@@ -1,0 +1,8 @@
+{% extends 'admin/master.html' %}
+{% import 'admin/lib.html' as lib with context %}
+{% block body %}
+    {% call lib.form_tag() %}
+      {{ lib.render_form_fields(form) }}
+      <input type="submit" />
+    {% endcall %}
+{% endblock %}

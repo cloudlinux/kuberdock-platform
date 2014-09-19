@@ -5,3 +5,4 @@ Jinja2==2.7.3
 MarkupSafe==0.23
 SQLAlchemy==0.9.7
 WTForms==2.0.1
+WTForms-Alchemy==0.12.9

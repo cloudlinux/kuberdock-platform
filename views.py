@@ -2,7 +2,6 @@ from flask import g, redirect, url_for, request, flash, render_template
 from flask.views import MethodView
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import exc
 from config import DATABASE_URL
 from models import User, Container
 from forms import RegisterUserForm
@@ -11,6 +10,17 @@ from forms import RegisterUserForm
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(engine)
 session = Session()
+
+def get_or_none(obj):
+    try:
+        session.add(obj)
+        session.commit()
+        return True
+    except:
+        session.rollback()
+        return False
+    finally:
+        session.close()
 
 
 class Index(MethodView):
@@ -27,15 +37,11 @@ class RegisterUserView(MethodView):
         form = RegisterUserForm(request.form)
         if form.validate():
             user = User(form.login.data, form.email.data,
-                     form.fullname.data, form.password.data)
-            try:
-                session.rollback()
-                session.add(user)
-                session.commit()
+                        form.fullname.data, form.password.data)
+            if get_or_none(user):
                 flash('Thanks for registering')
                 return redirect(url_for('index'))
-            except exc.IntegrityError:
+            else:
                 g.alert_type = 'danger'
                 flash('"{0}" already registered'.format(form.email.data))
-                # return render_template('register.html', form=form)
         return render_template('register.html', form=form)

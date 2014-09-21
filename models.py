@@ -14,17 +14,17 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, nullable=False)
-    login = Column(String(20))
+    login = Column(String(16))
     fullname = Column(String(64))
-    pwd_hash = Column(String(64))
+    password = Column(String(64))
     email = Column(String(64), unique=True, nullable=False)
     created = Column(TIMESTAMP)
 
-    def __init__(self, login=None, email=None, fullname=None, password=None):
+    def __init__(self, login, email, fullname, password):
         self.login = login
-        self.fullname = fullname
-        self.pwd_hash = generate_password_hash(password)
         self.email = email
+        self.fullname = fullname
+        self.password = generate_password_hash(password)
         self.created = datetime.datetime.now()
 
     def __repr__(self):
@@ -63,7 +63,7 @@ class Container(Base):
     stopped = Column(TIMESTAMP)
     terminated = Column(TIMESTAMP)
 
-    def __init__(self, name=None, desc=None):
+    def __init__(self, name, desc):
         self.name = name
         self.desc = desc
         self.cnt_uuid = str(uuid.uuid4())

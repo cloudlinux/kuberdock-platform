@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% from '_formhelpers.html' import render_field %}
+
+{% block content %}
+<div class="col-xs-12">
+{% if users %}
+
+        <h2 class="sub-header">Users</h2>
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Login</th>
+                <th>Email</th>
+                <th>Full Name</th>
+                <th>Registered</th>
+              </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td>{{ u.login }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.fullname }}</td>
+                        <td>{{ u.created|date }}</td>
+                    </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+        </div>
+{% else %}
+    <h2>No Users</h2>
+{% endif %}
+</div>
+{% endblock %}

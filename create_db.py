@@ -1,5 +1,12 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from config import DATABASE_URL
 from models import Base, User, Container
-from app import engine, session
+
+
+engine = create_engine(DATABASE_URL)
+Session = sessionmaker(engine)
+session = Session()
 
 Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)

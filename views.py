@@ -11,16 +11,16 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(engine)
 session = Session()
 
-def get_or_none(obj):
+def add_or_none(obj):
     try:
         session.add(obj)
         session.commit()
         return True
     except:
         session.rollback()
-        return False
     finally:
         session.close()
+    return False
 
 
 class Index(MethodView):
@@ -38,7 +38,7 @@ class RegisterUserView(MethodView):
         if form.validate():
             user = User(form.login.data, form.email.data,
                         form.fullname.data, form.password.data)
-            if get_or_none(user):
+            if add_or_none(user):
                 flash('Thanks for registering')
                 return redirect(url_for('index'))
             else:

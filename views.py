@@ -1,4 +1,4 @@
-from flask import g, redirect, url_for, request, flash, render_template
+from flask import g, redirect, url_for, request, flash, render_template, abort
 from flask.views import MethodView
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -30,7 +30,7 @@ class IndexView(MethodView):
 
 class RegisterUserView(MethodView):
     def get(self):
-        form = RegisterUserForm(request.form)
+        form = RegisterUserForm()
         return render_template('register.html', form=form)
 
     def post(self):
@@ -50,4 +50,5 @@ class RegisterUserView(MethodView):
 class UserView(MethodView):
     def get(self, user_id):
         user = session.query(User).get(user_id)
+        if not user: abort(404)
         return render_template('user.html', user=user)

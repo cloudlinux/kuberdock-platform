@@ -1,4 +1,5 @@
-from wtforms import Form, BooleanField, StringField, validators
+from wtforms import BooleanField, StringField, validators
+from flask_wtf import Form
 
 
 class RegisterUserForm(Form):

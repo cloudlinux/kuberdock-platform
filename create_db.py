@@ -12,18 +12,23 @@ Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 
 
-admin = User('admin', 'admin@example.com', 'John Doe', 'superpass')
-guest = User('guest', 'guest@example.com', 'Another Name', 'qwerty')
+u1 = User('max', 'max@example.com', 'Max Doe', 'superpass1')
+u2 = User('john', 'john@example.com', 'John Doe', 'superpass2')
+u3 = User('alex', 'alex@example.com', 'Alex Doe', 'qwerty')
 
-session.add(admin)
-session.add(guest)
+session.add_all([u1, u2, u3])
 session.commit()
 
-# c1 = Container('mongodb', 'Database server')
-# c2 = Container('ssh', 'SSH server')
-# c3 = Container('redis', 'Redis server')
-# c3 = Container('couchdb', 'CouchDB server')
-# session.add(c1)
-# session.add(c2)
-# session.add(c3)
-# session.commit()
+c1 = Container('mongodb', 'mongo:latest', 'Database server', '0', '1',
+               'XL', '1', '0', '0', '1')
+c2 = Container('mongodb', 'mongo:latest', 'Database server', '0', '1',
+               'XS', '1', '0', '0', '2')
+c3 = Container('ssh', 'ssh:latest', 'SSH server', '0', '1',
+               'XS', '1', '0', '0', '2')
+c3 = Container('redis', 'redis:latest', 'Redis server', '0', '1',
+               'XM', '1', '0', '0', '2')
+c4 = Container('couchdb', 'couchdb:latest', 'CouchDB server', '0', '1',
+               'XM', '1', '0', '0', '1')
+
+session.add_all([c1, c2, c3, c4])
+session.commit()

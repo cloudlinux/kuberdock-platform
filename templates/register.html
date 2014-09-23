@@ -3,6 +3,7 @@
 
 {% block content %}
 <div class="col-xs-4">
+    <h2 class="sub-header">Register</h2>
     <form method="POST" action="{{ url_for('register') }}">
         {{ render_field(form.email, 'envelope', 'sample@gmail.com') }}
         {{ render_field(form.password, 'lock', 'password') }}

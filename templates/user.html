@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% from '_formhelpers.html' import render_field %}
+
+{% block content %}
+<div class="col-xs-12">
+    <h2 class="sub-header">{{ user.fullname }}</h2>
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Login</th>
+            <th>Email</th>
+            <th>Full Name</th>
+            <th>Registered</th>
+          </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.login }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.fullname }}</td>
+                <td>{{ user.created|date }}</td>
+            </tr>
+        </tbody>
+      </table>
+
+{% if user.container %}
+    <h2 class="sub-header">Containers</h2>
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Image</th>
+            <th>Image Tag</th>
+            <th>Size</th>
+            <th>State</th>
+            <th>Command</th>
+            <th>Started</th>
+            <th>Stopped</th>
+            <th>Terminated</th>
+            <th>UUID</th>
+          </tr>
+        </thead>
+        <tbody>
+            {% for c in user.container %}
+            <tr>
+                <td>{{ c.id }}</td>
+                <td>{{ c.name }}</td>
+                <td>{{ c.docker_id }}</td>
+                <td>{{ c.docker_tag }}</td>
+                <td>{{ c.size }}</td>
+                <td>{{ c.state }}</td>
+                <td>{{ c.command }}</td>
+                <td>{{ c.started }}</td>
+                <td>{{ c.stopped }}</td>
+                <td>{{ c.terminated }}</td>
+                <td>{{ c.cnt_uuid }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+    </div>
+{% else %}
+    <h2>User has no containers</h2>
+{% endif %}
+
+</div>
+{% endblock %}

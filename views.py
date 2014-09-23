@@ -23,7 +23,7 @@ def add_or_none(obj):
     return False
 
 
-class Index(MethodView):
+class IndexView(MethodView):
     def get(self):
         q = session.query(User)
         return render_template('index.html', users=q.all())
@@ -45,3 +45,9 @@ class RegisterUserView(MethodView):
                 g.alert_type = 'danger'
                 flash('"{0}" already registered'.format(form.email.data))
         return render_template('register.html', form=form)
+
+
+class UserView(MethodView):
+    def get(self, user_id):
+        user = session.query(User).get(user_id)
+        return render_template('user.html', user=user)

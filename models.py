@@ -39,34 +39,44 @@ class Container(Base):
     __tablename__ = 'containers'
 
     id = Column(Integer, primary_key=True, nullable=False)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    user = relationship('User', backref=backref('container', order_by=id))
     cnt_uuid = Column(String(36), unique=True)
+    name = Column(String(128))
     docker_id = Column(String(256))
     docker_tag = Column(String(128))
-    name = Column(String(128))
-    deployment = Column(Integer)
+    deployment_type = Column(Integer)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship('User', backref=backref('container', order_by=id))
     copies = Column(Integer)
     size = Column(Integer)
     command = Column(String(512))
     crash_recovery = Column(Integer)
     auto_destroy = Column(Integer)
     deployment_strategy = Column(Integer)
-    entrypoint = Column(String(256))
-    subdomain = Column(String(512)) # I am not sure what it really means
+    # entrypoint = Column(String(256))
+    # subdomain = Column(String(512)) # I am not sure what it really means
     state = Column(Integer) # 0 - new,
                             # 1 - starting, 2 - running,
                             # 3 - stopping, 4 - stopped
                             # 4 - terminating, 5 - terminated,
                             # 6 - redeploy
-    started = Column(TIMESTAMP)
-    stopped = Column(TIMESTAMP)
-    terminated = Column(TIMESTAMP)
+    started = Column(TIMESTAMP, nullable=True)
+    stopped = Column(TIMESTAMP, nullable=True)
+    terminated = Column(TIMESTAMP, nullable=True)
 
-    def __init__(self, name, desc):
-        self.name = name
-        self.desc = desc
+    def __init__(self, *a):
         self.cnt_uuid = str(uuid.uuid4())
+        self.name = a[0]
+        self.docker_id = a[1]
+        self.docker_tag = a[2]
+        self.deployment_type = a[3]
+        self.copies = a[4]
+        self.size = a[5]
+        self.command = '/usr/bin/start_cnt.sh'
+        self.crash_recovery = a[6]
+        self.auto_destroy = a[7]
+        self.deployment_strategy = a[8]
+        self.user_id = a[9]
+        self.state = 0
 
     def __repr__(self):
         return '<Container %r>' % self.name

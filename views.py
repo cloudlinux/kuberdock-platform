@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from config import DATABASE_URL
 from models import User, Container
-from forms import RegisterUserForm
+from forms import RegisterUserForm, AddContainerForm
 
 
 engine = create_engine(DATABASE_URL)
@@ -30,7 +30,7 @@ class IndexView(MethodView):
 
 class RegisterUserView(MethodView):
     def get(self):
-        form = RegisterUserForm()
+        form = RegisterUserForm(request.form)
         return render_template('register.html', form=form)
 
     def post(self):
@@ -46,9 +46,20 @@ class RegisterUserView(MethodView):
                 flash('"{0}" already registered'.format(form.email.data))
         return render_template('register.html', form=form)
 
-
 class UserView(MethodView):
     def get(self, user_id):
         user = session.query(User).get(user_id)
         if not user: abort(404)
         return render_template('user.html', user=user)
+
+class AddContainerView(MethodView):
+    def get(self):
+        form = AddContainerForm(request.form)
+        form.copies.data = 1
+        return render_template('add_container.html', form=form)
+
+    def post(self):
+        form = AddContainerForm(request.form)
+        if form.validate():
+           pass
+        return render_template('add_container.html', form=form)

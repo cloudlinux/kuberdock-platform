@@ -41,6 +41,7 @@ class Container(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     cnt_uuid = Column(String(36), unique=True)
     name = Column(String(128))
+    desc = Column(String(128))
     docker_id = Column(String(256))
     docker_tag = Column(String(128))
     deployment_type = Column(Integer)
@@ -63,19 +64,20 @@ class Container(Base):
     stopped = Column(TIMESTAMP, nullable=True)
     terminated = Column(TIMESTAMP, nullable=True)
 
-    def __init__(self, *a):
+    def __init__(self, *a, **kw):
         self.cnt_uuid = str(uuid.uuid4())
-        self.name = a[0]
-        self.docker_id = a[1]
-        self.docker_tag = a[2]
-        self.deployment_type = a[3]
-        self.copies = a[4]
-        self.size = a[5]
+        self.name = kw.get('name')
+        self.docker_id = kw.get('docker_id')
+        self.docker_tag = kw.get('docker_tag')
+        self.desc = kw.get('desc')
+        self.deployment_type = kw.get('deployment_type')
+        self.copies = kw.get('copies')
+        self.size = kw.get('size')
         self.command = '/usr/bin/start_cnt.sh'
-        self.crash_recovery = a[6]
-        self.auto_destroy = a[7]
-        self.deployment_strategy = a[8]
-        self.user_id = a[9]
+        self.crash_recovery = kw.get('crash_recovery')
+        self.auto_destroy = kw.get('auto_destroy')
+        self.deployment_strategy = kw.get('deployment_strategy')
+        self.user_id = kw.get('user_id')
         self.state = 0
 
     def __repr__(self):

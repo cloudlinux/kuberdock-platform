@@ -55,11 +55,19 @@ class UserView(MethodView):
 class AddContainerView(MethodView):
     def get(self):
         form = AddContainerForm(request.form)
-        form.copies.data = 1
         return render_template('add_container.html', form=form)
 
     def post(self):
         form = AddContainerForm(request.form)
         if form.validate():
-           pass
+            # for i in form.__dict__.keys():
+            #     if i[0] != '_' and i not in ['meta', 'SECRET_KEY', 'csrf_enabled']: print(i, form[i].data)
+            container = Container(name=form.name.data, docker_id=form.docker_id.data,
+                docker_tag=form.docker_tag.data, desc=form.desc.data,
+                deployment_type=form.deployment_type.data, copies=form.copies.data,
+                size=form.size.data, crash_recovery=form.crash_recovery.data,
+                auto_destroy=form.auto_destroy.data,
+                deployment_strategy=form.deployment_strategy.data, user_id=form.user_id.data)
+            if add_or_none(container):
+                return redirect(url_for('user_list'))
         return render_template('add_container.html', form=form)

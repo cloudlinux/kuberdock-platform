@@ -14,20 +14,20 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        {% if not session.user_id %}
+        {% if session.user_id %}
+            <li><a href="{{ url_for('add_container') }}">Add Container</a></li>
+            <li><a href="{{ url_for('user', user_id=session.user_id) }}">My containers</a></li>
+        {% else %}
             <li><a href="{{ url_for('login') }}">Login</a></li>
             <li><a href="{{ url_for('register') }}">Register</a></li>
-        {% endif %}
-        <li><a href="{{ url_for('user_list') }}">Users</a></li>
-        <li><a href="{{ url_for('add_container') }}">Add Container</a></li>
-        {% if session.user_id %}
-            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            <li><a href="{{ url_for('user_list') }}">Users</a></li>        
         {% endif %}
       </ul>
       <ul class="nav navbar-nav navbar-right">
-        <li><a href="#">Link</a></li>
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <span class="caret"></span></a>
+          {% if session.login %}
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Hi, <strong>{{ session.login }}</strong> <span class="caret"></span></a>
+          {% endif%}
           <ul class="dropdown-menu" role="menu">
             <li><a href="#">Action</a></li>
             <li><a href="#">Another action</a></li>
@@ -36,6 +36,9 @@
             <li><a href="#">Separated link</a></li>
           </ul>
         </li>
+        {% if session.user_id %}
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        {% endif %}
       </ul>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->

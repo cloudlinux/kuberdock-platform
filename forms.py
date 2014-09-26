@@ -23,4 +23,3 @@ class AddContainerForm(Form):
     crash_recovery =       IntegerField('Crash Recovery', [validators.NumberRange(min=0, max=1)])
     auto_destroy =         IntegerField('Auto Destroy', [validators.NumberRange(min=0, max=1)])
     deployment_strategy =  IntegerField('Deployment Strategy', [validators.NumberRange(min=0, max=1)])
-    user_id =              IntegerField('User ID', [validators.NumberRange(min=1)])

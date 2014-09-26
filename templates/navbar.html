@@ -14,9 +14,15 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        <li><a href="{{ url_for('register') }}">Register</a></li>
+        {% if not session.user_id %}
+            <li><a href="{{ url_for('login') }}">Login</a></li>
+            <li><a href="{{ url_for('register') }}">Register</a></li>
+        {% endif %}
         <li><a href="{{ url_for('user_list') }}">Users</a></li>
         <li><a href="{{ url_for('add_container') }}">Add Container</a></li>
+        {% if session.user_id %}
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        {% endif %}
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li><a href="#">Link</a></li>

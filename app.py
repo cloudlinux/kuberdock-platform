@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 from flask import Flask
-from views import IndexView, UserView, RegisterUserView, AddContainerView
+from views import IndexView, UserView, LoginUserView, LogoutUserView, RegisterUserView, AddContainerView
 
 
 app = Flask(__name__)
@@ -16,6 +16,8 @@ def _jinja2_filter_datetime(date, fmt=None):
 
 
 app.add_url_rule('/', view_func=IndexView.as_view('index'))
+app.add_url_rule('/login', view_func=LoginUserView.as_view('login'))
+app.add_url_rule('/logout', view_func=LogoutUserView.as_view('logout'))
 app.add_url_rule('/register', view_func=RegisterUserView.as_view('register'))
 app.add_url_rule('/user/<int:user_id>', view_func=UserView.as_view('user'))
 app.add_url_rule('/user/list', view_func=IndexView.as_view('user_list'))

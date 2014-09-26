@@ -1,32 +1,60 @@
-from flask import g, redirect, url_for, request, flash, render_template, abort
+from flask import g, redirect, url_for, request, flash, render_template, abort, session
 from flask.views import MethodView
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, exc
 from config import DATABASE_URL
 from models import User, Container
-from forms import RegisterUserForm, AddContainerForm
+from forms import RegisterUserForm, LoginUserForm, AddContainerForm
 
 
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(engine)
-session = Session()
+db_session = Session()
 
 def add_or_none(obj):
     try:
-        session.add(obj)
-        session.commit()
+        db_session.add(obj)
+        db_session.commit()
         return True
     except:
-        session.rollback()
+        db_session.rollback()
     finally:
-        session.close()
+        db_session.close()
     return False
 
 
 class IndexView(MethodView):
     def get(self):
-        q = session.query(User)
+        q = db_session.query(User)
         return render_template('index.html', users=q.all())
+
+class LoginUserView(MethodView):
+    def get(self):
+        form = LoginUserForm(request.form)
+        return render_template('login.html', form=form)
+
+    def post(self):
+        form = LoginUserForm(request.form)
+        if form.validate():
+            user_id = session.get('user_id', None)
+            if not user_id:
+                try:
+                    user = db_session.query(User).filter_by(email=request.form['email']).one()
+                    flash('Welcome back, ' + user.fullname)
+                    session['user_id'] = user.id
+                    return redirect(url_for('user', user_id=user.id))
+                except exc.NoResultFound:
+                    g.alert_type = 'danger'
+                    flash('User not found')
+        return render_template('login.html', form=form)
+
+class LogoutUserView(MethodView):
+    def get(self):
+        user = session.get('user_id', None)
+        if user:
+            flash('Logging out!')
+            session.pop('user_id', None)
+        return redirect(url_for('index'))
 
 class RegisterUserView(MethodView):
     def get(self):
@@ -48,7 +76,7 @@ class RegisterUserView(MethodView):
 
 class UserView(MethodView):
     def get(self, user_id):
-        user = session.query(User).get(user_id)
+        user = db_session.query(User).get(user_id)
         if not user: abort(404)
         return render_template('user.html', user=user)
 
@@ -67,7 +95,8 @@ class AddContainerView(MethodView):
                 deployment_type=form.deployment_type.data, copies=form.copies.data,
                 size=form.size.data, crash_recovery=form.crash_recovery.data,
                 auto_destroy=form.auto_destroy.data,
-                deployment_strategy=form.deployment_strategy.data, user_id=form.user_id.data)
+                deployment_strategy=form.deployment_strategy.data,
+                user_id=form.user_id.data)
             if add_or_none(container):
                 return redirect(url_for('user_list'))
         return render_template('add_container.html', form=form)

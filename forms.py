@@ -8,6 +8,10 @@ class RegisterUserForm(Form):
     password =  StringField('Password', [validators.Length(min=4, max=64)])
     email =     StringField('Email Address', [validators.Length(min=6, max=64)])
 
+class LoginUserForm(Form):
+    email =     StringField('Email Address', [validators.Length(min=6, max=64)])
+    password =  StringField('Password', [validators.Length(min=4, max=64)])
+
 class AddContainerForm(Form):
     name =                 StringField('Name', [validators.Length(min=4, max=128)])
     docker_id =            StringField('Image', [validators.Length(min=4, max=64)])

@@ -88,6 +88,7 @@ class UserView(MethodView):
     def get(self, user_id):
         user = db_session.query(User).get(user_id)
         if not user: abort(404)
+        if session.get('user_id', None) is not user_id: abort(403)
         return render_template('user.html', user=user)
 
 class AddContainerView(MethodView):

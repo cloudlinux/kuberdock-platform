@@ -43,5 +43,11 @@ c4 = Container(
     size='XL', crash_recovery='1', auto_destroy='0', deployment_strategy='0',
     user_id='1')
 
-session.add_all([c1, c2, c3, c4])
+c5 = Container(
+    name='redis live', docker_id='redis', docker_tag='latest',
+    desc='Redis server', deployment_type='0', copies='1',
+    size='L', crash_recovery='1', auto_destroy='0', deployment_strategy='0',
+    user_id='1')
+
+session.add_all([c1, c2, c3, c4, c5])
 session.commit()

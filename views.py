@@ -2,6 +2,7 @@ from flask import g, redirect, url_for, request, flash, render_template, abort, 
 from flask.views import MethodView
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, exc
+from werkzeug.security import check_password_hash
 from config import DATABASE_URL
 from models import User, Container
 from forms import RegisterUserForm, LoginUserForm, AddContainerForm
@@ -22,6 +23,22 @@ def add_or_none(obj):
         db_session.close()
     return False
 
+def user_login(**kw):
+    user = db_session.query(User).filter_by(email=kw.get('email', None)).one()
+    if user.check_password(kw.get('password', None)):
+        session['user_id'] = user.id
+        session['login'] = user.login
+        return True
+    else:
+        g.alert_type = 'danger'
+        flash('Invalid password')
+        return False
+
+def user_logout():
+    user = session.get('user_id', None)
+    if user:
+        flash('Logout success!')
+        for k in ['user_id', 'login']: session.pop(k, None)
 
 class IndexView(MethodView):
     def get(self):
@@ -47,11 +64,9 @@ class LoginUserView(MethodView):
             user_id = session.get('user_id', None)
             if not user_id:
                 try:
-                    user = db_session.query(User).filter_by(email=request.form['email']).one()
-                    flash('Welcome back, ' + user.fullname)
-                    session['user_id'] = user.id
-                    session['login'] = user.login
-                    return redirect(url_for('user', user_id=user.id))
+                    if user_login(email=form.email.data, password=form.password.data):
+                        flash('Welcome back, ' + session['login'])
+                        return redirect(url_for('user', user_id=session['user_id']))
                 except exc.NoResultFound:
                     g.alert_type = 'danger'
                     flash('User not found')
@@ -59,10 +74,7 @@ class LoginUserView(MethodView):
 
 class LogoutUserView(MethodView):
     def get(self):
-        user = session.get('user_id', None)
-        if user:
-            flash('Logout success!')
-            for k in ['user_id', 'login']: session.pop(k, None)
+        user_logout()
         return redirect(url_for('index'))
 
 class RegisterUserView(MethodView):
@@ -75,7 +87,7 @@ class RegisterUserView(MethodView):
         if form.validate():
             user = User(form.login.data, form.email.data,
                         form.fullname.data, form.password.data)
-            if add_or_none(user):
+            if add_or_none(user) and user_login(email=form.email.data, password=form.password.data):
                 flash('Thanks for registering')
                 return redirect(url_for('user', user_id=session['user_id']))
             else:

@@ -62,8 +62,7 @@ class LogoutUserView(MethodView):
         user = session.get('user_id', None)
         if user:
             flash('Logout success!')
-            session.pop('user_id', None)
-            session.pop('login', None)
+            for k in ['user_id', 'login']: session.pop(k, None)
         return redirect(url_for('index'))
 
 class RegisterUserView(MethodView):

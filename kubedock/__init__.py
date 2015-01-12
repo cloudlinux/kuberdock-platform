@@ -1,0 +1,1 @@
+# Kubedock application package

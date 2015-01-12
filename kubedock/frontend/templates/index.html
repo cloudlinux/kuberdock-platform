@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>tutudock project</title>
+        <meta charset="utf8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        {% assets "app_css" -%}
+          <link rel="stylesheet" href="{{ ASSET_URL }}">
+        {%- endassets %}
+    </head>
+    <body>
+        
+        <!-- navbar -->
+        <nav id="navbar" class="navbar navbar-default">
+            <div id="navbar-container" class="container">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="/">
+                        <img alt="cloudlinux cubedock" src="{{ url_for('static', filename='img/logo.png') }}">
+                    </a>
+                    <span class="navbar-brand" href="/">
+                        <span>KubeDock project</span>
+                    </span>
+                </div>
+                <div class="nav-controls">
+                    <div class="navbar-text navbar-right">
+                        <span class="dropdown">
+                            <span class="dropdown-toggle" data-toggle="dropdown" role="button" area-expanded="false">
+                                <span class="navbar-link">bliss</span>
+                                <span class="caret"></span>
+                            </span>
+                            <ul class="dropdown-menu" role="menu">
+                                <li>Settings</li>
+                                <li class="divider"></li>
+                                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                            </ul>
+                        </span>
+                    </div>
+                    <div class="navbar-text navbar-right">
+                        <span>You logged as</span>
+                    </div>
+                </div>
+            </div><!-- navbar-container -->
+        </nav><!-- end of navbar -->
+        
+        <!-- contents container -->
+        <div id="contents" class="container"></div>
+        
+        <!-- Page Header template -->
+        <script type="text/template" id="page-header-title-template"><%- name %></script>
+        
+        <!-- Page Info Panel template -->
+        <script type="text/template" id="page-info-panel-template">
+            
+            <% states = {
+                running: 'glyphicon glyphicon-play',
+                unknown: 'glyphicon glyphicon-question-sign'
+            } %>
+            
+            <div class="col-md-4">
+                <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span>
+                <span class="<%- status %>"><%- status %></span>
+            </div>
+            <div class="col-md-8">
+                <button class="btn btn-default stats">Stats</button>
+            </div>
+        </script>
+        
+        <!-- Pods List templates -->
+        <!-- Pods list LayoutView template -->
+        <script type="text/template" id="layout-pod-list-template">
+            
+            <!-- Page header -->
+            <div class="row">
+                <div class="col-md-6">
+                    <h1 id="masthead-title" class="text-left"></h1>
+                </div>
+                <div class="col-md-4 col-md-offset-2">
+                    <a href="/#newpod" class="btn btn-success btn-lg btn-block">
+                        <span class="glyphicon glyphicon-send"></span>
+                        <span>Create container</span>
+                    </a>
+                </div>
+            </div><!-- end of page header -->
+            
+            <!-- page actions -->
+            <div class="row">
+                <div class="col-md-1 col-md-offset-11 text-left">
+                    <button type="button" class="btn btn-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                        Actions <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu bulk-action-menu" role="menu">
+                        <li><button type="button" class="btn btn-success btn-block">
+                        <span class="glyphicon glyphicon-play"></span>Start</button></li>
+                        <li><button type="button" class="btn btn-warning btn-block">
+                        <span class="glyphicon glyphicon-stop"></span>Stop</button></li>
+                        <li><button type="button" class="btn btn-danger btn-block">
+                        <span class="glyphicon glyphicon-trash"></span>Delete</button></li>
+                    </ul>
+                </div>
+            </div><!-- end of page actions -->
+            
+            <div id="layout-list"></div>
+            <div id="layout-footer"></div>
+        </script>
+        
+        <!-- Pods list row view template -->
+        <script type="text/template" id="pod-list-item-template">
+            
+            <% states = {
+                running: 'glyphicon glyphicon-play',
+                unknown: 'glyphicon glyphicon-question-sign'
+            } %>
+            
+            <!-- table data row -->
+            <td>
+                <input type="checkbox">
+            </td>
+            
+            <td>
+                <a href="/#pods/<%- id %>"><%- name %></a>
+                <span class="badge">
+                    <%- containers.length %>
+                </span>
+            </td>
+            
+            <td>
+                <span class="glyphicon <%- cluster ? 'glyphicon-th-large' : 'glyphicon-stop' %>"></span>
+                <% if (cluster){ %>
+                    <span class="badge"><%- replicas %></span>
+                <% } %>
+            </td>
+            <td>
+                <span class="glyphicon glyphicon-share <%- service ? 'service-on' : 'service-off' %>"></span>
+                <% if ( service && portalIP !== undefined) { %>
+                <span class="service-on"><%- portalIP %></span>
+                <% } %>
+            </td>
+            
+            <td>
+                <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span>
+                <span class="<%- status %>"><%- status %></span>
+            </td>
+            
+            <td class="text-right">
+                <div class="btn-group btn-group-xs" role="group" aria-roles="button">
+                    <button class="btn btn-default btn-xs start-btn"><span class="glyphicon glyphicon-play"></span>Start</button>
+                    <button class="btn btn-default btn-xs stop-btn"><span class="glyphicon glyphicon-stop"></span>Stop</button>
+                    <button class="btn btn-default btn-xs terminate-btn"><span class="glyphicon glyphicon-trash"></span>Delete</button>
+                </div>
+            </td>
+            <!-- end of table data row -->
+            
+        </script>
+
+        <!-- Pods items table compositeView template -->
+        <script type="text/template" id="pod-list-template">
+            <div class="col-md-12">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox"></th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Entrypoint</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </script>
+        
+        <!-- Pods Item templates -->
+        <!-- Pods item Details LayoutView template -->
+        <script type="text/template" id="layout-pod-item-template">
+            
+            <!-- Page header -->
+            <div class="row">
+                <div class="col-md-6">
+                    <h1 id="masthead-title" class="text-left"></h1>
+                </div>
+                <div class="col-md-4">
+                    <div class="btn-group btn-group-lg" role="group" aria-roles="button">
+                        <button class="btn btn-default btn-lg">
+                            <span class="glyphicon glyphicon-play start-btn"></span>
+                            <span class="start-btn">Start</span>
+                        </button>
+                        <button class="btn btn-default btn-lg">
+                            <span class="glyphicon glyphicon-stop stop-btn"></span>
+                            <span class="stop-btn">Stop</span>
+                        </button>
+                        <button class="btn btn-default btn-lg">
+                            <span class="glyphicon glyphicon-trash terminate-btn"></span>
+                            <span class="terminate-btn">Delete</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2 text-left">
+                    <a href="/#pods" class="btn btn-default btn-lg">
+                        <span class="glyphicon glyphicon-share-alt back-btn"></span>
+                        <span class="back-btn">Back to list</span>
+                    </a>
+                </div>
+            </div><!-- end of page header -->
+            
+            <div class="row">
+                <div id="item-info" class="col-md-12"></div>
+            </div>
+            <div class="row">
+                <div id="layout-aside" class="col-md-4"></div>
+                <div id="layout-contents" class="col-md-8"></div>
+            </div>
+        </script>
+        
+        <!-- A pod details template -->
+        <script type="text/template" id="pod-item-container-template">
+            <div><a href="/#poditem/<%- parentID %>/<%-name %>"><%- image %></a></div>
+        </script>
+        
+        <!-- A pod graph template -->
+        <script type="text/template" id="pod-item-graph-template">
+            hello this is pod graph
+        </script>
+        
+        <!-- A pod main data template -->
+        <script type="text/template" id="pod-item-main-template">
+            <table class="table">
+                <tbody>
+                    <tr><td>ID</td><td><%- id %></td></tr>
+                    <tr><td>Name</td><td><%- name %></td></tr>
+                </tbody>
+            </table>
+        </script>
+        
+        <!-- A Pod creation wizard layout template -->
+        <script type="text/template" id="layout-wizard-template">
+            <div id="header-steps" class="row"></div>
+            <div id="steps" class="row"></div>
+            <div id="footer-steps" class="row"></div>
+        </script>
+        
+        <!-- An image collection item template -->
+        <script type="text/template" id="wizard-image-collection-item-template">
+            <div class="item-header">
+                <div class="item-status">
+                    <span class="glyphicon glyphicon-globe"></span>
+                </div>
+                <div class="item-header-title"><%= name || 'nameless' %></div>
+                <div class="item-header-controls">
+                    <span class="glyphicon glyphicon-plus add-item el-control"></span>
+                </div>
+            </div>
+            <div class="item-body">
+                <div class="item-body-info">
+                    <%= description || 'No description' %>
+                </div>
+            </div>
+        </script>
+        
+        <!-- Wizard get image template -->
+        <script type="text/template" id="wizard-get-image-template">
+            <div class="input-group">
+                <input type="text" id="search-image-field" class="form-control" placeholder="Enter image or part of image name to search">
+                <span class="input-group-btn">
+                    <button class="btn btn-default search-image" type="button">Search!</button>
+                    <a href="/#pods" class="btn btn-default cancel-search" type="button">Cancel</a>
+                </span>
+            </div><!-- input-group -->
+            <div id="data-collection"></div>
+            <div id="pager"></div>
+        </script>
+        
+        <!-- Wizard set container port template -->
+        <script type="text/template" id="wizard-set-container-ports-template">
+            <div class="row title">
+                <div class="col-md-4">
+                    <h4><%- image %></h4>
+                </div>
+                <div class="col-md-7">
+                    <ul class="nav nav-pills">
+                        <li role="presentation" class="active"><span>Ports</span></li>
+                        <li role="presentation"><span class="go-to-volumes">Volumes</span></li>
+                        <li role="presentation"><span class="go-to-envs">Envvars</span></li>
+                        <li role="presentation"><span class="go-to-resources">Limits</span></li>
+                        <li role="presentation"><span class="go-to-other">Other</span></li>
+                    </ul>
+                </div>
+            </div>
+            <table class="table">
+                <thead><tr><th>Container port</th><th>Protocol</th><th>Host port</th></tr></thead>
+                <tbody>
+                <% _.each(ports, function(p){ %>
+                    <tr>
+                        <td class="containerPort"><span class="ieditable"><%- p.containerPort %></span></td>
+                        <td><span class="iseditable"><%- p.protocol %></span></td>
+                        <td class="hostPort"><span class="ieditable"><%- p.hostPort %></span></td>
+                    </tr>
+                <% }) %>
+                </tbody>
+            </table>
+            <div class="view-controls text-right">
+                <% if (isPending) { %>
+                <button class="btn btn-warning save-container">Save</button>
+                <button class="btn btn-success save-run-container">Save and Run</button>
+                <button class="btn btn-primary next-step">Next</button>
+
+                <% } else { %>
+                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+                <% } %>
+            </div>
+        </script>
+        
+        <!-- Wizard set container volumes template -->
+        <script type="text/template" id="wizard-set-container-volumes-template">
+            <div class="row title">
+                <div class="col-md-4">
+                    <h4><%- image %></h4>
+                </div>
+                <div class="col-md-7">
+                    <ul class="nav nav-pills">
+                        <li role="presentation"><span class="go-to-ports">Ports</span></li>
+                        <li role="presentation" class="active"><span>Volumes</span></li>
+                        <li role="presentation"><span class="go-to-envs">Envvars</span></li>
+                        <li role="presentation"><span class="go-to-resources">Limits</span></li>
+                        <li role="presentation"><span class="go-to-other">Other</span></li>
+                    </ul>
+                </div>
+            </div>
+            <table class="table">
+                <thead><tr><th>Name</th><th>Mount path</th><th>Read Only</th></tr></thead>
+                <tbody>
+                <% _.each(volumeMounts, function(v){ %>
+                    <tr>
+                        <td><span class="ieditable"><%- v.name %></span></td>
+                        <td><%- v.mountPath %></td>
+                        <% if (v.readOnly){ %>
+                        <td><span class="glyphicon glyphicon-check readonly readonly-on"></span></td>
+                        <% } else { %>
+                        <td><span class="glyphicon glyphicon-unchecked readonly readonly-off"></span></td>
+                        <% } %>
+                    </tr>
+                <% }) %>
+                </tbody>
+            </table>
+            <div class="view-controls text-right">
+                <% if (isPending) { %> 
+                <button class="btn btn-default prev-step">Previous</button>
+                <button class="btn btn-warning save-container">Save</button>
+                <button class="btn btn-success save-run-container">Save and Run</button>
+                <button class="btn btn-primary next-step">Next</button>
+                <% } else { %>
+                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+                <% } %>
+            </div>
+        </script>
+        
+        <!-- Wizard set container envvars template -->
+        <script type="text/template" id="wizard-set-container-env-template">
+            <div class="row title">
+                <div class="col-md-4">
+                    <h4><%- image %></h4>
+                </div>
+                <div class="col-md-7">
+                    <ul class="nav nav-pills">
+                        <li role="presentation"><span class="go-to-ports">Ports</span></li>
+                        <li role="presentation"><span class="go-to-volumes">Volumes</span></li>
+                        <li role="presentation" class="active"><span>Envvars</span></li>
+                        <li role="presentation"><span class="go-to-resources">Limits</span></li>
+                        <li role="presentation"><span class="go-to-other">Other</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div>
+                <table id="data-table" class="table">
+                    <thead><tr><th class="text-center">Key</th><th class="text-center">Value</th></tr></thead>
+                    <tbody>
+                    <% _.each(env, function(e){ %>
+                        <tr>
+                            <td class="text-center"><span class="ieditable name"><%- e.name ? e.name : 'not set' %></span></td>
+                            <td class="text-center"><span class="ieditable value"><%- e.value ? e.value : 'not set' %></span></td>
+                        </tr>
+                    <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <button type="button" class="btn btn-success btn-sm btn-block add-env">Add</button>
+            </div>
+            <div class="view-controls text-right">
+                <% if (isPending) { %> 
+                <button class="btn btn-default prev-step">Previous</button>
+                <button class="btn btn-warning save-container">Save</button>
+                <button class="btn btn-success save-run-container">Save and Run</button>
+                <button class="btn btn-primary next-step">Next</button>
+                <% } else { %>
+                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+                <% } %>
+            </div>
+        </script>
+        
+        <!-- Wizard set container limits template -->
+        <script type="text/template" id="wizard-set-container-resources-template">
+            <div class="row title">
+                <div class="col-md-4">
+                    <h4><%- image %></h4>
+                </div>
+                <div class="col-md-7">
+                    <ul class="nav nav-pills">
+                        <li role="presentation"><span class="go-to-ports">Ports</span></li>
+                        <li role="presentation"><span class="go-to-volumes">Volumes</span></li>
+                        <li role="presentation"><span class="go-to-envs">Envvars</span></li>
+                        <li role="presentation" class="active"><span>Limits</span></li>
+                        <li role="presentation"><span class="go-to-other">Other</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div>
+                <table class="table">
+                    <thead><tr><th class="text-center">CPU</th><th class="text-center">Memory</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-center"><span class="ieditable cpu"><%- cpu ? cpu : '0' %></span></td>
+                            <td class="text-center"><span class="ieditable memory"><%- memory ? memory : '0' %></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="view-controls text-right">
+                <% if (isPending) { %>
+                <button class="btn btn-default prev-step">Previous</button>
+                <button class="btn btn-warning save-container">Save</button>
+                <button class="btn btn-success save-run-container">Save and Run</button>
+                <button class="btn btn-primary next-step">Next</button>
+                <% } else { %>
+                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+                <% } %>
+            </div>
+        </script>
+        
+        <!-- Wizard set container other params template -->
+        <script type="text/template" id="wizard-set-container-other-template">
+            <div class="row title">
+                <div class="col-md-4">
+                    <h4><%- image %></h4>
+                </div>
+                <div class="col-md-7">
+                    <ul class="nav nav-pills">
+                        <li role="presentation"><span class="go-to-ports">Ports</span></li>
+                        <li role="presentation"><span class="go-to-volumes">Volumes</span></li>
+                        <li role="presentation"><span class="go-to-envs">Envvars</span></li>
+                        <li role="presentation"><span class="go-to-resources">Limits</span></li>
+                        <li role="presentation" class="active"><span>Other</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div>
+                <table class="table">
+                    <thead><tr><th class="text-center">Working directory</th><th class="text-center">Command</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-center"><span class="ieditable working-dir"><%- workingDir ? workingDir : '' %></span></td>
+                            <td class="text-center"><span class="ieditable command"><%- command ? command.join(' ') : '' %></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="view-controls text-right">
+                <% if (isPending) { %> 
+                <button class="btn btn-default prev-step">Previous</button>
+                <button class="btn btn-warning save-container">Save</button>
+                <button class="btn btn-success save-run-container">Save and Run</button>
+                <button class="btn btn-primary next-step">Complete</button>
+                <% } else { %>
+                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+                <% } %>
+            </div>
+        </script>
+        
+        <!-- Wizard new pod summary template -->
+        <script type="text/template" id="wizard-set-container-complete-template">
+            <div class="col-md-4 col-md-offset-1">
+                <table class="table">
+                    <thead><tr><th></th><th>Cluster</th></tr></thead>
+                    <tbody>
+                        <% if (cluster){ %>
+                        <tr>
+                            <td><span class="glyphicon glyphicon-check cluster cluster-on"></span></td>
+                            <td>Replicated</td>
+                        </tr>
+                        <tr>
+                            <td><input class="replicas" type="number" value="<%- replicas %>"></td>
+                            <td>Replicas</td>
+                        </tr>
+                        <tr>
+                            <td><span class="glyphicon glyphicon-share entrypoint entrypoint-on"></span></td>
+                            <td><span><%- portalIP ? portalIP : 'dynamic' %></span>:<span class="ieditable port"><%- port %></span></td>
+                        </tr>
+                        <% } else { %>
+                        <tr>
+                            <td><span class="glyphicon glyphicon-unchecked cluster cluster-off"></span></td>
+                            <td>Replicated</td>
+                        </tr>
+                        <% } %>
+                    </tbody>
+                    <% if (volumes.length !== 0){ %>
+                    <table class="table">
+                        <thead><tr><th>Volume</th><th>Path</th></tr></thead>
+                        <tbody>
+                            <% _.each(volumes, function(vol){ %>
+                            <tr>
+                                <td><%- vol['name'] %></td>
+                                <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
+                            </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                    <% } %>
+                </table>
+            </div>
+            <div class="col-md-5">
+                <table class="table">
+                    <thead><tr><th>Services</th><th></th></tr></thead>
+                <% _.each(containers, function(c){ %>
+                    <tr>
+                        <td class="lead"><%- c.image %></td>
+                        <td class="text-right"><button class="btn btn-danger btn-sm delete-item"><span class="glyphicon glyphicon-trash"></span>&nbsp;Delete</button></td>
+                    </tr>
+                <% }) %>
+                </table>
+                <div class="view-controls text-right">
+                    <button class="btn btn-warning save-container">Save</button>
+                    <button class="btn btn-success save-run-container">Save and Run</button>
+                    <button class="btn btn-primary add-more">Add more services</button>
+                </div>
+            </div>
+        </script>
+        
+        <!-- paginator template -->
+        <script type="text/template" id="paginator-template">
+            <% if ( c.state.pageSize < c.state.totalRecords){ %>
+            <ul class="pager">
+                <li class="paginatorFirst pseudo-link">first</li>
+                <li class="paginatorPrev pseudo-link">prev</li>
+                <li class="paginatorStat"><%- c.state.currentPage %> of <%- c.state.totalPages %></li>
+                <li class="paginatorNext pseudo-link">next</li>
+                <li class="paginatorLast pseudo-link">last</li>
+            </ul>
+            <% } %>
+        </script>
+        
+        <script type="text/javascript">
+            var current_username = "{{current_user.username }}",
+                administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
+        </script>
+        
+        {% assets "vendor_js" -%}
+          <script src="{{ ASSET_URL }}"></script>
+        {% endassets %}
+        {% assets "app_js" -%}
+          <script src="{{ ASSET_URL }}"></script>
+        {% endassets %}
+        
+        <script type="text/javascript">
+            var initPodCollection = new KubeDock.Data.PodCollection({{ pod_collection|safe }});
+        </script>
+        
+    </body>
+</html>

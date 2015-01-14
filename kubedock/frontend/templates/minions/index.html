@@ -1,0 +1,179 @@
+{% extends "index.html" %}
+{% block script_templates %}
+
+    <script type="text/template" id="minion-detailed-layout-template">
+        <ul class="nav nav-tabs">
+            <% var s = {};
+            switch (tab) {
+                case 'settings': s.settings = 'active'; break;
+                case 'stats': s.stats = 'active'; break;
+                case 'troubles': s.troubles = 'active'; break;
+            } %>
+            <li role="presentation" class="<%- s.settings %>"><a  class="minionSettingsTab" href="">Settings</a></li>
+            <li role="presentation" class="<%- s.stats %>"><a class="minionStatsTab" href="">Statistics</a></li>
+            <li role="presentation" class="<%- s.troubles %>"><a class="minionTroublesTab" href="">Troubles</a></li>
+        </ul>
+        <div id="tab-content">div tab_content</div>
+    </script>
+
+    <script type="text/template" id="minion-settings-tab-template">
+        <h3>Hostname: <%- hostname %></h3>
+        <h3>Status: <%- status %></h3>
+        <h3>Software version: <%- annotations.sw_version %></h3>
+        <hr>
+        <div class="panel panel-info">
+            <div class="panel-heading"><strong>Advanced settings(optional)</strong></div>
+            <div class="panel-body">
+                <table class="table table-bordered btn-group-justified">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% _.each(labels, function(v,k){ %>
+                        <tr>
+                            <td><%- k %></td>
+                            <td><%- v %></td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="text-center">
+            <button id="minion-add-btn" class="btn btn-lg btn-success" type="submit">Save</button>
+        </div>
+    </script>
+
+    <script type="text/template" id="minion-stats-tab-template">
+        PODS, DOCKERS LIST, CPU, RAM, DISK etc...
+    </script>
+
+    <script type="text/template" id="minion-troubles-tab-template">
+        List of errors, Disk space problems, logs, etc...
+    </script>
+
+    <script type="text/template" id="minion-add-layout-template">
+        <div id="minion-contents">
+            <div id="minion-header">
+                <h1>New Minion</h1>
+            </div>
+            <div class="minion-steps">
+                <div id="minion-find-step">div find step</div>
+                <div id="minion-final-step"></div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/template" id="minion-find-step-template">
+        <div id="address-spinner"></div>
+        <div class="form-field">
+            <label class="no-label" for="minion_address">http:// </label>
+            <input class="input-lg" type="text" placeholder="IP Address or Hostname" id="minion_address" name="minion_address"/>
+        </div>
+    </script>
+
+    <script type="text/template" id="minion-final-step-template">
+        <hr>
+        <div class="panel panel-info">
+            <div class="panel-heading"><strong>Advanced settings(optional)</strong></div>
+            <div class="panel-body">
+                Some advanced settings like LABELS
+            </div>
+        </div>
+        <div class="text-center">
+            <button id="minion-add-btn" class="btn btn-lg btn-success" type="submit">Complete</button>
+        </div>
+    </script>
+
+    <script type="text/template" id="minion-console-template">
+        <hr>
+        <div class="well">
+            <% _.each(text, function(x){ %>
+            <p><strong><%- x %></strong></p>
+            <% }) %>
+        </div>
+        <button id="main" class="btn btn-lg btn-success">TO MAIN</button>
+    </script>
+
+    <script type="text/template" id="minion-item-template">
+        <td><%- ip %></td>
+        <td><%- hostname ? hostname : 'Not specified' %></td>
+        <% var st_type = 'text-danger';
+           switch (status) {
+                case 'running': st_type = 'text-success'; break;
+                case 'removing...': st_type = 'text-info'; break;
+           }
+        %>
+        <td class="<%- st_type %>"><%- status %>
+            <% if (st_type === 'text-danger') { %>
+            <button id="detailedTroublesTab" class="btn btn-xs btn-link dropdown-toggle" title="See details">
+                <i class="<%- st_type %> glyphicon glyphicon-question-sign"></i>
+            </button>
+            <% } %>
+            <% if (annotations.sw_version !== 'v1.4') { %>
+            <button id="upgradeMinion" class="btn btn-xs btn-link dropdown-toggle" title="Upgrade Needed">
+                <i class="text-info glyphicon glyphicon-cloud-download"></i>
+                <%- annotations.sw_version %>
+            </button>
+            <% } %>
+            <div class="pull-right">
+                <button id="detailedMinion" class="btn btn-xs btn-link" title="Settings">
+                    <i class="glyphicon glyphicon-cog"></i>
+                </button>
+                <button id="deleteMinion" class="btn btn-xs btn-link" title="Remove">
+                    <i class="text-danger glyphicon glyphicon-remove"></i>
+                </button>
+            </div>
+        </td>
+    </script>
+
+    <script type="text/template" id="minions-list-template">
+        <button id="add_minion" class="btn btn-success">Add Minion</button><hr>
+        <div><strong>You have <%- totalMinions %> minions</strong></div><br>
+        <table class="table table-bordered btn-group-justified"><!-- TODO I know this is wrong -->
+            <thead>
+                <tr>
+                    <th>Minion IP</th>
+                    <th>Hostname</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <hr>
+    </script>
+
+    <script type="text/template" id="minions-layout-template">
+        <div id="main">main div text</div>
+        <div id="pager">pager div text</div>
+    </script>
+
+{#    Copy from main app, delete when merge #}
+    <script type="text/template" id="paginator-template">
+        <% if ( c.state.pageSize < c.state.totalRecords){ %>
+        <ul class="pager">
+            <li class="paginatorFirst pseudo-link btn btn-default btn-sm btn-group">first</li>
+            <li class="paginatorPrev pseudo-link btn btn-default btn-sm btn-group">prev</li>
+            <li class="paginatorStat"><%- c.state.currentPage %> of <%- c.state.totalPages %></li>
+            <li class="paginatorNext pseudo-link btn btn-default btn-sm btn-group">next</li>
+            <li class="paginatorLast pseudo-link btn btn-default btn-sm btn-group">last</li>
+        </ul>
+        <% } %>
+    </script>
+{#    ===================================== #}
+
+{% endblock %}
+
+{% block app_js_asset %}{% endblock %} {# To cut off app_js temporary #}
+
+{% block minions_app_js_asset %}
+    {% assets "minions_app_js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+    <script type="text/javascript">
+        MinionsApp.Data.minions = new MinionsApp.Data.MinionsCollection({{ minions_collection|safe }});
+    </script>
+{% endblock %}

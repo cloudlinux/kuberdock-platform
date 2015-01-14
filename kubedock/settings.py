@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 DEBUG = True
 FLASKY_ADMIN = 'igor.bliss@gmail.com'
@@ -16,3 +17,10 @@ INFLUXDB_TABLE='stats'
 INFLUXDB_USER='kubedock'
 INFLUXDB_PASSWORD='Iwb4gDo'
 INFLUXDB_DATABASE='cadvisor'
+
+CELERYBEAT_SCHEDULE = {
+    'event-stream': {
+        'task': 'kubedock.tasks.check_events',
+        'schedule': timedelta(seconds=5),
+    },
+}

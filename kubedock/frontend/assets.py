@@ -29,6 +29,16 @@ app_js = Bundle(
     'js/main.js',
     filters="jsmin", output="js/app.min.js")
 
+users_app_js = Bundle(
+    'js/users_app/users_app.js',
+    filters="jsmin", output="js/users_app/users_app.min.js")
+
+
+minions_app_js = Bundle(
+    'js/minions_app/minions_app.js',
+    filters="jsmin", output="js/minions_app/minions_app.min.js")
+
+
 def init_app(app):
     webassets = Environment(app)
     webassets.register('app_css', app_css)

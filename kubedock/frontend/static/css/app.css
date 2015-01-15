@@ -1,0 +1,144 @@
+* { padding: 0; margin: 0}
+a.navbar-brand {
+    padding: 8px 15px;
+}
+span.navbar-link, .toggler {
+    cursor: pointer;
+}
+span.navbar-link:hover {
+    text-decoration: underline;
+}
+.pseudo-link {
+    color: #337ab7;
+    background-color: transparent;
+    cursor: pointer;
+}
+.pseudo-link:hover {
+    color: #23527c;
+    text-decoration: underline;
+}
+.running {
+    color: #1DAA39;
+    font-weight: bold;
+}
+.start-btn {
+    color: #1DAA39;
+}
+.stop-btn {
+    color: #C42121;
+}
+.terminate-btn {
+    color: #686868;
+}
+.service-on {
+    color: #1A1F89;
+}
+.service-off {
+    color: #C9C9C9;
+}
+thead {
+    background-color: #D3D3D3;
+}
+.container-data {
+    float: left;
+}
+/*.i-editable:not(button) {
+    color: #438ABA;
+    border-bottom: 1px dashed #438ABA;
+}*/
+.editable {
+    display: inline-block;
+}
+.editable:hover {
+    cursor: pointer;
+}
+.nav > li > span {
+    display: block;
+    padding: 10px 15px;
+    position: relative;
+}
+.nav-pills > li > span {
+    border-radius: 4px;
+    color: #337ab7;
+}
+.nav-pills > li > span:hover {
+    cursor: pointer;
+    background-color: #eee;
+    color: #235227;
+}
+.nav-pills > li.active > span {
+    background-color: #337ab7;
+    color: #fff;
+}
+div.container-list-item, div.view-controls {
+    margin-top: 10px;
+}
+.title {
+    margin-bottom: 6px;
+}
+td > input[type="number"] {
+    width: 40px;
+}
+.cluster, .entrypoint, .readonly {
+    cursor: pointer;
+}
+.cluster-on, .entrypoint-on, .readonly-on {
+    color: #1DAA39;
+}
+.cluster-off, entrypoint-off, .readonly-off {
+    color: #ddd;
+}
+.shortfield {
+    width: 64px !important;
+}
+/* from old css */
+.item {
+    margin: .24em .32em;
+    background-color: #FFF;
+    border-radius: .24em;
+    border: 1px solid #d8d8d8;
+    color: #545454;
+}
+.item-header {
+    border-bottom: 1px solid #d8d8d8;
+    height: 2.4em;
+    margin: 0 .8em;
+    clear: left;
+}
+.item-header-title {
+    float: left;
+    margin: .52em 0 0 1.24em;
+    height: 1.2em;
+    line-height: 1.2em;
+    font-size: 1.12em;
+}
+.item-status {
+    box-sizing: border-box;
+    width: 1.2em;
+    height: 1.2em;
+    border-radius: .18em;
+    font-size: 1.3em;
+    margin-top: .3em;
+    float: left;
+}
+#basic-footer {
+    text-align: center;
+}
+#basic-footer > ul {
+    list-style-type: none;
+}
+#basic-footer > ul > li {
+    display: inline;
+    min-width: 1.6em;
+    padding: 0 .6em;
+}
+.el-control {
+    cursor: pointer;
+}
+.item-header-controls, .item-body-unit-header-controls {
+    float: right;
+    height: 2.4em;
+    line-height: 2.4em;
+    margin-right: 1em;
+}
+/* end of from old css */

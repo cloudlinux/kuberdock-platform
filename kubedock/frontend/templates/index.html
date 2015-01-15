@@ -10,7 +10,7 @@
         {%- endassets %}
     </head>
     <body>
-        
+
         <!-- navbar -->
         <nav id="navbar" class="navbar navbar-default">
             <div id="navbar-container" class="container">
@@ -23,6 +23,12 @@
                     </span>
                 </div>
                 <div class="nav-controls">
+                    <div class="navbar-text">
+                        <a href="{{ url_for('users.index') }}"><span class="navbar-link">Administrate Users</span></a>
+                    </div>
+                    <div class="navbar-text">
+                        <a href="{{ url_for('minions.index') }}"><span class="navbar-link">Manage Minions</span></a>
+                    </div>
                     <div class="navbar-text navbar-right">
                         <span class="dropdown">
                             <span class="dropdown-toggle" data-toggle="dropdown" role="button" area-expanded="false">
@@ -42,21 +48,22 @@
                 </div>
             </div><!-- navbar-container -->
         </nav><!-- end of navbar -->
-        
+
         <!-- contents container -->
         <div id="contents" class="container"></div>
-        
+        {% block script_templates %}
+
         <!-- Page Header template -->
         <script type="text/template" id="page-header-title-template"><%- name %></script>
-        
+
         <!-- Page Info Panel template -->
         <script type="text/template" id="page-info-panel-template">
-            
+
             <% states = {
                 running: 'glyphicon glyphicon-play',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
-            
+
             <div class="col-md-4">
                 <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span>
                 <span class="<%- status %>"><%- status %></span>
@@ -65,11 +72,11 @@
                 <button class="btn btn-default stats">Stats</button>
             </div>
         </script>
-        
+
         <!-- Pods List templates -->
         <!-- Pods list LayoutView template -->
         <script type="text/template" id="layout-pod-list-template">
-            
+
             <!-- Page header -->
             <div class="row">
                 <div class="col-md-6">
@@ -82,7 +89,7 @@
                     </a>
                 </div>
             </div><!-- end of page header -->
-            
+
             <!-- page actions -->
             <div class="row">
                 <div class="col-md-1 col-md-offset-11 text-left">
@@ -99,31 +106,31 @@
                     </ul>
                 </div>
             </div><!-- end of page actions -->
-            
+
             <div id="layout-list"></div>
             <div id="layout-footer"></div>
         </script>
-        
+
         <!-- Pods list row view template -->
         <script type="text/template" id="pod-list-item-template">
-            
+
             <% states = {
                 running: 'glyphicon glyphicon-play',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
-            
+
             <!-- table data row -->
             <td>
                 <input type="checkbox">
             </td>
-            
+
             <td>
                 <a href="/#pods/<%- id %>"><%- name %></a>
                 <span class="badge">
                     <%- containers.length %>
                 </span>
             </td>
-            
+
             <td>
                 <span class="glyphicon <%- cluster ? 'glyphicon-th-large' : 'glyphicon-stop' %>"></span>
                 <% if (cluster){ %>
@@ -136,12 +143,12 @@
                 <span class="service-on"><%- portalIP %></span>
                 <% } %>
             </td>
-            
+
             <td>
                 <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span>
                 <span class="<%- status %>"><%- status %></span>
             </td>
-            
+
             <td class="text-right">
                 <div class="btn-group btn-group-xs" role="group" aria-roles="button">
                     <button class="btn btn-default btn-xs start-btn"><span class="glyphicon glyphicon-play"></span>Start</button>
@@ -150,7 +157,7 @@
                 </div>
             </td>
             <!-- end of table data row -->
-            
+
         </script>
 
         <!-- Pods items table compositeView template -->
@@ -171,11 +178,11 @@
                 </table>
             </div>
         </script>
-        
+
         <!-- Pods Item templates -->
         <!-- Pods item Details LayoutView template -->
         <script type="text/template" id="layout-pod-item-template">
-            
+
             <!-- Page header -->
             <div class="row">
                 <div class="col-md-6">
@@ -204,7 +211,7 @@
                     </a>
                 </div>
             </div><!-- end of page header -->
-            
+
             <div class="row">
                 <div id="item-info" class="col-md-12"></div>
             </div>
@@ -213,17 +220,17 @@
                 <div id="layout-contents" class="col-md-8"></div>
             </div>
         </script>
-        
+
         <!-- A pod details template -->
         <script type="text/template" id="pod-item-container-template">
             <div><a href="/#poditem/<%- parentID %>/<%-name %>"><%- image %></a></div>
         </script>
-        
+
         <!-- A pod graph template -->
         <script type="text/template" id="pod-item-graph-template">
             hello this is pod graph
         </script>
-        
+
         <!-- A pod main data template -->
         <script type="text/template" id="pod-item-main-template">
             <table class="table">
@@ -233,14 +240,14 @@
                 </tbody>
             </table>
         </script>
-        
+
         <!-- A Pod creation wizard layout template -->
         <script type="text/template" id="layout-wizard-template">
             <div id="header-steps" class="row"></div>
             <div id="steps" class="row"></div>
             <div id="footer-steps" class="row"></div>
         </script>
-        
+
         <!-- An image collection item template -->
         <script type="text/template" id="wizard-image-collection-item-template">
             <div class="item-header">
@@ -258,7 +265,7 @@
                 </div>
             </div>
         </script>
-        
+
         <!-- Wizard get image template -->
         <script type="text/template" id="wizard-get-image-template">
             <div class="input-group">
@@ -271,7 +278,7 @@
             <div id="data-collection"></div>
             <div id="pager"></div>
         </script>
-        
+
         <!-- Wizard set container port template -->
         <script type="text/template" id="wizard-set-container-ports-template">
             <div class="row title">
@@ -311,7 +318,7 @@
                 <% } %>
             </div>
         </script>
-        
+
         <!-- Wizard set container volumes template -->
         <script type="text/template" id="wizard-set-container-volumes-template">
             <div class="row title">
@@ -345,7 +352,7 @@
                 </tbody>
             </table>
             <div class="view-controls text-right">
-                <% if (isPending) { %> 
+                <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>
                 <button class="btn btn-warning save-container">Save</button>
                 <button class="btn btn-success save-run-container">Save and Run</button>
@@ -355,7 +362,7 @@
                 <% } %>
             </div>
         </script>
-        
+
         <!-- Wizard set container envvars template -->
         <script type="text/template" id="wizard-set-container-env-template">
             <div class="row title">
@@ -389,7 +396,7 @@
                 <button type="button" class="btn btn-success btn-sm btn-block add-env">Add</button>
             </div>
             <div class="view-controls text-right">
-                <% if (isPending) { %> 
+                <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>
                 <button class="btn btn-warning save-container">Save</button>
                 <button class="btn btn-success save-run-container">Save and Run</button>
@@ -399,7 +406,7 @@
                 <% } %>
             </div>
         </script>
-        
+
         <!-- Wizard set container limits template -->
         <script type="text/template" id="wizard-set-container-resources-template">
             <div class="row title">
@@ -438,7 +445,7 @@
                 <% } %>
             </div>
         </script>
-        
+
         <!-- Wizard set container other params template -->
         <script type="text/template" id="wizard-set-container-other-template">
             <div class="row title">
@@ -467,7 +474,7 @@
                 </table>
             </div>
             <div class="view-controls text-right">
-                <% if (isPending) { %> 
+                <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>
                 <button class="btn btn-warning save-container">Save</button>
                 <button class="btn btn-success save-run-container">Save and Run</button>
@@ -477,7 +484,7 @@
                 <% } %>
             </div>
         </script>
-        
+
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
             <div class="col-md-4 col-md-offset-1">
@@ -536,7 +543,7 @@
                 </div>
             </div>
         </script>
-        
+
         <!-- paginator template -->
         <script type="text/template" id="paginator-template">
             <% if ( c.state.pageSize < c.state.totalRecords){ %>
@@ -549,22 +556,28 @@
             </ul>
             <% } %>
         </script>
-        
+
         <script type="text/javascript">
             var current_username = "{{current_user.username }}",
                 administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
         </script>
-        
+        {% endblock %}
+
         {% assets "vendor_js" -%}
           <script src="{{ ASSET_URL }}"></script>
         {% endassets %}
-        {% assets "app_js" -%}
-          <script src="{{ ASSET_URL }}"></script>
-        {% endassets %}
-        
-        <script type="text/javascript">
-            var initPodCollection = new KubeDock.Data.PodCollection({{ pod_collection|safe }});
-        </script>
-        
+
+        {% block app_js_asset %}
+            {% assets "app_js" -%}
+              <script src="{{ ASSET_URL }}"></script>
+            {% endassets %}
+            <script type="text/javascript">
+                var initPodCollection = new KubeDock.Data.PodCollection({{ pod_collection|safe }});
+            </script>
+        {% endblock %}
+
+        {% block users_app_js_asset %}{% endblock %}
+        {% block minions_app_js_asset %}{% endblock %}
+
     </body>
 </html>

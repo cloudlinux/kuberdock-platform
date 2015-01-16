@@ -1,7 +1,7 @@
 import json
 import requests
 import paramiko
-from .settings import DEBUG
+from .settings import DEBUG, MINION_SSH_AUTH
 from .api.sse import send_event
 from .core import ConnectionPool
 from .factory import make_celery
@@ -97,11 +97,9 @@ def add_new_minion(ip):
 
     send_event('install_logs', 'Connecting with ssh-key id_rsa...')
     if DEBUG:
-        # it's just for my development setup
-        last_part = ip.split('.')[-1]
-        ssh.connect(hostname='127.0.0.1', username='root', password='admin', port=22000 + int(last_part))
+        ssh.connect(hostname=ip, username='root', password=MINION_SSH_AUTH)
     else:
-        ssh.connect(hostname=ip, username='root', key_filename='cluster_global_rsa')    # not tested
+        ssh.connect(hostname=ip, username='root', key_filename=MINION_SSH_AUTH)    # not tested
 
     sftp = ssh.open_sftp()
     sftp.put('kub_install.sh', '/kub_install.sh')

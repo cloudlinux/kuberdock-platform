@@ -10,10 +10,27 @@ bp = Blueprint('minions', __name__, url_prefix='/minions')
 
 def get_minions_collection():
     kub_coll = tasks.get_all_minions.delay()
-    active_ips = []
+    new_flag = False
     minions = []
-    cur = Minion.query.all()
-    map((lambda x: active_ips.append(x['id'])), kub_coll.wait()['items'])
+    oldcur = Minion.query.all()
+    db_ips = [minion.ip for minion in oldcur]
+    kub_items = kub_coll.wait()['items']
+    active_ips = [x['id'] for x in kub_items]
+    for ip in active_ips:
+        if ip not in db_ips:
+            new_flag = True
+            try:
+                hostname = socket.gethostbyaddr(ip)[0]
+            except socket.error:
+                hostname = ip
+            # TODO add resources capacity etc from kub_items[ip] if needed
+            m = Minion(ip=ip, hostname=hostname, status='')
+            db.session.add(m)
+    if new_flag:
+        db.session.commit()
+        cur = Minion.query.all()
+    else:
+        cur = oldcur
     for minion in cur:
         minions.append({
             'id': minion.id,
@@ -104,6 +121,10 @@ def check_host(host_addr):
     except socket.error:
         return jsonify({'status': 'FAIL'})
     if ip == host_addr:
-        return jsonify({'status': 'OK', 'ip': ip, 'hostname': ip})
+        try:
+            hostname = socket.gethostbyaddr(ip)[0]
+        except socket.error:
+            hostname = ip
+        return jsonify({'status': 'OK', 'ip': ip, 'hostname': hostname})
     else:
         return jsonify({'status': 'OK', 'ip': ip, 'hostname': host_addr})

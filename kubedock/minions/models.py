@@ -70,4 +70,4 @@ class Minion(db.Model):
             self.hostname = hostname
 
     def __repr__(self):
-        return "<Minion(ip='{0}', status='{1}')>".format(self.ip, self.status)
+        return "<Minion(ip='{0}')>".format(self.ip)

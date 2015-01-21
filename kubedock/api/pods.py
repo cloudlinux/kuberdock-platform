@@ -198,6 +198,9 @@ def update_item(uuid):
                             return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
                 except KeyError, e:
                     return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
+        elif data['command'] == 'resize':
+            replicas = int(data['replicas'])
+            resize_replica(item.name, replicas)
         else:
             return jsonify({'status': 'ERROR', 'reason': 'Unknown command'})
     response.update({'status': 'OK'})

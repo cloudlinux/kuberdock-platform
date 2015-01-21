@@ -31,6 +31,22 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'tr',
         className: 'pod-item',
         
+        ui: {
+            reditable: '.reditable'
+        },
+
+        onRender: function(){
+            var that = this;
+            this.ui.reditable.editable({
+                type: 'text',
+                title: 'Change replicas number',
+                success: function(response, newValue) {
+                    that.model.set({'command': 'resize', 'replicas': newValue});
+                    that.model.save();
+                }
+            });
+        },
+
         events: {
             'click .start-btn': 'startItem',
             'click .stop-btn': 'stopItem',

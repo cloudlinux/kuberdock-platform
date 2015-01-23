@@ -1,6 +1,8 @@
 from functools import wraps
 from flask import jsonify
-from flask.ext.login import login_required
+from flask.ext.login import login_required, current_user
+from flask import jsonify
+from rbac.context import PermissionDenied
 
 from ..utils import JSONEncoder
 from .. import factory
@@ -27,7 +29,11 @@ def route(bp, *args, **kwargs):
         @wraps(f)
         def wrapper(*args, **kwargs):
             sc = 200
-            rv = f(*args, **kwargs)
+            try:
+                rv = f(*args, **kwargs)
+            except PermissionDenied as e:
+                message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
+                return jsonify({'status': 'ERROR', 'data': message}), 403
             if isinstance(rv, tuple):
                 sc = rv[1]
                 rv = rv[0]
@@ -35,6 +41,7 @@ def route(bp, *args, **kwargs):
             return rv, sc
         return f
     return decorator
+
 
 def noauthroute(bp, *args, **kwargs):
     def decorator(f):
@@ -44,6 +51,7 @@ def noauthroute(bp, *args, **kwargs):
             return f(*args, **kwargs)
         return f
     return decorator
+
 
 def on_app_error(e):
     return jsonify(dict(error=e.msg)), 400

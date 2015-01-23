@@ -1,11 +1,14 @@
 from flask import render_template
 from functools import wraps
-from flask.ext.login import login_required
+from flask.ext.login import login_required, current_user
+from flask import jsonify
+from rbac.context import PermissionDenied
 
 from .. import factory
 from .. import sessions
 from . import assets
 import datetime
+
 
 def create_app(settings_override=None):
     skip_paths = []
@@ -19,6 +22,7 @@ def create_app(settings_override=None):
             app.errorhandler(e)(handle_error)
     return app
 
+
 def handle_error(e):
     return render_template('errors/%s.html' % e.code), e.code
 
@@ -29,9 +33,14 @@ def route(bp, *args, **kwargs):
         @login_required
         @wraps(f)
         def wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
+            try:
+                return f(*args, **kwargs)
+            except PermissionDenied as e:
+                message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
+                return jsonify({'status': 'ERROR', 'data': message}), 403
         return f
     return decorator
+
 
 def noauthroute(bp, *args, **kwargs):
     def decorator(f):

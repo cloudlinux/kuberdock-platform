@@ -3,11 +3,12 @@ import socket
 from . import route
 from .. import tasks
 from ..models import Minion
-from ..core import db
+from ..core import db, check_permission
 
 bp = Blueprint('minions', __name__, url_prefix='/minions')
 
 
+@check_permission('get', 'minions')
 def get_minions_collection():
     kub_coll = tasks.get_all_minions.delay()
     new_flag = False
@@ -49,6 +50,7 @@ def get_list():
 
 
 @route(bp, '/<minion_id>/', methods=['GET'])
+@check_permission('get', 'minions')
 def get_one_minion(minion_id):
     kub_coll = tasks.get_all_minions.delay()
     active_ips = []
@@ -69,6 +71,7 @@ def get_one_minion(minion_id):
 
 
 @route(bp, '/', methods=['POST'])
+@check_permission('create', 'minions')
 def create_item():
     data = request.json
     m = db.session.query(Minion).filter_by(ip=data['ip']).first()
@@ -86,6 +89,7 @@ def create_item():
 
 
 @route(bp, '/<minion_id>/', methods=['PUT'])
+@check_permission('edit', 'minions')
 def put_item(minion_id):
     m = db.session.query(Minion).get(minion_id)
     if m:
@@ -102,6 +106,7 @@ def put_item(minion_id):
 
 
 @route(bp, '/<minion_id>/', methods=['DELETE'])
+@check_permission('delete', 'minions')
 def delete_item(minion_id):
     m = db.session.query(Minion).get(minion_id)
     if m:

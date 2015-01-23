@@ -2,11 +2,12 @@ from flask import Blueprint, request, current_app, jsonify
 from . import route
 from .. import tasks
 from ..models import User, Role, Pod
-from ..core import db
+from ..core import db, check_permission
 
 bp = Blueprint('users', __name__, url_prefix='/users')
 
 
+@check_permission('get', 'users')
 def get_users_collection():
     users = []
     cur = db.session.query(User).all()
@@ -28,6 +29,7 @@ def get_list():
 
 
 @route(bp, '/<user_id>/', methods=['GET'])
+@check_permission('get', 'users')
 def get_one_user(user_id):
     u = db.session.query(User).get(user_id)
     if u:
@@ -43,6 +45,7 @@ def get_one_user(user_id):
 
 
 @route(bp, '/', methods=['POST'])
+@check_permission('create', 'users')
 def create_item():
     data = request.json
     u = db.session.query(User).filter_by(username=data['username']).first()
@@ -61,6 +64,7 @@ def create_item():
 
 
 @route(bp, '/<user_id>/', methods=['PUT'])
+@check_permission('edit', 'users')
 def put_item(user_id):
     u = db.session.query(User).get(user_id)
     if u:
@@ -81,6 +85,7 @@ def put_item(user_id):
 
 
 @route(bp, '/<user_id>/', methods=['DELETE'])
+@check_permission('delete', 'users')
 def delete_item(user_id):
     u = db.session.query(User).get(user_id)
     if u:

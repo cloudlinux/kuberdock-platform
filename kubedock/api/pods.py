@@ -8,17 +8,20 @@ from uuid import uuid4
 import string
 import random
 import re
-from ..models import User, Role, Pod, Permission
-from ..core import db
+from ..models import User, Pod
+from ..core import db, check_permission
 
 
 bp = Blueprint('pods', __name__, url_prefix='/pods')
 
+
 @route(bp, '/', methods=['POST', 'PUT'])
+@check_permission('create', 'pods')
+@check_permission('edit', 'pods')
 def create_item():
     data = request.json
     item_id = make_item_id(data['name'])
-    runnable = data.pop('runnable', False);
+    runnable = data.pop('runnable', False)
     temp_uuid = str(uuid4())
     
     u = db.session.query(User).filter_by(username=current_user.username).first()
@@ -59,6 +62,7 @@ def create_item():
     return jsonify({'status': 'OK', 'data': data})
 
 @route(bp, '/<string:uuid>', methods=['DELETE'])
+@check_permission('delete', 'pods')
 def delete_item(uuid):
     item = db.session.query(Pod).get(uuid)
     if item is None:

@@ -1,19 +1,13 @@
-from flask import current_app
 from flask.ext.login import UserMixin
 from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..core import db, login_manager
 import datetime
 
+
 @login_manager.user_loader
 def load_users(user_id):
     return db.session.query(User).get(int(user_id))
-
-
-class Permission:
-    USE = 0x01
-    RESELL = 0x02
-    ADMINISTER = 0x80
 
 
 class User(UserMixin, db.Model):
@@ -27,14 +21,6 @@ class User(UserMixin, db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     
-    def __init__(self, **kwargs):
-        super(User, self).__init__(**kwargs)
-        if self.role is None:
-            if self.email == current_app.config['FLASKY_ADMIN']:
-                self.role = Role.query.filter_by(permissions=0xff).first()
-            if self.role is None:
-                self.role = Role.query.filter_by(default=True).first()
-    
     @property
     def password(self):
         raise AttributeError('password is not a readable attribute')
@@ -45,35 +31,25 @@ class User(UserMixin, db.Model):
         
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def is_administrator(self):     # TODO remove this, prefer normal permission check
+        if self.role.rolename == 'SuperAdmin':
+            return True
+        else:
+            return False
+
+    def __repr__(self):
+        return "<User(username='{0}', email='{1}')>".format(self.username, self.email)
     
-    def can(self, permissions):
-        return self.role is not None and (self.role.permissions & permissions) == permissions
-    
-    def is_administrator(self):
-        return self.can(Permission.ADMINISTER)
-    
+
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     rolename = db.Column(db.String(64), unique=True)
-    default = db.Column(db.Boolean, default=False, index=True)
-    permissions = db.Column(db.Integer)
     users = db.relationship('User', backref='role', lazy='dynamic')
     
-    @staticmethod
-    def insert_roles():
-        roles = {
-            'User': (Permission.USE, True),
-            'Reseller': (Permission.USE | Permission.RESELL, False),
-            'Administrator': (0xff, False)}
-        for r in roles:
-            role = Role.query.filter_by(rolename=r).first()
-            if role is None:
-                role = Role(rolename=r)
-            role.permissions = roles[r][0]
-            role.default = roles[r][1]
-            db.session.add(role)
-        db.session.commit()
+    def __repr__(self):
+        return "<Role(rolename='{0}')>".format(self.rolename)
 
 
 class SessionData(db.Model):
@@ -88,5 +64,5 @@ class SessionData(db.Model):
         self.time_stamp = datetime.datetime.now()
         
     def __repr__(self):
-        return "<SessionData(session_id='%s', data='%s', time_stamp='%s'')>" % (
+        return "<SessionData(session_id='%s', data='%s', time_stamp='%s')>" % (
             self.session_id, self.data, self.time_stamp)

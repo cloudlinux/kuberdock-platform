@@ -1,50 +1,74 @@
-{% extends "index.html" %}
-{% block script_templates %}
-    <!-- A users CREATE AND EDIT form template -->
+{% extends "layout.html" %}
+
+{% block body %}
+    {% include "inc/navbar.html" %}
+
+    <!-- contents container -->
+    <div id="contents" class="container"></div>
+
+
     <script type="text/template" id="user-create-template">
+        <a href="{{ url_for('users.index') }}">
+            <i class="glyphicon glyphicon-chevron-left"></i>
+            back to the users list
+        </a><hr>
+
         <div id="user-contents">
-            <div id="user-header">
-                <div class="header-title">User List</div>
-                <div id="user-contents-add-item" class="header-action">Add</div>
-            </div>
-            <div id="user-controls">
-                <div class="form-field">
-                    <label class="no-label" for="username">username: </label>
-                    <input type="text" placeholder="username" id="username" name="username"/>
+            <div class="row">
+                <div class="col-md-3">
+                    <div id="user-header">
+                        <h1>User form</h1>
+                        <h2>Add</h2>
+                    </div>
+
                 </div>
-                <div class="form-field">
-                    <label class="no-label" for="password">password: </label>
-                    <input type="password" placeholder="password" id="password" name="password"/>
-                </div>
-                <div class="form-field">
-                    <label class="no-label" for="password-again">repeat password: </label>
-                    <input type="password" placeholder="repeat password" id="password-again" name="password-again"/>
-                </div>
-                <div class="form-field">
-                    <label class="no-label" for="email">email: </label>
-                    <input type="text" placeholder="email" id="email" name="email"/>
-                </div>
-                <div class="form-field">
-                    <label class="no-label" for="description">description: </label>
-                    <input type="text" placeholder="description" id="description" name="description"/>
-                </div>
-                <div class="form-field">
-                    <label for="active-chkx">active: </label>
-                    <input type="checkbox" id="active-chkx" name="active-chkx"/>
-                </div>
-                <div class="form-field">
-                    <select id="role-select" name="role-select">
-                    {% for role in roles %}
-                        {% if role.default %}
-                            <option selected="selected">{{ role.rolename }}</option>
-                        {% else %}
-                            <option>{{ role.rolename }}</option>
-                        {% endif %}
-                    {% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <button id="user-add-btn" class="btn btn-success" type="submit">SAVE</button>
+                <div id="user-controls" class="col-md-6">
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Username</label>
+                        <input type="text" name="username" class="form-control"
+                               id="username" placeholder="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Password</label>
+                        <input type="password" class="form-control" id="password"
+                               placeholder="password" name="password">
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Repeat password</label>
+                        <input type="password" class="form-control" id="password-again"
+                               placeholder="repeat password" name="password-again">
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">E-mail</label>
+                        <input type="email" name="email" class="form-control"
+                               id="email" placeholder="E-mail">
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Description</label>
+                        <input type="text" name="description" class="form-control"
+                               id="description" placeholder="description">
+                    </div>
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" name="active-chkx" id="active-chkx">
+                            Active
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <select id="role-select" name="role-select">
+                        {% for role in roles %}
+                            {% if role.default %}
+                                <option selected="selected">{{ role.rolename }}</option>
+                            {% else %}
+                                <option>{{ role.rolename }}</option>
+                            {% endif %}
+                        {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <button id="user-add-btn" class="btn btn-success" type="submit">SAVE</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -53,8 +77,12 @@
     <script type="text/template" id="user-item-template">
         <td>
             <%- username %>
-            <button id="deleteUser" class="btn btn-danger btn-xs pull-right"><i class="glyphicon glyphicon-trash"></i></button>
-            <button id="editUser" class="btn btn-link btn-xs pull-left"><i class="glyphicon glyphicon-pencil"></i></button>
+            <button id="deleteUser" class="btn btn-danger btn-xs pull-right">
+                <i class="glyphicon glyphicon-trash"></i>
+            </button>
+            <button id="editUser" class="btn btn-link btn-xs pull-left">
+                <i class="glyphicon glyphicon-pencil"></i>
+            </button>
         </td>
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
@@ -62,8 +90,48 @@
         <td><%- description ? description : 'No description' %></td>
     </script>
 
+    <script type="text/template" id="online-user-item-template">
+        <td>
+            <%- username %>
+            <button id="userActivityHistory" class="btn btn-link btn-xs pull-left">
+                <i class="glyphicon glyphicon-search"></i>
+            </button>
+        </td>
+        <td><%- email ? email : 'No mail' %></td>
+        <td><%- rolename %></td>
+        <td><%- active %></td>
+        <td><%- last_activity %></td>
+        <td><%- description ? description : 'No description' %></td>
+    </script>
+
+    <script type="text/template" id="online-users-list-template">
+        <a href="{{ url_for('users.index') }}">
+            <i class="glyphicon glyphicon-chevron-left"></i>
+            back to the users list
+        </a><hr>
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Active</th>
+                    <th>Last activity</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <hr>
+    </script>
+
     <script type="text/template" id="users-list-template">
-        <button id="create_user" class="btn btn-success">Create user</button><hr>
+        <button id="create_user" class="btn btn-success">Create user</button>
+        <a href="{{ url_for('users.index') }}online/">
+            <i class="glyphicon glyphicon-log-in"></i>
+            Online user list
+        </a><hr>
         <table class="table table-bordered">
             <thead>
                 <tr>
@@ -72,6 +140,28 @@
                     <th>Role</th>
                     <th>Active</th>
                     <th>Description</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <hr>
+    </script>
+
+    <script type="text/template" id="activity-item-template">
+        <td><%- ts %></td>
+        <td><%- action %></td>
+    </script>
+
+    <script type="text/template" id="users-activities-template">
+        <a href="{{ url_for('users.index') }}online/">
+            <i class="glyphicon glyphicon-arrow-left"></i>
+            back to the online user list
+        </a><hr/>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -98,15 +188,6 @@
     </script>
 {#    ===================================== #}
 
-{% endblock %}
+    <script data-main="/static/js/require_main.js" src="/static/js/lib/require.js"></script>
 
-{% block app_js_asset %}{% endblock %} {# To cut off app_js temporary #}
-
-{% block users_app_js_asset %}
-    {% assets "users_app_js" -%}
-    <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
-    <script type="text/javascript">
-        UsersApp.Data.users = new UsersApp.Data.UsersCollection({{ users_collection|safe }});
-    </script>
 {% endblock %}

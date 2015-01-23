@@ -7,7 +7,7 @@ if __name__ == '__main__':
     app = create_app()
     ac = app.app_context()
     ac.push()
-    #db.drop_all()
+    db.drop_all()
     db.create_all()
 
     # Create all roles with users that has same name and password as role_name. Useful to test permissions.

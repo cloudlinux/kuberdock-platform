@@ -29,3 +29,5 @@ CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(seconds=5),
     },
 }
+
+ONLINE_LAST_MINUTES = 5

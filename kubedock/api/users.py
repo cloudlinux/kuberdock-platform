@@ -4,6 +4,7 @@ from .. import tasks
 from ..models import User, Role, Pod
 from ..core import db, check_permission
 
+
 bp = Blueprint('users', __name__, url_prefix='/users')
 
 
@@ -31,17 +32,28 @@ def get_list():
 @route(bp, '/<user_id>/', methods=['GET'])
 @check_permission('get', 'users')
 def get_one_user(user_id):
-    u = db.session.query(User).get(user_id)
+    u = User.query.get(user_id)
     if u:
-        data = {}
-        data['username'] = u.username
-        data['email'] = u.email
-        data['active'] = u.active
-        data['description'] = u.description
-        data['rolename'] = u.role.rolename
-        return jsonify({'status': 'OK', 'data': data})
+        return jsonify({'status': 'OK', 'data': u.to_dict()})
     else:
         return jsonify({'status': "User {0} doesn't exists".format(user_id)}), 404
+
+
+@route(bp, '/a/<user_id>/', methods=['GET'])
+@check_permission('get', 'users')
+def get_user_activities(user_id):
+    u = User.filter_by(id=user_id).first()
+    if u:
+        return jsonify({'status': 'OK', 'data': u.user_activity()})
+    else:
+        return jsonify({'status': "User %s doesn't exists" % user_id}), 404
+
+
+@route(bp, '/online/', methods=['GET'])
+@check_permission('get', 'users')
+def get_online_users():
+    objects_list = User.get_online_collection()
+    return jsonify({'data': objects_list})
 
 
 @route(bp, '/', methods=['POST'])

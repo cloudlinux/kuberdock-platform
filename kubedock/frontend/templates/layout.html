@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{% block title %}tutudock project{% endblock %}</title>
+        <meta charset="utf8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        {% assets "app_css" -%}
+          <link rel="stylesheet" href="{{ ASSET_URL }}">
+        {%- endassets %}
+        {% block js_extras %}{% endblock %}
+    </head>
+    <body>
+        {% block body %}{% endblock %}
+    </body>
+</html>

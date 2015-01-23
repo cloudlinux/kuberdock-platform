@@ -11,43 +11,7 @@
     </head>
     <body>
 
-        <!-- navbar -->
-        <nav id="navbar" class="navbar navbar-default">
-            <div id="navbar-container" class="container">
-                <div class="navbar-header">
-                    <a class="navbar-brand" href="/">
-                        <img alt="cloudlinux cubedock" src="{{ url_for('static', filename='img/logo.png') }}">
-                    </a>
-                    <span class="navbar-brand" href="/">
-                        <span>KubeDock project</span>
-                    </span>
-                </div>
-                <div class="nav-controls">
-                    <div class="navbar-text">
-                        <a href="{{ url_for('users.index') }}"><span class="navbar-link">Administrate Users</span></a>
-                    </div>
-                    <div class="navbar-text">
-                        <a href="{{ url_for('minions.index') }}"><span class="navbar-link">Manage Minions</span></a>
-                    </div>
-                    <div class="navbar-text navbar-right">
-                        <span class="dropdown">
-                            <span class="dropdown-toggle" data-toggle="dropdown" role="button" area-expanded="false">
-                                <span class="navbar-link">bliss</span>
-                                <span class="caret"></span>
-                            </span>
-                            <ul class="dropdown-menu" role="menu">
-                                <li>Settings</li>
-                                <li class="divider"></li>
-                                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
-                            </ul>
-                        </span>
-                    </div>
-                    <div class="navbar-text navbar-right">
-                        <span>You logged as</span>
-                    </div>
-                </div>
-            </div><!-- navbar-container -->
-        </nav><!-- end of navbar -->
+        {% include "inc/navbar.html" %}
 
         <!-- contents container -->
         <div id="contents" class="container"></div>

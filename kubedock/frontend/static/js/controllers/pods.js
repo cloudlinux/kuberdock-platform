@@ -53,6 +53,10 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 model: new Backbone.Model({name: model.get('name')})
             });
             
+            var controlsPanel = new App.Views.ControlsPanel({
+                model: new Backbone.Model({id: model.get('id')})
+            });
+
             var infoPanel = new App.Views.InfoPanel({
                 model: new Backbone.Model({status: model.get('status'), id: model.get('id')})
             });
@@ -80,6 +84,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             
             this.listenTo(itemLayout, 'show', function(){
                 itemLayout.masthead.show(masthead);
+                itemLayout.controls.show(controlsPanel);
                 itemLayout.info.show(infoPanel);
                 itemLayout.contents.show(itemView);
             });

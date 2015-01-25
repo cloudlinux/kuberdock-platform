@@ -152,22 +152,7 @@
                 <div class="col-md-6">
                     <h1 id="masthead-title" class="text-left"></h1>
                 </div>
-                <div class="col-md-4">
-                    <div class="btn-group btn-group-lg" role="group" aria-roles="button">
-                        <button class="btn btn-default btn-lg">
-                            <span class="glyphicon glyphicon-play start-btn"></span>
-                            <span class="start-btn">Start</span>
-                        </button>
-                        <button class="btn btn-default btn-lg">
-                            <span class="glyphicon glyphicon-stop stop-btn"></span>
-                            <span class="stop-btn">Stop</span>
-                        </button>
-                        <button class="btn btn-default btn-lg">
-                            <span class="glyphicon glyphicon-trash terminate-btn"></span>
-                            <span class="terminate-btn">Delete</span>
-                        </button>
-                    </div>
-                </div>
+                <div id="item-controls" class="col-md-4"></div>
                 <div class="col-md-2 text-left">
                     <a href="/#pods" class="btn btn-default btn-lg">
                         <span class="glyphicon glyphicon-share-alt back-btn"></span>
@@ -182,6 +167,24 @@
             <div class="row">
                 <div id="layout-aside" class="col-md-4"></div>
                 <div id="layout-contents" class="col-md-8"></div>
+            </div>
+        </script>
+
+        <!-- A pod controls template -->
+        <script type="text/template" id="pod-item-controls-template">
+            <div class="btn-group btn-group-lg item-control" role="group" aria-roles="button">
+                <button class="btn btn-default btn-lg start-btn">
+                    <span class="glyphicon glyphicon-play"></span>
+                    <span class="start-btn">Start</span>
+                </button>
+                <button class="btn btn-default btn-lg stop-btn">
+                    <span class="glyphicon glyphicon-stop"></span>
+                    <span class="stop-btn">Stop</span>
+                </button>
+                <button class="btn btn-default btn-lg terminate-btn">
+                    <span class="glyphicon glyphicon-trash"></span>
+                    <span class="terminate-btn">Delete</span>
+                </button>
             </div>
         </script>
 
@@ -273,9 +276,8 @@
             </table>
             <div class="view-controls text-right">
                 <% if (isPending) { %>
-                <button class="btn btn-warning save-container">Save</button>
-                <button class="btn btn-success save-run-container">Save and Run</button>
-                <button class="btn btn-primary next-step">Next</button>
+                <button class="btn btn-default next-step">Next</button>
+                <button class="btn btn-primary complete">Complete</button>
 
                 <% } else { %>
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
@@ -318,9 +320,8 @@
             <div class="view-controls text-right">
                 <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-warning save-container">Save</button>
-                <button class="btn btn-success save-run-container">Save and Run</button>
-                <button class="btn btn-primary next-step">Next</button>
+                <button class="btn btn-default next-step">Next</button>
+                <button class="btn btn-primary complete">Complete</button>
                 <% } else { %>
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>
@@ -362,9 +363,8 @@
             <div class="view-controls text-right">
                 <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-warning save-container">Save</button>
-                <button class="btn btn-success save-run-container">Save and Run</button>
-                <button class="btn btn-primary next-step">Next</button>
+                <button class="btn btn-default next-step">Next</button>
+                <button class="btn btn-primary complete">Complete</button>
                 <% } else { %>
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>
@@ -401,9 +401,8 @@
             <div class="view-controls text-right">
                 <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-warning save-container">Save</button>
-                <button class="btn btn-success save-run-container">Save and Run</button>
-                <button class="btn btn-primary next-step">Next</button>
+                <button class="btn btn-default next-step">Next</button>
+                <button class="btn btn-primary complete">Complete</button>
                 <% } else { %>
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>
@@ -440,9 +439,7 @@
             <div class="view-controls text-right">
                 <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-warning save-container">Save</button>
-                <button class="btn btn-success save-run-container">Save and Run</button>
-                <button class="btn btn-primary next-step">Complete</button>
+                <button class="btn btn-primary complete">Complete</button>
                 <% } else { %>
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>

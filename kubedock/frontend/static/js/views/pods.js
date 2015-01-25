@@ -100,6 +100,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         
         regions: {
             masthead: '#masthead-title',
+            controls: '#item-controls',
             info: '#item-info',
             aside: '#layout-aside',
             contents: '#layout-contents'
@@ -131,6 +132,52 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
     
+    Views.ControlsPanel = Backbone.Marionette.ItemView.extend({
+        template: '#pod-item-controls-template',
+        tagName: 'div',
+        className: 'pod-controls',
+
+        events: {
+            'click .start-btn': 'startItem',
+            'click .stop-btn': 'stopItem',
+            'click .terminate-btn': 'terminateItem'
+        },
+
+        getItem: function(){
+            return initPodCollection.fullCollection.get(this.model.id);
+            },
+
+        startItem: function(evt){
+            evt.stopPropagation();
+            var item = this.getItem();
+            item.set({'command': 'start'});
+            item.save();
+            },
+
+        stopItem: function(evt){
+            evt.stopPropagation();
+            var item = this.getItem();
+            item.set({'command': 'stop'});
+            item.save();
+            },
+
+        terminateItem: function(evt){
+            evt.stopPropagation();
+            var item = this.getItem(),
+                name = item.get('name');
+            item.destroy({
+                wait: true,
+                success: function(){
+                    initPodCollection.remove(item);
+                    window.location.href = '/#pods';
+                },
+                error: function(){
+                    console.log('Could not remove '+name);
+                }
+            });
+        }
+    });
+
     Views.PodGraph = Backbone.Marionette.CollectionView.extend({
         childView: Views.PodGraphItem
     });
@@ -367,6 +414,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         
         triggers: {
+            'click .complete' : 'step:complete',
             'click .next-step' : 'step:volconf',
             'click .go-to-volumes': 'step:volconf',
             'click .go-to-envs': 'step:envconf',
@@ -418,6 +466,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         
         triggers: {
+            'click .complete' : 'step:complete',
             'click .next-step' : 'step:envconf',
             'click .prev-step' : 'step:portconf',
             'click .go-to-ports': 'step:portconf',
@@ -472,6 +521,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         
         triggers: {
+            'click .complete' : 'step:complete',
             'click .next-step' : 'step:resconf',
             'click .prev-step' : 'step:volconf',
             'click .go-to-ports': 'step:portconf',
@@ -515,6 +565,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         
         triggers: {
+            'click .complete' : 'step:complete',
             'click .next-step' : 'step:otherconf',
             'click .prev-step' : 'step:envconf',
             'click .go-to-ports': 'step:portconf',
@@ -563,7 +614,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         
         triggers: {
-            'click .next-step' : 'step:complete',
+            'click .complete' : 'step:complete',
             'click .prev-step' : 'step:resconf',
             'click .go-to-ports': 'step:portconf',
             'click .go-to-volumes': 'step:volconf',

@@ -46,3 +46,11 @@ class JsonSerializer(object):
         for key in hidden:
             rv.pop(key, None)
         return rv
+
+
+def update_dict(src, diff):
+    for key, value in diff.iteritems():
+        if type(value) is dict and key in src:
+            update_dict(src[key], value)
+        else:
+            src[key] = value

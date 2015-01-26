@@ -32,8 +32,22 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         className: 'pod-item',
         
         events: {
+            'click .start-btn': 'startItem',
+            'click .stop-btn': 'stopItem',
             'click .terminate-btn': 'terminateItem'
         },
+
+        startItem: function(evt){
+            evt.stopPropagation();
+            this.model.set({'command': 'start'});
+            this.model.save();
+            },
+
+        stopItem: function(evt){
+            evt.stopPropagation();
+            this.model.set({'command': 'stop'});
+            this.model.save();
+            },
         
         terminateItem: function(evt){
             evt.stopPropagation();

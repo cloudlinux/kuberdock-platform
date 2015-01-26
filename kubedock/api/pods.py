@@ -10,14 +10,14 @@ import random
 import re
 from ..models import User, Pod
 from ..core import db, check_permission
+from ..utils import update_dict
 
 
 bp = Blueprint('pods', __name__, url_prefix='/pods')
 
 
-@route(bp, '/', methods=['POST', 'PUT'])
+@route(bp, '/', methods=['POST'])
 @check_permission('create', 'pods')
-@check_permission('edit', 'pods')
 def create_item():
     data = request.json
     item_id = make_item_id(data['name'])
@@ -132,6 +132,77 @@ def delete_item(uuid):
     db.session.commit()
     return jsonify({'status': 'OK'})
 
+@route(bp, '/<string:uuid>', methods=['PUT'])
+@check_permission('edit', 'pods')
+def update_item(uuid):
+    response = {}
+    item = db.session.query(Pod).get(uuid)
+    u = db.session.query(User).filter_by(username=current_user.username).first()
+    if item is None:
+        return jsonify({'status': 'ERROR'})
+    data = request.json
+    if 'dbdiff' in data:
+        update_dict(item.__dict__, data['dbdiff'])
+        try:
+            db.session.add(item)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return jsonify({'status': 'ERROR', 'reason': 'Error updating database entry'})
+    if 'command' in data:
+        if data['command'] == 'start':
+            if item.config['cluster']:
+                resize_replica(item.name, item.config['replicas'])
+            else:
+                item_id = make_item_id(item.name)
+                service_rv = run_service(data)
+                config = make_config(item.config, item_id)
+                current_app.logger.debug(config)
+                result = tasks.create_containers.delay(config)
+                pod_rv = result.wait()
+                output = prepare_for_output(pod_rv, service_rv)
+
+                try:
+                    pod = Pod(name=output['name'], config=output, id=output['id'], owner=u)
+                    db.session.add(pod)
+                    db.session.delete(item)
+                    db.session.commit()
+                    response = {'id': output['id']}
+                except Exception:
+                    current_app.logger.debug(output)
+                    db.session.rollback()
+                    if service_rv is not None:
+                        srv = json.loads(service_rv)
+                        if 'id' in srv:
+                            result = tasks.delete_service.delay(srv['id'])
+                            result.wait()
+        elif data['command'] == 'stop':
+            if item.config['cluster']:
+                resize_replica(item.name, 0)
+            else:
+                result = tasks.get_pods.delay()
+                pods = result.wait()
+
+                if 'items' not in pods:
+                    return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
+
+                try:
+                    filtered_pods = filter(
+                        (lambda x: x['labels']['name'] == item.name),
+                        pods['items'])
+                    for pod in filtered_pods:
+                        result = tasks.delete_pod.delay(pod['id'])
+                        pod_rv = result.wait()
+                        current_app.logger.debug(pod_rv)
+                        if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
+                            return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
+                except KeyError, e:
+                    return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
+        else:
+            return jsonify({'status': 'ERROR', 'reason': 'Unknown command'})
+    response.update({'status': 'OK'})
+    return jsonify(response)
+
 def run_service(data):
     if not data['service']:
         return
@@ -172,6 +243,7 @@ def prepare_container(data, key='ports'):
 
     # convert to int ports values
     current_app.logger.debug('about to convert 2')
+    data.setdefault(key, [])
     for t in data[key]:
         try:
             a.append(dict([
@@ -295,3 +367,13 @@ def make_item_id(item_name):
     item_id = ''.join(map((lambda x: x.lower()), re.split(r'[\s\\/\[\|\]{}\(\)\._]+', item_name)))
     item_id += ''.join(random.sample(string.lowercase + string.digits, 20))
     return item_id
+
+def resize_replica(name, num):
+    diff = {'desiredState': {'replicas': num}}
+    result = tasks.get_replicas.delay()
+    replicas = result.wait()
+    filtered_replicas = filter(
+        (lambda x: x['desiredState']['replicaSelector']['name'] == name),
+        replicas['items'])
+    for replica in filtered_replicas:
+        tasks.update_replica.delay(replica['id'], diff).wait()

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import json
 import requests
 import paramiko
@@ -5,6 +6,7 @@ from .settings import DEBUG, MINION_SSH_AUTH
 from .api.sse import send_event
 from .core import ConnectionPool
 from .factory import make_celery
+from .utils import update_dict
 from celery.exceptions import TimeoutError
 
 celery = make_celery()
@@ -56,6 +58,16 @@ def delete_pod(item):
 @celery.task()
 def delete_replica(item):
     r = requests.delete('http://localhost:8080/api/v1beta1/replicationControllers/'+item)
+    return json.loads(r.text)
+
+@celery.task()
+def update_replica(item, diff):
+    url = 'http://localhost:8080/api/v1beta1/replicationControllers/' + item
+    r = requests.get(url)
+    data = json.loads(r.text, object_pairs_hook=OrderedDict)
+    update_dict(data, diff)
+    headers = {'Content-Type': 'application/json'}
+    r = requests.put(url, data=json.dumps(data), headers=headers)
     return json.loads(r.text)
 
 @celery.task()

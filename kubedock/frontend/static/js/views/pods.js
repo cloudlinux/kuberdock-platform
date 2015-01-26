@@ -7,6 +7,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.PodListLayout = Backbone.Marionette.LayoutView.extend({
         template: '#layout-pod-list-template',
         
+        events: {
+            'click .start-checked': 'startItems',
+            'click .stop-checked': 'stopItems',
+            'click .terminate-checked': 'terminateItems'
+        },
+
         initialize: function(){
             var that = this;
             this.listenTo(this.list, 'show', function(view){
@@ -22,6 +28,40 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             masthead: '#masthead-title',
             list: '#layout-list',
             pager: '#layout-footer'
+        },
+
+        startItems: function(evt){
+            initPodCollection.forEach(function(i){
+                if (i.get('checked') === true){
+                    item.set({'command': 'start'});
+                    item.save();
+                }
+            });
+        },
+
+        stopItems: function(evt){
+            initPodCollection.forEach(function(i){
+                if (i.get('checked') === true){
+                    item.set({'command': 'stop'});
+                    item.save();
+                }
+            });
+        },
+
+        terminateItems: function(evt){
+            initPodCollection.forEach(function(i){
+                if (i.get('checked') === true){
+                    i.destroy({
+                        wait: true,
+                        success: function(){
+                            initPodCollection.remove(i);
+                        },
+                        error: function(){
+                            console.log('Could not remove '+name);
+                        }
+                    });
+                }
+            });
         }
     });
     
@@ -32,6 +72,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         className: 'pod-item',
         
         ui: {
+            checkbox: '.check-item',
             reditable: '.reditable'
         },
 
@@ -48,10 +89,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
+            'change .check-item': 'checkItem',
             'click .start-btn': 'startItem',
             'click .stop-btn': 'stopItem',
             'click .terminate-btn': 'terminateItem'
         },
+
+        checkItem: function(evt){
+            this.model.set('checked', this.ui.checkbox.is(':checked'));
+            },
 
         startItem: function(evt){
             evt.stopPropagation();
@@ -724,6 +770,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 v: options.view,
                 c: options.view.collection
             });
+            this.listenTo(options.view.collection, 'remove', this.render);
         },
         
         events: {

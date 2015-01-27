@@ -2,12 +2,12 @@ from collections import OrderedDict
 import json
 import requests
 import paramiko
+import time
 from .settings import DEBUG, MINION_SSH_AUTH
 from .api.sse import send_event
 from .core import ConnectionPool
 from .factory import make_celery
 from .utils import update_dict
-from celery.exceptions import TimeoutError
 
 celery = make_celery()
 
@@ -82,23 +82,18 @@ def get_dockerfile(data):
     return r.text
 
 
-@celery.task()
 def get_all_minions():
     r = requests.get('http://localhost:8080/api/v1beta1/minions')
-    return r.json()
+    return r.json()['items']
 
 
-@celery.task()
 def get_minion_by_ip(ip):
     r = requests.get('http://localhost:8080/api/v1beta1/minions/' + ip)
     return r.json()
 
 
-@celery.task()
 def remove_minion_by_ip(ip):
     r = requests.delete('http://localhost:8080/api/v1beta1/minions/' + ip)
-    # TODO remove directly from etcd registry, may be fixed in new kubernetes and not needed
-    requests.delete('http://127.0.0.1:4001/v2/keys/registry/minions/' + ip + '?recursive=true')
     return r.json()
 
 
@@ -117,17 +112,25 @@ def add_new_minion(ip):
     sftp.put('kub_install.sh', '/kub_install.sh')
     sftp.close()
     i, o, e = ssh.exec_command('bash /kub_install.sh')
+    s_time = time.time()
     while not o.channel.exit_status_ready():
         if o.channel.recv_ready():
-            send_event('install_logs', o.channel.recv(1024))
+            for line in o.channel.recv(1024).split('\n'):
+                send_event('install_logs', line)
+        if (time.time() - s_time) > 5*60:   # 5 min timeout
+            send_event('install_logs', 'Timeout during install. Installation has failed.')
+            ssh.exec_command('rm /kub_install.sh')
+            ssh.close()
+            return json.dumps({'status': 'error', 'data': 'Timeout during install. Installation has failed.'})
+        time.sleep(0.2)
     s = o.channel.recv_exit_status()
     if s != 0:
         message = 'Installation script error. Exit status: {0}. Error: {1}'.format(s, e.read())
         send_event('install_logs', message)
         res = json.dumps({'status': 'error', 'data': message})
     else:
-        send_event('install_logs', 'Adding minion completed successful.')
         res = requests.post('http://localhost:8080/api/v1beta1/minions/', json={'id': ip, 'apiVersion': 'v1beta1'}).json()
+        send_event('install_logs', 'Adding minion completed successful.')
     ssh.exec_command('rm /kub_install.sh')
     ssh.close()
     return res
@@ -139,23 +142,19 @@ def check_events():
 
     lock = redis.get('events_lock')
     if not lock:
-        redis.setex('events_lock', 10, 'true')
+        redis.setex('events_lock', 30+1, 'true')
     else:
         return
 
-    m = redis.get('cached_minions')
-    if not m:
-        m = get_all_minions.delay()
-        redis.set('cached_minions', json.dumps(m.wait()['items']))
+    ml = redis.get('cached_minions')
+    if not ml:
+        ml = get_all_minions()
+        redis.set('cached_minions', json.dumps(ml))
         send_event('ping', 'ping')
     else:
-        temp = get_all_minions.delay()
-        try:
-            temp = temp.get(timeout=4)['items']
-            if temp != json.loads(m):
-                redis.set('cached_minions', json.dumps(temp))
-                send_event('ping', 'ping')
-        except TimeoutError:
-            pass
+        temp = get_all_minions()
+        if temp != json.loads(ml):
+            redis.set('cached_minions', json.dumps(temp))
+            send_event('ping', 'ping')
 
     redis.delete('events_lock')

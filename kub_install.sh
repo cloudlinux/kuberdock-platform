@@ -6,8 +6,9 @@ echo "Setting up firewall rules..."
 systemctl stop firewalld
 systemctl disable firewalld
 
-# TODO somehow remove and automate this(read from some system config)
+# TODO somehow remove and automate this(read from some global cluster config, because this script is running on minions machine )
 MASTER_IP="192.168.56.100"
+echo "Using MASTER_IP=$MASTER_IP"
 
 # 1. create yum repo file
 
@@ -22,7 +23,10 @@ EOF
 
 # 2. install components
 echo "Installing kubernetes..."
-yum -y install kubernetes
+# TODO change to install via repo when ready.
+# yum -y install kubernetes
+# yum -y install http://el6.cloudlinux.com/kubernetes-0.9.1-1.el7.centos.x86_64.rpm     # unstable speed
+yum -y install http://repo.cloudlinux.com/cloudlinux/sources/kubernetes-0.9.1-1.el7.centos.x86_64.rpm
 
 # 3. configure minion config
 echo "Configuring services..."

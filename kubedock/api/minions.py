@@ -10,21 +10,18 @@ bp = Blueprint('minions', __name__, url_prefix='/minions')
 
 @check_permission('get', 'minions')
 def get_minions_collection():
-    kub_coll = tasks.get_all_minions.delay()
     new_flag = False
-    minions = []
     oldcur = Minion.query.all()
     db_ips = [minion.ip for minion in oldcur]
-    kub_items = kub_coll.wait()['items']
-    active_ips = [x['id'] for x in kub_items]
-    for ip in active_ips:
+    kub_ips = {x['id']: x for x in tasks.get_all_minions()}
+    for ip in kub_ips:
         if ip not in db_ips:
             new_flag = True
             try:
                 hostname = socket.gethostbyaddr(ip)[0]
             except socket.error:
                 hostname = ip
-            # TODO add resources capacity etc from kub_items[ip] if needed
+            # TODO add resources capacity etc from kub_ips[ip] if needed
             m = Minion(ip=ip, hostname=hostname, status='')
             db.session.add(m)
     if new_flag:
@@ -32,12 +29,13 @@ def get_minions_collection():
         cur = Minion.query.all()
     else:
         cur = oldcur
+    minions = []
     for minion in cur:
         minions.append({
             'id': minion.id,
             'ip': minion.ip,
             'hostname': minion.hostname,
-            'status': 'running' if minion.ip in active_ips else 'troubles',
+            'status': 'running' if minion.ip in kub_ips and kub_ips[minion.ip]['status']['conditions'][0]['status'] == 'Full' else 'troubles',
             'annotations': minion.annotations,
             'labels': minion.labels,
         })
@@ -52,16 +50,16 @@ def get_list():
 @route(bp, '/<minion_id>/', methods=['GET'])
 @check_permission('get', 'minions')
 def get_one_minion(minion_id):
-    kub_coll = tasks.get_all_minions.delay()
-    active_ips = []
-    map((lambda x: active_ips.append(x['id'])), kub_coll.wait()['items'])
     m = db.session.query(Minion).get(minion_id)
     if m:
+        res = tasks.get_minion_by_ip(m.ip)
+        if res['status'] == 'Failure':
+            return jsonify({'status': "Error. Minion exists in db but don't exists in kubernetes"}), 404
         data = {
             'id': m.id,
             'ip': m.ip,
             'hostname': m.hostname,
-            'status': 'running' if m.ip in active_ips else 'troubles',
+            'status': 'running' if res['status']['conditions'][0]['status'] == 'Full' else 'troubles',
             'annotations': m.annotations,
             'labels': m.labels,
         }
@@ -110,12 +108,11 @@ def put_item(minion_id):
 def delete_item(minion_id):
     m = db.session.query(Minion).get(minion_id)
     if m:
-        res = tasks.remove_minion_by_ip.delay(m.ip)
         db.session.delete(m)
         db.session.commit()
-        res = res.wait()
+        res = tasks.remove_minion_by_ip(m.ip)
         if res['status'] == 'Failure':
-            return jsonify({'status': '{0}. {1} Code: {2}'.format(res['status'], res['message'], res['code'])})
+            return jsonify({'status': 'Failure. {0} Code: {1}'.format(res['message'], res['code'])})
     return jsonify({'status': 'OK'})
 
 

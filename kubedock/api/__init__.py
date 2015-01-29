@@ -1,5 +1,4 @@
 from functools import wraps
-from flask import jsonify
 from flask.ext.login import login_required, current_user
 from flask import jsonify
 from rbac.context import PermissionDenied
@@ -18,6 +17,8 @@ def create_app(settings_override=None):
         skip_paths, datetime.timedelta(days=1))
     app.json_encoder = JSONEncoder
     app.errorhandler(404)(on_404)
+    app.errorhandler(PermissionDenied)(on_permission_denied)
+    app.errorhandler(APIError)(on_app_error)
     return app
 
 
@@ -29,11 +30,7 @@ def route(bp, *args, **kwargs):
         @wraps(f)
         def wrapper(*args, **kwargs):
             sc = 200
-            try:
-                rv = f(*args, **kwargs)
-            except PermissionDenied as e:
-                message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
-                return jsonify({'status': 'ERROR', 'data': message}), 403
+            rv = f(*args, **kwargs)
             if isinstance(rv, tuple):
                 sc = rv[1]
                 rv = rv[0]
@@ -53,9 +50,21 @@ def noauthroute(bp, *args, **kwargs):
     return decorator
 
 
+class APIError(Exception):
+    def __init__(self, message, status_code=400):
+        self.message = message
+        self.status_code = status_code
+
+
 def on_app_error(e):
-    return jsonify(dict(error=e.msg)), 400
+    return jsonify({'status': e.message}), e.status_code
+
+
+def on_permission_denied(e):
+                                                    # TODO(Stanislav) change to correct roleloader()
+    message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
+    return on_app_error(APIError('Error. {0}'.format(message), status_code=403))
 
 
 def on_404(e):
-    return jsonify(dict(error='Not found')), 404
+    return on_app_error(APIError('Not found', status_code=404))

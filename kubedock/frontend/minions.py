@@ -1,13 +1,14 @@
 from flask import Blueprint, render_template
 import json
-from . import route
-from ..api import minions
+from ..api import minions as api_minions
 
-bp = Blueprint('minions', __name__)
+minions = Blueprint('minions', __name__)
 
 
-@route(bp, '/minions/')
-@route(bp, '/minions/<path:p>/', endpoint='other')
+@minions.route('/minions/')
+@minions.route('/minions/<path:p>/', endpoint='other')
 def index(**kwargs):
-    return render_template('minions/index.html', minions_collection=json.dumps(minions.get_minions_collection()))
+    return render_template(
+        'minions/index.html',
+        minions_collection=json.dumps(api_minions.get_minions_collection()))
 

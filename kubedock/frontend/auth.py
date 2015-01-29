@@ -1,15 +1,14 @@
 from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask.ext.login import login_user, logout_user, current_user
 
-from . import route, noauthroute
 from ..users import User
 from ..users.signals import user_logged_in, user_logged_out
 
 
-bp = Blueprint('auth', __name__)
+auth = Blueprint('auth', __name__)
 
 
-@noauthroute(bp, '/login', methods=['GET', 'POST'])
+@auth.route('/login', methods=['GET', 'POST'])
 def login():
     username = request.form.get('login-form-username-field')
     passwd = request.form.get('login-form-password-field')
@@ -23,7 +22,7 @@ def login():
     return render_template('auth/login.html')
 
 
-@route(bp, '/logout')
+@auth.route('/logout')
 def logout():
     user_logged_out.send(current_user.id)
     logout_user()

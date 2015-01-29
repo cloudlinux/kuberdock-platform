@@ -1,18 +1,17 @@
 from flask import Blueprint, request, current_app
 #from flask.ext.login import current_user
 import json
-from . import route
 from ..core import ConnectionPool, EvtStream
 
-bp = Blueprint('sse', __name__, url_prefix='/stream')
+stream = Blueprint('stream', __name__, url_prefix='/stream')
 
 
 #@route(bp, '/', methods=['GET'])
 #def get_list():
 #    pass
 
-@route(bp, '')
-def stream():
+@stream.route('')
+def send_stream():
     conn = ConnectionPool.get_connection()
     #current_app.logger.debug(conn)
     channel = request.args.get('channel', 'common')

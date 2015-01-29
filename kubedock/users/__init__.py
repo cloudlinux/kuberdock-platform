@@ -1,1 +1,1 @@
-from .models import User, SessionData
+from .models import User, Role, SessionData

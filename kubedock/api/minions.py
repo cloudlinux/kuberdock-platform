@@ -5,7 +5,7 @@ from .. import tasks
 from ..models import Minion
 from ..core import db, check_permission
 
-bp = Blueprint('minions', __name__, url_prefix='/minions')
+minions = Blueprint('minions', __name__, url_prefix='/minions')
 
 
 @check_permission('get', 'minions')
@@ -42,12 +42,12 @@ def get_minions_collection():
     return minions
 
 
-@route(bp, '/', methods=['GET'])
+@minions.route('/', methods=['GET'])
 def get_list():
     return jsonify({'status': 'OK', 'data': get_minions_collection()})
 
 
-@route(bp, '/<minion_id>/', methods=['GET'])
+@minions.route('/<minion_id>/', methods=['GET'])
 @check_permission('get', 'minions')
 def get_one_minion(minion_id):
     m = db.session.query(Minion).get(minion_id)
@@ -68,7 +68,7 @@ def get_one_minion(minion_id):
         return jsonify({'status': "Minion {0} doesn't exists".format(minion_id)}), 404
 
 
-@route(bp, '/', methods=['POST'])
+@minions.route('/', methods=['POST'])
 @check_permission('create', 'minions')
 def create_item():
     data = request.json
@@ -86,7 +86,7 @@ def create_item():
         return jsonify({'status': 'Conflict: Minion with ip "{0}" already exists'.format(m.ip)}), 409
 
 
-@route(bp, '/<minion_id>/', methods=['PUT'])
+@minions.route('/<minion_id>/', methods=['PUT'])
 @check_permission('edit', 'minions')
 def put_item(minion_id):
     m = db.session.query(Minion).get(minion_id)
@@ -103,7 +103,7 @@ def put_item(minion_id):
         return jsonify({'status': "Minion " + minion_id + " doesn't exists"}), 404
 
 
-@route(bp, '/<minion_id>/', methods=['DELETE'])
+@minions.route('/<minion_id>/', methods=['DELETE'])
 @check_permission('delete', 'minions')
 def delete_item(minion_id):
     m = db.session.query(Minion).get(minion_id)
@@ -116,7 +116,7 @@ def delete_item(minion_id):
     return jsonify({'status': 'OK'})
 
 
-@route(bp, '/checkhost/<host_addr>/', methods=['GET'])
+@minions.route('/checkhost/<host_addr>/', methods=['GET'])
 def check_host(host_addr):
     try:
         ip = socket.gethostbyname(host_addr)

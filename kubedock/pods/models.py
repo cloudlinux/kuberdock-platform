@@ -5,7 +5,7 @@ class Pod(db.Model):
     __tablename__ = 'pods'
     
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
-    name = db.Column(db.String(length=255))
+    name = db.Column(db.String(length=255), unique=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     config = db.Column(postgresql.JSON)
     status = db.Column(db.String(length=32), default='unknown')

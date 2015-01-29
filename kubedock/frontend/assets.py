@@ -4,6 +4,7 @@ app_css = Bundle(
     'css/bootstrap.css',
 #   'css/bootstrap-theme.css',
     'css/bootstrap-editable.css',
+    'css/jquery.jqplot.min.css',
     'css/app.css',
     filters="cssmin", output="css/app.min.css")
 
@@ -17,6 +18,8 @@ vendor_js = Bundle(
     'js/lib/spin.min.js',
     'js/lib/jquery.spin.js',
     'js/lib/bootstrap-editable.min.js',
+    'js/lib/jquery.jqplot.min.js',
+    'js/lib/jqplot.dateAxisRenderer.min.js',
     filters="jsmin", output="js/lib.min.js")
 
 #: application js bundle

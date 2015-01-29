@@ -1,3 +1,4 @@
+from flask import g
 from flask.ext.login import current_user
 from rbac.acl import Registry
 from rbac.context import IdentityContext
@@ -9,7 +10,10 @@ check_permission = rbac_context.check_permission
 
 @rbac_context.set_roles_loader
 def roles_loader():
-    yield current_user.role.rolename
+    try:
+        yield current_user.role.rolename
+    except AttributeError:
+        yield g.user.role.rolename
 
 
 class RoleWrapper(object):

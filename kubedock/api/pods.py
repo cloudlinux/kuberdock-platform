@@ -1,22 +1,22 @@
-from flask import Blueprint, request, current_app, jsonify, session
+from flask import Blueprint, request, current_app, jsonify
 from flask.ext.login import current_user
-from . import route
 from .. import tasks
 import json
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from uuid import uuid4
 import string
 import random
 import re
 from ..models import User, Pod
 from ..core import db, check_permission
-from ..utils import update_dict
+from ..utils import update_dict, login_required_or_basic
 
 
-bp = Blueprint('pods', __name__, url_prefix='/pods')
+pods = Blueprint('pods', __name__, url_prefix='/pods')
 
 
-@route(bp, '/', methods=['POST'])
+@pods.route('/', methods=['POST'])
+@login_required_or_basic
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
@@ -61,7 +61,8 @@ def create_item():
         return jsonify({'status': 'OK', 'data': output})
     return jsonify({'status': 'OK', 'data': data})
 
-@route(bp, '/<string:uuid>', methods=['DELETE'])
+@pods.route('/<string:uuid>', methods=['DELETE'])
+@login_required_or_basic
 @check_permission('delete', 'pods')
 def delete_item(uuid):
     item = db.session.query(Pod).get(uuid)
@@ -132,7 +133,8 @@ def delete_item(uuid):
     db.session.commit()
     return jsonify({'status': 'OK'})
 
-@route(bp, '/<string:uuid>', methods=['PUT'])
+@pods.route('/<string:uuid>', methods=['PUT'])
+@login_required_or_basic
 @check_permission('edit', 'pods')
 def update_item(uuid):
     response = {}
@@ -245,7 +247,6 @@ def prepare_container(data, key='ports'):
             continue
 
     # convert to int ports values
-    current_app.logger.debug('about to convert 2')
     data.setdefault(key, [])
     for t in data[key]:
         try:
@@ -256,7 +257,10 @@ def prepare_container(data, key='ports'):
             a.append(dict([
                 i for i in t.items()
             ]))
-    
+
+    if type(data['workingDir']) is list:
+        data['workingDir'] = ','.join(data['workingDir'])
+
     data[key] = a
     current_app.logger.debug(data[key])
     return data
@@ -380,3 +384,14 @@ def resize_replica(name, num):
         replicas['items'])
     for replica in filtered_replicas:
         tasks.update_replica.delay(replica['id'], diff).wait()
+
+
+def is_related(one, two):
+    if one is None or two is None:
+        return False
+    for k in two.keys():
+        if k not in one:
+            return False
+        if one[k] != two[k]:
+            return False
+        return True

@@ -16,18 +16,22 @@ else:
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
-INFLUXDB_HOST = 'localhost'
+INFLUXDB_HOST = '127.0.0.1'
 INFLUXDB_PORT = 8086
 INFLUXDB_TABLE = 'stats'
-INFLUXDB_USER = 'kubedock'
+INFLUXDB_USER = 'dbadmin'
 INFLUXDB_PASSWORD = 'Iwb4gDo'
 INFLUXDB_DATABASE = 'cadvisor'
 
 CELERYBEAT_SCHEDULE = {
-    'event-stream': {
-        'task': 'kubedock.tasks.check_events',
-        'schedule': timedelta(seconds=5),
-    },
+    #'event-stream': {
+    #    'task': 'kubedock.tasks.check_events',
+    #    'schedule': timedelta(seconds=5),
+    #},
+    'pull-hourly-stats': {
+        'task': 'kubedock.tasks.pull_hourly_stats',
+        'schedule': timedelta(minutes=5)
+    }
 }
 
 ONLINE_LAST_MINUTES = 5

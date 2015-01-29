@@ -1,13 +1,13 @@
 from flask import Blueprint, render_template
-from . import route
-from flask.ext.login import current_user
+from flask.ext.login import current_user, login_required
 import json
 
-from ..kubedata import KubeResolver
+from ..kubedata.kuberesolver import KubeResolver
 
-bp = Blueprint('main', __name__)
+main = Blueprint('main', __name__)
 
-@route(bp, '/')
+@main.route('/')
+@login_required
 def index():
     units = KubeResolver().resolve_all()
     if current_user.is_administrator():

@@ -3,6 +3,7 @@ import datetime
 from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask.ext.login import UserMixin
+from ..billing import Pricing
 
 from ..core import db, login_manager
 from .utils import get_user_last_activity, get_online_users
@@ -21,11 +22,15 @@ class User(BaseModelMixin, UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True)
     email = db.Column(db.String(64), unique=True)
     password_hash = db.Column(db.String(128), nullable=False)
+    first_name = db.Column(db.String(64), nullable=True)
+    last_name = db.Column(db.String(64), nullable=True)
+    middle_initials = db.Column(db.String(128), nullable=True)
     active = db.Column(db.Boolean, nullable=False, default=False)
-    description = db.Column(db.Text, nullable=True)
+    suspended = db.Column(db.Boolean, nullable=False, default=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
-    pods = db.relationship('Pod', backref='owner', lazy='dynamic')
+    pricing_id = db.Column(db.Integer, db.ForeignKey('pricing.id'))
     join_date = db.Column(db.DateTime, default=datetime.datetime.now)
+    pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     activities = db.relationship('UserActivity', back_populates="user")
 
     @classmethod
@@ -61,7 +66,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def to_dict(self, include=None, exclude=None):
         last_activity = self.last_activity
         return dict(id=self.id, username=self.username, email=self.email, active=self.active,
-                    description=self.description, rolename=self.role.rolename,
+                    first_name=self.first_name, last_name=self.last_name,
+                    middle_initials=self.middle_initials, suspended=self.suspended,
+                    rolename=self.role.rolename,
                     join_date=self.join_date.isoformat(sep=' ')[:19],
                     last_activity=last_activity.isoformat(sep=' ')[
                                   :19] if last_activity else '', )

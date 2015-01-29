@@ -4,10 +4,13 @@ import requests
 import paramiko
 import time
 from .settings import DEBUG, MINION_SSH_AUTH
-from .api.sse import send_event
-from .core import ConnectionPool
+from .api.stream import send_event
+from .core import ConnectionPool, db
 from .factory import make_celery
 from .utils import update_dict
+from .stats import StatWrap5Min
+from .kubedata.kubestat import KubeUnitResolver, KubeStat
+import operator
 
 celery = make_celery()
 
@@ -158,3 +161,15 @@ def check_events():
             send_event('ping', 'ping')
 
     redis.delete('events_lock')
+    
+@celery.task()
+def pull_hourly_stats():
+    data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
+    time_windows = set(map(operator.itemgetter('time_window'), data))
+    rv = db.session.query(StatWrap5Min).filter(StatWrap5Min.time_window.in_(time_windows))
+    existing_windows = set(map((lambda x: x.time_window), rv))
+    for entry in data:
+        if entry['time_window'] in existing_windows:
+            continue
+        db.session.add(StatWrap5Min(**entry))
+    db.session.commit()

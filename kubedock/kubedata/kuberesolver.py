@@ -2,6 +2,8 @@ from .. import tasks
 from ..core import db
 from ..pods import Pod
 from ..users import User
+from flask.ext.login import current_user
+
 
 class KubeResolver(object):
     
@@ -131,10 +133,15 @@ class KubeResolver(object):
             if pod_id not in kube_ids:
                 self._pods.append(db_pods[pod_id]['config'])
         for pod in self._pods:
-            pod['owner'] = db_pods[pod['id']]['username']
+            try:
+                pod['owner'] = db_pods[pod['id']]['username']
+            except KeyError:
+                pod['owner'] = 'stranger'
     
     @staticmethod
     def _is_related(one, two):
+        if one is None or two is None:
+            return False
         for k in two.keys():
             if k not in one:
                 return False

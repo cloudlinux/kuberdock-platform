@@ -1,13 +1,11 @@
 import json
 from flask import Blueprint, request, current_app, jsonify
-from . import route
 from .. import tasks
 from ..core import db
 from ..models import ImageCache, DockerfileCache
 import datetime
-import re
 
-bp = Blueprint('images', __name__, url_prefix='/images')
+images = Blueprint('images', __name__, url_prefix='/images')
 
 def process(data):
     data = data.strip();
@@ -29,7 +27,7 @@ def parse(data):
             ready['ports'].extend(process(line))
     return ready
 
-@route(bp, '/', methods=['GET'])
+@images.route('/', methods=['GET'])
 def get_list_by_keyword():
     search_key = request.args.get('searchkey', 'none')
     query = db.session.query(ImageCache).get(search_key)
@@ -47,7 +45,7 @@ def get_list_by_keyword():
     db.session.commit()
     return jsonify({'status': 'OK', 'data': data})
 
-@route(bp, '/new', methods=['POST'])
+@images.route('/new', methods=['POST'])
 def get_dockerfile_data():
     image = request.form.get('image', 'none')
     query = db.session.query(DockerfileCache).get(image)

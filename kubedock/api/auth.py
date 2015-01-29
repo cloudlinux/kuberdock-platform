@@ -1,11 +1,10 @@
 from flask import Blueprint, render_template, redirect, request, url_for, flash, current_app, jsonify
 from flask.ext.login import login_user, logout_user, login_required
-from . import route, noauthroute
 from ..users import User
 
-bp = Blueprint('auth', __name__)
+auth = Blueprint('auth', __name__)
 
-@noauthroute(bp, '/login', methods=['GET', 'POST'])
+@auth.route('/login', methods=['GET', 'POST'])
 def login():
     message = 'You are not authorized to access the resource'
     if request.authorization is not None:

@@ -52,8 +52,8 @@ SuperAdmin.allow("edit", "pods")
 SuperAdmin.allow("delete", "pods")
 
 
-Admin = Role('Admin', [SuperAdmin])
-Admin.deny("delete", "users")
+Admin = Role('Administrator', [SuperAdmin])
+#Admin.deny("delete", "users")
 Admin.deny("delete", "minions")
 Admin.deny("delete", "pods")
 

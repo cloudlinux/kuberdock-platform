@@ -64,7 +64,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
     });
     
     Data.PodCollection = Backbone.PageableCollection.extend({
-        url: '/api/pods',
+        url: '/api/pods/',
         model: Data.Pod,
         parse: unwrapper,
         mode: 'client',
@@ -74,7 +74,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
     });
     
     Data.ImageCollection = Backbone.PageableCollection.extend({
-        url: '/api/images',
+        url: '/api/images/',
         model: Data.Image,
         parse: unwrapper,
         mode: 'client',
@@ -84,7 +84,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
     });
     
     Data.StatsCollection = Backbone.Collection.extend({
-        url: '/api/stats',
+        url: '/api/stats/',
         model: Data.Stat,
         parse: unwrapper
     });

@@ -1,8 +1,7 @@
 from flask import render_template
-from functools import wraps
-from flask.ext.login import login_required, current_user
-from flask import jsonify
-from rbac.context import PermissionDenied
+#from flask.ext.login import login_required, current_user
+#from flask import jsonify
+#from rbac.context import PermissionDenied
 
 from .. import factory
 from .. import sessions
@@ -17,6 +16,16 @@ def create_app(settings_override=None):
         sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
         skip_paths, datetime.timedelta(days=1))
     assets.init_app(app)
+    
+    # registering blueprings
+    from .main import main
+    from .auth import auth
+    from .minions import minions
+    from .users import users
+
+    for bp in main, auth, minions, users:
+        app.register_blueprint(bp)
+    
     if not app.debug:
         for e in [500, 404]:
             app.errorhandler(e)(handle_error)
@@ -25,28 +34,3 @@ def create_app(settings_override=None):
 
 def handle_error(e):
     return render_template('errors/%s.html' % e.code), e.code
-
-
-def route(bp, *args, **kwargs):
-    def decorator(f):
-        @bp.route(*args, **kwargs)
-        @login_required
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            try:
-                return f(*args, **kwargs)
-            except PermissionDenied as e:
-                message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
-                return jsonify({'status': 'ERROR', 'data': message}), 403
-        return f
-    return decorator
-
-
-def noauthroute(bp, *args, **kwargs):
-    def decorator(f):
-        @bp.route(*args, **kwargs)
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
-        return f
-    return decorator

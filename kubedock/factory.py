@@ -3,7 +3,7 @@ from celery import Celery
 from flask import Flask
 
 from .core import db, login_manager, influx_db
-from .utils import register_blueprints
+#from .utils import register_blueprints
 
 def create_app(package_name, package_path, settings_override=None):
     app = Flask(package_name, instance_relative_config=True)
@@ -13,7 +13,7 @@ def create_app(package_name, package_path, settings_override=None):
     db.init_app(app)
     influx_db.init_app(app)
     login_manager.init_app(app)
-    register_blueprints(app, package_name, package_path)
+    #register_blueprints(app, package_name, package_path)
     return app
 
 

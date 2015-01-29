@@ -1,12 +1,11 @@
-from functools import wraps
-from flask.ext.login import login_required, current_user
-from flask import jsonify
-from rbac.context import PermissionDenied
-
-from ..utils import JSONEncoder
+import datetime
+#from ..utils import JSONEncoder
 from .. import factory
 from .. import sessions
-import datetime
+
+from flask.ext.login import current_user
+from flask import jsonify
+from rbac.context import PermissionDenied
 
 
 def create_app(settings_override=None):
@@ -15,39 +14,23 @@ def create_app(settings_override=None):
     app.session_interface = sessions.ManagedSessionInterface(
         sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
         skip_paths, datetime.timedelta(days=1))
-    app.json_encoder = JSONEncoder
+    
+    # registering blueprings
+    from .images import images
+    from .pods import pods
+    from .stream import stream
+    from .minions import minions
+    from .stats import stats
+    from .users import users
+
+    for bp in images, pods, stream, minions, stats, users:
+        app.register_blueprint(bp)
+        
+    #app.json_encoder = JSONEncoder
     app.errorhandler(404)(on_404)
     app.errorhandler(PermissionDenied)(on_permission_denied)
     app.errorhandler(APIError)(on_app_error)
     return app
-
-
-def route(bp, *args, **kwargs):
-    kwargs.setdefault('strict_slashes', False)
-    def decorator(f):
-        @bp.route(*args, **kwargs)
-        @login_required
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            sc = 200
-            rv = f(*args, **kwargs)
-            if isinstance(rv, tuple):
-                sc = rv[1]
-                rv = rv[0]
-            #return jsonify(dict(data=rv)), sc
-            return rv, sc
-        return f
-    return decorator
-
-
-def noauthroute(bp, *args, **kwargs):
-    def decorator(f):
-        @bp.route(*args, **kwargs)
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
-        return f
-    return decorator
 
 
 class APIError(Exception):
@@ -61,7 +44,7 @@ def on_app_error(e):
 
 
 def on_permission_denied(e):
-                                                    # TODO(Stanislav) change to correct roleloader()
+    # TODO(Stanislav) change to correct roleloader()
     message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
     return on_app_error(APIError('Error. {0}'.format(message), status_code=403))
 

@@ -1,6 +1,5 @@
-from flask import Blueprint, request, current_app, jsonify, Response
+from flask import Blueprint, request, jsonify
 import socket
-from . import route
 from .. import tasks
 from ..models import Minion
 from ..core import db, check_permission

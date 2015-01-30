@@ -47,7 +47,7 @@ def get_list():
     return jsonify({'status': 'OK', 'data': get_minions_collection()})
 
 
-@minions.route('/<minion_id>/', methods=['GET'])
+@minions.route('/<minion_id>', methods=['GET'])
 @check_permission('get', 'minions')
 def get_one_minion(minion_id):
     check_int_id(minion_id)
@@ -87,7 +87,7 @@ def create_item():
         return jsonify({'status': 'Conflict: Minion with ip "{0}" already exists'.format(m.ip)}), 409
 
 
-@minions.route('/<minion_id>/', methods=['PUT'])
+@minions.route('/<minion_id>', methods=['PUT'])
 @check_permission('edit', 'minions')
 def put_item(minion_id):
     check_int_id(minion_id)
@@ -104,7 +104,7 @@ def put_item(minion_id):
         return jsonify({'status': "Minion " + minion_id + " doesn't exists"}), 404
 
 
-@minions.route('/<minion_id>/', methods=['DELETE'])
+@minions.route('/<minion_id>', methods=['DELETE'])
 @check_permission('delete', 'minions')
 def delete_item(minion_id):
     check_int_id(minion_id)
@@ -118,7 +118,7 @@ def delete_item(minion_id):
     return jsonify({'status': 'OK'})
 
 
-@minions.route('/checkhost/<host_addr>/', methods=['GET'])
+@minions.route('/checkhost/<host_addr>', methods=['GET'])
 def check_host(host_addr):
     try:
         ip = socket.gethostbyname(host_addr)

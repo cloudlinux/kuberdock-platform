@@ -37,7 +37,7 @@ def get_one_user(user_id):
     return jsonify({'status': 'OK', 'data': u.to_dict()})
 
 
-@users.route('/a/<user_id>/', methods=['GET'])
+@users.route('/a/<user_id>', methods=['GET'])
 @login_required_or_basic
 @check_permission('get', 'users')
 def get_user_activities(user_id):

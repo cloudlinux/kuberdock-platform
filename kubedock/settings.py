@@ -24,10 +24,10 @@ INFLUXDB_PASSWORD = 'Iwb4gDo'
 INFLUXDB_DATABASE = 'cadvisor'
 
 CELERYBEAT_SCHEDULE = {
-    #'event-stream': {
-    #    'task': 'kubedock.tasks.check_events',
-    #    'schedule': timedelta(seconds=5),
-    #},
+    'event-stream': {
+        'task': 'kubedock.tasks.check_events',
+        'schedule': timedelta(seconds=5),
+    },
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)

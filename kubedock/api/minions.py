@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
-import socket
+import socket; socket.setdefaulttimeout(2)
 from .. import tasks
 from ..models import Minion
 from ..core import db, check_permission
+from ..validation import check_int_id, check_minion_data
 
 minions = Blueprint('minions', __name__, url_prefix='/minions')
 
@@ -49,6 +50,7 @@ def get_list():
 @minions.route('/<minion_id>/', methods=['GET'])
 @check_permission('get', 'minions')
 def get_one_minion(minion_id):
+    check_int_id(minion_id)
     m = db.session.query(Minion).get(minion_id)
     if m:
         res = tasks.get_minion_by_ip(m.ip)
@@ -71,10 +73,10 @@ def get_one_minion(minion_id):
 @check_permission('create', 'minions')
 def create_item():
     data = request.json
+    check_minion_data(data)
     m = db.session.query(Minion).filter_by(ip=data['ip']).first()
     if not m:
-        temp = dict(filter((lambda t: t[1] != ''), data.items()))
-        m = Minion(**temp)
+        m = Minion(ip=data['ip'], hostname=data['hostname'])
         db.session.add(m)
         db.session.commit()
         r = tasks.add_new_minion.delay(m.ip)    # TODO send labels, annotations, capacity etc.
@@ -88,12 +90,12 @@ def create_item():
 @minions.route('/<minion_id>/', methods=['PUT'])
 @check_permission('edit', 'minions')
 def put_item(minion_id):
+    check_int_id(minion_id)
     m = db.session.query(Minion).get(minion_id)
     if m:
         data = request.json
-        # after some validation, including ip unique...
-        data = dict(filter((lambda item: item[1] != ''), data.items()))
-        m.ip = data['ip']
+        data['ip'] = m.ip   # for hostname checking, because minion ip can't be reassigned
+        check_minion_data(data)
         m.hostname = data['hostname']
         db.session.add(m)
         db.session.commit()
@@ -105,6 +107,7 @@ def put_item(minion_id):
 @minions.route('/<minion_id>/', methods=['DELETE'])
 @check_permission('delete', 'minions')
 def delete_item(minion_id):
+    check_int_id(minion_id)
     m = db.session.query(Minion).get(minion_id)
     if m:
         db.session.delete(m)

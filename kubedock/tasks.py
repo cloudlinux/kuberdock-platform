@@ -3,6 +3,7 @@ import json
 import requests
 import paramiko
 import time
+import socket
 from .settings import DEBUG, MINION_SSH_AUTH
 from .api.stream import send_event
 from .core import ConnectionPool, db
@@ -106,10 +107,14 @@ def add_new_minion(ip):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     send_event('install_logs', 'Connecting with ssh-key id_rsa...')
-    if DEBUG:
-        ssh.connect(hostname=ip, username='root', password=MINION_SSH_AUTH)
-    else:
-        ssh.connect(hostname=ip, username='root', key_filename=MINION_SSH_AUTH)    # not tested
+    try:
+        if DEBUG:
+            ssh.connect(hostname=ip, username='root', password=MINION_SSH_AUTH, timeout=10)
+        else:
+            ssh.connect(hostname=ip, username='root', key_filename=MINION_SSH_AUTH, timeout=10)    # not tested
+    except socket.timeout:
+        send_event('install_logs', 'Timeout while connecting. Stopped. Check ip/hostname and try again')
+        return 'Timeout'
 
     sftp = ssh.open_sftp()
     sftp.put('kub_install.sh', '/kub_install.sh')

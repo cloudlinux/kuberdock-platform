@@ -3,6 +3,7 @@ from flask import Blueprint, request, current_app, jsonify
 from .. import tasks
 from ..core import db
 from ..models import ImageCache, DockerfileCache
+from ..validation import check_container_image_name
 import datetime
 
 images = Blueprint('images', __name__, url_prefix='/images')
@@ -30,6 +31,7 @@ def parse(data):
 @images.route('/', methods=['GET'])
 def get_list_by_keyword():
     search_key = request.args.get('searchkey', 'none')
+    check_container_image_name(search_key)
     query = db.session.query(ImageCache).get(search_key)
     if query is not None:
         if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day

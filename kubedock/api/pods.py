@@ -10,6 +10,8 @@ import re
 from ..models import User, Pod
 from ..core import db, check_permission
 from ..utils import update_dict, login_required_or_basic
+from ..validation import check_pod_data
+from ..api import APIError
 
 
 pods = Blueprint('pods', __name__, url_prefix='/pods')
@@ -20,6 +22,11 @@ pods = Blueprint('pods', __name__, url_prefix='/pods')
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
+    check_pod_data(data)
+    pod = Pod.query.filter_by(name=data['name']).first()
+    if pod:
+        raise APIError("Conflict. Pod with name = '{0}' already exists. Try another name.".format(data['name']),
+                       status_code=409)
     item_id = make_item_id(data['name'])
     runnable = data.pop('runnable', False)
     temp_uuid = str(uuid4())
@@ -109,7 +116,7 @@ def delete_item(uuid):
     except KeyError, e:
         return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
     
-    if item.config['service']:
+    if item.config.get('service'):
         result = tasks.get_services.delay()
         services = result.wait()
     
@@ -141,8 +148,9 @@ def update_item(uuid):
     item = db.session.query(Pod).get(uuid)
     u = db.session.query(User).filter_by(username=current_user.username).first()
     if item is None:
-        return jsonify({'status': 'ERROR'})
+        raise APIError('Pod not found', 404)
     data = request.json
+    check_pod_data(data)
     if 'dbdiff' in data:
         update_dict(item.__dict__, data['dbdiff'])
         try:

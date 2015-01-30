@@ -1,6 +1,6 @@
 from ..core import db
 
-import socket
+import socket; socket.setdefaulttimeout(2)
 import random
 
 
@@ -36,7 +36,6 @@ class Minion(db.Model):
         pass    # TODO implement writing to kubernetes
 
     def __init__(self, **kwargs):
-        kwargs.pop('status')    # because now it's computable
         super(Minion, self).__init__(**kwargs)
         ip = kwargs.get('ip')
         hostname = kwargs.get('hostname')

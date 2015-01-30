@@ -22,8 +22,11 @@ def create_app(settings_override=None):
     from .minions import minions
     from .stats import stats
     from .users import users
+    from .notifications import notifications
+    from .static_pages import static_pages
 
-    for bp in images, pods, stream, minions, stats, users:
+    for bp in images, pods, stream, minions, stats, users, notifications, \
+              static_pages:
         app.register_blueprint(bp)
         
     #app.json_encoder = JSONEncoder

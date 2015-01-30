@@ -61,6 +61,11 @@ class NotificationTemplate(BaseModelMixin, db.Model):
             # keys=self.e.keys
         )
 
+    def update(self, data):
+        self.text_plain = data['text_plain']
+        self.text_html = data['text_html']
+        self.as_html = data['as_html']
+
     def make_templates(self, context):
         text_plain = self.text_plain
         text_html = self.text_html

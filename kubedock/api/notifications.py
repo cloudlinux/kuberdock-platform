@@ -1,15 +1,15 @@
-from flask import Blueprint, request, current_app, jsonify
-from . import route
+from flask import Blueprint, request, jsonify
 from ..notifications.models import NotificationTemplate
 from ..notifications.events import NotificationEvent
 from ..core import db, check_permission
 from . import APIError
 
 
-bp = Blueprint('notifications', __name__, url_prefix='/notifications')
+notifications = Blueprint('notifications', __name__,
+                          url_prefix='/notifications')
 
 
-@route(bp, '/', methods=['GET'])
+@notifications.route('/', methods=['GET'])
 # @check_permission('get', 'users')
 def get_list():
     return jsonify({
@@ -17,7 +17,7 @@ def get_list():
         'data': [n.to_dict() for n in NotificationTemplate.all()]})
 
 
-@route(bp, '/<tid>/', methods=['GET'])
+@notifications.route('/<tid>', methods=['GET'])
 # @check_permission('get', 'users')
 def get_template(tid):
     t = NotificationTemplate.filter_by(id=tid).first()
@@ -26,7 +26,7 @@ def get_template(tid):
     raise APIError("Template {0} doesn't exists".format(tid), 404)
 
 
-@route(bp, '/', methods=['POST'])
+@notifications.route('/', methods=['POST'])
 # @check_permission('create', 'users')
 def create_item():
     data = request.json
@@ -42,7 +42,7 @@ def create_item():
     return jsonify({'status': 'OK', 'data': t.to_dict()})
 
 
-@route(bp, '/<tid>/', methods=['PUT'])
+@notifications.route('/<tid>', methods=['PUT'])
 # @check_permission('edit', 'users')
 def put_item(tid):
     t = NotificationTemplate.filter_by(id=tid).first()
@@ -50,10 +50,10 @@ def put_item(tid):
         data = request.json
         t.update(data)
         return jsonify({'status': 'OK'})
-    raise APIError("Template {0} doesn't exists", 404)
+    raise APIError("Template {0} doesn't exists".format(tid), 404)
 
 
-@route(bp, '/<tid>/', methods=['DELETE'])
+@notifications.route('/<tid>', methods=['DELETE'])
 # @check_permission('delete', 'users')
 def delete_item(tid):
     t = NotificationTemplate.filter_by(id=tid).first()

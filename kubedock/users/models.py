@@ -3,7 +3,6 @@ import datetime
 from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask.ext.login import UserMixin
-from ..billing import Pricing
 
 from ..core import db, login_manager
 from .utils import get_user_last_activity, get_online_users

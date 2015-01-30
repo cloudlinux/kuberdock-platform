@@ -1,31 +1,18 @@
 from flask import Blueprint, request, jsonify, current_app
-from ..users import User, Role
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
+
 from ..billing import Pricing
 from ..core import db, check_permission
-#from flask.ext.login import current_user
 from ..utils import login_required_or_basic
-from sqlalchemy.exc import IntegrityError, InvalidRequestError
+from ..users import User, Role
+
+
 users = Blueprint('users', __name__, url_prefix='/users')
 
 
 def get_users_collection():
     return [u.to_dict() for u in User.all()]
-    users = []
-    cur = db.session.query(User).all()
-    for user in cur:
-        users.append({
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'active': user.active,
-            'suspended': user.suspended,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'middle_initials': user.middle_initials,
-            'rolename': user.role.rolename,
-            'package': user.pricing.package.package_name
-        })
-    return users
+
 
 @users.route('/', methods=['GET'])
 @login_required_or_basic
@@ -33,7 +20,8 @@ def get_users_collection():
 def get_list():
     return jsonify({'status': 'OK', 'data': get_users_collection()})
 
-@users.route('/<user_id>/', methods=['GET'])
+
+@users.route('/<user_id>', methods=['GET'])
 @login_required_or_basic
 @check_permission('get', 'users')
 def get_one_user(user_id):
@@ -96,7 +84,7 @@ def create_item():
         return jsonify({'status': 'Conflict: User "{0}" already exists'.format(data['username'])}), 409
 
 
-@users.route('/<user_id>/', methods=['PUT'])
+@users.route('/<user_id>', methods=['PUT'])
 @login_required_or_basic
 @check_permission('edit', 'users')
 def put_item(user_id):
@@ -125,7 +113,8 @@ def put_item(user_id):
     else:
         return jsonify({'status': "User " + user_id + " doesn't exists"}), 404
 
-@users.route('/<user_id>/', methods=['DELETE'])
+
+@users.route('/<user_id>', methods=['DELETE'])
 @login_required_or_basic
 @check_permission('delete', 'users')
 def delete_item(user_id):
@@ -137,6 +126,7 @@ def delete_item(user_id):
         db.session.delete(u)
         db.session.commit()
     return jsonify({'status': 'OK'})
+
 
 def get_pricing(package_name):
     try:

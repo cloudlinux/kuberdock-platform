@@ -1,0 +1,178 @@
+{% extends "layout.html" %}
+
+{% block body %}
+    <nav id="navbar" class="navbar">
+        <div id="navbar-container" class="container">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="/">
+                    <img alt="cloudlinux cubedock" class="logo" src="{{ url_for('static', filename='img/header-logo.png') }}">
+                </a>
+            </div>
+            {{ MENU.navbar.render()|safe }}
+        </div><!-- navbar-container -->
+    </nav><!-- end of navbar -->
+
+    <!-- contents container -->
+    <div id="contents" class="container">
+        <div class="row" style="">
+            <div class="col-md-4">
+                <ul id="menus-tree"></ul>
+                <div class="add-menu-item" style="display: none;">
+                    <h3>Add menu item</h3>
+                    Parent item:
+                    <select name="parent_item" id="id_parent_item">
+                        {% for region, menu in MENU.items() %}<optgroup label="{{ region }}"/>
+                            <option value="0" data-region="{{ menu.region }}">/</option>
+                            {% for item in menu.items %}<option value="{{ item.id }}" data-region="{{ menu.region }}">{{ item }}</option>
+                            {% endfor %}
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-xs btn-default new-item-btn">
+                        <i class="glyphicon glyphicon-play"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-8" id="form-block"></div>
+        </div>
+    </div>
+
+    <script type="text/template" id="menu-form-template">
+        <form>
+            Region:
+            <select name="region" id="id_region">
+                {% for id, name in regions %}<option value="{{ id }}"<% if (region == {{ id }}) { %> selected<% } %> >{{ name }}</option>
+                {% endfor %}
+            </select>
+
+            <div class="form-group">
+                <label for="id_name">Menu name</label>
+                <input type="text" class="form-control" id="id_name" placeholder="Menu name"
+                        value="<%- name %>">
+            </div>
+
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" id="id_is_active"<% if (is_active) { %> checked<% } %> />
+                    Is active
+                </label>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <button class="btn btn-success btn-sm" id="save-btn">
+                        Save
+                    </button>
+                    <button class="btn btn-default btn-sm" id="cancel-btn">
+                        Cancel
+                    </button>
+                </div>
+                <div class="col-md-6"></div>
+            </div>
+        </form>
+    </script>
+
+
+    <script type="text/template" id="menu-item-form-template">
+        <form>
+            <div class="form-group">
+                <label for="id_path">Path</label>
+                <input type="text" class="form-control" id="id_path"
+                       placeholder="Path" value="<%- path %>">
+            </div>
+
+            <div class="form-group">
+                <label for="id_name">Name</label>
+                <input type="text" class="form-control" id="id_name"
+                       placeholder="Name" value="<%- name %>">
+            </div>
+
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" id="id_is_active"<% if (is_active) { %> checked<% } %> />
+                    Is active
+                </label>
+            </div>
+
+            <% if(page_dict && page_dict.id) { %>
+            <div class="form-group">
+                <label for="id_slug">Slug</label>
+                <input type="text" class="form-control" id="id_slug"
+                       placeholder="Slug" value="<%- page_dict.slug %>">
+            </div>
+            <div class="form-group">
+                <label for="id_title">Title</label>
+                <input type="text" class="form-control" id="id_title"
+                       placeholder="Title" value="<%- page_dict.title %>">
+            </div>
+            <div class="form-group">
+                <label for="id_content<%- id %>">Content</label>
+                <textarea id="id_content<%- id %>" placeholder="Content">
+                    <%- page_dict.content %>
+                </textarea>
+            </div>
+            <% } else { %>
+            <div class="checkbox">
+                <label for="id_assign_page">
+                    <input type="checkbox" id="id_assign_page"> Assign page
+                </label>
+            </div>
+            <div class="new-page-form" style="display: none;">
+                <div class="form-group">
+                    <label for="id_slug">Slug</label>
+                    <input type="text" class="form-control" id="id_slug"
+                           placeholder="Slug" value="">
+                </div>
+                <div class="form-group">
+                    <label for="id_title">Title</label>
+                    <input type="text" class="form-control" id="id_title"
+                           placeholder="Title" value="">
+                </div>
+                <div class="form-group">
+                    <label for="id_content<%- id %>">Content</label>
+                    <textarea id="id_content<%- id %>" placeholder="Content">
+                    </textarea>
+                </div>
+            </div>
+            <% } %>
+            <div class="row">
+                <div class="col-md-6">
+                </div>
+
+                <div class="col-md-6">
+                    <button class="btn btn-success btn-sm" id="save-btn" type="submit">
+                        Save
+                    </button>
+                    <button class="btn btn-default btn-sm" id="cancel-btn">
+                        Cancel
+                    </button>
+                    <button class="btn btn-danger btn-sm" id="delete-btn">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </form>
+    </script>
+
+
+
+{% block static_pages_css_asset %}
+    <link rel="stylesheet" href="/static/css/skin/ui.dynatree.css">
+
+    <script type="text/javascript">
+        var URLS = {
+            staticPages: {
+                index: '/admin/static_pages',
+                api: {
+                    menu: '/api/static_pages/menu/',
+                    menuItem: '/api/static_pages/menuItem/',
+                    deleteMenuItem: '/api/static_pages/menuItem/delete/',
+                    page: '/api/static_pages/page/',
+                    menuTree: '/api/static_pages/dynatreeList/'
+                }
+            }
+        }
+    </script>
+
+    <script data-main="/static/js/static_pages_app/require_main.js" src="/static/js/lib/require.js"></script>
+{% endblock %}
+
+{% endblock %}

@@ -3,6 +3,8 @@ from kubedock.core import db
 from kubedock.models import Role, User
 from kubedock.rbac import gen_roles
 
+from kubedock.static_pages.fixtures import generate_menu
+
 if __name__ == '__main__':
     app = create_app()
     ac = app.app_context()
@@ -29,5 +31,7 @@ if __name__ == '__main__':
         u = User(username='admin', password='admin', role=r, active=True)
         db.session.add(u)
     db.session.commit()
+
+    generate_menu()
 
     ac.pop()

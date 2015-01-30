@@ -1,0 +1,103 @@
+{% extends "layout.html" %}
+
+{% block body %}
+    {% include "inc/navbar.html" %}
+
+    <!-- contents container -->
+    <div id="contents" class="container"></div>
+
+
+    <script type="text/template" id="template-create-template">
+        <a href="{{ url_for('notifications.index') }}">
+            <i class="glyphicon glyphicon-chevron-left"></i>
+            back to the templates list
+        </a><hr>
+
+        <div id="user-contents">
+            <div class="row">
+                <div class="col-md-3">
+                    <div id="template-header">
+                        <h1>Template form</h1>
+                        <h2>Add</h2>
+                    </div>
+                    <div class="help_text">
+                        <strong>Template keys</strong>:<br/>
+                        <i id="event_keys"></i>
+                    </div>
+
+                </div>
+                <div id="user-controls" class="col-md-6">
+                    <div class="form-group">
+                        <label for="id_event">Event</label>
+                        <select name="event" id="id_event">
+                            {% for eid, event in events.items() %}<option value="{{ eid }}">{{ event }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_text_plain">Text plain</label>
+                        <textarea id="id_text_plain" rows="10" style="width: 100%;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_text_html">Text HTML</label>
+                        <textarea id="id_text_html" rows="10" style="width: 100%;"></textarea>
+                    </div>
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" name="as_html" id="id_as_html">
+                            Send as HTML
+                        </label>
+                    </div>
+                    <div>
+                        <button id="template-add-btn" class="btn btn-success" type="submit">SAVE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-emptyitem-template">
+    </script>
+
+    <script type="text/template" id="template-item-template">
+        <td>
+            <%- name %>
+            <button id="deleteTemplate" class="btn btn-danger btn-xs pull-right">
+                <i class="glyphicon glyphicon-trash"></i>
+            </button>
+            <button id="editTemplate" class="btn btn-link btn-xs pull-left">
+                <i class="glyphicon glyphicon-pencil"></i>
+            </button>
+        </td>
+        <td>
+            <i class="glyphicon glyphicon-<%- as_html ? 'ok text-success' : 'remove text-danger' %>"></i>
+        </td>
+    </script>
+
+
+    <script type="text/template" id="templates-list-template">
+        <button id="create_template" class="btn btn-success">Create template</button>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Send as HTML</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <hr>
+    </script>
+
+    <script type="text/template" id="templates-layout-template">
+        <div id="main">main div text</div>
+    </script>
+
+    <script type="text/javascript">
+        var templatesCollection = {{ templates_collection|safe }};
+        var eventsKeysList = {{ events_keys|safe }};
+    </script>
+
+    <script data-main="/static/js/notifications_app/require_main.js" src="/static/js/lib/require.js"></script>
+
+{% endblock %}

@@ -5,22 +5,50 @@
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    {% assets "app_css" -%}
+      <link rel="stylesheet" href="{{ ASSET_URL }}">
+    {%- endassets %}
 </head>
 <body>
-    <div>
-        <form method="post" action="/login">
-            <div>
-                <label for="login-form-username-field">Username</label>
-                <input type="text" id="login-form-username-field" name="login-form-username-field"/>
-            </div>
-            <div>
+    <div class="wrapper clearfix">
+      <header class="main-header">
+        <div class="container">
+          <a href="/" class="logo">Kubedock</a>
+          <a href="#" class="btn invert put-right login-btn green">Sing Up</a>
+        </div>
+      </header>
+        <div class="container login-form">
+        <form id="loginForm" method="post" action="/login">
+            <ul class="form-group">
+              <li class="group">
+                <label for="login-form-username-field">Email</label>
+                <input type="text" id="login-form-username-field" name="login-form-username-field" placeholder="yourmail@website.com"/>
+              </li>
+              <li class="group">
                 <label for="login-form-password-field">Password</label>
-                <input type="password" id="login-form-password-field" name="login-form-password-field"/>
-            </div>
-            <div>
-                <button type="submit">Log In</button>
-            </div>
+                <input input type="password" id="login-form-password-field" name="login-form-password-field" placeholder="************">
+              </li>
+              <li class="group">
+                <button type="submit" class="btn shdw full submit green green-background">Log in</button>
+              </li>
+            </ul>
         </form>
+        </div>
+      </div>
     </div>
+
+    {% include "inc/footer.html" %}
+    {% assets "vendor_js" -%}
+      <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    {% block app_js_asset %}
+        {% assets "app_js" -%}
+          <script src="{{ ASSET_URL }}"></script>
+        {% endassets %}
+        <script type="text/javascript">
+            var initPodCollection = new KubeDock.Data.PodCollection({{ pod_collection|safe }});
+        </script>
+    {% endblock %}
 </body>
 </html>

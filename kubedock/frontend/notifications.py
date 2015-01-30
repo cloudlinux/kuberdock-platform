@@ -1,17 +1,16 @@
 import json
 from flask import Blueprint, render_template
-from flask.ext.login import current_user, login_required
+from flask.ext.login import login_required
 
-from . import route
 from ..notifications.models import NotificationTemplate
 from ..notifications.events import NotificationEvent
 
 
-bp = Blueprint('notifications', __name__)
+notifications = Blueprint('notifications', __name__)
 
 
-@route(bp, '/notifications/')
-@route(bp, '/notifications/<path:p>/', endpoint='other')
+@notifications.route('/notifications/')
+@notifications.route('/notifications/<path:p>/', endpoint='other')
 @login_required
 def index(**kwargs):
     """Returns the index page."""

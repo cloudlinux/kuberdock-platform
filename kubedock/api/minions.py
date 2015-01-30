@@ -22,7 +22,7 @@ def get_minions_collection():
             except socket.error:
                 hostname = ip
             # TODO add resources capacity etc from kub_ips[ip] if needed
-            m = Minion(ip=ip, hostname=hostname, status='')
+            m = Minion(ip=ip, hostname=hostname)
             db.session.add(m)
     if new_flag:
         db.session.commit()

@@ -65,13 +65,21 @@ class User(BaseModelMixin, UserMixin, db.Model):
 
     def to_dict(self, include=None, exclude=None):
         last_activity = self.last_activity
-        return dict(id=self.id, username=self.username, email=self.email, active=self.active,
-                    first_name=self.first_name, last_name=self.last_name,
-                    middle_initials=self.middle_initials, suspended=self.suspended,
-                    rolename=self.role.rolename,
-                    join_date=self.join_date.isoformat(sep=' ')[:19],
-                    last_activity=last_activity.isoformat(sep=' ')[
-                                  :19] if last_activity else '', )
+        package = self.pricing.package.package_name if self.pricing else None
+        return dict(
+            id=self.id,
+            username=self.username,
+            email=self.email,
+            active=self.active,
+            first_name=self.first_name,
+            last_name=self.last_name,
+            middle_initials=self.middle_initials,
+            suspended=self.suspended,
+            rolename=self.role.rolename,
+            join_date=self.join_date.isoformat(sep=' ')[:19],
+            package=package,
+            last_activity=last_activity.isoformat(sep=' ')[:19] \
+                if last_activity else '', )
 
     def history_logged_in(self):
         ua = UserActivity.create(action=UserActivity.LOGIN, user_id=self.id)

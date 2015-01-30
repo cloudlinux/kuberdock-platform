@@ -22,8 +22,9 @@ def create_app(settings_override=None):
     from .auth import auth
     from .minions import minions
     from .users import users
+    from .notifications import notifications
 
-    for bp in main, auth, minions, users:
+    for bp in main, auth, minions, users, notifications:
         app.register_blueprint(bp)
     
     if not app.debug:

@@ -14,11 +14,14 @@ def login():
     passwd = request.form.get('login-form-password-field')
     if username is not None and passwd is not None:
         user = User.query.filter_by(username=username).first()
-        if user is not None and user.verify_password(passwd):
+        error = 'Invalid credentials provided'
+        if not user.active:
+            error = 'User is blocked'
+        elif user is not None and user.verify_password(passwd):
             login_user(user)
             user_logged_in.send(user.id)
             return redirect(request.args.get('next') or url_for('main.index'))
-        flash('Invalid credentials provided', 'error')
+        flash(error, 'error')
     return render_template('auth/login.html')
 
 

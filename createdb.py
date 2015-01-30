@@ -26,7 +26,7 @@ if __name__ == '__main__':
     r = db.session.query(Role).filter_by(rolename='SuperAdmin').first()
     u = User.query.filter_by(username='admin').first()
     if u is None:
-        u = User(username='admin', password='admin', role=r)
+        u = User(username='admin', password='admin', role=r, active=True)
         db.session.add(u)
     db.session.commit()
 

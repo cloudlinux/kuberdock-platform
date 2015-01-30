@@ -24,29 +24,24 @@
                 </div>
                 <div id="user-controls" class="col-md-6">
                     <div class="form-group">
-                        <label for="exampleInputEmail1">Username</label>
+                        <label for="username">Username</label>
                         <input type="text" name="username" class="form-control"
                                id="username" placeholder="username">
                     </div>
                     <div class="form-group">
-                        <label for="exampleInputEmail1">Password</label>
+                        <label for="password">Password</label>
                         <input type="password" class="form-control" id="password"
                                placeholder="password" name="password">
                     </div>
                     <div class="form-group">
-                        <label for="exampleInputEmail1">Repeat password</label>
+                        <label for="password-again">Repeat password</label>
                         <input type="password" class="form-control" id="password-again"
                                placeholder="repeat password" name="password-again">
                     </div>
                     <div class="form-group">
-                        <label for="exampleInputEmail1">E-mail</label>
+                        <label for="email">E-mail</label>
                         <input type="email" name="email" class="form-control"
                                id="email" placeholder="E-mail">
-                    </div>
-                    <div class="form-group">
-                        <label for="exampleInputEmail1">Description</label>
-                        <input type="text" name="description" class="form-control"
-                               id="description" placeholder="description">
                     </div>
                     <div class="checkbox">
                         <label>
@@ -86,8 +81,7 @@
         </td>
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
-        <td><%- active %></td>
-        <td><%- description ? description : 'No description' %></td>
+        <td><i class="glyphicon glyphicon-<%- active ? 'ok text-success' : 'remove text-danger' %>"></i></td>
     </script>
 
     <script type="text/template" id="online-user-item-template">
@@ -99,9 +93,8 @@
         </td>
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
-        <td><%- active %></td>
+        <td><i class="glyphicon glyphicon-<%- active ? 'ok text-success' : 'remove text-danger' %>"></i></td>
         <td><%- last_activity %></td>
-        <td><%- description ? description : 'No description' %></td>
     </script>
 
     <script type="text/template" id="online-users-list-template">
@@ -118,7 +111,6 @@
                     <th>Role</th>
                     <th>Active</th>
                     <th>Last activity</th>
-                    <th>Description</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -139,7 +131,6 @@
                     <th>Email</th>
                     <th>Role</th>
                     <th>Active</th>
-                    <th>Description</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -188,6 +179,12 @@
     </script>
 {#    ===================================== #}
 
-    <script data-main="/static/js/require_main.js" src="/static/js/lib/require.js"></script>
+    <script data-main="/static/js/users_app/require_main.js" src="/static/js/lib/require.js"></script>
+
+    <script type="text/javascript">
+    var usersCollection = {{ users_collection|safe }};
+    var onlineUsersCollection = {{ online_users_collection|safe }};
+    var userActivity = {{ user_activity|safe }}
+    </script>
 
 {% endblock %}

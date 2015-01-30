@@ -30,12 +30,10 @@ requirejs.config({
         }
     }
 });
-require(['jquery', 'users_app'], function(jQuery, UsersApp){
-    $.ajax({
-        url: '/api/users/',
-        success: function(rs){
-            UsersApp.Data.users = new UsersApp.Data.UsersCollection(rs.data);
-            UsersApp.start();
-        }
-    });
+require(['jquery', 'users_app/app'], function(jQuery, UsersApp){
+    UsersApp.Data.users = new UsersApp.Data.UsersPageableCollection(usersCollection);
+    UsersApp.Data.onlineUsers = new UsersApp.Data.UsersPageableCollection(onlineUsersCollection);
+    UsersApp.Data.userActivity = new UsersApp.Data.ActivitiesCollection(userActivity);
+
+    UsersApp.start();
 });

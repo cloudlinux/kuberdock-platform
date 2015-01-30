@@ -9,6 +9,7 @@ users = Blueprint('users', __name__, url_prefix='/users')
 
 
 def get_users_collection():
+    return [u.to_dict() for u in User.all()]
     users = []
     cur = db.session.query(User).all()
     for user in cur:

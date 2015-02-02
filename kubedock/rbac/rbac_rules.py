@@ -52,6 +52,11 @@ SuperAdmin.allow("edit", "pods")
 SuperAdmin.allow("delete", "pods")
 
 
+AnonymousUser = Role('AnonymousUser')
+# rules for not logged users, by default - can't do anything
+# This role is not present in db
+
+
 Admin = Role('Administrator', [SuperAdmin])
 #Admin.deny("delete", "users")
 Admin.deny("delete", "minions")

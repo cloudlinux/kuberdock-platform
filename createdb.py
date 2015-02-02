@@ -20,7 +20,7 @@ if __name__ == '__main__':
             db.session.add(role)
         u = User.query.filter_by(username=rolename).first()
         if u is None:
-            u = User(username=rolename, password=rolename, role=role)
+            u = User(username=rolename, password=rolename, role=role, active=True)
             db.session.add(u)
     db.session.commit()
 

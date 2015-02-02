@@ -17,6 +17,8 @@
         <div id="contents" class="container"></div>
         {% block script_templates %}
 
+        {% include "inc/footer.html" %}
+        
         <!-- Page Header template -->
         <script type="text/template" id="page-header-title-template"><%- name %></script>
 
@@ -46,30 +48,30 @@
                 <div class="col-md-6">
                     <h1 id="masthead-title" class="text-left"></h1>
                 </div>
-                <div class="col-md-4 col-md-offset-2">
-                    <a href="/#newpod" class="btn btn-success btn-lg btn-block">
-                        <span class="glyphicon glyphicon-send"></span>
-                        <span>Create container</span>
+                <div class="col-md-4 col-md-offset-2 align-right">
+                    <a href="/#newpod" class="btn shdw btn-success">
+                        <!-- <span class="glyphicon glyphicon-send"></span> -->
+                        <span>Create new container</span>
                     </a>
                 </div>
             </div><!-- end of page header -->
 
-            <!-- page actions -->
+            <!-- page actions 
             <div class="row">
                 <div class="col-md-1 col-md-offset-11 text-left">
                     <button type="button" class="btn btn-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                         Actions <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu bulk-action-menu" role="menu">
-                        <li><button type="button" class="btn btn-success btn-block start-checked">
+                        <li><button type="button" class="btn btn-success btn-block">
                         <span class="glyphicon glyphicon-play"></span>Start</button></li>
-                        <li><button type="button" class="btn btn-warning btn-block stop-checked">
+                        <li><button type="button" class="btn btn-warning btn-block">
                         <span class="glyphicon glyphicon-stop"></span>Stop</button></li>
-                        <li><button type="button" class="btn btn-danger btn-block terminate-checked">
+                        <li><button type="button" class="btn btn-danger btn-block">
                         <span class="glyphicon glyphicon-trash"></span>Delete</button></li>
                     </ul>
                 </div>
-            </div><!-- end of page actions -->
+            </div>< end of page actions -->
 
             <div id="layout-list"></div>
             <div id="layout-footer"></div>
@@ -84,19 +86,19 @@
             } %>
 
             <!-- table data row -->
-            <td>
-                <input type="checkbox" class="check-item">
-            </td>
+            <!-- <td>
+                <input type="checkbox">
+            </td> -->
 
             <td>
                 <a href="/#pods/<%- id %>"><%- name %></a>
-                <span class="badge">
-                    <%- containers.length %>
-                </span>
             </td>
 
             <td>
-                <span class="glyphicon <%- cluster ? 'glyphicon-th-large' : 'glyphicon-stop' %>"></span>
+                <span class="badge">
+                    <%- containers.length %>
+                </span>
+                <span class=" glyphicon "></span>
                 <% if (cluster){ %>
                     <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span>
                 <% } %>
@@ -109,16 +111,28 @@
             </td>
 
             <td>
-                <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span>
+                <!-- <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span> -->
                 <span class="<%- status %>"><%- status %></span>
             </td>
 
             <td class="text-right">
-                <div class="btn-group btn-group-xs" role="group" aria-roles="button">
+                <div class="dropdown">
+                  <button class="btn invert login-btn dropdown-toggle green" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true">
+                    Actions
+                  </button>
+                  <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Start</a></li>
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Stop</a></li>
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                  </ul>
+                </div>
+
+
+               <!-- <div class="btn-group btn-group-xs" role="group" aria-roles="button">
                     <button class="btn btn-default btn-xs start-btn"><span class="glyphicon glyphicon-play"></span>Start</button>
                     <button class="btn btn-default btn-xs stop-btn"><span class="glyphicon glyphicon-stop"></span>Stop</button>
                     <button class="btn btn-default btn-xs terminate-btn"><span class="glyphicon glyphicon-trash"></span>Delete</button>
-                </div>
+                </div> buttons -->
             </td>
             <!-- end of table data row -->
 
@@ -130,9 +144,9 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th><input type="checkbox"></th>
+                           <!-- <th><input type="checkbox"></th> -->
                             <th>Name</th>
-                            <th>Type</th>
+                            <th>Elements</th>
                             <th>Entrypoint</th>
                             <th>Status</th>
                             <th></th>
@@ -509,11 +523,11 @@
         <script type="text/template" id="paginator-template">
             <% if ( c.state.pageSize < c.state.totalRecords){ %>
             <ul class="pager">
-                <li class="paginatorFirst pseudo-link">first</li>
-                <li class="paginatorPrev pseudo-link">prev</li>
-                <li class="paginatorStat"><%- c.state.currentPage %> of <%- c.state.totalPages %></li>
-                <li class="paginatorNext pseudo-link">next</li>
-                <li class="paginatorLast pseudo-link">last</li>
+                <li class="paginatorFirst pseudo-link custom-link btn btn-small">first</li>
+                <li class="paginatorPrev pseudo-link custom-link btn btn-small">prev</li>
+                <li class="paginatorStat btn btn-small green"><%- c.state.currentPage %> of <%- c.state.totalPages %></li>
+                <li class="paginatorNext pseudo-link custom-link  btn btn-small">next</li>
+                <li class="paginatorLast pseudo-link custom-link btn btn-small">last</li>
             </ul>
             <% } %>
         </script>

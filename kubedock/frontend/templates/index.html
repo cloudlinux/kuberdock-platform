@@ -86,18 +86,18 @@
             } %>
 
             <!-- table data row -->
-            <!-- <td>
-                <input type="checkbox">
-            </td> -->
-
             <td>
-                <a href="/#pods/<%- id %>"><%- name %></a>
-            </td>
+                <input type="checkbox">
+            </td> 
 
             <td>
                 <span class="badge">
                     <%- containers.length %>
                 </span>
+                <a href="/#pods/<%- id %>"><%- name %></a>
+            </td>
+
+            <td>
                 <span class=" glyphicon "></span>
                 <% if (cluster){ %>
                     <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span>
@@ -121,18 +121,11 @@
                     Actions
                   </button>
                   <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
-                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Start</a></li>
-                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Stop</a></li>
-                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                    <li role="presentation"><a class="start-btn" role="menuitem" tabindex="-1" href="#">Start</a></li>
+                    <li role="presentation"><a class="stop-btn" role="menuitem" tabindex="-1" href="#">Stop</a></li>
+                    <li role="presentation"><a class="terminate-btn" role="menuitem" tabindex="-1" href="#">Delete</a></li>
                   </ul>
                 </div>
-
-
-               <!-- <div class="btn-group btn-group-xs" role="group" aria-roles="button">
-                    <button class="btn btn-default btn-xs start-btn"><span class="glyphicon glyphicon-play"></span>Start</button>
-                    <button class="btn btn-default btn-xs stop-btn"><span class="glyphicon glyphicon-stop"></span>Stop</button>
-                    <button class="btn btn-default btn-xs terminate-btn"><span class="glyphicon glyphicon-trash"></span>Delete</button>
-                </div> buttons -->
             </td>
             <!-- end of table data row -->
 
@@ -144,7 +137,7 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                           <!-- <th><input type="checkbox"></th> -->
+                            <th><input type="checkbox"></th>
                             <th>Name</th>
                             <th>Elements</th>
                             <th>Entrypoint</th>
@@ -400,7 +393,7 @@
                         <li role="presentation"><span class="go-to-other">Other</span></li>
                     </ul>
                 </div>
-            </div>
+            </div >
             <div>
                 <table class="table">
                     <thead><tr><th class="text-center">CPU</th><th class="text-center">Memory</th></tr></thead>

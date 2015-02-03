@@ -16,8 +16,6 @@
         <!-- contents container -->
         <div id="contents" class="container"></div>
         {% block script_templates %}
-
-        {% include "inc/footer.html" %}
         
         <!-- Page Header template -->
         <script type="text/template" id="page-header-title-template"><%- name %></script>
@@ -56,22 +54,20 @@
                 </div>
             </div><!-- end of page header -->
 
-            <!-- page actions 
+            <!-- page actions -->
             <div class="row">
-                <div class="col-md-1 col-md-offset-11 text-left">
-                    <button type="button" class="btn btn-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                <div class="col-md-1 col-md-offset-0">
+                    <button type="button" class="btn invert login-btn dropdown-toggle green" data-toggle="dropdown" aria-expanded="false">
                         Actions <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu bulk-action-menu" role="menu">
-                        <li><button type="button" class="btn btn-success btn-block">
-                        <span class="glyphicon glyphicon-play"></span>Start</button></li>
-                        <li><button type="button" class="btn btn-warning btn-block">
-                        <span class="glyphicon glyphicon-stop"></span>Stop</button></li>
-                        <li><button type="button" class="btn btn-danger btn-block">
-                        <span class="glyphicon glyphicon-trash"></span>Delete</button></li>
+	                    <li role="presentation"><a class="start-btn" role="menuitem" tabindex="-1" href="#">Start</a></li>
+	                    <li role="presentation"><a class="stop-btn" role="menuitem" tabindex="-1" href="#">Stop</a></li>
+	                    <li role="presentation"><a class="terminate-btn" role="menuitem" tabindex="-1" href="#">Delete</a>
                     </ul>
                 </div>
-            </div>< end of page actions -->
+            </div>
+            <!-- end of page actions -->
 
             <div id="layout-list"></div>
             <div id="layout-footer"></div>
@@ -530,6 +526,8 @@
                 administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
         </script>
         {% endblock %}
+
+        {% include "inc/footer.html" %}
 
         {% assets "vendor_js" -%}
           <script src="{{ ASSET_URL }}"></script>

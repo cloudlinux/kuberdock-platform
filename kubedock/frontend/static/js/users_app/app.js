@@ -25,12 +25,12 @@ define(['marionette', 'paginator'],
         });
 
         Data.UserActivitiesModel = Backbone.Model.extend({
-            urlRoot: '/api/users/a/:id/',
+            urlRoot: '/api/users/a/:id',
             parse: unwrapper
         });
 
         Data.UsersPageableCollection = PageableCollection.extend({
-            url: '/api/users/',
+            url: '/api/users',
             model: Data.UserModel,
             parse: unwrapper,
             mode: 'client',
@@ -40,7 +40,7 @@ define(['marionette', 'paginator'],
         });
 
         Data.ActivitiesCollection = PageableCollection.extend({
-            url: '/api/users/a/:id/',
+            url: '/api/users/a/:id',
             model: Data.UserActivitiesModel,
             parse: unwrapper,
             mode: 'client',
@@ -187,7 +187,6 @@ define(['marionette', 'paginator'],
         Views.UsersEditView = Views.UserCreateView.extend({     // inherit
 
             onRender: function(){
-                console.log(this.model)
                 this.ui.username.val(this.model.get('username'));
                 this.ui.email.val(this.model.get('email'));
                 this.ui.active_chkx.prop('checked', this.model.get('active'));
@@ -271,7 +270,7 @@ define(['marionette', 'paginator'],
                 var layout_view = new App.Views.UsersLayout(),
                     t = this;
                 $.ajax({
-                    'url': '/api/users/a/' + user_id + '/',
+                    'url': '/api/users/a/' + user_id,
                     success: function(rs){
                         UsersApp.Data.activities = new UsersApp.Data.ActivitiesCollection(rs.data);
                         var activities_view = new App.Views.UsersActivityView({
@@ -343,7 +342,7 @@ define(['marionette', 'paginator'],
 
     UsersApp.on('start', function(){
         if (Backbone.history) {
-            Backbone.history.start({root: '/users/', pushState: true});
+            Backbone.history.start({root: '/users', pushState: true});
         }
     });
     return UsersApp;

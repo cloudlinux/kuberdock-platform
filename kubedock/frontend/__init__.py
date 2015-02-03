@@ -4,6 +4,7 @@ from flask.ext.login import current_user
 
 from .. import factory
 from .. import sessions
+from ..rbac import get_user_role
 from . import assets
 import datetime
 
@@ -40,6 +41,5 @@ def handle_error(e):
 
 
 def on_permission_denied(e):
-    # TODO(Stanislav) change to correct roleloader()
-    message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
+    message = e.kwargs['message'] or 'Denied to {0}'.format(get_user_role())
     return message, 403

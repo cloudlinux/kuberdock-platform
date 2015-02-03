@@ -10,13 +10,13 @@ from ..users import User, Role
 users = Blueprint('users', __name__, url_prefix='/users')
 
 
+@check_permission('get', 'users')
 def get_users_collection():
     return [u.to_dict() for u in User.all()]
 
 
 @users.route('/', methods=['GET'])
 @login_required_or_basic
-@check_permission('get', 'users')
 def get_list():
     return jsonify({'status': 'OK', 'data': get_users_collection()})
 

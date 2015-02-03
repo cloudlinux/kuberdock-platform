@@ -2,6 +2,7 @@ import datetime
 #from ..utils import JSONEncoder
 from .. import factory
 from .. import sessions
+from ..rbac import get_user_role
 
 from flask.ext.login import current_user
 from flask import jsonify
@@ -47,8 +48,7 @@ def on_app_error(e):
 
 
 def on_permission_denied(e):
-    # TODO(Stanislav) change to correct roleloader()
-    message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
+    message = e.kwargs['message'] or 'Denied to {0}'.format(get_user_role())
     return on_app_error(APIError('Error. {0}'.format(message), status_code=403))
 
 

@@ -6,6 +6,7 @@ from flask.ext.login import current_user
 from functools import wraps
 
 from .users import User
+from .api import APIError
 
 def login_required_or_basic(func):
     @wraps(func)
@@ -21,9 +22,7 @@ def login_required_or_basic(func):
                     if user is not None and user.verify_password(passwd):
                         g.user = user
                         return func(*args, **kwargs)
-            response = jsonify({'code': 403,'message': 'Access denied'})
-            response.status_code = 403
-            return response
+            raise APIError('Not Authorized', status_code=401)
             #return current_app.login_manager.unauthorized()
         return func(*args, **kwargs)
     return decorated_view

@@ -106,11 +106,14 @@ def add_new_minion(ip):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    send_event('install_logs', 'Connecting with ssh-key id_rsa...')
     try:
         if DEBUG:
+            send_event('install_logs', 'Connecting to {0} with ssh with user = root and password = {1} ...'
+                       .format(ip, MINION_SSH_AUTH))
             ssh.connect(hostname=ip, username='root', password=MINION_SSH_AUTH, timeout=10)
         else:
+            send_event('install_logs', 'Connecting to {0} with ssh with user = root and ssh_key_filename = {1} ...'
+                       .format(ip, MINION_SSH_AUTH))
             ssh.connect(hostname=ip, username='root', key_filename=MINION_SSH_AUTH, timeout=10)    # not tested
     except socket.timeout:
         send_event('install_logs', 'Timeout while connecting. Stopped. Check ip/hostname and try again')

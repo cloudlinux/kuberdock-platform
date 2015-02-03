@@ -172,15 +172,14 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 var that = this;
                 this.ui.spinner.spin({color: '#437A9E'});
                 Backbone.ajax({ url:"/api/minions/checkhost/" + val }).done(function (data) {
-                    if (data.status === 'OK') {
-                        that.state.set('isFinished', true);
-                        that.state.set('ip', data.ip);
-                        that.state.set('hostname', data.hostname);
-                    } else {
-                        that.state.set('isFinished', false);
-                    }
-                    that.ui.spinner.spin(false);
+                    that.state.set('isFinished', true);
+                    that.state.set('ip', data.ip);
+                    that.state.set('hostname', data.hostname);
+                }).error(function(resp) {
+                    that.state.set('isFinished', false);
+                    alert(resp.responseJSON.status);
                 });
+                that.ui.spinner.spin(false);
             } else {
                 this.state.set('isFinished', false);
             }

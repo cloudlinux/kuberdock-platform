@@ -116,8 +116,11 @@ def add_new_minion(ip):
                        .format(ip, MINION_SSH_AUTH))
             ssh.connect(hostname=ip, username='root', key_filename=MINION_SSH_AUTH, timeout=10)    # not tested
     except socket.timeout:
-        send_event('install_logs', 'Timeout while connecting. Stopped. Check ip/hostname and try again')
+        send_event('install_logs', 'Connection timeout. Check hostname and try again')
         return 'Timeout'
+    except socket.error as e:
+        send_event('install_logs', '{0}. Check hostname, your credentials, and try again'.format(e))
+        return 'Connection error'
 
     sftp = ssh.open_sftp()
     sftp.put('kub_install.sh', '/kub_install.sh')

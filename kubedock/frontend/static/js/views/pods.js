@@ -10,7 +10,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click .start-checked': 'startItems',
             'click .stop-checked': 'stopItems',
-            'click .terminate-checked': 'terminateItems'
+            'click .terminate-checked': 'terminateItems',
+            'click .table th input[type=checkbox]': 'itemsAllHandler',
         },
 
         initialize: function(){
@@ -62,6 +63,16 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     });
                 }
             });
+        },
+        itemsAllHandler: function(evt){
+            var target = $(evt.currentTarget),
+                inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
+
+            if( target.is(':checked') ) {
+                inputs.prop('checked',true);
+            } else {
+                inputs.prop('checked',false);
+            }
         }
     });
     
@@ -92,7 +103,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'change .check-item': 'checkItem',
             'click .start-btn': 'startItem',
             'click .stop-btn': 'stopItem',
-            'click .terminate-btn': 'terminateItem'
+            'click .terminate-btn': 'terminateItem',
+            'click td:first input[type=checkbox]': 'inputHandler'
         },
 
         checkItem: function(evt){
@@ -124,7 +136,28 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     console.log('Could not remove '+name);
                 }
             });
-        }
+        },
+        inputHandler: function(evt){
+            evt.stopPropagation();
+
+            var target = $(evt.currentTarget),
+                tbody = target.parents('.table tbody'),
+                switcher = target.parents('.table').find('thead tr:first-child input[type=checkbox]')[0],
+                inputsLength = 0,
+                counter = 0;
+
+            tbody.find('tr td:first-child input').each(function(){                    
+                if (this.checked) counter+=1;
+                inputsLength+=1;
+            });
+
+            if (counter == inputsLength) {
+               switcher.checked = true;   
+            }
+            else {
+                switcher.checked = false;  
+            }
+        }  
     });
     
     Views.PodCollection = Backbone.Marionette.CompositeView.extend({
@@ -138,7 +171,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.trigger('pager:clear');
         }
     });
-    
     
     // this layout view shows details a pod details page
     Views.PodItemLayout = Backbone.Marionette.LayoutView.extend({
@@ -308,8 +340,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.trigger('pod:run', data.model);
         }
     });
-    
-    
     
     Views.PodHeaderView = Backbone.Marionette.ItemView.extend({
         template: _.template('<h2 class="peditable"><%- name %></h2>'),

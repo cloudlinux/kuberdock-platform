@@ -290,6 +290,7 @@ span.badge {
   font-size: 11px;
   line-height: 11px;
   margin-right: 2px; 
+  vertical-align: top;
 }
 table { width: 100%; }
 table thead {
@@ -298,7 +299,7 @@ table thead {
 }
 table tbody a {
   color: #417505;
-  font-size: 18px; 
+  font-size: 14px; 
   text-decoration: underline;
 }
 table tbody a:hover {
@@ -380,7 +381,7 @@ span.stopped{
   color: #5c5c5c;
 }
 #contents .row{
-  margin-bottom: 50px;
+  margin-bottom: 30px;
 }
 .custom-link{
   color: #333;

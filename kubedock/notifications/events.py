@@ -2,6 +2,11 @@ from datetime import datetime
 from flask import render_template
 
 
+"""
+You may define any kind of events you want
+"""
+
+
 USER_CREATED = 1001
 USER_CHANGED = 1002
 USER_PWD_CHANGED = 1003
@@ -13,20 +18,28 @@ POD_CONTAINER_FAILED = 2002
 POD_LIMITS_REACHED = 2003
 
 
+"""
+But you have to add new event into base EVENTS object with few parameters:
+    name - the name that will be displayed in admin UI when add template
+            for new event
+    objects - the kay-value object where:
+        key - type of model, e.g. User, Pod, Page, etc.
+        value - the list(tuple) of the object's fields that may be provided
+                in template
+"""
+
+
 EVENTS = {
     USER_CREATED: dict(
         name='User created',
-        desciption='',
         objects=dict(user=('id', 'username', 'email',),)
     ),
     USER_LOGGEDIN: dict(
         name='User logged in',
-        desciption='',
         objects=dict(user=('id', 'username', 'email', '_ts'),)
     ),
     POD_CONTAINER_CREATED: dict(
         name='Pod container created',
-        desciption='',
         objects=dict(
             user=('id', 'username', 'email', '_ts'),
             pod=('id', 'name', 'status',),
@@ -34,7 +47,6 @@ EVENTS = {
     ),
     POD_CONTAINER_FAILED: dict(
         name='Pod container failed',
-        desciption='',
         objects=dict(
             user=('id', 'username', 'email', '_ts'),
             pod=('id', 'name', 'status',),
@@ -42,7 +54,6 @@ EVENTS = {
     ),
     POD_LIMITS_REACHED: dict(
         name='Pod limits reached',
-        desciption='',
         objects=dict(
             user=('id', 'username', 'email', '_ts'),
             pod=('id', 'name', 'status',),

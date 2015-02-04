@@ -21,5 +21,4 @@ def index(**kwargs):
         events_keys=json.dumps(NotificationEvent.get_events_keys()),
         templates_collection=json.dumps([t.to_dict() for t in templates])
     )
-    print context
     return render_template('notifications/index.html', **context)

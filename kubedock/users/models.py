@@ -2,6 +2,7 @@ import json
 import datetime
 from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import current_app
 from flask.ext.login import UserMixin
 
 from ..core import db, login_manager
@@ -36,7 +37,6 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def get_online_collection(cls, to_json=None):
         user_ids = get_online_users()
         users = [u.to_dict() for u in cls.query.filter(cls.id.in_(user_ids))]
-        print users
         if to_json:
             return json.dumps(users)
         return users
@@ -151,13 +151,13 @@ class SessionData(db.Model):
 ### Users signals ###
 @user_logged_in.connect
 def user_logged_in_signal(user_id):
-    print 'user_logged_in_signal', user_id
+    current_app.logger.debug('user_logged_in_signal {0}'.format(user_id))
     ua = UserActivity.create(action=UserActivity.LOGIN, user_id=user_id)
     ua.save()
 
 
 @user_logged_out.connect
 def user_logged_out_signal(user_id):
-    print 'user_logged_out_signal', user_id
+    current_app.logger.debug('user_logged_out_signal {0}'.format(user_id))
     ua = UserActivity.create(action=UserActivity.LOGOUT, user_id=user_id)
     ua.save()

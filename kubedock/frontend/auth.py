@@ -16,7 +16,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         error = 'Invalid credentials provided'
         if user and not user.active:
-            error = 'User is blocked'
+            return render_template('errors/user_inactive.html'), 403
         elif user is not None and user.verify_password(passwd):
             login_user(user)
             user_logged_in.send(user.id)

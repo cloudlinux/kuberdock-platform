@@ -1,11 +1,14 @@
-import socket; socket.setdefaulttimeout(2)
+import socket
 import re
 
 from .api import APIError
 
 container_image_name = re.compile(r"^[a-zA-Z0-9]+[a-zA-Z0-9/:_!.\-]*$")
 ipv4_addr = re.compile(r"((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)")
-hostname = re.compile(r"^[a-zA-Z0-9]+[a-zA-Z0-9.\-]*$")
+
+# http://stackoverflow.com/questions/1418423/the-hostname-regex
+hostname = re.compile(r"^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$")
+
 pod_name = re.compile(r"^[a-zA-Z0-9]+[a-zA-Z0-9._\- ]*$")
 
 
@@ -24,18 +27,16 @@ def check_container_image_name(searchkey):
 
 
 def check_minion_data(data):
-    if not ('ip' in data and ipv4_addr.match(data['ip'])):
-        raise APIError('Invalid ip address')
-    if not ('hostname' in data and hostname.match(data['hostname'])):
-        raise APIError('Invalid hostname')
+    if 'hostname' not in data:
+        raise APIError('Hostname not provided')
     if len(data['hostname']) > 255:
         raise APIError('Hostname is longer than 255 symbols')
+    if not hostname.match(data['hostname']):
+        raise APIError('Invalid hostname')
     try:
-        ip = socket.gethostbyname(data['hostname'])
+        socket.gethostbyname(data['hostname'])
     except socket.error:
-        raise APIError("Hostname can't be resolved")
-    if data['ip'] != ip:
-        raise APIError("Hostname ip don't match given ip")
+        raise APIError("Hostname can't be resolved. Check /etc/hosts file for correct minion records")
     # annotations - any
     # labels - any
 

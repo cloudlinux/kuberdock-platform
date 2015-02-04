@@ -1,6 +1,27 @@
 {% extends "layout.html" %}
 
 {% block body %}
+    <style>
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  /* Margin bottom by footer height */
+  margin-bottom: 180px;
+}
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 180px;
+  background-color: #f5f5f5;
+}
+.inactive { color: red !important; }
+{#.has_page { font-weight: bold; }#}
+    </style>
+
     <nav id="navbar" class="navbar">
         <div id="navbar-container" class="container">
             <div class="navbar-header">
@@ -36,47 +57,18 @@
         </div>
     </div>
 
-    <script type="text/template" id="menu-form-template">
-        <form>
-            Region:
-            <select name="region" id="id_region">
-                {% for id, name in regions %}<option value="{{ id }}"<% if (region == {{ id }}) { %> selected<% } %> >{{ name }}</option>
-                {% endfor %}
-            </select>
-
-            <div class="form-group">
-                <label for="id_name">Menu name</label>
-                <input type="text" class="form-control" id="id_name" placeholder="Menu name"
-                        value="<%- name %>">
-            </div>
-
-            <div class="checkbox">
-                <label>
-                    <input type="checkbox" id="id_is_active"<% if (is_active) { %> checked<% } %> />
-                    Is active
-                </label>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <button class="btn btn-success btn-sm" id="save-btn">
-                        Save
-                    </button>
-                    <button class="btn btn-default btn-sm" id="cancel-btn">
-                        Cancel
-                    </button>
-                </div>
-                <div class="col-md-6"></div>
-            </div>
-        </form>
-    </script>
-
-
     <script type="text/template" id="menu-item-form-template">
+        <h1><%- region_repr %>: <%- name %></h1>
         <form>
             <div class="form-group">
                 <label for="id_path">Path</label>
                 <input type="text" class="form-control" id="id_path"
                        placeholder="Path" value="<%- path %>">
+                <i class="text-info">
+                    If path starts with leading slash '/' then menu item will
+                    have absolute URL, or relative URL of parent item
+                </i>
+
             </div>
 
             <div class="form-group">
@@ -92,22 +84,44 @@
                 </label>
             </div>
 
+            <div class="form-group">
+                <select id="role-select" name="role-select" multiple style="width:200px;height: 100px;">
+                {% for role in roles %}
+                    {% if role.default %}
+                        <option selected="selected">{{ role.rolename }}</option>
+                    {% else %}
+                        <option>{{ role.rolename }}</option>
+                    {% endif %}
+                {% endfor %}
+                </select>
+            </div>
+
             <% if(page_dict && page_dict.id) { %>
-            <div class="form-group">
-                <label for="id_slug">Slug</label>
-                <input type="text" class="form-control" id="id_slug"
-                       placeholder="Slug" value="<%- page_dict.slug %>">
+            <div class="checkbox">
+                <label for="id_unbind_page" class="text-danger">
+                    <input type="checkbox" id="id_unbind_page">
+                    Unbind page
+                </label>
             </div>
-            <div class="form-group">
-                <label for="id_title">Title</label>
-                <input type="text" class="form-control" id="id_title"
-                       placeholder="Title" value="<%- page_dict.title %>">
-            </div>
-            <div class="form-group">
-                <label for="id_content<%- id %>">Content</label>
-                <textarea id="id_content<%- id %>" placeholder="Content">
-                    <%- page_dict.content %>
-                </textarea>
+
+            <div id="page-form">
+                <div class="form-group">
+                    <label for="id_title">Title</label>
+                    <input type="text" class="form-control" id="id_title"
+                           placeholder="Title" value="<%- page_dict.title %>">
+                </div>
+                <div class="form-group">
+                    <label for="id_slug">Slug</label>
+                    <input type="text" class="form-control" id="id_slug"
+                           placeholder="Slug" value="<%- page_dict.slug %>">
+                    <i class="text-info">The part of URL, e.g. /page/SLUG</i>
+                </div>
+                <div class="form-group">
+                    <label for="id_content<%- id %>">Content</label>
+                    <textarea id="id_content<%- id %>" placeholder="Content">
+                        <%- page_dict.content %>
+                    </textarea>
+                </div>
             </div>
             <% } else { %>
             <div class="checkbox">
@@ -117,14 +131,15 @@
             </div>
             <div class="new-page-form" style="display: none;">
                 <div class="form-group">
-                    <label for="id_slug">Slug</label>
-                    <input type="text" class="form-control" id="id_slug"
-                           placeholder="Slug" value="">
-                </div>
-                <div class="form-group">
                     <label for="id_title">Title</label>
                     <input type="text" class="form-control" id="id_title"
                            placeholder="Title" value="">
+                </div>
+                <div class="form-group">
+                    <label for="id_slug">Slug</label>
+                    <input type="text" class="form-control" id="id_slug"
+                           placeholder="Slug" value="">
+                    <i class="text-info">The part of URL, e.g. /page/SLUG</i>
                 </div>
                 <div class="form-group">
                     <label for="id_content<%- id %>">Content</label>
@@ -141,9 +156,6 @@
                     <button class="btn btn-success btn-sm" id="save-btn" type="submit">
                         Save
                     </button>
-                    <button class="btn btn-default btn-sm" id="cancel-btn">
-                        Cancel
-                    </button>
                     <button class="btn btn-danger btn-sm" id="delete-btn">
                         Delete
                     </button>
@@ -152,6 +164,11 @@
         </form>
     </script>
 
+    <footer class="footer">
+        <div class="container">
+            {{ MENU.footer.render()|safe }}
+        </div>
+    </footer>
 
 
 {% block static_pages_css_asset %}
@@ -162,14 +179,14 @@
             staticPages: {
                 index: '/admin/static_pages',
                 api: {
-                    menu: '/api/static_pages/menu/',
-                    menuItem: '/api/static_pages/menuItem/',
-                    deleteMenuItem: '/api/static_pages/menuItem/delete/',
-                    page: '/api/static_pages/page/',
-                    menuTree: '/api/static_pages/dynatreeList/'
+                    menu: '/api/static_pages/menu',
+                    menuItem: '/api/static_pages/menuItem',
+                    deleteMenuItem: '/api/static_pages/menuItem/delete',
+                    page: '/api/static_pages/page',
+                    menuTree: '/api/static_pages/dynatreeList'
                 }
             }
-        }
+        };
     </script>
 
     <script data-main="/static/js/static_pages_app/require_main.js" src="/static/js/lib/require.js"></script>

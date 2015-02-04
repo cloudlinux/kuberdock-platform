@@ -12,7 +12,8 @@ requirejs.config({
         tpl: 'lib/tpl',
         text: 'lib/text',
         dynatree: 'lib/jquery.dynatree',
-        ckeditor: 'lib/ckeditor/ckeditor'
+        ckeditor: 'lib/ckeditor/ckeditor',
+        treetable: 'lib/jquery.treetable'
     },
     shim: {
         jquery: {
@@ -42,8 +43,7 @@ requirejs.config({
         }
     }
 });
-require(["jquery", 'jquery-ui', "bootstrap", 'dynatree', 'lib/navbarr', 'static_pages_app/static_pages_app'],
+require(["jquery", 'jquery-ui', "bootstrap", 'dynatree', 'lib/navbarr', 'static_pages_app/app'],
 function(jQuery, jQueryUI, bs, DynATree, nb, StaticPagesApp){
-    console.log('StaticPagesApp.start');
     StaticPagesApp.start();
 });

@@ -31,6 +31,10 @@ CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)
+    },
+    'get-minions-logs': {
+        'task': 'kubedock.tasks.get_minions_logs',
+        'schedule': timedelta(seconds=1)
     }
 }
 

@@ -515,5 +515,15 @@ footer.footer ul.footer-menu li a:hover, footer.footer ul.footer-menu li a:activ
 }
 /* end footer */
 
+/* minions */
 
+div.minion-logs {
+  background: black;
+  color: white;
+  padding: 1em;
+  height: 26em;
+  width: 82em;
+  overflow: auto;
+}
 
+/* end minions */

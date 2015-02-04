@@ -184,3 +184,68 @@ def pull_hourly_stats():
             continue
         db.session.add(StatWrap5Min(**entry))
     db.session.commit()
+
+
+def get_minion_log(ip, log_size=0):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        if DEBUG:
+            ssh.connect(hostname=ip, username='root',
+                        password=MINION_SSH_AUTH, timeout=10)
+        else:
+            ssh.connect(hostname=ip, username='root',
+                        key_filename=MINION_SSH_AUTH, timeout=10)
+    except (socket.timeout, socket.error,
+            paramiko.ssh_exception.AuthenticationException):
+        return -1, []
+    sftp = ssh.open_sftp()
+    log_stat = sftp.stat('/var/log/messages')
+    log_lines = []
+    if log_size > 0:
+        if log_stat.st_size != log_size:
+            log_file = sftp.open('/var/log/messages')
+            if log_stat.st_size > log_size:
+                log_file.seek(log_size)
+            log_lines.extend(log_file.readlines())
+    sftp.close()
+    ssh.close()
+    return log_stat.st_size, log_lines
+
+
+@celery.task()
+def get_minions_logs():
+    redis = ConnectionPool.get_connection()
+
+    minions_logs_timestamp = redis.get('minions_logs_timestamp')
+    minions_logs_timestamp = (0. if minions_logs_timestamp is None
+                              else float(minions_logs_timestamp))
+    now = time.time()
+
+    if now - minions_logs_timestamp > 30:
+        redis.delete('minions_logged')
+        redis.delete('minions_log_size')
+
+    redis.setex('minions_logs_timestamp', 30, now)
+
+    all_minions = get_all_minions()
+    minions_logged = redis.lrange('minions_logged', 0, -1)
+
+    for minion in all_minions:
+        minion_id = minion['id']
+
+        if minion['id'] in minions_logged:
+            continue
+
+        log_size = redis.hget('minions_log_size', minion_id)
+        log_size = 0 if log_size is None else int(log_size)
+        log_size, log_lines = get_minion_log(minion_id, log_size)
+        redis.hset('minions_log_size', minion_id, log_size)
+        redis.rpush('minions_logged', minion_id)
+        event_name = 'minion-log-{0}'.format(minion_id)
+
+        for line in log_lines:
+            send_event(event_name, line)
+        break
+    else:
+        redis.delete('minions_logged')

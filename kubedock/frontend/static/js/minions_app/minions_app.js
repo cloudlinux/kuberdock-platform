@@ -308,6 +308,7 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             var url_ = '/detailed/' + this.minion_id;
             if (tgt.hasClass('minionSettingsTab')) App.router.navigate(url_ + '/settings/', {trigger: true});
             else if (tgt.hasClass('minionStatsTab')) App.router.navigate(url_ + '/stats/', {trigger: true});
+            else if (tgt.hasClass('minionLogsTab')) App.router.navigate(url_ + '/logs/', {trigger: true});
             else if (tgt.hasClass('minionTroublesTab')) App.router.navigate(url_ + '/troubles/', {trigger: true});
         },
 
@@ -349,6 +350,28 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     Views.MinionStatsTabView = Backbone.Marionette.ItemView.extend({
         template: '#minion-stats-tab-template'
+    });
+
+    Views.MinionLogsTabView = Backbone.Marionette.ItemView.extend({
+        template: '#minion-logs-tab-template',
+
+        ui: {
+            textarea: '.minion-logs'
+        },
+
+        initialize: function () {
+            this.model.set('logs', []);
+            this.listenTo(App.vent, 'update_minion_log_' + this.model.get('ip'), function (data) {
+                var lines = this.model.get('logs');
+                lines.push(data);
+                lines = lines.slice(-100);
+                this.model.set('logs', lines);
+                this.render();
+                _.defer(function(caller){
+                    caller.ui.textarea.scrollTop(caller.ui.textarea[0].scrollHeight);
+                }, this);
+            })
+        }
     });
 
     Views.MinionTroublesTabView = Backbone.Marionette.ItemView.extend({
@@ -442,6 +465,10 @@ MinionsApp.module('MinionsCRUD', function(MinionsCRUD, App, Backbone, Marionette
                         var minion_stats_tab_view = new App.Views.MinionStatsTabView({ model: minion });
                         layout_view.tab_content.show(minion_stats_tab_view);
                     } break;
+                    case 'logs': {
+                        var minion_logs_tab_view = new App.Views.MinionLogsTabView({ model: minion });
+                        layout_view.tab_content.show(minion_logs_tab_view);
+                    } break;
                     case 'troubles': {
                         var minion_troubles_tab_view = new App.Views.MinionTroublesTabView({ model: minion });
                         layout_view.tab_content.show(minion_troubles_tab_view);
@@ -474,6 +501,11 @@ MinionsApp.module('MinionsCRUD', function(MinionsCRUD, App, Backbone, Marionette
             source.addEventListener('install_logs', function (ev) {
                 App.vent.trigger('update_console_log', ev.data);
             }, false);
+            MinionsApp.Data.minions.forEach(function (minion) {
+        	source.addEventListener('minion-log-' + minion.get('ip'), function (ev) {
+        	    App.vent.trigger('update_minion_log_' + minion.get('ip'), ev.data);
+        	}, false);
+            });
         }
     });
 

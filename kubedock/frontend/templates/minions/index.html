@@ -7,10 +7,12 @@
             switch (tab) {
                 case 'settings': s.settings = 'active'; break;
                 case 'stats': s.stats = 'active'; break;
+                case 'logs': s.logs = 'active'; break;
                 case 'troubles': s.troubles = 'active'; break;
             } %>
             <li role="presentation" class="<%- s.settings %>"><a  class="minionSettingsTab" href="">Settings</a></li>
             <li role="presentation" class="<%- s.stats %>"><a class="minionStatsTab" href="">Statistics</a></li>
+            <li role="presentation" class="<%- s.logs %>"><a class="minionLogsTab" href="">Logs</a></li>
             <li role="presentation" class="<%- s.troubles %>"><a class="minionTroublesTab" href="">Troubles</a></li>
         </ul>
         <div id="tab-content">div tab_content</div>
@@ -49,6 +51,14 @@
 
     <script type="text/template" id="minion-stats-tab-template">
         PODS, DOCKERS LIST, CPU, RAM, DISK etc...
+    </script>
+
+    <script type="text/template" id="minion-logs-tab-template">
+        <div class="minion-logs">
+            <% _.each(logs, function(line){ %>
+            <p><%- line %></p>
+            <% }) %>
+        </div>
     </script>
 
     <script type="text/template" id="minion-troubles-tab-template">

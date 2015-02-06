@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
+from . import APIError
 from ..billing import Pricing
 from ..core import db, check_permission
 from ..utils import login_required_or_basic
@@ -31,9 +32,9 @@ def get_one_user(user_id):
     if user_id.isdigit():
         u = User.query.get(user_id)
     else:
-        u = db.session.query(User).filter_by(username=user_id).first()
+        u = User.filter_by(username=user_id).first()
     if u is None:
-        return jsonify({'status': "User {0} doesn't exists".format(user_id)}), 404
+        raise APIError("User {0} doesn't exists".format(user_id))
     return jsonify({'status': 'OK', 'data': u.to_dict()})
 
 
@@ -44,16 +45,14 @@ def get_user_activities(user_id):
     u = User.filter_by(id=user_id).first()
     if u:
         return jsonify({'status': 'OK', 'data': u.user_activity()})
-    else:
-        return jsonify({'status': "User %s doesn't exists" % user_id}), 404
+    raise APIError("User {0} doesn't exists".format(user_id))
 
 
 @users.route('/online/', methods=['GET'])
 @login_required_or_basic
 @check_permission('get', 'users')
 def get_online_users():
-    objects_list = User.get_online_collection()
-    return jsonify({'data': objects_list})
+    return jsonify({'data': User.get_online_collection()})
 
 
 @users.route('/', methods=['POST'])
@@ -69,19 +68,19 @@ def create_item():
     try:
         rolename = data.pop('rolename', 'user')
         package = data.pop('package', 'basic')
-        r = db.session.query(Role).filter_by(rolename=rolename).first()
+        r = Role.filter_by(rolename=rolename).first()
         p = get_pricing(package)
         temp = dict(filter((lambda t: t[1] != ''), data.items()))
         u = User(**temp)
         u.role = r
         u.pricing = p
-        db.session.add(u)
-        db.session.commit()
+        u.save()
         data.update({'id': u.id, 'rolename': rolename, 'package': package})
         return jsonify({'status': 'OK', 'data': data})
     except (IntegrityError, InvalidRequestError):
         db.session.rollback()
-        return jsonify({'status': 'Conflict: User "{0}" already exists'.format(data['username'])}), 409
+        raise APIError('Conflict: User "{0}" already '
+                       'exists'.format(data['username']))
 
 
 @users.route('/<user_id>', methods=['PUT'])
@@ -91,27 +90,30 @@ def put_item(user_id):
     if user_id.isdigit():
         u = User.query.get(user_id)
     else:
-        u = db.session.query(User).filter_by(username=user_id).first()
+        u = User.filter_by(username=user_id).first()
     if u is not None:
         data = request.json
         if data is None:
             data = dict(request.form)
         for key in data.keys():
-            if type(data[key]) is list and len(data[key]) == 1:
+            if isinstance(data[key], list) and len(data[key]) == 1:
                 data[key] = data[key][0]
         # after some validation, including username unique...
-        r = db.session.query(Role).filter_by(rolename=data.pop('rolename', 'User')).first()
+        r = Role.filter_by(rolename=data.pop('rolename', 'User')).first()
         #p = db.session.query(Pricing).get(u.pricing_id)
         data = dict(filter((lambda item: item[1] != ''), data.items()))
-        for key in data.keys():
-            setattr(u, key, data[key])
+        u.username = data['username']
+        u.email = data['email']
+        u.active = data['active']
+        u.first_name = data['first_name']
+        u.last_name = data['last_name']
+        u.suspended = data['suspended']
+        u.middle_initials = data['middle_initials']
         u.role = r
         #u.pricing = p
-        db.session.add(u)
-        db.session.commit()
+        u.save()
         return jsonify({'status': 'OK'})
-    else:
-        return jsonify({'status': "User " + user_id + " doesn't exists"}), 404
+    raise APIError("User {0} doesn't exists".format(user_id))
 
 
 @users.route('/<user_id>', methods=['DELETE'])
@@ -121,10 +123,9 @@ def delete_item(user_id):
     if user_id.isdigit():
         u = User.query.get(user_id)
     else:
-        u = db.session.query(User).filter_by(username=user_id).first()
+        u = User.filter_by(username=user_id).first()
     if u is not None:
-        db.session.delete(u)
-        db.session.commit()
+        u.delete()
     return jsonify({'status': 'OK'})
 
 

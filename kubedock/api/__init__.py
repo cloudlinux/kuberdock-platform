@@ -2,7 +2,6 @@ import datetime
 #from ..utils import JSONEncoder
 from .. import factory
 from .. import sessions
-from ..rbac import get_user_role
 
 from flask.ext.login import current_user
 from flask import jsonify
@@ -25,15 +24,18 @@ def create_app(settings_override=None):
     from .users import users
     from .notifications import notifications
     from .static_pages import static_pages
-
+    from .usage import usage
+    from .pricing import pricing
+    
     for bp in images, pods, stream, minions, stats, users, notifications, \
-              static_pages:
+              static_pages, usage, pricing:
         app.register_blueprint(bp)
         
     #app.json_encoder = JSONEncoder
     app.errorhandler(404)(on_404)
     app.errorhandler(PermissionDenied)(on_permission_denied)
     app.errorhandler(APIError)(on_app_error)
+    app.url_map.strict_slashes = False
     return app
 
 
@@ -48,7 +50,8 @@ def on_app_error(e):
 
 
 def on_permission_denied(e):
-    message = e.kwargs['message'] or 'Denied to {0}'.format(get_user_role())
+    # TODO(Stanislav) change to correct roleloader()
+    message = e.kwargs['message'] or 'Denied to {0}'.format(current_user.role.rolename)
     return on_app_error(APIError('Error. {0}'.format(message), status_code=403))
 
 

@@ -10,8 +10,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click .start-checked': 'startItems',
             'click .stop-checked': 'stopItems',
-            'click .terminate-checked': 'terminateItems',
-            'click .table th input[type=checkbox]': 'itemsAllHandler',
+            'click .terminate-checked': 'terminateItems'
         },
 
         initialize: function(){
@@ -63,16 +62,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     });
                 }
             });
-        },
-        itemsAllHandler: function(evt){
-            var target = $(evt.currentTarget),
-                inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
-
-            if( target.is(':checked') ) {
-                inputs.prop('checked',true);
-            } else {
-                inputs.prop('checked',false);
-            }
         }
     });
     
@@ -103,8 +92,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'change .check-item': 'checkItem',
             'click .start-btn': 'startItem',
             'click .stop-btn': 'stopItem',
-            'click .terminate-btn': 'terminateItem',
-            'click td:first input[type=checkbox]': 'inputHandler'
+            'click .terminate-btn': 'terminateItem'
         },
 
         checkItem: function(evt){
@@ -136,28 +124,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     console.log('Could not remove '+name);
                 }
             });
-        },
-        inputHandler: function(evt){
-            evt.stopPropagation();
-
-            var target = $(evt.currentTarget),
-                tbody = target.parents('.table tbody'),
-                switcher = target.parents('.table').find('thead tr:first-child input[type=checkbox]')[0],
-                inputsLength = 0,
-                counter = 0;
-
-            tbody.find('tr td:first-child input').each(function(){                    
-                if (this.checked) counter+=1;
-                inputsLength+=1;
-            });
-
-            if (counter == inputsLength) {
-               switcher.checked = true;   
-            }
-            else {
-                switcher.checked = false;  
-            }
-        }  
+        }
     });
     
     Views.PodCollection = Backbone.Marionette.CompositeView.extend({
@@ -171,6 +138,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.trigger('pager:clear');
         }
     });
+    
     
     // this layout view shows details a pod details page
     Views.PodItemLayout = Backbone.Marionette.LayoutView.extend({
@@ -255,13 +223,52 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             });
         }
     });
-
-    Views.PodGraph = Backbone.Marionette.CollectionView.extend({
-        childView: Views.PodGraphItem
-    });
     
     Views.PodGraphItem = Backbone.Marionette.ItemView.extend({
-        template: '#pod-item-graph-template'
+        template: '#pod-item-graph-template',
+        ui: {
+            chart: '.graph-item'
+        },
+        onShow: function(){
+            var lines = this.model.get('lines');
+            var options = {
+                title: this.model.get('title'),
+                axes: {
+                    xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
+                    yaxis: {label: this.model.get('ylabel')}
+                },
+                seriesDefaults: {
+                    showMarker: false,
+                    rendererOptions: {
+                        smooth: true
+                    }
+                },
+                grid: {
+                    background: '#ffffff',
+                    drawBorder: false,
+                    shadow: false
+                }
+            };
+            
+            var points = [];
+            for (var i=0; i<lines; i++) {
+                if (points.length < i+1) {
+                    points.push([])
+                }
+            }
+            
+            this.model.get('points').forEach(function(record){
+                for (var i=0; i<lines; i++) {
+                    points[i].push([record[0], record[i+1]])
+                }
+            });
+            console.log(points);
+            this.ui.chart.jqplot(points, options);
+        }
+    });
+    
+    Views.PodGraph = Backbone.Marionette.CollectionView.extend({
+        childView: Views.PodGraphItem
     });
     
     Views.PodItemMain = Backbone.Marionette.ItemView.extend({
@@ -340,6 +347,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.trigger('pod:run', data.model);
         }
     });
+    
+    
     
     Views.PodHeaderView = Backbone.Marionette.ItemView.extend({
         template: _.template('<h2 class="peditable"><%- name %></h2>'),
@@ -727,7 +736,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click .delete-item': 'deleteItem',
             'click .cluster': 'toggleCluster',
-            'change .replicas': 'changeReplicas'
+            'change .replicas': 'changeReplicas',
+            'change .kubes': 'changeKubes'
         },
         
         triggers: {
@@ -767,6 +777,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));
+        },
+        
+        changeKubes: function(evt){
+            evt.stopPropagation();
+            this.model.set('kubes', parseInt($(evt.target).val().trim()));
         },
         
         onRender: function(){

@@ -1,4 +1,6 @@
 from ..core import db
+
+import socket; socket.setdefaulttimeout(2)
 import random
 
 
@@ -35,11 +37,36 @@ class Minion(db.Model):
 
     def __init__(self, **kwargs):
         super(Minion, self).__init__(**kwargs)
+        ip = kwargs.get('ip')
+        hostname = kwargs.get('hostname')
 
         # TODO implement
         self.cpu_cores = 1
         self.ram = 512*1024*1024
         self.disk = 10*1024*1024*1024
+
+        if (not ip) and (not hostname):
+            raise Exception('Provide ip or hostname')
+
+        if ip:
+            if hostname:
+                try:
+                    h_ip = socket.gethostbyname(hostname)
+                except socket.error:
+                    raise Exception("Can't resolve hostname {0} to ip".format(hostname))
+                if h_ip != ip:
+                    raise Exception("Hostname ip doesn't match given ip")
+                self.ip = ip
+                self.hostname = hostname
+            else:
+                self.ip = ip
+                self.hostname = None
+        else:   # when hostname provided instead ip
+            try:
+                self.ip = socket.gethostbyname(hostname)
+            except socket.error:
+                raise Exception("Can't resolve hostname {0} to ip".format(hostname))
+            self.hostname = hostname
 
     def __repr__(self):
         return "<Minion(ip='{0}')>".format(self.ip)

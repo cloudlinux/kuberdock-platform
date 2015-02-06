@@ -29,11 +29,12 @@ def create_item():
                        status_code=409)
     item_id = make_item_id(data['name'])
     runnable = data.pop('runnable', False)
+    kubes = data.pop('kubes', 1)
     temp_uuid = str(uuid4())
     
     u = db.session.query(User).filter_by(username=current_user.username).first()
     data.update({'id': temp_uuid, 'status': 'stopped'})
-    pod = Pod(name=data['name'], config=data, id=temp_uuid, status='stopped')
+    pod = Pod(name=data['name'], kubes=kubes, config=data, id=temp_uuid, status='stopped')
     pod.owner = u
     try:
         db.session.add(pod)
@@ -45,20 +46,21 @@ def create_item():
         service_rv = run_service(data)
         config = make_config(data, item_id)
         
-        current_app.logger.debug(config)
+        #current_app.logger.debug(config)
         result = tasks.create_containers.delay(config)
         pod_rv = result.wait()
         output = prepare_for_output(pod_rv, service_rv)
+        output['kubes'] = kubes
     
         try:
-            pod = Pod(name=output['name'], config=output, id=output['id'])
+            pod = Pod(name=output['name'], kubes=kubes, config=output, id=output['id'])
             pod.owner = u
             db.session.add(pod)
             pending_pod = db.session.query(Pod).get(temp_uuid)
             db.session.delete(pending_pod)
             db.session.commit()
         except Exception:
-            current_app.logger.debug(output)
+            #current_app.logger.debug(output)
             db.session.rollback()
             if data['service'] and service_rv is not None:
                 srv = json.loads(service_rv)
@@ -89,9 +91,9 @@ def delete_item(uuid):
                 replicas['items'])
             for replica in filtered_replicas:
                 result = tasks.delete_replica.delay(replica['id'])
-                current_app.logger.debug(result)
+                #current_app.logger.debug(result)
                 replica_rv = result.wait()
-                current_app.logger.debug(replica_rv)
+                #current_app.logger.debug(replica_rv)
                 if 'status' in replica_rv and replica_rv['status'].lower() not in ['success', 'working']:
                     return jsonify({'status': 'ERROR', 'reason': replica_rv['message']})
         except KeyError, e:
@@ -110,7 +112,7 @@ def delete_item(uuid):
         for pod in filtered_pods:
             result = tasks.delete_pod.delay(pod['id'])
             pod_rv = result.wait()
-            current_app.logger.debug(pod_rv)
+            #current_app.logger.debug(pod_rv)
             if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
                 return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
     except KeyError, e:
@@ -130,7 +132,7 @@ def delete_item(uuid):
             for service in filtered_services:
                 result = tasks.delete_service.delay(service['id'])
                 service_rv = result.wait()
-                current_app.logger.debug(service_rv)
+                #current_app.logger.debug(service_rv)
                 if 'status' in service_rv and service_rv['status'].lower() not in ['success', 'working']:
                     return jsonify({'status': 'ERROR', 'reason': service_rv['message']})
         except KeyError, e:
@@ -167,7 +169,7 @@ def update_item(uuid):
                 item_id = make_item_id(item.name)
                 service_rv = run_service(data)
                 config = make_config(item.config, item_id)
-                current_app.logger.debug(config)
+                #current_app.logger.debug(config)
                 result = tasks.create_containers.delay(config)
                 pod_rv = result.wait()
                 output = prepare_for_output(pod_rv, service_rv)
@@ -179,7 +181,7 @@ def update_item(uuid):
                     db.session.commit()
                     response = {'id': output['id']}
                 except Exception:
-                    current_app.logger.debug(output)
+                    #current_app.logger.debug(output)
                     db.session.rollback()
                     if service_rv is not None:
                         srv = json.loads(service_rv)
@@ -203,7 +205,7 @@ def update_item(uuid):
                     for pod in filtered_pods:
                         result = tasks.delete_pod.delay(pod['id'])
                         pod_rv = result.wait()
-                        current_app.logger.debug(pod_rv)
+                        #current_app.logger.debug(pod_rv)
                         if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
                             return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
                 except KeyError, e:
@@ -270,12 +272,12 @@ def prepare_container(data, key='ports'):
         data['workingDir'] = ','.join(data['workingDir'])
 
     data[key] = a
-    current_app.logger.debug(data[key])
+    #current_app.logger.debug(data[key])
     return data
 
 def prepare_for_output(rv, s_rv=None):
-    current_app.logger.debug(rv)
-    current_app.logger.debug(s_rv)
+    #current_app.logger.debug(rv)
+    #current_app.logger.debug(s_rv)
     out = {}
     try:
         rv = json.loads(rv)
@@ -342,7 +344,7 @@ def make_pod_config(data, sid, separate=True):
     inner = [('version', 'v1beta1')]
     if separate:
         inner.append(('id', sid))
-    current_app.logger.debug('about to convert')
+    #current_app.logger.debug('about to convert')
     inner.extend([('volumes', data['volumes']),
                 ('containers', map(prepare_container, data['containers']))])
     outer = []

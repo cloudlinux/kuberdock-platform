@@ -13,6 +13,9 @@ class KubeResolver(object):
         self._services = self._parse_services()
         self._merge_with_db()
         return self._pods
+    
+    def resolve_by_name(self, name):
+        pass
         
     @staticmethod
     def _get_replicas():
@@ -123,18 +126,18 @@ class KubeResolver(object):
         data = {}
         for i in db.session.query(Pod).join(Pod.owner).values(
                 Pod.id, Pod.name, User.username, Pod.config):
-            data[i[1]] = {'id': i[0], 'username': i[2], 'config':i[3]}
+            data[i[0]] = {'name': i[1], 'username': i[2], 'config':i[3]}
         return data
     
     def _merge_with_db(self):
         db_pods = self._select_pods_from_db()
-        kube_names = set(map((lambda x: x['name']), self._pods))
-        for pod_name in db_pods:
-            if pod_name not in kube_names:
-                self._pods.append(db_pods[pod_name]['config'])
+        kube_ids = set(map((lambda x: x['id']), self._pods))
+        for pod_id in db_pods:
+            if pod_id not in kube_ids:
+                self._pods.append(db_pods[pod_id]['config'])
         for pod in self._pods:
             try:
-                pod['owner'] = db_pods[pod['name']]['username']
+                pod['owner'] = db_pods[pod['id']]['username']
             except KeyError:
                 pod['owner'] = 'stranger'
     

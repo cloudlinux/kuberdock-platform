@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from . import APIError
-from ..billing import Pricing
+from ..billing import Package
 from ..core import db, check_permission
 from ..utils import login_required_or_basic
 from ..users import User, Role
@@ -73,7 +73,7 @@ def create_item():
         temp = dict(filter((lambda t: t[1] != ''), data.items()))
         u = User(**temp)
         u.role = r
-        u.pricing = p
+        u.package = p
         u.save()
         data.update({'id': u.id, 'rolename': rolename, 'package': package})
         return jsonify({'status': 'OK', 'data': data})
@@ -132,6 +132,6 @@ def delete_item(user_id):
 def get_pricing(package_name):
     try:
         return filter((lambda x: x.package.package_name == package_name),
-            db.session.query(Pricing).all())[0]
+            db.session.query(Package).all())[0]
     except IndexError:
         return None

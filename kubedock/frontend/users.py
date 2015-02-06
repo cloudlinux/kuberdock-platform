@@ -1,6 +1,6 @@
 import json
 from flask import Blueprint, render_template
-from flask.ext.login import current_user, login_required
+from flask.ext.login import current_user
 
 from ..api import users as api_users
 from ..users.models import User, Role
@@ -18,7 +18,6 @@ def mark_current_user_online():
 
 @users.route('/users/')
 @users.route('/users/<path:p>/', endpoint='other')
-@login_required
 def index(**kwargs):
     """Returns the index page."""
     roles = Role.all()
@@ -31,6 +30,5 @@ def index(**kwargs):
 
 @users.route('/users/online/')
 @users.route('/users/online/<path:p>/', endpoint='online_other')
-@login_required
 def online_users(**kwargs):
     return index(**kwargs)

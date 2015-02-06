@@ -3,16 +3,12 @@ requirejs.config({
     paths: {
         backbone: 'lib/backbone',
         jquery: 'lib/jquery',
-        'jquery-ui': 'lib/jquery-ui',
-        cookie: 'lib/jquery.cookie',
         underscore: 'lib/underscore',
         marionette: 'lib/backbone.marionette',
         bootstrap: 'lib/bootstrap',
         paginator: 'lib/backbone.paginator',
         tpl: 'lib/tpl',
-        text: 'lib/text',
-        dynatree: 'lib/jquery.dynatree',
-        ckeditor: 'lib/ckeditor/ckeditor'
+        text: 'lib/text'
     },
     shim: {
         jquery: {
@@ -31,19 +27,15 @@ requirejs.config({
         marionette: {
             deps: ["jquery", "bootstrap", "underscore", "backbone"],
             exports: "Marionette"
-        },
-        dynatree: {
-            deps: ["jquery", 'cookie', 'jquery-ui'],
-            exports: "DynATree"
-        },
-        bootstrap: {
-            deps: ['jquery'],
-            exports: 'bootstrap'
         }
     }
 });
-require(["jquery", 'jquery-ui', "bootstrap", 'dynatree', 'lib/navbarr', 'static_pages_app/static_pages_app'],
-function(jQuery, jQueryUI, bs, DynATree, nb, StaticPagesApp){
-    console.log('StaticPagesApp.start');
-    StaticPagesApp.start();
+require(['jquery', 'users_app'], function(jQuery, UsersApp){
+    $.ajax({
+        url: '/api/users/',
+        success: function(rs){
+            UsersApp.Data.users = new UsersApp.Data.UsersCollection(rs.data);
+            UsersApp.start();
+        }
+    });
 });

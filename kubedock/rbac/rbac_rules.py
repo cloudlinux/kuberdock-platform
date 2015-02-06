@@ -52,11 +52,6 @@ SuperAdmin.allow("edit", "pods")
 SuperAdmin.allow("delete", "pods")
 
 
-AnonymousUser = Role('AnonymousUser')
-# rules for not logged users, by default - can't do anything
-# This role is not present in db
-
-
 Admin = Role('Administrator', [SuperAdmin])
 #Admin.deny("delete", "users")
 Admin.deny("delete", "minions")
@@ -72,25 +67,3 @@ User.allow("delete", "pods")
 
 TrialUser = Role('TrialUser', [User])
 TrialUser.deny("create", "pods")
-
-
-acl.add_resource("static_pages")
-acl.add_resource("notifications")
-
-# Static pages
-SuperAdmin.allow("create", "static_pages")
-SuperAdmin.allow("get", "static_pages")
-SuperAdmin.allow("view", "static_pages")
-SuperAdmin.allow("edit", "static_pages")
-SuperAdmin.allow("delete", "static_pages")
-Admin.deny("delete", "static_pages")
-User.allow("view", "static_pages")
-TrialUser.allow("view", "static_pages")
-# Notifications
-SuperAdmin.allow("create", "notifications")
-SuperAdmin.allow("get", "notifications")
-SuperAdmin.allow("edit", "notifications")
-SuperAdmin.allow("delete", "notifications")
-Admin.deny("create", "notifications")
-Admin.deny("delete", "notifications")
-

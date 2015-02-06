@@ -149,6 +149,7 @@ define(['marionette', 'paginator'],
                 'password': 'input#password',
                 'password_again': 'input#password-again',
                 'email': 'input#email',
+                'description': 'input#description',
                 'active_chkx': 'input#active-chkx',
                 'role_select': 'select#role-select'
             },
@@ -169,6 +170,7 @@ define(['marionette', 'paginator'],
                     'username': this.ui.username.val(),
                     'password': this.ui.password.val(),
                     'email': this.ui.email.val(),
+                    'description': this.ui.description.val(),
                     'active': this.ui.active_chkx.prop('checked'),
                     'rolename': this.ui.role_select.val()
                 }, {
@@ -190,6 +192,7 @@ define(['marionette', 'paginator'],
                 console.log(this.model)
                 this.ui.username.val(this.model.get('username'));
                 this.ui.email.val(this.model.get('email'));
+                this.ui.description.val(this.model.get('description'));
                 this.ui.active_chkx.prop('checked', this.model.get('active'));
                 this.ui.role_select.val(this.model.get('rolename'));
             },
@@ -199,6 +202,7 @@ define(['marionette', 'paginator'],
                 var data = {
                     'username': this.ui.username.val(),
                     'email': this.ui.email.val(),
+                    'description': this.ui.description.val(),
                     'active': this.ui.active_chkx.prop('checked'),
                     'rolename': this.ui.role_select.val()
                 };
@@ -256,20 +260,28 @@ define(['marionette', 'paginator'],
 
         UsersCRUD.Controller = Marionette.Controller.extend({
             showOnlineUsers: function(){
-                var layout_view = new App.Views.UsersLayout();
-                var online_users_list_view = new App.Views.OnlineUsersListView({
-                    collection: App.Data.onlineUsers});
-                var user_list_pager = new App.Views.PaginatorView({
-                    view: online_users_list_view});
-                this.listenTo(layout_view, 'show', function(){
-                    layout_view.main.show(online_users_list_view);
-                    layout_view.pager.show(user_list_pager);
+                var layout_view = new App.Views.UsersLayout(),
+                    t = this;
+                $.ajax({
+                    url: '/api/users/online/',
+                    success: function(rs){
+                        UsersApp.Data.users = new UsersApp.Data.UsersPageableCollection(rs.data);
+                        var users_list_view = new App.Views.OnlineUsersListView({
+                            collection: App.Data.users});
+                        var user_list_pager = new App.Views.PaginatorView({
+                            view: users_list_view});
+                        t.listenTo(layout_view, 'show', function(){
+                            layout_view.main.show(users_list_view);
+                            layout_view.pager.show(user_list_pager);
+                        });
+                        App.contents.show(layout_view);
+                    }
                 });
-                App.contents.show(layout_view);
             },
             showUserActivity: function(user_id){
                 var layout_view = new App.Views.UsersLayout(),
                     t = this;
+
                 $.ajax({
                     'url': '/api/users/a/' + user_id + '/',
                     success: function(rs){
@@ -287,16 +299,22 @@ define(['marionette', 'paginator'],
                 });
             },
             showUsers: function(){
-                var layout_view = new App.Views.UsersLayout();
-                var users_list_view = new App.Views.UsersListView({
-                    collection: UsersApp.Data.users});
-                var user_list_pager = new App.Views.PaginatorView({
-                    view: users_list_view});
-                this.listenTo(layout_view, 'show', function(){
-                    layout_view.main.show(users_list_view);
-                    layout_view.pager.show(user_list_pager);
+                var layout_view = new App.Views.UsersLayout(),
+                    t = this;
+                $.ajax({
+                    url: '/api/users/',
+                    success: function(rs){
+                        var users_list_view = new App.Views.UsersListView({
+                            collection: new App.Data.UsersPageableCollection(rs.data)});
+                        var user_list_pager = new App.Views.PaginatorView({
+                            view: users_list_view});
+                        t.listenTo(layout_view, 'show', function(){
+                            layout_view.main.show(users_list_view);
+                            layout_view.pager.show(user_list_pager);
+                        });
+                        App.contents.show(layout_view);
+                    }
                 });
-                App.contents.show(layout_view);
             },
 
             showCreateUser: function(){

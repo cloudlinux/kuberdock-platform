@@ -16,6 +16,8 @@
         <!-- contents container -->
         <div id="contents" class="container"></div>
         {% block script_templates %}
+
+        {% include "inc/footer.html" %}
         
         <!-- Page Header template -->
         <script type="text/template" id="page-header-title-template"><%- name %></script>
@@ -54,20 +56,22 @@
                 </div>
             </div><!-- end of page header -->
 
-            <!-- page actions -->
+            <!-- page actions 
             <div class="row">
-                <div class="col-md-1 col-md-offset-0">
-                    <button type="button" class="btn invert login-btn dropdown-toggle green" data-toggle="dropdown" aria-expanded="false">
+                <div class="col-md-1 col-md-offset-11 text-left">
+                    <button type="button" class="btn btn-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                         Actions <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu bulk-action-menu" role="menu">
-	                    <li role="presentation"><a class="start-btn" role="menuitem" tabindex="-1" href="#">Start</a></li>
-	                    <li role="presentation"><a class="stop-btn" role="menuitem" tabindex="-1" href="#">Stop</a></li>
-	                    <li role="presentation"><a class="terminate-btn" role="menuitem" tabindex="-1" href="#">Delete</a>
+                        <li><button type="button" class="btn btn-success btn-block">
+                        <span class="glyphicon glyphicon-play"></span>Start</button></li>
+                        <li><button type="button" class="btn btn-warning btn-block">
+                        <span class="glyphicon glyphicon-stop"></span>Stop</button></li>
+                        <li><button type="button" class="btn btn-danger btn-block">
+                        <span class="glyphicon glyphicon-trash"></span>Delete</button></li>
                     </ul>
                 </div>
-            </div>
-            <!-- end of page actions -->
+            </div>< end of page actions -->
 
             <div id="layout-list"></div>
             <div id="layout-footer"></div>
@@ -82,18 +86,18 @@
             } %>
 
             <!-- table data row -->
-            <td>
+            <!-- <td>
                 <input type="checkbox">
-            </td> 
+            </td> -->
+
+            <td>
+                <a href="/#pods/<%- id %>"><%- name %></a>
+            </td>
 
             <td>
                 <span class="badge">
                     <%- containers.length %>
                 </span>
-                <a href="/#pods/<%- id %>"><%- name %></a>
-            </td>
-
-            <td>
                 <span class=" glyphicon "></span>
                 <% if (cluster){ %>
                     <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span>
@@ -117,11 +121,18 @@
                     Actions
                   </button>
                   <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
-                    <li role="presentation"><a class="start-btn" role="menuitem" tabindex="-1" href="#">Start</a></li>
-                    <li role="presentation"><a class="stop-btn" role="menuitem" tabindex="-1" href="#">Stop</a></li>
-                    <li role="presentation"><a class="terminate-btn" role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Start</a></li>
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Stop</a></li>
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Delete</a></li>
                   </ul>
                 </div>
+
+
+               <!-- <div class="btn-group btn-group-xs" role="group" aria-roles="button">
+                    <button class="btn btn-default btn-xs start-btn"><span class="glyphicon glyphicon-play"></span>Start</button>
+                    <button class="btn btn-default btn-xs stop-btn"><span class="glyphicon glyphicon-stop"></span>Stop</button>
+                    <button class="btn btn-default btn-xs terminate-btn"><span class="glyphicon glyphicon-trash"></span>Delete</button>
+                </div> buttons -->
             </td>
             <!-- end of table data row -->
 
@@ -133,7 +144,7 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th><input type="checkbox"></th>
+                           <!-- <th><input type="checkbox"></th> -->
                             <th>Name</th>
                             <th>Elements</th>
                             <th>Entrypoint</th>
@@ -198,7 +209,7 @@
 
         <!-- A pod graph template -->
         <script type="text/template" id="pod-item-graph-template">
-            hello this is pod graph
+            <div class="graph-item"></div>
         </script>
 
         <!-- A pod main data template -->
@@ -389,7 +400,7 @@
                         <li role="presentation"><span class="go-to-other">Other</span></li>
                     </ul>
                 </div>
-            </div >
+            </div>
             <div>
                 <table class="table">
                     <thead><tr><th class="text-center">CPU</th><th class="text-center">Memory</th></tr></thead>
@@ -453,6 +464,13 @@
         <script type="text/template" id="wizard-set-container-complete-template">
             <div class="col-md-4 col-md-offset-1">
                 <table class="table">
+                    <thead><tr><th></th><th>Number of kubes</th></tr></thead>
+                    <tr>
+                        <td>kubes</td>
+                        <td><input class="kubes" type="number" min="1" value="<%- kubes === undefined ? 1 : kubes %>"></td>
+                    </tr>
+                </table>
+                <table class="table">
                     <thead><tr><th></th><th>Cluster</th></tr></thead>
                     <tbody>
                         <% if (cluster){ %>
@@ -475,20 +493,20 @@
                         </tr>
                         <% } %>
                     </tbody>
-                    <% if (volumes.length !== 0){ %>
-                    <table class="table">
-                        <thead><tr><th>Volume</th><th>Path</th></tr></thead>
-                        <tbody>
-                            <% _.each(volumes, function(vol){ %>
-                            <tr>
-                                <td><%- vol['name'] %></td>
-                                <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
-                            </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                    <% } %>
                 </table>
+                <% if (volumes.length !== 0){ %>
+                <table class="table">
+                    <thead><tr><th>Volume</th><th>Path</th></tr></thead>
+                    <tbody>
+                        <% _.each(volumes, function(vol){ %>
+                        <tr>
+                            <td><%- vol['name'] %></td>
+                            <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+                <% } %>
             </div>
             <div class="col-md-5">
                 <table class="table">
@@ -526,8 +544,6 @@
                 administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
         </script>
         {% endblock %}
-
-        {% include "inc/footer.html" %}
 
         {% assets "vendor_js" -%}
           <script src="{{ ASSET_URL }}"></script>

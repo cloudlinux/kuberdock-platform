@@ -6,7 +6,7 @@ class Minion(db.Model):
     __tablename__ = 'minions'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     ip = db.Column(db.String(40), unique=True)
-    hostname = db.Column(db.String(255))
+    hostname = db.Column(db.String(255), unique=True)
     cpu_cores = db.Column(db.Integer, nullable=False)
     ram = db.Column(db.BigInteger, nullable=False)
     disk = db.Column(db.BigInteger, nullable=False)  # all? free? visible to docker?
@@ -42,4 +42,4 @@ class Minion(db.Model):
         self.disk = 10*1024*1024*1024
 
     def __repr__(self):
-        return "<Minion(ip='{0}')>".format(self.ip)
+        return "<Minion(hostname='{0}', ip='{1}')>".format(self.hostname, self.ip)

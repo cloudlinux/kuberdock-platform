@@ -2,6 +2,7 @@ from collections import OrderedDict
 import json
 import requests
 import paramiko
+from paramiko import ssh_exception
 import time
 import socket
 from .settings import DEBUG, MINION_SSH_AUTH
@@ -87,34 +88,36 @@ def get_dockerfile(data):
 
 
 def get_all_minions():
-    r = requests.get('http://localhost:8080/api/v1beta1/minions')
+    r = requests.get('http://localhost:8080/api/v1beta1/nodes')
     return r.json()['items']
 
 
-def get_minion_by_ip(ip):
-    r = requests.get('http://localhost:8080/api/v1beta1/minions/' + ip)
+def get_minion_by_host(host):
+    r = requests.get('http://localhost:8080/api/v1beta1/nodes/' + host)
     return r.json()
 
 
-def remove_minion_by_ip(ip):
-    r = requests.delete('http://localhost:8080/api/v1beta1/minions/' + ip)
+def remove_minion_by_host(host):
+    r = requests.delete('http://localhost:8080/api/v1beta1/nodes/' + host)
     return r.json()
 
 
 @celery.task()
-def add_new_minion(ip):
+def add_new_minion(host):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
     try:
         if DEBUG:
             send_event('install_logs', 'Connecting to {0} with ssh with user = root and password = {1} ...'
-                       .format(ip, MINION_SSH_AUTH))
-            ssh.connect(hostname=ip, username='root', password=MINION_SSH_AUTH, timeout=10)
+                       .format(host, MINION_SSH_AUTH))
+            ssh.connect(hostname=host, username='root', password=MINION_SSH_AUTH, timeout=10)
         else:
             send_event('install_logs', 'Connecting to {0} with ssh with user = root and ssh_key_filename = {1} ...'
-                       .format(ip, MINION_SSH_AUTH))
-            ssh.connect(hostname=ip, username='root', key_filename=MINION_SSH_AUTH, timeout=10)    # not tested
+                       .format(host, MINION_SSH_AUTH))
+            ssh.connect(hostname=host, username='root', key_filename=MINION_SSH_AUTH, timeout=10)    # not tested
+    except ssh_exception.AuthenticationException as e:
+        send_event('install_logs', '{0} Check hostname, your credentials, and try again'.format(e))
+        return 'Authentication failed'
     except socket.timeout:
         send_event('install_logs', 'Connection timeout. Check hostname and try again')
         return 'Timeout'
@@ -143,8 +146,9 @@ def add_new_minion(ip):
         send_event('install_logs', message)
         res = json.dumps({'status': 'error', 'data': message})
     else:
-        res = requests.post('http://localhost:8080/api/v1beta1/minions/', json={'id': ip, 'apiVersion': 'v1beta1'}).json()
+        res = requests.post('http://localhost:8080/api/v1beta1/nodes/', json={'id': host, 'apiVersion': 'v1beta1'}).json()
         send_event('install_logs', 'Adding minion completed successful.')
+        send_event('install_logs', '===================================')
     ssh.exec_command('rm /kub_install.sh')
     ssh.close()
     return res

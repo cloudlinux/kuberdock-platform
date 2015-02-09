@@ -9,33 +9,26 @@ from . import APIError
 
 minions = Blueprint('minions', __name__, url_prefix='/minions')
 
+node_is_active = lambda x: x['status']['conditions'][0]['status'] == 'Full'
+
 
 @check_permission('get', 'minions')
 def get_minions_collection():
     new_flag = False
-    oldcur = Minion.query.all()
-    db_ips = [minion.ip for minion in oldcur]
-    kub_ips = {x['id']: x for x in tasks.get_all_minions()}
-    for ip in kub_ips:
-        if ip not in db_ips:
+    oldcur = Minion.query.all() # TODO values
+    db_hosts = [minion.hostname for minion in oldcur]
+    kub_hosts = {x['id']: x for x in tasks.get_all_minions()}
+    for host in kub_hosts:
+        if host not in db_hosts:
             new_flag = True
             try:
-                hostname = socket.gethostbyaddr(ip)[0]
+                resolved_ip = socket.gethostbyname(host)
             except socket.error:
                 raise APIError(
-                    "Can't resolve hostname for {0} during auto-scan. Check /etc/hosts file for correct minion records"
-                    .format(ip))
-            resolved_ip = ''
-            try:
-                resolved_ip = socket.gethostbyname(hostname)
-            except socket.error:
-                pass
-            if resolved_ip != ip:
-                raise APIError(
-                    "Invalid hostname({0}) resolved for {1} during auto-scan. Check /etc/hosts file for correct minion records"
-                    .format(hostname, ip))
-            # TODO add resources capacity etc from kub_ips[ip] if needed
-            m = Minion(ip=ip, hostname=hostname)
+                    "Hostname {0} can't be resolved to ip during auto-scan. Check /etc/hosts file for correct minion records"
+                    .format(host))
+            # TODO add resources capacity etc from kub_hosts[host] if needed
+            m = Minion(ip=resolved_ip, hostname=host)
             db.session.add(m)
     if new_flag:
         db.session.commit()
@@ -48,7 +41,7 @@ def get_minions_collection():
             'id': minion.id,
             'ip': minion.ip,
             'hostname': minion.hostname,
-            'status': 'running' if minion.ip in kub_ips and kub_ips[minion.ip]['status']['conditions'][0]['status'] == 'Full' else 'troubles',
+            'status': 'running' if minion.hostname in kub_hosts and node_is_active(kub_hosts[minion.hostname]) else 'troubles',
             'annotations': minion.annotations,
             'labels': minion.labels,
         })
@@ -66,14 +59,14 @@ def get_one_minion(minion_id):
     check_int_id(minion_id)
     m = db.session.query(Minion).get(minion_id)
     if m:
-        res = tasks.get_minion_by_ip(m.ip)
+        res = tasks.get_minion_by_host(m.hostname)
         if res['status'] == 'Failure':
             raise APIError("Error. Minion exists in db but don't exists in kubernetes", status_code=404)
         data = {
             'id': m.id,
             'ip': m.ip,
             'hostname': m.hostname,
-            'status': 'running' if res['status']['conditions'][0]['status'] == 'Full' else 'troubles',
+            'status': 'running' if node_is_active(res) else 'troubles',
             'annotations': m.annotations,
             'labels': m.labels,
         }
@@ -87,17 +80,17 @@ def get_one_minion(minion_id):
 def create_item():
     data = request.json
     check_minion_data(data)
-    m = db.session.query(Minion).filter_by(ip=data['ip']).first()
+    m = db.session.query(Minion).filter_by(hostname=data['hostname']).first()
     if not m:
         m = Minion(ip=data['ip'], hostname=data['hostname'])
         db.session.add(m)
         db.session.commit()
-        r = tasks.add_new_minion.delay(m.ip)    # TODO send labels, annotations, capacity etc.
+        r = tasks.add_new_minion.delay(m.hostname)    # TODO send labels, annotations, capacity etc.
         # r.wait()                              # maybe result?
         data.update({'id': m.id})
         return jsonify({'status': 'OK', 'data': data})
     else:
-        raise APIError('Conflict, minion with ip "{0}" already exists'.format(m.ip), status_code=409)
+        raise APIError('Conflict, minion with hostname "{0}" already exists'.format(m.hostname), status_code=409)
 
 
 @minions.route('/<minion_id>', methods=['PUT'])
@@ -108,9 +101,11 @@ def put_item(minion_id):
     if m:
         data = request.json
         check_minion_data(data)
+        if data['ip'] != m.ip:
+            raise APIError("Error. Minion ip can't be reassigned, you need delete it and create new.")
         new_ip = socket.gethostbyname(data['hostname'])
         if new_ip != m.ip:
-            raise APIError("Error. Minion ip can't be reassigned, you need to delete minion and create new.")
+            raise APIError("Error. Minion ip can't be reassigned, you need delete it and create new.")
         m.hostname = data['hostname']
         db.session.add(m)
         db.session.commit()
@@ -127,7 +122,7 @@ def delete_item(minion_id):
     if m:
         db.session.delete(m)
         db.session.commit()
-        res = tasks.remove_minion_by_ip(m.ip)
+        res = tasks.remove_minion_by_host(m.hostname)
         if res['status'] == 'Failure':
             raise APIError('Failure. {0} Code: {1}'.format(res['message'], res['code']), status_code=200)
     return jsonify({'status': 'OK'})

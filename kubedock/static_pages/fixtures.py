@@ -50,6 +50,13 @@ MENUS = [
                 ]
             )
         ]
+    ),
+    dict(
+        region=Menu.REGION_FOOTER,
+        name='Footer menu',
+        items=[
+            dict(name='expample page')
+        ]
     )
 ]
 
@@ -80,11 +87,12 @@ def generate_menu():
         menu = Menu.create(**menu)
         menu.save()
         for item in items:
-            children = item.pop('children')
+            children = item.pop('children', None)
             menu_item = MenuItem(**item)
             menu_item.menu = menu
             menu_item.save()
-            create_children(children, menu_item, menu)
+            if children:
+                create_children(children, menu_item, menu)
 
 
 if __name__ == '__main__':

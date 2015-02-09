@@ -7,26 +7,14 @@ class Pod(db.Model):
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
     name = db.Column(db.String(length=255), unique=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    kubes = db.Column(db.Integer, nullable=False, default=1)
     config = db.Column(postgresql.JSON)
     status = db.Column(db.String(length=32), default='unknown')
-    states = db.relationship('PodStates', backref='pod')
     
     def __repr__(self):
         return "<Pod(id='%s', name='%s', owner_id='%s', config='%s', status='%s')>" % (
             self.id, self.name, self.owner_id, self.config, self.status)
 
-
-class PodStates(db.Model):
-    __tablename__ = 'pod_states'
-    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), primary_key=True, nullable=False)
-    start_time = db.Column(db.Integer, primary_key=True, nullable=False)
-    end_time = db.Column(db.Integer, nullable=True)
     
-    def __repr__(self):
-        return "<Pod(pod_id='%s', start_time='%s', end_time='%s')>" % (
-            self.pod_id, self.start_time, self.end_time)
-
 class ImageCache(db.Model):
     __tablename__ = 'image_cache'
     

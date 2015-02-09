@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request
 from ..core import db
 from ..stats import StatWrap5Min
 from ..kubedata.kubestat import KubeUnitResolver
@@ -17,9 +17,7 @@ def unit_stat():
     #start = request.args.get('start', None)
     #end = request.args.get('end', None)
     items = KubeUnitResolver().by_unit(uuid)
-    #current_app.logger.debug(items)
-    items_list= map(operator.itemgetter(2), itertools.chain(*items.values()))
-    #current_app.logger.debug(items_list)
+    items_list = map(operator.itemgetter(1), itertools.chain(*items.values()))
     start = time.time() - 3600  # An hour distance
     data = db.session.query(
         StatWrap5Min.time_window,
@@ -28,7 +26,7 @@ def unit_stat():
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)).filter(
             StatWrap5Min.time_window>=start).filter(
-            StatWrap5Min.unit_name.in_(items_list)).group_by(StatWrap5Min.time_window)
+            StatWrap5Min.unit.in_(items_list)).group_by(StatWrap5Min.time_window)
     cpu = {'title': 'CPU', 'ylabel': '%', 'lines': 1, 'points': []}
     mem = {'title': 'Memory', 'ylabel': '%', 'lines': 1, 'points': []}
     net = {'title': 'Network Usage', 'ylabel': 'bps', 'lines': 2, 'points': []}

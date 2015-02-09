@@ -1,8 +1,12 @@
+import json
 from datetime import datetime
 from flask import render_template_string
+from flask.ext.login import current_user
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm.collections import attribute_mapped_collection
 
 from ..core import db
+from ..users.models import Role
 from ..models_mixin import BaseModelMixin
 from .utils import slugify
 
@@ -34,6 +38,11 @@ class Menu(BaseModelMixin, db.Model):
         menus = dict([(m.region_repr, m) for m in menu_list])
         return menus
 
+    @classmethod
+    def get_active_json(cls):
+        objects_list = [m.to_dict() for m in cls.filter_by(is_active=True)]
+        return json.dumps(objects_list)
+
     def get_items(self):
         items = MenuItem.filter_by(menu_id=self.id, parent_id=None).all()
         return items
@@ -56,6 +65,16 @@ class Menu(BaseModelMixin, db.Model):
                     </ul>
                 </div><!--/.nav-collapse -->
             """, items=self.get_items())
+        elif self.region == Menu.REGION_FOOTER:
+            return render_template_string("""
+                <ul class="">
+                    {% for item in items %}<li>
+                        {{ item.render()|safe }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            """, items=self.get_items())
+
 
     @property
     def region_repr(self):
@@ -69,7 +88,7 @@ class Menu(BaseModelMixin, db.Model):
             region=self.region,
             name=self.name,
             items=[item.to_dict(include=include, exclude=exclude)
-                   for item in self.items.values()]
+                   for item in self.items]
         )
 
     def to_dynatree(self):
@@ -117,14 +136,30 @@ class MenuItem(BaseModelMixin, db.Model):
     ordering = db.Column(db.Integer, default=0)
     is_group_label = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
-
-    # def __init__(self, name, parent=None):
-    #     self.name = name
-    #     self.parent = parent
+    is_public = db.Column(db.Boolean, default=True)
+    roles = db.Column(postgresql.JSON)
 
     def __repr__(self):
         return "MenuItem(name=%r, id=%r, parent_id=%r)" % (
             self.name, self.id, self.parent_id)
+
+    def parent_path(self):
+        if self.parent_id is None:
+            return
+        return self.parent.get_absolute_url()
+
+    def get_absolute_url(self):
+        if self.page_id:
+            return '/page/{0}'.format(self.page.slug)
+        path = self.path
+        if path is not None:
+            if path.startswith('/'):
+                return path
+            elif self.parent_id:
+                if self.parent.page:
+                    return '{0}/{1}'.format(self.parent.get_absolute_url(), path)
+                return path
+        return '#'
 
     def to_dict(self, include=None, exclude=None):
         page = self.page
@@ -133,13 +168,16 @@ class MenuItem(BaseModelMixin, db.Model):
             parent_id=self.parent_id,
             ts=self.ts.isoformat(sep=' ')[:19],
             created_by_id=self.created_by_id,
+            parent_path=self.parent_path(),
             path=self.path,
+            absolute_url=self.get_absolute_url(),
             menu_id=self.menu_id,
             name=self.name,
             page=page.id if page else None,
             ordering=self.ordering,
             is_group_label=self.is_group_label,
             is_active=self.is_active,
+            roles=self.roles or [],
             children=[(item.id, item.to_dict(include=include, exclude=None))
                       for item in self.children.values()]
         )
@@ -157,7 +195,9 @@ class MenuItem(BaseModelMixin, db.Model):
                 parent_id=self.parent_id,
                 ts=self.ts.isoformat(sep=' ')[:19],
                 created_by_id=self.created_by_id,
+                parent_path=self.parent_path(),
                 path=self.path,
+                absolute_url=self.get_absolute_url(),
                 menu_id=self.menu_id,
                 region=self.menu.region,
                 region_repr=self.menu.region_repr,
@@ -165,6 +205,7 @@ class MenuItem(BaseModelMixin, db.Model):
                 ordering=self.ordering,
                 is_group_label=self.is_group_label,
                 is_active=self.is_active,
+                roles=self.roles or [],
                 t='item',
             )
         )
@@ -192,53 +233,78 @@ class MenuItem(BaseModelMixin, db.Model):
                 </ul>
                 {% endif %}
             """, children=self.children, item=self)
+        elif self.menu.region == Menu.REGION_FOOTER:
+            return render_template_string("""
+                {% if not children %}
+                <a href="{{ item.get_path()|default("#") }}">{{ item }}</a>
+                {% else %}
+                <a href="{{ item.get_path()|default("#") }}">
+                    {{ item }}
+                </a>
+                <ul class="">
+                    {% for itm in children.values() %}<li>
+                        {{ itm.render()|safe }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            """, children=self.children, item=self)
 
     def update(self, data, user_id):
-        path = '/%s' % '/'.join([p for p in data.get('path', '').split('/')
-                                 if p.strip()])
+        path = data.get('path')
+        # if path:
+        #     path = '/'.join([p for p in path.split('/') if p.strip()])
         name = data.get('name', '').strip()
-        assign_page = data.get('assign_page') == 'on'
-        page_title = data.get('page_title', '').strip()
-        page_slug = slugify(data.get('page_slug', '').strip())
-        page_content = data.get('page_content', '').strip()
-        is_active = data.get('is_active') and data['is_active'] == 'on'
+        assign_page = data.get('assign_page') == 'true'
+        unbind_page = data.get('unbind_page') == 'true'
+        is_active = data.get('is_active') and data['is_active'] == 'true'
         if path != self.path:
             self.path = path
         if name and name != self.name:
             self.name = name
+        self.roles = data.getlist('roles[]')
         self.is_active = is_active
-        if (not self.page_id and assign_page) or self.page_id:
+        self.save()
+
+        # Update page
+        if unbind_page and self.page_id:
+            self.page.delete()
+            self.page_id = None
+            self.save()
+        if assign_page or self.page_id:
+            page_title = data.get('page_title', '').strip()
+            page_slug = slugify(data.get('page_slug', '').strip())
+            page_content = data.get('page_content', '').strip()
             if not page_title:
                 raise ValueError('Page title is required')
             if not page_slug:
                 raise ValueError('Page slug is required')
             if not page_content:
                 raise ValueError('Page content is required')
-        page = None
-        if not self.page_id and assign_page:
-            page = Page.create(
-                created_by_id=user_id, slug=page_slug, title=page_title,
-                content=page_content)
-        elif self.page_id:
-            page = self.page
-            is_page_modified = False
-            if page_slug != page.slug:
-                page.slug = page_slug
-                is_page_modified = True
-            if page_title != page.title:
-                page.title = page_title
-                is_page_modified = True
-            if page_content != page.content:
-                page.content = page_content
-                is_page_modified = True
-            if is_page_modified:
-                page.modified = datetime.now()
-                page.modified_by_id = user_id
-        if page is not None:
-            page.save()
+            page = None
             if not self.page_id:
-                self.page_id = page.id
-        self.save()
+                page = Page.create(
+                    created_by_id=user_id, slug=page_slug, title=page_title,
+                    content=page_content)
+            elif self.page_id:
+                page = self.page
+                is_page_modified = False
+                if page_slug != page.slug:
+                    page.slug = page_slug
+                    is_page_modified = True
+                if page_title != page.title:
+                    page.title = page_title
+                    is_page_modified = True
+                if page_content != page.content:
+                    page.content = page_content
+                    is_page_modified = True
+                if is_page_modified:
+                    page.modified = datetime.now()
+                    page.modified_by_id = user_id
+            if page is not None:
+                page.save()
+                if not self.page_id:
+                    self.page_id = page.id
 
     @classmethod
     def create_item(cls, data, user_id):
@@ -251,6 +317,13 @@ class MenuItem(BaseModelMixin, db.Model):
             item.parent_id = data['parent']
         item.update(data, user_id)
         return item
+
+    def delete(self):
+        for item in self.children.values():
+            if item.page_id:
+                item.page.delete()
+            item.delete()
+        super(MenuItem, self).delete()
 
 
     def __unicode__(self):
@@ -273,6 +346,16 @@ class Page(BaseModelMixin, db.Model):
 
     def __unicode__(self):
         return self.title
+
+    @property
+    def roles(self):
+        return self.menu_item.first().roles
+
+    def has_access(self, user_role):
+        roles = self.roles
+        if roles is None or len(roles) == 0:
+            return True
+        return user_role in roles
 
     def to_dict(self, include=None, exclude=None):
         item = self.menu_item.first()

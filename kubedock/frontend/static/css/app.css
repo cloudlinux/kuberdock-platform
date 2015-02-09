@@ -47,25 +47,6 @@ thead {
 .container-data {
     float: left;
 }
-.align-center{
-  text-align: center;
-}
-.error-wrapper{
-  border: 1px solid transparent;
-}
-.align-left{
-  text-align: left;
-}
-.align-right{
-  text-align: right;
-}
-.messages-wrapper{
-  margin: 0 auto;
-  max-width: 50%;
-}
-.plus-footer{
-  padding-bottom: 76px;
-}
 /*.i-editable:not(button) {
     color: #438ABA;
     border-bottom: 1px dashed #438ABA;
@@ -533,7 +514,6 @@ footer.footer ul.footer-menu li a:hover, footer.footer ul.footer-menu li a:activ
   color: #4DB04D;
 }
 /* end footer */
-
 
 /* minions */
 

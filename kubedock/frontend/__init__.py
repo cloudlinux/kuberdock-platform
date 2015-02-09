@@ -1,11 +1,13 @@
 from flask import render_template
-#from flask.ext.login import login_required, current_user
-#from flask import jsonify
-#from rbac.context import PermissionDenied
+from flask import jsonify
+from rbac.context import PermissionDenied
+from flask.ext.login import current_user
 
 from .. import factory
 from .. import sessions
+from ..rbac import get_user_role
 from . import assets
+from ..api import APIError
 import datetime
 
 
@@ -27,6 +29,9 @@ def create_app(settings_override=None):
 
     for bp in main, auth, minions, users, notifications, static_pages:
         app.register_blueprint(bp)
+
+    app.errorhandler(PermissionDenied)(on_permission_denied)
+    app.errorhandler(APIError)(on_app_error)
     
     if not app.debug:
         for e in [500, 404]:
@@ -34,5 +39,14 @@ def create_app(settings_override=None):
     return app
 
 
+def on_app_error(e):
+    return jsonify({'status': e.message}), e.status_code
+
+
 def handle_error(e):
     return render_template('errors/%s.html' % e.code), e.code
+
+
+def on_permission_denied(e):
+    message = e.kwargs['message'] or 'Denied to {0}'.format(get_user_role())
+    return message, 403

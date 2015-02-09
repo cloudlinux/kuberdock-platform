@@ -66,14 +66,14 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             });
             
             this.listenTo(itemLayout, 'display:pod:stats', function(data){
-                var statCollection = new App.Data.StatsCollection(),
+                var collection = new App.Data.StatsCollection(),
                     that = this;
-                statCollection.fetch({
+                collection.fetch({
                     data: {unit: data.get('id')},
                     reset: true,
                     success: function(){
                         itemLayout.contents.show(new App.Views.PodGraph({
-                            collection: statCollection
+                            collection: that.collection
                         }));
                     },
                     error: function(){

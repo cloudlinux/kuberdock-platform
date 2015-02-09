@@ -54,7 +54,7 @@ class KubeUnitResolver(object):
                 if host not in self._containers:
                     self._containers[host] = []
                 for c in item['desiredState']['manifest']['containers']:
-                    self._containers[host].append((c['name'], item['id'], item['labels']['name']))
+                    self._containers[host].append((c['name'], item['id']))
             except KeyError:
                 continue
             except socket.herror:
@@ -162,11 +162,9 @@ class KubeStat(object):
 
     def _make_checker(self, containers):
         self._containers_checks = set()
-        self._containers_map = {}
         for host in containers.keys():
             for item in containers[host]:
                 self._containers_checks.add((host, item[1]))
-                self._containers_map[item[1]] = item[2]
                 
     def _is_wanted(self, entry):
         if entry['container_name'] == '/system.slice':
@@ -246,7 +244,7 @@ class KubeStat(object):
                         self._unfolded.append({
                             'time_window': cell,
                             'host': host,
-                            'unit_name': self._containers_map[unit],
+                            'unit': unit,
                             'container': item,
                             'cpu': item_cpu,
                             'memory': item_mem,

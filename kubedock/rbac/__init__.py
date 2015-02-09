@@ -10,10 +10,18 @@ check_permission = rbac_context.check_permission
 
 @rbac_context.set_roles_loader
 def roles_loader():
+    yield get_user_role()
+
+
+# separate function because set_roles_loader decorator don't return function. Lib bug.
+def get_user_role():
     try:
-        yield current_user.role.rolename
+        return current_user.role.rolename
     except AttributeError:
-        yield g.user.role.rolename
+        try:
+            return g.user.role.rolename
+        except AttributeError:
+            return 'AnonymousUser'
 
 
 class RoleWrapper(object):
@@ -36,4 +44,6 @@ import rbac_rules   # load after acl end RoleWrapper definition
 
 def gen_roles():    # only after load rbac_rules
     for role in acl._roles:
+        if role == 'AnonymousUser':
+            continue
         yield role

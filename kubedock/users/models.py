@@ -28,7 +28,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     active = db.Column(db.Boolean, nullable=False, default=False)
     suspended = db.Column(db.Boolean, nullable=False, default=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
-    pricing_id = db.Column(db.Integer, db.ForeignKey('pricing.id'))
+    package_id = db.Column(db.Integer, db.ForeignKey('packages.id'))
     join_date = db.Column(db.DateTime, default=datetime.datetime.now)
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     activities = db.relationship('UserActivity', back_populates="user")
@@ -64,7 +64,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
 
     def to_dict(self, include=None, exclude=None):
         last_activity = self.last_activity
-        package = self.pricing.package.package_name if self.pricing else None
+        package = self.package.name if self.package else None
         return dict(
             id=self.id,
             username=self.username,
@@ -141,7 +141,7 @@ class SessionData(db.Model):
         self.id = id
         self.data = data
         self.time_stamp = datetime.datetime.now()
-        
+
     def __repr__(self):
         return "<SessionData(session_id='%s', data='%s', time_stamp='%s')>" % (
             self.session_id, self.data, self.time_stamp)

@@ -1,5 +1,20 @@
 {% extends "layout.html" %}
 
 {% block body %}
-    Forbidden
+
+	{% include "inc/navbar.html" %}
+
+	<div class="container plus-footer">
+      <div class="row">
+        <div class="messages-wrapper align-center">
+        	<div class="alert alert-danger" role="alert">
+	        	<span class="glyphicon glyphicon-ban-circle align-left"></span>
+	        	<span>Forbidden! Back to <a href="/" class="alert-link">main page</a></span>
+        	</div>
+        </div>
+      </div>
+    </div>
+
+    {% include "inc/footer.html" %}
+
 {% endblock %}

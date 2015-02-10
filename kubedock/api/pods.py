@@ -12,7 +12,7 @@ from ..core import db, check_permission
 from ..utils import update_dict, login_required_or_basic
 from ..validation import check_pod_data
 from ..api import APIError
-
+import copy
 
 pods = Blueprint('pods', __name__, url_prefix='/pods')
 
@@ -29,36 +29,43 @@ def create_item():
                        status_code=409)
     item_id = make_item_id(data['name'])
     runnable = data.pop('runnable', False)
+    kubes = data.pop('kubes', 1)
     temp_uuid = str(uuid4())
     
     u = db.session.query(User).filter_by(username=current_user.username).first()
     data.update({'id': temp_uuid, 'status': 'stopped'})
-    pod = Pod(name=data['name'], config=data, id=temp_uuid, status='stopped')
+    pod = Pod(name=data['name'], kubes=kubes, config=data, id=temp_uuid, status='stopped')
     pod.owner = u
     try:
         db.session.add(pod)
         db.session.commit()
     except Exception:
         db.session.rollback()
+        raise APIError("Could not create database record for '{0}'.".format(data['name']),
+                       status_code=409)
     
     if runnable:    # trying to run service and pods right away
-        service_rv = run_service(data)
+        service_rv = json.loads(run_service(data))
         config = make_config(data, item_id)
         
         current_app.logger.debug(config)
         result = tasks.create_containers.delay(config)
-        pod_rv = result.wait()
-        output = prepare_for_output(pod_rv, service_rv)
+        pod_rv = json.loads(result.wait())
+        if 'status' in pod_rv and pod_rv['status'] == 'Working':
+            current_app.logger.debug('WORKING')
+            output = copy.deepcopy(data)
+            output.update(prepare_for_output(None, service_rv))
+        else:
+            output = prepare_for_output(pod_rv, service_rv)
+        output['kubes'] = kubes
     
         try:
-            pod = Pod(name=output['name'], config=output, id=output['id'])
-            pod.owner = u
-            db.session.add(pod)
-            pending_pod = db.session.query(Pod).get(temp_uuid)
-            db.session.delete(pending_pod)
+            pod = db.session.query(Pod).get(temp_uuid)
+            pod.config = output
+            output['id'] = temp_uuid
             db.session.commit()
-        except Exception:
-            current_app.logger.debug(output)
+        except Exception, e:
+            current_app.logger.debug('DB_EXCEPTION:'+str(e))
             db.session.rollback()
             if data['service'] and service_rv is not None:
                 srv = json.loads(service_rv)
@@ -273,52 +280,50 @@ def prepare_container(data, key='ports'):
     current_app.logger.debug(data[key])
     return data
 
-def prepare_for_output(rv, s_rv=None):
-    current_app.logger.debug(rv)
-    current_app.logger.debug(s_rv)
+def prepare_for_output(rv=None, s_rv=None):
     out = {}
-    try:
-        rv = json.loads(rv)
-
-        if rv['kind'] == 'ReplicationController':
-            out['cluster'] = True
-            out['name'] = rv['desiredState']['replicaSelector']['name']
-            out['status'] = 'unknown'
-        elif rv['kind'] == 'Pod':
-            out['cluster'] = False
-            out['name'] = rv['labels']['name']
-            out['status'] = rv['currentState']['status'].lower()
-        else:
-            return out
-
-        out['id'] = rv['uid']
-
+    if rv is not None:
         try:
-            root = rv['desiredState']['podTemplate']['desiredState']['manifest']
-        except KeyError:
-            root = rv['desiredState']['manifest']
-
-        for k in 'containers', 'restartPolicy', 'volumes':
-            out[k] = root[k]
-
-        out['replicas'] = 1
-        if 'replicas' in rv['desiredState']:
-            out['replicas'] = rv['desiredState']['replicas']
-
-    except (ValueError, TypeError), e: # Failed to process JSON
-        current_app.logger.debug(str(e))
-        return out
-
-    except KeyError, e:
-        current_app.logger.debug(str(e))
-        current_app.logger.debug(rv)
-        return out
+            rv = json.loads(rv)
+    
+            if rv['kind'] == 'ReplicationController':
+                out['cluster'] = True
+                out['name'] = rv['desiredState']['replicaSelector']['name']
+                out['status'] = 'unknown'
+            elif rv['kind'] == 'Pod':
+                out['cluster'] = False
+                out['name'] = rv['labels']['name']
+                out['status'] = rv['currentState']['status'].lower()
+            else:
+                return out
+    
+            out['id'] = rv['uid']
+    
+            try:
+                root = rv['desiredState']['podTemplate']['desiredState']['manifest']
+            except KeyError:
+                root = rv['desiredState']['manifest']
+    
+            for k in 'containers', 'restartPolicy', 'volumes':
+                out[k] = root[k]
+    
+            out['replicas'] = 1
+            if 'replicas' in rv['desiredState']:
+                out['replicas'] = rv['desiredState']['replicas']
+    
+        except (ValueError, TypeError), e: # Failed to process JSON
+            current_app.logger.debug(str(e))
+            return out
+    
+        except KeyError, e:
+            current_app.logger.debug(str(e))
+            current_app.logger.debug(rv)
+            return out
 
     if s_rv is None:
         return out
 
     try:
-        s_rv = json.loads(s_rv)
         if s_rv['kind'] == 'Service':
             out['service'] = True
         else:

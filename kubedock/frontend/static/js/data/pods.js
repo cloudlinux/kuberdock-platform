@@ -16,6 +16,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             containers: [],
             volumes: [],
             cluster: false,
+            kubes: 1,
             replicas: 1,
             service: false,
             portalIP: null,
@@ -84,7 +85,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
     });
     
     Data.StatsCollection = Backbone.Collection.extend({
-        url: '/api/stats/',
+        url: '/api/stats',
         model: Data.Stat,
         parse: unwrapper
     });

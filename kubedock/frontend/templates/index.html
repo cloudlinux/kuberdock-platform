@@ -198,7 +198,7 @@
 
         <!-- A pod graph template -->
         <script type="text/template" id="pod-item-graph-template">
-            hello this is pod graph
+            <div class="graph-item"></div>
         </script>
 
         <!-- A pod main data template -->
@@ -452,6 +452,13 @@
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
             <div class="col-md-4 col-md-offset-1">
+                <table class="table">
+                    <thead><tr><th></th><th>Number of kubes</th></tr></thead>
+                    <tr>
+                        <td>kubes</td>
+                        <td><input class="kubes" type="number" min="1" value="<%- kubes === undefined ? 1 : kubes %>"></td>
+                    </tr>
+                </table>
                 <table class="table">
                     <thead><tr><th></th><th>Cluster</th></tr></thead>
                     <tbody>

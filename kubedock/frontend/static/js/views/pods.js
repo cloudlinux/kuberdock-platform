@@ -256,12 +256,51 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    Views.PodGraph = Backbone.Marionette.CollectionView.extend({
-        childView: Views.PodGraphItem
+    Views.PodGraphItem = Backbone.Marionette.ItemView.extend({
+        template: '#pod-item-graph-template',
+        ui: {
+            chart: '.graph-item'
+        },
+        onShow: function(){
+            var lines = this.model.get('lines');
+            var options = {
+                title: this.model.get('title'),
+                axes: {
+                    xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
+                    yaxis: {label: this.model.get('ylabel')}
+                },
+                seriesDefaults: {
+                    showMarker: false,
+                    rendererOptions: {
+                        smooth: true
+                    }
+                },
+                grid: {
+                    background: '#ffffff',
+                    drawBorder: false,
+                    shadow: false
+                }
+            };
+            
+            var points = [];
+            for (var i=0; i<lines; i++) {
+                if (points.length < i+1) {
+                    points.push([])
+                }
+            }
+            
+            this.model.get('points').forEach(function(record){
+                for (var i=0; i<lines; i++) {
+                    points[i].push([record[0], record[i+1]])
+                }
+            });
+            console.log(points);
+            this.ui.chart.jqplot(points, options);
+        }
     });
     
-    Views.PodGraphItem = Backbone.Marionette.ItemView.extend({
-        template: '#pod-item-graph-template'
+    Views.PodGraph = Backbone.Marionette.CollectionView.extend({
+        childView: Views.PodGraphItem
     });
     
     Views.PodItemMain = Backbone.Marionette.ItemView.extend({
@@ -727,7 +766,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click .delete-item': 'deleteItem',
             'click .cluster': 'toggleCluster',
-            'change .replicas': 'changeReplicas'
+            'change .replicas': 'changeReplicas',
+            'change .kubes': 'changeKubes'
         },
         
         triggers: {
@@ -767,6 +807,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));
+        },
+        
+        changeKubes: function(evt){
+            evt.stopPropagation();
+            this.model.set('kubes', parseInt($(evt.target).val().trim()));
         },
         
         onRender: function(){

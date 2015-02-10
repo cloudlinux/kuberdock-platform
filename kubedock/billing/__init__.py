@@ -1,1 +1,1 @@
-from .models import Pricing, Kube, Package
+from .models import Kube, Package

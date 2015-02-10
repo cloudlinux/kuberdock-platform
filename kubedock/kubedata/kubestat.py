@@ -8,6 +8,7 @@ from ..users import User
 import socket
 import re
 import requests
+from influxdb.client import InfluxDBClientError
 
 class KubeUnitResolver(object):
     def __init__(self):
@@ -16,6 +17,8 @@ class KubeUnitResolver(object):
     
     def by_unit(self, uuid):
         unit = db.session.query(Pod).get(uuid)
+        if unit is None:
+            return self._containers
         self._names.append(unit.name)
         self._get_containers()
         return self._containers
@@ -54,7 +57,7 @@ class KubeUnitResolver(object):
                 if host not in self._containers:
                     self._containers[host] = []
                 for c in item['desiredState']['manifest']['containers']:
-                    self._containers[host].append((c['name'], item['id']))
+                    self._containers[host].append((c['name'], item['id'], item['labels']['name']))
             except KeyError:
                 continue
             except socket.herror:
@@ -64,10 +67,10 @@ class KubeStat(object):
     SELECT_COLUMNS = [
         'cpu_cumulative_usage',
         'memory_usage',
-        'rx_bytes',
-        'rx_errors',
-        'tx_bytes',
-        'tx_errors',
+        #'rx_bytes',
+        #'rx_errors',
+        #'tx_bytes',
+        #'tx_errors',
         'container_name',
         'machine']
     
@@ -82,14 +85,14 @@ class KubeStat(object):
         self._unfolded = []
         
         start_point = int(time.time() - 3600) if start is None else self.timestamp(start) 
-        startcond = "time > %ds" % (start_point,)
+        self._startcond = "time > %ds" % (start_point,)
         
         end_point = None if end is None else self.timestamp(end)
-        endcond = '' if end_point is None else "time < %ds" % (end_point,)
+        self._endcond = '' if end_point is None else "time < %ds" % (end_point,)
 
         self._windows = self._make_windows(start_point, end_point, resolution)
         colstr = ', '.join(['%s' % (c,) for c in self.SELECT_COLUMNS])
-        conds = filter(None, [startcond, endcond])
+        conds = filter(None, [self._startcond, self._endcond])
         condstr = ' where %s' % (' and '.join(conds),) if len(conds) != 0 else ''
         self.query_str = 'select %s from %s%s;' % (colstr, settings.INFLUXDB_TABLE, condstr)
 
@@ -104,6 +107,13 @@ class KubeStat(object):
             self._data = conn.query(self.query_str)[0]
         except IndexError:
             self._data = {'points': [], 'columns': []}
+        #except InfluxDBClientError:
+        #    self.SELECT_COLUMNS = ['cpu_cumulative_usage', 'memory_usage', 'container_name', 'machine']
+        #    colstr = ', '.join(['%s' % (c,) for c in self.SELECT_COLUMNS])
+        #    conds = filter(None, [self._startcond, self._endcond])
+        #    condstr = ' where %s' % (' and '.join(conds),) if len(conds) != 0 else ''
+        #    self.query_str = 'select %s from %s%s;' % (colstr, settings.INFLUXDB_TABLE, condstr)
+        #    self._make_query()
 
 
     def _make_windows(self, start_point, end_point, resolution):
@@ -141,14 +151,16 @@ class KubeStat(object):
         if (entry['machine'], entry['container_name']) not in self._previous:
             self._previous[(entry['machine'], entry['container_name'])] = {
                 'cpu': entry['cpu_cumulative_usage'],
-                'rxb': entry['rx_bytes'] if entry['rx_bytes'] is not None else 0,
-                'txb': entry['tx_bytes'] if entry['tx_bytes'] is not None else 0}
-            entry['cpu_cumulative_usage'] = entry['rx_bytes'] = entry['tx_bytes'] = 0
+                'rxb': entry['rx_bytes'] if ('rx_bytes' in entry and entry['rx_bytes'] is not None) else 0,
+                'txb': entry['tx_bytes'] if ('tx_bytes' in entry and entry['tx_bytes'] is not None) else 0}
+            if 'rx_bytes' in entry and 'tx_bytes' in entry:
+                entry['rx_bytes'] = entry['tx_bytes'] = 0
+            entry['cpu_cumulative_usage'] = 0
             return entry
         cpu_diff = entry['cpu_cumulative_usage'] - self._previous[(entry['machine'], entry['container_name'])]['cpu']
         
-        curr_rxb = entry['rx_bytes'] if entry['rx_bytes'] is not None else 0
-        curr_txb = entry['tx_bytes'] if entry['tx_bytes'] is not None else 0
+        curr_rxb = entry['rx_bytes'] if ('rx_bytes' in entry and entry['rx_bytes'] is not None) else 0
+        curr_txb = entry['tx_bytes'] if ('tx_bytes' in entry and entry['tx_bytes'] is not None) else 0
         
         rxb_diff = curr_rxb - self._previous[(entry['machine'], entry['container_name'])]['rxb']
         txb_diff = curr_txb - self._previous[(entry['machine'], entry['container_name'])]['txb']
@@ -157,14 +169,17 @@ class KubeStat(object):
         self._previous[(entry['machine'], entry['container_name'])]['rxb'] = curr_rxb
         self._previous[(entry['machine'], entry['container_name'])]['txb'] = curr_txb
         entry['cpu_cumulative_usage'] = cpu_diff
-        entry['rx_bytes'] = rxb_diff
-        entry['tx_bytes'] = txb_diff
+        if 'rx_bytes' in entry and 'tx_bytes' in entry:
+            entry['rx_bytes'] = rxb_diff
+            entry['tx_bytes'] = txb_diff
 
     def _make_checker(self, containers):
         self._containers_checks = set()
+        self._containers_map = {}
         for host in containers.keys():
             for item in containers[host]:
                 self._containers_checks.add((host, item[1]))
+                self._containers_map[item[1]] = item[2]
                 
     def _is_wanted(self, entry):
         if entry['container_name'] == '/system.slice':
@@ -203,9 +218,9 @@ class KubeStat(object):
         self._folded[key][entry['machine']][unit][entry['container_name']]['cpu_count'] += 1
         self._folded[key][entry['machine']][unit][entry['container_name']]['mem'] += entry['memory_usage']
         self._folded[key][entry['machine']][unit][entry['container_name']]['mem_count'] += 1
-        self._folded[key][entry['machine']][unit][entry['container_name']]['rxb'] += entry['rx_bytes']
+        self._folded[key][entry['machine']][unit][entry['container_name']]['rxb'] += entry['rx_bytes'] if 'rx_bytes' in entry else 0
         self._folded[key][entry['machine']][unit][entry['container_name']]['rxb_count'] += 1
-        self._folded[key][entry['machine']][unit][entry['container_name']]['txb'] += entry['tx_bytes']
+        self._folded[key][entry['machine']][unit][entry['container_name']]['txb'] += entry['tx_bytes'] if 'tx_bytes' in entry else 0
         self._folded[key][entry['machine']][unit][entry['container_name']]['txb_count'] += 1
 
     def _fold(self, entry):
@@ -244,7 +259,7 @@ class KubeStat(object):
                         self._unfolded.append({
                             'time_window': cell,
                             'host': host,
-                            'unit': unit,
+                            'unit_name': self._containers_map[unit],
                             'container': item,
                             'cpu': item_cpu,
                             'memory': item_mem,

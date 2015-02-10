@@ -13,6 +13,9 @@ class KubeResolver(object):
         self._services = self._parse_services()
         self._merge_with_db()
         return self._pods
+    
+    def resolve_by_name(self, name):
+        pass
         
     @staticmethod
     def _get_replicas():
@@ -121,7 +124,7 @@ class KubeResolver(object):
     @staticmethod
     def _select_pods_from_db():
         data = {}
-        for i in db.session.query(Pod).join(Pod.owner).values(
+        for i in db.session.query(Pod).join(Pod.owner).filter(Pod.status!='deleted').values(
                 Pod.id, Pod.name, User.username, Pod.config):
             data[i[1]] = {'id': i[0], 'username': i[2], 'config':i[3]}
         return data

@@ -6,7 +6,8 @@ app_css = Bundle(
     'css/bootstrap-editable.css',
     'css/jquery.jqplot.min.css',
     'css/app.css',
-    filters="cssmin", output="css/app.min.css")
+    'css/main.less',
+    filters="cssmin,less", output="css/app.min.css")
 
 vendor_js = Bundle(
     'js/lib/jquery.js',

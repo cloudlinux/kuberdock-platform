@@ -3,6 +3,12 @@
 
 * { padding: 0; margin: 0}
 
+img, a, input {
+	&:focus{
+		outline: 0;
+	}
+}
+
 html{
 	min-height: 100%;
 	position: relative;
@@ -146,7 +152,7 @@ html{
 			color: #686868;
 		}
 		.service-on {
-			color: #1A1F89;
+			color: #5CB85C;
 		}
 		.service-off {
 			color: #C9C9C9;
@@ -482,7 +488,10 @@ html{
 			text-transform: capitalize;
 		}
 		/*end  need refactoring */
-
+		.disabled{
+			color: gray !important;
+			border-color: gray !important;
+		}
 		.align-center{
 			text-align: center;
 		}

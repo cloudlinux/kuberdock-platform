@@ -5,12 +5,18 @@
         <meta charset="utf8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
         {% assets "app_css" -%}
+            <link rel="stylesheet"href="{{ ASSET_URL }}">
+        {%- endassets %}
+        {% assets "less_css" -%}
             <link rel="stylesheet/less" type="text/css" href="{{ ASSET_URL }}">
         {%- endassets %}
+
         {% assets "less_js" -%}
             <script src="{{ ASSET_URL }}"></script>
         {% endassets %}
+        
     </head>
     <body>
 
@@ -60,7 +66,7 @@
             <!-- page actions -->
             <div class="row">
                 <div class="col-md-1 col-md-offset-0">
-                    <button type="button" class="btn invert login-btn dropdown-toggle green" data-toggle="dropdown" aria-expanded="false">
+                    <button type="button" class="btn invert login-btn dropdown-toggle green disabled pods-actions-btn" data-toggle="dropdown" aria-expanded="false">
                         Actions <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu bulk-action-menu" role="menu">
@@ -86,7 +92,7 @@
 
             <!-- table data row -->
             <td>
-                <input type="checkbox">
+                <input type="checkbox" class="check-item">
             </td> 
 
             <td>

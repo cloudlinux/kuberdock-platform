@@ -7,7 +7,10 @@
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
         {% assets "app_css" -%}
-          <link rel="stylesheet/less" type="text/css" href="{{ ASSET_URL }}">
+            <link rel="stylesheet"href="{{ ASSET_URL }}">
+        {%- endassets %}
+        {% assets "less_css" -%}
+            <link rel="stylesheet/less" type="text/css" href="{{ ASSET_URL }}">
         {%- endassets %}
 
         {% block js_extras %}

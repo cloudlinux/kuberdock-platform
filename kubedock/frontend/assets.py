@@ -9,6 +9,10 @@ app_css = Bundle(
     'css/main.less',
     filters="cssmin", output="css/app.min.css")
 
+less_css = Bundle(
+    'css/main.less',
+    filters="cssmin", output="css/less.min.css")
+
 vendor_js = Bundle(
     'js/lib/jquery.js',
     'js/lib/underscore.js',
@@ -49,6 +53,7 @@ minions_app_js = Bundle(
 def init_app(app):
     webassets = Environment(app)
     webassets.register('app_css', app_css)
+    webassets.register('less_css', less_css)
     webassets.register('vendor_js', vendor_js)
     webassets.register('app_js', app_js)
     webassets.register('less_js', less_js)

@@ -64,14 +64,17 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
-        itemsAllHandler: function(evt){
+		itemsAllHandler: function(evt){
             var target = $(evt.currentTarget),
+            	pods_actions_btn = $('.pods-actions-btn'),
                 inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
 
             if( target.is(':checked') ) {
                 inputs.prop('checked',true);
+                pods_actions_btn.removeClass('disabled');
             } else {
                 inputs.prop('checked',false);
+                pods_actions_btn.addClass('disabled');
             }
         }
     });
@@ -104,7 +107,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .start-btn': 'startItem',
             'click .stop-btn': 'stopItem',
             'click .terminate-btn': 'terminateItem',
-            'click td:first input[type=checkbox]': 'inputHandler'
+            'click @ui.checkbox': 'inputHandler',
         },
 
         checkItem: function(evt){
@@ -139,20 +142,30 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         inputHandler: function(evt){
             evt.stopPropagation();
-
+            
             var target = $(evt.currentTarget),
                 tbody = target.parents('.table tbody'),
                 switcher = target.parents('.table').find('thead tr:first-child input[type=checkbox]')[0],
+               	pods_actions_btn = $('.pods-actions-btn'),   //for bliss ты обещал посмотреть как избегать подобного кода если элемент не динамический //
                 inputsLength = 0,
                 counter = 0;
 
             tbody.find('tr td:first-child input').each(function(){                    
-                if (this.checked) counter+=1;
+                if (this.checked) {
+                	counter+=1;
+                	pods_actions_btn.removeClass('disabled');
+                }
                 inputsLength+=1;
             });
-
+            if (counter != inputsLength && switcher.is(':checked')){
+				console.log('asdas');
+            }
+            if (counter == 0 ){
+            	pods_actions_btn.addClass('disabled');
+            }
             if (counter == inputsLength) {
                switcher.checked = true;   
+               pods_actions_btn.removeClass('disabled');  
             }
             else {
                 switcher.checked = false;  

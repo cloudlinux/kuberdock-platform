@@ -12,21 +12,22 @@ echo "Using MASTER_IP=$MASTER_IP"
 
 # 1. create yum repo file
 
-cat > /etc/yum.repos.d/eparis-kubernetes-epel-7.repo << EOF
-[eparis-kubernetes-epel-7]
-name=Copr repo for kubernetes-epel-7 owned by eparis
-baseurl=http://copr-be.cloud.fedoraproject.org/results/eparis/kubernetes-epel-7/epel-7-\$basearch/
-skip_if_unavailable=True
-gpgcheck=0
+cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
+[kube]
+name=kube
+baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
 enabled=1
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
 
 # 2. install components
 echo "Installing kubernetes..."
-# TODO change to install via repo when ready.
-# yum -y install kubernetes
+yum -y install kubernetes
+# Direct links for some cases...
 # yum -y install http://el6.cloudlinux.com/kubernetes-0.9.1-1.el7.centos.x86_64.rpm     # unstable speed
-yum -y install http://repo.cloudlinux.com/cloudlinux/sources/kubernetes-0.9.1-1.el7.centos.x86_64.rpm
+# yum -y install http://repo.cloudlinux.com/cloudlinux/sources/kubernetes-0.9.1-1.el7.centos.x86_64.rpm
+# yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.10.0-1.el7.centos.x86_64.rpm
 
 # 3. configure minion config
 echo "Configuring services..."

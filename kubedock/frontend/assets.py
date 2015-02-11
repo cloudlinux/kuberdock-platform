@@ -21,9 +21,12 @@ vendor_js = Bundle(
     'js/lib/bootstrap-editable.min.js',
     'js/lib/jquery.jqplot.min.js',
     'js/lib/jqplot.dateAxisRenderer.min.js',
-    'js/lib/less.js',
     filters="jsmin", output="js/lib.min.js")
 
+less_js = Bundle(
+    'js/lib/less.js',
+    filters="jsmin", output="js/less.min.js"
+)
 #: application js bundle
 app_js = Bundle(
     'js/app.js',
@@ -48,6 +51,7 @@ def init_app(app):
     webassets.register('app_css', app_css)
     webassets.register('vendor_js', vendor_js)
     webassets.register('app_js', app_js)
+    webassets.register('less_js', less_js)
     webassets.register('users_app_js', users_app_js)
     webassets.register('minions_app_js', minions_app_js)
     webassets.manifest = 'cache' if not app.debug else False

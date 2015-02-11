@@ -1,13 +1,13 @@
 "use strict";
 
-var MinionsApp = new Backbone.Marionette.Application({
+var NodesApp = new Backbone.Marionette.Application({
     regions: {
         contents: '#contents'
     }
 });
 
 
-MinionsApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
+NodesApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
     var unwrapper = function(response) {
         if (response.hasOwnProperty('data'))
@@ -15,14 +15,14 @@ MinionsApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
         return response;
     };
 
-    Data.MinionModel = Backbone.Model.extend({
-        urlRoot: '/api/minions/',
+    Data.NodeModel = Backbone.Model.extend({
+        urlRoot: '/api/nodes/',
         parse: unwrapper
     });
 
-    Data.MinionsCollection = Backbone.PageableCollection.extend({
-        url: '/api/minions/',
-        model: Data.MinionModel,
+    Data.NodesCollection = Backbone.PageableCollection.extend({
+        url: '/api/nodes/',
+        model: Data.NodeModel,
         parse: unwrapper,
         mode: 'client',
         state: {
@@ -32,7 +32,7 @@ MinionsApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 });
 
 
-MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
+NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     //=================Copy from app.js ===========================================================
     Views.PaginatorView = Backbone.Marionette.ItemView.extend({
@@ -78,22 +78,22 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
 
 
-    Views.MinionItem = Backbone.Marionette.ItemView.extend({
-        template: '#minion-item-template',
+    Views.NodeItem = Backbone.Marionette.ItemView.extend({
+        template: '#node-item-template',
         tagName: 'tr',
 
         events: {
-            'click button#deleteMinion': 'deleteMinion',
-            'click button#detailedMinion' : 'detailedMinion',
-            'click button#upgradeMinion' : 'detailedMinion',
+            'click button#deleteNode': 'deleteNode',
+            'click button#detailedNode' : 'detailedNode',
+            'click button#upgradeNode' : 'detailedNode',
             'click button#detailedTroublesTab' : 'detailedTroublesTab'
         },
 
-        deleteMinion: function(){
+        deleteNode: function(){
             this.model.destroy();   // no wait, because removed in any case
         },
 
-        detailedMinion: function(){
+        detailedNode: function(){
             App.router.navigate('/detailed/' + this.model.id + '/settings/', {trigger: true});
         },
 
@@ -103,13 +103,13 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     });
 
-    Views.MinionsListView = Backbone.Marionette.CompositeView.extend({
-        template: '#minions-list-template',
-        childView: Views.MinionItem,
+    Views.NodesListView = Backbone.Marionette.CompositeView.extend({
+        template: '#nodes-list-template',
+        childView: Views.NodeItem,
         childViewContainer: "tbody",
 
         events: {
-            'click button#add_minion' : 'addMinion'
+            'click button#add_node' : 'addNode'
         },
 
         collectionEvents: {
@@ -118,11 +118,11 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         templateHelpers: function(){
           return {
-              totalMinions: this.collection.fullCollection.length
+              totalNodes: this.collection.fullCollection.length
           }
         },
 
-        addMinion: function(){
+        addNode: function(){
             App.router.navigate('/add/', {trigger: true});
         }
     });
@@ -143,27 +143,27 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
 
 
-    // =========== Add minion wizard ====================================
-    Views.MinionAddWizardLayout = Backbone.Marionette.LayoutView.extend({
-        template: '#minion-add-layout-template',
+    // =========== Add Node wizard ====================================
+    Views.NodeAddWizardLayout = Backbone.Marionette.LayoutView.extend({
+        template: '#node-add-layout-template',
 
         regions: {
-            header: '#minion-header',
-            find_step: '#minion-find-step',
-            final_step: '#minion-final-step'
+            header: '#node-header',
+            find_step: '#node-find-step',
+            final_step: '#node-final-step'
         }
     });
 
-    Views.MinionFindStep = Backbone.Marionette.ItemView.extend({
-        template: '#minion-find-step-template',
+    Views.NodeFindStep = Backbone.Marionette.ItemView.extend({
+        template: '#node-find-step-template',
 
         ui: {
-            'minion_name': 'input#minion_address',
+            'node_name': 'input#node_address',
             'spinner': '#address-spinner'
         },
 
         events:{
-            'change @ui.minion_name': 'validateStep'
+            'change @ui.node_name': 'validateStep'
         },
 
         validateStep: function (evt) {
@@ -171,7 +171,7 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             if (val !== '') {
                 var that = this;
                 this.ui.spinner.spin({color: '#437A9E'});
-                Backbone.ajax({ url:"/api/minions/checkhost/" + val }).done(function (data) {
+                Backbone.ajax({ url:"/api/nodes/checkhost/" + val }).done(function (data) {
                     that.state.set('isFinished', true);
                     that.state.set('ip', data.ip);
                     that.state.set('hostname', data.hostname);
@@ -190,17 +190,17 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    Views.MinionFinalStep = Backbone.Marionette.ItemView.extend({
-        template: '#minion-final-step-template',
+    Views.NodeFinalStep = Backbone.Marionette.ItemView.extend({
+        template: '#node-final-step-template',
 
         ui: {
-//            'minion_ssh': 'select#minion_ssh',
-            'minion_add_btn': 'button#minion-add-btn'
+//            'node_ssh': 'select#node_ssh',
+            'node_add_btn': 'button#node-add-btn'
         },
 
         events:{
-//            'change @ui.minion_ssh': 'validateStep',
-            'click @ui.minion_add_btn': 'complete'      // only if valid
+//            'change @ui.node_ssh': 'validateStep',
+            'click @ui.node_add_btn': 'complete'      // only if valid
         },
 
 //        validateStep: function (evt) {
@@ -213,7 +213,7 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         complete: function () {
             var that = this;
-            App.Data.minions.create({
+            App.Data.nodes.create({
                 ip: this.state.get('ip'),
                 hostname: this.state.get('hostname'),
                 status: 'pending',
@@ -236,7 +236,7 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
 
     Views.ConsoleView = Backbone.Marionette.ItemView.extend({
-        template: '#minion-console-template',
+        template: '#node-console-template',
         model: new Backbone.Model({'text': []}),
 
         events: {
@@ -253,7 +253,7 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             })
         }
     });
-    // =========== //Add minion wizard ==================================
+    // =========== //Add Node wizard ==================================
 
 
 
@@ -285,8 +285,8 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
 
     // =========== Detailed view ========================================
-    Views.MinionDetailedLayout = Backbone.Marionette.LayoutView.extend({
-        template: '#minion-detailed-layout-template',
+    Views.NodeDetailedLayout = Backbone.Marionette.LayoutView.extend({
+        template: '#node-detailed-layout-template',
 
         regions: {
             tab_content: 'div#tab-content'
@@ -294,22 +294,22 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         events: {
             'click ul.nav li': 'changeTab',
-            'click button#minion-add-btn': 'saveMinion'
+            'click button#node-add-btn': 'saveNode'
         },
 
         initialize: function (options) {
             this.tab = options.tab;
-            this.minion_id = options.minion_id;
+            this.node_id = options.node_id;
         },
 
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
-            var url_ = '/detailed/' + this.minion_id;
-            if (tgt.hasClass('minionSettingsTab')) App.router.navigate(url_ + '/settings/', {trigger: true});
-            else if (tgt.hasClass('minionStatsTab')) App.router.navigate(url_ + '/stats/', {trigger: true});
-            else if (tgt.hasClass('minionLogsTab')) App.router.navigate(url_ + '/logs/', {trigger: true});
-            else if (tgt.hasClass('minionTroublesTab')) App.router.navigate(url_ + '/troubles/', {trigger: true});
+            var url_ = '/detailed/' + this.node_id;
+            if (tgt.hasClass('nodeSettingsTab')) App.router.navigate(url_ + '/settings/', {trigger: true});
+            else if (tgt.hasClass('nodeStatsTab')) App.router.navigate(url_ + '/stats/', {trigger: true});
+            else if (tgt.hasClass('nodeLogsTab')) App.router.navigate(url_ + '/logs/', {trigger: true});
+            else if (tgt.hasClass('nodeTroublesTab')) App.router.navigate(url_ + '/troubles/', {trigger: true});
         },
 
 //        onRender: function(){
@@ -318,7 +318,7 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 //            this.ui.active_chkx.prop('checked', this.model.get('active'));
 //        },
         
-        saveMinion: function () {
+        saveNode: function () {
             // validation
             this.model.set({
                 // change annotations and labels
@@ -344,24 +344,24 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    Views.MinionSettingsTabView = Backbone.Marionette.ItemView.extend({
-        template: '#minion-settings-tab-template'
+    Views.NodeSettingsTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-settings-tab-template'
     });
 
-    Views.MinionStatsTabView = Backbone.Marionette.ItemView.extend({
-        template: '#minion-stats-tab-template'
+    Views.NodeStatsTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-stats-tab-template'
     });
 
-    Views.MinionLogsTabView = Backbone.Marionette.ItemView.extend({
-        template: '#minion-logs-tab-template',
+    Views.NodeLogsTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-logs-tab-template',
 
         ui: {
-            textarea: '.minion-logs'
+            textarea: '.node-logs'
         },
 
         initialize: function () {
             this.model.set('logs', []);
-            this.listenTo(App.vent, 'update_minion_log_' + this.model.get('ip'), function (data) {
+            this.listenTo(App.vent, 'update_node_log_' + this.model.get('ip'), function (data) {
                 var lines = this.model.get('logs');
                 lines.push(data);
                 lines = lines.slice(-100);
@@ -374,8 +374,8 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    Views.MinionTroublesTabView = Backbone.Marionette.ItemView.extend({
-        template: '#minion-troubles-tab-template'
+    Views.NodeTroublesTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-troubles-tab-template'
     });
     // =========== //Detailed view ======================================
 
@@ -394,8 +394,8 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
 
 
-    Views.MinionsLayout = Backbone.Marionette.LayoutView.extend({
-        template: '#minions-layout-template',
+    Views.NodesLayout = Backbone.Marionette.LayoutView.extend({
+        template: '#nodes-layout-template',
 
         regions: {
             main: 'div#main',
@@ -406,27 +406,27 @@ MinionsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 });
 
 
-MinionsApp.module('MinionsCRUD', function(MinionsCRUD, App, Backbone, Marionette, $, _){
+NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _){
 
-    MinionsCRUD.Controller = Marionette.Controller.extend({
+    NodesCRUD.Controller = Marionette.Controller.extend({
 
-        showMinions: function(){
-            var layout_view = new App.Views.MinionsLayout();
-            var minions_list_view = new App.Views.MinionsListView({collection: App.Data.minions});
-            var minion_list_pager = new App.Views.PaginatorView({view: minions_list_view});
+        showNodes: function(){
+            var layout_view = new App.Views.NodesLayout();
+            var nodes_list_view = new App.Views.NodesListView({collection: App.Data.nodes});
+            var node_list_pager = new App.Views.PaginatorView({view: nodes_list_view});
 
             this.listenTo(layout_view, 'show', function(){
-                layout_view.main.show(minions_list_view);
-                layout_view.pager.show(minion_list_pager);
+                layout_view.main.show(nodes_list_view);
+                layout_view.pager.show(node_list_pager);
             });
 
             App.contents.show(layout_view);
         },
 
-        showAddMinion: function(){
-            var layout_view = new App.Views.MinionAddWizardLayout();
-            var find_step = new App.Views.MinionFindStep();
-            var final_step = new App.Views.MinionFinalStep();
+        showAddNode: function(){
+            var layout_view = new App.Views.NodeAddWizardLayout();
+            var find_step = new App.Views.NodeFindStep();
+            var final_step = new App.Views.NodeFinalStep();
             var console_view = new App.Views.ConsoleView();
 
             this.listenTo(find_step.state, 'change', function () {
@@ -451,27 +451,27 @@ MinionsApp.module('MinionsCRUD', function(MinionsCRUD, App, Backbone, Marionette
             App.contents.show(layout_view);
         },
 
-        showDetailedMinion: function(minion_id, tab){
-            var minion = App.Data.minions.get(minion_id);
-            var layout_view = new App.Views.MinionDetailedLayout({tab: tab, minion_id: minion_id, model: minion});
+        showDetailedNode: function(node_id, tab){
+            var node = App.Data.nodes.get(node_id);
+            var layout_view = new App.Views.NodeDetailedLayout({tab: tab, node_id: node_id, model: node});
 
             this.listenTo(layout_view, 'show', function(){
                 switch (layout_view.tab) {
                     case 'settings': {
-                        var minion_settings_tab_view = new App.Views.MinionSettingsTabView({ model: minion });
-                        layout_view.tab_content.show(minion_settings_tab_view);
+                        var node_settings_tab_view = new App.Views.NodeSettingsTabView({ model: node });
+                        layout_view.tab_content.show(node_settings_tab_view);
                     } break;
                     case 'stats': {
-                        var minion_stats_tab_view = new App.Views.MinionStatsTabView({ model: minion });
-                        layout_view.tab_content.show(minion_stats_tab_view);
+                        var node_stats_tab_view = new App.Views.NodeStatsTabView({ model: node });
+                        layout_view.tab_content.show(node_stats_tab_view);
                     } break;
                     case 'logs': {
-                        var minion_logs_tab_view = new App.Views.MinionLogsTabView({ model: minion });
-                        layout_view.tab_content.show(minion_logs_tab_view);
+                        var node_logs_tab_view = new App.Views.NodeLogsTabView({ model: node });
+                        layout_view.tab_content.show(node_logs_tab_view);
                     } break;
                     case 'troubles': {
-                        var minion_troubles_tab_view = new App.Views.MinionTroublesTabView({ model: minion });
-                        layout_view.tab_content.show(minion_troubles_tab_view);
+                        var node_troubles_tab_view = new App.Views.NodeTroublesTabView({ model: node });
+                        layout_view.tab_content.show(node_troubles_tab_view);
                     } break;
                 }
             });
@@ -479,15 +479,15 @@ MinionsApp.module('MinionsCRUD', function(MinionsCRUD, App, Backbone, Marionette
         }
     });
 
-    MinionsCRUD.addInitializer(function(){
-        var controller = new MinionsCRUD.Controller();
+    NodesCRUD.addInitializer(function(){
+        var controller = new NodesCRUD.Controller();
 
         App.router = new Marionette.AppRouter({
             controller: controller,
             appRoutes: {
-                '': 'showMinions',
-                'add/': 'showAddMinion',
-                'detailed/:id/:tab/': 'showDetailedMinion'
+                '': 'showNodes',
+                'add/': 'showAddNode',
+                'detailed/:id/:tab/': 'showDetailedNode'
             }
         });
 
@@ -496,14 +496,14 @@ MinionsApp.module('MinionsCRUD', function(MinionsCRUD, App, Backbone, Marionette
         } else {
             var source = new EventSource("/api/stream");
             source.addEventListener('ping', function (ev) {
-                App.Data.minions.fetch()
+                App.Data.nodes.fetch()
             }, false);
             source.addEventListener('install_logs', function (ev) {
                 App.vent.trigger('update_console_log', ev.data);
             }, false);
-            MinionsApp.Data.minions.forEach(function (minion) {
-        	source.addEventListener('minion-log-' + minion.get('ip'), function (ev) {
-        	    App.vent.trigger('update_minion_log_' + minion.get('ip'), ev.data);
+            NodesApp.Data.nodes.forEach(function (node) {
+        	source.addEventListener('node-log-' + node.get('ip'), function (ev) {
+        	    App.vent.trigger('update_node_log_' + node.get('ip'), ev.data);
         	}, false);
             });
         }
@@ -512,13 +512,13 @@ MinionsApp.module('MinionsCRUD', function(MinionsCRUD, App, Backbone, Marionette
 });
 
 
-MinionsApp.on('start', function(){
+NodesApp.on('start', function(){
     if (Backbone.history) {
-        Backbone.history.start({root: '/minions/', pushState: true});
+        Backbone.history.start({root: '/nodes/', pushState: true});
     }
 });
 
 
 $(function(){
-    MinionsApp.start();
+    NodesApp.start();
 });

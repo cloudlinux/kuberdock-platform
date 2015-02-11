@@ -1,12 +1,12 @@
 #!/bin/bash
-# install kubernetes components on minion host
+# install kubernetes components on Node host
 
 # TODO change rules, not disable
 echo "Setting up firewall rules..."
 systemctl stop firewalld
 systemctl disable firewalld
 
-# TODO somehow remove and automate this(read from some global cluster config, because this script is running on minions machine )
+# TODO somehow remove and automate this(read from some global cluster config, because this script is running on Node machine )
 MASTER_IP="192.168.56.100"
 echo "Using MASTER_IP=$MASTER_IP"
 
@@ -29,7 +29,7 @@ yum -y install kubernetes
 # yum -y install http://repo.cloudlinux.com/cloudlinux/sources/kubernetes-0.9.1-1.el7.centos.x86_64.rpm
 # yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.10.0-1.el7.centos.x86_64.rpm
 
-# 3. configure minion config
+# 3. configure Node config
 echo "Configuring services..."
 cat > /etc/kubernetes/config << EOF
 ###
@@ -57,11 +57,11 @@ KUBE_LOG_LEVEL="--v=0"
 KUBE_ALLOW_PRIV="--allow_privileged=false"
 EOF
 
-# 4. configure minion kubelet
+# 4. configure Node kubelet
 
 cat > /etc/kubernetes/kubelet << EOF
 ###
-# kubernetes kubelet (minion) config
+# kubernetes kubelet (Node) config
 
 # The address for the info server to serve on (set to 0.0.0.0 or "" for all interfaces)
 KUBELET_ADDRESS="--address=0.0.0.0"

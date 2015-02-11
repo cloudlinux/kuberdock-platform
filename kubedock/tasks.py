@@ -5,7 +5,7 @@ import paramiko
 from paramiko import ssh_exception
 import time
 import socket
-from .settings import DEBUG, MINION_SSH_AUTH
+from .settings import DEBUG, NODE_SSH_AUTH
 from .api.stream import send_event
 from .core import ConnectionPool, db
 from .factory import make_celery
@@ -87,34 +87,34 @@ def get_dockerfile(data):
     return r.text
 
 
-def get_all_minions():
+def get_all_nodes():
     r = requests.get('http://localhost:8080/api/v1beta1/nodes')
     return r.json()['items']
 
 
-def get_minion_by_host(host):
+def get_node_by_host(host):
     r = requests.get('http://localhost:8080/api/v1beta1/nodes/' + host)
     return r.json()
 
 
-def remove_minion_by_host(host):
+def remove_node_by_host(host):
     r = requests.delete('http://localhost:8080/api/v1beta1/nodes/' + host)
     return r.json()
 
 
 @celery.task()
-def add_new_minion(host):
+def add_new_node(host):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         if DEBUG:
             send_event('install_logs', 'Connecting to {0} with ssh with user = root and password = {1} ...'
-                       .format(host, MINION_SSH_AUTH))
-            ssh.connect(hostname=host, username='root', password=MINION_SSH_AUTH, timeout=10)
+                       .format(host, NODE_SSH_AUTH))
+            ssh.connect(hostname=host, username='root', password=NODE_SSH_AUTH, timeout=10)
         else:
             send_event('install_logs', 'Connecting to {0} with ssh with user = root and ssh_key_filename = {1} ...'
-                       .format(host, MINION_SSH_AUTH))
-            ssh.connect(hostname=host, username='root', key_filename=MINION_SSH_AUTH, timeout=10)    # not tested
+                       .format(host, NODE_SSH_AUTH))
+            ssh.connect(hostname=host, username='root', key_filename=NODE_SSH_AUTH, timeout=10)    # not tested
     except ssh_exception.AuthenticationException as e:
         send_event('install_logs', '{0} Check hostname, your credentials, and try again'.format(e))
         return 'Authentication failed'
@@ -147,7 +147,7 @@ def add_new_minion(host):
         res = json.dumps({'status': 'error', 'data': message})
     else:
         res = requests.post('http://localhost:8080/api/v1beta1/nodes/', json={'id': host, 'apiVersion': 'v1beta1'}).json()
-        send_event('install_logs', 'Adding minion completed successful.')
+        send_event('install_logs', 'Adding Node completed successful.')
         send_event('install_logs', '===================================')
     ssh.exec_command('rm /kub_install.sh')
     ssh.close()
@@ -164,15 +164,15 @@ def check_events():
     else:
         return
 
-    ml = redis.get('cached_minions')
+    ml = redis.get('cached_nodes')
     if not ml:
-        ml = get_all_minions()
-        redis.set('cached_minions', json.dumps(ml))
+        ml = get_all_nodes()
+        redis.set('cached_nodes', json.dumps(ml))
         send_event('ping', 'ping')
     else:
-        temp = get_all_minions()
+        temp = get_all_nodes()
         if temp != json.loads(ml):
-            redis.set('cached_minions', json.dumps(temp))
+            redis.set('cached_nodes', json.dumps(temp))
             send_event('ping', 'ping')
 
     redis.delete('events_lock')
@@ -190,16 +190,16 @@ def pull_hourly_stats():
     db.session.commit()
 
 
-def get_minion_log(ip, log_size=0):
+def get_node_log(ip, log_size=0):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         if DEBUG:
             ssh.connect(hostname=ip, username='root',
-                        password=MINION_SSH_AUTH, timeout=10)
+                        password=NODE_SSH_AUTH, timeout=10)
         else:
             ssh.connect(hostname=ip, username='root',
-                        key_filename=MINION_SSH_AUTH, timeout=10)
+                        key_filename=NODE_SSH_AUTH, timeout=10)
     except (socket.timeout, socket.error,
             paramiko.ssh_exception.AuthenticationException):
         return -1, []
@@ -218,38 +218,38 @@ def get_minion_log(ip, log_size=0):
 
 
 @celery.task()
-def get_minions_logs():
+def get_nodes_logs():
     redis = ConnectionPool.get_connection()
 
-    minions_logs_timestamp = redis.get('minions_logs_timestamp')
-    minions_logs_timestamp = (0. if minions_logs_timestamp is None
-                              else float(minions_logs_timestamp))
+    nodes_logs_timestamp = redis.get('nodes_logs_timestamp')
+    nodes_logs_timestamp = (0. if nodes_logs_timestamp is None
+                              else float(nodes_logs_timestamp))
     now = time.time()
 
-    if now - minions_logs_timestamp > 30:
-        redis.delete('minions_logged')
-        redis.delete('minions_log_size')
+    if now - nodes_logs_timestamp > 30:
+        redis.delete('nodes_logged')
+        redis.delete('nodes_log_size')
 
-    redis.setex('minions_logs_timestamp', 30, now)
+    redis.setex('nodes_logs_timestamp', 30, now)
 
-    all_minions = get_all_minions()
-    minions_logged = redis.lrange('minions_logged', 0, -1)
+    all_nodes = get_all_nodes()
+    nodes_logged = redis.lrange('nodes_logged', 0, -1)
 
-    for minion in all_minions:
-        minion_id = minion['id']
+    for node in all_nodes:
+        node_id = node['id']
 
-        if minion['id'] in minions_logged:
+        if node['id'] in nodes_logged:
             continue
 
-        log_size = redis.hget('minions_log_size', minion_id)
+        log_size = redis.hget('nodes_log_size', node_id)
         log_size = 0 if log_size is None else int(log_size)
-        log_size, log_lines = get_minion_log(minion_id, log_size)
-        redis.hset('minions_log_size', minion_id, log_size)
-        redis.rpush('minions_logged', minion_id)
-        event_name = 'minion-log-{0}'.format(minion_id)
+        log_size, log_lines = get_node_log(node_id, log_size)
+        redis.hset('nodes_log_size', node_id, log_size)
+        redis.rpush('nodes_logged', node_id)
+        event_name = 'node-log-{0}'.format(node_id)
 
         for line in log_lines:
             send_event(event_name, line)
         break
     else:
-        redis.delete('minions_logged')
+        redis.delete('nodes_logged')

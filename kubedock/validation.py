@@ -26,7 +26,7 @@ def check_container_image_name(searchkey):
         raise APIError('Invalid container image name')
 
 
-def check_minion_data(data):
+def check_node_data(data):
     if 'hostname' not in data:
         raise APIError('Hostname not provided')
     if len(data['hostname']) > 255:
@@ -36,7 +36,7 @@ def check_minion_data(data):
     try:
         socket.gethostbyname(data['hostname'])
     except socket.error:
-        raise APIError("Hostname can't be resolved. Check /etc/hosts file for correct minion records")
+        raise APIError("Hostname can't be resolved. Check /etc/hosts file for correct Node records")
     # annotations - any
     # labels - any
 

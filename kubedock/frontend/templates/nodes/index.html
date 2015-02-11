@@ -1,7 +1,7 @@
 {% extends "index.html" %}
 {% block script_templates %}
 
-    <script type="text/template" id="minion-detailed-layout-template">
+    <script type="text/template" id="node-detailed-layout-template">
         <ul class="nav nav-tabs">
             <% var s = {};
             switch (tab) {
@@ -10,15 +10,15 @@
                 case 'logs': s.logs = 'active'; break;
                 case 'troubles': s.troubles = 'active'; break;
             } %>
-            <li role="presentation" class="<%- s.settings %>"><a  class="minionSettingsTab" href="">Settings</a></li>
-            <li role="presentation" class="<%- s.stats %>"><a class="minionStatsTab" href="">Statistics</a></li>
-            <li role="presentation" class="<%- s.logs %>"><a class="minionLogsTab" href="">Logs</a></li>
-            <li role="presentation" class="<%- s.troubles %>"><a class="minionTroublesTab" href="">Troubles</a></li>
+            <li role="presentation" class="<%- s.settings %>"><a  class="nodeSettingsTab" href="">Settings</a></li>
+            <li role="presentation" class="<%- s.stats %>"><a class="nodeStatsTab" href="">Statistics</a></li>
+            <li role="presentation" class="<%- s.logs %>"><a class="nodeLogsTab" href="">Logs</a></li>
+            <li role="presentation" class="<%- s.troubles %>"><a class="nodeTroublesTab" href="">Troubles</a></li>
         </ul>
         <div id="tab-content">div tab_content</div>
     </script>
 
-    <script type="text/template" id="minion-settings-tab-template">
+    <script type="text/template" id="node-settings-tab-template">
         <h3>Hostname: <%- hostname %></h3>
         <h3>Status: <%- status %></h3>
         <h3>Software version: <%- annotations.sw_version %></h3>
@@ -45,47 +45,47 @@
             </div>
         </div>
         <div class="text-center">
-            <button id="minion-add-btn" class="btn btn-lg btn-success" type="submit">Save</button>
+            <button id="node-add-btn" class="btn btn-lg btn-success" type="submit">Save</button>
         </div>
     </script>
 
-    <script type="text/template" id="minion-stats-tab-template">
+    <script type="text/template" id="node-stats-tab-template">
         PODS, DOCKERS LIST, CPU, RAM, DISK etc...
     </script>
 
-    <script type="text/template" id="minion-logs-tab-template">
-        <div class="minion-logs">
+    <script type="text/template" id="node-logs-tab-template">
+        <div class="node-logs">
             <% _.each(logs, function(line){ %>
             <p><%- line %></p>
             <% }) %>
         </div>
     </script>
 
-    <script type="text/template" id="minion-troubles-tab-template">
+    <script type="text/template" id="node-troubles-tab-template">
         List of errors, Disk space problems, logs, etc...
     </script>
 
-    <script type="text/template" id="minion-add-layout-template">
-        <div id="minion-contents">
-            <div id="minion-header">
-                <h1>New Minion</h1>
+    <script type="text/template" id="node-add-layout-template">
+        <div id="node-contents">
+            <div id="node-header">
+                <h1>New Node</h1>
             </div>
-            <div class="minion-steps">
-                <div id="minion-find-step">div find step</div>
-                <div id="minion-final-step"></div>
+            <div class="node-steps">
+                <div id="node-find-step">div find step</div>
+                <div id="node-final-step"></div>
             </div>
         </div>
     </script>
 
-    <script type="text/template" id="minion-find-step-template">
+    <script type="text/template" id="node-find-step-template">
         <div id="address-spinner"></div>
         <div class="form-field">
-            <label class="no-label" for="minion_address">http:// </label>
-            <input class="input-lg" type="text" placeholder="IP Address or Hostname" id="minion_address" name="minion_address"/>
+            <label class="no-label" for="node_address">http:// </label>
+            <input class="input-lg" type="text" placeholder="IP Address or Hostname" id="node_address" name="node_address"/>
         </div>
     </script>
 
-    <script type="text/template" id="minion-final-step-template">
+    <script type="text/template" id="node-final-step-template">
         <hr>
         <div class="panel panel-info">
             <div class="panel-heading"><strong>Advanced settings(optional)</strong></div>
@@ -94,11 +94,11 @@
             </div>
         </div>
         <div class="text-center">
-            <button id="minion-add-btn" class="btn btn-lg btn-success" type="submit">Complete</button>
+            <button id="node-add-btn" class="btn btn-lg btn-success" type="submit">Complete</button>
         </div>
     </script>
 
-    <script type="text/template" id="minion-console-template">
+    <script type="text/template" id="node-console-template">
         <hr>
         <div class="well">
             <% _.each(text, function(x){ %>
@@ -108,7 +108,7 @@
         <button id="main" class="btn btn-lg btn-success">TO MAIN</button>
     </script>
 
-    <script type="text/template" id="minion-item-template">
+    <script type="text/template" id="node-item-template">
         <td><%- ip %></td>
         <td><%- hostname ? hostname : 'Not specified' %></td>
         <% var st_type = 'text-danger';
@@ -124,29 +124,29 @@
             </button>
             <% } %>
             <% if (annotations.sw_version !== 'v1.4') { %>
-            <button id="upgradeMinion" class="btn btn-xs btn-link dropdown-toggle" title="Upgrade Needed">
+            <button id="upgradeNode" class="btn btn-xs btn-link dropdown-toggle" title="Upgrade Needed">
                 <i class="text-info glyphicon glyphicon-cloud-download"></i>
                 <%- annotations.sw_version %>
             </button>
             <% } %>
             <div class="pull-right">
-                <button id="detailedMinion" class="btn btn-xs btn-link" title="Settings">
+                <button id="detailedNode" class="btn btn-xs btn-link" title="Settings">
                     <i class="glyphicon glyphicon-cog"></i>
                 </button>
-                <button id="deleteMinion" class="btn btn-xs btn-link" title="Remove">
+                <button id="deleteNode" class="btn btn-xs btn-link" title="Remove">
                     <i class="text-danger glyphicon glyphicon-remove"></i>
                 </button>
             </div>
         </td>
     </script>
 
-    <script type="text/template" id="minions-list-template">
-        <button id="add_minion" class="btn btn-success">Add Minion</button><hr>
-        <div><strong>You have <%- totalMinions %> minions</strong></div><br>
+    <script type="text/template" id="nodes-list-template">
+        <button id="add_node" class="btn btn-success">Add Node</button><hr>
+        <div><strong>You have <%- totalNodes %> nodes</strong></div><br>
         <table class="table table-bordered btn-group-justified"><!-- TODO I know this is wrong -->
             <thead>
                 <tr>
-                    <th>Minion IP</th>
+                    <th>Node IP</th>
                     <th>Hostname</th>
                     <th>Status</th>
                 </tr>
@@ -156,7 +156,7 @@
         <hr>
     </script>
 
-    <script type="text/template" id="minions-layout-template">
+    <script type="text/template" id="nodes-layout-template">
         <div id="main">main div text</div>
         <div id="pager">pager div text</div>
     </script>
@@ -179,11 +179,11 @@
 
 {% block app_js_asset %}{% endblock %} {# To cut off app_js temporary #}
 
-{% block minions_app_js_asset %}
-    {% assets "minions_app_js" -%}
+{% block nodes_app_js_asset %}
+    {% assets "nodes_app_js" -%}
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
     <script type="text/javascript">
-        MinionsApp.Data.minions = new MinionsApp.Data.MinionsCollection({{ minions_collection|safe }});
+        NodesApp.Data.nodes = new NodesApp.Data.NodesCollection({{ nodes_collection|safe }});
     </script>
 {% endblock %}

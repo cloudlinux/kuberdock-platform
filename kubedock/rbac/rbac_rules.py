@@ -19,8 +19,8 @@ To add new:
  4. Allow/deny actions on it to roles
 """
 acl.add_resource("users")
-acl.add_resource("minions")
-acl.add_resource("pods", ["minions"])   # TODO test inheritance
+acl.add_resource("nodes")
+acl.add_resource("pods", ["nodes"])   # TODO test inheritance
 
 """
 ROLES it's just a strings, wrapped in a class to minimize syntax errors and for convenience.
@@ -41,10 +41,10 @@ SuperAdmin.allow("get", "users")
 SuperAdmin.allow("edit", "users")
 SuperAdmin.allow("delete", "users")
 
-SuperAdmin.allow("create", "minions")
-SuperAdmin.allow("get", "minions")
-SuperAdmin.allow("edit", "minions")
-SuperAdmin.allow("delete", "minions")
+SuperAdmin.allow("create", "nodes")
+SuperAdmin.allow("get", "nodes")
+SuperAdmin.allow("edit", "nodes")
+SuperAdmin.allow("delete", "nodes")
 
 SuperAdmin.allow("create", "pods")
 SuperAdmin.allow("get", "pods")
@@ -59,7 +59,7 @@ AnonymousUser = Role('AnonymousUser')
 
 Admin = Role('Administrator', [SuperAdmin])
 #Admin.deny("delete", "users")
-Admin.deny("delete", "minions")
+Admin.deny("delete", "nodes")
 Admin.deny("delete", "pods")
 
 

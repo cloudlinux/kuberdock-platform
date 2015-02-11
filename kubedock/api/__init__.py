@@ -20,7 +20,7 @@ def create_app(settings_override=None):
     from .images import images
     from .pods import pods
     from .stream import stream
-    from .minions import minions
+    from .nodes import nodes
     from .stats import stats
     from .users import users
     from .notifications import notifications
@@ -28,7 +28,7 @@ def create_app(settings_override=None):
     from .usage import usage
     from .pricing import pricing
     
-    for bp in images, pods, stream, minions, stats, users, notifications, \
+    for bp in images, pods, stream, nodes, stats, users, notifications, \
               static_pages, usage, pricing:
         app.register_blueprint(bp)
         

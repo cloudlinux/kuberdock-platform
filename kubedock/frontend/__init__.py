@@ -22,12 +22,12 @@ def create_app(settings_override=None):
     # registering blueprings
     from .main import main
     from .auth import auth
-    from .minions import minions
+    from .nodes import nodes
     from .users import users
     from .notifications import notifications
     from .static_pages import static_pages
 
-    for bp in main, auth, minions, users, notifications, static_pages:
+    for bp in main, auth, nodes, users, notifications, static_pages:
         app.register_blueprint(bp)
 
     app.errorhandler(PermissionDenied)(on_permission_denied)

@@ -2,8 +2,8 @@ from ..core import db
 import random
 
 
-class Minion(db.Model):
-    __tablename__ = 'minions'
+class Node(db.Model):
+    __tablename__ = 'nodes'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     ip = db.Column(db.String(40), unique=True)
     hostname = db.Column(db.String(255), unique=True)
@@ -34,7 +34,7 @@ class Minion(db.Model):
         pass    # TODO implement writing to kubernetes
 
     def __init__(self, **kwargs):
-        super(Minion, self).__init__(**kwargs)
+        super(Node, self).__init__(**kwargs)
 
         # TODO implement
         self.cpu_cores = 1
@@ -42,4 +42,4 @@ class Minion(db.Model):
         self.disk = 10*1024*1024*1024
 
     def __repr__(self):
-        return "<Minion(hostname='{0}', ip='{1}')>".format(self.hostname, self.ip)
+        return "<Node(hostname='{0}', ip='{1}')>".format(self.hostname, self.ip)

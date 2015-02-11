@@ -9,9 +9,9 @@ SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
 
 if DEBUG:
-    MINION_SSH_AUTH = 'admin'
+    NODE_SSH_AUTH = 'admin'
 else:
-    MINION_SSH_AUTH = 'id_rsa'
+    NODE_SSH_AUTH = 'id_rsa'
 
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
@@ -32,8 +32,8 @@ CELERYBEAT_SCHEDULE = {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)
     },
-    'get-minions-logs': {
-        'task': 'kubedock.tasks.get_minions_logs',
+    'get-nodes-logs': {
+        'task': 'kubedock.tasks.get_nodes_logs',
         'schedule': timedelta(seconds=1)
     }
 }

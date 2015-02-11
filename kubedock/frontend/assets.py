@@ -45,9 +45,9 @@ users_app_js = Bundle(
     filters="jsmin", output="js/users_app/users_app.min.js")
 
 
-minions_app_js = Bundle(
-    'js/minions_app/minions_app.js',
-    filters="jsmin", output="js/minions_app/minions_app.min.js")
+nodes_app_js = Bundle(
+    'js/nodes_app/nodes_app.js',
+    filters="jsmin", output="js/nodes_app/nodes_app.min.js")
 
 
 def init_app(app):
@@ -58,7 +58,7 @@ def init_app(app):
     webassets.register('app_js', app_js)
     webassets.register('less_js', less_js)
     webassets.register('users_app_js', users_app_js)
-    webassets.register('minions_app_js', minions_app_js)
+    webassets.register('nodes_app_js', nodes_app_js)
     webassets.manifest = 'cache' if not app.debug else False
     webassets.cache = not app.debug
     webassets.debug = app.debug

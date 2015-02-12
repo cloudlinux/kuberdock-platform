@@ -9,7 +9,12 @@ from . import APIError
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
 
-node_is_active = lambda x: x['status']['conditions'][0]['status'] == 'Full'
+
+def _node_is_active(x):
+    try:
+        return x['status']['conditions'][0]['status'] == 'Full'
+    except KeyError:
+        return False
 
 
 @check_permission('get', 'nodes')
@@ -41,7 +46,7 @@ def get_nodes_collection():
             'id': node.id,
             'ip': node.ip,
             'hostname': node.hostname,
-            'status': 'running' if node.hostname in kub_hosts and node_is_active(kub_hosts[node.hostname]) else 'troubles',
+            'status': 'running' if node.hostname in kub_hosts and _node_is_active(kub_hosts[node.hostname]) else 'troubles',
             'annotations': node.annotations,
             'labels': node.labels,
         })
@@ -66,7 +71,7 @@ def get_one_node(node_id):
             'id': m.id,
             'ip': m.ip,
             'hostname': m.hostname,
-            'status': 'running' if node_is_active(res) else 'troubles',
+            'status': 'running' if _node_is_active(res) else 'troubles',
             'annotations': m.annotations,
             'labels': m.labels,
         }

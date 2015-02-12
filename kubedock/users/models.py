@@ -8,7 +8,9 @@ from flask.ext.login import UserMixin
 from ..core import db, login_manager
 from .utils import get_user_last_activity, get_online_users
 from ..models_mixin import BaseModelMixin
-from .signals import user_logged_in, user_logged_out
+from .signals import (
+    user_logged_in, user_logged_out, user_logged_in_by_another,
+    user_logged_out_by_another)
 
 
 @login_manager.user_loader
@@ -99,10 +101,12 @@ class User(BaseModelMixin, UserMixin, db.Model):
 class UserActivity(BaseModelMixin, db.Model):
     __tablename__ = 'users_activity'
 
-    LOGIN, LOGOUT = 0, 1
+    LOGIN, LOGOUT, LOGIN_A, LOGOUT_A = 0, 1, 2, 3
     ACTIONS = {
         LOGIN: 'login',
-        LOGOUT: 'logout'
+        LOGOUT: 'logout',
+        LOGIN_A: 'login_by_another',
+        LOGOUT_A: 'logout_by_another',
     }
 
     id = db.Column(
@@ -160,4 +164,23 @@ def user_logged_in_signal(user_id):
 def user_logged_out_signal(user_id):
     current_app.logger.debug('user_logged_out_signal {0}'.format(user_id))
     ua = UserActivity.create(action=UserActivity.LOGOUT, user_id=user_id)
+    ua.save()
+
+
+@user_logged_in_by_another.connect
+def user_logged_in_by_another_signal(args):
+    user_id, target_user_id = args
+    current_app.logger.debug('user_logged_in_by_another {0} -> {1}'.format(
+        user_id, target_user_id))
+    ua = UserActivity.create(action=UserActivity.LOGIN_A, user_id=user_id)
+    ua.save()
+
+
+@user_logged_out_by_another.connect
+def user_logged_out_by_another_signal(args):
+    user_id, target_user_id = args
+    current_app.logger.debug('user_logged_out_by_another {0} -> {1}'.format(
+        user_id, target_user_id))
+    ua = UserActivity.create(action=UserActivity.LOGOUT_A,
+                             user_id=target_user_id)
     ua.save()

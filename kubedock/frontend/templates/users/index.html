@@ -82,6 +82,7 @@
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
         <td><i class="glyphicon glyphicon-<%- active ? 'ok text-success' : 'remove text-danger' %>"></i></td>
+        <td><button class="btn btn-danger btn-xs" id="authIt">Auth by</button> </td>
     </script>
 
     <script type="text/template" id="online-user-item-template">
@@ -131,6 +132,7 @@
                     <th>Email</th>
                     <th>Role</th>
                     <th>Active</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody></tbody>

@@ -40,6 +40,7 @@ SuperAdmin.allow("create", "users")
 SuperAdmin.allow("get", "users")
 SuperAdmin.allow("edit", "users")
 SuperAdmin.allow("delete", "users")
+SuperAdmin.allow("auth_by_another", "users")
 
 SuperAdmin.allow("create", "nodes")
 SuperAdmin.allow("get", "nodes")

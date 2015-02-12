@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, redirect, request, url_for, flash
+from flask import (
+    Blueprint, render_template, redirect, request, url_for, flash, session)
 from flask.ext.login import login_user, logout_user, current_user
 
 from ..users import User
@@ -15,9 +16,11 @@ def login():
     if username is not None and passwd is not None:
         user = User.query.filter_by(username=username).first()
         error = 'Invalid credentials provided'
-        if user and not user.active:
-            error = 'User is blocked'
-        elif user is not None and user.verify_password(passwd):
+        if user is None:
+            pass
+        elif not user.active:
+            return render_template('errors/user_inactive.html'), 403
+        elif user.verify_password(passwd):
             login_user(user)
             user_logged_in.send(user.id)
             return redirect(request.args.get('next') or url_for('main.index'))
@@ -29,5 +32,6 @@ def login():
 def logout():
     user_logged_out.send(current_user.id)
     logout_user()
+    session.pop('auth_by_another', None)
     flash('You have been logged out')
     return redirect(url_for('main.index'))

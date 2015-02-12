@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, session
+from flask.ext.login import login_user, logout_user, current_user
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from . import APIError
@@ -6,9 +7,29 @@ from ..billing import Package
 from ..core import db, check_permission
 from ..utils import login_required_or_basic
 from ..users import User, Role
+from ..users.signals import (
+    user_logged_in_by_another, user_logged_out_by_another)
+
 
 
 users = Blueprint('users', __name__, url_prefix='/users')
+
+
+@users.route('/loginA', methods=['POST'])
+@login_required_or_basic
+@check_permission('auth_by_another', 'users')
+def auth_another():
+    data = request.form
+    user_id = data['user_id']
+    current_app.logger.debug('auth_another({0})'.format(user_id))
+    user = User.query.get(user_id)
+    if user is None:
+        raise APIError('User with Id {0} does not exist'.format(user_id))
+    session['auth_by_another'] = session.get('auth_by_another', current_user.id)
+    user_logged_in_by_another.send((current_user.id, user_id))
+    login_user(user)
+    current_app.logger.debug('auth_another({0}) after'.format(current_user.id))
+    return jsonify({'status': 'OK'})
 
 
 @check_permission('get', 'users')

@@ -1,10 +1,11 @@
 import json
-from flask import Blueprint, render_template
-from flask.ext.login import current_user, login_required
+from flask import Blueprint, render_template, session, current_app, redirect, flash
+from flask.ext.login import login_user, logout_user, current_user, login_required
 
 from ..api import users as api_users
 from ..users.models import User, Role
 from ..users.utils import mark_online
+from ..users.signals import user_logged_out_by_another
 
 
 users = Blueprint('users', __name__)
@@ -34,3 +35,28 @@ def index(**kwargs):
 @login_required
 def online_users(**kwargs):
     return index(**kwargs)
+
+
+@users.route('/users/logoutA/', methods=['GET'])
+# @login_required_or_basic
+# @check_permission('auth_by_another', 'users')
+def logout_another():
+    admin_user_id = session.pop('auth_by_another', None)
+    current_app.logger.debug('logout_another({0})'.format(admin_user_id))
+    user_id = current_user.id
+    logout_user()
+    flash('You have been logged out')
+    if admin_user_id is None:
+        current_app.logger.warning('Session key not defined "auth_by_another"')
+        return redirect('/')
+    user = User.query.get(admin_user_id)
+    if user is None:
+        current_app.logger.warning(
+            'User with Id {0} does not exist'.format(admin_user_id))
+    login_user(user)
+    current_app.logger.debug(
+        'logout_another({0}) after'.format(current_user.id))
+    user_logged_out_by_another.send((user_id, admin_user_id))
+    return redirect('/users/')
+
+

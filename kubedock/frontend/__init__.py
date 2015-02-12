@@ -1,7 +1,6 @@
 from flask import render_template
 from flask import jsonify
 from rbac.context import PermissionDenied
-from flask.ext.login import current_user
 
 from .. import factory
 from .. import sessions
@@ -36,6 +35,10 @@ def create_app(settings_override=None):
     if not app.debug:
         for e in [500, 404]:
             app.errorhandler(e)(handle_error)
+
+    # context processors
+    from ..users.context_processors import users_helpers
+    app.context_processor(users_helpers)
     return app
 
 

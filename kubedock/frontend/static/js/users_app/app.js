@@ -85,7 +85,8 @@ define(['marionette', 'paginator'],
 
             events: {
                 'click button#deleteUser': 'deleteUser_btn',
-                'click button#editUser' : 'editUser_btn'
+                'click button#editUser' : 'editUser_btn',
+                'click button#authIt' : 'authIt_btn'
             },
 
             deleteUser_btn: function(){
@@ -94,6 +95,23 @@ define(['marionette', 'paginator'],
 
             editUser_btn: function(){
                 App.router.navigate('/edit/' + this.model.id + '/', {trigger: true});
+            },
+
+            authIt_btn: function(){
+                if(!confirm('Are you sure want to authorize by this user?'))
+                    return false;
+                $.ajax({
+                    url: '/api/users/loginA',
+                    type: 'POST',
+                    data: {user_id: this.model.id},
+                    dataType: 'JSON',
+                    success: function(rs){
+                        if(rs.status == 'OK')
+                            window.location.href = '/';
+                        else
+                            alert(rs.status);
+                    }
+               });
             }
 
         });

@@ -1,3 +1,5 @@
+        {% if auth_by_id %}<a href="/users/logoutA">Log out [{{ auth_by_id }}]</a>{% endif %}
+
         <!-- navbar -->
         <nav id="navbar" class="navbar">
             <div id="navbar-container" class="container">
@@ -36,7 +38,7 @@
                     <div class="navbar-text navbar-right btn green">
                         <span class="dropdown">
                             <span class="dropdown-toggle" data-toggle="dropdown" role="button" area-expanded="false">
-                                <span class="navbar-link">{{current_user.username }}</span>
+                                <span class="navbar-link">{{ current_user.username }}</span>
                                 <span class="caret"></span>
                             </span>
                             <ul class="dropdown-menu" role="menu">

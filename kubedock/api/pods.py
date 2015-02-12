@@ -51,6 +51,7 @@ def create_item():
         current_app.logger.debug(config)
         result = tasks.create_containers.delay(config)
         pod_rv = json.loads(result.wait())
+        current_app.logger.debug(pod_rv)
         if 'status' in pod_rv and pod_rv['status'] == 'Working':
             current_app.logger.debug('WORKING')
             output = copy.deepcopy(data)
@@ -81,7 +82,7 @@ def create_item():
 def delete_item(uuid):
     item = db.session.query(Pod).get(uuid)
     if item is None:
-        return jsonify({'status': 'ERROR'})
+        return jsonify({'status': 'ERROR', 'message': 'No such id: {0}'.format(uuid)})
     name = item.name
     if item.config['cluster']:
         result = tasks.get_replicas.delay()
@@ -277,15 +278,12 @@ def prepare_container(data, key='ports'):
         data['workingDir'] = ','.join(data['workingDir'])
 
     data[key] = a
-    current_app.logger.debug(data[key])
     return data
 
 def prepare_for_output(rv=None, s_rv=None):
     out = {}
     if rv is not None:
         try:
-            rv = json.loads(rv)
-    
             if rv['kind'] == 'ReplicationController':
                 out['cluster'] = True
                 out['name'] = rv['desiredState']['replicaSelector']['name']
@@ -343,11 +341,10 @@ def prepare_for_output(rv=None, s_rv=None):
 
 
 def make_pod_config(data, sid, separate=True):
-    # to insert config into peplicas config set separate to False
+    # to insert config into replicas config set separate to False
     inner = [('version', 'v1beta1')]
     if separate:
         inner.append(('id', sid))
-    current_app.logger.debug('about to convert')
     inner.extend([('volumes', data['volumes']),
                 ('containers', map(prepare_container, data['containers']))])
     outer = []

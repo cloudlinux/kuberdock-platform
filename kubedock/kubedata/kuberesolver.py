@@ -132,9 +132,15 @@ class KubeResolver(object):
     def _merge_with_db(self):
         db_pods = self._select_pods_from_db()
         kube_names = set(map((lambda x: x['name']), self._pods))
+        # We check if a pod is present in DB (by name)
         for pod_name in db_pods:
             if pod_name not in kube_names:
+                # add config for displaying in front-end
                 self._pods.append(db_pods[pod_name]['config'])
+            else: # we want to substitute all pods UUIDs for database pods UUIDs
+                diff = filter((lambda x: x['name'] == pod_name), self._pods)
+                for pod in diff:
+                    pod['id'] = db_pods[pod_name]['id']
         for pod in self._pods:
             try:
                 pod['owner'] = db_pods[pod['name']]['username']

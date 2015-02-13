@@ -45,13 +45,16 @@ def create_item():
                        status_code=409)
     
     if runnable:    # trying to run service and pods right away
-        service_rv = json.loads(run_service(data))
+        try:
+            service_rv = json.loads(run_service(data))
+        except TypeError:
+            service_rv = None
         config = make_config(data, item_id)
-        
-        current_app.logger.debug(config)
         result = tasks.create_containers.delay(config)
-        pod_rv = json.loads(result.wait())
-        current_app.logger.debug(pod_rv)
+        try:
+            pod_rv = json.loads(result.wait())
+        except TypeError:
+            pod_rv = None
         if 'status' in pod_rv and pod_rv['status'] == 'Working':
             current_app.logger.debug('WORKING')
             output = copy.deepcopy(data)
@@ -144,7 +147,8 @@ def delete_item(uuid):
         except KeyError, e:
             return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
     
-    db.session.delete(item)
+    item.name += ('__' + ''.join(random.sample(string.lowercase + string.digits, 8)))
+    item.status = 'deleted'
     db.session.commit()
     return jsonify({'status': 'OK'})
 

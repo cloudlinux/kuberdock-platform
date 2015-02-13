@@ -32,15 +32,56 @@
         <!-- Page Info Panel template -->
         <script type="text/template" id="page-info-panel-template">
 
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Image name</th>
+                        <th>Status</th>
+                        <th>Kubes</th>
+                        <th>Deployed</th>
+                        <th>Control</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pod-item">
+                        <td>1</td> 
+                        <td>
+                            <a href="#">My best container name</a>
+                        </td>
+                        <td>
+                            <span>Docker/php</span>
+                        </td>
+                        <td>
+                            <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span>
+                            <span class="<%- status %>"><%- status %></span>
+                        </td>
+                        <td>
+                            <span>10</span><sub><a href"#">change</sup>
+                        </td>
+                        <td>
+                            <span>month ago</span>
+                        </td>
+                        <td class="text-right">
+                            <div class="dropdown">
+                                <button class="btn invert login-btn dropdown-toggle green" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true">Actions</button>
+                                <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                                    <li role="presentation"><a class="start-btn" role="menuitem" tabindex="-1" href="#">Start</a></li>
+                                    <li role="presentation"><a class="stop-btn" role="menuitem" tabindex="-1" href="#">Stop</a></li>
+                                    <li role="presentation"><a class="terminate-btn" role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
             <% states = {
                 running: 'glyphicon glyphicon-play',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
 
-            <div class="col-md-4">
-                <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span>
-                <span class="<%- status %>"><%- status %></span>
-            </div>
             <div class="col-md-8">
                 <button class="btn btn-default stats">Stats</button>
             </div>
@@ -168,7 +209,7 @@
                 <div class="col-md-2 text-left">
                     <a href="/#pods" class="btn btn-default btn-lg">
                         <span class="glyphicon glyphicon-share-alt back-btn"></span>
-                        <span class="back-btn">Back to list</span>
+                        <span class="back-btn">Back to pods</span>
                     </a>
                 </div>
             </div><!-- end of page header -->

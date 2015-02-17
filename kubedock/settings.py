@@ -1,6 +1,8 @@
 import os
 from datetime import timedelta
 
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+
 DEBUG = True
 FLASKY_ADMIN = os.environ.get('AC_FLASKY_ADMIN', 'igor.bliss@gmail.com')
 SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + os.environ.get('AC_POSTGRES', 'kubedock:Iwb4gDo@127.0.0.1/kubedock')

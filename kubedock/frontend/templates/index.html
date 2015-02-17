@@ -288,8 +288,16 @@
 
         <!-- Wizard get image template -->
         <script type="text/template" id="wizard-get-image-template">
+            <p class="text-info">
+                Default repository:
+                <span id="search-image-default-repo"
+                      style="font-weight: bold; cursor: pointer;">
+                    https://registry.hub.docker.com/
+                </span>
+            </p>
             <div class="input-group">
-                <input type="text" id="search-image-field" class="form-control" placeholder="Enter image or part of image name to search">
+                <input type="text" id="search-image-field" class="form-control"
+                       placeholder="Enter image or part of image name to search">
                 <span class="input-group-btn">
                     <button class="btn btn-default search-image" type="button">Search!</button>
                     <a href="/#pods" class="btn btn-default cancel-search" type="button">Cancel</a>

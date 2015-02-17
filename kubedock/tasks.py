@@ -1,10 +1,12 @@
-from collections import OrderedDict
 import json
 import requests
 import paramiko
-from paramiko import ssh_exception
 import time
 import socket
+import operator
+from collections import OrderedDict
+from paramiko import ssh_exception
+
 from .settings import DEBUG, NODE_SSH_AUTH
 from .api.stream import send_event
 from .core import ConnectionPool, db
@@ -12,42 +14,55 @@ from .factory import make_celery
 from .utils import update_dict
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
-import operator
+
 
 celery = make_celery()
 
-@celery.task()
-def get_container_images(term, url=None):
+
+def search_image(term, url=None):
     if url is None:
         url = 'https://registry.hub.docker.com/v1/search'
+    else:
+        if not url.rstrip('/').endswith('v1/search'):
+            url = '{0}/v1/search'.format(url.rstrip('/'))
     data = {'q': term}
     r = requests.get(url, params=data)
     return r.text
+
+
+@celery.task()
+def get_container_images(term, url=None):
+    return search_image(term, url)
+
 
 @celery.task()
 def get_pods(pod_id=None):
     url = 'http://localhost:8080/api/v1beta1/pods'
     if pod_id is not None:
-        url = 'http://localhost:8080/api/v1beta1/pods/%s' % (pod_id,)
+        url = 'http://localhost:8080/api/v1beta1/pods/' + pod_id
     r = requests.get(url)
     return json.loads(r.text)
+
 
 @celery.task()
 def get_replicas():
     r = requests.get('http://localhost:8080/api/v1beta1/replicationControllers')
     return json.loads(r.text)
 
+
 @celery.task()
 def get_services():
     r = requests.get('http://localhost:8080/api/v1beta1/services')
     return json.loads(r.text)
 
+
 @celery.task()
 def create_containers(data):
     kind = data['kind'][0].lower() + data['kind'][1:] + 's'
-    r = requests.post('http://localhost:8080/api/v1beta1/%s' % (kind,),
+    r = requests.post('http://localhost:8080/api/v1beta1/' + kind,
                       data=json.dumps(data))
     return r.text
+
 
 @celery.task()
 def create_service(data):
@@ -55,15 +70,19 @@ def create_service(data):
                       data=json.dumps(data))
     return r.text
 
+
 @celery.task()
 def delete_pod(item):
-    r = requests.delete('http://localhost:8080/api/v1beta1/pods/'+item)
+    r = requests.delete('http://localhost:8080/api/v1beta1/pods/' + item)
     return json.loads(r.text)
+
 
 @celery.task()
 def delete_replica(item):
-    r = requests.delete('http://localhost:8080/api/v1beta1/replicationControllers/'+item)
+    r = requests.delete(
+        'http://localhost:8080/api/v1beta1/replicationControllers/' + item)
     return json.loads(r.text)
+
 
 @celery.task()
 def update_replica(item, diff):
@@ -75,14 +94,17 @@ def update_replica(item, diff):
     r = requests.put(url, data=json.dumps(data), headers=headers)
     return json.loads(r.text)
 
+
 @celery.task()
 def delete_service(item):
-    r = requests.delete('http://localhost:8080/api/v1beta1/services/'+item)
+    r = requests.delete('http://localhost:8080/api/v1beta1/services/' + item)
     return json.loads(r.text)
-    
+
+
 @celery.task()
 def get_dockerfile(data):
-    url = 'https://registry.hub.docker.com/u/%s/dockerfile/raw' % (data.strip('/'),)
+    url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(
+        data.strip('/'))
     r = requests.get(url)
     return r.text
 
@@ -108,21 +130,30 @@ def add_new_node(host):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         if DEBUG:
-            send_event('install_logs', 'Connecting to {0} with ssh with user = root and password = {1} ...'
-                       .format(host, NODE_SSH_AUTH))
-            ssh.connect(hostname=host, username='root', password=NODE_SSH_AUTH, timeout=10)
+            send_event('install_logs',
+                       'Connecting to {0} with ssh with user = root and '
+                       'password = {1} ...'.format(host, NODE_SSH_AUTH))
+            ssh.connect(hostname=host, username='root', password=NODE_SSH_AUTH,
+                        timeout=10)
         else:
-            send_event('install_logs', 'Connecting to {0} with ssh with user = root and ssh_key_filename = {1} ...'
-                       .format(host, NODE_SSH_AUTH))
-            ssh.connect(hostname=host, username='root', key_filename=NODE_SSH_AUTH, timeout=10)    # not tested
+            send_event('install_logs',
+                       'Connecting to {0} with ssh with user = root and '
+                       'ssh_key_filename = {1} ...'.format(host, NODE_SSH_AUTH))
+            ssh.connect(hostname=host, username='root',
+                        key_filename=NODE_SSH_AUTH, timeout=10)    # not tested
     except ssh_exception.AuthenticationException as e:
-        send_event('install_logs', '{0} Check hostname, your credentials, and try again'.format(e))
+        send_event('install_logs',
+                   '{0} Check hostname, your credentials, '
+                   'and try again'.format(e))
         return 'Authentication failed'
     except socket.timeout:
-        send_event('install_logs', 'Connection timeout. Check hostname and try again')
+        send_event('install_logs',
+                   'Connection timeout. Check hostname and try again')
         return 'Timeout'
     except socket.error as e:
-        send_event('install_logs', '{0}. Check hostname, your credentials, and try again'.format(e))
+        send_event('install_logs',
+                   '{0}. Check hostname, your credentials, '
+                   'and try again'.format(e))
         return 'Connection error'
 
     sftp = ssh.open_sftp()
@@ -135,18 +166,23 @@ def add_new_node(host):
             for line in o.channel.recv(1024).split('\n'):
                 send_event('install_logs', line)
         if (time.time() - s_time) > 5*60:   # 5 min timeout
-            send_event('install_logs', 'Timeout during install. Installation has failed.')
+            send_event('install_logs',
+                       'Timeout during install. Installation has failed.')
             ssh.exec_command('rm /kub_install.sh')
             ssh.close()
-            return json.dumps({'status': 'error', 'data': 'Timeout during install. Installation has failed.'})
+            return json.dumps({
+                'status': 'error',
+                'data': 'Timeout during install. Installation has failed.'})
         time.sleep(0.2)
     s = o.channel.recv_exit_status()
     if s != 0:
-        message = 'Installation script error. Exit status: {0}. Error: {1}'.format(s, e.read())
+        message = 'Installation script error. Exit status: {0}. ' \
+                  'Error: {1}'.format(s, e.read())
         send_event('install_logs', message)
         res = json.dumps({'status': 'error', 'data': message})
     else:
-        res = requests.post('http://localhost:8080/api/v1beta1/nodes/', json={'id': host, 'apiVersion': 'v1beta1'}).json()
+        res = requests.post('http://localhost:8080/api/v1beta1/nodes/',
+                            json={'id': host, 'apiVersion': 'v1beta1'}).json()
         send_event('install_logs', 'Adding Node completed successful.')
         send_event('install_logs', '===================================')
     ssh.exec_command('rm /kub_install.sh')
@@ -160,7 +196,7 @@ def check_events():
 
     lock = redis.get('events_lock')
     if not lock:
-        redis.setex('events_lock', 30+1, 'true')
+        redis.setex('events_lock', 30 + 1, 'true')
     else:
         return
 
@@ -174,14 +210,15 @@ def check_events():
         if temp != json.loads(ml):
             redis.set('cached_nodes', json.dumps(temp))
             send_event('ping', 'ping')
-
     redis.delete('events_lock')
-    
+
+
 @celery.task()
 def pull_hourly_stats():
     data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
     time_windows = set(map(operator.itemgetter('time_window'), data))
-    rv = db.session.query(StatWrap5Min).filter(StatWrap5Min.time_window.in_(time_windows))
+    rv = db.session.query(StatWrap5Min).filter(
+        StatWrap5Min.time_window.in_(time_windows))
     existing_windows = set(map((lambda x: x.time_window), rv))
     for entry in data:
         if entry['time_window'] in existing_windows:

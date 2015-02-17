@@ -11,7 +11,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .start-checked': 'startItems',
             'click .stop-checked': 'stopItems',
             'click .terminate-checked': 'terminateItems',
-            'click .table th input[type=checkbox]': 'itemsAllHandler',
+            'click .table th input[type=checkbox]': 'itemsAllHandler'
         },
 
         initialize: function(){
@@ -64,9 +64,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
-		itemsAllHandler: function(evt){
+        itemsAllHandler: function(evt){
             var target = $(evt.currentTarget),
-            	pods_actions_btn = $('.pods-actions-btn'),
+                pods_actions_btn = $('.pods-actions-btn'),
                 inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
 
             if( target.is(':checked') ) {
@@ -107,7 +107,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .start-btn': 'startItem',
             'click .stop-btn': 'stopItem',
             'click .terminate-btn': 'terminateItem',
-            'click @ui.checkbox': 'inputHandler',
+            'click @ui.checkbox': 'inputHandler'
         },
 
         checkItem: function(evt){
@@ -151,16 +151,16 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
             tbody.find('tr td:first-child input').each(function(){                    
                 if (this.checked) {
-                	counter+=1;
-                	pods_actions_btn.removeClass('disabled');
+                    counter+=1;
+                    pods_actions_btn.removeClass('disabled');
                 }
                 inputsLength+=1;
             });
             if (counter != inputsLength && switcher.is(':checked')){
-				console.log('asdas');
+                console.log('asdas');
             }
             if (counter == 0 ){
-            	pods_actions_btn.addClass('disabled');
+                pods_actions_btn.addClass('disabled');
             }
             if (counter == inputsLength) {
                switcher.checked = true;   
@@ -443,6 +443,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
     
     // Images collection view
+    var imageSearchURL = 'https://registry.hub.docker.com/';
     Views.GetImageView = Backbone.Marionette.CompositeView.extend({
         template: '#wizard-get-image-template',
         childView: Views.ImageListItemView,
@@ -461,7 +462,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         
         events: {
             'click .search-image': 'onSearchClick',
-            'keypress #search-image-field': 'onInputKeypress'
+            'keypress #search-image-field': 'onInputKeypress',
+            'click #search-image-default-repo': 'onChangeRepoURL'
         },
         
         childEvents: {
@@ -469,22 +471,23 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         
         ui: {
+            repo_url_repr: 'span#search-image-default-repo',
             input: 'input#search-image-field',
             spinner: '#data-collection'
         },
-        
+
         onInputKeypress: function(evt){
             evt.stopPropagation();
             if (evt.which === 13) { // 'Enter' key
                 this.fetchCollection(this.ui.input.val().trim());
             }
         },
-        
+
         onSearchClick: function(evt){
             evt.stopPropagation();
             this.fetchCollection(this.ui.input.val().trim());
         },
-        
+
         fetchCollection: function(query){
             var that = this;
             this.ui.spinner.spin({color: '#437A9E'});
@@ -497,7 +500,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
-        
+
         onShow: function(){
             this.ui.input.focus();
         },

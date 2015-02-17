@@ -118,8 +118,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             evt.stopPropagation();
             this.model.set({'command': 'start'});
             this.model.save();
-            },
-
+        },
         stopItem: function(evt){
             evt.stopPropagation();
             this.model.set({'command': 'stop'});
@@ -236,21 +235,30 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         getItem: function(){
             return initPodCollection.fullCollection.get(this.model.id);
-            },
+        },
 
-        startItem: function(evt){
+        startItem: function(evt){            
             evt.stopPropagation();
+
             var item = this.getItem();
+            var template = $('.modal');
+
             item.set({'command': 'start'});
-            item.save();
-            },
+            item.save(null,{                
+                error: function(e, data){
+                    var errorText = JSON.parse(data.responseText).status;
+
+                    template.modal('show').find('.modal-body').text(errorText);
+                }
+            });
+        },
 
         stopItem: function(evt){
             evt.stopPropagation();
             var item = this.getItem();
             item.set({'command': 'stop'});
             item.save();
-            },
+        },
 
         terminateItem: function(evt){
             evt.stopPropagation();

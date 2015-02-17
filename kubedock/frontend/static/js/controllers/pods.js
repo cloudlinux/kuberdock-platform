@@ -23,7 +23,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             var listLayout = new App.Views.PodListLayout();
             
             var masthead = new App.Views.PageHeader({
-                model: new Backbone.Model({name: 'Containers'})
+                model: new Backbone.Model({name: 'Pods'})
             });
             
             var podCollection = new App.Views.PodCollection({

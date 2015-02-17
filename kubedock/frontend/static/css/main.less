@@ -14,6 +14,7 @@ html{
 	position: relative;
 	body{
 		/* need refactoring */
+		
 		/* nodes */
 		.btn-lg, .btn-group-lg > .btn{
 			font-size: 16px;
@@ -109,15 +110,6 @@ html{
 		.running {
 			color: #4DB04D; 
 			text-transform: capitalize;
-		}
-		.start-btn {
-			color: #1DAA39;
-		}
-		.stop-btn {
-			color: #C42121;
-		}
-		.terminate-btn {
-			color: #686868;
 		}
 		.service-on {
 			color: #5CB85C;
@@ -451,11 +443,11 @@ html{
 			}
 		}
 		/* end settings page */
+		/*end  need refactoring */
 		.stopped{
 			color: #bfbfbf;
 			text-transform: capitalize;
 		}
-		/*end  need refactoring */
 		.disabled{
 			color: gray !important;
 			border-color: gray !important;
@@ -534,6 +526,75 @@ html{
 										}
 									}
 								}
+							}
+						}
+					}
+					.back{
+						padding: 8px 22px;
+						&:hover{
+							.transition(all 200ms);
+							border-color: #4DB04D;
+							color: #4DB04D;
+							border-color: #ccc;
+						}
+						&:focus{
+							border-color: #4DB04D;
+							background-color: #fff;
+							color: #4DB04D;
+							&:hover{
+								border-color: ##4DB04D;
+								background-color: #fff;
+								color: #4DB04D;
+							}
+						}
+					}
+					#item-controls{
+						.start-btn, .stop-btn, .terminate-btn{
+							.opacity(1);
+							padding: 8px;
+							.glyphicon{
+								color: inherit;
+							}
+							&:hover{
+								border-color: #ccc;
+								.transition(all 200ms);
+								span{
+									&:hover{
+										background-color: transparent;
+									}
+								}
+								.glyphicon{
+									color: inherit;
+								}
+							}
+							&:focus, &:active{
+								border-color: #ccc;
+								background-color: #fff;
+								&:hover{
+									background-color: #fff;
+									border-color: #ccc;
+								}
+							}
+						}
+						.start-btn {
+							color: #1DAA39;
+							&:hover{
+								color: #1DAA39;
+								background-color: rgba(156, 203, 153, 0.28);
+							}
+						}
+						.stop-btn {
+							color: #C42121;
+							&:hover{
+								color: #C42121;
+								background-color: rgba(203, 166, 153, 0.28)
+							}
+						}
+						.terminate-btn {
+							color: #686868;
+							&:hover{
+								color: #686868;
+								background-color: rgba(203, 203, 203, 0.28)
 							}
 						}
 					}

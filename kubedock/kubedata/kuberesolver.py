@@ -2,6 +2,7 @@ from .. import tasks
 from ..core import db
 from ..pods import Pod
 from ..users import User
+from uuid import uuid4
 from flask.ext.login import current_user
 
 
@@ -47,6 +48,22 @@ class KubeResolver(object):
         """Get list of pods via REST API call task"""
         result = tasks.get_pods.delay()
         return result.wait()
+
+    @staticmethod
+    def _get_dockers(data):
+        if not 'currentState' in data or \
+           not 'status' in data['currentState'] or \
+           not data['currentState']['status'] == 'Running':
+            return []
+        dockers = []
+        for pod_name, pod_info in data['currentState']['info'].items():
+            if pod_name == 'POD':
+                continue
+            dockers.append({
+                'host': data['currentState']['host'],
+                'info': pod_info
+            })
+        return dockers
     
     def _parse_pods(self):
         """
@@ -63,8 +80,7 @@ class KubeResolver(object):
             try:    # getting UUID
                 item_uuid = item['desiredState']['manifest']['uuid']
             except KeyError:
-                item_uuid = item['uid']
-                
+                item_uuid = item.get('uid', str(uuid4()))
             try:
                 items = {'id': item_uuid,
                          'name': item['labels']['name'],
@@ -72,6 +88,7 @@ class KubeResolver(object):
                          'cluster': False,
                          'replicas': 1,
                          'status': item['currentState']['status'].lower(),
+                         'dockers': self._get_dockers(item),
                          'containers': item['desiredState']['manifest']['containers'],
                          'volumes': item['desiredState']['manifest']['volumes'],
                          'service': False,

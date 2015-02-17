@@ -5,6 +5,10 @@ from flask import current_app
 from sse import Sse
 import redis
 import json
+import paramiko
+from paramiko import ssh_exception
+import socket
+from .settings import DEBUG, NODE_SSH_AUTH
 from rbac import check_permission
 
 login_manager = LoginManager()
@@ -61,3 +65,25 @@ class EvtStream(object):
                 ssev.add_message(event, data)
                 for data in ssev:
                     yield data.encode('u8')
+
+
+def ssh_connect(host, timeout=10):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    error_message = None
+    try:
+        if DEBUG:
+            ssh.connect(hostname=host, username='root',
+                        password=NODE_SSH_AUTH, timeout=timeout)
+        else:
+            ssh.connect(hostname=host, username='root',
+                        key_filename=NODE_SSH_AUTH, timeout=timeout)
+    except ssh_exception.AuthenticationException as e:
+        error_message =\
+            '{0} Check hostname, your credentials, and try again'.format(e)
+    except socket.timeout:
+        error_message = 'Connection timeout. Check hostname and try again'
+    except socket.error as e:
+        error_message =\
+            '{0} Check hostname, your credentials, and try again'.format(e)
+    return ssh, error_message

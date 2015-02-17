@@ -8,11 +8,14 @@ import string
 import random
 import re
 from ..models import User, Pod
-from ..core import db, check_permission
+from ..core import db, check_permission, ssh_connect
+from .stream import send_event
 from ..utils import update_dict, login_required_or_basic
 from ..validation import check_pod_data
 from ..api import APIError
 import copy
+
+ALLOWED_ACTIONS = ('start', 'stop', 'inspect',)
 
 pods = Blueprint('pods', __name__, url_prefix='/pods')
 
@@ -25,17 +28,16 @@ def create_item():
     check_pod_data(data)
     pod = Pod.query.filter_by(name=data['name']).first()
     if pod:
-        raise APIError("Conflict. Pod with name = '{0}' already exists. Try another name.".format(data['name']),
+        raise APIError("Conflict. Pod with name = '{0}' already exists. "
+                       "Try another name.".format(data['name']),
                        status_code=409)
     item_id = make_item_id(data['name'])
     runnable = data.pop('runnable', False)
     kubes = data.pop('kubes', 1)
     temp_uuid = str(uuid4())
-    
-    u = db.session.query(User).filter_by(username=current_user.username).first()
     data.update({'id': temp_uuid, 'status': 'stopped'})
     pod = Pod(name=data['name'], kubes=kubes, config=data, id=temp_uuid, status='stopped')
-    pod.owner = u
+    pod.owner = current_user
     try:
         db.session.add(pod)
         db.session.commit()
@@ -85,9 +87,9 @@ def create_item():
 def delete_item(uuid):
     item = db.session.query(Pod).get(uuid)
     if item is None:
-        return jsonify({'status': 'ERROR', 'message': 'No such id: {0}'.format(uuid)})
+        raise APIError('No pod with id: {0}'.format(uuid), status_code=404)
     name = item.name
-    if item.config['cluster']:
+    if item.config.get('cluster'):
         result = tasks.get_replicas.delay()
         replicas = result.wait()
     
@@ -228,6 +230,54 @@ def update_item(uuid):
     response.update({'status': 'OK'})
     return jsonify(response)
 
+
+def do_action(host, action, container_id):
+    ssh, error_message = ssh_connect(host)
+    if error_message:
+        raise APIError(error_message)
+    i, o, e = ssh.exec_command('docker {0} {1}'.format(action, container_id))
+    exit_status = o.channel.recv_exit_status()
+    if exit_status != 0:
+        raise APIError('Docker error. Exit status: {0}. Error: {1}'.format(exit_status, e.read()))
+    else:
+        message = o.read()
+        if action in ('start', 'stop'):
+            send_event('pull_pod_state', message)
+        ssh.close()
+        return message or 'OK'
+
+
+@pods.route('/containers', methods=['PUT'])
+@login_required_or_basic
+@check_permission('edit', 'pods')
+def docker_action():
+    data = request.json
+    action = data.get('action')
+    if action not in ALLOWED_ACTIONS:
+        raise APIError('This action is not allowed.', status_code=403)
+    if not data.get('host'):
+        raise APIError('Node host is not provided')
+    pod = db.session.query(Pod).get(data.get('pod_uuid'))
+    if pod is None:
+        raise APIError('Pod not found', status_code=404)
+    if pod.owner != current_user:
+        raise APIError("You may do actions only on your own Pods",
+                       status_code=403)
+    if pod.config.get('cluster'):
+        if action != 'inspect':     # special cases here
+            raise APIError('This action is not allowed for replicated PODs',
+                           status_code=403)
+    # TODO uncomment when we know input data format
+    if pod.config.get('restartPolicy') == 'always' \
+            and action in ('start', 'stop'):
+        raise APIError("POD with restart policy 'Always' can't "
+                       "start or stop containers")
+    # TODO validate containerId (escape) and his presents for different commands
+    return jsonify({
+        'status': 'OK',
+        'data': do_action(data['host'], data['action'], data['containerId'])})
+
+
 def run_service(data):
     if not data['service']:
         return
@@ -349,6 +399,8 @@ def make_pod_config(data, sid, separate=True):
     inner = [('version', 'v1beta1')]
     if separate:
         inner.append(('id', sid))
+        # TODO get from "data" when implemented in frontend
+        inner.append(('restartPolicy', {'always': {}}))
     inner.extend([('volumes', data['volumes']),
                 ('containers', map(prepare_container, data['containers']))])
     outer = []

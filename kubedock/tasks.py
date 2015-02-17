@@ -9,7 +9,7 @@ from paramiko import ssh_exception
 
 from .settings import DEBUG, NODE_SSH_AUTH
 from .api.stream import send_event
-from .core import ConnectionPool, db
+from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
 from .utils import update_dict
 from .stats import StatWrap5Min
@@ -126,35 +126,18 @@ def remove_node_by_host(host):
 
 @celery.task()
 def add_new_node(host):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    try:
-        if DEBUG:
-            send_event('install_logs',
-                       'Connecting to {0} with ssh with user = root and '
-                       'password = {1} ...'.format(host, NODE_SSH_AUTH))
-            ssh.connect(hostname=host, username='root', password=NODE_SSH_AUTH,
-                        timeout=10)
-        else:
-            send_event('install_logs',
-                       'Connecting to {0} with ssh with user = root and '
-                       'ssh_key_filename = {1} ...'.format(host, NODE_SSH_AUTH))
-            ssh.connect(hostname=host, username='root',
-                        key_filename=NODE_SSH_AUTH, timeout=10)    # not tested
-    except ssh_exception.AuthenticationException as e:
+    if DEBUG:
         send_event('install_logs',
-                   '{0} Check hostname, your credentials, '
-                   'and try again'.format(e))
-        return 'Authentication failed'
-    except socket.timeout:
+                   'Connecting to {0} with ssh with user = root and '
+                   'password = {1} ...'.format(host, NODE_SSH_AUTH))
+    else:
         send_event('install_logs',
-                   'Connection timeout. Check hostname and try again')
-        return 'Timeout'
-    except socket.error as e:
-        send_event('install_logs',
-                   '{0}. Check hostname, your credentials, '
-                   'and try again'.format(e))
-        return 'Connection error'
+                   'Connecting to {0} with ssh with user = root and '
+                   'ssh_key_filename = {1} ...'.format(host, NODE_SSH_AUTH))
+    ssh, error_message = ssh_connect(host)
+    if error_message:
+        send_event('install_logs', error_message)
+        return error_message
 
     sftp = ssh.open_sftp()
     sftp.put('kub_install.sh', '/kub_install.sh')
@@ -204,12 +187,13 @@ def check_events():
     if not ml:
         ml = get_all_nodes()
         redis.set('cached_nodes', json.dumps(ml))
-        send_event('ping', 'ping')
+        send_event('pull_nodes_state', 'ping')
     else:
         temp = get_all_nodes()
         if temp != json.loads(ml):
             redis.set('cached_nodes', json.dumps(temp))
-            send_event('ping', 'ping')
+            send_event('pull_nodes_state', 'ping')
+
     redis.delete('events_lock')
 
 

@@ -495,7 +495,7 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
             console.log('ERROR: EventSource is not supported by browser');
         } else {
             var source = new EventSource("/api/stream");
-            source.addEventListener('ping', function (ev) {
+            source.addEventListener('pull_nodes_state', function (ev) {
                 App.Data.nodes.fetch()
             }, false);
             source.addEventListener('install_logs', function (ev) {

@@ -111,7 +111,7 @@ def get_dockerfile(data):
 
 def get_all_nodes():
     r = requests.get('http://localhost:8080/api/v1beta1/nodes')
-    return r.json()['items']
+    return r.json().get('items') or []
 
 
 def get_node_by_host(host):

@@ -152,7 +152,7 @@ def delete_item(user_id):
 
 def get_pricing(package_name):
     try:
-        return filter((lambda x: x.package.package_name == package_name),
+        return filter((lambda x: x.name == package_name),
             db.session.query(Package).all())[0]
     except IndexError:
         return None

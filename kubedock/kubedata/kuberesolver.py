@@ -7,24 +7,24 @@ from flask.ext.login import current_user
 
 
 class KubeResolver(object):
-    
+
     def resolve_all(self):
         self._replicas = self._parse_replicas()
         self._pods = self._parse_pods()
         self._services = self._parse_services()
         self._merge_with_db()
         return self._pods
-    
-    def resolve_by_name(self, name):
-        pass
-        
+
+    def resolve_by_replica_name(self, name):
+        return self._parse_replicas(name)
+
     @staticmethod
     def _get_replicas():
         """Get list of replicas via REST API call task"""
         task = tasks.get_replicas.delay()
         return task.wait()
-    
-    def _parse_replicas(self):
+
+    def _parse_replicas(self, name=None):
         """Parse received list of replicas to a structure"""
         replicas = []       # replicationControllers
         data = self._get_replicas()
@@ -38,11 +38,14 @@ class KubeResolver(object):
                     'replicas': item['currentState']['replicas'],
                     'replicaSelector': item['desiredState']['replicaSelector'],
                     'name': item['labels']['name']}
+
+                if name is not None and replica_item['replicaSelector'] != name:
+                    continue
                 replicas.append(replica_item)
             except KeyError:
                 pass
         return replicas
-    
+
     @staticmethod
     def _get_pods():
         """Get list of pods via REST API call task"""
@@ -64,7 +67,7 @@ class KubeResolver(object):
                 'info': pod_info
             })
         return dockers
-    
+
     def _parse_pods(self):
         """
         Parse received pods, learning if there are pods pertaining to certain replicas,
@@ -73,7 +76,7 @@ class KubeResolver(object):
         pods = []
         pod_index = set()
         data = self._get_pods()
-        
+
         if 'items' not in data:
             return pods
         for item in data['items']:  # iterate through pods list
@@ -95,7 +98,7 @@ class KubeResolver(object):
                          'labels': item['labels']}
             except KeyError:
                 continue
-            
+
             if hasattr(self, '_replicas'):
                 for r in self._replicas:    # iterating through replicas list received earlier
                     if self._is_related(r['replicaSelector'], item['labels']):
@@ -103,19 +106,19 @@ class KubeResolver(object):
                         for i in 'id', 'sid', 'replicas':
                             items[i] = r[i]
                         break
-                    
+
                 if items['sid'] not in pod_index:
                     pod_index.add(items['sid'])
                     pods.append(items)
             else:
                 pods.append(items)
         return pods
-    
+
     @staticmethod
     def _get_services():
         result = tasks.get_services.delay()
         return result.wait()
-    
+
     def _parse_services(self):
         """
         Get services from REST API and mark pods which have entripoints
@@ -123,7 +126,7 @@ class KubeResolver(object):
         data = self._get_services()
         if 'items' not in data:
             return []
-        
+
         if hasattr(self, '_pods'):
             for item in data['items']:
                 for pod in self._pods:
@@ -137,7 +140,7 @@ class KubeResolver(object):
                     except KeyError:
                         pass
         return data['items']
-    
+
     @staticmethod
     def _select_pods_from_db():
         data = {}
@@ -145,7 +148,7 @@ class KubeResolver(object):
                 Pod.id, Pod.name, User.username, Pod.config):
             data[i[1]] = {'id': i[0], 'username': i[2], 'config':i[3]}
         return data
-    
+
     def _merge_with_db(self):
         db_pods = self._select_pods_from_db()
         kube_names = set(map((lambda x: x['name']), self._pods))
@@ -163,7 +166,7 @@ class KubeResolver(object):
                 pod['owner'] = db_pods[pod['name']]['username']
             except KeyError:
                 pod['owner'] = 'stranger'
-    
+
     @staticmethod
     def _is_related(one, two):
         if one is None or two is None:

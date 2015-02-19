@@ -11,6 +11,7 @@ from ..models import User, Pod
 from ..core import db, check_permission, ssh_connect
 from .stream import send_event
 from ..utils import update_dict, login_required_or_basic
+from ..kubedata.kuberesolver import KubeResolver
 from ..validation import check_pod_data
 from ..api import APIError
 import copy
@@ -31,6 +32,7 @@ def create_item():
         raise APIError("Conflict. Pod with name = '{0}' already exists. "
                        "Try another name.".format(data['name']),
                        status_code=409)
+
     item_id = make_item_id(data['name'])
     runnable = data.pop('runnable', False)
     kubes = data.pop('kubes', 1)
@@ -45,7 +47,7 @@ def create_item():
         db.session.rollback()
         raise APIError("Could not create database record for '{0}'.".format(data['name']),
                        status_code=409)
-    
+
     if runnable:    # trying to run service and pods right away
         try:
             service_rv = json.loads(run_service(data))
@@ -64,7 +66,7 @@ def create_item():
         else:
             output = prepare_for_output(pod_rv, service_rv)
         output['kubes'] = kubes
-    
+
         try:
             pod = db.session.query(Pod).get(temp_uuid)
             pod.config = output
@@ -92,10 +94,10 @@ def delete_item(uuid):
     if item.config.get('cluster'):
         result = tasks.get_replicas.delay()
         replicas = result.wait()
-    
+
         if 'items' not in replicas:
             return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
-        
+
         try:
             filtered_replicas = filter(
                 (lambda x: x['desiredState']['replicaSelector']['name'] == name),
@@ -109,13 +111,13 @@ def delete_item(uuid):
                     return jsonify({'status': 'ERROR', 'reason': replica_rv['message']})
         except KeyError, e:
             return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
-    
+
     result = tasks.get_pods.delay()
     pods = result.wait()
-    
+
     if 'items' not in pods:
         return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
-    
+
     try:
         filtered_pods = filter(
             (lambda x: x['labels']['name'] == name),
@@ -128,14 +130,14 @@ def delete_item(uuid):
                 return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
     except KeyError, e:
         return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
-    
+
     if item.config.get('service'):
         result = tasks.get_services.delay()
         services = result.wait()
-    
+
         if 'items' not in services:
             return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
-        
+
         try:
             filtered_services = filter(
                 (lambda x: is_related(x['selector'], {'name': name})),
@@ -148,7 +150,7 @@ def delete_item(uuid):
                     return jsonify({'status': 'ERROR', 'reason': service_rv['message']})
         except KeyError, e:
             return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
-    
+
     item.name += ('__' + ''.join(random.sample(string.lowercase + string.digits, 8)))
     item.status = 'deleted'
     db.session.commit()
@@ -173,10 +175,18 @@ def update_item(uuid):
         except Exception:
             db.session.rollback()
             return jsonify({'status': 'ERROR', 'reason': 'Error updating database entry'})
+
     if 'command' in data:
         if data['command'] == 'start':
+
             if item.config['cluster']:
-                resize_replica(item.name, item.config['replicas'])
+                if is_alive(item.name):
+                    # TODO check replica numbers and compare to ones set in config
+                    resize_replica(item.name, item.config['replicas'])
+                else:
+                    return jsonify({'status': 'OK', 'data': start_cluster(data)})
+
+
             else:
                 item_id = make_item_id(item.name)
                 service_rv = run_service(data)
@@ -203,6 +213,7 @@ def update_item(uuid):
         elif data['command'] == 'stop':
             if item.config['cluster']:
                 resize_replica(item.name, 0)
+                response['data'] = {'status': 'Stopped'}
             else:
                 result = tasks.get_pods.delay()
                 pods = result.wait()
@@ -298,7 +309,7 @@ def run_service(data):
     ])
     task = tasks.create_service.delay(conf)
     return task.wait()
-            
+
 def prepare_container(data, key='ports'):
     a=[]
     # if container name is missing generate from image
@@ -348,25 +359,25 @@ def prepare_for_output(rv=None, s_rv=None):
                 out['status'] = rv['currentState']['status'].lower()
             else:
                 return out
-    
+
             out['id'] = rv['uid']
-    
+
             try:
                 root = rv['desiredState']['podTemplate']['desiredState']['manifest']
             except KeyError:
                 root = rv['desiredState']['manifest']
-    
+
             for k in 'containers', 'restartPolicy', 'volumes':
                 out[k] = root[k]
-    
+
             out['replicas'] = 1
             if 'replicas' in rv['desiredState']:
                 out['replicas'] = rv['desiredState']['replicas']
-    
+
         except (ValueError, TypeError), e: # Failed to process JSON
             current_app.logger.debug(str(e))
             return out
-    
+
         except KeyError, e:
             current_app.logger.debug(str(e))
             current_app.logger.debug(rv)
@@ -416,7 +427,7 @@ def make_config(data, sid=None):
         sid = data['sid']
     dash_name = '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', data['name']))
     cluster = data['cluster']
-    
+
     # generate replicationController config
     if not cluster:
         return make_pod_config(data, sid)
@@ -435,7 +446,7 @@ def make_config(data, sid=None):
             ('name', dash_name + '-cluster')
         ])),
     ])
-    
+
 def make_item_id(item_name):
     item_id = ''.join(map((lambda x: x.lower()), re.split(r'[\s\\/\[\|\]{}\(\)\._]+', item_name)))
     item_id += ''.join(random.sample(string.lowercase + string.digits, 20))
@@ -461,3 +472,40 @@ def is_related(one, two):
         if one[k] != two[k]:
             return False
         return True
+
+def is_alive(name):
+    if KubeResolver().resolve_by_replica_name(name):
+        return True
+    return False
+
+
+def start_cluster(data):
+    item_id = make_item_id(data['name'])
+    rv = {}
+    try:
+        service_rv = json.loads(run_service(data))
+        if 'kind' in service_rv and service_rv['kind'] == 'Service':
+            rv['service_ok'] = True
+            rv['portalIP'] = service_rv['portalIP']
+    except TypeError:
+        rv['service_ok'] = False
+    except KeyError:
+        rv['portalIP'] = None
+
+    config = make_config(data, item_id)
+
+    result = tasks.create_containers.delay(config)
+    try:
+        pod_rv = json.loads(result.wait())
+        if 'kind' in pod_rv and pod_rv['kind'] == 'ReplicationController':
+            rv['replica_ok'] = True
+            rv['replicas'] = pod_rv['desiredState']['replicas']
+    except TypeError:
+        rv['replica_ok'] = False
+    except KeyError:
+        rv['replicas'] = 0
+    if rv['service_ok'] and rv['replica_ok']:
+        rv['status'] = 'Running'
+        rv.pop('service_ok')
+        rv.pop('replica_ok')
+    return rv

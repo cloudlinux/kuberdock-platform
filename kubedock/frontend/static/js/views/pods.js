@@ -34,8 +34,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         startItems: function(evt){
             initPodCollection.forEach(function(i){
                 if (i.get('checked') === true){
-                    item.set({'command': 'start'});
-                    item.save();
+                    i.set({'command': 'start'});
+                    i.save();
                 }
             });
         },
@@ -43,8 +43,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         stopItems: function(evt){
             initPodCollection.forEach(function(i){
                 if (i.get('checked') === true){
-                    item.set({'command': 'stop'});
-                    item.save();
+                    i.set({'command': 'stop'});
+                    i.save();
                 }
             });
         },

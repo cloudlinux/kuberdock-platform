@@ -121,6 +121,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 wait: true,
                 success: function(model, response, options){
                     that.render();
+                },
+                error: function(model, response, options){
+                    that.render();
                 }
             });
         },
@@ -132,6 +135,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 wait: true,
                 success: function(model, response, options){
                     that.render();
+                },
+                error: function(model, response, options){
+                    that.render();
                 }
             });
             },
@@ -140,13 +146,17 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             evt.stopPropagation();
             var that = this,
                 name = this.model.get('name');
+                template = $('.modal'),
             this.model.destroy({
                 wait: true,
                 success: function(){
                     that.remove();
                 },
-                error: function(){
-                    console.log('Could not remove '+name);
+               error: function(e, data){
+                    var errorText = JSON.parse(data.responseText).status;
+
+                    that.render();
+                    template.modal('show').find('.modal-body').text(errorText);
                 }
             });
         },

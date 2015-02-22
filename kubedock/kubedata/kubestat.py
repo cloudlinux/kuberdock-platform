@@ -10,6 +10,9 @@ import re
 import requests
 from influxdb.client import InfluxDBClientError
 
+from ..tasks import get_api_url
+
+
 class KubeUnitResolver(object):
     def __init__(self):
         self._names = []
@@ -38,7 +41,7 @@ class KubeUnitResolver(object):
     
     def __getattr__(self, name):
         if name == '_data':
-            url = 'http://localhost:8080/api/v1beta1/pods'
+            url = get_api_url('pods')
             r = requests.get(url)
             return r.json()
         raise AttributeError("No such attribute: %s" % (name,))

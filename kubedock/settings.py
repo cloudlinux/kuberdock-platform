@@ -18,6 +18,9 @@ else:
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
+KUBE_API_VERSION = 'v1beta1'
+KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
+
 INFLUXDB_HOST = '127.0.0.1'
 INFLUXDB_PORT = 8086
 INFLUXDB_TABLE = 'stats'

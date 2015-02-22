@@ -7,7 +7,7 @@ import operator
 from collections import OrderedDict
 from paramiko import ssh_exception
 
-from .settings import DEBUG, NODE_SSH_AUTH
+from .settings import DEBUG, NODE_SSH_AUTH, KUBE_MASTER_URL
 from .api.stream import send_event
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
@@ -30,6 +30,11 @@ def search_image(term, url=None):
     return r.text
 
 
+def get_api_url(*args, **kwargs):
+    url = kwargs.get('url') or KUBE_MASTER_URL
+    return '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
+
+
 @celery.task()
 def get_container_images(term, url=None):
     return search_image(term, url)
@@ -37,56 +42,53 @@ def get_container_images(term, url=None):
 
 @celery.task()
 def get_pods(pod_id=None):
-    url = 'http://localhost:8080/api/v1beta1/pods'
+    url = get_api_url('pods')
     if pod_id is not None:
-        url = 'http://localhost:8080/api/v1beta1/pods/' + pod_id
+        url = get_api_url('pods', pod_id)
     r = requests.get(url)
     return json.loads(r.text)
 
 
 @celery.task()
 def get_replicas():
-    r = requests.get('http://localhost:8080/api/v1beta1/replicationControllers')
+    r = requests.get(get_api_url('replicationControllers'))
     return json.loads(r.text)
 
 
 @celery.task()
 def get_services():
-    r = requests.get('http://localhost:8080/api/v1beta1/services')
+    r = requests.get(get_api_url('services'))
     return json.loads(r.text)
 
 
 @celery.task()
 def create_containers(data):
     kind = data['kind'][0].lower() + data['kind'][1:] + 's'
-    r = requests.post('http://localhost:8080/api/v1beta1/' + kind,
-                      data=json.dumps(data))
+    r = requests.post(get_api_url(kind), data=json.dumps(data))
     return r.text
 
 
 @celery.task()
 def create_service(data):
-    r = requests.post('http://localhost:8080/api/v1beta1/services',
-                      data=json.dumps(data))
+    r = requests.post(get_api_url('services'), data=json.dumps(data))
     return r.text
 
 
 @celery.task()
 def delete_pod(item):
-    r = requests.delete('http://localhost:8080/api/v1beta1/pods/' + item)
+    r = requests.delete(get_api_url('pods', item))
     return json.loads(r.text)
 
 
 @celery.task()
 def delete_replica(item):
-    r = requests.delete(
-        'http://localhost:8080/api/v1beta1/replicationControllers/' + item)
+    r = requests.delete(get_api_url('replicationControllers', item))
     return json.loads(r.text)
 
 
 @celery.task()
 def update_replica(item, diff):
-    url = 'http://localhost:8080/api/v1beta1/replicationControllers/' + item
+    url = get_api_url('replicationControllers', item)
     r = requests.get(url)
     data = json.loads(r.text, object_pairs_hook=OrderedDict)
     update_dict(data, diff)
@@ -97,7 +99,7 @@ def update_replica(item, diff):
 
 @celery.task()
 def delete_service(item):
-    r = requests.delete('http://localhost:8080/api/v1beta1/services/' + item)
+    r = requests.delete(get_api_url('services', item))
     return json.loads(r.text)
 
 
@@ -110,17 +112,17 @@ def get_dockerfile(data):
 
 
 def get_all_nodes():
-    r = requests.get('http://localhost:8080/api/v1beta1/nodes')
+    r = requests.get(get_api_url('nodes'))
     return r.json().get('items') or []
 
 
 def get_node_by_host(host):
-    r = requests.get('http://localhost:8080/api/v1beta1/nodes/' + host)
+    r = requests.get(get_api_url('nodes', host))
     return r.json()
 
 
 def remove_node_by_host(host):
-    r = requests.delete('http://localhost:8080/api/v1beta1/nodes/' + host)
+    r = requests.delete(get_api_url('nodes', host))
     return r.json()
 
 
@@ -164,7 +166,7 @@ def add_new_node(host):
         send_event('install_logs', message)
         res = json.dumps({'status': 'error', 'data': message})
     else:
-        res = requests.post('http://localhost:8080/api/v1beta1/nodes/',
+        res = requests.post(get_api_url('nodes'),
                             json={'id': host, 'apiVersion': 'v1beta1'}).json()
         send_event('install_logs', 'Adding Node completed successful.')
         send_event('install_logs', '===================================')

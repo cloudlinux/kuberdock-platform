@@ -10,7 +10,7 @@ import re
 import requests
 from influxdb.client import InfluxDBClientError
 
-from ..tasks import get_api_url
+from ..utils import get_api_url
 
 
 class KubeUnitResolver(object):

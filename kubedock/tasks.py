@@ -7,7 +7,7 @@ import operator
 from collections import OrderedDict
 from paramiko import ssh_exception
 
-from .settings import DEBUG, NODE_SSH_AUTH, KUBE_MASTER_URL
+from .settings import DEBUG, NODE_SSH_AUTH
 from .api.stream import send_event
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
@@ -15,6 +15,7 @@ from .utils import update_dict
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 
+from .utils import get_api_url
 
 celery = make_celery()
 
@@ -28,11 +29,6 @@ def search_image(term, url=None):
     data = {'q': term}
     r = requests.get(url, params=data)
     return r.text
-
-
-def get_api_url(*args, **kwargs):
-    url = kwargs.get('url') or KUBE_MASTER_URL
-    return '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
 
 
 @celery.task()

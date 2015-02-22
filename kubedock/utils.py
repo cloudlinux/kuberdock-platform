@@ -7,6 +7,7 @@ from functools import wraps
 
 from .users import User
 from .api import APIError
+from .settings import KUBE_MASTER_URL
 
 def login_required_or_basic(func):
     @wraps(func)
@@ -94,3 +95,8 @@ def update_dict(src, diff):
             update_dict(src[key], value)
         else:
             src[key] = value
+
+
+def get_api_url(*args, **kwargs):
+    url = kwargs.get('url') or KUBE_MASTER_URL
+    return '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))

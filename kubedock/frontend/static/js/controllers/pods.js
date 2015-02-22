@@ -181,11 +181,11 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 wizardLayout.steps.show(new App.Views.WizardOtherSubView({model: data}));
             });
             this.listenTo(wizardLayout, 'pod:save', function(data){
-                data.set({'runnable': false}, {silent: true});
+                data.set({'save_only': true}, {silent: true});
                 processRequest(data);
             });
             this.listenTo(wizardLayout, 'pod:run', function(data){
-                data.set({'runnable': true}, {silent: true});
+                data.set({'save_only': false}, {silent: true});
                 processRequest(data);
             });
             this.listenTo(wizardLayout, 'step:complete', function(data){

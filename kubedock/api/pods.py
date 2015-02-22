@@ -34,7 +34,7 @@ def create_item():
                        status_code=409)
 
     item_id = make_item_id(data['name'])
-    runnable = data.pop('runnable', False)
+    save_only = data.pop('save_only', True)
     kubes = data.pop('kubes', 1)
     temp_uuid = str(uuid4())
     data.update({'id': temp_uuid, 'status': 'stopped'})
@@ -47,8 +47,8 @@ def create_item():
         db.session.rollback()
         raise APIError("Could not create database record for '{0}'.".format(data['name']),
                        status_code=409)
-
-    if runnable:    # trying to run service and pods right away
+    
+    if not save_only:    # trying to run service and pods right away
         try:
             service_rv = json.loads(run_service(data))
         except TypeError:
@@ -82,6 +82,7 @@ def create_item():
                     result.wait()
         return jsonify({'status': 'OK', 'data': output})
     return jsonify({'status': 'OK', 'data': data})
+
 
 @pods.route('/<string:uuid>', methods=['DELETE'])
 @login_required_or_basic
@@ -155,6 +156,7 @@ def delete_item(uuid):
     item.status = 'deleted'
     db.session.commit()
     return jsonify({'status': 'OK'})
+
 
 @pods.route('/<string:uuid>', methods=['PUT'])
 @login_required_or_basic
@@ -278,7 +280,6 @@ def docker_action():
         if action != 'inspect':     # special cases here
             raise APIError('This action is not allowed for replicated PODs',
                            status_code=403)
-    # TODO uncomment when we know input data format
     if pod.config.get('restartPolicy') == 'always' \
             and action in ('start', 'stop'):
         raise APIError("POD with restart policy 'Always' can't "
@@ -309,6 +310,7 @@ def run_service(data):
     ])
     task = tasks.create_service.delay(conf)
     return task.wait()
+
 
 def prepare_container(data, key='ports'):
     a=[]
@@ -344,6 +346,7 @@ def prepare_container(data, key='ports'):
 
     data[key] = a
     return data
+
 
 def prepare_for_output(rv=None, s_rv=None):
     out = {}
@@ -410,8 +413,7 @@ def make_pod_config(data, sid, separate=True):
     inner = [('version', 'v1beta1')]
     if separate:
         inner.append(('id', sid))
-        # TODO get from "data" when implemented in frontend
-        inner.append(('restartPolicy', {'always': {}}))
+        inner.append(('restartPolicy', data['restartPolicy']))
     inner.extend([('volumes', data['volumes']),
                 ('containers', map(prepare_container, data['containers']))])
     outer = []
@@ -447,10 +449,12 @@ def make_config(data, sid=None):
         ])),
     ])
 
+
 def make_item_id(item_name):
     item_id = ''.join(map((lambda x: x.lower()), re.split(r'[\s\\/\[\|\]{}\(\)\._]+', item_name)))
     item_id += ''.join(random.sample(string.lowercase + string.digits, 20))
     return item_id
+
 
 def resize_replica(name, num):
     diff = {'desiredState': {'replicas': num}}
@@ -472,6 +476,7 @@ def is_related(one, two):
         if one[k] != two[k]:
             return False
         return True
+
 
 def is_alive(name):
     if KubeResolver().resolve_by_replica_name(name):

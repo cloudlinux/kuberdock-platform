@@ -8,6 +8,8 @@ from functools import wraps
 from .users import User
 from .api import APIError
 from .settings import KUBE_MASTER_URL
+from .rbac import get_user_role
+
 
 def login_required_or_basic(func):
     @wraps(func)
@@ -28,14 +30,16 @@ def login_required_or_basic(func):
         return func(*args, **kwargs)
     return decorated_view
 
+
 def check_perms(rolename):
     roles = ['User', 'Administrator']
+
     def wrapper(func):
         @wraps(func)
         def decorated_view(*args, **kwargs):
-            role = g.user.role.rolename
+            role = get_user_role()
             if rolename not in roles or roles.index(role) < roles.index(rolename):
-                response = jsonify({'code': 403,'message': 'Access denied'})
+                response = jsonify({'code': 403, 'message': 'Access denied'})
                 response.status_code = 403
                 return response
             return func(*args, **kwargs)

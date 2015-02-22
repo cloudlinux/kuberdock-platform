@@ -18,6 +18,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             cluster: false,
             kubes: 1,
             replicas: 1,
+            restartPolicy: {'always': {}},
             service: false,
             portalIP: null,
             port: null
@@ -35,7 +36,11 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
         fillContainer: function(container, data){
             if (data.hasOwnProperty('ports')) {
                 _.each(data['ports'], function(p){
-                    container['ports'].push({containerPort: parseInt(p), protocol: 'tcp'})
+                    container['ports'].push({
+                        containerPort: parseInt(p),
+                        protocol: 'tcp',
+                        hostPort: null
+                    })
                 });
             }
             if (data.hasOwnProperty('volumeMounts')) {

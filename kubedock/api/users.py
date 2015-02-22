@@ -43,6 +43,16 @@ def get_list():
     return jsonify({'status': 'OK', 'data': get_users_collection()})
 
 
+@users.route('/roles', methods=['GET'])
+@login_required_or_basic
+@check_permission('get', 'users')
+def get_roles():
+    return jsonify({
+        'status': 'OK',
+        'data': [x.rolename for x in db.session.query(Role).all()]
+    })
+
+
 @users.route('/<user_id>', methods=['GET'])
 @login_required_or_basic
 @check_permission('get', 'users')
@@ -87,7 +97,7 @@ def create_item():
         if type(data[key]) is list and len(data[key]) == 1:
             data[key] = data[key][0]
     try:
-        rolename = data.pop('rolename', 'user')
+        rolename = data.pop('rolename', 'User')
         package = data.pop('package', 'basic')
         r = Role.filter_by(rolename=rolename).first()
         p = get_pricing(package)
@@ -109,29 +119,28 @@ def create_item():
 @check_permission('edit', 'users')
 def put_item(user_id):
     if user_id.isdigit():
-        u = User.query.get(user_id)
+        u = db.session.query(User).get(user_id)
     else:
-        u = User.filter_by(username=user_id).first()
+        u = db.session.query(User).filter_by(username=user_id).first()
     if u is not None:
         data = request.json
         if data is None:
-            data = dict(request.form)
+            data = request.form.to_dict()
         for key in data.keys():
             if isinstance(data[key], list) and len(data[key]) == 1:
                 data[key] = data[key][0]
+        
         # after some validation, including username unique...
-        r = Role.filter_by(rolename=data.pop('rolename', 'User')).first()
-        #p = db.session.query(Pricing).get(u.pricing_id)
+        if 'role' in data:
+            rolename = rolename=data.pop('role', 'User')
+            r = db.session.query(Role).filter_by(rolename=rolename).first()
+            if r is not None:
+                data['role'] = r
+            else:
+                data['role'] = db.session.query(Role).filter_by(rolename='User').first()
         data = dict(filter((lambda item: item[1] != ''), data.items()))
-        u.username = data['username']
-        u.email = data['email']
-        u.active = data['active']
-        u.first_name = data['first_name']
-        u.last_name = data['last_name']
-        u.suspended = data['suspended']
-        u.middle_initials = data['middle_initials']
-        u.role = r
-        #u.pricing = p
+        for attr in data.keys():
+            setattr(u, attr, data[attr])
         u.save()
         return jsonify({'status': 'OK'})
     raise APIError("User {0} doesn't exists".format(user_id))

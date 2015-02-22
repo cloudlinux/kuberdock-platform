@@ -367,8 +367,8 @@
                 <tbody>
                 <% _.each(volumeMounts, function(v){ %>
                     <tr>
-                        <td><span class="ieditable"><%- v.name %></span></td>
-                        <td><%- v.mountPath %></td>
+                        <td><span class="ieditable name"><%- v.name %></span></td>
+                        <td><span class="ieditable mountPath"><%- v.mountPath %></span></td>
                         <% if (v.readOnly){ %>
                         <td><span class="glyphicon glyphicon-check readonly readonly-on"></span></td>
                         <% } else { %>
@@ -378,6 +378,9 @@
                 <% }) %>
                 </tbody>
             </table>
+            <div>
+                <button type="button" class="btn btn-success btn-sm btn-block add-vol">Add</button>
+            </div>
             <div class="view-controls text-right">
                 <% if (isPending) { %>
                 <button class="btn btn-default prev-step">Previous</button>

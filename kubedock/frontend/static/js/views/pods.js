@@ -620,13 +620,20 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#wizard-set-container-volumes-template',
         tagName: 'div',
         className: 'col-md-8 col-md-offset-2',
+        
+        initialize: function(){
+            if (!this.model.has('volumeMounts')) {
+                this.model.set({'volumeMounts': []});
+            }
+        },
 
         ui: {
             ieditable: '.ieditable'
         },
 
         events: {
-            'click .readonly': 'toggleReadOnly'
+            'click .readonly': 'toggleReadOnly',
+            'click .add-vol': 'addItem',
         },
 
         templateHelpers: function(){
@@ -645,6 +652,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-other': 'step:otherconf',
         },
 
+        addItem: function(env){
+            env.stopPropagation();
+            this.model.get('volumeMounts').push({name: null, mountPath: null, readOnly: false});
+            this.render();
+        },
+        
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({
@@ -652,7 +665,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 mode: 'inline',
                 success: function(response, newValue) {
                     var index = $(this).closest('tr').index();
-                    that.model.get('volumeMounts')[index]['name'] = newValue;
+                    if (item.hasClass('name')) {
+                        that.model.get('volumeMounts')[index]['name'] = newValue;
+                    }
+                    else if (item.hasClass('mountPath')) {
+                        that.model.get('volumeMounts')[index]['mountPath'] = newValue;
+                    }
                 }
             });
         },

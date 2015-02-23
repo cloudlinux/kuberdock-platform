@@ -2,7 +2,6 @@ from flask import Blueprint, request, current_app, jsonify
 from flask.ext.login import current_user
 from .. import tasks
 import json
-from collections import OrderedDict
 from uuid import uuid4
 import string
 import random
@@ -295,25 +294,22 @@ def run_service(data):
         return
     dash_name = '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', data['name']))
     s = string.lowercase
-    item_id = s[random.randrange(len(s))] + ''.join(random.sample(s + string.digits, 19))
-    conf = OrderedDict([
-        ('kind', 'Service'),
-        ('apiVersion', 'v1beta2'),
-        ('id', item_id),
-        ('selector', dict([
-            ('name', data['name'])
-        ])),
-        ('port', int(data['port'])),
-        ('labels', dict([
-            ('name', dash_name + '-service')
-        ])),
-    ])
+    item_id = s[random.randrange(len(s))] +\
+        ''.join(random.sample(s + string.digits, 19))
+    conf = {
+        'kind': 'Service',
+        'apiVersion': 'v1beta2',
+        'id': item_id,
+        'selector': {'name': data['name']},
+        'port': int(data['port']),
+        'labels': {'name': dash_name + '-service'}
+    }
     task = tasks.create_service.delay(conf)
     return task.wait()
 
 
 def prepare_container(data, key='ports'):
-    a=[]
+    a = []
     # if container name is missing generate from image
     if 'name' not in data or not data['name']:
         image = '-'.join(map((lambda x: x.lower()), data['image'].split('/')))
@@ -410,18 +406,20 @@ def prepare_for_output(rv=None, s_rv=None):
 
 def make_pod_config(data, sid, separate=True):
     # to insert config into replicas config set separate to False
-    inner = [('version', 'v1beta1')]
+    inner = {'version': 'v1beta1'}
     if separate:
-        inner.append(('id', sid))
-        inner.append(('restartPolicy', data['restartPolicy']))
-    inner.extend([('volumes', data['volumes']),
-                ('containers', map(prepare_container, data['containers']))])
-    outer = []
+        inner['id'] = sid
+        inner['restartPolicy'] = data['restartPolicy']
+    inner['volumes'] = data['volumes']
+    inner['containers'] = map(prepare_container, data['containers'])
+    outer = {}
     if separate:
-        outer.extend([('kind', 'Pod'), ('apiVersion', 'v1beta1'), ('id', sid)])
-    outer.extend([('desiredState', dict([('manifest', OrderedDict(inner))])),
-        ('labels', dict([('name', data['name'])]))])
-    return OrderedDict(outer)
+        outer['kind'] = 'Pod'
+        outer['apiVersion'] = 'v1beta1'
+        outer['id'] = sid
+    outer['desiredState'] = {'manifest': inner}
+    outer['labels'] = {'name': data['name']}
+    return outer
 
 
 def make_config(data, sid=None):
@@ -433,21 +431,17 @@ def make_config(data, sid=None):
     # generate replicationController config
     if not cluster:
         return make_pod_config(data, sid)
-    return OrderedDict([
-        ('kind', 'ReplicationController'),
-        ('apiVersion', 'v1beta2'),
-        ('id', sid),
-        ('desiredState', OrderedDict([
-            ('replicas', data['replicas']),
-            ('replicaSelector', dict([
-                ('name', data['name'])
-            ])),
-            ('podTemplate', make_pod_config(data, sid, False)),
-        ])),
-        ('labels', dict([
-            ('name', dash_name + '-cluster')
-        ])),
-    ])
+    return {
+        'kind': 'ReplicationController',
+        'apiVersion': 'v1beta2',
+        'id': sid,
+        'desiredState': {
+            'replicas': data['replicas'],
+            'replicaSelector': {'name': data['name']},
+            'podTemplate': make_pod_config(data, sid, False),
+        },
+        'labels': {'name': dash_name + '-cluster'}
+    }
 
 
 def make_item_id(item_name):

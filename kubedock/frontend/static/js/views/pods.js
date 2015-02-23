@@ -1,6 +1,17 @@
 /**
  * This module provides view for displaying data
  */
+
+function modalDialog(options){
+    var modal = $('.modal');
+    if(options.title) modal.find('.modal-title').html(options.title);
+    if(options.body) modal.find('.modal-body').html(options.body);
+    if(options.large) modal.addClass('bs-example-modal-lg');
+    if(options.small) modal.addClass('bs-example-modal-sm');
+    if(options.show) modal.modal('show');
+    return modal;
+}
+
 KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     // this layout view shows the main page: basic pods list
@@ -454,7 +465,24 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 type: 'text',
                 title: 'Change container name',
                 success: function(response, newValue) {
-                    that.model.set({name: newValue});
+                    // TODO: check pod name
+                    $.ajax({
+                        url: '/api/pods/checkName',
+                        data: {'name': newValue},
+                        dataType: 'JSON',
+                        success: function(rs){
+                            if(rs.status == 'OK')
+                                that.model.set({name: newValue});
+                        },
+                        error: function(xhr, status, erorr){
+                            modalDialog({
+                                title: 'Wrong name',
+                                body: JSON.parse(xhr.responseText).status,
+                                show: true
+                            });
+                            that.ui.peditable.editable('option', 'value', 'Unnamed');
+                        }
+                    })
                 }
             });
         }
@@ -510,6 +538,18 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             spinner: '#data-collection'
         },
 
+        onRender: function(){
+            var that = this;
+            this.ui.repo_url_repr.editable({
+                type: 'text',
+                title: 'Change repository url',
+                success: function(response, newValue) {
+                    imageSearchURL = newValue;
+                    that.ui.repo_url_repr.text(imageSearchURL);
+                }
+            });
+        },
+
         onInputKeypress: function(evt){
             evt.stopPropagation();
             if (evt.which === 13) { // 'Enter' key
@@ -523,14 +563,30 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         fetchCollection: function(query){
+            // query string validation
+            if(query.split('/').length > 2) {
+                if(query.substr(0, 4) != 'http') {
+                    modalDialog({
+                        title: 'Wrong image name',
+                        body: 'Wrong image name. If you want to search in your own ' +
+                          'repository, please type full URL path, e.g.: <br/>' +
+                          'https://registry.hub.docker.com/<i>UserName/ImageName</i> <br/>' +
+                          'or <i>UserName/ImageName</i><br/> or simple <i>ImageName</i>',
+                        show: true
+                    });
+                    this.ui.input.focus();
+                    return;
+                } else {}
+            }
             var that = this;
             this.ui.spinner.spin({color: '#437A9E'});
             this.collection.fetch({
-                data: {searchkey: query},
+                data: {searchkey: query, url: imageSearchURL},
                 reset: true,
                 success: function(){
                     that.ui.spinner.spin(false);
                     that.trigger('image:fetched', that);
+                    that.ui.repo_url_repr.text(imageSearchURL);
                 }
             });
         },

@@ -10,3 +10,6 @@
 *~
 media
 *.dat
+settings.cfg
+local_settings.py
+celerybeat-schedule

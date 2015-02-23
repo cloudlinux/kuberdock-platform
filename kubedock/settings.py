@@ -44,3 +44,9 @@ CELERYBEAT_SCHEDULE = {
 }
 
 ONLINE_LAST_MINUTES = 5
+
+
+# Import local settings
+try:
+    from local_settings import *
+except Exception, e: print e

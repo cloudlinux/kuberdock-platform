@@ -39,6 +39,14 @@ def parse(data):
 def get_list_by_keyword():
     repo_url = request.args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
     search_key = request.args.get('searchkey', 'none')
+
+    # parse search string
+    if search_key.startswith('http://') or search_key.startswith('https://'):
+        protocol = 'http://' if search_key.startswith('http://') else 'https://'
+        host, urn = search_key.lstrip(protocol).split('/', 1)
+        search_key = '/'.join(urn.split('/')[-2:])
+        repo_url = protocol + host
+
     check_container_image_name(search_key)
     query_key = '{0}?{1}'.format(repo_url.rstrip('/'), search_key)
     query = db.session.query(ImageCache).get(query_key)

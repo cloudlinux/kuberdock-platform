@@ -11,7 +11,7 @@ from ..core import db, check_permission, ssh_connect
 from .stream import send_event
 from ..utils import update_dict, login_required_or_basic
 from ..kubedata.kuberesolver import KubeResolver
-from ..validation import check_pod_data
+from ..validation import check_pod_data, check_change_pod_data
 from ..api import APIError
 import copy
 
@@ -167,7 +167,7 @@ def update_item(uuid):
     if item is None:
         raise APIError('Pod not found', 404)
     data = request.json
-    check_pod_data(data)
+    check_change_pod_data(data)
     if 'dbdiff' in data:
         update_dict(item.__dict__, data['dbdiff'])
         try:

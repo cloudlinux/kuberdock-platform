@@ -96,7 +96,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 type: 'text',
                 title: 'Change replicas number',
                 success: function(response, newValue) {
-                    that.model.set({'command': 'resize', 'replicas': newValue});
+                    that.model.set({
+                        'command': 'resize',
+                        'replicas': parseInt(newValue.trim())
+                    });
                     that.model.save();
                 }
             });
@@ -817,7 +820,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 mode: 'inline',
                 success: function(response, newValue) {
                     if ($(this).hasClass('working-dir')) {
-                        that.model.set('workingDir', newValue);
+                        that.model.set('workingDir', [newValue]);
                     }
                     else if ($(this).hasClass('command')) {
                         that.model.set('command', newValue.split(' '));

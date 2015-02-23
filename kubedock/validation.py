@@ -53,6 +53,160 @@ port_scheme = {
 }
 nullable_port_scheme = deepcopy(port_scheme)
 nullable_port_scheme['nullable'] = True
+
+
+new_pod_scheme = {
+    'name': pod_name_scheme,
+    'lastAddedImage': lastadded_image_scheme,       # ignored
+    'port': nullable_port_scheme,                   # ignore, read-only
+    'portalIP': {                                   # ignore, read-only
+        'type': 'ipv4',
+        'nullable': True
+    },
+    'service': {'type': 'boolean'},
+    'replicas': {'type': 'integer', 'min': 0},
+    'kubes': {'type': 'integer', 'min': 0},
+    'cluster': {'type': 'boolean'},
+    'save_only': {'type': 'boolean'},
+    'restartPolicy': {
+        'type': 'dict',
+        'restart_polices': ['always', 'onFailure', 'never']
+    },
+    'volumes': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'name': {
+                    'type': 'string',
+                    'empty': False,
+                    'maxlength': 255,
+                }
+            },
+        }
+    },
+    'containers': {
+        'type': 'list',
+        'minlength': 1,
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'capabilities': {'type': 'dict', 'required': False},
+                'imagePullPolicy': {
+                    'type': 'string',
+                    'allowed': ['PullAlways', 'PullIfNotPresent'],
+                    'required': False
+                },
+                'resources': {
+                    'type': 'dict',
+                    'required': False
+                },
+                'command': {
+                    'type': 'list',
+                    'minlength': 1,
+                    'schema': {
+                        'type': 'string',
+                        'empty': False
+                    }
+                },
+                'cpu': {'type': 'integer', 'min': 0},
+                # TODO check real or buyed ram
+                'memory': {'type': 'integer', 'min': 0},
+                'image': container_image_name_scheme,
+                'name': {
+                    'type': 'string',
+                    'empty': False,
+                    'maxlength': 255
+                },
+                'env': {
+                    'type': 'list',
+                    'schema': {
+                        'type': 'dict',
+                        'schema': {
+                            'name': {
+                                'type': 'string',
+                                'maxlength': 255,
+                                'empty': False,
+                                # 'regex': ''     # maybe needed
+                            },
+                            'value': {'type': 'string'},
+                        },
+                    }
+                },
+                'ports': {
+                    'type': 'list',
+                    'schema': {
+                        'type': 'dict',
+                        'schema': {
+                            'containerPort': port_scheme,
+                            'hostPort': nullable_port_scheme,
+                            'protocol': {
+                                'type': 'string',
+                                'maxlength': 255
+                            },
+                        }
+                    }
+                },
+                'volumeMounts': {
+                    'type': 'list',
+                    'schema': {
+                        'type': 'dict',
+                        'schema': {
+                            'mountPath': {'type': 'string'},
+                            'name': {'type': 'string'},
+                            'readOnly': {'type': 'boolean'}
+                        }
+                    }
+                },
+                'workingDir': {
+                    'type': 'list',
+                    'schema': {
+                        'type': 'string'
+                    }
+                },
+            }
+        }
+    }
+}
+
+change_pod_scheme = deepcopy(new_pod_scheme)
+change_pod_scheme.update({
+    'owner': {                                      # ignore, read-only
+        'type': 'string',
+        'maxlength': 255,
+        'empty': False,
+    },
+    'status': {                                     # ignore, read-only
+        'type': 'string',
+        'empty': False,
+    },
+    'command': {
+        'type': 'string',
+        'allowed': ['start', 'stop', 'resize'],
+    },
+    'id': {
+        'type': 'string',
+        'maxlength': 36,
+    },
+    'sid': {
+        'type': 'string',
+        'maxlength': 1024
+    },
+    'servicename': {
+        'type': 'string',
+        'required': False,
+        'empty': False,
+        'regex': pod_name
+    },
+    'dockers': {'type': 'list'},                    # retrieved from kubernetes
+    'labels': {                                     # TODO when implement
+        'type': 'dict',
+        'required': False
+    },
+})
+change_pod_scheme['containers']['schema']['schema']['workingDir'] = {
+    'type': 'string'
+}
 # ===================================================================
 
 
@@ -117,107 +271,13 @@ def check_hostname(hostname):
         raise APIError(validator.errors)
 
 
+def check_change_pod_data(data):
+    validator = V()
+    if not validator.validate(data, change_pod_scheme):
+        raise APIError(validator.errors)
+
+
 def check_pod_data(data):
     validator = V()
-    if not validator.validate(data, {
-            'name': pod_name_scheme,
-            'lastAddedImage': lastadded_image_scheme,       # ignored
-            'port': nullable_port_scheme,                   # ignore, read-only
-            'portalIP': {'type': 'ipv4', 'nullable': True}, # ignore, read-only
-            'service': {'type': 'boolean'},
-            'replicas': {'type': 'integer', 'min': 0},
-            'kubes': {'type': 'integer', 'min': 0},
-            'cluster': {'type': 'boolean'},
-            'save_only': {'type': 'boolean'},
-            'restartPolicy': {
-                'type': 'dict',
-                'restart_polices': ['always', 'onFailure', 'never']
-            },
-            'volumes': {
-                'type': 'list',
-                'schema': {
-                    'type': 'dict',
-                    'schema': {
-                        'name': {
-                            'type': 'string',
-                            'empty': False,
-                            'maxlength': 255,
-                        }
-                    },
-                }
-            },
-            'containers': {
-                'type': 'list',
-                'minlength': 1,
-                'schema': {
-                    'type': 'dict',
-                    'schema': {
-                        'command': {
-                            'type': 'list',
-                            'minlength': 1,
-                            'schema': {
-                                'type': 'string',
-                                'empty': False
-                            }
-                        },
-                        'cpu': {'type': 'integer', 'min': 0},
-                        # TODO check real or buyed ram
-                        'memory': {'type': 'integer', 'min': 0},
-                        'image': container_image_name_scheme,
-                        'name': {
-                            'type': 'string',
-                            'empty': False,
-                            'maxlength': 255
-                        },
-                        'env': {
-                            'type': 'list',
-                            'schema': {
-                                'type': 'dict',
-                                'schema': {
-                                    'name': {
-                                        'type': 'string',
-                                        'maxlength': 255,
-                                        'empty': False,
-                                        # 'regex': ''     # maybe needed
-                                    },
-                                    'value': {'type': 'string'},
-                                },
-                            }
-                        },
-                        'ports': {
-                            'type': 'list',
-                            'schema': {
-                                'type': 'dict',
-                                'schema': {
-                                    'containerPort': port_scheme,
-                                    'hostPort': nullable_port_scheme,
-                                    'protocol': {
-                                        'type': 'string',
-                                        'maxlength': 255
-                                    },
-                                }
-                            }
-                        },
-                        'volumeMounts': {
-                            'type': 'list',
-                            'schema': {
-                                'type': 'dict',
-                                'schema': {
-                                    'mountPath': {'type': 'string'},
-                                    'name': {'type': 'string'},
-                                    'readOnly': {'type': 'boolean'}
-                                }
-                            }
-                        },
-                        'workingDir': {
-                            'type': 'list',
-                            'schema': {
-                                'type': 'string'
-                            }
-                        },
-                    }
-                }
-            },
-            # 'labels': '',     # TODO when implement
-    }):
+    if not validator.validate(data, new_pod_scheme):
         raise APIError(validator.errors)

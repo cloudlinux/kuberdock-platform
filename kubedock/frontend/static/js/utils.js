@@ -1,6 +1,7 @@
 define(function () {
 
     // jQuery ajax setup
+    var that = this;
     Backbone.ajax = function() {
         // Invoke $.ajaxSetup in the context of Backbone.$
         Backbone.$.ajaxSetup.call(Backbone.$, {
@@ -8,13 +9,18 @@ define(function () {
                 400: function(xhr){
                     if(xhr.responseJSON.status) alert(xhr.responseJSON.status);
                 },
-                401: function () {
+                401: function (xhr) {
                     // Redirect to the login page.
 //                    Backbone.history.navigate("login", true);
                 },
-                403: function () {
+                403: function (xhr) {
                     // 403 -- Access denied
 //                    Backbone.history.navigate("login", true);
+                },
+                404: function(xhr){
+                    $('body').html(
+                        '404 Page not found'
+                    );
                 }
             }
         });

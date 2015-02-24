@@ -8,7 +8,8 @@ requirejs.config({
         bootstrap: 'lib/bootstrap',
         paginator: 'lib/backbone.paginator',
         tpl: 'lib/tpl',
-        text: 'lib/text'
+        text: 'lib/text',
+        utils: 'utils'
     },
     shim: {
         jquery: {
@@ -27,6 +28,10 @@ requirejs.config({
         marionette: {
             deps: ["jquery", "bootstrap", "underscore", "backbone"],
             exports: "Marionette"
+        },
+        utils: {
+            deps: ['backbone'],
+            exports: "utils"
         }
     }
 });

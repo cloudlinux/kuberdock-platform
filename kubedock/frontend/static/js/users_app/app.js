@@ -1,5 +1,5 @@
-define(['marionette', 'paginator'],
-       function (Marionette, PageableCollection) {
+define(['marionette', 'paginator', 'utils'],
+       function (Marionette, PageableCollection, utils) {
 
     var UsersApp = new Marionette.Application({
         regions: {
@@ -9,30 +9,22 @@ define(['marionette', 'paginator'],
 
     UsersApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
-        var unwrapper = function(response) {
-            if (response.hasOwnProperty('data'))
-                return response['data'];
-            return response;
-        };
-
-        Data.UserModel = Backbone.Model.extend({
-            urlRoot: '/api/users/',
-            parse: unwrapper
+        Data.UserModel = utils.BaseModel.extend({
+            urlRoot: '/api/users/'
         });
         Data.UsersCollection = Backbone.Collection.extend({
             url: '/api/users/',
             model: Data.UserModel
         });
 
-        Data.UserActivitiesModel = Backbone.Model.extend({
-            urlRoot: '/api/users/a/:id',
-            parse: unwrapper
+        Data.UserActivitiesModel = utils.BaseModel.extend({
+            urlRoot: '/api/users/a/:id'
         });
 
         Data.UsersPageableCollection = PageableCollection.extend({
             url: '/api/users',
             model: Data.UserModel,
-            parse: unwrapper,
+            parse: utils.unwrapper,
             mode: 'client',
             state: {
                 pageSize: 5
@@ -42,7 +34,7 @@ define(['marionette', 'paginator'],
         Data.ActivitiesCollection = PageableCollection.extend({
             url: '/api/users/a/:id',
             model: Data.UserActivitiesModel,
-            parse: unwrapper,
+            parse: utils.unwrapper,
             mode: 'client',
             state: {
                 pageSize: 15
@@ -108,8 +100,6 @@ define(['marionette', 'paginator'],
                     success: function(rs){
                         if(rs.status == 'OK')
                             window.location.href = '/';
-                        else
-                            alert(rs.status);
                     }
                });
             }
@@ -193,10 +183,10 @@ define(['marionette', 'paginator'],
                     wait: true,
                     success: function(){
                         App.router.navigate('/', {trigger: true})
-                    },
-                    error: function(){
-                        alert('error while saving! Maybe some fields required.')
-                    }
+                    }//,
+//                    error: function(){
+//                        alert('error while saving! Maybe some fields required.')
+//                    }
                 });
             }
 
@@ -250,10 +240,10 @@ define(['marionette', 'paginator'],
                     wait: true,
                     success: function(){
                         App.router.navigate('/', {trigger: true})
-                    },
-                    error: function(){
-                        alert('error while updating! Maybe some fields required.')
-                    }
+                    }//,
+//                    error: function(){
+//                        alert('error while updating! Maybe some fields required.')
+//                    }
                 });
             }
 

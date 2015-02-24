@@ -191,9 +191,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
                 inputsLength+=1;
             });
-            if (counter != inputsLength && switcher.is(':checked')){
-                console.log('asdas');
-            }
             if (counter == 0 ){
                 pods_actions_btn.addClass('disabled');
             }

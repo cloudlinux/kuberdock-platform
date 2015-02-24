@@ -82,9 +82,9 @@ def create_item():
         except TypeError:
             service_rv = None
         config = make_config(data, item_id)
-        result = tasks.create_containers.delay(config)
+        result = tasks.create_containers_nodelay(config)
         try:
-            pod_rv = json.loads(result.wait())
+            pod_rv = json.loads(tasks.create_containers_nodelay(config))
         except TypeError:
             pod_rv = None
         if 'status' in pod_rv and pod_rv['status'] == 'Working':
@@ -106,8 +106,7 @@ def create_item():
             if data['service'] and service_rv is not None:
                 srv = json.loads(service_rv)
                 if 'id' in srv:
-                    result = tasks.delete_service.delay(srv['id'])
-                    result.wait()
+                    tasks.delete_service_nodelay(srv['id'])
         return jsonify({'status': 'OK', 'data': output})
     return jsonify({'status': 'OK', 'data': data})
 
@@ -121,8 +120,7 @@ def delete_item(uuid):
         raise APIError('No pod with id: {0}'.format(uuid), status_code=404)
     name = item.name
     if item.config.get('cluster'):
-        result = tasks.get_replicas.delay()
-        replicas = result.wait()
+        replicas = tasks.get_replicas_nodelay()
 
         if 'items' not in replicas:
             return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
@@ -132,17 +130,14 @@ def delete_item(uuid):
                 (lambda x: x['desiredState']['replicaSelector']['name'] == name),
                 replicas['items'])
             for replica in filtered_replicas:
-                result = tasks.delete_replica.delay(replica['id'])
-                current_app.logger.debug(result)
-                replica_rv = result.wait()
+                replica_rv = tasks.delete_replica_nodelay(replica['id'])
                 current_app.logger.debug(replica_rv)
                 if 'status' in replica_rv and replica_rv['status'].lower() not in ['success', 'working']:
                     return jsonify({'status': 'ERROR', 'reason': replica_rv['message']})
         except KeyError, e:
             return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
 
-    result = tasks.get_pods.delay()
-    pods = result.wait()
+    pods = tasks.get_pods_nodelay()
 
     if 'items' not in pods:
         return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
@@ -152,8 +147,7 @@ def delete_item(uuid):
             (lambda x: x['labels']['name'] == name),
             pods['items'])
         for pod in filtered_pods:
-            result = tasks.delete_pod.delay(pod['id'])
-            pod_rv = result.wait()
+            pod_rv = tasks.delete_pod_nodelay(pod['id'])
             current_app.logger.debug(pod_rv)
             if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
                 return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
@@ -161,8 +155,7 @@ def delete_item(uuid):
         return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
 
     if item.config.get('service'):
-        result = tasks.get_services.delay()
-        services = result.wait()
+        services = tasks.get_services_nodelay()
 
         if 'items' not in services:
             return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
@@ -172,8 +165,7 @@ def delete_item(uuid):
                 (lambda x: is_related(x['selector'], {'name': name})),
                 services['items'])
             for service in filtered_services:
-                result = tasks.delete_service.delay(service['id'])
-                service_rv = result.wait()
+                service_rv = tasks.delete_service_nodelay(service['id'])
                 current_app.logger.debug(service_rv)
                 if 'status' in service_rv and service_rv['status'].lower() not in ['success', 'working']:
                     return jsonify({'status': 'ERROR', 'reason': service_rv['message']})
@@ -222,8 +214,7 @@ def update_item(uuid):
                 service_rv = run_service(data)
                 config = make_config(item.config, item_id)
                 current_app.logger.debug(config)
-                result = tasks.create_containers.delay(config)
-                pod_rv = result.wait()
+                pod_rv = tasks.create_containers_nodelay(config)
                 output = prepare_for_output(pod_rv, service_rv)
 
                 try:
@@ -238,15 +229,13 @@ def update_item(uuid):
                     if service_rv is not None:
                         srv = json.loads(service_rv)
                         if 'id' in srv:
-                            result = tasks.delete_service.delay(srv['id'])
-                            result.wait()
+                            tasks.delete_service_nodelay(srv['id'])
         elif data['command'] == 'stop':
             if item.config['cluster']:
                 resize_replica(item.name, 0)
                 response['data'] = {'status': 'Stopped'}
             else:
-                result = tasks.get_pods.delay()
-                pods = result.wait()
+                pods = tasks.get_pods_nodelay()
 
                 if 'items' not in pods:
                     return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
@@ -256,9 +245,7 @@ def update_item(uuid):
                         (lambda x: x['labels']['name'] == item.name),
                         pods['items'])
                     for pod in filtered_pods:
-                        result = tasks.delete_pod.delay(pod['id'])
-                        pod_rv = result.wait()
-                        current_app.logger.debug(pod_rv)
+                        pod_rv = tasks.delete_pod_nodelay(pod['id'])
                         if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
                             return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
                 except KeyError, e:
@@ -280,7 +267,7 @@ def do_action(host, action, container_id):
     exit_status = o.channel.recv_exit_status()
     if exit_status != 0:
         raise APIError('Docker error. Exit status: {0}. Error: {1}'
-                       .format(exit_status, e.read()))
+               .format(exit_status, e.read()))
     else:
         message = o.read()
         if action in ('start', 'stop'):
@@ -334,8 +321,7 @@ def run_service(data):
         'port': int(data['port']),
         'labels': {'name': dash_name + '-service'}
     }
-    task = tasks.create_service.delay(conf)
-    return task.wait()
+    return tasks.create_service_nodelay(conf)
 
 
 def prepare_container(data, key='ports'):
@@ -360,7 +346,7 @@ def prepare_container(data, key='ports'):
     for t in data[key]:
         try:
             a.append(dict([
-                (i[0], int(i[1])) for i in t.items()
+                (i[0], int( i[1])) for i in t.items()
             ]))
         except ValueError:
             a.append(dict([
@@ -483,13 +469,12 @@ def make_item_id(item_name):
 
 def resize_replica(name, num):
     diff = {'desiredState': {'replicas': num}}
-    result = tasks.get_replicas.delay()
-    replicas = result.wait()
+    replicas = tasks.get_replicas_nodelay()
     filtered_replicas = filter(
         (lambda x: x['desiredState']['replicaSelector']['name'] == name),
         replicas['items'])
     for replica in filtered_replicas:
-        tasks.update_replica.delay(replica['id'], diff).wait()
+        tasks.update_replica_nodelay(replica['id'], diff)
 
 
 def is_related(one, two):
@@ -524,9 +509,8 @@ def start_cluster(data):
 
     config = make_config(data, item_id)
 
-    result = tasks.create_containers.delay(config)
     try:
-        pod_rv = json.loads(result.wait())
+        pod_rv = json.loads(tasks.create_containers_nodelay(config))
         if 'kind' in pod_rv and pod_rv['kind'] == 'ReplicationController':
             rv['replica_ok'] = True
             rv['replicas'] = pod_rv['desiredState']['replicas']

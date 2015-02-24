@@ -45,14 +45,32 @@ def get_pods(pod_id=None):
     return json.loads(r.text)
 
 
+def get_pods_nodelay(pod_id=None):
+    url = get_api_url('pods')
+    if pod_id is not None:
+        url = get_api_url('pods', pod_id)
+    r = requests.get(url)
+    return json.loads(r.text)
+
+
 @celery.task()
 def get_replicas():
     r = requests.get(get_api_url('replicationControllers'))
     return json.loads(r.text)
 
 
+def get_replicas_nodelay():
+    r = requests.get(get_api_url('replicationControllers'))
+    return json.loads(r.text)
+
+
 @celery.task()
 def get_services():
+    r = requests.get(get_api_url('services'))
+    return json.loads(r.text)
+
+
+def get_services_nodelay():
     r = requests.get(get_api_url('services'))
     return json.loads(r.text)
 
@@ -64,8 +82,19 @@ def create_containers(data):
     return r.text
 
 
+def create_containers_nodelay(data):
+    kind = data['kind'][0].lower() + data['kind'][1:] + 's'
+    r = requests.post(get_api_url(kind), data=json.dumps(data))
+    return r.text
+
+
 @celery.task()
 def create_service(data):
+    r = requests.post(get_api_url('services'), data=json.dumps(data))
+    return r.text
+
+
+def create_service_nodelay(data):
     r = requests.post(get_api_url('services'), data=json.dumps(data))
     return r.text
 
@@ -76,8 +105,18 @@ def delete_pod(item):
     return json.loads(r.text)
 
 
+def delete_pod_nodelay(item):
+    r = requests.delete(get_api_url('pods', item))
+    return json.loads(r.text)
+
+
 @celery.task()
 def delete_replica(item):
+    r = requests.delete(get_api_url('replicationControllers', item))
+    return json.loads(r.text)
+
+
+def delete_replica_nodelay(item):
     r = requests.delete(get_api_url('replicationControllers', item))
     return json.loads(r.text)
 
@@ -93,14 +132,36 @@ def update_replica(item, diff):
     return json.loads(r.text)
 
 
+def update_replica_nodelay(item, diff):
+    url = get_api_url('replicationControllers', item)
+    r = requests.get(url)
+    data = json.loads(r.text, object_pairs_hook=OrderedDict)
+    update_dict(data, diff)
+    headers = {'Content-Type': 'application/json'}
+    r = requests.put(url, data=json.dumps(data), headers=headers)
+    return json.loads(r.text)
+
+
 @celery.task()
 def delete_service(item):
     r = requests.delete(get_api_url('services', item))
     return json.loads(r.text)
 
 
+def delete_service_nodelay(item):
+    r = requests.delete(get_api_url('services', item))
+    return json.loads(r.text)
+
+
 @celery.task()
 def get_dockerfile(data):
+    url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(
+        data.strip('/'))
+    r = requests.get(url)
+    return r.text
+
+
+def get_dockerfile_nodelay(data):
     url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(
         data.strip('/'))
     r = requests.get(url)

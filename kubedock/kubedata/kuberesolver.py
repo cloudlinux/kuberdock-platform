@@ -21,8 +21,7 @@ class KubeResolver(object):
     @staticmethod
     def _get_replicas():
         """Get list of replicas via REST API call task"""
-        task = tasks.get_replicas.delay()
-        return task.wait()
+        return tasks.get_replicas_nodelay()
 
     def _parse_replicas(self, name=None):
         """Parse received list of replicas to a structure"""
@@ -49,8 +48,7 @@ class KubeResolver(object):
     @staticmethod
     def _get_pods():
         """Get list of pods via REST API call task"""
-        result = tasks.get_pods.delay()
-        return result.wait()
+        return tasks.get_pods_nodelay()
 
     @staticmethod
     def _get_dockers(data):
@@ -116,8 +114,7 @@ class KubeResolver(object):
 
     @staticmethod
     def _get_services():
-        result = tasks.get_services.delay()
-        return result.wait()
+        return tasks.get_services_nodelay()
 
     def _parse_services(self):
         """

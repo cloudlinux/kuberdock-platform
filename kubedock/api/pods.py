@@ -11,7 +11,7 @@ from ..core import db, check_permission, ssh_connect
 from .stream import send_event
 from ..utils import update_dict, login_required_or_basic
 from ..kubedata.kuberesolver import KubeResolver
-from ..validation import check_pod_data, check_change_pod_data
+from ..validation import check_new_pod_data, check_change_pod_data
 from ..api import APIError
 import copy
 
@@ -33,12 +33,28 @@ def check_pod_name():
     return jsonify({'status': 'OK'})
 
 
+@check_permission('get', 'pods')
+def get_pods_collection(user):
+    units = KubeResolver().resolve_all()
+    if user.is_administrator():
+        return units
+    return filter((lambda x: x['owner'] == user.username), units)
+
+
+@pods.route('/', methods=['GET'])
+@login_required_or_basic
+@check_permission('get', 'pods')
+def get_pods():
+    coll = get_pods_collection(current_user)
+    return jsonify({'status': 'OK', 'data': coll})
+
+
 @pods.route('/', methods=['POST'])
 @login_required_or_basic
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
-    check_pod_data(data)
+    check_new_pod_data(data)
     pod = Pod.query.filter_by(name=data['name']).first()
     if pod:
         raise APIError("Conflict. Pod with name = '{0}' already exists. "
@@ -263,7 +279,8 @@ def do_action(host, action, container_id):
     i, o, e = ssh.exec_command('docker {0} {1}'.format(action, container_id))
     exit_status = o.channel.recv_exit_status()
     if exit_status != 0:
-        raise APIError('Docker error. Exit status: {0}. Error: {1}'.format(exit_status, e.read()))
+        raise APIError('Docker error. Exit status: {0}. Error: {1}'
+                       .format(exit_status, e.read()))
     else:
         message = o.read()
         if action in ('start', 'stop'):
@@ -343,14 +360,15 @@ def prepare_container(data, key='ports'):
     for t in data[key]:
         try:
             a.append(dict([
-                (i[0], int( i[1])) for i in t.items()
+                (i[0], int(i[1])) for i in t.items()
             ]))
         except ValueError:
             a.append(dict([
                 i for i in t.items()
             ]))
 
-    if type(data['workingDir']) is list:
+    wd = data.get('workingDir', '.')
+    if type(wd) is list:
         data['workingDir'] = ','.join(data['workingDir'])
 
     data[key] = a

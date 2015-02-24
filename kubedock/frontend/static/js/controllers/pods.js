@@ -239,5 +239,13 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
         });
         WorkFlow.routes(routes);
         controller.showPods();
+        if (typeof(EventSource) === undefined) {
+            console.log('ERROR: EventSource is not supported by browser');
+        } else {
+            var source = new EventSource("/api/stream");
+            source.addEventListener('pull_pods_state', function (ev) {
+                initPodCollection.fetch();
+            }, false);
+        }
     });
 });

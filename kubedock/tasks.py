@@ -181,16 +181,27 @@ def check_events():
     else:
         return
 
-    ml = redis.get('cached_nodes')
-    if not ml:
-        ml = get_all_nodes()
-        redis.set('cached_nodes', json.dumps(ml))
+    nodes_list = redis.get('cached_nodes')
+    if not nodes_list:
+        nodes_list = get_all_nodes()
+        redis.set('cached_nodes', json.dumps(nodes_list))
         send_event('pull_nodes_state', 'ping')
     else:
         temp = get_all_nodes()
-        if temp != json.loads(ml):
+        if temp != json.loads(nodes_list):
             redis.set('cached_nodes', json.dumps(temp))
             send_event('pull_nodes_state', 'ping')
+
+    pods_list = redis.get('cached_pods')
+    if not pods_list:
+        pods_list = requests.get(get_api_url('pods')).text
+        redis.set('cached_pods', json.dumps(pods_list))
+        send_event('pull_pods_state', 'ping')
+    else:
+        temp = requests.get(get_api_url('pods')).text
+        if temp != json.loads(pods_list):
+            redis.set('cached_pods', json.dumps(temp))
+            send_event('pull_pods_state', 'ping')
 
     redis.delete('events_lock')
 

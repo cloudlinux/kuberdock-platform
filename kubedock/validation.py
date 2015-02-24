@@ -25,13 +25,13 @@ lastadded_image_scheme['required'] = False
 
 
 # http://stackoverflow.com/questions/1418423/the-hostname-regex
-hostname = r"^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$"
+hostname_regex = r"^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$"
 hostname_scheme = {
     'type': 'string',
     'empty': False,
     'required': True,
     'maxlength': 255,
-    'regex': hostname,
+    'regex': hostname_regex,
     'resolvable': True,
 }
 
@@ -103,7 +103,7 @@ new_pod_scheme = {
                 },
                 'command': {
                     'type': 'list',
-                    'minlength': 1,
+                    # 'minlength': 1,
                     'schema': {
                         'type': 'string',
                         'empty': False
@@ -192,6 +192,11 @@ change_pod_scheme.update({
         'type': 'string',
         'maxlength': 1024
     },
+    'containerPort': {
+        'type': 'integer',
+        'required': False
+    },
+    'checked': {'type': 'boolean', 'required': False},
     'servicename': {
         'type': 'string',
         'required': False,
@@ -277,7 +282,7 @@ def check_change_pod_data(data):
         raise APIError(validator.errors)
 
 
-def check_pod_data(data):
+def check_new_pod_data(data):
     validator = V()
     if not validator.validate(data, new_pod_scheme):
         raise APIError(validator.errors)

@@ -7,7 +7,7 @@ import operator
 from collections import OrderedDict
 from paramiko import ssh_exception
 
-from .settings import DEBUG, NODE_SSH_AUTH
+from .settings import DEBUG, NODE_SSH_AUTH, MASTER_IP
 from .api.stream import send_event
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
@@ -201,6 +201,12 @@ def add_new_node(host):
     sftp = ssh.open_sftp()
     sftp.put('kub_install.sh', '/kub_install.sh')
     sftp.close()
+    # change MASTER IP
+    i, o, e = ssh.exec_command(
+        "sed 's/192.168.56.100/{0}/' "
+        "< /kub_install.sh > /kub_install.sh.tmp && "
+        "mv /kub_install.sh.tmp /kub_install.sh".format(MASTER_IP))
+    # execute kub_install.sh
     i, o, e = ssh.exec_command('bash /kub_install.sh')
     s_time = time.time()
     while not o.channel.exit_status_ready():

@@ -18,6 +18,8 @@ else:
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
+MASTER_IP = '192.168.56.100'
+
 KUBE_API_VERSION = 'v1beta1'
 KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
 
@@ -49,4 +51,5 @@ ONLINE_LAST_MINUTES = 5
 # Import local settings
 try:
     from local_settings import *
-except Exception, e: print e
+except ImportError:
+    pass

@@ -755,7 +755,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 success: function(response, newValue) {
                     var index = $(this).closest('tr').index(),
                         item = $(this).parent().attr('class');
-                    that.model.get('ports')[index][item] = newValue;
+                    that.model.get('ports')[index][item] = parseInt(newValue);
                 }
             });
             this.ui.iseditable.editable({
@@ -819,7 +819,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 type: 'text',
                 mode: 'inline',
                 success: function(response, newValue) {
-                    var index = $(this).closest('tr').index();
+                    var item = $(this),
+                        index = item.closest('tr').index();
                     if (item.hasClass('name')) {
                         that.model.get('volumeMounts')[index]['name'] = newValue;
                     }
@@ -972,7 +973,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 mode: 'inline',
                 success: function(response, newValue) {
                     if ($(this).hasClass('working-dir')) {
-                        that.model.set('workingDir', [newValue]);
+                        that.model.set('workingDir', newValue);
                     }
                     else if ($(this).hasClass('command')) {
                         that.model.set('command', newValue.split(' '));
@@ -1055,7 +1056,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                         that.model.get('volumes')[index]['source'] = {hostDir: {path: newValue}};
                     }
                     else if (item.hasClass('port')) {
-                        that.model.set('port', newValue);
+                        that.model.set('port', parseInt(newValue));
                     }
                     else {
                         console.log('oops!');

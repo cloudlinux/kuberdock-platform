@@ -73,17 +73,17 @@ new_pod_scheme = {
         'restart_polices': ['always', 'onFailure', 'never']
     },
     'volumes': {
-        'type': 'list',
-        'schema': {
-            'type': 'dict',
-            'schema': {
-                'name': {
-                    'type': 'string',
-                    'empty': False,
-                    'maxlength': 255,
-                }
-            },
-        }
+        #'type': 'list',
+        #'schema': {
+        #    'type': 'dict',
+        #    'schema': {
+        #        'name': {
+        #            'type': 'string',
+        #            'empty': False,
+        #            'maxlength': 255,
+        #        }
+        #    },
+        #}
     },
     'containers': {
         'type': 'list',
@@ -148,15 +148,15 @@ new_pod_scheme = {
                     }
                 },
                 'volumeMounts': {
-                    'type': 'list',
-                    'schema': {
-                        'type': 'dict',
-                        'schema': {
-                            'mountPath': {'type': 'string'},
-                            'name': {'type': 'string'},
-                            'readOnly': {'type': 'boolean'}
-                        }
-                    }
+                    #'type': 'list',
+                    #'schema': {
+                    #    'type': 'dict',
+                    #    'schema': {
+                    #        'mountPath': {'type': 'string'},
+                    #        'name': {'type': 'string'},
+                    #        'readOnly': {'type': 'boolean'}
+                    #    }
+                    #}
                 },
                 'workingDir': {
                     'type': 'list',
@@ -164,6 +164,9 @@ new_pod_scheme = {
                         'type': 'string'
                     }
                 },
+                "terminationMessagePath": {
+                    'type': 'string', 'required': False
+                }
             }
         }
     }

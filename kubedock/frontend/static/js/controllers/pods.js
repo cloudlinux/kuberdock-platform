@@ -218,6 +218,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 model.get('containers').push({
                     image: image, name: name, cpu: 0, memory: 0, workingDir: null,
                     ports: [], volumeMounts: [], env: [], command: [],
+                    terminationMessagePath: null
                 });
                 model.set('lastAddedImage', image);
                 rqst.done(function(data){

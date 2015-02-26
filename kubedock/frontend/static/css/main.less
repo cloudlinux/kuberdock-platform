@@ -13,6 +13,28 @@ html{
 	min-height: 100%;
 	position: relative;
 	body{
+	#page-preloader {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 100500;
+		display: none;
+	}
+
+	#page-preloader{
+		width: 60px;
+		height: 60px;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		margin: auto;
+		position: absolute;
+		background: url('../img/preloader.gif') 0 0 no-repeat;
+		z-index: 999;
+	}
 		/* need refactoring */
 		
 		/* nodes */
@@ -783,10 +805,9 @@ html{
 		}
 		.modal{
 			.modal-header{
-				padding: 23px 8px;
 				.close{
 					outline: 0;
-					margin-top: -10px;
+					margin-top: 0;
 				}
 			}
 			.modal-footer{

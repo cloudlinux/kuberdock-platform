@@ -15,12 +15,13 @@
 
         {% assets "less_js" -%}
             <script src="{{ ASSET_URL }}"></script>
-        {% endassets %}
-        
+        {% endassets %}     
     </head>
     <body>
 
         {% include "inc/navbar.html" %}
+
+        <div id="page-preloader"></div>
 
         <!-- contents container -->
         <div id="contents" class="container"></div>

@@ -43,24 +43,60 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         startItems: function(evt){
+            var preloader = $('#page-preloader');
+                preloader.show(); 
             initPodCollection.forEach(function(i){
                 if (i.get('checked') === true){
-                    i.set({'command': 'start'});
-                    i.save();
+                   /* i.set({'command': 'start'});*/
+                    i.save({'command': 'start'}, {
+                        success: function(){
+                            preloader.hide();
+                        },
+                        error: function(){
+                            var errorText = 'errorText',
+                                errorTitle = 'errorTitle';
+                            preloader.hide();
+                            modalDialog({
+                                title: errorTitle,
+                                body: errorText,
+                                show: true
+                            });
+                        }
+                    });
                 }
             });
         },
 
         stopItems: function(evt){
+            var preloader = $('#page-preloader');
+                preloader.show();
             initPodCollection.forEach(function(i){
                 if (i.get('checked') === true){
-                    i.set({'command': 'stop'});
-                    i.save();
+                   /* i.set({'command': 'stop'});*/
+                    i.save({'command': 'stop'}, {
+                        wait: true,
+                        success: function(){
+                            initPodCollection.remove(i);
+                        },
+                        error: function(){
+                            var errorTitle = 'errorTitle',
+                                errorText = 'errorText';
+                            preloader.hide();
+                            modalDialog({
+                                title: errorTitle,
+                                body: errorText,
+                                show: true
+                            });
+                        }
+                    });
                 }
+
             });
         },
 
         terminateItems: function(evt){
+            var preloader = $('#page-preloader');
+                preloader.show();
             initPodCollection.forEach(function(i){
                 if (i.get('checked') === true){
                     i.destroy({
@@ -69,7 +105,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                             initPodCollection.remove(i);
                         },
                         error: function(){
-                            console.log('Could not remove '+name);
+                            var errorTitle = 'errorTitle',
+                                errorText = 'errorText';
+                            preloader.hide();
+                            modalDialog({
+                                title: errorTitle,
+                                body: errorText,
+                                show: true
+                            });
                         }
                     });
                 }
@@ -129,48 +172,76 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             },
 
         startItem: function(evt){
-            var that = this;
+            var that = this,
+                preloader = $('#page-preloader');
+            preloader.show(); 
             evt.stopPropagation();
             this.model.save({command: 'start'}, {
                 wait: true,
                 success: function(model, response, options){
                     that.render();
+                    preloader.hide();
                 },
-                error: function(model, response, options){
+                error: function(model, response, options, data){
+                    var errorText = 'errorText',
+                        errorTitle = 'errorTitle';
                     that.render();
+                    preloader.hide();
+                    modalDialog({
+                        title: errorTitle,
+                        body: errorText,
+                        show: true
+                    });
                 }
             });
         },
         stopItem: function(evt){
-            var that = this;
+            var that = this,
+                preloader = $('#page-preloader');
+            preloader.show();
             evt.stopPropagation();
-            //this.model.set({'command': 'stop'});
             this.model.save({command: 'stop'}, {
                 wait: true,
                 success: function(model, response, options){
                     that.render();
+                    preloader.hide();
                 },
-                error: function(model, response, options){
+                error: function(model, response, options, data){
+                    var errorText = 'errorText',
+                        errorTitle = 'errorTitle';
                     that.render();
+                    preloader.hide();
+                    modalDialog({
+                        title: errorTitle,
+                        body: errorText,
+                        show: true
+                    });
                 }
             });
-            },
+        },
 
         terminateItem: function(evt){
             evt.stopPropagation();
             var that = this,
-                name = this.model.get('name');
-                template = $('.modal'),
+                name = this.model.get('name'),
+                preloader = $('#page-preloader');
+                preloader.show();
             this.model.destroy({
                 wait: true,
                 success: function(){
                     that.remove();
+                    preloader.hide();
                 },
                error: function(e, data){
-                    var errorText = JSON.parse(data.responseText).status;
-
+                    var errorText = 'errorText',
+                        errorTitle = 'errorTitle';
                     that.render();
-                    template.modal('show').find('.modal-body').text(errorText);
+                    preloader.hide();
+                    modalDialog({
+                        title: errorTitle,
+                        body: errorText,
+                        show: true
+                    });
                 }
             });
         },
@@ -271,33 +342,52 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         startItem: function(evt){
             var item = this.getItem(),
-                template = $('.modal'),
-                that = this;
+                that = this,
+                preloader = $('#page-preloader');
+                preloader.show(); 
             evt.stopPropagation();
             //item.set({'command': 'start'});
             item.save({command: 'start'}, {
                 wait: true,
                 success: function(model, response, options){
                     that.render();
+                    preloader.hide();
                 },
                 error: function(e, data){
-                    var errorText = JSON.parse(data.responseText).status;
-
-                    template.modal('show').find('.modal-body').text(errorText);
+                    var errorText = 'errorText',
+                        errorTitle = 'errorTitle';
+                    preloader.hide();
+                    modalDialog({
+                        title: errorTitle,
+                        body: errorText,
+                        show: true
+                    });
                 }
             });
         },
 
         stopItem: function(evt){
             var item = this.getItem(),
-                that = this;
+                that = this,
+                preloader = $('#page-preloader');
+                preloader.show(); 
             evt.stopPropagation();
-
             //item.set({'command': 'stop'});
             item.save({command: 'stop'}, {
                 wait: true,
                 success: function(model, response, options){
                     that.render();
+                    preloader.hide();
+                },
+                error: function(e, data){
+                    var errorText = 'errorText',
+                        errorTitle = 'errorTitle';
+                    preloader.hide();
+                    modalDialog({
+                        title: errorTitle,
+                        body: errorText,
+                        show: true
+                    });
                 }
             });
         },
@@ -305,15 +395,24 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         terminateItem: function(evt){
             evt.stopPropagation();
             var item = this.getItem(),
-                name = item.get('name');
+                name = item.get('name'),
+                preloader = $('#page-preloader');
+                preloader.show();
             item.destroy({
                 wait: true,
                 success: function(){
                     initPodCollection.remove(item);
                     window.location.href = '/#pods';
+                    preloader.hide();
                 },
-                error: function(){
-                    console.log('Could not remove '+name);
+                error: function(e, data){
+                    var errorTitle = 'errorTitle';
+                    preloader.hide();
+                    modalDialog({
+                        title: errorTitle,
+                        body: 'Could not remove ' + name,
+                        show: true
+                    });
                 }
             });
         }

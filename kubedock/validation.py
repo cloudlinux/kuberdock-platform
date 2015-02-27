@@ -10,6 +10,8 @@ from .api import APIError
 This schemes it's just a shortcut variables for convenience and reusability
 """
 # ===================================================================
+PATH_LENGTH = 512
+
 container_image_name = r"^[a-zA-Z0-9_]+[a-zA-Z0-9/:_!.\-]*$"
 container_image_name_scheme = {
     'type': 'string',
@@ -73,17 +75,35 @@ new_pod_scheme = {
         'restart_polices': ['always', 'onFailure', 'never']
     },
     'volumes': {
-        #'type': 'list',
-        #'schema': {
-        #    'type': 'dict',
-        #    'schema': {
-        #        'name': {
-        #            'type': 'string',
-        #            'empty': False,
-        #            'maxlength': 255,
-        #        }
-        #    },
-        #}
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'name': {
+                    # TODO this name must be unique, per what?
+                    'type': 'string',
+                    'empty': False,
+                    'maxlength': 255,
+                },
+                'source': {
+                    'type': 'dict',
+                    'keyschema': {
+                        'type': 'dict',
+                        'schema': {
+                            'path': {
+                                'type': 'string',
+                                'required': True,
+                                'nullable': True,
+                                'empty': False,
+                                'maxlength': PATH_LENGTH,
+                                # TODO validate that dir exists on node
+                                # 'dirExist': True
+                            }
+                        }
+                    }
+                }
+            },
+        }
     },
     'containers': {
         'type': 'list',
@@ -148,24 +168,27 @@ new_pod_scheme = {
                     }
                 },
                 'volumeMounts': {
-                    #'type': 'list',
-                    #'schema': {
-                    #    'type': 'dict',
-                    #    'schema': {
-                    #        'mountPath': {'type': 'string'},
-                    #        'name': {'type': 'string'},
-                    #        'readOnly': {'type': 'boolean'}
-                    #    }
-                    #}
-                },
-                'workingDir': {
                     'type': 'list',
                     'schema': {
-                        'type': 'string'
+                        'type': 'dict',
+                        'schema': {
+                            'mountPath': {
+                                'type': 'string',
+                                'maxlength': PATH_LENGTH,
+                            },
+                            'name': {'type': 'string'},    # TODO depend volumes
+                            'readOnly': {'type': 'boolean'}
+                        }
                     }
                 },
+                'workingDir': {
+                    'type': 'string',
+                    'maxlength': PATH_LENGTH,
+                },
                 "terminationMessagePath": {
-                    'type': 'string', 'required': False
+                    'type': 'string',
+                    'maxlength': PATH_LENGTH,
+                    'nullable': True
                 }
             }
         }
@@ -212,8 +235,11 @@ change_pod_scheme.update({
         'required': False
     },
 })
-change_pod_scheme['containers']['schema']['schema']['workingDir'] = {
-    'type': 'string'
+change_pod_scheme['containers']['schema']['schema']['volumeMounts']\
+['schema']['schema']['path'] = {
+    'type': 'string',
+    'maxlength': PATH_LENGTH,
+    'required': False
 }
 # ===================================================================
 

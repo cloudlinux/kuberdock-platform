@@ -238,6 +238,34 @@ def add_new_node(host):
     return res
 
 
+def parse_pods_statuses(data):
+    items = data.get('items')
+    res = []
+    if not items:
+        return res
+    for item in items:
+        current_state = item.get('currentState')
+        if not current_state:
+            res.append({})
+        res.append(current_state)
+    return res
+
+
+def parse_nodes_statuses(items):
+    res = []
+    if not items:
+        return res
+    for item in items:
+        try:
+            conditions = item['status']['conditions']
+            for cond in conditions:
+                status = cond['status']
+                res.append(status)
+        except KeyError:
+            res.append('')
+    return res
+
+
 @celery.task()
 def check_events():
     redis = ConnectionPool.get_connection()
@@ -251,21 +279,25 @@ def check_events():
     nodes_list = redis.get('cached_nodes')
     if not nodes_list:
         nodes_list = get_all_nodes()
+        nodes_list = parse_nodes_statuses(nodes_list)
         redis.set('cached_nodes', json.dumps(nodes_list))
         send_event('pull_nodes_state', 'ping')
     else:
         temp = get_all_nodes()
+        temp = parse_nodes_statuses(temp)
         if temp != json.loads(nodes_list):
             redis.set('cached_nodes', json.dumps(temp))
             send_event('pull_nodes_state', 'ping')
 
     pods_list = redis.get('cached_pods')
     if not pods_list:
-        pods_list = requests.get(get_api_url('pods')).text
+        pods_list = requests.get(get_api_url('pods')).json()
+        pods_list = parse_pods_statuses(pods_list)
         redis.set('cached_pods', json.dumps(pods_list))
         send_event('pull_pods_state', 'ping')
     else:
-        temp = requests.get(get_api_url('pods')).text
+        temp = requests.get(get_api_url('pods')).json()
+        temp = parse_pods_statuses(temp)
         if temp != json.loads(pods_list):
             redis.set('cached_pods', json.dumps(temp))
             send_event('pull_pods_state', 'ping')

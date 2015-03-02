@@ -45,9 +45,10 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             var itemLayout = new App.Views.PodItemLayout(),
                 model = initPodCollection.fullCollection.get(id);
             _.each(model.get('containers'), function(i){
-                    i.parentID = this.parentID
-                }, {parentID: id});
-            var containers = new Backbone.Collection(model.get('containers'));
+                    i.parentID = this.parentID;
+                    i.kubes = this.kubes;
+                }, {parentID: id, kubes: model.get('kubes')});
+            containerCollection = new Backbone.Collection(model.get('containers'));
 
             var masthead = new App.Views.PageHeader({
                 model: new Backbone.Model({name: model.get('name')})
@@ -58,11 +59,9 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             });
 
             var infoPanel = new App.Views.InfoPanel({
-                model: new Backbone.Model({status: model.get('status'), id: model.get('id')})
-            });
-            
-            var itemView = new App.Views.PodItem({
-                collection: containers,
+                childView: App.Views.InfoPanelItem,
+                childViewContainer: "tbody",
+                collection: containerCollection
             });
             
             this.listenTo(itemLayout, 'display:pod:stats', function(data){
@@ -86,7 +85,6 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 itemLayout.masthead.show(masthead);
                 itemLayout.controls.show(controlsPanel);
                 itemLayout.info.show(infoPanel);
-                itemLayout.contents.show(itemView);
             });
             App.contents.show(itemLayout);
         },

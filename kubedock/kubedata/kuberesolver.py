@@ -83,6 +83,14 @@ class KubeResolver(object):
             except KeyError:
                 item_uuid = item.get('uid', str(uuid4()))
             try:
+                containers = item['desiredState']['manifest']['containers']
+                for c in containers:
+                    c['info'] = item['currentState']['info'].get(c['name'], {})
+                    state = c['info'].get('state', {'unknown': None})
+                    c['state_repr'] = state.keys()[0]
+                    startedAt = state.get(c['state_repr'], {}).get(
+                        'startedAt', '')
+                    c['startedAt'] = ' '.join(startedAt.split('T'))[:19]
                 items = {'id': item_uuid,
                          'name': item['labels']['name'],
                          'sid': item['id'],
@@ -90,7 +98,7 @@ class KubeResolver(object):
                          'replicas': 1,
                          'status': item['currentState']['status'].lower(),
                          'dockers': self._get_dockers(item),
-                         'containers': item['desiredState']['manifest']['containers'],
+                         'containers': containers,
                          'volumes': item['desiredState']['manifest']['volumes'],
                          'service': False,
                          'labels': item['labels']}

@@ -178,7 +178,7 @@ def delete_item(uuid):
     return jsonify({'status': 'OK'})
 
 
-@pods.route('/<string:uuid>', methods=['PUT'])
+@pods.route('/<string:uuid>', methods=['PUT', 'POST'])
 @login_required_or_basic
 @check_permission('edit', 'pods')
 def update_item(uuid):
@@ -188,6 +188,8 @@ def update_item(uuid):
     if item is None:
         raise APIError('Pod not found', 404)
     data = request.json
+    # TODO: sart|stop|terminate actions for containers
+    containers = data.get('containers')
     check_change_pod_data(data)
     if 'dbdiff' in data:
         update_dict(item.__dict__, data['dbdiff'])

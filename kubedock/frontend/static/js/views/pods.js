@@ -315,14 +315,170 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#page-header-title-template'
     });
 
-    Views.InfoPanel = Backbone.Marionette.ItemView.extend({
+    Views.InfoPanel = Backbone.Marionette.CompositeView.extend({
         template: '#page-info-panel-template',
         tagName: 'div',
         className: 'row',
 
         triggers: {
             'click .stats': 'display:pod:stats'
+        },
+
+        events: {
+            'click .start-checked': 'startItems',
+            'click .stop-checked': 'stopItems',
+            'click .terminate-checked': 'terminateItems',
+            'click .table th input[type=checkbox]': 'itemsAllHandler'
+        },
+
+        command: function(cmd){
+            var preloader = $('#page-preloader');
+                preloader.show();
+            var model;
+            var containers = [];
+            containerCollection.forEach(function(i){
+                if (i.get('checked') === true){
+                    model = initPodCollection.fullCollection.get(i.get('parentID'));
+                    containers.push(i.get('name'));
+                }
+            });
+            if(model)
+           /* model.set({'command': cmd, 'containers': containers});*/
+            model.save({'command': cmd, 'containers': containers}, {
+                success: function(){
+                    preloader.hide();
+                },
+                error: function(model, xhr){
+                    preloader.hide();
+                    modalDialog({
+                        title: 'Error',
+                        body: xhr.responseJSON.status,
+                        show: true
+                    });
+                }
+            });
+
+        },
+        startItems: function(evt){
+            this.command('start');
+        },
+
+        stopItems: function(evt){
+            this.command('stop');
+        },
+
+        terminateItems: function(evt){
+            // TODO: terminate containers
+        },
+
+        itemsAllHandler: function(evt){
+            var target = $(evt.currentTarget),
+                pods_actions_btn = $('.containers-actions-btn'),
+                inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
+
+            if( target.is(':checked') ) {
+                inputs.prop('checked',true);
+                pods_actions_btn.removeClass('disabled');
+            } else {
+                inputs.prop('checked',false);
+                pods_actions_btn.addClass('disabled');
+            }
         }
+    });
+
+    // View for showing a single container item as a row in containers list
+    Views.InfoPanelItem = Backbone.Marionette.ItemView.extend({
+        template: '#page-container-item-template',
+        tagName: 'tr',
+        className: 'container-item',
+
+        templateHelpers: function(){
+            var modelIndex = this.model.collection.indexOf(this.model);
+            return {
+                index: modelIndex + 1
+            }
+        },
+
+        ui: {
+            checkbox: '.check-item'
+        },
+
+        events: {
+            'change .check-item': 'checkItem',
+            'click .start-btn': 'startItem',
+            'click .stop-btn': 'stopItem',
+            'click .terminate-btn': 'terminateItem',
+            'click @ui.checkbox': 'inputHandler'
+        },
+
+        checkItem: function(evt){
+            this.model.set('checked', this.ui.checkbox.is(':checked'));
+        },
+        command: function(evt, cmd){
+            var that = this,
+                preloader = $('#page-preloader');
+            preloader.show();
+            evt.stopPropagation();
+            var model = initPodCollection.fullCollection.get(
+                this.model.get('parentID'));
+            model.save({command: cmd, 'containers': [this.model.get('name')]}, {
+                wait: true,
+                success: function(model, response, options){
+                    that.render();
+                    preloader.hide();
+                },
+                error: function(model, response, options, data){
+                    var errorText = 'errorText',
+                        errorTitle = 'errorTitle';
+                    that.render();
+                    preloader.hide();
+                    modalDialog({
+                        title: 'Error',
+                        body: response.responseJSON.status,
+                        show: true
+                    });
+                }
+            });
+        },
+        startItem: function(evt){
+            this.command(evt, 'start');
+        },
+        stopItem: function(evt){
+            this.command(evt, 'stop');
+        },
+
+        terminateItem: function(evt){
+            // TODO: terminate container
+        },
+        inputHandler: function(evt){
+            evt.stopPropagation();
+
+            var target = $(evt.currentTarget),
+                tbody = target.parents('.table tbody'),
+                switcher = target.parents('.table').find('thead tr:first-child input[type=checkbox]')[0],
+                pods_actions_btn = $('.containers-actions-btn'),
+                inputsLength = 0,
+                counter = 0;
+
+            tbody.find('tr td:first-child input').each(function(){
+                if (this.checked) {
+                    counter+=1;
+                    pods_actions_btn.removeClass('disabled');
+                }
+                inputsLength+=1;
+            });
+            if (counter == 0 ){
+                pods_actions_btn.addClass('disabled');
+            }
+            if (counter == inputsLength) {
+               switcher.checked = true;
+               pods_actions_btn.removeClass('disabled');
+            }
+            else {
+                switcher.checked = false;
+            }
+        }
+
     });
 
     Views.ControlsPanel = Backbone.Marionette.ItemView.extend({

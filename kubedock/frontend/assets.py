@@ -2,10 +2,8 @@ from flask.ext.assets import Environment, Bundle
 
 app_css = Bundle(
     'css/bootstrap.css',
-#   'css/bootstrap-theme.css',
     'css/bootstrap-editable.css',
     'css/jquery.jqplot.min.css',
-    'css/app.css',
     'css/main.less',
     filters="cssmin", output="css/app.min.css")
 

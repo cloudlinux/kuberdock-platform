@@ -1,51 +1,46 @@
-        {% if auth_by_id %}<a href="/users/logoutA">Log out [{{ auth_by_id }}]</a>{% endif %}
+    {% if auth_by_id %}<a href="/users/logoutA">Log out [{{ auth_by_id }}]</a>{% endif %}
 
-        <!-- navbar -->
-        <nav id="navbar" class="navbar">
-            <div id="navbar-container" class="container">
+    <div class="container">
+        <div class="navbar" role="navigation">
+            <div class="container-fluid">
                 <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
                     <a class="navbar-brand" href="/">
-                        <img alt="cloudlinux cubedock" class="logo" src="{{ url_for('static', filename='img/header-logo.png') }}">
+                        <img alt="cloudlinux cubedock" class="logo" src="{{ url_for('static', filename='img/logo.png') }}">
                     </a>
                 </div>
-                <div class="nav-controls">
-                    <div class="navbar-text">
-                        <span class="dropdown">
-                            <span class="dropdown-toggle" data-toggle="dropdown" role="button" area-expanded="false">
-                                <span class="navbar-link">Administrate</span>
-                                <span class="caret"></span>
-                            </span>
-                            <ul class="dropdown-menu" role="menu">
-                                <li>
-                                    <a href="{{ url_for('users.index') }}"><span class="navbar-link">Users</span></a>
-                                </li>
-                                <li class="divider"></li>
-                                <li>
-                                    <a href="{{ url_for('users.online_users') }}">Online users</a>
-                                </li>
-                                <li>
-                                    <a href="{{ url_for('notifications.index') }}">Notifications</a>
-                                </li>
-                                <li>
-                                    <a href="{{ url_for('menus.index') }}">Static pages + Menu</a>
-                                </li>
+                <div class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav">
+                        <li class="active"><a href="/">Main</a></li>
+                        <li><a href="{{ url_for('nodes.index') }}">Nodes</a></li>
+                        <li><a href="#">Users</a></li>
+                        <li><a href="#">Helpdesk</a></li>
+                        <li><a href="#">Settings</a></li>
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">Administration<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for('users.index') }}">Users</a></li>
+                                <li><a href="{{ url_for('users.online_users') }}">Online users</a></li>
+                                <li><a href="{{ url_for('notifications.index') }}">Notifications</a></li>
+                                <li><a href="{{ url_for('menus.index') }}">Static pages + Menu</a></li>
                             </ul>
-                        </span>
-                    </div>
-                    <div class="navbar-text">
-                        <a href="{{ url_for('nodes.index') }}"><span class="navbar-link">Manage Nodes</span></a>
-                    </div>
-                    <div class="navbar-text navbar-right">
-                        <span class="dropdown">
-                            <span class="dropdown-toggle btn green" data-toggle="dropdown" role="button" area-expanded="false">
-                                <span class="navbar-link">{{ current_user.username }}</span>
-                                <span class="caret"></span>
-                            </span>
-                            <ul class="dropdown-menu" role="menu">
+                        </li>
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ current_user.username }}<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                             </ul>
-                        </span>
-                    </div>
-                </div>
-            </div><!-- navbar-container -->
-        </nav><!-- end of navbar -->
+                        </li>
+                    </ul>
+                </div><!--/.nav-collapse -->
+            </div><!--/.container-fluid -->
+        </div>
+    </div>
+    <!-- navbar -->

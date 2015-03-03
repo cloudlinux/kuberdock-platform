@@ -816,3 +816,93 @@ html{
 		}
 	}
 }
+/* new design */ 
+body{
+	@import "fonts.less";
+	font-family: "ProximaNovaReg";
+
+	/* header */
+	.navbar{
+		border: 0;
+		margin-bottom: 0;
+		.container-fluid,{
+			padding: 10px 0 17px 0;
+		}
+		.nav .open > a, .nav .open > a:hover, .nav .open > a:focus{
+			background-color: transparent;
+			color: #3d464d !important;
+		}
+		.dropdown-menu li a{
+			color: #3d464d;
+			text-decoration: none;
+			font-size: 16px;
+			font-family: "ProximaNovaReg";
+			&:hover{
+				color: #3197ee;
+				background-color: transparent;
+			}
+		}
+		.dropdown{
+			> a{
+				.caret{
+					margin-left: 8px;
+				}
+			}
+		}
+		.dropdown-menu{
+			border-color: transparent;
+		}
+		.navbar-header{
+			button{
+				&.navbar-toggle{
+					.icon-bar{
+						background-color: #3197ee;
+					}
+					&:hover{
+						.icon-bar{
+							background-color: #3d464d;
+						}
+					}
+				}
+			}
+			.navbar-brand{
+				margin: 0px 50px 0 15px;
+				padding: 0;
+				img{
+					height: 48px;
+				}
+			}
+		}
+		.navbar-collapse{
+				margin: 0;
+			.nav.navbar-nav{
+				padding: 15px 0;
+				> li{
+					> a {
+						padding: 0;
+						margin: 0 50px 0 0;
+						color: #3197ee;
+						text-decoration: none;
+						font-size: 16px;
+						font-family: "ProximaNovaReg";
+						&:hover{
+							color: #3d464d;
+							background-color: transparent;
+						}
+					}
+					&:last-child{
+						> a{
+							margin-right: 0;
+						}
+					}
+				}
+				
+			}
+		}
+	}
+	/* end header */
+
+	/* bredkramp */
+
+	/* end bredkramp */
+}

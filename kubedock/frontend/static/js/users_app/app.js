@@ -82,7 +82,21 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             deleteUser_btn: function(){
-                this.model.destroy({wait: true});
+                var that = this;
+                utils.modalDialog({
+                    title: 'Delete user',
+                    body: "Do you really want to delete user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            that.model.destroy({wait: true});
+                        },
+                        buttonCancel: true
+                    }
+                })
+
             },
 
             editUser_btn: function(){
@@ -90,18 +104,29 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             authIt_btn: function(){
-                if(!confirm('Are you sure want to authorize by this user?'))
-                    return false;
-                $.ajax({
-                    url: '/api/users/loginA',
-                    type: 'POST',
-                    data: {user_id: this.model.id},
-                    dataType: 'JSON',
-                    success: function(rs){
-                        if(rs.status == 'OK')
-                            window.location.href = '/';
+                var that = this;
+                utils.modalDialog({
+                    title: 'Authorize by user',
+                    body: "Are you sure want to authorize by user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            $.ajax({
+                                url: '/api/users/loginA',
+                                type: 'POST',
+                                data: {user_id: that.model.id},
+                                dataType: 'JSON',
+                                success: function(rs){
+                                    if(rs.status == 'OK')
+                                        window.location.href = '/';
+                                }
+                            });
+                        },
+                        buttonCancel: true
                     }
-               });
+                });
             }
 
         });
@@ -169,7 +194,7 @@ define(['marionette', 'paginator', 'utils'],
                 // temp validation
                 if (!this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val())) {
                     // set error messages to password fields
-                    alert("empty password or don't match");
+                    this.ui.password.notify("empty password or don't match");
                     return false
                 }
 
@@ -183,10 +208,7 @@ define(['marionette', 'paginator', 'utils'],
                     wait: true,
                     success: function(){
                         App.router.navigate('/', {trigger: true})
-                    }//,
-//                    error: function(){
-//                        alert('error while saving! Maybe some fields required.')
-//                    }
+                    }
                 });
             }
 
@@ -212,27 +234,26 @@ define(['marionette', 'paginator', 'utils'],
                 if(this.ui.password.val()){
                     if (!this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val())) {
                         // set error messages to password fields
-                        alert("empty password or don't match");
-                        return false
+                        this.ui.password.notify("empty password or don't match");
+                        return false;
                     }
                     data['password'] = this.ui.password.val();
                 }
                 if(!data.email){
-                    alert('E-mail is required');
+                    this.ui.email.notify('E-mail is required');
                     this.ui.email.focus();
                     return false;
                 }
                 if(!data.username){
-                    alert('Username is required');
+                    this.ui.username.notify('Username is required');
                     this.ui.username.focus();
                     return false;
                 }
                 if(!data.rolename){
-                    alert('Username is required');
+                    this.ui.role_select.notify('Username is required');
                     this.ui.role_select.focus();
                     return false;
                 }
-
 
                 this.model.set(data);
 
@@ -240,10 +261,7 @@ define(['marionette', 'paginator', 'utils'],
                     wait: true,
                     success: function(){
                         App.router.navigate('/', {trigger: true})
-                    }//,
-//                    error: function(){
-//                        alert('error while updating! Maybe some fields required.')
-//                    }
+                    }
                 });
             }
 

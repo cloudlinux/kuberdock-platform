@@ -43,6 +43,36 @@ define(function () {
         parse: this.unwrapper
     });
 
+    this.modalDialog = function(options){
+        var modal = $('.modal');
+        if(options.title) modal.find('.modal-title').html(options.title);
+        if(options.body) modal.find('.modal-body').html(options.body);
+        if(options.large) modal.addClass('bs-example-modal-lg');
+        if(options.small) modal.addClass('bs-example-modal-sm');
+        if(options.show) modal.modal('show');
+        if(options.footer){
+            modal.find('.modal-footer').empty();
+            if(options.footer.buttonOk){
+                modal.find('.modal-footer').prepend(
+                    $('<button type="button" class="btn btn-success" ' +
+                          'data-dismiss="modal">').unbind('click')
+                        .bind('click', options.footer.buttonOk)
+                        .text('OK')
+                )
+            }
+            if(options.footer.buttonCancel){
+                if(options.footer.buttonCancel === true){
+                    modal.find('.modal-footer').append(
+                        $('<button type="button" class="btn btn-default" ' +
+                              'data-dismiss="modal">Cancel</button>')
+                    )
+                }
+            }
+        }
+        console.log(modal)
+        return modal;
+    };
+
 
     return this;
 });

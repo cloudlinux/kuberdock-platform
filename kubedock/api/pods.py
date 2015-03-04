@@ -436,6 +436,8 @@ def make_pod_config(data, sid, separate=True):
         outer['kind'] = 'Pod'
         outer['apiVersion'] = 'v1beta1'
         outer['id'] = sid
+        if 'node' in data and data['node'] is not None:
+            outer['nodeSelector'] = {'hostname': data['node']}
     outer['desiredState'] = {'manifest': inner}
     outer['labels'] = {'name': data['name']}
     return outer

@@ -576,20 +576,39 @@
                         </tr>
                         <% } %>
                     </tbody>
-                    <% if (volumes.length !== 0){ %>
-                    <table class="table">
-                        <thead><tr><th>Volume</th><th>Path</th></tr></thead>
-                        <tbody>
-                            <% _.each(volumes, function(vol){ %>
-                            <tr>
-                                <td><%- vol['name'] %></td>
-                                <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
-                            </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                    <% } %>
                 </table>
+                <% if (nodes.length !== 0){ %>
+                <table class="table">
+                    <thead><tr><th></th><th>Node to run on</th></tr></thead>
+                    <tbody>
+                        <% _.each(nodes, function(n){ %>
+                        <tr>
+                            <td>
+                            <% if (node !== null && node === n.hostname){ %>
+                            <span class="glyphicon glyphicon-check node node-selected"></span>
+                            <% } else { %>
+                            <span class="glyphicon glyphicon-unchecked node node-unselected"></span>
+                            <% } %>
+                            </td>
+                            <td><%- n.hostname %></td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+                <% } %>
+                <% if (volumes.length !== 0){ %>
+                <table class="table">
+                    <thead><tr><th>Volume</th><th>Path</th></tr></thead>
+                    <tbody>
+                        <% _.each(volumes, function(vol){ %>
+                        <tr>
+                            <td><%- vol['name'] %></td>
+                            <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+                <% } %>
             </div>
             <div class="col-md-5">
                 <table class="table">

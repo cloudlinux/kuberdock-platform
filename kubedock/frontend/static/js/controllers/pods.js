@@ -201,7 +201,15 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 _.each(data.attributes, function(value, key, obj){
                     this.container[key] = value;
                 }, {container: container});
-                wizardLayout.steps.show(new App.Views.WizardCompleteSubView({model: model}));
+                var rqst = $.ajax({
+                    type: 'GET',
+                    url: '/api/nodes'
+                });
+                rqst.done(function(data){
+                    if (data.hasOwnProperty('data')) { data = data['data']; }
+                    wizardLayout.steps.show(new App.Views.WizardCompleteSubView({nodes: data, model: model}));
+                });
+                //wizardLayout.steps.show(new App.Views.WizardCompleteSubView({nodes: nodes, model: model}));
             });
             this.listenTo(wizardLayout, 'image:selected', function(image){
                 var that = this,

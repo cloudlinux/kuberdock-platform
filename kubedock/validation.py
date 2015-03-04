@@ -69,6 +69,7 @@ new_pod_scheme = {
     'replicas': {'type': 'integer', 'min': 0},
     'kubes': {'type': 'integer', 'min': 0},
     'cluster': {'type': 'boolean'},
+    'node': {'type': 'string', 'nullable': True},
     'save_only': {'type': 'boolean'},
     'restartPolicy': {
         'type': 'dict',

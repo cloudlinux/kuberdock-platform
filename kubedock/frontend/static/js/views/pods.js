@@ -1102,7 +1102,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#wizard-set-container-other-template',
         tagName: 'div',
         className: 'col-md-8 col-md-offset-2',
-
+        
         ui: {
             ieditable: '.ieditable'
         },
@@ -1121,7 +1121,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs': 'step:envconf',
             'click .go-to-resources': 'step:resconf',
         },
-
+        
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({
@@ -1144,6 +1144,18 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'div',
         className: 'row',
 
+        initialize: function(options){
+            this.model = options.model;
+            this.nodes = options.nodes;
+            
+        },
+
+        templateHelpers: function(){
+            return {
+                nodes: this.nodes
+            };
+        },
+        
         ui: {
             ieditable: '.ieditable'
         },
@@ -1151,6 +1163,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click .delete-item': 'deleteItem',
             'click .cluster': 'toggleCluster',
+            'click .node': 'toggleNode',
             'change .replicas': 'changeReplicas',
             'change .kubes': 'changeKubes'
         },
@@ -1189,6 +1202,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
         },
 
+        toggleNode: function(evt){
+            evt.stopPropagation();
+            var tgt = $(evt.target),
+                node = tgt.closest('td').next('td').text().trim();
+            this.model.set('node', node);
+            this.render();
+        },
+        
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));

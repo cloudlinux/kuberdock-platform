@@ -21,7 +21,8 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             restartPolicy: {'always': {}},
             service: false,
             portalIP: null,
-            port: null
+            port: null,
+            node: null
         },
         
         parse: unwrapper,

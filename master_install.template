@@ -30,11 +30,43 @@ EOF
 echo "Starting flannel..."
 systemctl restart flanneld
 systemctl enable flanneld
-source /run/flannel/subnet.env
+
+
+
 echo "Adding bridge to flannel network..."
+
+source /run/flannel/subnet.env
+
 # with host-gw backend we don't have to change MTU (bridge.mtu)
-nmcli -n c delete kuberdock-flannel-br0 &> /dev/null
-nmcli -n connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
+# If we have working NetworkManager we can just
+#nmcli -n c delete kuberdock-flannel-br0 &> /dev/null
+#nmcli -n connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
+
+yum -y install bridge-utils
+
+cat > /etc/sysconfig/network-scripts/ifcfg-kuberdock-flannel-br0 << EOF
+DEVICE=br0
+STP=yes
+BRIDGING_OPTS=priority=32768
+TYPE=Bridge
+BOOTPROTO=none
+IPADDR=$(echo $FLANNEL_SUBNET | cut -f 1 -d /)
+PREFIX=$(echo $FLANNEL_SUBNET | cut -f 2 -d /)
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=no
+IPV6INIT=yes
+IPV6_AUTOCONF=yes
+IPV6_DEFROUTE=yes
+IPV6_PEERDNS=yes
+IPV6_PEERROUTES=yes
+IPV6_FAILURE_FATAL=no
+NAME=kuberdock-flannel-br0
+ONBOOT=yes
+EOF
+
+echo "Starting bridge..."
+ifdown br0
+ifup br0
 # ======================================================================
 
 echo "Successfully done."

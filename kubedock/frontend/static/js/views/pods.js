@@ -133,7 +133,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    // View for showing a single pod item as a row in pods list
+    // View for showing a single pod item as a container in pods list
     Views.PodListItem = Backbone.Marionette.ItemView.extend({
         template: '#pod-list-item-template',
         tagName: 'tr',
@@ -278,7 +278,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.PodCollection = Backbone.Marionette.CompositeView.extend({
         childView: Views.PodListItem,
         tagName: 'div',
-        className: 'row',
+        className: 'container',
         childViewContainer: 'tbody',
         template: '#pod-list-template',
 
@@ -318,7 +318,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.InfoPanel = Backbone.Marionette.CompositeView.extend({
         template: '#page-info-panel-template',
         tagName: 'div',
-        className: 'row',
+        className: 'container',
 
         triggers: {
             'click .stats': 'display:pod:stats'
@@ -386,7 +386,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    // View for showing a single container item as a row in containers list
+    // View for showing a single container item as a container in containers list
     Views.InfoPanelItem = Backbone.Marionette.ItemView.extend({
         template: '#page-container-item-template',
         tagName: 'tr',
@@ -1142,7 +1142,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-complete-template',
         tagName: 'div',
-        className: 'row',
+        className: 'container',
 
         initialize: function(options){
             this.model = options.model;

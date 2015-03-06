@@ -66,31 +66,37 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
         }
     });
+
+
+
+
+
     //=============================================================================================
-
-
-
-
-
-
-
-
-
-
 
     Views.NodeItem = Backbone.Marionette.ItemView.extend({
         template: '#node-item-template',
         tagName: 'tr',
-
+        className: function(){
+            if (this.model.get('checked')) return 'checked';
+        },
+        
         events: {
-            'click button#deleteNode': 'deleteNode',
             'click button#detailedNode' : 'detailedNode',
             'click button#upgradeNode' : 'detailedNode',
-            'click button#detailedTroublesTab' : 'detailedTroublesTab'
+            'click button#detailedTroublesTab' : 'detailedTroublesTab',
+            'click' : 'checkNode'
         },
 
-        deleteNode: function(){
-            this.model.destroy();   // no wait, because removed in any case
+        checkNode: function(){
+            var models = this.model.collection.models;
+            this.model.get('checked') ? this.model.set('checked',false) : this.model.set('checked',true);
+            
+            this.$el.toggleClass('checked').siblings().removeClass('checked');
+
+            for (var i = 0; i < models.length; i++) {
+                if ( this.model.get('id') == models[i].get('id') ) continue;
+                models[i].unset('checked');
+            };
         },
 
         detailedNode: function(){
@@ -100,7 +106,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         detailedTroublesTab: function(){
             App.router.navigate('/detailed/' + this.model.id + '/troubles/', {trigger: true});
         }
-
     });
 
     Views.NodesListView = Backbone.Marionette.CompositeView.extend({
@@ -109,38 +114,60 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         childViewContainer: "tbody",
 
         events: {
-            'click button#add_node' : 'addNode'
+            'click button#add_node' : 'addNode',
+            'click tbody tr' : 'activeMenu',
+            'click @ui.button' : 'removeSelectedNode'
+        },
+
+        ui: {
+            'control': 'div.active-item-control',
+            'thead' : 'thead',
+            'button': 'button#deleteNode'
         },
 
         collectionEvents: {
-            "remove": function () {this.render()}
+            "remove": function () {
+                this.render()
+            }
+        },
+
+        activeMenu: function(){
+            var models = this.collection.models;
+
+            for (var i = 0; i < models.length; i++) {
+
+                if ( models[i].get('checked') ) {
+                    this.ui.control.show();
+                    this.ui.thead.addClass('min-opacity');
+                    break;
+                } else {
+                    this.ui.control.hide();
+                    this.ui.thead.removeClass('min-opacity');
+                }
+            };
         },
 
         templateHelpers: function(){
-          return {
-              totalNodes: this.collection.fullCollection.length
-          }
+            return {
+                totalNodes: this.collection.fullCollection.length
+            }
         },
 
         addNode: function(){
             App.router.navigate('/add/', {trigger: true});
+        },
+        removeSelectedNode: function(e){
+            var models = this.collection.models;
+           
+            for (var i = 0; i < models.length; i++) {
+                if (models[i].get('checked')){
+                    models[i].destroy();
+                    break;
+                }
+            }    
+            e.stopPropagation();      
         }
     });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     // =========== Add Node wizard ====================================
@@ -264,26 +291,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // =========== Detailed view ========================================
     Views.NodeDetailedLayout = Backbone.Marionette.LayoutView.extend({
         template: '#node-detailed-layout-template',
@@ -378,19 +385,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#node-troubles-tab-template'
     });
     // =========== //Detailed view ======================================
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

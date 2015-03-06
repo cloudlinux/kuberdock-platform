@@ -109,6 +109,11 @@
     </script>
 
     <script type="text/template" id="node-item-template">
+        <td>
+        <button id="detailedNode" class="btn btn-xs btn-link" title="Settings">
+              Some node name     
+        </button>
+        </td>
         <td><%- ip %></td>
         <td><%- hostname ? hostname : 'Not specified' %></td>
         <% var st_type = 'text-danger';
@@ -117,43 +122,60 @@
                 case 'removing...': st_type = 'text-info'; break;
            }
         %>
-        <td class="<%- st_type %>"><%- status %>
+        <td>50/100</td>
+        <td>51%</td>
+        <td>20 (100)</td>
+        <td class="<%- st_type %>">
             <% if (st_type === 'text-danger') { %>
             <button id="detailedTroublesTab" class="btn btn-xs btn-link dropdown-toggle" title="See details">
-                <i class="<%- st_type %> glyphicon glyphicon-question-sign"></i>
+                <%- status %>
             </button>
-            <% } %>
-            <% if (annotations.sw_version !== 'v1.4') { %>
-            <button id="upgradeNode" class="btn btn-xs btn-link dropdown-toggle" title="Upgrade Needed">
-                <i class="text-info glyphicon glyphicon-cloud-download"></i>
-                <%- annotations.sw_version %>
-            </button>
-            <% } %>
-            <div class="pull-right">
-                <button id="detailedNode" class="btn btn-xs btn-link" title="Settings">
-                    <i class="glyphicon glyphicon-cog"></i>
-                </button>
-                <button id="deleteNode" class="btn btn-xs btn-link" title="Remove">
-                    <i class="text-danger glyphicon glyphicon-remove"></i>
-                </button>
-            </div>
+            <% }  else { %>
+                <%- status %>
+            <% } %> 
         </td>
     </script>
 
     <script type="text/template" id="nodes-list-template">
-        <button id="add_node" class="btn btn-success">Add Node</button><hr>
-        <div><strong>You have <%- totalNodes %> nodes</strong></div><br>
-        <table class="table table-bordered btn-group-justified"><!-- TODO I know this is wrong -->
-            <thead>
-                <tr>
-                    <th>Node IP</th>
-                    <th>Hostname</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <hr>
+        <div class="breadcrumbs-wrapper">
+            <div class="container breadcrumbs" id="breadcrumbs">
+                <ul class="breadcrumb">
+                    <li class="active">
+                        Nodes
+                    </li>
+                </ul><!-- /.breadcrumb -->
+                <div class="control-group">
+                    <button id="add_node">Add Node</button>
+                    <div class="nav-search" id="nav-search">
+                        <form class="form-search">
+                            <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
+                            <i class="nav-search-icon"></i>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="active-item-control">
+                <span>Some nod name</span>
+                <button id="deleteNode" class="btn btn-xs btn-link" title="Remove">Delete</button>
+            </div>
+        <!--<div><strong>You have <%- totalNodes %> nodes</strong></div -->
+            <table id="nodelist-table" class="table tablesorter tablesorter-default">
+                <thead>
+                    <tr class="tablesorter-headerRow">
+                        <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Node<b class="caret"></b></div></th>
+                        <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">IP<b class="caret"></b></div></th>
+                        <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube type<b class="caret"></b></div></th>
+                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube capacity<b class="caret"></b><br>(used/max)</div></th>
+                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Average<b class="caret"></b><br>CPU usage</div></th>
+                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Active pods<b class="caret"></b><br>(containers)</div></th>
+                        <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table> 
+        </div>
     </script>
 
     <script type="text/template" id="nodes-layout-template">

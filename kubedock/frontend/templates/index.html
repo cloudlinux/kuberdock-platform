@@ -21,11 +21,12 @@
 
         {% include "inc/navbar.html" %}
 
-        <div id="page-preloader"></div>
-
         <!-- contents container -->
-        <div id="contents" class="container"></div>
+        <div id="contents"></div>
         {% block script_templates %}
+
+        <!-- ################################## old templates ########################################## -->
+
         
         <!-- Page Header template -->
         <script type="text/template" id="page-header-title-template"><%- name %></script>
@@ -114,7 +115,7 @@
         <script type="text/template" id="layout-pod-list-template">
 
             <!-- Page header -->
-            <div class="row">
+            <div class="container">
                 <div class="col-md-6">
                     <h1 id="masthead-title" class="text-left"></h1>
                 </div>
@@ -127,7 +128,7 @@
             </div><!-- end of page header -->
 
             <!-- page actions -->
-            <div class="row">
+            <div class="container">
                 <div class="col-md-1 col-md-offset-0 left-action">
                     <button type="button" class="btn invert login-btn dropdown-toggle green disabled pods-actions-btn" data-toggle="dropdown" aria-expanded="false">
                         Actions <span class="caret"></span>
@@ -223,7 +224,7 @@
         <script type="text/template" id="layout-pod-item-template">
 
             <!-- Page header -->
-            <div class="row">
+            <div class="container">
                 <div class="col-md-6">
                     <h1 id="masthead-title" class="text-left"></h1>
                 </div>
@@ -236,10 +237,10 @@
                 </div>
             </div><!-- end of page header -->
 
-            <div class="row">
+            <div class="container">
                 <div id="item-info" class="col-md-12"></div>
             </div>
-            <div class="row">
+            <div class="container">
                 <div id="layout-aside" class="col-md-4"></div>
                 <div id="layout-contents" class="col-md-8"></div>
             </div>
@@ -296,9 +297,9 @@
 
         <!-- A Pod creation wizard layout template -->
         <script type="text/template" id="layout-wizard-template">
-            <div id="header-steps" class="row"></div>
+            <div id="header-steps" class="container"></div>
             <div id="steps" class="row"></div>
-            <div id="footer-steps" class="row"></div>
+            <div id="footer-steps" class="container"></div>
         </script>
 
         <!-- An image collection item template -->
@@ -665,8 +666,8 @@
                 administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
         </script>
         {% endblock %}
-
-        {% include "inc/footer.html" %}
+        
+        <div id="page-preloader"></div>
 
         {% assets "vendor_js" -%}
           <script src="{{ ASSET_URL }}"></script>

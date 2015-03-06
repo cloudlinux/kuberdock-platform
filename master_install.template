@@ -28,13 +28,13 @@ FLANNEL_OPTIONS="--iface={{ inet_iface }}"
 EOF
 
 echo "Starting flannel..."
-systemctl start flanneld
+systemctl restart flanneld
 systemctl enable flanneld
 source /run/flannel/subnet.env
 echo "Adding bridge to flannel network..."
 # with host-gw backend we don't have to change MTU (bridge.mtu)
-nmcli c delete kuberdock-flannel-br0 &> /dev/null
-nmcli connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
+nmcli -n c delete kuberdock-flannel-br0 &> /dev/null
+nmcli -n connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
 # ======================================================================
 
 echo "Successfully done."

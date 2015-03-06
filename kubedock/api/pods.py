@@ -447,7 +447,7 @@ def make_pod_config(data, sid, separate=True):
     except (KeyError, IndexError):
         pass
     else:
-        outer['labels'] = {'kuberdock-public-ip': public_ip}
+        outer['labels']['kuberdock-public-ip'] = public_ip
     return outer
 
 

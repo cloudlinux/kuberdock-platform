@@ -109,8 +109,8 @@ EOF
 
 # 7. enable services
 echo "Starting services..."
-systemctl enable cadvisor; systemctl start cadvisor
-systemctl enable kube-proxy; systemctl start kube-proxy
-systemctl enable kubelet; systemctl start kubelet
-systemctl enable docker; systemctl start docker
 systemctl enable flanneld; systemctl start flanneld
+systemctl enable docker; systemctl start docker
+systemctl enable kubelet; systemctl start kubelet
+systemctl enable kube-proxy; systemctl start kube-proxy
+systemctl enable cadvisor; systemctl start cadvisor

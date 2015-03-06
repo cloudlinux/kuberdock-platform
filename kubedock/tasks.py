@@ -201,12 +201,6 @@ def add_new_node(host):
     sftp = ssh.open_sftp()
     sftp.put('kub_install.sh', '/kub_install.sh')
     sftp.close()
-    # change MASTER IP
-    i, o, e = ssh.exec_command(
-        "sed 's/192.168.56.100/{0}/' "
-        "< /kub_install.sh > /kub_install.sh.tmp && "
-        "mv /kub_install.sh.tmp /kub_install.sh".format(MASTER_IP))
-    # execute kub_install.sh
     i, o, e = ssh.exec_command('bash /kub_install.sh')
     s_time = time.time()
     while not o.channel.exit_status_ready():
@@ -230,7 +224,12 @@ def add_new_node(host):
         res = json.dumps({'status': 'error', 'data': message})
     else:
         res = requests.post(get_api_url('nodes'),
-                            json={'id': host, 'apiVersion': 'v1beta1'}).json()
+                            json={'id': host,
+                                  'apiVersion': 'v1beta1',
+                                  'labels': {
+                                      'kuberdock-node-hostname': host
+                                  }
+                            }).json()
         send_event('install_logs', 'Adding Node completed successful.')
         send_event('install_logs', '===================================')
     ssh.exec_command('rm /kub_install.sh')

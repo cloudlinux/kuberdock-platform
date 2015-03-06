@@ -6,9 +6,9 @@ echo "Setting up firewall rules..."
 systemctl stop firewalld
 systemctl disable firewalld
 
-# TODO somehow remove and automate this(read from some global cluster config, because this script is running on Node machine )
-MASTER_IP="192.168.56.100"
-echo "Using MASTER_IP=$MASTER_IP"
+echo "Using MASTER_IP={{ master_ip }}"
+
+
 
 # 1. create yum repo file
 
@@ -21,13 +21,14 @@ gpgcheck=1
 gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
 
+
+
 # 2. install components
 echo "Installing kubernetes..."
 yum -y install kubernetes
-# Direct links for some cases...
-# yum -y install http://el6.cloudlinux.com/kubernetes-0.9.1-1.el7.centos.x86_64.rpm     # unstable speed
-# yum -y install http://repo.cloudlinux.com/cloudlinux/sources/kubernetes-0.9.1-1.el7.centos.x86_64.rpm
-# yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.10.0-1.el7.centos.x86_64.rpm
+yum -y install flannel
+
+
 
 # 3. configure Node config
 echo "Configuring services..."
@@ -45,7 +46,7 @@ cat > /etc/kubernetes/config << EOF
 #   kubernetes-proxy.service
 
 # Comma seperated list of nodes in the etcd cluster
-KUBE_ETCD_SERVERS="--etcd_servers=http://$MASTER_IP:4001"
+KUBE_ETCD_SERVERS="--etcd_servers=http://{{ master_ip }}:4001"
 
 # logging to stderr means we get it in the systemd journal
 KUBE_LOGTOSTDERR="--logtostderr=true"
@@ -56,6 +57,8 @@ KUBE_LOG_LEVEL="--v=0"
 # Should this cluster be allowed to run privleged docker containers
 KUBE_ALLOW_PRIV="--allow_privileged=false"
 EOF
+
+
 
 # 4. configure Node kubelet
 
@@ -76,9 +79,38 @@ KUBELET_HOSTNAME=""
 KUBELET_ARGS=""
 EOF
 
-# 5. enable services
+
+
+# 5. configure Flannel
+
+cat > /etc/sysconfig/flanneld << EOF
+# Flanneld configuration options
+
+# etcd url location.  Point this to the server where etcd runs
+FLANNEL_ETCD="http://{{ master_ip }}:4001"
+
+# etcd config key.  This is the configuration key that flannel queries
+# For address range assignment
+FLANNEL_ETCD_KEY="/kuberdock/network/"
+
+# Any additional options that you want to pass
+FLANNEL_OPTIONS="--iface={{ inet_iface }}"
+EOF
+
+
+
+# 6. Setting kernel parameters
+sysctl -w net.ipv4.ip_nonlocal_bind=1
+cat > /etc/sysctl.d/75-kuberdock.conf << EOF
+net.ipv4.ip_nonlocal_bind = 1
+EOF
+
+
+
+# 7. enable services
 echo "Starting services..."
 systemctl enable cadvisor; systemctl start cadvisor
 systemctl enable kube-proxy; systemctl start kube-proxy
 systemctl enable kubelet; systemctl start kubelet
 systemctl enable docker; systemctl start docker
+systemctl enable flanneld; systemctl start flanneld

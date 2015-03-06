@@ -437,9 +437,17 @@ def make_pod_config(data, sid, separate=True):
         outer['apiVersion'] = 'v1beta1'
         outer['id'] = sid
         if 'node' in data and data['node'] is not None:
-            outer['nodeSelector'] = {'hostname': data['node']}
+            outer['nodeSelector'] = {'kuberdock-node-hostname': data['node']}
     outer['desiredState'] = {'manifest': inner}
     outer['labels'] = {'name': data['name']}
+    try:
+        # TODO delete when we have normal UI to do this
+        d = data['containers'][0]['env'][0]
+        public_ip = d['value'] if d['name'] == 'ip' else ''
+    except (KeyError, IndexError):
+        pass
+    else:
+        outer['labels'] = {'kuberdock-public-ip': public_ip}
     return outer
 
 

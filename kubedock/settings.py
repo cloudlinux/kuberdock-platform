@@ -18,7 +18,7 @@ else:
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
-MASTER_IP = '192.168.56.100'
+MASTER_IP = '148.251.158.55'
 
 KUBE_API_VERSION = 'v1beta1'
 KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
@@ -47,6 +47,8 @@ CELERYBEAT_SCHEDULE = {
 
 ONLINE_LAST_MINUTES = 5
 
+# TODO We need to allow change it during cluster setup
+NODE_INET_IFACE = 'enp0s3'
 
 # Import local settings
 try:

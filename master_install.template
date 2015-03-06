@@ -1,0 +1,40 @@
+#!/bin/bash
+# install all needed software to Master
+
+# Flannel
+echo "Setuping flannel config to etcd..."
+etcdctl mk /kuberdock/network/config '{"Network":"10.240.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
+etcdctl get /kuberdock/network/config
+
+# if we want master in this network  too:
+# ======================================================================
+echo "Installing flannel..."
+yum -y install flannel
+
+# configure Flannel
+
+cat > /etc/sysconfig/flanneld << EOF
+# Flanneld configuration options
+
+# etcd url location.  Point this to the server where etcd runs
+FLANNEL_ETCD="http://{{ master_ip }}:4001"
+
+# etcd config key.  This is the configuration key that flannel queries
+# For address range assignment
+FLANNEL_ETCD_KEY="/kuberdock/network/"
+
+# Any additional options that you want to pass
+FLANNEL_OPTIONS="--iface={{ inet_iface }}"
+EOF
+
+echo "Starting flannel..."
+systemctl start flanneld
+systemctl enable flanneld
+source /run/flannel/subnet.env
+echo "Adding bridge to flannel network..."
+# with host-gw backend we don't have to change MTU (bridge.mtu)
+nmcli c delete kuberdock-flannel-br0 &> /dev/null
+nmcli connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
+# ======================================================================
+
+echo "Successfully done."

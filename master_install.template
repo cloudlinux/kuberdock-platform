@@ -3,7 +3,7 @@
 
 # Flannel
 echo "Setuping flannel config to etcd..."
-etcdctl mk /kuberdock/network/config '{"Network":"10.240.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
+etcdctl mk /kuberdock/network/config '{"Network":"10.240.0.0/16", "SubnetLen": 24, "Backend": {"Type": "udp"}}' 2> /dev/null
 etcdctl get /kuberdock/network/config
 
 # if we want master in this network  too:
@@ -52,6 +52,7 @@ TYPE=Bridge
 BOOTPROTO=none
 IPADDR=$(echo $FLANNEL_SUBNET | cut -f 1 -d /)
 PREFIX=$(echo $FLANNEL_SUBNET | cut -f 2 -d /)
+MTU=$FLANNEL_MTU
 DEFROUTE=yes
 IPV4_FAILURE_FATAL=no
 IPV6INIT=yes

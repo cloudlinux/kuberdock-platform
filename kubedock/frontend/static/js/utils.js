@@ -2,28 +2,46 @@ define(function () {
 
     // jQuery ajax setup
     var that = this;
+    var _ajaxStatusCodes = {
+        statusCode: {
+            400: function(xhr){
+                var err = xhr.statusText;
+                if(xhr.responseJSON && xhr.responseJSON.status)
+                    err = xhr.responseJSON.status;
+                $.notify(err, {
+                    autoHideDelay: 5000,
+                    globalPosition: 'top center',
+                    className: 'danger'
+                });
+            },
+            401: function (xhr) {
+                // Redirect to the login page.
+//                    Backbone.history.navigate("login", true);
+            },
+            403: function (xhr) {
+                // 403 -- Access denied
+//                    Backbone.history.navigate("login", true);
+            },
+            404: function(xhr){
+                $('body').html(
+                    '404 Page not found'
+                );
+            },
+            500: function(xhr){
+                $.notify(xhr.statusText, {
+                    autoHideDelay: 5000,
+                    globalPosition: 'top center',
+                    className: 'danger'
+                });
+            }
+        }
+    };
+
+    $.ajaxSetup.call($, _ajaxStatusCodes);
+
     Backbone.ajax = function() {
         // Invoke $.ajaxSetup in the context of Backbone.$
-        Backbone.$.ajaxSetup.call(Backbone.$, {
-            statusCode: {
-                400: function(xhr){
-                    if(xhr.responseJSON.status) alert(xhr.responseJSON.status);
-                },
-                401: function (xhr) {
-                    // Redirect to the login page.
-//                    Backbone.history.navigate("login", true);
-                },
-                403: function (xhr) {
-                    // 403 -- Access denied
-//                    Backbone.history.navigate("login", true);
-                },
-                404: function(xhr){
-                    $('body').html(
-                        '404 Page not found'
-                    );
-                }
-            }
-        });
+        Backbone.$.ajaxSetup.call(Backbone.$, _ajaxStatusCodes);
         return Backbone.$.ajax.apply(Backbone.$, arguments);
     };
 
@@ -73,6 +91,15 @@ define(function () {
         return modal;
     };
 
+    this.dateYYYYMMDD = function(date, sep){
+        if(!date) date = new Date();
+        if(!sep) sep = '-';
+        var y = date.getFullYear(),
+            m = date.getMonth() + 1,
+            d = date.getDate(),
+            D = [y, m > 9 ? m : '0' + m, d > 9 ? d : '0' + d];
+        return D.join(sep);
+    };
 
     return this;
 });

@@ -1,11 +1,69 @@
 {% extends "layout.html" %}
 
+{% block head_extras %}
+<link rel="stylesheet" href="/static/css/jquery-ui.css">
+{% endblock %}
+
 {% block body %}
+    <style>
+    ul#users-list { list-style-type: none; }
+    </style>
     {% include "inc/navbar.html" %}
 
+    <div id="globalError"></div>
     <!-- contents container -->
     <div id="contents" class="container"></div>
 
+    <script type="text/template" id="all-users-activities-template">
+        <a href="{{ url_for('users.index') }}" class="pull-right">
+            <i class="glyphicon glyphicon-chevron-left"></i>
+            back to the users list
+        </a>
+        <h2>Users activities</h2>
+
+        <hr>
+
+        <div class="row">
+            <div class="col-md-2">
+                <h3>From</h3>
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">
+                            <i class="glyphicon glyphicon-calendar"></i>
+                        </div>
+                        <input type="text" class="form-control" id="dateFrom"
+                               placeholder="">
+                    </div>
+                </div>
+                <h3>To</h3>
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">
+                            <i class="glyphicon glyphicon-calendar"></i>
+                        </div>
+                        <input type="text" class="form-control" id="dateTo"
+                               placeholder="">
+                    </div>
+                </div>
+                <h3>Users:</h3>
+                <ul id="users-list"></ul>
+            </div>
+            <div class="col-md-10">
+                <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Active</th>
+                    <th>Last activity</th>
+                </tr>
+                </thead>
+                <tbody id="users-activities-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </script>
 
     <script type="text/template" id="user-create-template">
         <a href="{{ url_for('users.index') }}">
@@ -124,6 +182,10 @@
         <a href="{{ url_for('users.index') }}online/">
             <i class="glyphicon glyphicon-log-in"></i>
             Online user list
+        </a> |
+        <a href="{{ url_for('users.index') }}activity/">
+            <i class="glyphicon glyphicon-eye-open"></i>
+            Users activities
         </a><hr>
         <table class="table table-bordered">
             <thead>

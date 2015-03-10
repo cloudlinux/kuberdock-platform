@@ -116,13 +116,37 @@ class UserActivity(BaseModelMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User')
 
+    @classmethod
+    def get_users_activities(cls, user_ids, date_from=None, date_to=None,
+                             to_dict=None, to_json=None):
+        activities = cls.query.filter(cls.user_id.in_(user_ids))
+        if date_from:
+            activities = activities.filter(
+                cls.ts >= '{0} 00:00:00'.format(date_from))
+        if date_to:
+            activities = activities.filter(
+                cls.ts <= '{0} 23:59:59'.format(date_to))
+        users = User.filter(User.id.in_([a.user_id for a in activities]))
+        users = {u.id: u.to_dict() for u in users}
+        if to_dict:
+            data = [a.to_dict(include={'user': users.get(a.user_id)})
+                    for a in activities]
+            return data
+        if to_json:
+            return json.dumps([a.to_dict(include={'user': users.get(a.user_id)})
+                               for a in activities])
+        return activities
+
     def to_dict(self, include=None, exclude=None):
-        return dict(
+        data = dict(
             id=self.id,
             ts=self.ts.isoformat(sep=' ')[:19],
             action=UserActivity.ACTIONS.get(self.action),
             user_id=self.user_id
         )
+        if isinstance(include, dict):
+            data.update(include)
+        return data
 
 
 class Role(BaseModelMixin, db.Model):

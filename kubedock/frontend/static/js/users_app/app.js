@@ -173,6 +173,82 @@ define(['marionette', 'paginator', 'utils'],
             childViewContainer: "tbody"
         });
 
+        Views.AllUsersActivitiesView = Backbone.Marionette.ItemView.extend({
+            template: '#all-users-activities-template',
+
+            ui: {
+                'dateFrom': 'input#dateFrom',
+                'dateTo': 'input#dateTo',
+                'usersList': 'ul#users-list',
+                'tbody': '#users-activities-table'
+            },
+
+            events: {
+                'change input.user-activity': 'getUsersActivities',
+                'change input#dateFrom': 'getUsersActivities',
+                'change input#dateTo': 'getUsersActivities'
+            },
+
+            onRender: function(){
+                var that = this;
+                console.log(usersCollection);
+                // Make users list
+                $.each(usersCollection, function(i, user){
+                    that.ui.usersList.append(
+                        '<li><label><input type="checkbox" name="uachb" value="' +
+                            user.id + '" class="user-activity"/> ' +
+                            user.username + '</label></li>'
+                    );
+                });
+                // Init datepicker
+                this.ui.dateFrom.datepicker({dateFormat: "yy-mm-dd"});
+                this.ui.dateTo.datepicker({dateFormat: "yy-mm-dd"});
+                // Set default date
+                var now = utils.dateYYYYMMDD();
+                this.ui.dateFrom.val(now);
+                this.ui.dateTo.val(now);
+            },
+
+            getUsersActivities: function(){
+                var that = this,
+                    users = [];
+                that.ui.tbody.empty();
+                $('.user-activity').each(function(i, el){
+                    if($(el).is(':checked')) users.push(parseInt($(el).val()));
+                });
+                if(users.length == 0) {
+                    return false;
+                }
+                $.ajax({
+                    url: '/api/users/activities',
+                    data: {date_from: this.ui.dateFrom.val(),
+                           date_to: this.ui.dateTo.val(),
+                           users_ids: users.join(',')},
+                    dataType: 'JSON',
+                    type: 'POST',
+                    success: function(rs){
+                        if(rs.data){
+                            if(rs.data.length == 0){
+                                that.ui.tbody.append($('<tr>').append(
+                                    '<td colspan="5" align="center">Nothing found</td>'
+                                ));
+                            } else {
+                                $.each(rs.data, function (i, itm) {
+                                    that.ui.tbody.append($('<tr>').append(
+                                        '<td>' + itm.user.username + '</td>' +
+                                        '<td>' + itm.user.email + '</td>' +
+                                        '<td>' + itm.user.rolename + '</td>' +
+                                        '<td>' + itm.user.active + '</td>' +
+                                        '<td>' + itm.ts + '</td>'
+                                    ));
+                                })
+                            }
+                        }
+                    }
+                })
+            }
+        });
+
         Views.UserCreateView = Backbone.Marionette.ItemView.extend({
             template: '#user-create-template',
             tagName: 'div',
@@ -324,6 +400,15 @@ define(['marionette', 'paginator', 'utils'],
                 App.contents.show(layout_view);
             },
 
+            showAllUsersActivity: function(){
+                var layout_view = new App.Views.UsersLayout();
+                var users_activities_view = new App.Views.AllUsersActivitiesView();
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(users_activities_view);
+                });
+                App.contents.show(layout_view);
+            },
+
             showCreateUser: function(){
                 var layout_view = new App.Views.UsersLayout();
                 var user_create_view = new App.Views.UserCreateView();
@@ -359,7 +444,8 @@ define(['marionette', 'paginator', 'utils'],
                     'online/:id/': 'showUserActivity',
                     '': 'showUsers',
                     'create/': 'showCreateUser',
-                    'edit/:id/': 'showEditUser'
+                    'edit/:id/': 'showEditUser',
+                    'activity/': 'showAllUsersActivity'
                 }
             });
         });

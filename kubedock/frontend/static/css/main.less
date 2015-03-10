@@ -918,6 +918,7 @@ body{
 		#breadcrumbs{
 			.clearfix;
 			.breadcrumb{
+				 line-height: 34px;
 				margin-left: 10px;
 				float: left;
 				.border-radius(0);
@@ -929,13 +930,19 @@ body{
 					font-family: @regular;
 					line-height: 32px;
 					color: #ffffff;
-					a{
+					div{
 						color: #ffffff;
 						text-decoration: none;
 						&:hover{
-							text-decoration: underline;
+							cursor: pointer;
 						}
 					}
+				}
+				li + li:before{
+					padding: 0 7px;
+					color: #FFF;
+					content: ">";
+					font-size: 16px;
 				}
 			}
 			.control-group{
@@ -1084,7 +1091,47 @@ body{
 					padding-top: 0;
 					padding-bottom: 0;
 					vertical-align: middle;
-					line-height: 50px;
+					height: 50px;
+					span{
+						&.more-ico{
+							background: url('../img/small-circles.png') 0 0 no-repeat;
+							height: 5px;
+							width: 20px;
+							display: inline-block;
+							vertical-align: middle;
+							&:hover{
+								cursor: pointer;
+								background-position: 0 -5px;
+							}
+						}
+					}
+					.tooltip.bottom{
+						margin-top: 8px;
+						.tooltip-arrow{
+							display: none;
+						}
+						.tooltip-inner{
+							background-color: #fff;
+							border: 1px solid #c7ced3;
+							height: 44px;
+							padding: 0 12px;
+							white-space: nowrap;
+							line-height: 44px;
+							text-align: center;
+							color: #1d1d1d;
+							position: relative;
+							&:before{
+								content:'';
+								position: absolute;
+								width: 14px;
+								height: 11px;
+								z-index: 9999;
+								top: -10px;
+								left: 46%;
+								background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat
+							}
+						}
+					}
 				}
 				button{
 					color: #1d1d1d;
@@ -1102,4 +1149,127 @@ body{
 		}
 	}
 	/* end-node-main */
+
+	/* add-node */
+	#node-contents{
+		width: 80%;
+		margin: 0 auto;
+		padding: 0 40px;
+		.col-lg-12, .col-lg-6{
+			padding: 0;
+		}
+		.node-steps{
+			#node-find-step{
+				.form-field{
+					label{
+						margin: 0;
+						font-weight: bold;
+						font-family: @regular;
+						font-size: 14px;
+						margin: 7px 0 16px 0;
+					}
+					.find-input{
+						width: 100%;
+						border: 1px solid #e5e5e5;
+						height: 51px;
+						font-size: 14px;
+						font-family: @regular;
+						font-weight: normal;
+						color: #1d1d1d;
+						padding: 0 20px;
+					}
+				}
+			}
+			#node-final-step{
+				button{
+					height: 37px;
+					margin: 0;
+					padding: 0;
+					width: 100px;
+					border: 1px solid;
+					text-align: center;
+					float: right;
+					font-size: 16px;
+					font-family: @regular;
+					&:hover{
+						cursor: pointer;
+					}
+					&:active{
+						cursor: default;
+					}
+				}
+				button + button{
+					margin-right: 10px;
+				}
+				#node-add-btn{
+					background-color: #466eb1;
+					border-color: #466eb1;
+					color: #fff;
+				}
+				#node-cancel-btn{
+					color: #1d1d1d;
+					background-color: #fcfcfc;
+					border-color: #ebebeb;
+				}
+				.col-lg-12{
+					margin: 16px 0 20px 0;
+					padding-bottom: 49px;
+					border-bottom: 1px solid #e5e5e5;
+				}
+				.col-lg-6{
+					&.right{
+						padding-left: 17px;
+						.info{
+							margin-top: 25px;
+							padding: 18px 36px 19px;
+							background-color: #fcfcfc;
+							border: 1px solid #e5e5e5;
+							p{
+								height: 22px;
+								line-height: 20px;
+								width: 100%;
+								padding-left: 104px;
+								margin-bottom: 3px;
+								display: inline-block;
+								vertical-align: middle;
+								position: relative;
+								&:last-child{
+									margin-bottom: 0;
+								}
+								&:before{
+									content: '';
+									position: absolute;
+									left: 0;
+									top: 0;
+									width: 80px;
+									height: 22px;
+									background: url('../img/server-ico.png') 0 0 no-repeat;
+								}
+							}
+						}
+					}
+					@media only screen and (max-width : 1200px) {
+						&.right{
+							padding: 0;
+						}
+					}
+					#extra-options, input{
+						display: block;
+						width: 100%;
+						height: 51px;
+						border: 1px solid #e5e5e5;
+						background-color: #fff;
+						padding: 0 20px;
+					}
+					#extra-options{
+						margin-bottom: 9px;
+					}
+				}
+				#node-add-btn{
+					float: right;
+				}
+			}
+		}
+	}
+	/* end-node */	
 }

@@ -187,8 +187,8 @@ def remove_node_by_host(host):
 def add_new_node(host):
     if DEBUG:
         send_event('install_logs',
-                   'Connecting to {0} with ssh with user = root and '
-                   'password = {1} ...'.format(host, NODE_SSH_AUTH))
+                   'Connecting to {0} with ssh with user root ...'
+                   .format(host))
     else:
         send_event('install_logs',
                    'Connecting to {0} with ssh with user = root and '

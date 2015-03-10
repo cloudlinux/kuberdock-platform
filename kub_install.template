@@ -1,6 +1,9 @@
 #!/bin/bash
 # install kubernetes components on Node host
 
+echo "Set locale to en_US.UTF-8"
+export LANG=en_US.UTF-8
+
 # TODO change rules, not disable
 echo "Setting up firewall rules..."
 systemctl stop firewalld
@@ -20,6 +23,11 @@ enabled=1
 gpgcheck=1
 gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
+
+
+
+# 1.1 import CloudLinux key
+rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 
 
 
@@ -113,4 +121,4 @@ systemctl enable flanneld; systemctl restart flanneld
 systemctl enable docker; systemctl restart docker
 systemctl enable kubelet; systemctl restart kubelet
 systemctl enable kube-proxy; systemctl restart kube-proxy
-systemctl enable cadvisor; systemctl restart cadvisor
+#systemctl enable cadvisor; systemctl restart cadvisor

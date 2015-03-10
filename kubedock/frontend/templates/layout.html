@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>{% block title %}tutudock project{% endblock %}</title>
+        <title>{% block title %}KubeDock.AppCloud project{% endblock %}</title>
         <meta charset="utf8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -18,6 +18,8 @@
                 <script src="{{ ASSET_URL }}"></script>
             {% endassets %}
         {% endblock %}
+
+        {% block head_extras %}{% endblock %}
         
     </head>
     <body>

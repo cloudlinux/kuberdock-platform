@@ -6,7 +6,7 @@ from . import APIError
 from ..billing import Package
 from ..core import db, check_permission
 from ..utils import login_required_or_basic
-from ..users import User, Role
+from ..users.models import User, Role, UserActivity
 from ..users.signals import (
     user_logged_in_by_another, user_logged_out_by_another)
 
@@ -77,6 +77,21 @@ def get_user_activities(user_id):
     if u:
         return jsonify({'status': 'OK', 'data': u.user_activity()})
     raise APIError("User {0} doesn't exists".format(user_id))
+
+
+@users.route('/activities', methods=['POST'])
+@login_required_or_basic
+@check_permission('get', 'users')
+def get_users_activities():
+    data = request.form
+    user_ids = data.get('users_ids', '').split(',')
+    data_from = data.get('date_from')
+    date_to = data.get('date_to')
+    if not user_ids:
+        raise APIError("Select at least one user")
+    objects_list = UserActivity.get_users_activities(
+        user_ids, data_from, date_to, to_dict=True)
+    return jsonify({'data': objects_list})
 
 
 @users.route('/online/', methods=['GET'])

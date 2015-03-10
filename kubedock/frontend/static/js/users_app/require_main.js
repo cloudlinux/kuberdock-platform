@@ -3,6 +3,7 @@ requirejs.config({
     paths: {
         backbone: 'lib/backbone',
         jquery: 'lib/jquery',
+        'jquery-ui': 'lib/jquery-ui',
         underscore: 'lib/underscore',
         marionette: 'lib/backbone.marionette',
         bootstrap: 'lib/bootstrap',
@@ -15,6 +16,9 @@ requirejs.config({
     shim: {
         jquery: {
             exports: "$"
+        },
+        'jquery-ui': {
+            deps: ["jquery"]
         },
         underscore: {
             exports: "_"
@@ -40,7 +44,7 @@ requirejs.config({
         }
     }
 });
-require(['jquery', 'users_app/app', 'notify'], function(jQuery, UsersApp){
+require(['jquery', 'users_app/app', 'notify', 'jquery-ui'], function(jQuery, UsersApp){
     UsersApp.Data.users = new UsersApp.Data.UsersPageableCollection(usersCollection);
     UsersApp.Data.onlineUsers = new UsersApp.Data.UsersPageableCollection(onlineUsersCollection);
     UsersApp.Data.userActivity = new UsersApp.Data.ActivitiesCollection(userActivity);

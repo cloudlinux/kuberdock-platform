@@ -178,6 +178,18 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             header: '#node-header',
             find_step: '#node-find-step',
             final_step: '#node-final-step'
+        },
+
+        ui: {
+            'nodes_page' : 'div#nodes-page' 
+        },
+
+        events:{
+            'click @ui.nodes_page' : 'breadcrampClick'
+        }, 
+
+        breadcrampClick: function(){
+           App.router.navigate('/', {trigger: true})
         }
     });
 
@@ -222,12 +234,14 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         ui: {
 //            'node_ssh': 'select#node_ssh',
-            'node_add_btn': 'button#node-add-btn'
+            'node_add_btn': 'button#node-add-btn',
+            'node_cancel_btn': 'button#node-cancel-btn'
         },
 
         events:{
 //            'change @ui.node_ssh': 'validateStep',
-            'click @ui.node_add_btn': 'complete'      // only if valid
+            'click @ui.node_add_btn': 'complete',      // only if valid
+            'click @ui.node_cancel_btn' : 'cancel'
         },
 
 //        validateStep: function (evt) {
@@ -237,6 +251,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 //                this.state.set('isFinished', false);
 //            }
 //        },
+
+
 
         complete: function () {
             var that = this;
@@ -255,6 +271,10 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     alert('error while saving! Maybe some fields required.')
                 }
             });
+        },
+
+        cancel: function () {
+            App.router.navigate('/', {trigger: true});
         },
 
         initialize: function () {
@@ -505,14 +525,13 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
 
 });
 
-
 NodesApp.on('start', function(){
     if (Backbone.history) {
         Backbone.history.start({root: '/nodes/', pushState: true});
     }
 });
 
-
 $(function(){
     NodesApp.start();
+    $('[data-toggle="tooltip"]').tooltip()
 });

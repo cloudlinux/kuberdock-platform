@@ -207,7 +207,7 @@ def add_new_node(host):
         if o.channel.recv_ready():
             for line in o.channel.recv(1024).split('\n'):
                 send_event('install_logs', line)
-        if (time.time() - s_time) > 5*60:   # 5 min timeout
+        if (time.time() - s_time) > 15*60:   # 15 min timeout
             send_event('install_logs',
                        'Timeout during install. Installation has failed.')
             ssh.exec_command('rm /kub_install.sh')

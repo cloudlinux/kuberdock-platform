@@ -33,7 +33,8 @@ rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLin
 
 # 2. install components
 echo "Installing kubernetes..."
-yum -y install kubernetes
+#yum -y install kubernetes
+yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.12.0-0.1.gitecca426.el7.centos.x86_64.rpm
 yum -y install flannel
 
 
@@ -83,6 +84,9 @@ KUBELET_PORT="--port=10250"
 # You may leave this blank to use the actual hostname
 KUBELET_HOSTNAME=""
 
+# location of the api-server
+KUBELET_API_SERVER="--api_servers={{ master_ip }}:8080"
+
 # Add your own!
 KUBELET_ARGS=""
 EOF
@@ -122,3 +126,4 @@ systemctl enable docker; systemctl restart docker
 systemctl enable kubelet; systemctl restart kubelet
 systemctl enable kube-proxy; systemctl restart kube-proxy
 #systemctl enable cadvisor; systemctl restart cadvisor
+exit 0

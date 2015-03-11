@@ -44,14 +44,6 @@ html{
 				background-color: transparent;
 			}
 		}
-		div.node-logs {
-		  background: black;
-		  color: white;
-		  padding: 1em;
-		  height: 26em;
-		  width: 82em;
-		  overflow: auto;
-		}
 
 		/* end nodes */
 		input[type="text"], input[type="email"], input[type="password"] {
@@ -951,25 +943,64 @@ body{
 				#add_node, #nav-search{
 					float: left;
 				}
-				#add_node{
+				button{
 					border: none;
 					background: none;
 					outline: 0;
-					padding:0 0 0 38px;
-					margin-right: 25px;
 					line-height: 34px;
 					color: #ffffff;
 					font-family: @regular;
 					font-size: 16px;
 					position: relative;
 					&:before{
-						content: '';
 						position: absolute;
-						top: 8px;
-						left: 2px;
-						background: url('../img/add-one.png') 0 0 no-repeat;
-						width: 28px;
-  						height: 21px;
+					}
+					&#add_node{
+						padding:0 0 0 38px;
+						margin-right: 25px;
+						&:before{
+							content: '';
+							background: url('../img/add-one.png') 0 0 no-repeat;
+							top: 8px;
+							left: 2px;
+							width: 28px;
+							height: 21px;
+						}
+					}
+					&#rename_node{
+						padding:0 0 0 38px;
+						margin-right: 17px;
+						&:before{
+							content: '';
+							background: url('../img/rename-node.png') 0 0 no-repeat;
+							top: 8px;
+							left: 2px;
+							width: 28px;
+							height: 21px;
+						}
+					}
+					&#stop_node{
+						padding:0 0 0 28px;
+						margin-right: 16px;
+						&:before{
+							content: '';
+							background: url('../img/stop-node.png') 0 0 no-repeat;
+							top: 8px;
+							left: 4px;
+							width: 28px;
+							height: 21px;
+						}
+					}
+					&#delete_node{
+						padding:0 0 0 28px;
+						&:before{
+							content: '';
+							background: url('../img/delete-node.png') 0 0 no-repeat;
+							top: 8px;
+							left: 2px;
+							width: 28px;
+							height: 21px;
+						}
 					}
 				}
 				#nav-search{
@@ -1271,5 +1302,251 @@ body{
 			}
 		}
 	}
-	/* end-node */	
+	/* end add-node */
+
+	/* details-node */
+	.sidebar{
+		margin-bottom: 25px;
+		.nav-sidebar{
+			li{
+				font-size: 14px;
+				font-family: @regular;
+				color: #3197ee;
+				padding-left: 23px;
+				position: relative;
+				line-height: 22px;
+				height: 16px;
+				margin-bottom: 14px;
+				margin-left: 10px;
+				&:last-child{
+					margin-bottom: 0;
+				}
+				&:before{
+					position: absolute;
+					left: 0px;
+					top: 0px;
+					content: '';
+				}
+				&:hover{
+					cursor: pointer;
+					color: #1d1d1d;
+				}
+				&.active{
+					color: #1d1d1d;
+				}
+				&.general{
+					&:before{
+						background: url('../img/general-ico.png') 0 0 no-repeat;
+						width: 13px;
+						height: 16px;
+					}
+				}
+				&.stats{
+					&:before{
+						background: url('../img/stats-ico.png') 0 0 no-repeat;
+						width: 16px;
+						height: 16px;
+					}
+				}
+				&.configuration{
+					&:before{
+						background: url('../img/configuration-ico.png') 0 0 no-repeat;
+						width: 16px;
+						height: 16px;
+						top: 3px;
+					}
+				}
+			}
+		}
+	}
+	#details_content{
+		.status-line{
+			height: 40px;
+			margin-bottom: 0px;
+			border-bottom: 1px solid #e5e5e5;
+			color: #1d1d1d;
+			font-size: 16px;
+			font-family: @regular;
+			font-weight: bold;
+			padding-left: 37px;
+			line-height: 27px;
+			position: relative;
+			&:before{
+				.border-radius(50%);
+				content: '';
+				width: 13px;
+				height: 13px;
+				position: absolute;
+				left: 11px;
+				bottom: 20px;
+			}
+			&.running{
+				&:before{
+					background-color: #98cc79;
+					border: 1px solid #5d973c;
+				}
+			}
+			&.stopped{
+				&:before{
+					background-color: #f25552;
+					border: 1px solid #bc2322;
+				}
+			}
+			&.configuration{
+				&:before{
+					background-color: #efd66d;
+					border: 1px solid #c1a741;
+				}
+			}
+		}
+	}
+	/* general details page */
+	#tab-content{
+		.col-xs-10{
+			margin: 37px auto 0;
+			float: none;
+			.col-xs-6{
+				margin-bottom: 25px;
+			}
+			.info{
+				padding-left: 94px;
+				position: relative;
+				&:before{
+					content: '';
+					position: absolute;
+					width: 80px;
+					height: 70px;
+					left: 0;
+					top: 0;
+					background: url('../img/info-ico.png') 0 0 no-repeat;
+				}
+				> div{
+					line-height: 22px;
+					height: 20px;
+					margin-bottom: 5px;
+					color: #1d1d1d;
+					font-size: 14px;
+					font-weight: normal;
+					font-family: @regular;
+					&:last-child{
+						margin-bottom: 0;
+					}
+				}
+			}
+			.server-ico{
+				padding-left: 103px;
+				position: relative;
+				height: 20px;
+				line-height: 22px;
+				margin-bottom: 5px;
+				&:last-child{
+					margin-bottom: 0;
+				}
+				&:before{
+					position: absolute;
+					content: '';
+					width: 80px;
+					height: 22px;
+					left: 0;
+					top: -1;
+					background: url('../img/server-ico.png') 0 0 no-repeat;
+				}
+			}
+
+		}
+	}
+	/* end general details page */
+
+	/* stats details page */
+	#stats-page{
+		.page-top-menu{
+			display: inline-block;
+			font-size: 0;
+  			vertical-align: top;
+  			margin: 13px 0;
+			> span{
+				color: #b1b9c0;
+				font-size: 14px;
+				font-family: @regular;
+				display: inline-block;
+				vertical-align: top;
+			}
+			.checkbox{
+				margin: 0 0 0 25px;
+				display: inline-block;
+				vertical-align: top;
+				label{
+					color: #1d1d1d;
+					font-size: 14px;
+					font-family: @regular;
+					padding-left: 25px;
+				}
+			}
+		}
+	}
+	/* end stats details page */
+
+	/* logs details page */
+	#logs-page{
+		.page-top-menu{
+			display: inline-block;
+			font-size: 0;
+  			vertical-align: top;
+  			margin: 13px 0;
+  			> span{
+				color: #b1b9c0;
+				font-size: 14px;
+				font-family: @regular;
+				display: inline-block;
+				vertical-align: top;
+				margin-right: 25px;
+				&:last-child{
+					margin-right: 0;
+				}
+			}
+			.log-item{
+				color: #3197ee;
+				font-size: 14px;
+				font-family: @regular;
+				display: inline-block;
+				vertical-align: top;
+				&:hover{
+					cursor: pointer;
+					color: #1d1d1d;
+				}
+				&.active{
+					color: #1d1d1d;
+					&:hover{
+						cursor: default;
+					}	
+				}
+			}
+  		}
+  	}
+  	.node-logs{
+
+  	}
+	/* end logs details page */
+
+	/* monitoring details page */
+	#monitoring-page{
+
+	}
+	/* end monitoring details page */
+
+	/* timelines details page */
+	#timelines-page{
+
+	}
+	/* end timelines details page */
+
+	/* configuration details page */
+	#configuration-page{
+
+	}
+	/* end configuration details page */
+
+
+
+	/* end details-node */	
 }

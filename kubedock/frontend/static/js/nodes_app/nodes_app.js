@@ -83,13 +83,15 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click button#detailedNode' : 'detailedNode',
             'click button#upgradeNode' : 'detailedNode',
-            'click button#detailedTroublesTab' : 'detailedTroublesTab',
+            'click button#detailedConfigurationTab' : 'detailedConfigurationTab',
             'click' : 'checkNode'
         },
 
         checkNode: function(){
             var models = this.model.collection.models;
             this.model.get('checked') ? this.model.set('checked',false) : this.model.set('checked',true);
+
+            console.log(Marionette.Callbacks());
             
             this.$el.toggleClass('checked').siblings().removeClass('checked');
 
@@ -100,11 +102,11 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         detailedNode: function(){
-            App.router.navigate('/detailed/' + this.model.id + '/settings/', {trigger: true});
+            App.router.navigate('/detailed/' + this.model.id + '/general/', {trigger: true});
         },
 
-        detailedTroublesTab: function(){
-            App.router.navigate('/detailed/' + this.model.id + '/troubles/', {trigger: true});
+        detailedConfigurationTab: function(){
+            App.router.navigate('/detailed/' + this.model.id + '/configuration/', {trigger: true});
         }
     });
 
@@ -319,11 +321,17 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             tab_content: 'div#tab-content'
         },
 
-        events: {
-            'click ul.nav li': 'changeTab',
-            'click button#node-add-btn': 'saveNode'
+        ui: {
+            'nodes_page' : 'div#nodes-page' 
         },
 
+        events: {
+            'click ul.nav li': 'changeTab',
+            'click button#node-add-btn': 'saveNode',
+            'click @ui.nodes_page' : 'breadcrampClick'
+        },
+
+        
         initialize: function (options) {
             this.tab = options.tab;
             this.node_id = options.node_id;
@@ -333,10 +341,12 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             evt.preventDefault();
             var tgt = $(evt.target);
             var url_ = '/detailed/' + this.node_id;
-            if (tgt.hasClass('nodeSettingsTab')) App.router.navigate(url_ + '/settings/', {trigger: true});
+            if (tgt.hasClass('nodeGeneralTab')) App.router.navigate(url_ + '/general/', {trigger: true});
             else if (tgt.hasClass('nodeStatsTab')) App.router.navigate(url_ + '/stats/', {trigger: true});
             else if (tgt.hasClass('nodeLogsTab')) App.router.navigate(url_ + '/logs/', {trigger: true});
-            else if (tgt.hasClass('nodeTroublesTab')) App.router.navigate(url_ + '/troubles/', {trigger: true});
+            else if (tgt.hasClass('nodeMonitoringTab')) App.router.navigate(url_ + '/monitoring/', {trigger: true});
+            else if (tgt.hasClass('nodeTimelinesTab')) App.router.navigate(url_ + '/timelines/', {trigger: true});
+            else if (tgt.hasClass('nodeConfigurationTab')) App.router.navigate(url_ + '/configuration/', {trigger: true});
         },
 
 //        onRender: function(){
@@ -364,6 +374,10 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             });
         },
 
+        breadcrampClick: function(){
+           App.router.navigate('/', {trigger: true})
+        },
+
         templateHelpers: function(){
           return {
               tab: this.tab
@@ -371,8 +385,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    Views.NodeSettingsTabView = Backbone.Marionette.ItemView.extend({
-        template: '#node-settings-tab-template'
+    Views.NodeGeneralTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-general-tab-template'
     });
 
     Views.NodeStatsTabView = Backbone.Marionette.ItemView.extend({
@@ -401,12 +415,19 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    Views.NodeTroublesTabView = Backbone.Marionette.ItemView.extend({
-        template: '#node-troubles-tab-template'
+    Views.NodeMonitoringTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-monitoring-tab-template',
     });
+
+    Views.NodeTimelinesTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-timelines-tab-template',
+    });
+
+    Views.NodeConfigurationTabView = Backbone.Marionette.ItemView.extend({
+        template: '#node-configuration-tab-template'
+    });
+
     // =========== //Detailed view ======================================
-
-
 
     Views.NodesLayout = Backbone.Marionette.LayoutView.extend({
         template: '#nodes-layout-template',
@@ -416,14 +437,12 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             pager: 'div#pager'
         }
     });
-
 });
 
 
 NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _){
 
     NodesCRUD.Controller = Marionette.Controller.extend({
-
         showNodes: function(){
             var layout_view = new App.Views.NodesLayout();
             var nodes_list_view = new App.Views.NodesListView({collection: App.Data.nodes});
@@ -471,9 +490,9 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
 
             this.listenTo(layout_view, 'show', function(){
                 switch (layout_view.tab) {
-                    case 'settings': {
-                        var node_settings_tab_view = new App.Views.NodeSettingsTabView({ model: node });
-                        layout_view.tab_content.show(node_settings_tab_view);
+                    case 'general': {
+                        var node_general_tab_view = new App.Views.NodeGeneralTabView({ model: node });
+                        layout_view.tab_content.show(node_general_tab_view);
                     } break;
                     case 'stats': {
                         var node_stats_tab_view = new App.Views.NodeStatsTabView({ model: node });
@@ -483,9 +502,18 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
                         var node_logs_tab_view = new App.Views.NodeLogsTabView({ model: node });
                         layout_view.tab_content.show(node_logs_tab_view);
                     } break;
-                    case 'troubles': {
-                        var node_troubles_tab_view = new App.Views.NodeTroublesTabView({ model: node });
-                        layout_view.tab_content.show(node_troubles_tab_view);
+                    case 'monitoring': {
+                        var node_monitoring_tab_view = new App.Views.NodeMonitoringTabView({ model: node });
+                        layout_view.tab_content.show(node_monitoring_tab_view);
+                    } break;
+                    case 'timelines': {
+                        var node_timelines_tab_view = new App.Views.NodeTimelinesTabView({ model: node });
+                        layout_view.tab_content.show(node_timelines_tab_view);
+                    } break;
+
+                    case 'configuration': {
+                        var node_configuration_tab_view = new App.Views.NodeConfigurationTabView({ model: node });
+                        layout_view.tab_content.show(node_configuration_tab_view);
                     } break;
                 }
             });

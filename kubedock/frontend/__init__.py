@@ -25,8 +25,9 @@ def create_app(settings_override=None):
     from .users import users
     from .notifications import notifications
     from .static_pages import static_pages
+    from .ippool import ippool
 
-    for bp in main, auth, nodes, users, notifications, static_pages:
+    for bp in main, auth, nodes, users, notifications, static_pages, ippool:
         app.register_blueprint(bp)
 
     app.errorhandler(PermissionDenied)(on_permission_denied)

@@ -578,6 +578,16 @@
                         <% } %>
                     </tbody>
                 </table>
+                <% if(hasPublicIPs) { %>
+                <table class="table">
+                <thead><tr><th>Public IP</th></tr></thead>
+                <tbody><tr>
+                    <td><input type="checkbox" id="set_public_ip"
+                               name="set_public_ip" value="1"/></td>
+                    <th><label for="set_public_ip">Set public IP</label></th>
+                </tr></tbody>
+                </table>
+                <% } %>
                 <% if (nodes.length !== 0){ %>
                 <table class="table">
                     <thead><tr><th></th><th>Node to run on</th></tr></thead>

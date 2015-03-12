@@ -27,9 +27,10 @@ def create_app(settings_override=None):
     from .static_pages import static_pages
     from .usage import usage
     from .pricing import pricing
-    
+    from .ippool import ippool
+
     for bp in images, pods, stream, nodes, stats, users, notifications, \
-              static_pages, usage, pricing:
+              static_pages, usage, pricing, ippool:
         app.register_blueprint(bp)
         
     #app.json_encoder = JSONEncoder

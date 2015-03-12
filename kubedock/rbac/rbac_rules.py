@@ -21,6 +21,7 @@ To add new:
 acl.add_resource("users")
 acl.add_resource("nodes")
 acl.add_resource("pods", ["nodes"])   # TODO test inheritance
+acl.add_resource("ippool", ["pods"])   # TODO test inheritance
 
 """
 ROLES it's just a strings, wrapped in a class to minimize syntax errors and for convenience.
@@ -94,4 +95,14 @@ SuperAdmin.allow("edit", "notifications")
 SuperAdmin.allow("delete", "notifications")
 Admin.deny("create", "notifications")
 Admin.deny("delete", "notifications")
+# IP pool
+SuperAdmin.allow("create", "ippool")
+SuperAdmin.allow("get", "ippool")
+SuperAdmin.allow("view", "ippool")
+SuperAdmin.allow("edit", "ippool")
+SuperAdmin.allow("delete", "ippool")
+Admin.deny("create", "ippool")
+Admin.deny("delete", "ippool")
+User.allow("view", "ippool")
+User.allow("get", "ippool")
 

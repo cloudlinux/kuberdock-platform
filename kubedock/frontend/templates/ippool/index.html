@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block head_extras %}
+<link rel="stylesheet" href="/static/css/jquery-ui.css">
+{% endblock %}
+
+{% block body %}
+    <style>
+    ul#hosts-list { list-style-type: none; }
+    </style>
+    {% include "inc/navbar.html" %}
+
+    <div id="globalError"></div>
+    <!-- contents container -->
+    <div id="contents" class="container"></div>
+
+    <script type="text/template" id="networks-list-template">
+        <button id="create_network" class="btn btn-success">Add network</button>
+        <hr>
+        <table class="table table-bordered">
+        <thead><tr>
+            <th>Network</th>
+            <th>Status</th>
+        </tr></thead>
+        <tbody></tbody>
+        </table>
+    </script>
+
+    <script type="text/template" id="network-create-template">
+        <a href="{{ url_for('ippool.index') }}">
+            <i class="glyphicon glyphicon-chevron-left"></i>
+            back to the networks list
+        </a><hr>
+
+        <div id="network-contents">
+            <div class="row">
+                <div class="col-md-3">
+                    <div id="network-header">
+                        <h1>Network form</h1>
+                        <h2>Add</h2>
+                    </div>
+
+                </div>
+                <div id="network-controls" class="col-md-6">
+                    <div class="form-group">
+                        <label for="network">Network</label>
+                        <input type="text" name="network" class="form-control masked-ip"
+                               id="network" placeholder="1.2.3.4/32">
+                    </div>
+
+                    <div>
+                        <button id="network-add-btn" class="btn btn-success"
+                                type="submit">
+                            SAVE
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/template" id="network-item-template">
+        <td>
+            <%- network %>
+            <button id="deleteNetwork" class="btn btn-danger btn-xs pull-right">
+                <i class="glyphicon glyphicon-trash"></i>
+            </button>
+        </td>
+        <td><ul id="hosts-list">
+            <% _.each(allocation, function(itm){ %>
+            <li class="<%- itm[1] ? 'text-danger' : 'text-success' %>"><%- itm[0] %>: <%- itm[1] ? itm[1] : 'free' %></li>
+            <% }); %>
+        </ul></td>
+    </script>
+
+    <script type="text/template" id="networks-layout-template">
+        <div id="main">main div text</div>
+    </script>
+
+    <script data-main="/static/js/ippool_app/require_main.js" src="/static/js/lib/require.js"></script>
+
+    <script type="text/javascript">
+    var networksCollection = {{ networks_collection|safe }};
+    </script>
+
+{% endblock %}

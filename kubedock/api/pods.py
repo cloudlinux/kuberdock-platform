@@ -14,6 +14,7 @@ from ..kubedata.kuberesolver import KubeResolver
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..api import APIError
 import copy
+from ..pods import signals as pods_signals
 
 ALLOWED_ACTIONS = ('start', 'stop', 'inspect',)
 
@@ -57,6 +58,7 @@ def get_pods():
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
+    set_public_ip = data.pop('set_public_ip', None) == '1'
     check_new_pod_data(data)
     pod = Pod.query.filter_by(name=data['name']).first()
     if pod:
@@ -76,9 +78,15 @@ def create_item():
         db.session.commit()
     except Exception:
         db.session.rollback()
-        raise APIError("Could not create database record for '{0}'.".format(data['name']),
-                       status_code=409)
-    
+        raise APIError("Could not create database record for "
+                       "'{0}'.".format(data['name']), status_code=409)
+    if set_public_ip:
+        try:
+            podip = pods_signals.allocate_ip_address.send([temp_uuid])
+        except Exception, e:
+            db.session.rollback()
+            raise APIError(str(e), status_code=409)
+
     if not save_only:    # trying to run service and pods right away
         try:
             service_rv = json.loads(run_service(data))

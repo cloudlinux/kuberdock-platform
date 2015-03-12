@@ -134,6 +134,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 that = this;
             
             var processRequest = function(data){
+                data.set('set_public_ip', $('#set_public_ip').val());
                 _.each(data.get('containers'), function(item){
                     item.volumeMounts = _.filter(item.volumeMounts, function(mp){
                         return mp['name'] !== null;
@@ -207,7 +208,13 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 });
                 rqst.done(function(data){
                     if (data.hasOwnProperty('data')) { data = data['data']; }
-                    wizardLayout.steps.show(new App.Views.WizardCompleteSubView({nodes: data, model: model}));
+                    $.ajax({
+                        url: '/api/ippool/hasPublicIPs',
+                        success: function(rs){
+                            wizardLayout.steps.show(new App.Views.WizardCompleteSubView({
+                                nodes: data, model: model, hasPublicIPs: rs.status == 'OK'}));
+                        }
+                    })
                 });
                 //wizardLayout.steps.show(new App.Views.WizardCompleteSubView({nodes: nodes, model: model}));
             });

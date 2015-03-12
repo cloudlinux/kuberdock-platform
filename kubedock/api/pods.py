@@ -1,4 +1,4 @@
-from flask import Blueprint, request, current_app, jsonify
+from flask import Blueprint, request, current_app, jsonify, g
 from flask.ext.login import current_user
 from .. import tasks
 import json
@@ -45,7 +45,10 @@ def get_pods_collection(user):
 @login_required_or_basic
 @check_permission('get', 'pods')
 def get_pods():
-    coll = get_pods_collection(current_user)
+    try:
+        coll = get_pods_collection(current_user)
+    except AttributeError:
+        coll = get_pods_collection(g.user)
     return jsonify({'status': 'OK', 'data': coll})
 
 

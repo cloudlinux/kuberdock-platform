@@ -297,6 +297,8 @@ def check_node_data(data):
             # 'labels': '',
         }):
         raise APIError(validator.errors)
+    if data['ip'] == data['hostname']:
+        raise APIError('Please add nodes by hostname, not by ip')
 
 
 def check_hostname(hostname):

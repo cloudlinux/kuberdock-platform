@@ -94,7 +94,11 @@ def ssh_connect(host, timeout=10):
 
 def process_event(kub_event):
     # TODO handle pods migrations
-    kub_event = json.loads(kub_event.strip())
+    try:
+        kub_event = json.loads(kub_event.strip())
+    except ValueError:
+        print 'Wrong event data in process_event: "{0}"'.format(kub_event)
+        return True
     public_ip = kub_event['object']['labels'].get('kuberdock-public-ip')
     if (not public_ip) or (kub_event['type'] == "ADDED"):
         return False
@@ -154,9 +158,9 @@ def listen_kub_events():
             if content_length not in ('0', ''):
                 # TODO due to watch bug:
                 needs_reconnect = process_event(r.raw.readline())
-                r.raw.readline()
                 if needs_reconnect:
                     r.raw.close()
                     gevent.sleep(0.2)
                     break
+                r.raw.readline()
         # print 'RECONNECT(Listen pods events)'

@@ -69,15 +69,18 @@
 	-o-transform: 		 rotate(@deg);
 }
 .placeholder(@color) {
-    ::-webkit-input-placeholder {
-        color: @color;
-    }
-    :-moz-placeholder {
-        color: @color;
-    }
-    ::-moz-placeholder {
-      color: @color;
-    }
+	&::-webkit-input-placeholder {
+	   color: @color;
+	}
+	&:-moz-placeholder {
+	   color: @color;  
+	}
+	&::-moz-placeholder { 
+	   color: @color; 
+	}
+	&:-ms-input-placeholder {  
+	   color: @color;  
+	}
 }
 .align-right{
   text-align: right;

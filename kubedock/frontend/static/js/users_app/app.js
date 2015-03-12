@@ -152,11 +152,15 @@ define(['marionette', 'paginator', 'utils'],
             childView: Views.UserItem,
             childViewContainer: "tbody",
 
-            events: {
-                'click button#create_user' : 'createUser'
+            ui: {
+                'add_user':'button#add_user'
             },
 
-            createUser: function(){
+            events: {
+                'click @ui.add_user' : 'addUser'
+            },
+
+            addUser: function(){
                 App.router.navigate('/create/', {trigger: true});
             }
         });
@@ -258,12 +262,17 @@ define(['marionette', 'paginator', 'utils'],
                 'password': 'input#password',
                 'password_again': 'input#password-again',
                 'email': 'input#email',
-                'active_chkx': 'input#active-chkx',
-                'role_select': 'select#role-select'
+                'user_status' : 'select#status-select',
+                'role_select': 'select#role-select',
+                'nodes_page' : 'div#nodes-page',
+                'user_add_btn' : 'button#user-add-btn',
+                'user_cancel_btn' : 'button#user-cancel-btn'
             },
 
             events: {
-                'click button#user-add-btn': 'onSave'
+                'click @ui.nodes_page' : 'breadcrambClick',
+                'click @ui.user_add_btn': 'onSave',
+                'click @ui.user_cancel_btn': 'cancel'
             },
 
             onSave: function(){
@@ -278,7 +287,7 @@ define(['marionette', 'paginator', 'utils'],
                     'username': this.ui.username.val(),
                     'password': this.ui.password.val(),
                     'email': this.ui.email.val(),
-                    'active': this.ui.active_chkx.prop('checked'),
+                    'active': (this.ui.user_status.val() == 1 ? true : false),
                     'rolename': this.ui.role_select.val()
                 }, {
                     wait: true,
@@ -286,6 +295,14 @@ define(['marionette', 'paginator', 'utils'],
                         App.router.navigate('/', {trigger: true})
                     }
                 });
+            },
+
+            cancel: function(){
+               App.router.navigate('/', {trigger: true});
+            },
+
+            breadcrambClick: function(){
+               App.router.navigate('/', {trigger: true});
             }
 
         });
@@ -295,7 +312,7 @@ define(['marionette', 'paginator', 'utils'],
             onRender: function(){
                 this.ui.username.val(this.model.get('username'));
                 this.ui.email.val(this.model.get('email'));
-                this.ui.active_chkx.prop('checked', this.model.get('active'));
+                this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
                 this.ui.role_select.val(this.model.get('rolename'));
             },
 
@@ -304,7 +321,7 @@ define(['marionette', 'paginator', 'utils'],
                 var data = {
                     'username': this.ui.username.val(),
                     'email': this.ui.email.val(),
-                    'active': this.ui.active_chkx.prop('checked'),
+                    'active': (this.ui.user_status.val() == 1 ? true : false),
                     'rolename': this.ui.role_select.val()
                 };
                 if(this.ui.password.val()){
@@ -330,7 +347,6 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.role_select.focus();
                     return false;
                 }
-
                 this.model.set(data);
 
                 this.model.save(undefined, {

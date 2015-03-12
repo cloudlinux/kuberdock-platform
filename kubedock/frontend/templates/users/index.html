@@ -12,7 +12,7 @@
 
     <div id="globalError"></div>
     <!-- contents container -->
-    <div id="contents" class="container"></div>
+    <div id="contents"></div>
 
     <script type="text/template" id="all-users-activities-template">
         <a href="{{ url_for('users.index') }}" class="pull-right">
@@ -41,15 +41,14 @@
                         <div class="input-group-addon">
                             <i class="glyphicon glyphicon-calendar"></i>
                         </div>
-                        <input type="text" class="form-control" id="dateTo"
-                               placeholder="">
+                        <input type="text" class="form-control" id="dateTo" placeholder="">
                     </div>
                 </div>
                 <h3>Users:</h3>
                 <ul id="users-list"></ul>
             </div>
             <div class="col-md-10">
-                <table class="table table-bordered">
+                <table class="table">
                 <thead>
                 <tr>
                     <th>Name</th>
@@ -66,61 +65,59 @@
     </script>
 
     <script type="text/template" id="user-create-template">
-        <a href="{{ url_for('users.index') }}">
-            <i class="glyphicon glyphicon-chevron-left"></i>
-            back to the users list
-        </a><hr>
-
-        <div id="user-contents">
-            <div class="row">
-                <div class="col-md-3">
-                    <div id="user-header">
-                        <h1>User form</h1>
-                        <h2>Add</h2>
+        <div class="breadcrumbs-wrapper">
+            <div class="container breadcrumbs" id="breadcrumbs">
+                <ul class="breadcrumb">
+                    <li>
+                        <div id="nodes-page">Nodes</div>
+                    </li>
+                    <li class="active">
+                        Add node
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="container">
+            <div id="user-contents">
+                <div class="row">
+                    <div class="col-md-3"></div>
+                    <div id="user-controls" class="col-md-9">
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" name="username" class="form-control" id="username" placeholder="Username">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" class="form-control" id="password" placeholder="Password" name="password">
+                            <input type="password" class="form-control" id="password-again" placeholder="Repeat password" name="password-again">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">E-mail</label>
+                            <input type="email" name="email" class="form-control" id="email" placeholder="E-mail">
+                        </div>
+                        <div class="form-group">
+                            <label for="role-select">Role</label>
+                            <select id="role-select" name="role-select">
+                            {% for role in roles %}
+                                {% if role.default %}
+                                    <option selected="selected">{{ role.rolename }}</option>
+                                {% else %}
+                                    <option>{{ role.rolename }}</option>
+                                {% endif %}
+                            {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="status-select">Status</label>
+                            <select id="status-select" name="status-select">
+                                <option selected="selected" value="1">Active</option>
+                                <option value="0">Blocked</option>
+                            </select>
+                        </div>
                     </div>
-
-                </div>
-                <div id="user-controls" class="col-md-6">
-                    <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" name="username" class="form-control"
-                               id="username" placeholder="username">
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" class="form-control" id="password"
-                               placeholder="password" name="password">
-                    </div>
-                    <div class="form-group">
-                        <label for="password-again">Repeat password</label>
-                        <input type="password" class="form-control" id="password-again"
-                               placeholder="repeat password" name="password-again">
-                    </div>
-                    <div class="form-group">
-                        <label for="email">E-mail</label>
-                        <input type="email" name="email" class="form-control"
-                               id="email" placeholder="E-mail">
-                    </div>
-                    <div class="checkbox">
-                        <label>
-                            <input type="checkbox" name="active-chkx" id="active-chkx">
-                            Active
-                        </label>
-                    </div>
-
-                    <div class="form-group">
-                        <select id="role-select" name="role-select">
-                        {% for role in roles %}
-                            {% if role.default %}
-                                <option selected="selected">{{ role.rolename }}</option>
-                            {% else %}
-                                <option>{{ role.rolename }}</option>
-                            {% endif %}
-                        {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <button id="user-add-btn" class="btn btn-success" type="submit">SAVE</button>
+                    <div class="buttons pull-right">
+                        <button id="user-cancel-btn" class="" type="submit">Cencele</button>
+                        <button id="user-add-btn" class="" type="submit">Add</button>
                     </div>
                 </div>
             </div>
@@ -129,18 +126,21 @@
 
     <script type="text/template" id="user-item-template">
         <td>
-            <%- username %>
-            <button id="deleteUser" class="btn btn-danger btn-xs pull-right">
-                <i class="glyphicon glyphicon-trash"></i>
+            <button id="editUser">
+                <%- username %>
             </button>
+            <!-- <button id="deleteUser" class="btn btn-danger btn-xs pull-right">
+                <i class="glyphicon glyphicon-trash"></i>
+            </button> 
             <button id="editUser" class="btn btn-link btn-xs pull-left">
                 <i class="glyphicon glyphicon-pencil"></i>
-            </button>
+            </button> --> <!-- ### need remove in future -->
         </td>
+        <td>20<!--<button class="btn btn-danger btn-xs" id="authIt">Auth by</button>--></td>
+        <td>89</td>
         <td><%- email ? email : 'No mail' %></td>
-        <td><%- rolename %></td>
-        <td><i class="glyphicon glyphicon-<%- active ? 'ok text-success' : 'remove text-danger' %>"></i></td>
-        <td><button class="btn btn-danger btn-xs" id="authIt">Auth by</button> </td>
+        <td><%- active ? 'Active' : 'Blocked' %></td>
+        <td>25</td>
     </script>
 
     <script type="text/template" id="online-user-item-template">
@@ -162,7 +162,7 @@
             back to the users list
         </a><hr>
 
-        <table class="table table-bordered">
+        <table class="table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -174,32 +174,52 @@
             </thead>
             <tbody></tbody>
         </table>
-        <hr>
     </script>
 
     <script type="text/template" id="users-list-template">
-        <button id="create_user" class="btn btn-success">Create user</button>
-        <a href="{{ url_for('users.index') }}online/">
-            <i class="glyphicon glyphicon-log-in"></i>
-            Online user list
-        </a> |
-        <a href="{{ url_for('users.index') }}activity/">
-            <i class="glyphicon glyphicon-eye-open"></i>
-            Users activities
-        </a><hr>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Active</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <hr>
+        <div class="breadcrumbs-wrapper">
+            <div class="container breadcrumbs" id="breadcrumbs">
+                <ul class="breadcrumb">
+                    <li class="active">
+                        Users
+                    </li>
+                </ul><!-- /.breadcrumb -->
+                <div class="control-group">
+                    <button id="add_user">Add user</button>
+                    <div class="nav-search" id="nav-search">
+                        <form class="form-search">
+                            <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
+                            <i class="nav-search-icon"></i>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+
+            <!-- <a href="{{ url_for('users.index') }}online/">
+                <i class="glyphicon glyphicon-log-in"></i>
+                Online user list
+            </a> |
+            <a href="{{ url_for('users.index') }}activity/">
+                <i class="glyphicon glyphicon-eye-open"></i>
+                Users activities
+            </a> -->
+
+            <table id="userslist-table" class="table">
+                <thead>
+                    <tr class="tablesorter-headerRow">
+                        <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">User<b class="caret"></b></div></th>
+                        <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pods<b class="caret"></b></div></th>
+                        <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Containers<b class="caret"></b></div></th>
+                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Email<b class="caret"></b></div></th>
+                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
+                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Number<b class="caret"></b><br>of Kubes</div></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </script>
 
     <script type="text/template" id="activity-item-template">
@@ -212,7 +232,7 @@
             <i class="glyphicon glyphicon-arrow-left"></i>
             back to the online user list
         </a><hr/>
-        <table class="table table-bordered">
+        <table class="table">
             <thead>
                 <tr>
                     <th>Date/Time</th>
@@ -225,8 +245,8 @@
     </script>
 
     <script type="text/template" id="users-layout-template">
-        <div id="main">main div text</div>
-        <div id="pager">pager div text</div>
+        <div id="main"></div>
+        <div id="pager"></div>
     </script>
 
 {#    Copy from main app, delete when merge #}

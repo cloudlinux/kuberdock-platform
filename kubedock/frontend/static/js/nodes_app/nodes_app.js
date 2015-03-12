@@ -6,7 +6,6 @@ var NodesApp = new Backbone.Marionette.Application({
     }
 });
 
-
 NodesApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
     var unwrapper = function(response) {
@@ -67,10 +66,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-
-
-
-
     //=============================================================================================
 
     Views.NodeItem = Backbone.Marionette.ItemView.extend({
@@ -90,9 +85,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         checkNode: function(){
             var models = this.model.collection.models;
             this.model.get('checked') ? this.model.set('checked',false) : this.model.set('checked',true);
-
-            console.log(Marionette.Callbacks());
-            
+           
             this.$el.toggleClass('checked').siblings().removeClass('checked');
 
             for (var i = 0; i < models.length; i++) {
@@ -115,16 +108,17 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         childView: Views.NodeItem,
         childViewContainer: "tbody",
 
-        events: {
-            'click button#add_node' : 'addNode',
-            'click tbody tr' : 'activeMenu',
-            'click @ui.button' : 'removeSelectedNode'
-        },
-
         ui: {
+            'addNode': 'button#add_node',
             'control': 'div.active-item-control',
             'thead' : 'thead',
             'button': 'button#deleteNode'
+        },
+
+        events: {
+            'click @ui.addNode' : 'addNode',
+            'click tbody tr' : 'activeMenu',
+            'click @ui.button' : 'removeSelectedNode'
         },
 
         collectionEvents: {
@@ -158,6 +152,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         addNode: function(){
             App.router.navigate('/add/', {trigger: true});
         },
+
         removeSelectedNode: function(e){
             var models = this.collection.models;
            
@@ -170,7 +165,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             e.stopPropagation();      
         }
     });
-
 
     // =========== Add Node wizard ====================================
     Views.NodeAddWizardLayout = Backbone.Marionette.LayoutView.extend({
@@ -187,10 +181,10 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events:{
-            'click @ui.nodes_page' : 'breadcrampClick'
+            'click @ui.nodes_page' : 'breadcrambClick'
         }, 
 
-        breadcrampClick: function(){
+        breadcrambClick: function(){
            App.router.navigate('/', {trigger: true})
         }
     });
@@ -254,8 +248,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 //            }
 //        },
 
-
-
         complete: function () {
             var that = this;
             App.Data.nodes.create({
@@ -304,15 +296,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
     // =========== //Add Node wizard ==================================
 
-
-
-
-
-
-
-
-
-
     // =========== Detailed view ========================================
     Views.NodeDetailedLayout = Backbone.Marionette.LayoutView.extend({
         template: '#node-detailed-layout-template',
@@ -322,16 +305,21 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         ui: {
-            'nodes_page' : 'div#nodes-page' 
+            'nodes_page' : 'div#nodes-page',
+            'delete': 'button#delete_node',
+            'stop' : 'button#stop_node',
+            'rename' : 'button#rename_node'
         },
 
         events: {
             'click ul.nav li': 'changeTab',
             'click button#node-add-btn': 'saveNode',
-            'click @ui.nodes_page' : 'breadcrampClick'
+            'click @ui.nodes_page' : 'breadcrambClick',
+            'click @ui.delete' : 'deleteNode',
+            'click @ui.stop' : 'stopNode',
+            'click @ui.rename' : 'renameNode'
         },
 
-        
         initialize: function (options) {
             this.tab = options.tab;
             this.node_id = options.node_id;
@@ -374,7 +362,19 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             });
         },
 
-        breadcrampClick: function(){
+        deleteNode: function() {
+            alert('delete event')
+        },
+
+        stopNode: function() {
+            alert('stop event')
+        },
+
+        renameNode: function() {
+            alert('rename event')
+        },
+
+        breadcrambClick: function(){
            App.router.navigate('/', {trigger: true})
         },
 
@@ -438,7 +438,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 });
-
 
 NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _){
 

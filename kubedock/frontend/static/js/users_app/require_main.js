@@ -50,12 +50,4 @@ require(['jquery', 'users_app/app', 'notify', 'jquery-ui'], function(jQuery, Use
     UsersApp.Data.userActivity = new UsersApp.Data.ActivitiesCollection(userActivity);
 
     UsersApp.start();
-
-    $.notify('User app started', {
-        autoHideDelay: 5000,
-        globalPosition: 'top center',
-        className: 'info'
-    });
-
-
 });

@@ -134,7 +134,8 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 that = this;
             
             var processRequest = function(data){
-                data.set('set_public_ip', $('#set_public_ip').val());
+                if($('#set_public_ip').is(':checked'))
+                    data.set('set_public_ip', '1');
                 _.each(data.get('containers'), function(item){
                     item.volumeMounts = _.filter(item.volumeMounts, function(mp){
                         return mp['name'] !== null;

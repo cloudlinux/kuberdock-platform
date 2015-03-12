@@ -487,11 +487,18 @@
             </div >
             <div>
                 <table class="table">
-                    <thead><tr><th class="text-center">CPU</th><th class="text-center">Memory</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <td class="text-center">CPU</td>
+                            <td class="text-center">Memory</td>
+                            <td class="text-center">Kubes</td>
+                        </tr>
+                    </thead>
                     <tbody>
                         <tr>
                             <td class="text-center"><span class="ieditable cpu"><%- cpu ? cpu : '0' %></span></td>
                             <td class="text-center"><span class="ieditable memory"><%- memory ? memory : '0' %></span></td>
+                            <td class="text-center"><span class="ieditable kubes"><%- kubes ? kubes : '1' %></span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -547,13 +554,6 @@
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
             <div class="col-md-4 col-md-offset-1">
-                <table class="table">
-                    <thead><tr><th></th><th>Number of kubes</th></tr></thead>
-                    <tr>
-                        <td>kubes</td>
-                        <td><input class="kubes" type="number" min="1" value="<%- kubes === undefined ? 1 : kubes %>"></td>
-                    </tr>
-                </table>
                 <table class="table">
                     <thead><tr><th></th><th>Cluster</th></tr></thead>
                     <tbody>

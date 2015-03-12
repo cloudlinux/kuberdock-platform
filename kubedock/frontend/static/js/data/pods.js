@@ -16,7 +16,6 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             containers: [],
             volumes: [],
             cluster: false,
-            kubes: 1,
             replicas: 1,
             restartPolicy: {'always': {}},
             service: false,

@@ -1092,6 +1092,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     else if ($(this).hasClass('memory')) {
                         that.model.set('memory', parseInt(newValue));
                     }
+                    else if ($(this).hasClass('kubes')) {
+                        that.model.set('kubes', parseInt(newValue));
+                    }
                 }
             });
         }
@@ -1166,7 +1169,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .cluster': 'toggleCluster',
             'click .node': 'toggleNode',
             'change .replicas': 'changeReplicas',
-            'change .kubes': 'changeKubes'
         },
 
         triggers: {
@@ -1214,11 +1216,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));
-        },
-
-        changeKubes: function(evt){
-            evt.stopPropagation();
-            this.model.set('kubes', parseInt($(evt.target).val().trim()));
         },
 
         onRender: function(){

@@ -68,10 +68,9 @@ def create_item():
 
     item_id = make_item_id(data['name'])
     save_only = data.pop('save_only', True)
-    kubes = data.pop('kubes', 1)
     temp_uuid = str(uuid4())
     data.update({'id': temp_uuid, 'status': 'stopped'})
-    pod = Pod(name=data['name'], kubes=kubes, config=data, id=temp_uuid, status='stopped')
+    pod = Pod(name=data['name'], config=data, id=temp_uuid, status='stopped')
     pod.owner = current_user
     try:
         db.session.add(pod)
@@ -104,7 +103,6 @@ def create_item():
             output.update(prepare_for_output(None, service_rv))
         else:
             output = prepare_for_output(pod_rv, service_rv)
-        output['kubes'] = kubes
 
         try:
             pod = db.session.query(Pod).get(temp_uuid)

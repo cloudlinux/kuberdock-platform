@@ -21,10 +21,11 @@ def get_list():
     return jsonify({'status': 'OK', 'data': get_networks_collection()})
 
 
-@ippool.route('/hasPublicIPs', methods=['GET'])
+@ippool.route('/getFreeHost', methods=['GET'])
 @login_required_or_basic
-def has_public_ips():
-    return jsonify({'status': 'OK' if IPPool.has_public_ips() else 'NO'})
+def get_free_host():
+    free_host = IPPool.get_free_host()
+    return jsonify({'status': 'OK', 'data': free_host})
 
 
 @ippool.route('/<network>', methods=['GET'])

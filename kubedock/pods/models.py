@@ -64,27 +64,35 @@ class IPPool(BaseModelMixin, db.Model):
     def __repr__(self):
         return self.network
 
-    def hosts(self, as_int=None, as_str=None):
+    def hosts(self, as_int=None, exclude=None):
+        """
+        Return IPv4Network object or list of IPs (long) or list of IPs (string)
+        :param as_int: Return list of IPs (long)
+        :param exclude: Exclude IP from IP list (list, tuple, str, int)
+        :return: IPv4Network or list
+        """
         network = self.network
         if not self.ipv6 and network.find('/') < 0:
             network = u'{0}/32'.format(network)
-        _hosts = ipaddress.ip_network(unicode(network))
+        network = ipaddress.ip_network(unicode(network))
+        hosts = list(network.hosts()) or [network.network_address]
+        if exclude:
+            if isinstance(exclude, (basestring, int)):
+                hosts = [h for h in hosts if int(h) != int(exclude)]
+            elif isinstance(exclude, (list, tuple)):
+                hosts = [h for h in hosts
+                         if int(h) not in [int(ex) for ex in exclude]]
         if as_int:
-            return [int(h) for h in _hosts]
-        elif as_str:
-            return [str(h) for h in _hosts]
-        return _hosts
+            hosts = [int(h) for h in hosts]
+        else:
+            hosts = [str(h) for h in hosts]
+        hosts.sort()
+        return hosts
 
-    def free_hosts(self, as_int=None, as_str=None):
+    def free_hosts(self, as_int=None):
         allocated_ips = [pod.ip_address
                          for pod in PodIP.filter_by(network=self.network)]
-        _hosts = self.hosts()
-        for ip in allocated_ips:
-            _hosts = _hosts.address_exclude(ipaddress.ip_network(ip))
-        if as_int:
-            return [int(h) for h in _hosts]
-        elif as_str:
-            return [str(h) for h in _hosts]
+        _hosts = self.hosts(as_int=as_int, exclude=allocated_ips)
         return _hosts
 
     def free_hosts_and_busy(self, as_int=None):
@@ -92,7 +100,7 @@ class IPPool(BaseModelMixin, db.Model):
         allocated_ips = {int(pod) if as_int else str(pod): pod.get_pod()
                          for pod in pods}
         data = []
-        for ip in self.hosts(as_str=not as_int):
+        for ip in self.hosts(as_int=as_int):
             data.append((ip, allocated_ips.get(ip)))
         data.sort()
         return data
@@ -101,12 +109,18 @@ class IPPool(BaseModelMixin, db.Model):
     def is_free(self):
         return len(self.free_hosts(as_int=True)) > 0
 
+    def get_first_free_host(self):
+        free_hosts = self.free_hosts()
+        if free_hosts:
+            return free_hosts[0]
+        return None
+
     def to_dict(self, include=None, exclude=None):
         data = self.free_hosts_and_busy()
         data = dict(
             network=self.network,
             ipv6=self.ipv6,
-            free_hosts=self.free_hosts(as_str=True),
+            free_hosts=self.free_hosts(),
             allocation=data
         )
         return data
@@ -119,10 +133,11 @@ class IPPool(BaseModelMixin, db.Model):
         return False
 
     @classmethod
-    def get_free(cls):
+    def get_free_host(cls):
         for n in cls.all():
-            if n.is_free:
-                return n
+            free_host = n.get_first_free_host()
+            if free_host is not None:
+                return free_host
         return None
 
 

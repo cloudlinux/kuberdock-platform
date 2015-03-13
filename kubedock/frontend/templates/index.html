@@ -578,13 +578,13 @@
                         <% } %>
                     </tbody>
                 </table>
-                <% if(hasPublicIPs) { %>
+                <% if(freeHost) { %>
                 <table class="table">
-                <thead><tr><th>Public IP</th></tr></thead>
+                <thead><tr><th></th><th>Public IP</th></tr></thead>
                 <tbody><tr>
                     <td><input type="checkbox" id="set_public_ip"
                                name="set_public_ip" value="1"/></td>
-                    <th><label for="set_public_ip">Set public IP</label></th>
+                    <th><label for="set_public_ip">Set public IP: <%- freeHost %></label></th>
                 </tr></tbody>
                 </table>
                 <% } %>

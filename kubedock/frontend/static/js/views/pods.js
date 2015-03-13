@@ -1150,13 +1150,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         initialize: function(options){
             this.model = options.model;
             this.nodes = options.nodes;
-            this.hasPublicIPs = options.hasPublicIPs;
+            this.freeHost = options.freeHost;
         },
 
         templateHelpers: function(){
             return {
                 nodes: this.nodes,
-                hasPublicIPs: this.hasPublicIPs
+                freeHost: this.freeHost
             };
         },
         

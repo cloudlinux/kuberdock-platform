@@ -58,7 +58,9 @@ def get_pods():
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
+    print data
     set_public_ip = data.pop('set_public_ip', None) == '1'
+    public_ip = data.pop('free_host')
     check_new_pod_data(data)
     pod = Pod.query.filter_by(name=data['name']).first()
     if pod:
@@ -79,9 +81,9 @@ def create_item():
         db.session.rollback()
         raise APIError("Could not create database record for "
                        "'{0}'.".format(data['name']), status_code=409)
-    if set_public_ip:
+    if set_public_ip and public_ip:
         try:
-            podip = pods_signals.allocate_ip_address.send([temp_uuid])
+            pods_signals.allocate_ip_address.send([temp_uuid, public_ip])
         except Exception, e:
             db.session.rollback()
             raise APIError(str(e), status_code=409)

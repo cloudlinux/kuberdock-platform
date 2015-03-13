@@ -211,10 +211,11 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 rqst.done(function(data){
                     if (data.hasOwnProperty('data')) { data = data['data']; }
                     $.ajax({
-                        url: '/api/ippool/hasPublicIPs',
+                        url: '/api/ippool/getFreeHost',
                         success: function(rs){
+                            model.set({free_host: rs.data});
                             wizardLayout.steps.show(new App.Views.WizardCompleteSubView({
-                                nodes: data, model: model, hasPublicIPs: rs.status == 'OK'}));
+                                nodes: data, model: model, freeHost: rs.data}));
                         }
                     })
                 });

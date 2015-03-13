@@ -120,14 +120,16 @@ EOF
 
 
 # 7. get docker bridge ip address
-DOCKER_BRIDGE_IP=$(ip addr show {{ docker_if }} | grep 'inet ' | head -n 1| awk '{print $2}' | cut -d/ -f1)
+systemctl enable flanneld; systemctl restart flanneld
+source /run/flannel/subnet.env
+DOCKER_BRIDGE_IP=$(echo $FLANNEL_SUBNET | cut -d/ -f1)
 
 
 
 # 8. setup docker dns server to use
 cat > /etc/sysconfig/docker-network << EOF
 # /etc/sysconfig/docker-network
-DOCKER_NETWORK_OPTIONS=--dns=$DOCKER_BRIDGE_IP
+DOCKER_NETWORK_OPTIONS="--dns=$DOCKER_BRIDGE_IP"
 EOF
 
 
@@ -245,7 +247,6 @@ EOF
 
 # 12. enable services
 echo "Starting services..."
-systemctl enable flanneld; systemctl restart flanneld
 systemctl enable kubelet; systemctl restart kubelet
 systemctl enable kube-proxy; systemctl restart kube-proxy
 #systemctl enable cadvisor; systemctl restart cadvisor

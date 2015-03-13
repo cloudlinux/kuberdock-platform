@@ -50,7 +50,6 @@ ONLINE_LAST_MINUTES = 5
 # TODO We need to allow change it during cluster setup
 NODE_INET_IFACE = 'enp0s3'
 
-DOCKER_IF = 'docker0'
 ES_HOST = 'elasticsearch.kuberdock'
 
 

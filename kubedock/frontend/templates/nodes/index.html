@@ -115,19 +115,20 @@
 
     <script type="text/template" id="node-logs-tab-template">
         <div id="logs-page" class="col-sm-12">
+            <!--
             <div class="page-top-menu">
                 <span>Choose log:</span>
-                <span >Log 1</span>
-                <span class="active">Log 2</span>
-                <span Log 3</span>
-                <span Log 3</span>
-            </div
-        </div>
-        <div class="node-logs">
-            log text
-            <% _.each(logs, function(line){ %>
-            <p><%- line %></p>
-            <% }) %>
+                <span class="active">Log 1</span>
+                <span>Log 2</span>
+                <span>Log 3</span>
+                <span>Log 3</span>
+            </div>
+            -->
+            <div class="node-logs">
+                <% _.each(logs, function(line){ %>
+                <p><%- line['@timestamp'] %> <%- line['ident'] %>: <%- line['message'] %></p>
+                <% }) %>
+            </div>
         </div>
     </script>
 

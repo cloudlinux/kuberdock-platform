@@ -26,7 +26,9 @@ define(['marionette', 'utils'],
             tagName: 'tr',
 
             events: {
-                'click button#deleteNetwork': 'deleteNetwork_btn'
+                'click button#deleteNetwork': 'deleteNetwork_btn',
+                'click button.block_ip': 'blockIP',
+                'click button.unblock_ip': 'unblockIP'
             },
 
             deleteNetwork_btn: function(){
@@ -52,6 +54,34 @@ define(['marionette', 'utils'],
                         buttonCancel: true
                     }
                 })
+            },
+            blockIP: function(btn){
+                var alloc = this.model.get('allocation'),
+                    ip = $(btn.currentTarget).data('ip'),
+                    that = this;
+                _.each(alloc, function(itm){
+                    if(itm[0] == ip) {
+                        itm[2] = 'blocked';
+                        that.model.set('allocation', alloc);
+                        that.model.set('block_ip', ip);
+                        that.model.save();
+                        that.render();
+                    }
+                });
+            },
+            unblockIP: function(btn){
+                var alloc = this.model.get('allocation'),
+                    ip = $(btn.currentTarget).data('ip'),
+                    that = this;
+                _.each(alloc, function(itm){
+                    if(itm[0] == ip) {
+                        itm[2] = 'free';
+                        that.model.set('allocation', alloc);
+                        that.model.set('unblock_ip', ip);
+                        that.model.save();
+                        that.render();
+                    }
+                });
             }
         });
 

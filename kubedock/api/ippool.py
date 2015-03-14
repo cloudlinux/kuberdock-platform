@@ -65,6 +65,25 @@ def create_item():
         raise APIError("An error was occured: '{0}'".format(e))
 
 
+@ippool.route('/<path:network>', methods=['PUT'])
+@login_required_or_basic
+@check_permission('edit', 'ippool')
+def change_item(network):
+    data = request.json
+    if data is None:
+        data = dict(request.form)
+    block_ip = data.get('block_ip')
+    unblock_ip = data.get('unblock_ip')
+    net = IPPool.filter_by(network=network).first()
+    if net is None:
+        raise APIError("Network '{0}' doesn't exist".format(network))
+    if block_ip is not None:
+        net.block_ip(block_ip)
+    if unblock_ip is not None:
+        net.unblock_ip(unblock_ip)
+    return jsonify({'status': 'OK', 'data': net.to_dict()})
+
+
 @ippool.route('/', methods=['DELETE'])
 @login_required_or_basic
 @check_permission('delete', 'ippool')

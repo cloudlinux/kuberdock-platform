@@ -1,5 +1,7 @@
+import json
 import ipaddress
 from sqlalchemy.dialects import postgresql
+from flask import current_app
 from ..core import db
 from ..models_mixin import BaseModelMixin
 import signals
@@ -60,11 +62,41 @@ class IPPool(BaseModelMixin, db.Model):
 
     network = db.Column(db.String, primary_key=True, nullable=False)
     ipv6 = db.Column(db.Boolean, default=False)
+    blocked_list = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return self.network
 
-    def hosts(self, as_int=None, exclude=None):
+    def get_blocked_list(self, as_int=None):
+        blocked_list = []
+        try:
+            blocked_list = json.loads(self.blocked_list or "[]")
+            if as_int is None:
+                blocked_list = [str(ipaddress.ip_address(int(ip)))
+                                for ip in blocked_list]
+            blocked_list.sort()
+        except Exception, e:
+            current_app.logger.warning("IPPool.get_blocked_list failed: "
+                                       "{0}".format(e))
+        return blocked_list
+
+
+    def block_ip(self, ip):
+        blocked_list = self.get_blocked_list(as_int=True)
+        if ip not in blocked_list:
+            blocked_list.append(int(ipaddress.ip_address(ip)))
+        self.blocked_list = json.dumps(blocked_list)
+        self.save()
+
+    def unblock_ip(self, ip):
+        blocked_list = self.get_blocked_list()
+        ind = blocked_list.index(ip)
+        if ind >= 0:
+            del blocked_list[ind]
+        self.blocked_list = json.dumps(blocked_list)
+        self.save()
+
+    def hosts(self, as_int=None, exclude=None, allowed=None):
         """
         Return IPv4Network object or list of IPs (long) or list of IPs (string)
         :param as_int: Return list of IPs (long)
@@ -90,9 +122,10 @@ class IPPool(BaseModelMixin, db.Model):
         return hosts
 
     def free_hosts(self, as_int=None):
-        allocated_ips = [pod.ip_address
-                         for pod in PodIP.filter_by(network=self.network)]
-        _hosts = self.hosts(as_int=as_int, exclude=allocated_ips)
+        ip_list = [pod.ip_address
+                   for pod in PodIP.filter_by(network=self.network)]
+        ip_list = list(set(ip_list) | set(self.get_blocked_list(as_int=True)))
+        _hosts = self.hosts(as_int=as_int, exclude=ip_list)
         return _hosts
 
     def free_hosts_and_busy(self, as_int=None):
@@ -100,8 +133,15 @@ class IPPool(BaseModelMixin, db.Model):
         allocated_ips = {int(pod) if as_int else str(pod): pod.get_pod()
                          for pod in pods}
         data = []
-        for ip in self.hosts(as_int=as_int):
-            data.append((ip, allocated_ips.get(ip)))
+        blocked_list = self.get_blocked_list(as_int=True)
+        hosts = self.hosts(as_int=True)
+        for ip in hosts:
+            pod = allocated_ips.get(ip)
+            status = 'blocked' \
+                if ip in blocked_list else 'busy' if pod else 'free'
+            if not as_int:
+                ip = str(ipaddress.ip_address(ip))
+            data.append((ip, pod, status))
         data.sort()
         return data
 
@@ -116,12 +156,14 @@ class IPPool(BaseModelMixin, db.Model):
         return None
 
     def to_dict(self, include=None, exclude=None):
-        data = self.free_hosts_and_busy()
+        free_hosts_and_busy = self.free_hosts_and_busy()
         data = dict(
+            id=self.network,
             network=self.network,
             ipv6=self.ipv6,
             free_hosts=self.free_hosts(),
-            allocation=data
+            blocked_list=self.get_blocked_list(),
+            allocation=free_hosts_and_busy
         )
         return data
 
@@ -197,6 +239,7 @@ class PodIP(BaseModelMixin, db.Model):
     def to_dict(self, include=None, exclude=None):
         ip = self.ip_address
         return dict(
+            id=self.pod_id,
             pod_id=self.pod_id,
             network=self.network.network,
             ip_address_int=ip,

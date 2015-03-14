@@ -60,6 +60,12 @@
     </script>
 
     <script type="text/template" id="network-item-template">
+        <% states = {
+            free: 'text-success',
+            busy: 'text-danger',
+            blocked: 'text-warning'
+        } %>
+
         <td>
             <%- network %>
             <button id="deleteNetwork" class="btn btn-danger btn-xs pull-right">
@@ -68,7 +74,16 @@
         </td>
         <td><ul id="hosts-list">
             <% _.each(allocation, function(itm){ %>
-            <li class="<%- itm[1] ? 'text-danger' : 'text-success' %>"><%- itm[0] %>: <%- itm[1] ? itm[1] : 'free' %></li>
+            <li class="<%- states[itm[2]] %>">
+                <%- itm[0] %>: <%- itm[1] ? itm[1] : itm[2] %>
+                <% if(itm[2] == 'blocked') { %>
+                <button class="btn btn-xs btn-link unblock_ip"
+                        data-ip="<%- itm[0] %>">unblock</button>
+                <% } else if(itm[2] == 'free') { %>
+                <button class="btn btn-xs btn-link block_ip"
+                        data-ip="<%- itm[0] %>">block</button>
+                <% } %>
+            </li>
             <% }); %>
         </ul></td>
     </script>

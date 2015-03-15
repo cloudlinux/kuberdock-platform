@@ -54,7 +54,7 @@ define(['marionette', 'utils'],
                         },
                         buttonCancel: true
                     }
-                })
+                });
             },
             blockIP: function(btn){
                 var alloc = this.model.get('allocation'),
@@ -85,18 +85,30 @@ define(['marionette', 'utils'],
                 });
             },
             unbindIP: function(btn){
-                if(!confirm("Do you really want to unbind IP-address?")) return;
                 var alloc = this.model.get('allocation'),
                     ip = $(btn.currentTarget).data('ip'),
                     that = this;
+
                 _.each(alloc, function(itm){
                     if(itm[0] == ip) {
-                        itm[2] = 'free';
-                        itm[1] = null;
-                        that.model.set('allocation', alloc);
-                        that.model.set('unbind_ip', ip);
-                        that.model.save();
-                        that.render();
+                        utils.modalDialog({
+                            title: 'Unbind IP-address',
+                            body: "Do you really want to unbind IP-address?",
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    itm[2] = 'free';
+                                    itm[1] = null;
+                                    that.model.set('allocation', alloc);
+                                    that.model.set('unbind_ip', ip);
+                                    that.model.save();
+                                    that.render();
+                                },
+                                buttonCancel: true
+                            }
+                        });
+
                     }
                 });
             }

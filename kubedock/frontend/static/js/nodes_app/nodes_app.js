@@ -400,18 +400,46 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             textarea: '.node-logs'
         },
 
-        initialize: function () {
+        initialize: function() {
             this.model.set('logs', []);
-            this.listenTo(App.vent, 'update_node_log_' + this.model.get('ip'), function (data) {
-                var lines = this.model.get('logs');
-                lines.push(data);
-                lines = lines.slice(-100);
-                this.model.set('logs', lines);
-                this.render();
-                _.defer(function(caller){
-                    caller.ui.textarea.scrollTop(caller.ui.textarea[0].scrollHeight);
-                }, this);
-            })
+            function get_logs() {
+                var ip = this.model.get('ip');
+                var today = new Date();
+                var year = today.getUTCFullYear();
+                var month = today.getUTCMonth() + 1;
+                var day = today.getUTCDate();
+                var index = 'syslog-' + year + '.' +
+                    ('0' + month).slice(-2) +'.' +
+                    ('0' + day).slice(-2);
+                var hostname = this.model.get('hostname');
+                var host = hostname.split('.')[0];
+                var size = 100;
+                var url = 'http://' + ip + ':9200/' + index + '/_search?q="' +
+                    hostname + '" OR "' + host + '"&size=' + size +
+                    '&sort=@timestamp:desc';
+                $.ajax({
+                    url: url,
+                    dataType : 'json',
+                    context: this,
+                    success: function(data) {
+                        var lines = _.map(data['hits']['hits'], function(line) {
+                            return line['_source'];
+                        });
+                        lines.reverse();
+                        this.model.set('logs', lines);
+                        this.render();
+                        _.defer(function(caller){
+                            caller.ui.textarea.scrollTop(caller.ui.textarea[0].scrollHeight);
+                        }, this);
+                    }
+                });
+                this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
+            }
+            $.proxy(get_logs, this)();
+        },
+
+        onBeforeDestroy: function () {
+            clearTimeout(this.model.get('timeout'));
         }
     });
 
@@ -542,11 +570,6 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
             source.addEventListener('install_logs', function (ev) {
                 App.vent.trigger('update_console_log', ev.data);
             }, false);
-            NodesApp.Data.nodes.forEach(function (node) {
-        	source.addEventListener('node-log-' + node.get('ip'), function (ev) {
-        	    App.vent.trigger('update_node_log_' + node.get('ip'), ev.data);
-        	}, false);
-            });
         }
     });
 

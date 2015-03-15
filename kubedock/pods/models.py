@@ -172,7 +172,6 @@ class IPPool(BaseModelMixin, db.Model):
             blocked_list=self.get_blocked_list(),
             allocation=free_hosts_and_busy
         )
-        print data
         return data
 
     @classmethod

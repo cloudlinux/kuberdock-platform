@@ -81,6 +81,7 @@ def create_item():
         raise APIError("Could not create database record for "
                        "'{0}'.".format(data['name']), status_code=409)
     if set_public_ip and public_ip:
+        data['public_ip'] = public_ip
         try:
             pods_signals.allocate_ip_address.send([temp_uuid, public_ip])
         except Exception, e:
@@ -450,14 +451,8 @@ def make_pod_config(data, sid, separate=True):
             outer['nodeSelector'] = {'kuberdock-node-hostname': data['node']}
     outer['desiredState'] = {'manifest': inner}
     outer['labels'] = {'name': data['name']}
-    try:
-        # TODO delete when we have normal UI to do this
-        d = data['containers'][0]['env'][0]
-        public_ip = d['value'] if d['name'] == 'ip' else ''
-    except (KeyError, IndexError):
-        pass
-    else:
-        outer['labels']['kuberdock-public-ip'] = public_ip
+    if 'public_ip' in data:
+        outer['labels']['kuberdock-public-ip'] = data.pop('public_ip')
     return outer
 
 

@@ -133,6 +133,7 @@ new_pod_scheme = {
                 'cpu': {'type': 'integer', 'min': 0},
                 # TODO check real or buyed ram
                 'memory': {'type': 'integer', 'min': 0},
+                'kubes': {'type': 'integer', 'min': 1},
                 'image': container_image_name_scheme,
                 'name': {
                     'type': 'string',

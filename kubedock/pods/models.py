@@ -130,8 +130,7 @@ class IPPool(BaseModelMixin, db.Model):
 
     def free_hosts_and_busy(self, as_int=None):
         pods = PodIP.filter_by(network=self.network)
-        allocated_ips = {int(pod) if as_int else str(pod): pod.get_pod()
-                         for pod in pods}
+        allocated_ips = {int(pod): pod.get_pod() for pod in pods}
         data = []
         blocked_list = self.get_blocked_list(as_int=True)
         hosts = self.hosts(as_int=True)
@@ -149,10 +148,18 @@ class IPPool(BaseModelMixin, db.Model):
     def is_free(self):
         return len(self.free_hosts(as_int=True)) > 0
 
-    def get_first_free_host(self):
-        free_hosts = self.free_hosts()
+    def get_first_free_host(self, as_int=None):
+        free_hosts = self.free_hosts(as_int=as_int)
         if free_hosts:
             return free_hosts[0]
+        return None
+
+    @classmethod
+    def get_network_by_ip(cls, ip_address):
+        ip_address = ipaddress.ip_address(ip_address)
+        for net in cls.all():
+            if ip_address in ipaddress.ip_network(net.network).hosts():
+                return net
         return None
 
     def to_dict(self, include=None, exclude=None):
@@ -165,6 +172,7 @@ class IPPool(BaseModelMixin, db.Model):
             blocked_list=self.get_blocked_list(),
             allocation=free_hosts_and_busy
         )
+        print data
         return data
 
     @classmethod
@@ -175,9 +183,9 @@ class IPPool(BaseModelMixin, db.Model):
         return False
 
     @classmethod
-    def get_free_host(cls):
+    def get_free_host(cls, as_int=None):
         for n in cls.all():
-            free_host = n.get_first_free_host()
+            free_host = n.get_first_free_host(as_int=as_int)
             if free_host is not None:
                 return free_host
         return None
@@ -198,7 +206,7 @@ class PodIP(BaseModelMixin, db.Model):
         return self.ip_address
 
     @classmethod
-    def allocate_ip_address(cls, pid, network=None, add_network=None):
+    def allocate_ip_address(cls, pid, ip_address=None):
         """
         Allocate an IP-address to POD
         :param pid: Pod Id
@@ -208,28 +216,24 @@ class PodIP(BaseModelMixin, db.Model):
         pod = Pod.query.filter_by(id=pid).first()
         if pod is None:
             raise Exception("Wrong Pod Id '{0}".format(pid))
-        pool = None
+        network = None
+        if ip_address is None:
+            ip_address = IPPool.get_free_host(as_int=True)
+            if ip_address is None:
+                raise Exception('There are no free IP-addresses')
+        else:
+            network = IPPool.get_network_by_ip(ip_address)
+        if ip_address is None:
+            raise Exception('There are no free networks to allocate IP-address')
         if network is None:
-            pool = IPPool.filter_by(is_free=True).first()
-        elif isinstance(network, basestring):
-            pool = IPPool.filter_by(network=network).first()
-        if pool is None:
-            if add_network and network:
-                pool, created = IPPool.get_or_create(
-                    network=str(ipaddress.ip_network(unicode(network))))
-                if created:
-                    pool.save()
-            pool = IPPool.get_free()
-            if pool is None:
-                raise Exception(
-                    'There are no free networks to allocate IP-address')
-        free_hosts = pool.free_hosts(as_int=True)
-        if not free_hosts:
-            raise Exception('There are no free IP-addresses')
+            raise Exception(
+                'Cannot find network by IP-address: {0}'.format(ip_address))
+        if isinstance(ip_address, basestring):
+            ip_address = int(ipaddress.ip_address(ip_address))
         podip = cls.filter_by(pod_id=pid).first()
         if podip is None:
-            podip = cls.create(pod_id=pid, network=pool.network,
-                               ip_address=free_hosts[0])
+            podip = cls.create(pod_id=pid, network=network.network,
+                               ip_address=ip_address)
             podip.save()
         return podip
 
@@ -252,8 +256,6 @@ class PodIP(BaseModelMixin, db.Model):
 @signals.allocate_ip_address.connect
 def allocate_ip_address_signal(args):
     if len(args) == 1:
-        args = (args[0], None, None)
-    elif len(args) == 2:
-        args = (args[0], args[1], None)
-    pid, network, add_network = args
-    return PodIP.allocate_ip_address(pid, network, add_network)
+        args = (args[0], None)
+    pid, network = args
+    return PodIP.allocate_ip_address(pid, network)

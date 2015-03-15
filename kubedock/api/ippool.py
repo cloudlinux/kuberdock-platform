@@ -74,6 +74,7 @@ def change_item(network):
         data = dict(request.form)
     block_ip = data.get('block_ip')
     unblock_ip = data.get('unblock_ip')
+    unbind_ip = data.get('unbind_ip')
     net = IPPool.filter_by(network=network).first()
     if net is None:
         raise APIError("Network '{0}' doesn't exist".format(network))
@@ -81,6 +82,9 @@ def change_item(network):
         net.block_ip(block_ip)
     if unblock_ip is not None:
         net.unblock_ip(unblock_ip)
+    if unbind_ip:
+        podip = PodIP.filter_by(ip_address=int(ipaddress.ip_address(unbind_ip)))
+        podip.delete()
     return jsonify({'status': 'OK', 'data': net.to_dict()})
 
 

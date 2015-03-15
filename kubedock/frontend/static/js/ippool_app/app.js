@@ -28,7 +28,8 @@ define(['marionette', 'utils'],
             events: {
                 'click button#deleteNetwork': 'deleteNetwork_btn',
                 'click button.block_ip': 'blockIP',
-                'click button.unblock_ip': 'unblockIP'
+                'click button.unblock_ip': 'unblockIP',
+                'click button.unbind_ip': 'unbindIP'
             },
 
             deleteNetwork_btn: function(){
@@ -78,6 +79,22 @@ define(['marionette', 'utils'],
                         itm[2] = 'free';
                         that.model.set('allocation', alloc);
                         that.model.set('unblock_ip', ip);
+                        that.model.save();
+                        that.render();
+                    }
+                });
+            },
+            unbindIP: function(btn){
+                if(!confirm("Do you really want to unbind IP-address?")) return;
+                var alloc = this.model.get('allocation'),
+                    ip = $(btn.currentTarget).data('ip'),
+                    that = this;
+                _.each(alloc, function(itm){
+                    if(itm[0] == ip) {
+                        itm[2] = 'free';
+                        itm[1] = null;
+                        that.model.set('allocation', alloc);
+                        that.model.set('unbind_ip', ip);
                         that.model.save();
                         that.render();
                     }

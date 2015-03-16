@@ -98,8 +98,6 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     {n: name}
                 )[0];
                 
-            if (!model_data.hasOwnProperty('cpu')) model_data['cpu'] = 0;
-            if (!model_data.hasOwnProperty('memory')) model_data['memory'] = 0;
             if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
             if (!model_data.hasOwnProperty('workingDir')) model_data['workingDir'] = undefined;
             if (!model_data.hasOwnProperty('command')) model_data['command'] = [];
@@ -232,7 +230,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     });
                 name += _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
                 model.get('containers').push({
-                    image: image, name: name, cpu: 0, memory: 0, workingDir: null,
+                    image: image, name: name, workingDir: null,
                     ports: [], volumeMounts: [], env: [], command: [], kubes: 1,
                     terminationMessagePath: null
                 });

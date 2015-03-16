@@ -6,12 +6,9 @@ from sse import Sse
 import redis
 import json
 import paramiko
-import requests
-import gevent
 from paramiko import ssh_exception
 import socket
-from .settings import DEBUG, NODE_SSH_AUTH, NODE_INET_IFACE
-from .settings import KUBE_MASTER_URL
+from .settings import DEBUG, NODE_SSH_AUTH
 from rbac import check_permission
 
 login_manager = LoginManager()
@@ -92,75 +89,11 @@ def ssh_connect(host, timeout=10):
     return ssh, error_message
 
 
-def process_event(kub_event):
-    # TODO handle pods migrations
-    try:
-        kub_event = json.loads(kub_event.strip())
-    except ValueError:
-        print 'Wrong event data in process_event: "{0}"'.format(kub_event)
-        return True
-    public_ip = kub_event['object']['labels'].get('kuberdock-public-ip')
-    if (not public_ip) or (kub_event['type'] == "ADDED"):
-        return False
-    pod_ip = kub_event['object']['currentState'].get('podIP')
-    if not pod_ip:
-        return True
-    conts = kub_event['object']['desiredState']['manifest']['containers']
-
-    ARPING = 'arping -I {0} -A {1} -c 10 -w 1'
-    IP_ADDR = 'ip addr {0} {1}/32 dev {2}'
-    IPTABLES = 'iptables -t nat -{0} PREROUTING ' \
-               '-i {1} ' \
-               '-p tcp -d {2} ' \
-               '--dport {3} -j DNAT ' \
-               '--to-destination {4}:{3}'
-    if kub_event['type'] == "MODIFIED":
-        cmd = 'add'
-    elif kub_event['type'] == "DELETED":
-        cmd = 'del'
+def fast_cmd(ssh, cmd):
+    i, o, e = ssh.exec_command(cmd)
+    s = o.channel.recv_exit_status()
+    if s != 0:
+        err = 'Remote error. Exit status: {0}. Error: {1}'.format(s, e.read())
+        return False, err
     else:
-        print 'Skip event type %s' % kub_event['type']
-        return False
-    ssh, errors = ssh_connect(kub_event['object']['currentState']['host'])
-    ssh.exec_command(IP_ADDR.format(cmd, public_ip, NODE_INET_IFACE))
-    if cmd == 'add':
-        ssh.exec_command(ARPING.format(NODE_INET_IFACE, public_ip))
-    for container in conts:
-        for port_spec in container['ports']:
-            if cmd == 'add':
-                i, o, e = ssh.exec_command(
-                    IPTABLES.format('C', NODE_INET_IFACE, public_ip,
-                                    port_spec['containerPort'],
-                                    pod_ip))
-                exit_status = o.channel.recv_exit_status()
-                if exit_status != 0:
-                    ssh.exec_command(
-                        IPTABLES.format('I', NODE_INET_IFACE, public_ip,
-                                        port_spec['containerPort'],
-                                        pod_ip))
-            else:
-                ssh.exec_command(
-                    IPTABLES.format('D', NODE_INET_IFACE, public_ip,
-                                    port_spec['containerPort'],
-                                    pod_ip))
-    ssh.close()
-    return False
-
-
-def listen_kub_events():
-    while True:
-        r = requests.get(KUBE_MASTER_URL + '/watch/pods', stream=True)
-        # TODO if listen endpoinds must skip 3 events
-        # (1 last +  2 * kubernetes endpoints)
-        # maybe more if we have more services
-        while not r.raw.closed:
-            content_length = r.raw.readline()
-            if content_length not in ('0', ''):
-                # TODO due to watch bug:
-                needs_reconnect = process_event(r.raw.readline())
-                if needs_reconnect:
-                    r.raw.close()
-                    gevent.sleep(0.2)
-                    break
-                r.raw.readline()
-        # print 'RECONNECT(Listen pods events)'
+        return True, o.read()

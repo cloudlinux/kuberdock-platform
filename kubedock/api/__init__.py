@@ -3,9 +3,16 @@ import datetime
 from .. import factory
 from .. import sessions
 from ..rbac import get_user_role
+from ..settings import NODE_INET_IFACE, KUBE_MASTER_URL
+from ..core import ssh_connect
+from ..pods.models import PodIP
 
 from flask.ext.login import current_user
 from flask import jsonify
+import json
+import requests
+import gevent
+import ipaddress
 from rbac.context import PermissionDenied
 
 
@@ -57,3 +64,87 @@ def on_permission_denied(e):
 
 def on_404(e):
     return on_app_error(APIError('Not found', status_code=404))
+
+
+api_app = create_app()
+
+
+def process_event(kub_event):
+    # TODO handle pods migrations
+    try:
+        kub_event = json.loads(kub_event.strip())
+    except ValueError:
+        print 'Wrong event data in process_event: "{0}"'.format(kub_event)
+        return True
+    public_ip = kub_event['object']['labels'].get('kuberdock-public-ip')
+    if (not public_ip) or (kub_event['type'] == "ADDED"):
+        return False
+    pod_ip = kub_event['object']['currentState'].get('podIP')
+    if not pod_ip:
+        return True
+    conts = kub_event['object']['desiredState']['manifest']['containers']
+
+    ARPING = 'arping -I {0} -A {1} -c 10 -w 1'
+    IP_ADDR = 'ip addr {0} {1}/32 dev {2}'
+    IPTABLES = 'iptables -t nat -{0} PREROUTING ' \
+               '-i {1} ' \
+               '-p tcp -d {2} -j DNAT ' \
+               '--to-destination {3}'
+    if kub_event['type'] == "MODIFIED":
+        cmd = 'add'
+    elif kub_event['type'] == "DELETED":
+        cmd = 'del'
+    else:
+        print 'Skip event type %s' % kub_event['type']
+        return False
+    ssh, errors = ssh_connect(kub_event['object']['currentState']['host'])
+    if errors:
+        print errors
+        return False
+    ssh.exec_command(IP_ADDR.format(cmd, public_ip, NODE_INET_IFACE))
+    if cmd == 'add':
+        ssh.exec_command(ARPING.format(NODE_INET_IFACE, public_ip))
+    for container in conts:
+        if cmd == 'add':
+            i, o, e = ssh.exec_command(
+                IPTABLES.format('C', NODE_INET_IFACE, public_ip, pod_ip))
+            exit_status = o.channel.recv_exit_status()
+            if exit_status != 0:
+                ssh.exec_command(
+                    IPTABLES.format('I', NODE_INET_IFACE, public_ip, pod_ip))
+        else:
+            ssh.exec_command(
+                IPTABLES.format('D', NODE_INET_IFACE, public_ip, pod_ip))
+            ac = api_app.app_context()
+            ac.push()
+            podip = PodIP.filter_by(
+                ip_address=int(ipaddress.ip_address(public_ip)))
+            podip.delete()
+            ac.pop()
+    ssh.close()
+    return False
+
+
+def listen_kub_events():
+    while True:
+        try:
+            r = requests.get(KUBE_MASTER_URL + '/watch/pods', stream=True)
+            # TODO if listen endpoinds must skip 3 events
+            # (1 last +  2 * kubernetes endpoints)
+            # maybe more if we have more services
+            while not r.raw.closed:
+                content_length = r.raw.readline()
+                if content_length not in ('0', ''):
+                    # TODO due to watch bug:
+                    needs_reconnect = process_event(r.raw.readline())
+                    if needs_reconnect:
+                        r.raw.close()
+                        gevent.sleep(0.2)
+                        break
+                    r.raw.readline()
+            # print 'RECONNECT(Listen pods events)'
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print e.__repr__(), '...restarting listen events...'
+            gevent.sleep(0.2)

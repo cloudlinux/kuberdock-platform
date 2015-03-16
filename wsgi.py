@@ -8,16 +8,15 @@ from werkzeug.debug import DebuggedApplication
 from gevent.wsgi import WSGIServer
 
 from kubedock import frontend, api
-from kubedock.core import listen_kub_events
 
 # This renders install scripts with latest settings at every start
 import make_scripts
 
 application = DispatcherMiddleware(
     frontend.create_app(),
-    {'/api': api.create_app()}
+    {'/api': api.api_app}
 )
-gevent.spawn(listen_kub_events)
+gevent.spawn(api.listen_kub_events)
 
 if __name__ == "__main__":
 

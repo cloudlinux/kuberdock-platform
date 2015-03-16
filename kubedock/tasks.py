@@ -9,7 +9,7 @@ from paramiko import ssh_exception
 
 from .settings import DEBUG, NODE_SSH_AUTH, MASTER_IP
 from .api.stream import send_event
-from .core import ConnectionPool, db, ssh_connect
+from .core import ConnectionPool, db, ssh_connect, fast_cmd
 from .factory import make_celery
 from .utils import update_dict
 from .stats import StatWrap5Min

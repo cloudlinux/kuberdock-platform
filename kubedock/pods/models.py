@@ -4,7 +4,7 @@ from sqlalchemy.dialects import postgresql
 from flask import current_app
 from ..core import db
 from ..models_mixin import BaseModelMixin
-import signals
+from .. import signals
 
 
 class Pod(db.Model):

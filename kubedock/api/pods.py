@@ -13,8 +13,8 @@ from ..utils import update_dict, login_required_or_basic
 from ..kubedata.kuberesolver import KubeResolver
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..api import APIError
+from .. import signals
 import copy
-from ..pods import signals as pods_signals
 
 ALLOWED_ACTIONS = ('start', 'stop', 'inspect',)
 
@@ -83,7 +83,7 @@ def create_item():
     if set_public_ip and public_ip:
         data['public_ip'] = public_ip
         try:
-            pods_signals.allocate_ip_address.send([temp_uuid, public_ip])
+            signals.allocate_ip_address.send([temp_uuid, public_ip])
         except Exception, e:
             db.session.rollback()
             raise APIError(str(e), status_code=409)
@@ -94,7 +94,6 @@ def create_item():
         except TypeError:
             service_rv = None
         config = make_config(data, item_id)
-        result = tasks.create_containers_nodelay(config)
         try:
             pod_rv = json.loads(tasks.create_containers_nodelay(config))
         except TypeError:
@@ -435,6 +434,7 @@ def prepare_for_output(rv=None, s_rv=None):
 
 
 def make_pod_config(data, sid, separate=True):
+    # separate=True means that this is just a pod, not replica
     # to insert config into replicas config set separate to False
     inner = {'version': 'v1beta1'}
     if separate:

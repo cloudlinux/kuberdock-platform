@@ -1086,13 +1086,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 type: 'text',
                 mode: 'inline',
                 success: function(response, newValue) {
-                    if ($(this).hasClass('cpu')) {
-                        that.model.set('cpu', parseInt(newValue));
-                    }
-                    else if ($(this).hasClass('memory')) {
-                        that.model.set('memory', parseInt(newValue));
-                    }
-                    else if ($(this).hasClass('kubes')) {
+                    if ($(this).hasClass('kubes')) {
                         that.model.set('kubes', parseInt(newValue));
                     }
                 }

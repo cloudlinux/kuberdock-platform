@@ -199,9 +199,13 @@ def update_item(uuid):
     if item is None:
         raise APIError('Pod not found', 404)
     data = request.json
-    # TODO: sart|stop|terminate actions for containers
-    containers = data.get('containers')
+    containers_action = data.pop('containers_action', None)
     check_change_pod_data(data)
+
+    if containers_action and 'command' in data:
+        data['action'] = data['command']
+        return docker_action(data=data, containers_action=containers_action)
+
     if 'dbdiff' in data:
         update_dict(item.__dict__, data['dbdiff'])
         try:
@@ -292,8 +296,9 @@ def do_action(host, action, container_id):
 @pods.route('/containers', methods=['PUT'])
 @login_required_or_basic
 @check_permission('edit', 'pods')
-def docker_action():
-    data = request.json
+def docker_action(data=None, containers_action=None):
+    if data is None:
+        data = request.json
     action = data.get('action')
     if action not in ALLOWED_ACTIONS:
         raise APIError('This action is not allowed.', status_code=403)
@@ -314,9 +319,12 @@ def docker_action():
         raise APIError("POD with restart policy 'Always' can't "
                        "start or stop containers")
     # TODO validate containerId (escape) and his presents for different commands
-    return jsonify({
-        'status': 'OK',
-        'data': do_action(data['host'], data['action'], data['containerId'])})
+    if containers_action:
+        result = {cid: do_action(data['host'], data['action'], cid)
+                  for cid in data['containers']}
+    else:
+        result = do_action(data['host'], data['action'], data['containerId'])
+    return jsonify({'status': 'OK', 'data': result})
 
 
 def run_service(data):

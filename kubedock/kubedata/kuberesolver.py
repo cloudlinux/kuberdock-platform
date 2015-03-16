@@ -85,12 +85,8 @@ class KubeResolver(object):
             try:
                 containers = item['desiredState']['manifest']['containers']
                 for c in containers:
-                    c['info'] = item['currentState']['info'].get(c['name'], {})
-                    state = c['info'].get('state', {'unknown': None})
-                    c['state_repr'] = state.keys()[0]
-                    startedAt = state.get(c['state_repr'], {}).get(
-                        'startedAt', '')
-                    c['startedAt'] = ' '.join(startedAt.split('T'))[:19]
+                    c['imageID'] = item['currentState']['info'].get(
+                        c['name'], {}).get('imageID')
                 items = {'id': item_uuid,
                          'name': item['labels']['name'],
                          'sid': item['id'],

@@ -7,13 +7,13 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             return true;
         }
         return routes;
-    }
+    };
     WorkFlow.Router = Marionette.AppRouter.extend({
         appRoutes: {
             'pods': 'showPods',
             'pods/:id': 'showPodItem',
             'newpod': 'createPod',
-            'poditem/:id/:name': 'showPodContainer',
+            'poditem/:id/:name': 'showPodContainer'
         }
     });
     
@@ -48,7 +48,26 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     i.parentID = this.parentID;
                     i.kubes = this.kubes;
                 }, {parentID: id, kubes: model.get('kubes')});
-            containerCollection = new Backbone.Collection(model.get('containers'));
+            var _containerCollection = model.get('containers');
+            var newContainerCollection = [];
+            _.each(model.get('dockers'), function(el){
+                var container = {};
+                _.each(_containerCollection, function(c){
+                    if(c.imageID == el.info.imageID){
+                        $.each(c, function(k, v){
+                            container[k] = v;
+                        });
+
+                        container['info'] = el.info;
+                        $.each(container.info.state, function(k, v){
+                            container['state_repr'] = k;
+                            container['startedAt'] = v.startedAt;
+                        });
+                    }
+                });
+                newContainerCollection.push(container);
+            });
+            containerCollection = new Backbone.Collection(newContainerCollection);
 
             var masthead = new App.Views.PageHeader({
                 model: new Backbone.Model({name: model.get('name')})

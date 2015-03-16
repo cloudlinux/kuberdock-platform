@@ -132,6 +132,14 @@ new_pod_scheme = {
                 },
                 'kubes': {'type': 'integer', 'min': 1},
                 'image': container_image_name_scheme,
+                'imageID': {
+                    'type': 'string',
+                    'required': False
+                },
+                'parentID': {
+                    'type': 'string',
+                    'required': False
+                },
                 'name': {
                     'type': 'string',
                     'empty': False,

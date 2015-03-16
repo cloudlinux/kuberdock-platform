@@ -5,13 +5,20 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 DEBUG = True
 FLASKY_ADMIN = os.environ.get('AC_FLASKY_ADMIN', 'igor.bliss@gmail.com')
-SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + os.environ.get('AC_POSTGRES', 'kubedock:Iwb4gDo@127.0.0.1/kubedock')
+
+DB_USER = 'kuberdock'
+DB_PASSWORD = 'kuberdock2go'
+DB_NAME = 'kuberdock'
+
+DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
+
+SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + os.environ.get('AC_POSTGRES', DB_CONNECT_STRING)
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
 
 if DEBUG:
-    NODE_SSH_AUTH = 'admin'
+    NODE_SSH_AUTH = 'ADMIN_PASS'
 else:
     NODE_SSH_AUTH = 'id_rsa'
 
@@ -26,8 +33,8 @@ KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
 INFLUXDB_HOST = '127.0.0.1'
 INFLUXDB_PORT = 8086
 INFLUXDB_TABLE = 'stats'
-INFLUXDB_USER = 'dbadmin'
-INFLUXDB_PASSWORD = 'Iwb4gDo'
+INFLUXDB_USER = 'root'
+INFLUXDB_PASSWORD = 'root'
 INFLUXDB_DATABASE = 'cadvisor'
 
 CELERYBEAT_SCHEDULE = {

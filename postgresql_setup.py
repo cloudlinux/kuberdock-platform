@@ -5,10 +5,7 @@ import pwd
 import subprocess
 import tempfile
 
-
-DB_USER = 'kuberdock'
-DB_PASSWORD = 'Iwb4gDo'
-DB_NAME = 'kuberdock'
+from kubedock.settings import DB_USER, DB_PASSWORD, DB_NAME
 
 CONF_PATH = '/var/lib/pgsql/data/pg_hba.conf'
 

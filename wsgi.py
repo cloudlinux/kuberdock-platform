@@ -14,7 +14,7 @@ import make_scripts
 
 application = DispatcherMiddleware(
     frontend.create_app(),
-    {'/api': api.api_app}
+    {'/api': api.create_app()}
 )
 gevent.spawn(api.listen_kub_events)
 

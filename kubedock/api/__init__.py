@@ -66,9 +66,6 @@ def on_404(e):
     return on_app_error(APIError('Not found', status_code=404))
 
 
-api_app = create_app()
-
-
 def process_event(kub_event):
     # TODO handle pods migrations
     try:
@@ -115,7 +112,7 @@ def process_event(kub_event):
         else:
             ssh.exec_command(
                 IPTABLES.format('D', NODE_INET_IFACE, public_ip, pod_ip))
-            ac = api_app.app_context()
+            ac = create_app().app_context()
             ac.push()
             podip = PodIP.filter_by(
                 ip_address=int(ipaddress.ip_address(public_ip)))

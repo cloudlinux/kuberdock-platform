@@ -12,6 +12,7 @@ from .stream import send_event
 from ..utils import update_dict, login_required_or_basic
 from ..kubedata.kuberesolver import KubeResolver
 from ..validation import check_new_pod_data, check_change_pod_data
+from ..billing import kubes_to_limits
 from ..api import APIError
 from .. import signals
 import copy
@@ -344,14 +345,12 @@ def prepare_container(data, key='ports'):
         data['name'] = "%s-%s" % (
             image, ''.join(random.sample(string.lowercase + string.digits, 10)))
 
-    # convert to int cpu and memory data or delete'em entirely if invalid
-    for i in 'cpu', 'memory':
-        try:
-            data[i] = int(data[i])
-        except (TypeError, ValueError):
-            data.pop(i)
-        except KeyError:
-            continue
+    try:
+        kubes = int(data.pop('kubes'))
+    except (KeyError, ValueError):
+        kubes = 1
+    kube_type = 0   # mock
+    data.update(kubes_to_limits(kubes, kube_type, version='v1beta1'))
 
     # convert to int ports values
     data.setdefault(key, [])

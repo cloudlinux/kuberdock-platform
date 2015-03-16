@@ -41,13 +41,13 @@ cd $KUBERDOCK_DIR
 python createdb.py
 
 systemctl enable redis
-systemctl start redis
+systemctl restart redis
 
 systemctl enable influxdb > /dev/null 2>&1
-systemctl start influxdb
+systemctl restart influxdb
 
 systemctl enable etcd
-systemctl start etcd
+systemctl restart etcd
 
 for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl enable $i;done
 for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl restart $i;done

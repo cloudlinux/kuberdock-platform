@@ -10,9 +10,6 @@ DB_USER = 'kuberdock'
 DB_PASSWORD = 'kuberdock2go'
 DB_NAME = 'kuberdock'
 
-DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
-
-SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + os.environ.get('AC_POSTGRES', DB_CONNECT_STRING)
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
@@ -62,3 +59,7 @@ try:
     from local_settings import *
 except ImportError:
     pass
+
+# Only after local settings
+DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
+SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + DB_CONNECT_STRING

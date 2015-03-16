@@ -31,6 +31,7 @@ yum -y install redis influxdb python-redis python-influxdb
 #4. Install kubernetes
 yum -y install kubernetes
 sed -i "/^KUBE_API_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBE_CONF_DIR/apiserver
+sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBE_CONF_DIR/controller-manager
 
 #5. Install packages for app
 yum -y install python-flask python-sqlalchemy python-flask-sqlalchemy python-requests python python-flask-influxdb python-celery python-cerberus python-flask-login python-sse python-simple-rbac python-paramiko python-gevent python-blinker python-flask-assets python-unidecode python-ipaddress python-flask-mail python-psycopg2
@@ -48,4 +49,5 @@ systemctl start influxdb
 systemctl enable etcd
 systemctl start etcd
 
+for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl enable $i;done
 for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl restart $i;done

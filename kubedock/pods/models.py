@@ -89,7 +89,11 @@ class IPPool(BaseModelMixin, db.Model):
         self.save()
 
     def unblock_ip(self, ip):
-        blocked_list = self.get_blocked_list()
+        if isinstance(ip, basestring):
+            ip = int(ipaddress.ip_address(ip))
+        blocked_list = self.get_blocked_list(as_int=True)
+        if ip not in blocked_list:
+            return
         ind = blocked_list.index(ip)
         if ind >= 0:
             del blocked_list[ind]

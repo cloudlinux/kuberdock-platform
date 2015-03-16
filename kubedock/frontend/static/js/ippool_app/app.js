@@ -42,15 +42,7 @@ define(['marionette', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            $.ajax({
-                                url: '/api/ippool/',
-                                type: 'DELETE',
-                                data: {'network': that.model.get('network')},
-                                success: function(rs){
-                                    that.model.destroy({wait: true});
-                                }
-                            });
-
+                            that.model.destroy({wait: true});
                         },
                         buttonCancel: true
                     }

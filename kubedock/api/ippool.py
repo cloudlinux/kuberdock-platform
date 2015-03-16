@@ -88,15 +88,12 @@ def change_item(network):
     return jsonify({'status': 'OK', 'data': net.to_dict()})
 
 
-@ippool.route('/', methods=['DELETE'])
+@ippool.route('/<path:network>', methods=['DELETE'])
 @login_required_or_basic
 @check_permission('delete', 'ippool')
-def delete_item():
-    data = request.json
-    if data is None:
-        data = dict(request.form)
+def delete_item(network):
     try:
-        network = str(ipaddress.ip_network(unicode(data['network'][0])))
+        network = str(ipaddress.ip_network(network))
         if not IPPool.filter_by(network=network).first():
             raise Exception("Network '{0}' does not exist".format(network))
         pods_count = PodIP.filter_by(network=network).count()

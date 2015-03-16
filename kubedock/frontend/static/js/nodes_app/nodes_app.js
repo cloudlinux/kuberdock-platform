@@ -414,9 +414,9 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 var hostname = this.model.get('hostname');
                 var host = hostname.split('.')[0];
                 var size = 100;
-                var url = 'http://' + ip + ':9200/' + index + '/_search?q="' +
-                    hostname + '" OR "' + host + '"&size=' + size +
-                    '&sort=@timestamp:desc';
+                var url = '/es-proxy/' + ip + '/' + index +
+                    '/_search?q=host:("' + hostname + '" OR "' + host + '")' +
+                    '&size=' + size + '&sort=@timestamp:desc';
                 $.ajax({
                     url: url,
                     dataType : 'json',

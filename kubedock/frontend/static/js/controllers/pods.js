@@ -120,8 +120,14 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     parent_model.get('containers'),
                     function(i){return i.name === this.n},
                     {n: name}
-                )[0];
-                
+                )[0],
+                container_id = _.last(_.filter(
+                    parent_model.get('dockers'),
+                    function(i){return i.info.imageID === this.d},
+                    {d: model_data.imageID}
+                )[0].info.containerID.split('/')),
+                model_data.container_id = container_id,
+                model_data.node = parent_model.get('dockers')[0].host;
             if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
             if (!model_data.hasOwnProperty('workingDir')) model_data['workingDir'] = undefined;
             if (!model_data.hasOwnProperty('command')) model_data['command'] = [];
@@ -147,6 +153,9 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             });
             this.listenTo(wizardLayout, 'step:otherconf', function(data){
                 wizardLayout.steps.show(new App.Views.WizardOtherSubView({model: data}));
+            });
+            this.listenTo(wizardLayout, 'step:logsconf', function(data){
+                wizardLayout.steps.show(new App.Views.WizardLogsSubView({model: data}));
             });
             App.contents.show(wizardLayout);
         },

@@ -71,10 +71,14 @@
             <div class="container breadcrumbs" id="breadcrumbs">
                 <ul class="breadcrumb">
                     <li>
-                        <div id="nodes-page">Nodes</div>
+                        <div id="users-page">Users</div>
                     </li>
                     <li class="active">
-                        Add node
+                        <% if (typeof username !== "undefined") { %>
+                            <%= username %>
+                        <% } else { %>
+                            New User
+                        <% } %>
                     </li>
                 </ul>
             </div>
@@ -118,7 +122,7 @@
                         </div>
                     </div>
                     <div class="buttons pull-right">
-                        <button id="user-cancel-btn" class="" type="submit">Cencele</button>
+                        <button id="user-cancel-btn" class="" type="submit">Cencel</button>
                         <button id="user-add-btn" class="" type="submit">Add</button>
                     </div>
                 </div>
@@ -126,17 +130,47 @@
         </div>
     </script>
 
+    <script type="text/template" id="user-profile-template">
+        <div class="breadcrumbs-wrapper">
+            <div class="container breadcrumbs" id="breadcrumbs">
+                <ul class="breadcrumb">
+                    <li>
+                        <div id="users-page">Users</div>
+                    </li>
+                    <li class="active">
+                        <%- username ? username : 'Add user' %>
+                    </li>
+                </ul>
+                <div class="control-group">
+                    <button id="login_this_user">Login as this user</button>
+                    <button id="delete_user">Delete</button>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-3 col-md-2 sidebar">
+                    <ul class="nav nav-sidebar">
+                        <li role="presentation" class="general userGeneralTab">General</li>
+                        <li role="presentation" class="logs  userLogsTab">Logs History</li>
+                    </ul>
+                </div>
+                <div id="details_content" class="col-sm-10">
+                    <div class="status-line"></div>
+                    <div id="tab-content">div tab_content</div>
+                </div>
+            </div>
+        </div>
+    </script>
+
     <script type="text/template" id="user-item-template">
         <td>
-            <button id="editUser">
+            <button id="profileUser">
                 <%- username %>
             </button>
-            <!-- <button id="deleteUser" class="btn btn-danger btn-xs pull-right">
-                <i class="glyphicon glyphicon-trash"></i>
-            </button> 
-            <button id="editUser" class="btn btn-link btn-xs pull-left">
+            <!-- <button id="editUser" class="btn btn-link btn-xs pull-right">
                 <i class="glyphicon glyphicon-pencil"></i>
-            </button> --> <!-- ### need remove in future -->
+            </button> -->
         </td>
         <td>20<!--<button class="btn btn-danger btn-xs" id="authIt">Auth by</button>--></td>
         <td>89</td>
@@ -185,7 +219,7 @@
                     <li class="active">
                         Users
                     </li>
-                </ul><!-- /.breadcrumb -->
+                </ul>
                 <div class="control-group">
                     <button id="add_user">Add user</button>
                     <div class="nav-search" id="nav-search">
@@ -198,16 +232,11 @@
             </div>
         </div>
         <div class="container">
-
-            <!-- <a href="{{ url_for('users.index') }}online/">
-                <i class="glyphicon glyphicon-log-in"></i>
-                Online user list
-            </a> |
-            <a href="{{ url_for('users.index') }}activity/">
-                <i class="glyphicon glyphicon-eye-open"></i>
-                Users activities
-            </a> -->
-
+            <div class="active-item-control">
+                <span>Username</span>
+                <button id="editUser" class="btn btn-xs btn-link" title="Edit select item">Edit</button>
+                <button id="deleteUser" class="btn btn-xs btn-link" title="Remove select item">Delete</button>
+            </div>
             <table id="userslist-table" class="table">
                 <thead>
                     <tr class="tablesorter-headerRow">

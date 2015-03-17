@@ -74,33 +74,35 @@ define(['marionette', 'paginator', 'utils'],
         Views.UserItem = Backbone.Marionette.ItemView.extend({
             template: '#user-item-template',
             tagName: 'tr',
-
-            events: {
-                'click button#deleteUser': 'deleteUser_btn',
-                'click button#editUser' : 'editUser_btn',
-                'click button#authIt' : 'authIt_btn'
+            className: function(){
+                if (this.model.get('checked')) return 'checked';
             },
 
-            deleteUser_btn: function(){
-                var that = this;
-                utils.modalDialog({
-                    title: 'Delete user',
-                    body: "Do you really want to delete user '" +
-                        this.model.get('username') + "'?",
-                    small: true,
-                    show: true,
-                    footer: {
-                        buttonOk: function(){
-                            that.model.destroy({wait: true});
-                        },
-                        buttonCancel: true
-                    }
-                })
+            events: {
+                'click button#editUser' : 'editUser_btn',
+                'click button#profileUser' : 'profileUser_btn',
+                'click button#authIt' : 'authIt_btn',
+                'click' : 'checkUser'
+            },
 
+            checkUser: function(){
+                var models = this.model.collection.models;
+                this.model.get('checked') ? this.model.set('checked',false) : this.model.set('checked',true);
+           
+                this.$el.toggleClass('checked').siblings().removeClass('checked');
+
+                for (var i = 0; i < models.length; i++) {
+                    if ( this.model.get('id') == models[i].get('id') ) continue;
+                    models[i].unset('checked');
+                };
             },
 
             editUser_btn: function(){
                 App.router.navigate('/edit/' + this.model.id + '/', {trigger: true});
+            },
+
+            profileUser_btn: function(){
+                App.router.navigate('/profile/' + this.model.id + '/', {trigger: true});
             },
 
             authIt_btn: function(){
@@ -153,11 +155,58 @@ define(['marionette', 'paginator', 'utils'],
             childViewContainer: "tbody",
 
             ui: {
-                'add_user':'button#add_user'
+                'add_user':'button#add_user',
+                'control': 'div.active-item-control',
+                'thead' : 'thead',
+                'remove_selected_user': 'button#deleteUser',
+                'edit_selected_user': 'button#editUser'
             },
 
             events: {
-                'click @ui.add_user' : 'addUser'
+                'click @ui.add_user' : 'addUser',
+                'click tbody tr' : 'activeMenu',
+                'click @ui.remove_selected_user' : 'removeSelectedUser',
+                'click @ui.edit_selected_user' : 'editSelectedUser'
+            },
+
+            activeMenu: function(){
+                var models = this.collection.models;
+
+                for (var i = 0; i < models.length; i++) {
+
+                    if ( models[i].get('checked') ) {
+                        this.ui.control.show();
+                        this.ui.thead.addClass('min-opacity');
+                        break;
+                    } else {
+                        this.ui.control.hide();
+                        this.ui.thead.removeClass('min-opacity');
+                    }
+                };
+            },
+
+            editSelectedUser: function(e){
+                var models = this.collection.models;
+               
+                for (var i = 0; i < models.length; i++) {
+                    if (models[i].get('checked')){
+                        App.router.navigate('/edit/' + models[i].id + '/', {trigger: true});
+                        break;
+                    }
+                }    
+                e.stopPropagation();      
+            },
+
+            removeSelectedUser: function(e){
+                var models = this.collection.models;
+               
+                for (var i = 0; i < models.length; i++) {
+                    if (models[i].get('checked')){
+                        models[i].destroy();
+                        break;
+                    }
+                }    
+                e.stopPropagation();      
             },
 
             addUser: function(){
@@ -264,15 +313,15 @@ define(['marionette', 'paginator', 'utils'],
                 'email': 'input#email',
                 'user_status' : 'select#status-select',
                 'role_select': 'select#role-select',
-                'nodes_page' : 'div#nodes-page',
+                'users_page' : 'div#users-page',
                 'user_add_btn' : 'button#user-add-btn',
                 'user_cancel_btn' : 'button#user-cancel-btn'
             },
 
             events: {
-                'click @ui.nodes_page' : 'breadcrambClick',
-                'click @ui.user_add_btn': 'onSave',
-                'click @ui.user_cancel_btn': 'cancel'
+                'click @ui.users_page'      : 'breadcrumbClick',
+                'click @ui.user_add_btn'    : 'onSave',
+                'click @ui.user_cancel_btn' : 'cancel'
             },
 
             onSave: function(){
@@ -301,7 +350,43 @@ define(['marionette', 'paginator', 'utils'],
                App.router.navigate('/', {trigger: true});
             },
 
-            breadcrambClick: function(){
+            breadcrumbClick: function(){
+               App.router.navigate('/', {trigger: true});
+            }
+
+        });
+
+        Views.UserProfileView = Backbone.Marionette.ItemView.extend({
+            template: '#user-profile-template',
+            tagName: 'div',
+            
+
+            ui: {
+                'users_page' : 'div#users-page',
+                'delete_user_btn' : 'button#delete_user',
+                'user_cancel_btn' : 'button#user-cancel-btn',
+                'login_this_user_btn' : 'button#login_this_user'
+            },
+            events: {
+                'click @ui.users_page' : 'breadcrumbClick',
+                'click @ui.user_cancel_btn': 'cancel',
+                'click @ui.delete_user_btn': 'delete_user',
+                'click @ui.login_this_user_btn': 'login_this_user'
+            },
+
+            login_this_user: function(){
+               alert('Login this user event');
+            },
+
+            delete_user: function(){
+               alert('Delete User Event');
+            },
+
+            cancel: function(){
+               App.router.navigate('/', {trigger: true});
+            },
+
+            breadcrumbClick: function(){
                App.router.navigate('/', {trigger: true});
             }
 
@@ -448,6 +533,18 @@ define(['marionette', 'paginator', 'utils'],
 
                 });
                 App.contents.show(layout_view);
+            },
+
+            showProfileUser: function(user_id){
+                var layout_view = new App.Views.UsersLayout();
+                var user_profile_view = new App.Views.UserProfileView({
+                    model: App.Data.users.get(parseInt(user_id))
+                });
+
+                this.listenTo(layout_view, 'show', function () {
+                    layout_view.main.show(user_profile_view);
+                });
+                App.contents.show(layout_view);
             }
         });
 
@@ -461,6 +558,7 @@ define(['marionette', 'paginator', 'utils'],
                     '': 'showUsers',
                     'create/': 'showCreateUser',
                     'edit/:id/': 'showEditUser',
+                    'profile/:id/' : 'showProfileUser',
                     'activity/': 'showAllUsersActivity'
                 }
             });

@@ -105,7 +105,7 @@ body{
 	}
 	/* end header */
 
-	/* bredkramb */
+	/* bredkrumb */
 	.breadcrumbs-wrapper{
 		padding: 8px 0 9px;
 		width: 100%;
@@ -160,7 +160,7 @@ body{
 					&:before{
 						position: absolute;
 					}
-					&#add_node, &#add_user{
+					&#add_node, &#add_user, &#login_this_user{
 						padding:0 0 0 38px;
 						margin-right: 25px;
 						&:before{
@@ -171,7 +171,7 @@ body{
 							height: 21px;
 						}
 					}
-					&#add_user{
+					&#add_node{
 						&:before{
 							background: url('../img/add-one.png') 0 0 no-repeat;
 						}
@@ -179,6 +179,11 @@ body{
 					&#add_user{
 						&:before{
 							background: url('../img/add-one-user.png') 0 0 no-repeat;
+						}
+					}
+					&#login_this_user{
+						&:before{
+							background: url('../img/small-profile-ico.png') 0 0 no-repeat;
 						}
 					}
 					&#rename_node{
@@ -205,7 +210,7 @@ body{
 							height: 21px;
 						}
 					}
-					&#delete_node{
+					&#delete_node, &#delete_user{
 						padding:0 0 0 28px;
 						&:before{
 							content: '';
@@ -243,7 +248,7 @@ body{
 			}
 		}
 	}
-	/* end bredkramb */
+	/* end bredkrumb */
 
 	.active-item-control{
 		display: none;
@@ -272,6 +277,7 @@ body{
 			line-height: inherit;
 			position: relative;
 			padding-left: 25px;
+			margin-right: 20px;
 			&:before{
 				content: '';
 				position: absolute;
@@ -285,7 +291,7 @@ body{
 				color: #3197ee;
 				text-decoration: none;
 			}
-			&#deleteNode{
+			&#deleteNode, &#deleteUser{
 				&:before{
 					background: url('../img/recycling.png') 0 0 no-repeat;
 				}

@@ -110,7 +110,7 @@ define(['marionette', 'ckeditor'], function () {
                         is_active: ui.is_active.is(':checked'),
                         assign_page: ui.assign_page.is(':checked'),
                         unbind_page: ui.unbind_page.is(':checked'),
-                        roles: ui.role_select.val(),
+                        roles: ui.role_select.val() ? ui.role_select.val().join(',') : '',
                         page_slug: ui.page_slug.val(),
                         page_title: ui.page_title.val()
                     };
@@ -123,6 +123,8 @@ define(['marionette', 'ckeditor'], function () {
                     if(CKEDITOR.instances[page_content_id])
                         data['page_content'] = CKEDITOR.instances[page_content_id].getData();
                     //TODO: validation
+                    console.log(data);
+
                     $.ajax({
                         url: URLS.staticPages.api.menuItem + '/' + this.model.id,
                         type: 'PUT',
@@ -193,7 +195,7 @@ define(['marionette', 'ckeditor'], function () {
                     var tree_data = data[region],
                         li = $('<li>').attr('id', 'dynatree-' + region);
                     tree.append(li);
-                    $('#dynatree-' + region).dynatree({
+                    var dtree = $('#dynatree-' + region).dynatree({
                         onActivate: function(node) {
                             if( node.data.href ){
                                 StaticPages.router.navigate(node.data.href);
@@ -201,45 +203,76 @@ define(['marionette', 'ckeditor'], function () {
                         },
                         onCustomRender: function(node) {
                             var data = node.data.data,
-                                $a = $('<a href="#" class="dynatree-title">').text(data.name);
+                                $a = $('<a href="#" class="dynatree-title">')
+                                    .text(data.name);
                             if(!data.is_active) $a.addClass('inactive');
                             if(data.page) {
                                 $a.addClass('has_page');
                                 $a.append('&nbsp;<i class="glyphicon glyphicon-list-alt text-info"></i>');
                             }
-                            return $a[0].outerHTML;
+                            return $a[0].outerHTML +
+                                '<button class="btn btn-xs btn-link add-child" title="Add child item">+' +
+                                    '<span class="glyphicon glyphicon-menu-down></span>' +
+                                '</button>';
                         },
                         onCreate: function(node, nodeSpan) {},
                         onClick: function(node, event) {
                             var node_data = node.data.data, data, formView;
-                            node_data['page_dict'] = null;
-                            var page_content_id = 'id_content' + node_data.id;
-                            if(node_data.t == 'item'){
-                                if(node_data.page && node_data.page > 0){
-                                    $.ajax({
-                                        cache: false,
-                                        url: URLS.staticPages.api.page + '/' + node_data.page,
-                                        success: function(rs){
-                                            node_data['page_dict'] = rs.data;
-                                            data = new StaticPages.Data.MenuItemModel(node_data);
-                                            formView = new StaticPages.Views.MenuItemForm({model: data});
-                                            StaticPages.contents.show(formView);
-                                            CKEDITOR.replace(page_content_id);
-                                        }
+
+                            if($(event.target).hasClass('add-child')){
+                                console.log(node_data)
+                                formView = new StaticPages.Views.MenuItemForm({
+                                    model: new StaticPages.Data.MenuItemModel({
+                                        id: 0,
+                                        region: node_data.region,
+                                        region_repr: node_data.region_repr + ': ' + node_data.name,
+                                        is_active: true,
+                                        path: '',
+                                        page_dict: {},
+                                        parent: node_data.id,
+                                        absolute_url: ''
                                     })
-                                } else {
-                                    data = new StaticPages.Data.MenuItemModel(node_data);
-                                    formView = new StaticPages.Views.MenuItemForm({model: data});
-                                    StaticPages.contents.show(formView);
-                                }
+                                });
+                                StaticPages.contents.show(formView);
                                 $('#id_assign_page').unbind('change');
                                 $('#id_assign_page').change(function(){
                                     if($(this).is(':checked')) {
                                         $('.new-page-form').show();
-                                        CKEDITOR.replace(page_content_id);
+                                        CKEDITOR.replace('id_content0');
                                     }
                                     else $('.new-page-form').hide();
                                 });
+
+                            } else {
+                                node_data['page_dict'] = null;
+                                var page_content_id = 'id_content' + node_data.id;
+                                if (node_data.t == 'item') {
+                                    if (node_data.page && node_data.page > 0) {
+                                        $.ajax({
+                                            cache: false,
+                                            url: URLS.staticPages.api.page + '/' + node_data.page,
+                                            success: function (rs) {
+                                                node_data['page_dict'] = rs.data;
+                                                data = new StaticPages.Data.MenuItemModel(node_data);
+                                                formView = new StaticPages.Views.MenuItemForm({model: data});
+                                                StaticPages.contents.show(formView);
+                                                CKEDITOR.replace(page_content_id);
+                                            }
+                                        })
+                                    } else {
+                                        data = new StaticPages.Data.MenuItemModel(node_data);
+                                        formView = new StaticPages.Views.MenuItemForm({model: data});
+                                        StaticPages.contents.show(formView);
+                                    }
+                                    $('#id_assign_page').unbind('change');
+                                    $('#id_assign_page').change(function () {
+                                        if ($(this).is(':checked')) {
+                                            $('.new-page-form').show();
+                                            CKEDITOR.replace(page_content_id);
+                                        }
+                                        else $('.new-page-form').hide();
+                                    });
+                                }
                             }
                         },
                         dnd: {
@@ -250,17 +283,33 @@ define(['marionette', 'ckeditor'], function () {
                             onDragEnter: function(node, sourceNode) {
         //                        if(node.parent !== sourceNode.parent)
         //                            return false;
-                                console.log(node, sourceNode)
                                 return ["before", "after"];
                             },
                             onDrop: function(node, sourceNode, hitMode, ui, draggable) {
-                                sourceNode.move(node, hitMode);
-                                console.log(node, sourceNode, hitMode)
+                                console.log(node)
+                                console.log(sourceNode)
+                                $.ajax({
+                                    url: URLS.staticPages.api.menuItemOrd + '/' +
+                                        sourceNode.data.key + '/' + node.data.key,
+                                    type: 'POST',
+                                    success: function(rs){
+                                        if(rs.status == 'OK'){
+                                            sourceNode.move(node, hitMode);
+                                        } else {
+                                            alert(rs.status)
+                                        }
+                                    }
+                                });
+                                console.log('onDrop', node, sourceNode, hitMode)
                             }
                         },
                         persist: true,
                         children: [tree_data]
                     });
+                    function sortItems(a, b){
+                        return a.data.ordering > b.data.ordering ? 1 : a.data.ordering < b.data.ordering ? -1 : 0;
+                    }
+                    dtree.dynatree("getRoot").sortChildren(sortItems, true);
                 }
                 $('.add-menu-item').show();
             }

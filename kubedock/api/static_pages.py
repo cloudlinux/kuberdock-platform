@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask.ext.login import current_user
 
 from . import APIError
@@ -12,7 +12,6 @@ static_pages = Blueprint('static_pages', __name__, url_prefix='/static_pages')
 @static_pages.route('/<region>', methods=['GET'])
 @check_permission('get', 'static_pages')
 def get_tree(region):
-    print region
     menu = Menu.filter_by(region=region).first()
     return jsonify({'status': 'OK', 'data': {'html': menu.render()}})
 
@@ -59,9 +58,26 @@ def put_menu_item(oid):
         try:
             item.update(data, user_id)
         except Exception, e:
-            print e
+            current_app.logger.warning(
+                'put_menu_item({0}) failed: {1}'.format(oid, e))
             raise APIError(str(e))
     return jsonify({'status': 'OK', 'dynatree_data': item.to_dynatree()})
+
+
+@static_pages.route('/menuItem/ord/<oid1>/<oid2>', methods=['PUT', 'POST'])
+@check_permission('edit', 'static_pages')
+def order_item(oid1, oid2):
+    item1 = MenuItem.filter_by(id=oid1).first()
+    item2 = MenuItem.filter_by(id=oid2).first()
+    if item1 is None or item2 is None:
+        raise APIError(
+            'Menu item1 {0} or item2 {1} does not exist'.format(oid1, oid2))
+    new_ordering = item2.ordering
+    item2.ordering = item1.ordering
+    item1.ordering = new_ordering
+    item1.save()
+    item2.save()
+    return jsonify({'status': 'OK'})
 
 
 @static_pages.route('/menuItem/delete/<oid>', methods=['DELETE', 'PUT', 'POST'])

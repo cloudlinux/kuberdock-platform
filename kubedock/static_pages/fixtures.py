@@ -5,50 +5,50 @@ MENUS = [
         region=Menu.REGION_NAVBAR,
         name='Navbar menu',
         items=[
+            dict(name="Main", path="/", ordering=0),
+            dict(name="Nodes", path="/nodes/", ordering=1),
+            dict(name="Users", path="/users/", ordering=2),
             dict(
-                name='Administrative',
+                name="Helpdesk",
                 children=[
                     dict(
-                        path='/users/',
-                        name='User list',
-                    ),
+                        name="FAQ",
+                        page=dict(
+                            title="FAQ",
+                            slug="FAQ",
+                            content="<h1>Helpdesk</h1>"
+                                    "<p>text here</p>"
+                                    "<i>Static page sample</i>"
+                        ),
+                        ordering=0
+                    )
+                ],
+                ordering=3
+            ),
+            dict(name="Settings", path="/settings/", ordering=4),
+            dict(
+                name="Administration",
+                ordering=5,
+                children=[
                     dict(
-                        path='/users/online',
-                        name='Online user list',
-                    ),
-                    dict(
-                        name='Static pages and menus',
+                        name="Users",
+                        ordering=0,
                         children=[
-                            dict(
-                                path='/admin/static_pages/menus/',
-                                name='Menus'
-                            ),
-                            dict(
-                                path='/admin/static_pages/menus/pages/',
-                                name='Pages'
-                            ),
+                            dict(name="Users", path="/users/", ordering=0),
+                            dict(name="Online users", path="/users/online/",
+                                 ordering=1),
+                            dict(name="Users activity", path="/users/activity/",
+                                 ordering=2)
                         ]
                     ),
-                    dict(
-                        path='/admin/static_pages/menus/pages/TestStaticPage',
-                        name='Test static page',
-                        page=dict(
-                            title='Test static page',
-                            slug='TestStaticPage',
-                            content="<h1>Test static page</h1>"
-                        )
-                    ),
-                    dict(
-                        path='/admin/static_pages/menus/pages/FAQ',
-                        name='FAQ',
-                        page=dict(
-                            title='FAQ',
-                            slug='FAQ',
-                            content="<h1>FAQ</h1>"
-                        )
-                    )
+                    dict(name="IP pool", path="/ippool/", ordering=1),
+                    dict(name="Notifications", path="/notifications/",
+                         ordering=2),
+                    dict(name="Static pages and menus",
+                         path='/admin/static_pages/',
+                         ordering=3)
                 ]
-            )
+            ),
         ]
     ),
     dict(

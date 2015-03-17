@@ -6,6 +6,8 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
+        <link rel="stylesheet" href="/static/css/dropdowns-enhancement.css">
+
         {% assets "app_css" -%}
             <link rel="stylesheet"href="{{ ASSET_URL }}">
         {%- endassets %}
@@ -19,7 +21,10 @@
     </head>
     <body>
 
-        {% include "inc/navbar.html" %}
+{#        {% include "inc/navbar.html" %}#}
+    {% with items=MENU.navbar.get_items() %}
+    {% include "inc/navbar_menu.html" %}
+    {% endwith %}
 
         <!-- contents container -->
         <div id="contents"></div>

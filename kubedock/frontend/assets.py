@@ -5,6 +5,7 @@ app_css = Bundle(
     'css/bootstrap-editable.css',
     'css/jquery.jqplot.min.css',
     'css/main.less',
+    'css/dropdowns-enhancement.css',
     filters="cssmin", output="css/app.min.css")
 
 less_css = Bundle(
@@ -23,6 +24,7 @@ vendor_js = Bundle(
     'js/lib/bootstrap-editable.min.js',
     'js/lib/jquery.jqplot.min.js',
     'js/lib/jqplot.dateAxisRenderer.min.js',
+    'js/lib/dropdowns-enhancement.js',
     filters="jsmin", output="js/lib.min.js")
 
 less_js = Bundle(

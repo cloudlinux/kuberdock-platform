@@ -16,7 +16,6 @@ def index(**kwargs):
     """Returns the index page."""
     context = dict(
         regions=Menu.REGIONS,
-        MENU=Menu.get_active(),
         roles=Role.all(),
     )
     return render_template('static_pages/index.html', **context)

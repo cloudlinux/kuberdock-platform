@@ -8,7 +8,8 @@ requirejs.config({
         bootstrap: 'lib/bootstrap',
         paginator: 'lib/backbone.paginator',
         tpl: 'lib/tpl',
-        text: 'lib/text'
+        text: 'lib/text',
+        dde: 'lib/dropdowns-enhancement'
     },
     shim: {
         jquery: {
@@ -27,10 +28,13 @@ requirejs.config({
         marionette: {
             deps: ["jquery", "bootstrap", "underscore", "backbone"],
             exports: "Marionette"
+        },
+        dde: {
+            deps: ['jquery', 'bootstrap']
         }
     }
 });
-require(['jquery', 'notifications_app/app'], function(jQuery, NotificationsApp){
+require(['jquery', 'notifications_app/app', 'dde'], function(jQuery, NotificationsApp){
     NotificationsApp.Data.templates = new NotificationsApp.Data.TemplatesCollection(templatesCollection);
     NotificationsApp.start();
 });

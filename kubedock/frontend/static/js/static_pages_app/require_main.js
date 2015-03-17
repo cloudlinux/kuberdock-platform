@@ -13,7 +13,8 @@ requirejs.config({
         text: 'lib/text',
         dynatree: 'lib/jquery.dynatree',
         ckeditor: 'lib/ckeditor/ckeditor',
-        treetable: 'lib/jquery.treetable'
+        treetable: 'lib/jquery.treetable',
+        dde: 'lib/dropdowns-enhancement'
     },
     shim: {
         jquery: {
@@ -40,10 +41,13 @@ requirejs.config({
         bootstrap: {
             deps: ['jquery'],
             exports: 'bootstrap'
+        },
+        dde: {
+            deps: ['jquery', 'bootstrap']
         }
     }
 });
-require(["jquery", 'jquery-ui', "bootstrap", 'dynatree', 'lib/navbarr', 'static_pages_app/app'],
-function(jQuery, jQueryUI, bs, DynATree, nb, StaticPagesApp){
+require(["jquery", 'jquery-ui', "bootstrap", 'dynatree', 'static_pages_app/app', 'dde'],
+function(jQuery, jQueryUI, bs, DynATree, StaticPagesApp){
     StaticPagesApp.start();
 });

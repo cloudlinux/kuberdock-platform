@@ -12,7 +12,8 @@ requirejs.config({
         text: 'lib/text',
         notify: 'lib/notify.min',
         mask: 'lib/jquery.mask',
-        utils: 'utils'
+        utils: 'utils',
+        dde: 'lib/dropdowns-enhancement'
     },
     shim: {
         jquery: {
@@ -46,10 +47,13 @@ requirejs.config({
         utils: {
             deps: ['backbone'],
             exports: "utils"
+        },
+        dde: {
+            deps: ['jquery', 'bootstrap']
         }
     }
 });
-require(['jquery', 'ippool_app/app', 'notify', 'jquery-ui', 'mask'], function(jQuery, IPPoolApp){
+require(['jquery', 'ippool_app/app', 'notify', 'jquery-ui', 'mask', 'dde'], function(jQuery, IPPoolApp){
     IPPoolApp.Data.networks = new IPPoolApp.Data.NetworksCollection(networksCollection);
     IPPoolApp.start();
 });

@@ -4,8 +4,10 @@ from flask import render_template_string
 from flask.ext.login import current_user
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.ext.orderinglist import ordering_list
 
 from ..core import db
+from ..rbac import get_user_role
 from ..users.models import Role
 from ..models_mixin import BaseModelMixin
 from .utils import slugify
@@ -43,8 +45,12 @@ class Menu(BaseModelMixin, db.Model):
         objects_list = [m.to_dict() for m in cls.filter_by(is_active=True)]
         return json.dumps(objects_list)
 
-    def get_items(self):
-        items = MenuItem.filter_by(menu_id=self.id, parent_id=None).all()
+    def get_items(self, admin=None):
+        items = MenuItem.filter_by(
+            menu_id=self.id, parent_id=None).order_by(MenuItem.ordering).all()
+        if not admin:
+            role = get_user_role()
+            items = [item for item in items if item.validate_role(role)]
         return items
 
     @classmethod
@@ -52,29 +58,6 @@ class Menu(BaseModelMixin, db.Model):
         menu_list = cls.filter_by(is_active=True)
         menus = dict([(m.region_repr, m.to_dynatree()) for m in menu_list])
         return menus
-
-    def render(self):
-        if self.region == Menu.REGION_NAVBAR:
-            return render_template_string("""
-                <div class="collapse navbar-collapse">
-                    <ul class="nav navbar-nav">
-                        {% for item in items %}<li>
-                            {{ item.render()|safe }}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div><!--/.nav-collapse -->
-            """, items=self.get_items())
-        elif self.region == Menu.REGION_FOOTER:
-            return render_template_string("""
-                <ul class="">
-                    {% for item in items %}<li>
-                        {{ item.render()|safe }}
-                    </li>
-                    {% endfor %}
-                </ul>
-            """, items=self.get_items())
-
 
     @property
     def region_repr(self):
@@ -95,7 +78,8 @@ class Menu(BaseModelMixin, db.Model):
         return dict(
             key=self.id,
             title=self.name,
-            children=[item.to_dynatree() for item in self.get_items()],
+            children=[item.to_dynatree()
+                      for item in self.get_items(admin=True)],
             unselectable=True,
             # href='menu/%s/' % self.id,
             data=dict(
@@ -125,8 +109,9 @@ class MenuItem(BaseModelMixin, db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('menus_items.id'))
     children = db.relationship(
         'MenuItem', cascade="all",
-        collection_class=attribute_mapped_collection('name'),
-        backref=db.backref("parent", remote_side='MenuItem.id'))
+        collection_class=ordering_list('ordering'),
+        backref=db.backref("parent", remote_side='MenuItem.id'),
+        order_by="MenuItem.ordering",)
     ts = db.Column(db.DateTime, default=datetime.now)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     path = db.Column(db.String(1000), nullable=True)
@@ -137,7 +122,7 @@ class MenuItem(BaseModelMixin, db.Model):
     is_group_label = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     is_public = db.Column(db.Boolean, default=True)
-    roles = db.Column(postgresql.JSON)
+    roles = db.Column(db.String)
 
     def __repr__(self):
         return "MenuItem(name=%r, id=%r, parent_id=%r)" % (
@@ -161,6 +146,20 @@ class MenuItem(BaseModelMixin, db.Model):
                 return path
         return '#'
 
+    def get_roles(self):
+        roles = json.loads(self.roles or "[]")
+        return roles
+
+    def validate_role(self, role):
+        roles = self.get_roles()
+        if not roles:
+            return True
+        return role in roles
+
+    def get_children(self):
+        role = get_user_role()
+        return [item for item in self.children if item.validate_role(role)]
+
     def to_dict(self, include=None, exclude=None):
         page = self.page
         return dict(
@@ -177,9 +176,9 @@ class MenuItem(BaseModelMixin, db.Model):
             ordering=self.ordering,
             is_group_label=self.is_group_label,
             is_active=self.is_active,
-            roles=self.roles or [],
+            roles=self.get_roles(),
             children=[(item.id, item.to_dict(include=include, exclude=None))
-                      for item in self.children.values()]
+                      for item in self.children]
         )
 
     def to_dynatree(self):
@@ -188,7 +187,7 @@ class MenuItem(BaseModelMixin, db.Model):
             key=self.id,
             # href='item/%s/' % self.id,
             title=self.name,
-            children=[item.to_dynatree() for item in self.children.values()],
+            children=[item.to_dynatree() for item in self.children],
             data=dict(
                 id=self.id,
                 name=self.name,
@@ -205,7 +204,7 @@ class MenuItem(BaseModelMixin, db.Model):
                 ordering=self.ordering,
                 is_group_label=self.is_group_label,
                 is_active=self.is_active,
-                roles=self.roles or [],
+                roles=self.get_roles(),
                 t='item',
             )
         )
@@ -213,42 +212,6 @@ class MenuItem(BaseModelMixin, db.Model):
     def get_path(self):
         path = self.path or '#'
         return path
-
-    def render(self):
-        if self.menu.region == Menu.REGION_NAVBAR:
-            return render_template_string("""
-                {% if not children %}
-                <a href="{{ item.get_path()|default("#") }}">{{ item }}</a>
-                {% else %}
-                <a href="{{ item.get_path()|default("#") }}"
-                   class="dropdown-toggle" data-toggle="dropdown">
-                    {{ item }}
-                    <b class="caret{% if item.parent_id %} caret-right{% endif %}"></b>
-                </a>
-                <ul class="dropdown-menu">
-                    {% for itm in children.values() %}<li>
-                        {{ itm.render()|safe }}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            """, children=self.children, item=self)
-        elif self.menu.region == Menu.REGION_FOOTER:
-            return render_template_string("""
-                {% if not children %}
-                <a href="{{ item.get_path()|default("#") }}">{{ item }}</a>
-                {% else %}
-                <a href="{{ item.get_path()|default("#") }}">
-                    {{ item }}
-                </a>
-                <ul class="">
-                    {% for itm in children.values() %}<li>
-                        {{ itm.render()|safe }}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            """, children=self.children, item=self)
 
     def update(self, data, user_id):
         path = data.get('path')
@@ -262,7 +225,8 @@ class MenuItem(BaseModelMixin, db.Model):
             self.path = path
         if name and name != self.name:
             self.name = name
-        self.roles = data.getlist('roles[]')
+        roles = [role for role in data.get('roles', '').split(',') if role]
+        self.roles = json.dumps(roles) if roles else None
         self.is_active = is_active
         self.save()
 
@@ -319,7 +283,7 @@ class MenuItem(BaseModelMixin, db.Model):
         return item
 
     def delete(self):
-        for item in self.children.values():
+        for item in self.children:
             if item.page_id:
                 item.page.delete()
             item.delete()
@@ -349,7 +313,7 @@ class Page(BaseModelMixin, db.Model):
 
     @property
     def roles(self):
-        return self.menu_item.first().roles
+        return self.menu_item.first().get_roles()
 
     def has_access(self, user_role):
         roles = self.roles

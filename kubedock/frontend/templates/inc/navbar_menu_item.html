@@ -1,0 +1,22 @@
+{% if not children %}
+<a href="{{ item.get_path()|default("#") }}">{{ item }}</a>
+{% else %}
+<a href="{{ item.get_path()|default("#") }}"
+   class="dropdown-toggle" data-toggle="dropdown">
+    {{ item }}
+    {% if not item.parent %}<b class="caret{% if item.parent_id %} caret-right{% endif %}"></b>{% endif %}
+</a>
+{% if children %}
+<ul class="dropdown-menu">
+    {% for itm in children %}
+    {% with children=itm.get_children() %}
+    <li{% if children %} class="dropdown-submenu"{% endif %}>
+        {% with item=itm %}
+        {% include 'inc/navbar_menu_item.html' %}
+        {% endwith %}
+    </li>
+    {% endwith %}
+    {% endfor %}
+</ul>
+{% endif %}
+{% endif %}

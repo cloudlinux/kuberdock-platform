@@ -11,7 +11,8 @@ requirejs.config({
         tpl: 'lib/tpl',
         text: 'lib/text',
         notify: 'lib/notify.min',
-        utils: 'utils'
+        utils: 'utils',
+        dde: 'lib/dropdowns-enhancement'
     },
     shim: {
         jquery: {
@@ -41,10 +42,13 @@ requirejs.config({
         utils: {
             deps: ['backbone'],
             exports: "utils"
+        },
+        dde: {
+            deps: ['jquery', 'bootstrap']
         }
     }
 });
-require(['jquery', 'users_app/app', 'notify', 'jquery-ui'], function(jQuery, UsersApp){
+require(['jquery', 'users_app/app', 'notify', 'jquery-ui', 'dde'], function(jQuery, UsersApp){
     UsersApp.Data.users = new UsersApp.Data.UsersPageableCollection(usersCollection);
     UsersApp.Data.onlineUsers = new UsersApp.Data.UsersPageableCollection(onlineUsersCollection);
     UsersApp.Data.userActivity = new UsersApp.Data.ActivitiesCollection(userActivity);

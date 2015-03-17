@@ -1,7 +1,11 @@
 {% extends "layout.html" %}
 
+{% block head_extras %}
+<link rel="stylesheet" href="/static/css/dropdowns-enhancement.css">
+{% endblock %}
+
 {% block body %}
-    <style>
+<style>
 html {
   position: relative;
   min-height: 100%;
@@ -20,38 +24,17 @@ body {
 }
 .inactive { color: red !important; }
 {#.has_page { font-weight: bold; }#}
-    </style>
+</style>
 
-    <nav id="navbar" class="navbar">
-        <div id="navbar-container" class="container">
-            <div class="navbar-header">
-                <a class="navbar-brand" href="/">
-                    <img alt="cloudlinux cubedock" class="logo" src="{{ url_for('static', filename='img/header-logo.png') }}">
-                </a>
-            </div>
-            {{ MENU.navbar.render()|safe }}
-        </div><!-- navbar-container -->
-    </nav><!-- end of navbar -->
+    {% with items=MENU.navbar.get_items() %}
+    {% include "inc/navbar_menu.html" %}
+    {% endwith %}
 
     <!-- contents container -->
     <div id="contents" class="container">
         <div class="row" style="">
             <div class="col-md-4">
                 <ul id="menus-tree"></ul>
-                <div class="add-menu-item" style="display: none;">
-                    <h3>Add menu item</h3>
-                    Parent item:
-                    <select name="parent_item" id="id_parent_item">
-                        {% for region, menu in MENU.items() %}<optgroup label="{{ region }}"/>
-                            <option value="0" data-region="{{ menu.region }}">/</option>
-                            {% for item in menu.items %}<option value="{{ item.id }}" data-region="{{ menu.region }}">{{ item }}</option>
-                            {% endfor %}
-                        {% endfor %}
-                    </select>
-                    <button class="btn btn-xs btn-default new-item-btn">
-                        <i class="glyphicon glyphicon-play"></i>
-                    </button>
-                </div>
             </div>
             <div class="col-md-8" id="form-block"></div>
         </div>
@@ -166,7 +149,9 @@ body {
 
     <footer class="footer">
         <div class="container">
-            {{ MENU.footer.render()|safe }}
+            {% with items=MENU.footer.get_items() %}
+            {% include "inc/footer_menu.html" ignore missing %}
+            {% endwith %}
         </div>
     </footer>
 
@@ -181,6 +166,7 @@ body {
                 api: {
                     menu: '/api/static_pages/menu',
                     menuItem: '/api/static_pages/menuItem',
+                    menuItemOrd: '/api/static_pages/menuItem/ord',
                     deleteMenuItem: '/api/static_pages/menuItem/delete',
                     page: '/api/static_pages/page',
                     menuTree: '/api/static_pages/dynatreeList'

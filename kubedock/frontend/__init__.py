@@ -39,7 +39,9 @@ def create_app(settings_override=None):
 
     # context processors
     from ..users.context_processors import users_helpers
+    from ..static_pages.context_processors import pages_helpers
     app.context_processor(users_helpers)
+    app.context_processor(pages_helpers)
     return app
 
 

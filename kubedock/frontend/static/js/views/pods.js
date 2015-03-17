@@ -877,6 +877,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
         },
 
+        events: {
+            'click .add-port': 'addItem',
+        },
+        
         ui: {
             ieditable: '.ieditable',
             iseditable: '.iseditable'
@@ -891,6 +895,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-other': 'step:otherconf',
         },
 
+        addItem: function(env){
+            env.stopPropagation();
+            this.model.get('ports').push({containerPort: null, hostPort: null, protocol: 'tcp'});
+            this.render();
+        },
+        
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({

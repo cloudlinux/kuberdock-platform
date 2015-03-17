@@ -6,6 +6,7 @@ from uuid import uuid4
 import string
 import random
 import re
+import ipaddress
 from ..models import User, Pod
 from ..core import db, check_permission, ssh_connect
 from .stream import send_event
@@ -14,6 +15,7 @@ from ..kubedata.kuberesolver import KubeResolver
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..billing import kubes_to_limits
 from ..api import APIError
+from ..pods.models import PodIP
 from .. import signals
 import copy
 
@@ -130,6 +132,13 @@ def delete_item(uuid):
     if item is None:
         raise APIError('No pod with id: {0}'.format(uuid), status_code=404)
     name = item.name
+    try:
+        public_ip = item.config['labels']['kuberdock-public-ip']
+        podip = PodIP.filter_by(
+            ip_address=int(ipaddress.ip_address(public_ip)))
+        podip.delete()
+    except KeyError:
+        pass
     if item.config.get('cluster'):
         replicas = tasks.get_replicas_nodelay()
 
@@ -391,6 +400,7 @@ def prepare_for_output(rv=None, s_rv=None):
             elif rv['kind'] == 'Pod':
                 out['cluster'] = False
                 out['name'] = rv['labels']['name']
+                out['labels'] = rv['labels']
                 out['status'] = rv['currentState']['status'].lower()
             else:
                 return out
@@ -457,9 +467,12 @@ def make_pod_config(data, sid, separate=True):
         if 'node' in data and data['node'] is not None:
             outer['nodeSelector'] = {'kuberdock-node-hostname': data['node']}
     outer['desiredState'] = {'manifest': inner}
-    outer['labels'] = {'name': data['name']}
-    if 'public_ip' in data:
-        outer['labels']['kuberdock-public-ip'] = data.pop('public_ip')
+    if 'labels' not in data:
+        outer['labels'] = {'name': data['name']}
+        if 'public_ip' in data:
+            outer['labels']['kuberdock-public-ip'] = data.pop('public_ip')
+    else:
+        outer['labels'] = data['labels']
     return outer
 
 

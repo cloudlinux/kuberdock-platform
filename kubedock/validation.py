@@ -71,6 +71,8 @@ new_pod_scheme = {
     'cluster': {'type': 'boolean'},
     'node': {'type': 'string', 'nullable': True},
     'save_only': {'type': 'boolean'},
+    'free_host': {'type': 'string', 'required': False},
+    'set_public_ip': {'type': 'string', 'required': False},
     'restartPolicy': {
         'type': 'dict',
         'restart_polices': ['always', 'onFailure', 'never']
@@ -112,6 +114,9 @@ new_pod_scheme = {
         'schema': {
             'type': 'dict',
             'schema': {
+                # TODO delete when swich from v1beta1 to newer
+                'cpu': {'type': 'integer', 'required': False},
+                'memory': {'type': 'integer', 'required': False},
                 'capabilities': {'type': 'dict', 'required': False},
                 'imagePullPolicy': {
                     'type': 'string',
@@ -162,11 +167,12 @@ new_pod_scheme = {
                 },
                 'ports': {
                     'type': 'list',
+                    'minlength': 1,
                     'schema': {
                         'type': 'dict',
                         'schema': {
                             'containerPort': port_scheme,
-                            'hostPort': nullable_port_scheme,
+                            'hostPort': nullable_port_scheme,  # TODO nullable?
                             'protocol': {
                                 'type': 'string',
                                 'maxlength': 255

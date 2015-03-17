@@ -85,8 +85,9 @@ def process_event(kub_event):
     IP_ADDR = 'ip addr {0} {1}/32 dev {2}'
     IPTABLES = 'iptables -t nat -{0} PREROUTING ' \
                '-i {1} ' \
-               '-p tcp -d {2} -j DNAT ' \
-               '--to-destination {3}'
+               '-p tcp -d {2} ' \
+               '--dport {3} -j DNAT ' \
+               '--to-destination {4}:{3}'
     if kub_event['type'] == "MODIFIED":
         cmd = 'add'
     elif kub_event['type'] == "DELETED":
@@ -102,22 +103,23 @@ def process_event(kub_event):
     if cmd == 'add':
         ssh.exec_command(ARPING.format(NODE_INET_IFACE, public_ip))
     for container in conts:
-        if cmd == 'add':
-            i, o, e = ssh.exec_command(
-                IPTABLES.format('C', NODE_INET_IFACE, public_ip, pod_ip))
-            exit_status = o.channel.recv_exit_status()
-            if exit_status != 0:
+        for port_spec in container['ports']:
+            if cmd == 'add':
+                i, o, e = ssh.exec_command(
+                    IPTABLES.format('C', NODE_INET_IFACE, public_ip,
+                                    port_spec['containerPort'],
+                                    pod_ip))
+                exit_status = o.channel.recv_exit_status()
+                if exit_status != 0:
+                    ssh.exec_command(
+                        IPTABLES.format('I', NODE_INET_IFACE, public_ip,
+                                        port_spec['containerPort'],
+                                        pod_ip))
+            else:
                 ssh.exec_command(
-                    IPTABLES.format('I', NODE_INET_IFACE, public_ip, pod_ip))
-        else:
-            ssh.exec_command(
-                IPTABLES.format('D', NODE_INET_IFACE, public_ip, pod_ip))
-            ac = create_app().app_context()
-            ac.push()
-            podip = PodIP.filter_by(
-                ip_address=int(ipaddress.ip_address(public_ip)))
-            podip.delete()
-            ac.pop()
+                    IPTABLES.format('D', NODE_INET_IFACE, public_ip,
+                                    port_spec['containerPort'],
+                                    pod_ip))
     ssh.close()
     return False
 

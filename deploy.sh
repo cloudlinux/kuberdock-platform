@@ -40,6 +40,10 @@ yum -y install python-flask python-sqlalchemy python-flask-sqlalchemy python-req
 cd $KUBERDOCK_DIR
 python createdb.py
 
+#7. Install dnsmasq
+yum -y install dnsmasq
+
+#8. Start services
 systemctl enable redis
 systemctl restart redis
 
@@ -48,6 +52,9 @@ systemctl restart influxdb
 
 systemctl enable etcd
 systemctl restart etcd
+
+systemctl enable dnsmasq
+systemctl restart dnsmasq
 
 for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl enable $i;done
 for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl restart $i;done

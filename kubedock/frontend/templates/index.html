@@ -89,7 +89,7 @@
             <td><input type="checkbox" class="check-item"></td>
 
             <td><%- index %></td>
-            <td><a href="#"><%- name %></a></td>
+            <td><a href="#poditem/<%- parentID %>/<%- name %>"><%- name %></a></td>
             <td><span><%- image %></span></td>
             <td>
                 <span class="<%- state_repr %> <%- info.state.hasOwnProperty(state_repr) ? states[state_repr] : states['unknown'] %>"></span>

@@ -5,15 +5,18 @@ from .. import sessions
 from ..rbac import get_user_role
 from ..settings import NODE_INET_IFACE, KUBE_MASTER_URL
 from ..core import ssh_connect
-from ..pods.models import PodIP
 
 from flask.ext.login import current_user
 from flask import jsonify
 import json
 import requests
 import gevent
-import ipaddress
+import os
+import sys
+import signal
+import psutil
 from rbac.context import PermissionDenied
+from kubedock.settings import LOCK_FILE_NAME
 
 
 def create_app(settings_override=None):
@@ -126,7 +129,30 @@ def process_event(kub_event):
     return False
 
 
+def remove_lock(*args):
+    try:
+        os.remove(LOCK_FILE_NAME)
+    except OSError:
+        pass
+    sys.exit(0)
+
+
+def set_lock():
+    with open(LOCK_FILE_NAME, 'wt') as f:
+        f.write(str(os.getpid()))
+    signal.signal(signal.SIGINT, remove_lock)
+    signal.signal(signal.SIGTERM, remove_lock)
+
+
 def listen_kub_events():
+    if not os.path.exists(LOCK_FILE_NAME):
+        set_lock()
+    else:
+        with open(LOCK_FILE_NAME, 'rt') as f:
+            if not psutil.pid_exists(int(f.read())):
+                set_lock()
+            else:
+                return
     while True:
         try:
             r = requests.get(KUBE_MASTER_URL + '/watch/pods', stream=True)

@@ -53,6 +53,7 @@ NODE_INET_IFACE = 'enp0s3'
 DOCKER_IF = 'docker0'
 ES_HOST = 'elasticsearch.kuberdock'
 
+LOCK_FILE_NAME = '/var/tmp/kuberdock.watch.pid'
 
 # Import local settings
 try:

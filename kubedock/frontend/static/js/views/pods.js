@@ -601,6 +601,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 that.listenTo(view, 'step:envconf', that.envConf);
                 that.listenTo(view, 'step:resconf', that.resConf);
                 that.listenTo(view, 'step:otherconf', that.otherConf);
+                that.listenTo(view, 'step:logsconf', that.logsConf);
                 that.listenTo(view, 'step:complete', that.completeConf);
                 that.listenTo(view, 'image:fetched', that.imageFetched);
                 that.listenTo(view, 'pager:clear', that.clearPager);
@@ -634,6 +635,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         otherConf: function(data){
             this.trigger('step:otherconf', data.model);
+        },
+        logsConf: function(data){
+            this.trigger('step:logsconf', data.model);
         },
         completeConf: function(data){
             this.trigger('step:complete', data.model);
@@ -855,6 +859,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs': 'step:envconf',
             'click .go-to-resources': 'step:resconf',
             'click .go-to-other': 'step:otherconf',
+            'click .go-to-logs': 'step:logsconf',
         },
 
         addItem: function(env){
@@ -921,6 +926,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs': 'step:envconf',
             'click .go-to-resources': 'step:resconf',
             'click .go-to-other': 'step:otherconf',
+            'click .go-to-logs': 'step:logsconf',
         },
 
         addItem: function(env){
@@ -988,6 +994,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-volumes': 'step:volconf',
             'click .go-to-resources': 'step:resconf',
             'click .go-to-other': 'step:otherconf',
+            'click .go-to-logs': 'step:logsconf',
         },
 
         addItem: function(env){
@@ -1032,6 +1039,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-volumes': 'step:volconf',
             'click .go-to-envs': 'step:envconf',
             'click .go-to-other': 'step:otherconf',
+            'click .go-to-logs': 'step:logsconf',
         },
 
         templateHelpers: function(){
@@ -1077,6 +1085,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-volumes': 'step:volconf',
             'click .go-to-envs': 'step:envconf',
             'click .go-to-resources': 'step:resconf',
+            'click .go-to-logs': 'step:logsconf',
         },
         
         onRender: function(){
@@ -1093,6 +1102,66 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     }
                 }
             });
+        }
+    });
+
+    Views.WizardLogsSubView = Backbone.Marionette.ItemView.extend({
+        template: '#wizard-set-container-logs-template',
+        tagName: 'div',
+        className: 'col-md-8 col-md-offset-2',
+
+        ui: {
+            ieditable: '.ieditable',
+            textarea: '.container-logs'
+        },
+
+        templateHelpers: function(){
+            return {
+                isPending: !this.model.has('parentID')
+            };
+        },
+
+        triggers: {
+            'click .go-to-ports': 'step:portconf',
+            'click .go-to-volumes': 'step:volconf',
+            'click .go-to-envs': 'step:envconf',
+            'click .go-to-resources': 'step:resconf',
+            'click .go-to-other': 'step:otherconf',
+        },
+
+        initialize: function() {
+            this.model.set('logs', []);
+            function get_logs() {
+                var node = this.model.get('node');
+                var index = 'docker-*';
+                var container_id = this.model.get('container_id');
+                var size = 100;
+                var url = '/es-proxy/' + node + '/' + index +
+                    '/_search?q=container_id:"' + container_id + '"' +
+                    '&size=' + size + '&sort=@timestamp:desc';
+                $.ajax({
+                    url: url,
+                    dataType : 'json',
+                    context: this,
+                    success: function(data) {
+                        var lines = _.map(data['hits']['hits'], function(line) {
+                            return line['_source'];
+                        });
+                        lines.reverse();
+                        this.model.set('logs', lines);
+                        this.render();
+                        _.defer(function(caller){
+                            caller.ui.textarea.scrollTop(caller.ui.textarea[0].scrollHeight);
+                        }, this);
+                    }
+                });
+                this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
+            }
+            $.proxy(get_logs, this)();
+        },
+
+        onBeforeDestroy: function () {
+            clearTimeout(this.model.get('timeout'));
         }
     });
 

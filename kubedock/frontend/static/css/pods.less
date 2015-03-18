@@ -1,0 +1,110 @@
+/* pod-main */
+#podlist-table{
+	thead{
+		background-color: transparent;
+		&.min-opacity{
+			.opacity(0);
+		}
+		tr{
+			th{
+				padding-top: 0;
+				vertical-align: top;
+				border-bottom: 1px solid #e5e5e5;
+				padding-bottom: 10px;
+				font-size: 14px;
+				color: #b1b9c0;
+				font-family: @regular;
+				text-align: left;
+				font-weight: normal;
+				padding-left: 0;
+				border: none;
+				&:focus{
+					outline: 0;
+				}
+				.tablesorter-header-inner{
+					margin-left: 10px;
+					.caret{
+						margin-left: 5px;
+					}
+				}
+			}
+		}
+	}
+	tbody{
+		tr{
+			&.checked, &:hover{
+				background-color: #f5fafe;
+				td, button{
+
+				}
+			}
+			td{
+				color: #1d1d1d;
+				font-size: 14px;
+				font-family: @regular;
+				padding-top: 0;
+				padding-bottom: 0;
+				vertical-align: middle;
+				height: 50px;
+				span{
+					&.more-ico{
+						background: url('../img/small-circles.png') 0 0 no-repeat;
+						height: 5px;
+						width: 20px;
+						display: inline-block;
+						vertical-align: middle;
+						&:hover{
+							cursor: default;
+							background-position: 0 -5px;
+						}
+					}
+				}
+				.tooltip.bottom{
+					margin-top: 8px;
+					border-color: #bdc4c9;
+					background-color: #fff;
+					.box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
+					.opacity(1);
+
+					.tooltip-arrow{
+						display: none;
+					}
+					.tooltip-inner{
+						background-color: #fff;
+						border: 1px solid #c7ced3;
+						height: 44px;
+						padding: 0 12px;
+						white-space: nowrap;
+						line-height: 44px;
+						text-align: center;
+						color: #1d1d1d;
+						position: relative;
+						&:before{
+							content:'';
+							position: absolute;
+							width: 14px;
+							height: 11px;
+							z-index: 9999;
+							top: -10px;
+							left: 46%;
+							background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat
+						}
+					}
+				}
+			}
+			button, a{
+				color: #1d1d1d;
+				font-size: 14px;
+				font-family: @regular;
+				text-decoration: none;
+				padding: 0;
+				&:hover{
+					text-decoration: none;
+					cursor: pointer;
+					color: #3197ee;
+				}
+			}
+		}
+	}
+}
+/* end-pod-main */

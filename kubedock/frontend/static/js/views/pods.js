@@ -18,12 +18,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.PodListLayout = Backbone.Marionette.LayoutView.extend({
         template: '#layout-pod-list-template',
 
-        events: {
+/*        events: {
             'click .start-checked': 'startItems',
             'click .stop-checked': 'stopItems',
             'click .terminate-checked': 'terminateItems',
             'click .table th input[type=checkbox]': 'itemsAllHandler'
-        },
+        },*/
 
         initialize: function(){
             var that = this;
@@ -37,17 +37,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         regions: {
-            masthead: '#masthead-title',
             list: '#layout-list',
             pager: '#layout-footer'
-        },
+        }
 
-        startItems: function(evt){
+       /* startItems: function(evt){
             var preloader = $('#page-preloader');
                 preloader.show(); 
             initPodCollection.forEach(function(i){
                 if (i.get('checked') === true){
-                   /* i.set({'command': 'start'});*/
                     i.save({'command': 'start'}, {
                         success: function(){
                             preloader.hide();
@@ -64,13 +62,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
-
-        stopItems: function(evt){
+*/
+       /* stopItems: function(evt){
             var preloader = $('#page-preloader');
                 preloader.show();
             initPodCollection.forEach(function(i){
                 if (i.get('checked') === true){
-                   /* i.set({'command': 'stop'});*/
                     i.save({'command': 'stop'}, {
                         wait: true,
                         success: function(){
@@ -88,9 +85,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
 
             });
-        },
+        },*/
 
-        terminateItems: function(evt){
+        /*terminateItems: function(evt){
             var preloader = $('#page-preloader');
                 preloader.show();
             initPodCollection.forEach(function(i){
@@ -111,8 +108,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     });
                 }
             });
-        },
-        itemsAllHandler: function(evt){
+        }, */
+/*        itemsAllHandler: function(evt){
             var target = $(evt.currentTarget),
                 pods_actions_btn = $('.pods-actions-btn'),
                 inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
@@ -124,18 +121,26 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 inputs.prop('checked',false);
                 pods_actions_btn.addClass('disabled');
             }
-        }
+        }*/
     });
 
     // View for showing a single pod item as a container in pods list
     Views.PodListItem = Backbone.Marionette.ItemView.extend({
-        template: '#pod-list-item-template',
-        tagName: 'tr',
-        className: 'pod-item',
+        template    : '#pod-list-item-template',
+        tagName     : 'tr',
+        className   : 'pod-item',
 
         ui: {
-            checkbox: '.check-item',
-            reditable: '.reditable'
+            checkbox    : '.check-item',
+            reditable   : '.reditable'
+        },
+
+        events: {
+            /*'change .check-item'  : 'checkItem',*/
+            'click .start-btn'      : 'startItem',
+            'click .stop-btn'       : 'stopItem',
+            'click .terminate-btn'  : 'terminateItem',
+            /*'click @ui.checkbox'  : 'inputHandler'*/
         },
 
         onRender: function(){
@@ -145,25 +150,18 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 title: 'Change replicas number',
                 success: function(response, newValue) {
                     that.model.set({
-                        'command': 'resize',
-                        'replicas': parseInt(newValue.trim())
+                        'command'   : 'resize',
+                        'replicas'  : parseInt(newValue.trim())
                     });
                     that.model.save();
                 }
             });
         },
 
-        events: {
-            'change .check-item': 'checkItem',
-            'click .start-btn': 'startItem',
-            'click .stop-btn': 'stopItem',
-            'click .terminate-btn': 'terminateItem',
-            'click @ui.checkbox': 'inputHandler'
-        },
 
-        checkItem: function(evt){
+/*        checkItem: function(evt){
             this.model.set('checked', this.ui.checkbox.is(':checked'));
-            },
+        },*/
 
         startItem: function(evt){
             var that = this,
@@ -180,9 +178,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.render();
                     preloader.hide();
                     modalDialog({
-                        title: 'Error',
-                        body: response.responseJSON ? response.responseJSON.status : response.responseText,
-                        show: true
+                        title   : 'Error',
+                        body    : response.responseJSON ? response.responseJSON.status : response.responseText,
+                        show    : true
                     });
                 }
             });
@@ -202,9 +200,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.render();
                     preloader.hide();
                     modalDialog({
-                        title: 'Error',
-                        body: response.responseJSON ? response.responseJSON.status : response.responseText,
-                        show: true
+                        title   : 'Error',
+                        body    : response.responseJSON ? response.responseJSON.status : response.responseText,
+                        show    : true
                     });
                 }
             });
@@ -228,14 +226,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.render();
                     preloader.hide();
                     modalDialog({
-                        title: errorTitle,
-                        body: errorText,
-                        show: true
+                        title   : errorTitle,
+                        body    : errorText,
+                        show    : true
                     });
                 }
             });
         },
-        inputHandler: function(evt){
+/*        inputHandler: function(evt){
             evt.stopPropagation();
 
             var target = $(evt.currentTarget),
@@ -262,15 +260,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             else {
                 switcher.checked = false;
             }
-        }
+        }*/
     });
 
     Views.PodCollection = Backbone.Marionette.CompositeView.extend({
         childView: Views.PodListItem,
-        tagName: 'div',
-        className: 'container',
-        childViewContainer: 'tbody',
-        template: '#pod-list-template',
+        tagName             : 'div',
+        childViewContainer  : 'tbody',
+        template            : '#pod-list-template',
 
         onBeforeDestroy: function(){
             this.trigger('pager:clear');
@@ -279,14 +276,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     // this layout view shows details a pod details page
     Views.PodItemLayout = Backbone.Marionette.LayoutView.extend({
-        template: '#layout-pod-item-template',
+        template : '#layout-pod-item-template',
 
         regions: {
-            masthead: '#masthead-title',
-            controls: '#item-controls',
-            info: '#item-info',
-            aside: '#layout-aside',
-            contents: '#layout-contents'
+            masthead : '#masthead-title',
+            controls : '#item-controls',
+            info     : '#item-info',
+            aside    : '#layout-aside',
+            contents : '#layout-contents'
         },
 
         initialize: function(){
@@ -306,19 +303,19 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
 
     Views.InfoPanel = Backbone.Marionette.CompositeView.extend({
-        template: '#page-info-panel-template',
-        tagName: 'div',
-        className: 'container',
+        template  : '#page-info-panel-template',
+        tagName   : 'div',
+        className : 'container',
 
         triggers: {
-            'click .stats': 'display:pod:stats'
+            'click .stats' : 'display:pod:stats'
         },
 
         events: {
-            'click .start-checked': 'startItems',
-            'click .stop-checked': 'stopItems',
-            'click .terminate-checked': 'terminateItems',
-            'click .table th input[type=checkbox]': 'itemsAllHandler'
+            'click .start-checked'                 : 'startItems',
+            'click .stop-checked'                  : 'stopItems',
+            'click .terminate-checked'             : 'terminateItems',
+           /* 'click .table th input[type=checkbox]' : 'itemsAllHandler'*/
         },
 
         command: function(cmd){
@@ -359,9 +356,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         terminateItems: function(evt){
             // TODO: terminate containers
-        },
+        }
 
-        itemsAllHandler: function(evt){
+        /*itemsAllHandler: function(evt){
             var target = $(evt.currentTarget),
                 pods_actions_btn = $('.containers-actions-btn'),
                 inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
@@ -373,14 +370,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 inputs.prop('checked',false);
                 pods_actions_btn.addClass('disabled');
             }
-        }
+        }*/
     });
 
     // View for showing a single container item as a container in containers list
     Views.InfoPanelItem = Backbone.Marionette.ItemView.extend({
-        template: '#page-container-item-template',
-        tagName: 'tr',
-        className: 'container-item',
+        template    : '#page-container-item-template',
+        tagName     : 'tr',
+        className   : 'container-item',
 
         templateHelpers: function(){
             var modelIndex = this.model.collection.indexOf(this.model);
@@ -389,21 +386,21 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
         },
 
-        ui: {
+/*        ui: {
             checkbox: '.check-item'
-        },
+        },*/
 
         events: {
-            'change .check-item': 'checkItem',
-            'click .start-btn': 'startItem',
-            'click .stop-btn': 'stopItem',
-            'click .terminate-btn': 'terminateItem',
-            'click @ui.checkbox': 'inputHandler'
+            /*'change .check-item'    : 'checkItem',*/
+            'click .start-btn'      : 'startItem',
+            'click .stop-btn'       : 'stopItem',
+            'click .terminate-btn'  : 'terminateItem',
+/*            'click @ui.checkbox'    : 'inputHandler'*/
         },
 
-        checkItem: function(evt){
+/*        checkItem: function(evt){
             this.model.set('checked', this.ui.checkbox.is(':checked'));
-        },
+        },*/
         command: function(evt, cmd){
             var that = this,
                 preloader = $('#page-preloader');
@@ -438,7 +435,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         terminateItem: function(evt){
             // TODO: terminate container
         },
-        inputHandler: function(evt){
+        /*inputHandler: function(evt){
             evt.stopPropagation();
 
             var target = $(evt.currentTarget),
@@ -465,7 +462,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             else {
                 switcher.checked = false;
             }
-        }
+        }*/
 
     });
 

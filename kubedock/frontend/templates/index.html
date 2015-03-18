@@ -21,7 +21,6 @@
     </head>
     <body>
 
-{#        {% include "inc/navbar.html" %}#}
     {% with items=MENU.navbar.get_items() %}
     {% include "inc/navbar_menu.html" %}
     {% endwith %}
@@ -30,9 +29,6 @@
         <div id="contents"></div>
         {% block script_templates %}
 
-        <!-- ################################## old templates ########################################## -->
-
-        
         <!-- Page Header template -->
         <script type="text/template" id="page-header-title-template"><%- name %></script>
 
@@ -115,47 +111,58 @@
             </td>
         </script>
 
-        <!-- Pods List templates -->
+        <!-- ########## Pods List templates ########## -->
+
         <!-- Pods list LayoutView template -->
         <script type="text/template" id="layout-pod-list-template">
-
-            <!-- Page header -->
-            <div class="container">
-                <div class="col-md-6">
-                    <h1 id="masthead-title" class="text-left"></h1>
-                </div>
-                <div class="col-md-4 col-md-offset-2 align-right">
-                    <a href="/#newpod" class="btn shdw btn-success">
-                        <!-- <span class="glyphicon glyphicon-send"></span> -->
-                        <span>Create new container</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- end of page header -->
-
-            <!-- page actions -->
-            <div class="container">
-                <div class="col-md-1 col-md-offset-0 left-action">
-                    <button type="button" class="btn invert login-btn dropdown-toggle green disabled pods-actions-btn" data-toggle="dropdown" aria-expanded="false">
-                        Actions <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu bulk-action-menu" role="menu">
-	                    <li role="presentation"><a class="start-checked" role="menuitem" tabindex="-1" href="#">Start</a></li>
-	                    <li role="presentation"><a class="stop-checked" role="menuitem" tabindex="-1" href="#">Stop</a></li>
-	                    <li role="presentation"><a class="terminate-checked" role="menuitem" tabindex="-1" href="#">Delete</a>
-                    </ul>
-                </div>
-            </div>
-            <!-- end of page actions -->
-
             <div id="layout-list"></div>
             <div id="layout-footer"></div>
         </script>
 
+        <!-- Pods items table compositeView template -->
+        <script type="text/template" id="pod-list-template">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li class="active">
+                            Pods
+                        </li>
+                    </ul>
+                    <div class="control-group">
+                        <button id="add_pod" ><a href="/#newpod">Add new container</a></button>
+                        <div class="nav-search" id="nav-search">
+                            <form class="form-search">
+                                <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
+                                <i class="nav-search-icon"></i>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="container">
+                <div class="col-md-12">
+                    <table id="podlist-table" class="table tablesorter tablesorter-default">
+                        <thead>
+                            <tr class="tablesorter-headerRow">
+                                <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">#<b class="caret"></b></div></th>
+                                <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pod name<b class="caret"></b></div></th>
+                                <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Replicated<b class="caret"></b></div></th>
+                                <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
+                                <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Kube type<b class="caret"></b><br/>(kubes quantity)</div></th>
+                                <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Deployed<b class="caret"></b><br/>date</div></th>
+                                <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Controls<b class="caret"></b><br/>column</div></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </script>
+
+        <!-- Pods Item templates -->
+
         <!-- Pods list row view template -->
         <script type="text/template" id="pod-list-item-template">
-
             <% states = {
                 running: 'glyphicon glyphicon-play',
                 unknown: 'glyphicon glyphicon-question-sign'
@@ -163,8 +170,8 @@
 
             <!-- table data row -->
             <td>
-                <input type="checkbox" class="check-item">
-            </td> 
+                #
+            </td>
 
             <td>
                 <span class="badge">
@@ -179,21 +186,25 @@
                     <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span>
                 <% } %>
             </td>
+           
             <td>
-                <span class="glyphicon glyphicon-share <%- service ? 'service-on' : 'service-off' %>"></span>
+                <span><%- status %></span>
+            </td>
+
+            <td>
+                some kube type(10)
+                <!-- <span class="glyphicon glyphicon-share <%- service ? 'service-on' : 'service-off' %>"></span>
                 <% if ( service && portalIP !== undefined) { %>
-                <span class="service-on"><%- portalIP %></span>
-                <% } %>
+                    <span><%- portalIP %></span>
+                <% } %>  -->
+            </td>
+            <td> 
+                01/02/2015
             </td>
 
             <td>
-                <!-- <span class="<%- status %> <%- states.hasOwnProperty(status) ? states[status] : states['unknown'] %>"></span> -->
-                <span class="<%- status %>"><%- status %></span>
-            </td>
-
-            <td class="text-right">
                 <div class="dropdown">
-                  <button class="btn invert login-btn dropdown-toggle green" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true">
+                  <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true">
                     Actions
                   </button>
                   <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
@@ -204,29 +215,8 @@
                 </div>
             </td>
             <!-- end of table data row -->
-
         </script>
 
-        <!-- Pods items table compositeView template -->
-        <script type="text/template" id="pod-list-template">
-            <div class="col-md-12">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th><input type="checkbox"></th>
-                            <th>Pod name</th>
-                            <th>Elements</th>
-                            <th>Entrypoint</th>
-                            <th>Status</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </script>
-
-        <!-- Pods Item templates -->
         <!-- Pods item Details LayoutView template -->
         <script type="text/template" id="layout-pod-item-template">
 

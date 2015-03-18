@@ -145,7 +145,7 @@ body{
 			.control-group{
 				.clearfix;
 				float: right;
-				#add_node, #nav-search, #add_user{
+				#add_node, #nav-search, #add_user, #add_pod{
 					float: left;
 				}
 				button{
@@ -160,7 +160,7 @@ body{
 					&:before{
 						position: absolute;
 					}
-					&#add_node, &#add_user, &#login_this_user{
+					&#add_node, &#add_user, &#login_this_user, &#add_pod{
 						padding:0 0 0 38px;
 						margin-right: 25px;
 						&:before{
@@ -171,7 +171,7 @@ body{
 							height: 21px;
 						}
 					}
-					&#add_node{
+					&#add_node, &#add_pod{
 						&:before{
 							background: url('../img/add-one.png') 0 0 no-repeat;
 						}
@@ -219,6 +219,14 @@ body{
 							left: 2px;
 							width: 28px;
 							height: 21px;
+						}
+					}
+					&#add_pod{
+						a{
+							text-decoration: none;
+							color: #ffffff;
+							font-family: @regular;
+							font-size: 16px;
 						}
 					}
 				}
@@ -298,8 +306,7 @@ body{
 			}
 		}
 	}
-
+	@import "pods.less";
 	@import "nodes.less";
 	@import "users.less";
-	
 }

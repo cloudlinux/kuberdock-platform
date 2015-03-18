@@ -21,17 +21,12 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
         
         showPods: function(){
             var listLayout = new App.Views.PodListLayout();
-            
-            var masthead = new App.Views.PageHeader({
-                model: new Backbone.Model({name: 'Pods'})
-            });
-            
+                      
             var podCollection = new App.Views.PodCollection({
                 collection: initPodCollection
             });
             
             this.listenTo(listLayout, 'show', function(){
-                listLayout.masthead.show(masthead);
                 listLayout.list.show(podCollection);
                 listLayout.pager.show(new App.Views.PaginatorView({view: podCollection}));
             });

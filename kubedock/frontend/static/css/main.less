@@ -32,14 +32,14 @@ body{
 		.nav .open > a:hover,
 		.nav .open > a:focus,
 		li a:focus{
-			background-color: transparent;
 			color: #3d464d !important;
+			background-color: transparent;
 		}
 		.dropdown-menu li a{
 			color: #3d464d;
-			text-decoration: none;
 			font-size: 16px;
 			font-family: @regular;
+			text-decoration: none;
 			&:hover{
 				color: #3197ee;
 				background-color: transparent;
@@ -69,8 +69,8 @@ body{
 				}
 			}
 			.navbar-brand{
-				margin: 0px 50px 0 10px;
 				padding: 0;
+				margin: 0px 50px 0 10px;
 				img{
 					height: 48px;
 				}
@@ -83,10 +83,10 @@ body{
 				> li{
 					> a {
 						padding: 0;
-						margin: 0 50px 0 0;
 						color: #3197ee;
-						text-decoration: none;
 						font-size: 16px;
+						margin: 0 50px 0 0;
+						text-decoration: none;
 						font-family: @regular;
 						&:hover{
 							color: #3d464d;
@@ -99,7 +99,6 @@ body{
 						}
 					}
 				}
-				
 			}
 		}
 	}
@@ -107,17 +106,17 @@ body{
 
 	/* bredkrumb */
 	.breadcrumbs-wrapper{
-		padding: 8px 0 9px;
 		width: 100%;
-		background-color: #466eb1;
+		padding: 8px 0 9px;
 		margin-bottom: 40px;
+		background-color: #466eb1;
 
 		#breadcrumbs{
 			.clearfix;
 			.breadcrumb{
-				 line-height: 34px;
-				margin-left: 10px;
 				float: left;
+				line-height: 34px;
+				margin-left: 10px;
 				.border-radius(0);
 				padding: 0;
 				margin-bottom: 0;
@@ -149,25 +148,25 @@ body{
 					float: left;
 				}
 				button{
-					border: none;
-					background: none;
 					outline: 0;
-					line-height: 34px;
+					border: none;
 					color: #ffffff;
-					font-family: @regular;
 					font-size: 16px;
+					background: none;
+					line-height: 34px;
 					position: relative;
+					font-family: @regular;
 					&:before{
 						position: absolute;
 					}
 					&#add_node, &#add_user, &#login_this_user, &#add_pod{
-						padding:0 0 0 38px;
 						margin-right: 25px;
+						padding: 0 0 0 38px;
 						&:before{
-							content: '';
 							top: 8px;
 							left: 2px;
 							width: 28px;
+							content: '';
 							height: 21px;
 						}
 					}
@@ -187,46 +186,46 @@ body{
 						}
 					}
 					&#rename_node{
-						padding:0 0 0 38px;
 						margin-right: 17px;
+						padding: 0 0 0 38px;
 						&:before{
-							content: '';
-							background: url('../img/rename-node.png') 0 0 no-repeat;
 							top: 8px;
 							left: 2px;
+							content: '';
 							width: 28px;
 							height: 21px;
+							background: url('../img/rename-node.png') 0 0 no-repeat;
 						}
 					}
 					&#stop_node{
-						padding:0 0 0 28px;
 						margin-right: 16px;
+						padding: 0 0 0 28px;
 						&:before{
-							content: '';
-							background: url('../img/stop-node.png') 0 0 no-repeat;
 							top: 8px;
 							left: 4px;
 							width: 28px;
+							content: '';
 							height: 21px;
+							background: url('../img/stop-node.png') 0 0 no-repeat;
 						}
 					}
 					&#delete_node, &#delete_user{
 						padding:0 0 0 28px;
 						&:before{
-							content: '';
-							background: url('../img/delete-node.png') 0 0 no-repeat;
 							top: 8px;
 							left: 2px;
 							width: 28px;
+							content: '';
 							height: 21px;
+							background: url('../img/delete-node.png') 0 0 no-repeat;
 						}
 					}
 					&#add_pod{
 						a{
-							text-decoration: none;
 							color: #ffffff;
-							font-family: @regular;
 							font-size: 16px;
+							font-family: @regular;
+							text-decoration: none;
 						}
 					}
 				}
@@ -235,15 +234,15 @@ body{
 					#nav-search-input{
 						.border-radius(3px);
 						.box-sizing(border-box);
-						width: 212px;
-						height: 34px;
 						border: 0;
 						outline: 0;
+						width: 212px;
+						height: 34px;
 						padding: 0 10px 0 40px;
 					}
 					.nav-search-icon{
-						left: 13px;
 						top: 9px;
+						left: 13px;
 						width: 15px;
 						height: 15px;
 						position: absolute;
@@ -257,56 +256,87 @@ body{
 		}
 	}
 	/* end bredkrumb */
-
 	.active-item-control{
-		display: none;
-		position: absolute;
-		height: 50px;
-		width: 100%;
 		z-index: 1;
-		max-width: 1140px;
+		width: 100%;
+		height: 50px;
 		font-size: 0;
+		display: none;
+		max-width: 1140px;
+		position: absolute;
 
 		span,button{
 			color: #1d1d1d;
-			font-family: @regular;
 			font-size: 14px;
 			vertical-align: top;
+			font-family: @regular;
 		}
 		span{
 			font-weight: bold;
 			margin-right: 20px;
+			&#editUser{
+				&:hover{
+					cursor: pointer;
+				}
+			}
 		}
 		button{
-			padding: 0;
 			margin: 0;
 			border: 0;
 			outline: 0;
-			line-height: inherit;
+			padding: 0;
 			position: relative;
 			padding-left: 25px;
 			margin-right: 20px;
+			line-height: inherit;
 			&:before{
 				content: '';
 				position: absolute;
-				top: 0;
-				left: 2px;
-				width: 28px;
-				height: 21px;
 			}
 			&:hover{
-				cursor: pointer;
 				color: #3197ee;
+				cursor: pointer;
 				text-decoration: none;
+			}
+			&:focus{
+				color: initial;
+				text-decoration: none;
+				&:hover{
+					color: #3197ee;
+				}
 			}
 			&#deleteNode, &#deleteUser{
 				&:before{
+					top: 0;
+					left: 2px;
+					width: 28px;
+					height: 21px;
 					background: url('../img/recycling.png') 0 0 no-repeat;
+				}
+			}
+			&#blockUser{
+				&:before{
+					top: 0;
+					left: 0;
+					height: 15px;
+					width: 15px;
+					background: url('../img/block-user-ico.png') 0 0 no-repeat;
+				}
+			}
+			&#activeteUser{
+				&:before{
+					top: 1px;
+					left: -2px;
+					width: 19px;
+					height: 14px;
+					background: url('../img/activate-user-ico.png') 0 0 no-repeat;
 				}
 			}
 		}
 	}
+
 	@import "pods.less";
 	@import "nodes.less";
 	@import "users.less";
+
 }

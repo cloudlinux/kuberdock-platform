@@ -57,7 +57,7 @@ define(['marionette', 'paginator', 'utils'],
                 });
             },
             events: {
-                'click li.pseudo-link': 'paginateIt'
+                'click li.pseudo-link' : 'paginateIt'
             },
             paginateIt: function(evt){
                 evt.stopPropagation();
@@ -78,11 +78,15 @@ define(['marionette', 'paginator', 'utils'],
                 if (this.model.get('checked')) return 'checked';
             },
 
+            ui: {
+                'profileUser'   :   'button#profileUser',
+                'authIt'        :   'button#authIt'
+            },
+
             events: {
-                'click button#editUser' : 'editUser_btn',
-                'click button#profileUser' : 'profileUser_btn',
-                'click button#authIt' : 'authIt_btn',
-                'click' : 'checkUser'
+                'click @ui.profileUser' : 'profileUser_btn',
+                'click @ui.authIt'      : 'authIt_btn',
+                'click'                 : 'checkUser'
             },
 
             checkUser: function(){
@@ -95,10 +99,6 @@ define(['marionette', 'paginator', 'utils'],
                     if ( this.model.get('id') == models[i].get('id') ) continue;
                     models[i].unset('checked');
                 };
-            },
-
-            editUser_btn: function(){
-                App.router.navigate('/edit/' + this.model.id + '/', {trigger: true});
             },
 
             profileUser_btn: function(){
@@ -136,9 +136,14 @@ define(['marionette', 'paginator', 'utils'],
         Views.OnlineUserItem = Marionette.ItemView.extend({
             template: '#online-user-item-template',
             tagName: 'tr',
-            events: {
-                'click button#userActivityHistory': 'userActivityHistory_btn'
+            ui: { 
+                'userActivityHistory' : "button#userActivityHistory"
             },
+
+            events: {
+                'click @ui.userActivityHistory' : 'userActivityHistory_btn'
+            },
+
             userActivityHistory_btn: function(){
                 App.router.navigate('/online/' + this.model.id + '/', {trigger: true});
             }
@@ -155,28 +160,34 @@ define(['marionette', 'paginator', 'utils'],
             childViewContainer: "tbody",
 
             ui: {
-                'add_user':'button#add_user',
-                'control': 'div.active-item-control',
-                'thead' : 'thead',
-                'remove_selected_user': 'button#deleteUser',
-                'edit_selected_user': 'button#editUser'
+                'add_user'               : 'button#add_user',
+                'control'                : 'div.active-item-control',
+                'thead'                  : 'thead',
+                'remove_selected_user'   : 'button#deleteUser',
+                'edit_selected_user'     : 'span#editUser',
+                'block_selected_user'    : 'button#blockUser',
+                'activate_selected_user' : 'button#activeteUser'
             },
 
             events: {
-                'click @ui.add_user' : 'addUser',
-                'click tbody tr' : 'activeMenu',
-                'click @ui.remove_selected_user' : 'removeSelectedUser',
-                'click @ui.edit_selected_user' : 'editSelectedUser'
+                'click tbody tr'                   : 'activeMenu',
+                'click @ui.add_user'               : 'addUser',
+                'click @ui.remove_selected_user'   : 'removeSelectedUser',
+                'click @ui.edit_selected_user'     : 'editSelectedUser',
+                'click @ui.block_selected_user'    : 'blockSelectedUser',
+                'click @ui.activate_selected_user' : 'activateSelectedUser'
             },
 
             activeMenu: function(){
                 var models = this.collection.models;
 
                 for (var i = 0; i < models.length; i++) {
-
                     if ( models[i].get('checked') ) {
+                        var name = models[i].attributes.username;
+                        
                         this.ui.control.show();
                         this.ui.thead.addClass('min-opacity');
+                        this.ui.edit_selected_user.text(name);
                         break;
                     } else {
                         this.ui.control.hide();
@@ -195,6 +206,48 @@ define(['marionette', 'paginator', 'utils'],
                     }
                 }    
                 e.stopPropagation();      
+            },
+
+            blockSelectedUser: function(e){
+                var models = this.collection.models;
+               
+                for (var i = 0; i < models.length; i++) {
+                    if (models[i].get('checked')){
+                        this.collection.models[i].set('active',false)
+                        console.log(this.collection.models[i]);
+
+                        this.collection.models[i].save(undefined, {
+                                wait: true,
+                                success: function(){
+                                console.log('yes');
+                            }
+                        });
+                        
+                        break;
+                    }
+                }    
+                e.stopPropagation();     
+            },
+
+            activateSelectedUser: function(e){
+                var models = this.collection.models;
+               
+                for (var i = 0; i < models.length; i++) {
+                    if (models[i].get('checked')){
+                        this.collection.models[i].set('active',true)
+                        console.log(this.collection.models[i]);
+                        
+                        this.collection.models[i].save(undefined, {
+                                wait: true,
+                                success: function(){
+                                console.log('yes');
+                            }
+                        });
+
+                        break;
+                    }
+                }    
+                e.stopPropagation();  
             },
 
             removeSelectedUser: function(e){
@@ -230,16 +283,16 @@ define(['marionette', 'paginator', 'utils'],
             template: '#all-users-activities-template',
 
             ui: {
-                'dateFrom': 'input#dateFrom',
-                'dateTo': 'input#dateTo',
-                'usersList': 'ul#users-list',
-                'tbody': '#users-activities-table'
+                'dateFrom'  : 'input#dateFrom',
+                'dateTo'    : 'input#dateTo',
+                'usersList' : 'ul#users-list',
+                'tbody'     : '#users-activities-table'
             },
 
             events: {
-                'change input.user-activity': 'getUsersActivities',
-                'change input#dateFrom': 'getUsersActivities',
-                'change input#dateTo': 'getUsersActivities'
+                'change input.user-activity' : 'getUsersActivities',
+                'change input#dateFrom'      : 'getUsersActivities',
+                'change input#dateTo'        : 'getUsersActivities'
             },
 
             onRender: function(){
@@ -307,14 +360,14 @@ define(['marionette', 'paginator', 'utils'],
             tagName: 'div',
 
             ui: {
-                'username': 'input#username',
-                'password': 'input#password',
-                'password_again': 'input#password-again',
-                'email': 'input#email',
-                'user_status' : 'select#status-select',
-                'role_select': 'select#role-select',
-                'users_page' : 'div#users-page',
-                'user_add_btn' : 'button#user-add-btn',
+                'username'        : 'input#username',
+                'password'        : 'input#password',
+                'password_again'  : 'input#password-again',
+                'email'           : 'input#email',
+                'user_status'     : 'select#status-select',
+                'role_select'     : 'select#role-select',
+                'users_page'      : 'div#users-page',
+                'user_add_btn'    : 'button#user-add-btn',
                 'user_cancel_btn' : 'button#user-cancel-btn'
             },
 
@@ -333,11 +386,11 @@ define(['marionette', 'paginator', 'utils'],
                 }
 
                 App.Data.users.create({
-                    'username': this.ui.username.val(),
-                    'password': this.ui.password.val(),
-                    'email': this.ui.email.val(),
-                    'active': (this.ui.user_status.val() == 1 ? true : false),
-                    'rolename': this.ui.role_select.val()
+                    'username' : this.ui.username.val(),
+                    'password' : this.ui.password.val(),
+                    'email'    : this.ui.email.val(),
+                    'active'   : (this.ui.user_status.val() == 1 ? true : false),
+                    'rolename' : this.ui.role_select.val()
                 }, {
                     wait: true,
                     success: function(){
@@ -362,16 +415,16 @@ define(['marionette', 'paginator', 'utils'],
             
 
             ui: {
-                'users_page' : 'div#users-page',
-                'delete_user_btn' : 'button#delete_user',
-                'user_cancel_btn' : 'button#user-cancel-btn',
+                'users_page'          : 'div#users-page',
+                'delete_user_btn'     : 'button#delete_user',
+                'user_cancel_btn'     : 'button#user-cancel-btn',
                 'login_this_user_btn' : 'button#login_this_user'
             },
             events: {
-                'click @ui.users_page' : 'breadcrumbClick',
-                'click @ui.user_cancel_btn': 'cancel',
-                'click @ui.delete_user_btn': 'delete_user',
-                'click @ui.login_this_user_btn': 'login_this_user'
+                'click @ui.users_page'          : 'breadcrumbClick',
+                'click @ui.user_cancel_btn'     : 'cancel',
+                'click @ui.delete_user_btn'     : 'delete_user',
+                'click @ui.login_this_user_btn' : 'login_this_user'
             },
 
             login_this_user: function(){
@@ -404,10 +457,10 @@ define(['marionette', 'paginator', 'utils'],
             onSave: function(){
                 // temp validation
                 var data = {
-                    'username': this.ui.username.val(),
-                    'email': this.ui.email.val(),
-                    'active': (this.ui.user_status.val() == 1 ? true : false),
-                    'rolename': this.ui.role_select.val()
+                    'username' : this.ui.username.val(),
+                    'email'    : this.ui.email.val(),
+                    'active'   : (this.ui.user_status.val() == 1 ? true : false),
+                    'rolename' : this.ui.role_select.val()
                 };
                 if(this.ui.password.val()){
                     if (!this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val())) {
@@ -553,13 +606,13 @@ define(['marionette', 'paginator', 'utils'],
             App.router = new Marionette.AppRouter({
                 controller: controller,
                 appRoutes: {
-                    'online/': 'showOnlineUsers',
-                    'online/:id/': 'showUserActivity',
-                    '': 'showUsers',
-                    'create/': 'showCreateUser',
-                    'edit/:id/': 'showEditUser',
+                    'online/'      : 'showOnlineUsers',
+                    'online/:id/'  : 'showUserActivity',
+                    ''             : 'showUsers',
+                    'create/'      : 'showCreateUser',
+                    'edit/:id/'    : 'showEditUser',
                     'profile/:id/' : 'showProfileUser',
-                    'activity/': 'showAllUsersActivity'
+                    'activity/'    : 'showAllUsersActivity'
                 }
             });
         });

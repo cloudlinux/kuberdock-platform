@@ -168,11 +168,8 @@
             <button id="profileUser">
                 <%- username %>
             </button>
-            <!-- <button id="editUser" class="btn btn-link btn-xs pull-right">
-                <i class="glyphicon glyphicon-pencil"></i>
-            </button> -->
         </td>
-        <td>20<!--<button class="btn btn-danger btn-xs" id="authIt">Auth by</button>--></td>
+        <td>20 <!--<button class="btn btn-danger btn-xs" id="authIt">Auth by</button>--> </td>
         <td>89</td>
         <td><%- email ? email : 'No mail' %></td>
         <td><%- active ? 'Active' : 'Blocked' %></td>
@@ -233,8 +230,9 @@
         </div>
         <div class="container">
             <div class="active-item-control">
-                <span>Username</span>
-                <button id="editUser" class="btn btn-xs btn-link" title="Edit select item">Edit</button>
+                <span id="editUser" title="Edit this user">Username</span>
+                <button id="blockUser" class="btn btn-xs btn-link" title="">Block</button>
+                <button id="activeteUser" class="btn btn-xs btn-link" title="">Activate</button>
                 <button id="deleteUser" class="btn btn-xs btn-link" title="Remove select item">Delete</button>
             </div>
             <table id="userslist-table" class="table">

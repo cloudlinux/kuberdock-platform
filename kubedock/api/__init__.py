@@ -49,6 +49,8 @@ def create_app(settings_override=None):
 
 class APIError(Exception):
     def __init__(self, message, status_code=400):
+        if isinstance(message, (list, tuple, dict)):
+            message = str(message)
         self.message = message
         self.status_code = status_code
 

@@ -12,6 +12,14 @@ function modalDialog(options){
     return modal;
 }
 
+function modelError(b, t){
+    modalDialog({
+        title: t ? t : 'Error',
+        body: typeof b == "string" ? b : b.responseJSON ? b.responseJSON.status : b.responseText,
+        show: true
+    });
+}
+
 KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     // this layout view shows the main page: basic pods list
@@ -177,11 +185,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 error: function(model, response, options, data){
                     that.render();
                     preloader.hide();
-                    modalDialog({
-                        title   : 'Error',
-                        body    : response.responseJSON ? response.responseJSON.status : response.responseText,
-                        show    : true
-                    });
+                    modelError(response);
                 }
             });
         },
@@ -199,11 +203,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 error: function(model, response, options, data){
                     that.render();
                     preloader.hide();
-                    modalDialog({
-                        title   : 'Error',
-                        body    : response.responseJSON ? response.responseJSON.status : response.responseText,
-                        show    : true
-                    });
+                    modelError(response);
                 }
             });
         },
@@ -220,16 +220,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.remove();
                     preloader.hide();
                 },
-               error: function(e, data){
-                    var errorText = 'errorText',
-                        errorTitle = 'errorTitle';
+               error: function(model, response, options, data){
                     that.render();
                     preloader.hide();
-                    modalDialog({
-                        title   : errorTitle,
-                        body    : errorText,
-                        show    : true
-                    });
+                    modelError(response);
                 }
             });
         },
@@ -335,13 +329,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 success: function(){
                     preloader.hide();
                 },
-                error: function(model, xhr){
+                error: function(model, response, options, data){
                     preloader.hide();
-                    modalDialog({
-                        title: 'Error',
-                        body: xhr.responseJSON.status,
-                        show: true
-                    });
+                    modelError(response);
                 }
             });
 
@@ -417,11 +407,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 error: function(model, response, options, data){
                     that.render();
                     preloader.hide();
-                    modalDialog({
-                        title: 'Error',
-                        body: response.responseJSON ? response.responseJSON.status : response.responseText,
-                        show: true
-                    });
+                    modelError(response);
                 }
             });
         },
@@ -494,15 +480,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.render();
                     preloader.hide();
                 },
-                error: function(e, data){
-                    var errorText = 'errorText',
-                        errorTitle = 'errorTitle';
+                error: function(model, response, options, data){
                     preloader.hide();
-                    modalDialog({
-                        title: errorTitle,
-                        body: errorText,
-                        show: true
-                    });
+                    modelError(response);
                 }
             });
         },
@@ -520,15 +500,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.render();
                     preloader.hide();
                 },
-                error: function(e, data){
-                    var errorText = 'errorText',
-                        errorTitle = 'errorTitle';
+                error: function(model, response, options, data){
                     preloader.hide();
-                    modalDialog({
-                        title: errorTitle,
-                        body: errorText,
-                        show: true
-                    });
+                    modelError(response);
                 }
             });
         },
@@ -546,14 +520,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     window.location.href = '/#pods';
                     preloader.hide();
                 },
-                error: function(e, data){
-                    var errorTitle = 'errorTitle';
+                error: function(model, response, options, data){
                     preloader.hide();
-                    modalDialog({
-                        title: errorTitle,
-                        body: 'Could not remove ' + name,
-                        show: true
-                    });
+                    modelError('Could not remove ' + name);
                 }
             });
         }
@@ -712,11 +681,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                                 that.model.set({name: newValue});
                         },
                         error: function(xhr, status, erorr){
-                            modalDialog({
-                                title: 'Wrong name',
-                                body: JSON.parse(xhr.responseText).status,
-                                show: true
-                            });
+                            modelError(xhr);
                             that.ui.peditable.editable('option', 'value', 'Unnamed');
                         }
                     })

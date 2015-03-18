@@ -1,3 +1,13 @@
+function modalDialog(options){
+    var modal = $('.modal');
+    if(options.title) modal.find('.modal-title').html(options.title);
+    if(options.body) modal.find('.modal-body').html(options.body);
+    if(options.large) modal.addClass('bs-example-modal-lg');
+    if(options.small) modal.addClass('bs-example-modal-sm');
+    if(options.show) modal.modal('show');
+    return modal;
+}
+
 KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
     
     var routes;
@@ -159,8 +169,12 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                         routes.navigate('pods');
                         that.showPods();
                     },
-                    error: function(){
-                        console.log('failed to save pod')
+                    error: function(model, response, options, data){
+                        modalDialog({
+                            title: 'Error',
+                            body: response.responseJSON ? response.responseJSON.status : response.responseText,
+                            show: true
+                        });
                     }
                 });
             };

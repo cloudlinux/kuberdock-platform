@@ -26,13 +26,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.PodListLayout = Backbone.Marionette.LayoutView.extend({
         template: '#layout-pod-list-template',
 
-/*        events: {
-            'click .start-checked': 'startItems',
-            'click .stop-checked': 'stopItems',
-            'click .terminate-checked': 'terminateItems',
-            'click .table th input[type=checkbox]': 'itemsAllHandler'
-        },*/
-
         initialize: function(){
             var that = this;
             this.listenTo(this.list, 'show', function(view){
@@ -48,88 +41,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             list: '#layout-list',
             pager: '#layout-footer'
         }
-
-       /* startItems: function(evt){
-            var preloader = $('#page-preloader');
-                preloader.show(); 
-            initPodCollection.forEach(function(i){
-                if (i.get('checked') === true){
-                    i.save({'command': 'start'}, {
-                        success: function(){
-                            preloader.hide();
-                        },
-                        error: function(model, response, options, data){
-                            preloader.hide();
-                            modalDialog({
-                                title: 'Error',
-                                body: response.responseJSON ? response.responseJSON.status : response.responseText,
-                                show: true
-                            });
-                        }
-                    });
-                }
-            });
-        },
-*/
-       /* stopItems: function(evt){
-            var preloader = $('#page-preloader');
-                preloader.show();
-            initPodCollection.forEach(function(i){
-                if (i.get('checked') === true){
-                    i.save({'command': 'stop'}, {
-                        wait: true,
-                        success: function(){
-                            initPodCollection.remove(i);
-                        },
-                        error: function(model, response, options, data){
-                            preloader.hide();
-                            modalDialog({
-                                title: 'Error',
-                                body: response.responseJSON ? response.responseJSON.status : response.responseText,
-                                show: true
-                            });
-                        }
-                    });
-                }
-
-            });
-        },*/
-
-        /*terminateItems: function(evt){
-            var preloader = $('#page-preloader');
-                preloader.show();
-            initPodCollection.forEach(function(i){
-                if (i.get('checked') === true){
-                    i.destroy({
-                        wait: true,
-                        success: function(){
-                            initPodCollection.remove(i);
-                        },
-                        error: function(model, response, options, data){
-                            preloader.hide();
-                            modalDialog({
-                                title: 'Error',
-                                body: response.responseJSON ? response.responseJSON.status : response.responseText,
-                                show: true
-                            });
-                        }
-                    });
-                }
-            });
-        }, */
-/*        itemsAllHandler: function(evt){
-            var target = $(evt.currentTarget),
-                pods_actions_btn = $('.pods-actions-btn'),
-                inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
-
-            if( target.is(':checked') ) {
-                inputs.prop('checked',true);
-                pods_actions_btn.removeClass('disabled');
-            } else {
-                inputs.prop('checked',false);
-                pods_actions_btn.addClass('disabled');
-            }
-        }*/
     });
 
     // View for showing a single pod item as a container in pods list
@@ -144,11 +55,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            /*'change .check-item'  : 'checkItem',*/
             'click .start-btn'      : 'startItem',
             'click .stop-btn'       : 'stopItem',
             'click .terminate-btn'  : 'terminateItem',
-            /*'click @ui.checkbox'  : 'inputHandler'*/
         },
 
         onRender: function(){
@@ -165,11 +74,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
-
-
-/*        checkItem: function(evt){
-            this.model.set('checked', this.ui.checkbox.is(':checked'));
-        },*/
 
         startItem: function(evt){
             var that = this,
@@ -227,34 +131,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
-/*        inputHandler: function(evt){
-            evt.stopPropagation();
-
-            var target = $(evt.currentTarget),
-                tbody = target.parents('.table tbody'),
-                switcher = target.parents('.table').find('thead tr:first-child input[type=checkbox]')[0],
-               	pods_actions_btn = $('.pods-actions-btn'),   //for bliss ты обещал посмотреть как избегать подобного кода если элемент не динамический //
-                inputsLength = 0,
-                counter = 0;
-
-            tbody.find('tr td:first-child input').each(function(){
-                if (this.checked) {
-                    counter+=1;
-                    pods_actions_btn.removeClass('disabled');
-                }
-                inputsLength+=1;
-            });
-            if (counter == 0 ){
-                pods_actions_btn.addClass('disabled');
-            }
-            if (counter == inputsLength) {
-               switcher.checked = true;
-               pods_actions_btn.removeClass('disabled');
-            }
-            else {
-                switcher.checked = false;
-            }
-        }*/
     });
 
     Views.PodCollection = Backbone.Marionette.CompositeView.extend({
@@ -309,7 +185,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .start-checked'                 : 'startItems',
             'click .stop-checked'                  : 'stopItems',
             'click .terminate-checked'             : 'terminateItems',
-           /* 'click .table th input[type=checkbox]' : 'itemsAllHandler'*/
         },
 
         command: function(cmd){
@@ -347,20 +222,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         terminateItems: function(evt){
             // TODO: terminate containers
         }
-
-        /*itemsAllHandler: function(evt){
-            var target = $(evt.currentTarget),
-                pods_actions_btn = $('.containers-actions-btn'),
-                inputs = target.parents('.table').find('tbody tr td:first-child input[type=checkbox]');
-
-            if( target.is(':checked') ) {
-                inputs.prop('checked',true);
-                pods_actions_btn.removeClass('disabled');
-            } else {
-                inputs.prop('checked',false);
-                pods_actions_btn.addClass('disabled');
-            }
-        }*/
     });
 
     // View for showing a single container item as a container in containers list
@@ -376,21 +237,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
         },
 
-/*        ui: {
-            checkbox: '.check-item'
-        },*/
-
         events: {
             /*'change .check-item'    : 'checkItem',*/
             'click .start-btn'      : 'startItem',
             'click .stop-btn'       : 'stopItem',
             'click .terminate-btn'  : 'terminateItem',
-/*            'click @ui.checkbox'    : 'inputHandler'*/
         },
 
-/*        checkItem: function(evt){
-            this.model.set('checked', this.ui.checkbox.is(':checked'));
-        },*/
         command: function(evt, cmd){
             var that = this,
                 preloader = $('#page-preloader');
@@ -420,35 +273,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         terminateItem: function(evt){
             // TODO: terminate container
-        },
-        /*inputHandler: function(evt){
-            evt.stopPropagation();
-
-            var target = $(evt.currentTarget),
-                tbody = target.parents('.table tbody'),
-                switcher = target.parents('.table').find('thead tr:first-child input[type=checkbox]')[0],
-                pods_actions_btn = $('.containers-actions-btn'),
-                inputsLength = 0,
-                counter = 0;
-
-            tbody.find('tr td:first-child input').each(function(){
-                if (this.checked) {
-                    counter+=1;
-                    pods_actions_btn.removeClass('disabled');
-                }
-                inputsLength+=1;
-            });
-            if (counter == 0 ){
-                pods_actions_btn.addClass('disabled');
-            }
-            if (counter == inputsLength) {
-               switcher.checked = true;
-               pods_actions_btn.removeClass('disabled');
-            }
-            else {
-                switcher.checked = false;
-            }
-        }*/
+        }
 
     });
 
@@ -458,9 +283,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         className: 'pod-controls',
 
         events: {
-            'click .start-btn': 'startItem',
-            'click .stop-btn': 'stopItem',
-            'click .terminate-btn': 'terminateItem'
+            'click .start-btn'     : 'startItem',
+            'click .stop-btn'      : 'stopItem',
+            'click .terminate-btn' : 'terminateItem'
         },
 
         getItem: function(){
@@ -530,9 +355,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     Views.PodGraphItem = Backbone.Marionette.ItemView.extend({
         template: '#pod-item-graph-template',
+       
         ui: {
             chart: '.graph-item'
         },
+
         onShow: function(){
             var lines = this.model.get('lines');
             var options = {
@@ -701,7 +528,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         className: 'item',
 
         events: {
-            'click .add-item': 'addItem'
+            'click .add-item' : 'addItem'
         },
 
         addItem: function(evt){
@@ -729,19 +556,19 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click .search-image': 'onSearchClick',
-            'keypress #search-image-field': 'onInputKeypress',
-            'click #search-image-default-repo': 'onChangeRepoURL'
+            'click .search-image'              : 'onSearchClick',
+            'keypress #search-image-field'     : 'onInputKeypress',
+            'click #search-image-default-repo' : 'onChangeRepoURL'
         },
 
         childEvents: {
-            'image:selected': 'childImageSelected'
+            'image:selected' : 'childImageSelected'
         },
 
         ui: {
-            repo_url_repr: 'span#search-image-default-repo',
-            input: 'input#search-image-field',
-            spinner: '#data-collection'
+            repo_url_repr   : 'span#search-image-default-repo',
+            input           : 'input#search-image-field',
+            spinner         : '#data-collection'
         },
 
         onRender: function(){
@@ -853,13 +680,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-            'click .complete' : 'step:complete',
-            'click .next-step' : 'step:volconf',
-            'click .go-to-volumes': 'step:volconf',
-            'click .go-to-envs': 'step:envconf',
-            'click .go-to-resources': 'step:resconf',
-            'click .go-to-other': 'step:otherconf',
-            'click .go-to-logs': 'step:logsconf',
+            'click .complete'        : 'step:complete',
+            'click .next-step'       : 'step:volconf',
+            'click .go-to-volumes'   : 'step:volconf',
+            'click .go-to-envs'      : 'step:envconf',
+            'click .go-to-resources' : 'step:resconf',
+            'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-logs'      : 'step:logsconf',
         },
 
         addItem: function(env){
@@ -908,8 +735,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click .readonly': 'toggleReadOnly',
-            'click .add-vol': 'addItem',
+            'click .readonly' : 'toggleReadOnly',
+            'click .add-vol'  : 'addItem'
         },
 
         templateHelpers: function(){
@@ -919,14 +746,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-            'click .complete' : 'step:complete',
-            'click .next-step' : 'step:envconf',
-            'click .prev-step' : 'step:portconf',
-            'click .go-to-ports': 'step:portconf',
-            'click .go-to-envs': 'step:envconf',
-            'click .go-to-resources': 'step:resconf',
-            'click .go-to-other': 'step:otherconf',
-            'click .go-to-logs': 'step:logsconf',
+            'click .complete'        : 'step:complete',
+            'click .next-step'       : 'step:envconf',
+            'click .prev-step'       : 'step:portconf',
+            'click .go-to-ports'     : 'step:portconf',
+            'click .go-to-envs'      : 'step:envconf',
+            'click .go-to-resources' : 'step:resconf',
+            'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-logs'      : 'step:logsconf',
         },
 
         addItem: function(env){
@@ -977,7 +804,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click .add-env': 'addItem',
+            'click .add-env' : 'addItem',
         },
 
         templateHelpers: function(){
@@ -987,14 +814,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-            'click .complete' : 'step:complete',
-            'click .next-step' : 'step:resconf',
-            'click .prev-step' : 'step:volconf',
-            'click .go-to-ports': 'step:portconf',
-            'click .go-to-volumes': 'step:volconf',
-            'click .go-to-resources': 'step:resconf',
-            'click .go-to-other': 'step:otherconf',
-            'click .go-to-logs': 'step:logsconf',
+            'click .complete'        : 'step:complete',
+            'click .next-step'       : 'step:resconf',
+            'click .prev-step'       : 'step:volconf',
+            'click .go-to-ports'     : 'step:portconf',
+            'click .go-to-volumes'   : 'step:volconf',
+            'click .go-to-resources' : 'step:resconf',
+            'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-logs'      : 'step:logsconf',
         },
 
         addItem: function(env){
@@ -1032,14 +859,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-            'click .complete' : 'step:complete',
-            'click .next-step' : 'step:otherconf',
-            'click .prev-step' : 'step:envconf',
-            'click .go-to-ports': 'step:portconf',
-            'click .go-to-volumes': 'step:volconf',
-            'click .go-to-envs': 'step:envconf',
-            'click .go-to-other': 'step:otherconf',
-            'click .go-to-logs': 'step:logsconf',
+            'click .complete'      : 'step:complete',
+            'click .next-step'     : 'step:otherconf',
+            'click .prev-step'     : 'step:envconf',
+            'click .go-to-ports'   : 'step:portconf',
+            'click .go-to-volumes' : 'step:volconf',
+            'click .go-to-envs'    : 'step:envconf',
+            'click .go-to-other'   : 'step:otherconf',
+            'click .go-to-logs'    : 'step:logsconf',
         },
 
         templateHelpers: function(){
@@ -1079,13 +906,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-            'click .complete' : 'step:complete',
-            'click .prev-step' : 'step:resconf',
-            'click .go-to-ports': 'step:portconf',
-            'click .go-to-volumes': 'step:volconf',
-            'click .go-to-envs': 'step:envconf',
-            'click .go-to-resources': 'step:resconf',
-            'click .go-to-logs': 'step:logsconf',
+            'click .complete'        : 'step:complete',
+            'click .prev-step'       : 'step:resconf',
+            'click .go-to-ports'     : 'step:portconf',
+            'click .go-to-volumes'   : 'step:volconf',
+            'click .go-to-envs'      : 'step:envconf',
+            'click .go-to-resources' : 'step:resconf',
+            'click .go-to-logs'      : 'step:logsconf',
         },
         
         onRender: function(){
@@ -1122,11 +949,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-            'click .go-to-ports': 'step:portconf',
-            'click .go-to-volumes': 'step:volconf',
-            'click .go-to-envs': 'step:envconf',
-            'click .go-to-resources': 'step:resconf',
-            'click .go-to-other': 'step:otherconf',
+            'click .go-to-ports'     : 'step:portconf',
+            'click .go-to-volumes'   : 'step:volconf',
+            'click .go-to-envs'      : 'step:envconf',
+            'click .go-to-resources' : 'step:resconf',
+            'click .go-to-other'     : 'step:otherconf',
         },
 
         initialize: function() {
@@ -1188,17 +1015,17 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click .delete-item': 'deleteItem',
-            'click .cluster': 'toggleCluster',
-            'click .node': 'toggleNode',
-            'change .replicas': 'changeReplicas',
+            'click .delete-item' : 'deleteItem',
+            'click .cluster'     : 'toggleCluster',
+            'click .node'        : 'toggleNode',
+            'change .replicas'   : 'changeReplicas',
         },
 
         triggers: {
-            'click .add-more' : 'step:getimage',
-            'click .prev-step' : 'step:envconf',
-            'click .save-container': 'pod:save',
-            'click .save-run-container': 'pod:run'
+            'click .add-more'           : 'step:getimage',
+            'click .prev-step'          : 'step:envconf',
+            'click .save-container'     : 'pod:save',
+            'click .save-run-container' : 'pod:run'
         },
 
         deleteItem: function(evt){
@@ -1276,7 +1103,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click li.pseudo-link': 'paginateIt'
+            'click li.pseudo-link' : 'paginateIt'
         },
 
         paginateIt: function(evt){

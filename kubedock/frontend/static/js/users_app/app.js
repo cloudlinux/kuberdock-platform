@@ -213,16 +213,7 @@ define(['marionette', 'paginator', 'utils'],
                
                 for (var i = 0; i < models.length; i++) {
                     if (models[i].get('checked')){
-                        this.collection.models[i].set('active',false)
-                        console.log(this.collection.models[i]);
-
-                        this.collection.models[i].save(undefined, {
-                                wait: true,
-                                success: function(){
-                                console.log('yes');
-                            }
-                        });
-                        
+                        models[i].set('active',false);
                         break;
                     }
                 }    
@@ -234,16 +225,7 @@ define(['marionette', 'paginator', 'utils'],
                
                 for (var i = 0; i < models.length; i++) {
                     if (models[i].get('checked')){
-                        this.collection.models[i].set('active',true)
-                        console.log(this.collection.models[i]);
-                        
-                        this.collection.models[i].save(undefined, {
-                                wait: true,
-                                success: function(){
-                                console.log('yes');
-                            }
-                        });
-
+                        models[i].set('active',true);
                         break;
                     }
                 }    

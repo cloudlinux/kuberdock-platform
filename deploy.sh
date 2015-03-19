@@ -10,6 +10,8 @@ rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLin
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 yum -y install epel-release
 
+# TODO we must open what we want instead
+systemctl stop firewalld; systemctl disable firewalld
 
 
 #1. Add kubernetes repo
@@ -26,6 +28,15 @@ EOF
 
 #2. Install kuberdock
 yum -y install kuberdock
+
+#2.1 Fix package path bug
+mkdir /var/run/kubernetes
+chown kube:kube /var/run/kubernetes
+
+# Start as early as possible, because Flannel need it
+echo "Starting etcd..."
+systemctl enable etcd
+systemctl restart etcd
 
 
 
@@ -52,14 +63,11 @@ systemctl restart redis
 systemctl enable influxdb > /dev/null 2>&1
 systemctl restart influxdb
 
-systemctl enable etcd
-systemctl restart etcd
-
 
 
 # Flannel
 echo "Setuping flannel config to etcd..."
-etcdctl mk /kuberdock/network/config '{"Network":"10.240.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
+etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
 etcdctl get /kuberdock/network/config
 
 
@@ -139,4 +147,5 @@ systemctl restart nginx
 
 
 # ======================================================================
+echo "WARNING: Firewalld was disabled. You need to configure it to work right"
 echo "Successfully done."

@@ -14,4 +14,3 @@ settings.cfg
 local_settings.py
 celerybeat-schedule
 kub_install.sh
-master_install.sh

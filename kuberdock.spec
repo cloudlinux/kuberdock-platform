@@ -15,6 +15,7 @@ Requires: redis
 Requires: postgresql-server
 Requires: kubernetes
 Requires: flannel >= 0.3.0
+Requires: dnsmasq >= 2.66
 Requires: python-uwsgi
 Requires: python-cerberus >= 0.7.2
 Requires: python-flask >= 0.10.1

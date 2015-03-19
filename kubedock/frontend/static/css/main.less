@@ -147,6 +147,34 @@ body{
 				#add_node, #nav-search, #add_user, #add_pod{
 					float: left;
 				}
+				/* delete after fix */
+				a{
+					&#add_pod{
+						outline: 0;
+						border: none;
+						color: #ffffff;
+						font-size: 16px;
+						background: none;
+						line-height: 34px;
+						position: relative;
+						font-family: @regular;
+						margin-right: 25px;
+						padding: 0 0 0 38px;
+						&:before{
+							position: absolute;
+							top: 8px;
+							left: 2px;
+							width: 28px;
+							content: '';
+							height: 21px;
+							background: url('../img/add-one.png') 0 0 no-repeat;
+						}
+						&:hover{
+							text-decoration: none;
+						}
+					}
+				}
+				/* end delete after fix */
 				button{
 					outline: 0;
 					border: none;
@@ -218,14 +246,6 @@ body{
 							content: '';
 							height: 21px;
 							background: url('../img/delete-node.png') 0 0 no-repeat;
-						}
-					}
-					&#add_pod{
-						a{
-							color: #ffffff;
-							font-size: 16px;
-							font-family: @regular;
-							text-decoration: none;
 						}
 					}
 				}
@@ -330,6 +350,72 @@ body{
 					width: 19px;
 					height: 14px;
 					background: url('../img/activate-user-ico.png') 0 0 no-repeat;
+				}
+			}
+		}
+	}
+
+	/* details-node, sidebar-user */
+	.sidebar{
+		margin-bottom: 25px;
+		.nav-sidebar{
+			li{
+				font-size: 14px;
+				font-family: @regular;
+				color: #3197ee;
+				padding-left: 23px;
+				position: relative;
+				line-height: 22px;
+				height: 16px;
+				margin-bottom: 14px;
+				margin-left: 10px;
+				a{
+					padding: 0;
+					&:hover, &:focus{
+						color: inherit;
+						background-color: transparent;
+					}
+				}
+				&:last-child{
+					margin-bottom: 0;
+				}
+				&:before{
+					position: absolute;
+					left: 0px;
+					top: 0px;
+					content: '';
+				}
+				&:hover{
+					cursor: pointer;
+					color: #1d1d1d;
+				}
+				&.active{
+					color: #1d1d1d;
+					a{
+						color: #1d1d1d;
+					}
+				}
+				&.general{
+					&:before{
+						background: url('../img/general-ico.png') 0 0 no-repeat;
+						width: 13px;
+						height: 16px;
+					}
+				}
+				&.stats{
+					&:before{
+						background: url('../img/stats-ico.png') 0 0 no-repeat;
+						width: 16px;
+						height: 16px;
+					}
+				}
+				&.configuration{
+					&:before{
+						background: url('../img/configuration-ico.png') 0 0 no-repeat;
+						width: 16px;
+						height: 16px;
+						top: 3px;
+					}
 				}
 			}
 		}

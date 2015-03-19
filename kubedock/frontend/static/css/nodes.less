@@ -231,62 +231,6 @@
 	}
 }
 /* end add-node */
-
-/* details-node */
-.sidebar{
-	margin-bottom: 25px;
-	.nav-sidebar{
-		li{
-			font-size: 14px;
-			font-family: @regular;
-			color: #3197ee;
-			padding-left: 23px;
-			position: relative;
-			line-height: 22px;
-			height: 16px;
-			margin-bottom: 14px;
-			margin-left: 10px;
-			&:last-child{
-				margin-bottom: 0;
-			}
-			&:before{
-				position: absolute;
-				left: 0px;
-				top: 0px;
-				content: '';
-			}
-			&:hover{
-				cursor: pointer;
-				color: #1d1d1d;
-			}
-			&.active{
-				color: #1d1d1d;
-			}
-			&.general{
-				&:before{
-					background: url('../img/general-ico.png') 0 0 no-repeat;
-					width: 13px;
-					height: 16px;
-				}
-			}
-			&.stats{
-				&:before{
-					background: url('../img/stats-ico.png') 0 0 no-repeat;
-					width: 16px;
-					height: 16px;
-				}
-			}
-			&.configuration{
-				&:before{
-					background: url('../img/configuration-ico.png') 0 0 no-repeat;
-					width: 16px;
-					height: 16px;
-					top: 3px;
-				}
-			}
-		}
-	}
-}
 #details_content{
 	.status-line{
 		height: 40px;

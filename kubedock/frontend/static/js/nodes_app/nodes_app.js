@@ -181,10 +181,10 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events:{
-            'click @ui.nodes_page' : 'breadcrambClick'
+            'click @ui.nodes_page' : 'breadcrumbClick'
         }, 
 
-        breadcrambClick: function(){
+        breadcrumbClick: function(){
            App.router.navigate('/', {trigger: true})
         }
     });
@@ -306,18 +306,18 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         ui: {
             'nodes_page' : 'div#nodes-page',
-            'delete': 'button#delete_node',
-            'stop' : 'button#stop_node',
-            'rename' : 'button#rename_node'
+            'delete'     : 'button#delete_node',
+            'stop'       : 'button#stop_node',
+            'rename'     : 'button#rename_node'
         },
 
         events: {
-            'click ul.nav li': 'changeTab',
-            'click button#node-add-btn': 'saveNode',
-            'click @ui.nodes_page' : 'breadcrambClick',
-            'click @ui.delete' : 'deleteNode',
-            'click @ui.stop' : 'stopNode',
-            'click @ui.rename' : 'renameNode'
+            'click ul.nav li'           : 'changeTab',
+            'click button#node-add-btn' : 'saveNode',
+            'click @ui.nodes_page'      : 'breadcrumbClick',
+            'click @ui.delete'          : 'deleteNode',
+            'click @ui.stop'            : 'stopNode',
+            'click @ui.rename'          : 'renameNode'
         },
 
         initialize: function (options) {
@@ -374,7 +374,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             alert('rename event')
         },
 
-        breadcrambClick: function(){
+        breadcrumbClick: function(){
            App.router.navigate('/', {trigger: true})
         },
 

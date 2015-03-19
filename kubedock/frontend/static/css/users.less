@@ -1,5 +1,7 @@
 /* node-main */
-#userslist-table{
+#userslist-table, 
+#user-profile-logs-table,
+#user-profile-general-table{
 	thead{
 		background-color: transparent;
 		&.min-opacity{
@@ -36,6 +38,11 @@
 				background-color: #f5fafe;
 				button{
 
+				}
+			}
+			&:last-child{
+				td{
+					border-bottom: 1px solid #e5e5e5;
 				}
 			}
 			td{
@@ -110,7 +117,31 @@
 		}
 	}
 }
-/* end-node-main */
+#userGeneralTab{
+	.col-xs-2{
+		margin-bottom: 50px;
+		&.info{
+			height: 70px;
+			background: url('../img/info-ico.png') center center no-repeat;
+			.background-size(70px);
+		}
+		&.user{
+			height: 94px;
+			background: url('../img/user-and-pc-small.png') center center no-repeat;
+			.background-size(80px 94px);
+		}
+	}
+}
+#user-profile-logs-table{
+	thead{
+		tr{
+			th{
+	  			padding-bottom: 17px;
+			}
+		}
+	}
+}
+/* end-user-tables */
 
 /* create edit user page */
 #user-controls{

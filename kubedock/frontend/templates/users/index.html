@@ -150,15 +150,99 @@
         <div class="container">
             <div class="row">
                 <div class="col-sm-3 col-md-2 sidebar">
-                    <ul class="nav nav-sidebar">
-                        <li role="presentation" class="general userGeneralTab">General</li>
-                        <li role="presentation" class="logs  userLogsTab">Logs History</li>
+                    <ul class="nav nav-sidebar list-unstyled" role="tablist">
+                        <li class="general active">
+                            <a href="#userGeneralTab" role="tab" data-toggle="tab">Home</a>
+                        </li>
+                        <li class="logs">
+                            <a href="#userLogsTab" role="tab" data-toggle="tab">Log History</a>
+                        </li>
                     </ul>
                 </div>
                 <div id="details_content" class="col-sm-10">
-                    <div class="status-line"></div>
-                    <div id="tab-content">div tab_content</div>
-                </div>
+                    <div class="row placeholders">
+                        <div class="tab-content col-xs-12 no-padding-right">
+                            <div class="tab-pane fade in active" id="userGeneralTab">
+                            	<div class="col-xs-2 col-offset-1 user"></div>
+								<div class="col-xs-3">
+				                    <div>Name: Adam Smith</div>
+				                    <div>Regestered: 12 Jan 2015</div>
+				                    <div>Last login: 04 May 2015</div>
+				                </div>
+				                <div class="col-xs-2 col-offset-1 info"></div>
+				                <div class="col-xs-3">
+				                    <div>Kubes: 220</div>
+				                    <div>Plan: Basic</div>
+				                </div>
+	                            <div class="col-xs-12">
+		                            <table id="user-profile-general-table" class="table">
+						                <thead>
+						                    <tr>
+						                        <th unselectable="on" style="-webkit-user-select: none;">
+						                        	<div>Containers</div>
+						                        </th>
+						                        <th unselectable="on" style="-webkit-user-select: none;">
+						                        	<div>Average<br/>CPU usage</div>
+						                        </th>
+						                        <th unselectable="on" style="-webkit-user-select: none;">
+						                        	<div>Pods</div>
+						                        </th>
+						                    </tr>
+						                </thead>
+						                <tbody>
+						                	<tr>
+						                		<td>Some case 2</td>
+						                		<td>20%</td>
+						                		<td>Some pod name</td>
+						                	</tr>
+						                	<tr>
+						                		<td>Some case 2</td>
+						                		<td>20%</td>
+						                		<td>Some pod name</td>
+						                	</tr>
+						                </tbody>
+						            </table>
+	                            </div>
+                            </div>
+                            <div class="tab-pane fade" id="userLogsTab">
+                                <div class="col-xs-12 no-padding-right">
+                                    <table id="user-profile-logs-table" class="table">
+						                <thead>
+						                    <tr>
+						                        <th unselectable="on" style="-webkit-user-select: none;">
+						                        	<div>Login</div>
+						                        </th>
+						                        <th unselectable="on" style="-webkit-user-select: none;">
+						                        	<div>Duration</div>
+						                        </th>
+						                        <th unselectable="on" style="-webkit-user-select: none;">
+						                        	<div>Logout</div>
+						                        </th>
+						                        <th unselectable="on" style="-webkit-user-select: none;">
+						                        	<div>IP</div>
+						                        </th>
+						                    </tr>
+						                </thead>
+						                <tbody>
+						                	<tr>
+						                		<td>12 Jan 2014 at 12:00 AM</td>
+						                		<td>5h 20min</td>
+						                		<td>12 Jan 2014 at 5:20 PM</td>
+						                		<td>192.168.0.1</td>
+						                	</tr>
+						                	<tr>
+						                		<td>13 May 2013 at 11:32 PM</td>
+						                		<td>32h 10min</td>
+						                		<td>15 May 2013 at 1:42 AM</td>
+						                		<td>122.12.32.11</td>
+						                	</tr>
+						                </tbody>
+						            </table>
+                                </div
+                            </div>
+                        </div>
+                    </div>
+                </div> 
             </div>
         </div>
     </script>
@@ -230,10 +314,10 @@
         </div>
         <div class="container">
             <div class="active-item-control">
-                <span id="editUser" title="Edit this user">Username</span>
-                <button id="blockUser" class="btn btn-xs btn-link" title="">Block</button>
-                <button id="activeteUser" class="btn btn-xs btn-link" title="">Activate</button>
-                <button id="deleteUser" class="btn btn-xs btn-link" title="Remove select item">Delete</button>
+                <span id="editUser" title="Edit this user"></span>
+                <button id="blockUser" class="btn btn-xs btn-link" title="Block this user">Block</button>
+                <button id="activeteUser" class="btn btn-xs btn-link" title="Activate this user">Activate</button>
+                <button id="deleteUser" class="btn btn-xs btn-link" title="Remove this user">Delete</button>
             </div>
             <table id="userslist-table" class="table">
                 <thead>

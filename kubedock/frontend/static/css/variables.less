@@ -37,8 +37,8 @@
 	border-top-left-radius:             @topleft;
 
 	-moz-background-clip:    padding; 
-	-webkit-background-clip: padding-box; 
-	background-clip:         padding-box; 
+	-webkit-background-clip: padding-box;
+	background-clip:         padding-box;
 }
 .opacity (@opacity) {
 	-webkit-opacity: 	@opacity;
@@ -51,13 +51,13 @@
 	-ms-animation:     @name @duration @delay @ease;
 }
 .transition (@transition) {
-	-webkit-transition: @transition;  
+	-webkit-transition: @transition;
 	-moz-transition:    @transition;
-	-ms-transition:     @transition; 
-	-o-transition:      @transition;  
+	-ms-transition:     @transition;
+	-o-transition:      @transition;
 }
 .transform(@string){
-	-webkit-transform: @string;
+	-webkit-transform:   @string;
 	-moz-transform: 	 @string;
 	-ms-transform: 		 @string;
 	-o-transform: 		 @string;
@@ -68,29 +68,35 @@
 	-ms-transform: 		 rotate(@deg);
 	-o-transform: 		 rotate(@deg);
 }
+.background-size (@size) {
+	-webkit-background-size: @size;
+	-moz-background-size: 	 @size;
+	-o-background-size: 	 @size;
+	background-size: 		 @size;
+}
 .placeholder(@color) {
 	&::-webkit-input-placeholder {
-	   color: @color;
+		color: @color;
 	}
 	&:-moz-placeholder {
-	   color: @color;  
+		color: @color;  
 	}
-	&::-moz-placeholder { 
-	   color: @color; 
+	&::-moz-placeholder {
+		color: @color;
 	}
-	&:-ms-input-placeholder {  
-	   color: @color;  
+	&:-ms-input-placeholder {
+		color: @color;
 	}
 }
 .align-right{
-  text-align: right;
+	text-align: right;
 }
 .clearfix{
-  zoom:1;
-  &:before, &:after{ 
-  	content:""; display:table;
-  }
-  &:after{
-  	clear: both;
-  	}
+	zoom:1;
+	&:before, &:after{
+		content:""; display:table;
+	}
+	&:after{
+		clear: both;
+	}
 }

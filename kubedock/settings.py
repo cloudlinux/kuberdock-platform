@@ -15,14 +15,16 @@ SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
 
 if DEBUG:
-    NODE_SSH_AUTH = 'ADMIN_PASS'
+    # root password to connect to nodes
+    NODE_SSH_AUTH = ''
 else:
-    NODE_SSH_AUTH = 'id_rsa'
+    # ssh key filename to connect to nodes (in production)
+    NODE_SSH_AUTH = ''
 
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
-MASTER_IP = '148.251.158.55'
+MASTER_IP = ''
 
 KUBE_API_VERSION = 'v1beta1'
 KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
@@ -48,7 +50,7 @@ CELERYBEAT_SCHEDULE = {
 ONLINE_LAST_MINUTES = 5
 
 # TODO We need to allow change it during cluster setup
-NODE_INET_IFACE = 'enp0s3'
+NODE_INET_IFACE = 'enp0s5'
 
 DOCKER_IF = 'docker0'
 ES_HOST = 'elasticsearch.kuberdock'
@@ -60,6 +62,11 @@ try:
     from local_settings import *
 except ImportError:
     pass
+
+if MASTER_IP == '':
+    raise Exception('YOU HAVE TO PROVIDE MASTER IP')
+if NODE_SSH_AUTH == '':
+    raise Exception('YOU HAVE TO PROVIDE SSH PASSWORD TO CONNECT WITH NODES')
 
 # Only after local settings
 DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)

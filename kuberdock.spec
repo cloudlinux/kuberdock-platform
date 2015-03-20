@@ -1,13 +1,15 @@
+%global commit		6b2e8fda4bd4f49df9e4eb2c1c3bc7a583334a4e
+%global shortcommit	%(c=%{commit}; echo ${c:0:7})
+
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 1%{?dist}.cloudlinux
+Release: 1.git%{shortcommit}%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
 Url: http://www.kernelcare.com
-Source0: %{name}-%{version}.tar.gz
-Source1: kuberdock.ini
+Source0: %{name}-%{shortcommit}.tar.gz
 
 Requires: nginx
 Requires: influxdb
@@ -61,7 +63,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Kuberdock
 
 %prep
-%setup -q
+%setup -c
 
 %build
 

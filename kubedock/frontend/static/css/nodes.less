@@ -439,7 +439,110 @@
 
 /* timelines details page */
 #timelines-page{
-
+	padding: 0;
+	.cases{
+		.item{
+			.clearfix;
+			line-height: 49px;
+			text-align: center;
+			background-color: #fff;
+			border-top: 1px solid #e5e5e5;
+			&:hover, &.active{
+				cursor: pointer;
+				background-color: #f5fafe;
+			}
+			&:first-child{
+				border-top: none;
+			}
+			&:last-child{
+				border-bottom: 1px solid #e5e5e5;
+			}
+			&.active{
+				+ .item-body{
+					display: block;
+				}
+				span{
+					&.control{
+						display: none;
+					}
+					&.control-hide{
+						display: block;
+					}
+				}
+			}
+			span{
+				color: #1d1d1d;
+				padding: 0 10px;
+				font-size: 14px;
+				font-weight: normal;
+				font-family: @regular;
+				&.control, &.control-hide{
+					color: #3197ee;
+					position: relative;
+					&:before{
+						top: 1px;
+						left: 0;
+						content: '>';
+						color: inherit;
+						font-size: 12px;
+						font-weight: bold;
+						position: absolute;
+					}
+				}
+				&.control{
+					&:before{
+					}
+				}
+				&.control-hide{
+					display: none;
+					&:before{
+						.rotate(90deg);
+					}
+				}
+			}
+		}
+		.item-body{
+			display: none;
+			padding: 10px;
+			.title{
+				color: #1d1d1d;
+				font-size: 14px;
+				margin-bottom: 0;
+				font-weight: bold;
+				font-family: @regular;
+			}
+			.general{
+				.title{
+					line-height: 48px;
+				}
+				.all-info{
+					margin: 0 25px 0 27px;
+					padding-bottom: 20px;
+					border-bottom: 1px solid #e5e5e5;
+					margin-bottom: 12px;
+					p{
+						span{
+							display: inline-block;
+							vertical-align: middle;
+							&:first-child{
+								width: 113px;
+							}
+						}
+					}
+				}
+			}
+			.detailes{
+				.title{
+					line-height: 32px;
+				}
+				p{
+					line-height: 24px;
+					padding: 0 0 20px 0;
+					margin: 0 27px 25px 27px;
+				}
+			}
+		}
+	}
 }
 /* end timelines details page */
 

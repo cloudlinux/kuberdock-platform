@@ -13,25 +13,31 @@ class Pod(db.Model):
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
     name = db.Column(db.String(length=255), unique=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    kubes = db.Column(db.Integer, nullable=False, default=1)
+    kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
     config = db.Column(db.Text)
     status = db.Column(db.String(length=32), default='unknown')
-    states = db.relationship('PodStates', backref='pod')
+    states = db.relationship('ContainerState', backref='pod')
     
     def __repr__(self):
-        return "<Pod(id='%s', name='%s', owner_id='%s', config='%s', status='%s')>" % (
-            self.id, self.name, self.owner_id, self.config, self.status)
+        return "<Pod(id='%s', name='%s', owner_id='%s', kubes='%s', config='%s', status='%s')>" % (
+            self.id, self.name, self.owner_id, self.kubes, self.config, self.status)
+
+    @property
+    def kubes(self):
+        return sum([c.get('kubes', 1) for c in self.config['containers']])
 
 
-class PodStates(db.Model):
-    __tablename__ = 'pod_states'
+class ContainerState(db.Model):
+    __tablename__ = 'container_states'
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), primary_key=True, nullable=False)
-    start_time = db.Column(db.Integer, primary_key=True, nullable=False)
-    end_time = db.Column(db.Integer, nullable=True)
+    container_name = db.Column(db.String(length=255), primary_key=True, nullable=False)
+    kubes = db.Column(db.Integer, primary_key=True, nullable=False, default=1)
+    start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self):
-        return "<Pod(pod_id='%s', start_time='%s', end_time='%s')>" % (
-            self.pod_id, self.start_time, self.end_time)
+        return "<ContainerState(pod_id='%s', container_name='%s', kubes='%s', start_time='%s', end_time='%s')>" % (
+            self.pod_id, self.container_name, self.kubes, self.start_time, self.end_time)
 
 class ImageCache(db.Model):
     __tablename__ = 'image_cache'

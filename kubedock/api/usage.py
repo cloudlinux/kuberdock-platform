@@ -9,7 +9,7 @@ from ..pods import Pod
 from ..stats import StatWrap5Min
 from collections import defaultdict
 import time
-import datetime
+from datetime import datetime
 
 usage = Blueprint('usage', __name__, url_prefix='/usage')
 
@@ -46,18 +46,28 @@ def get_usage(login):
 
 
 def unfold_entry(row):
-    entry = {
-    'id': row.id,
-    'name': row.name,
-    'kubes': row.kubes,
-    'kube_id': row.owner.package.kube_id,
-    'time': []}
+    time_ = defaultdict(list)
     for state in row.states:
-        if state.end_time is not None:
-            entry['time'].append({'start': state.start_time, 'end': state.end_time})
-        else:
-            entry['time'].append({'start': state.start_time, 'end': int(time.time())})
-    return entry
+        start = to_timestamp(state.start_time)
+        end = (int(time.time()) if state.end_time is None else
+               to_timestamp(state.end_time))
+        time_[state.container_name].append({
+            'kubes': state.kubes,
+            'start': start,
+            'end': end,
+            })
+    return {
+        'id': row.id,
+        'name': row.name,
+        'kubes': row.kubes,
+        'kube_id': row.owner.package.kube_id,
+        'time': time_,
+        }
+
+
+def to_timestamp(date):
+    return int((date - datetime(1970, 1, 1)).total_seconds())
+
 
 #def get_range(start, end):
 #    now = datetime.datetime.now()

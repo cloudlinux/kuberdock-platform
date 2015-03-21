@@ -3,6 +3,7 @@ import requests
 import time
 import operator
 from collections import OrderedDict
+from datetime import datetime
 
 from .settings import DEBUG, NODE_SSH_AUTH
 from .api.stream import send_event
@@ -11,8 +12,13 @@ from .factory import make_celery
 from .utils import update_dict
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
+from .models import Pod, ContainerState
 
 from .utils import get_api_url
+
+
+DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+
 
 celery = make_celery()
 
@@ -270,15 +276,26 @@ def add_new_node(host):
 
 
 def parse_pods_statuses(data):
+    db_pods = {}
+    for pod in Pod.query.filter(Pod.status != 'deleted').values(
+            Pod.name, Pod.id, Pod.config):
+        kubes = {}
+        for container in pod[2]['containers']:
+            if 'kubes' in container:
+                kubes[container['name']] = container['kubes']
+        db_pods[pod[0]] = {'uid': pod[1], 'kubes': kubes}
     items = data.get('items')
     res = []
-    if not items:
-        return res
     for item in items:
-        current_state = item.get('currentState')
-        if not current_state:
-            res.append({})
-        res.append(current_state)
+        current_state = item['currentState']
+        pod_name = item['labels']['name']
+        if pod_name in db_pods:
+            current_state['uid'] = db_pods[pod_name]['uid']
+            if 'info' in current_state:
+                for name, data in current_state['info'].items():
+                    if name in db_pods[pod_name]['kubes']:
+                        data['kubes'] = db_pods[pod_name]['kubes'][name]
+            res.append(current_state)
     return res
 
 
@@ -321,19 +338,76 @@ def check_events():
             send_event('pull_nodes_state', 'ping')
 
     pods_list = redis.get('cached_pods')
-    if not pods_list:
-        pods_list = requests.get(get_api_url('pods')).json()
-        pods_list = parse_pods_statuses(pods_list)
-        redis.set('cached_pods', json.dumps(pods_list))
-        send_event('pull_pods_state', 'ping')
-    else:
+    if pods_list:
         temp = requests.get(get_api_url('pods')).json()
         temp = parse_pods_statuses(temp)
-        if temp != json.loads(pods_list):
-            redis.set('cached_pods', json.dumps(temp))
-            send_event('pull_pods_state', 'ping')
+        pods_list = json.loads(pods_list)
+        if temp != pods_list:
+            pods_list = temp
+    else:
+        pods_list = requests.get(get_api_url('pods')).json()
+        pods_list = parse_pods_statuses(pods_list)
+    redis.set('cached_pods', json.dumps(pods_list))
+    send_event('pull_pods_state', 'ping')
+
+    now = datetime.now()
+    now = now.replace(microsecond=0)
+
+    for pod in pods_list:
+        if 'info' in pod:
+            for container_name, container_data in pod['info'].items():
+                kubes = container_data.get('kubes', 1)
+                for s in container_data['state'].values():
+                    start = s.get('startedAt')
+                    if start is None:
+                        continue
+                    start = datetime.strptime(start, DATETIME_FORMAT)
+                    end = s.get('finishedAt')
+                    if end is not None:
+                        end = datetime.strptime(end, DATETIME_FORMAT)
+                    add_container_state(pod['uid'], container_name, kubes,
+                                        start, end)
+        else:
+            end_container_state(pod['uid'], now)
+
+    pod_ids = [pod['uid'] for pod in pods_list]
+    css = ContainerState.query.filter_by(end_time=None)
+    for cs in css:
+        exist = ContainerState.query.filter(ContainerState.pod_id == cs.pod_id,
+            ContainerState.container_name == cs.container_name,
+            ContainerState.start_time > cs.start_time).order_by(
+            ContainerState.start_time).first()
+        if exist is not None:
+            cs.end_time = exist.start_time
+            db.session.add(cs)
+            continue
+        if cs.pod_id not in pod_ids:
+            cs.end_time = now
+            db.session.add(cs)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
     redis.delete('events_lock')
+
+
+def add_container_state(pod, container, kubes, start, end):
+    cs = ContainerState.query.filter_by(pod_id=pod, container_name=container,
+                                        kubes=kubes, start_time=start).first()
+    if cs:
+        cs.end_time = end
+    else:
+        cs = ContainerState(pod_id=pod, container_name=container,
+                            kubes=kubes, start_time=start, end_time=end)
+        db.session.add(cs)
+
+
+def end_container_state(pod, now):
+    css = ContainerState.query.filter_by(pod_id=pod, end_time=None)
+    for cs in css:
+        cs.end_time = now
+        db.session.add(cs)
 
 
 @celery.task()

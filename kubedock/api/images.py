@@ -69,17 +69,15 @@ def get_list_by_keyword():
     return jsonify({'status': 'OK', 'data': data})
 
 
-@images.route('/<search_key>/<path:repo_url>', methods=['GET'])
-def search_image(search_key=None, repo_url=None):
+@images.route('/search', methods=['GET'])
+def search_image():
+    repo_url = request.args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
+    repo_url = 'https://{0}'.format(
+        repo_url.lstrip('http://').lstrip('https://'))
+    search_key = request.args.get('searchkey', 'none')
     page = int(request.args.get('page', 0)) + 1
 
-    # parse search string
-    if search_key.startswith('http://') or search_key.startswith('https://'):
-        protocol = 'http://' if search_key.startswith('http://') else 'https://'
-        host, urn = search_key.lstrip(protocol).split('/', 1)
-        search_key = '/'.join(urn.split('/')[-2:])
-        repo_url = protocol + host
-
+    current_app.logger.debug((search_key, repo_url))
     check_container_image_name(search_key)
     query_key = '{0}?{1}:{2}'.format(repo_url.rstrip('/'), search_key, page)
     query = db.session.query(ImageCache).get(query_key)

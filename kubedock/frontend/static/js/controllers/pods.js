@@ -225,6 +225,12 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 processRequest(data);
             });
             this.listenTo(wizardLayout, 'step:complete', function(data){
+                console.log(data);
+                if(data.get('ports').length == 0){
+                    modelError('Please, setup ports of container.');
+                    wizardLayout.steps.show(new App.Views.WizardPortsSubView({model: data}));
+                    return false;
+                }
                 _.each(data.get('volumeMounts'), function(mp){
                     if (mp['name'] !== null) {
                         var volumes = _.filter(model.get('volumes'), function(item){

@@ -538,7 +538,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
 
     // Images collection view
-    var imageSearchURL = 'https://registry.hub.docker.com/';
+    var imageSearchURL = 'registry.hub.docker.com';
     Views.GetImageView = Backbone.Marionette.CompositeView.extend({
         template: '#wizard-get-image-template',
         childView: Views.ImageListItemView,
@@ -596,22 +596,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         fetchCollection: function(query){
-            // query string validation
-            if(query.split('/').length > 2) {
-                if(query.substr(0, 4) != 'http') {
-                    modalDialog({
-                        title: 'Wrong image name',
-                        body: 'Wrong image name. If you want to search in your own ' +
-                          'repository, please type full URL path, e.g.: <br/>' +
-                          'https://registry.hub.docker.com/<i>UserName/ImageName</i> <br/>' +
-                          'or <i>UserName/ImageName</i><br/> or simple <i>ImageName</i>',
-                        show: true
-                    });
-                    this.ui.input.focus();
-                    return;
-                } else {}
-            }
-
             var that = this;
 //            this.ui.spinner.spin({color: '#437A9E'});
 //            this.collection.fetch({
@@ -627,8 +611,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 columnsSelector: "#data-collection",
                 itemTemplateSelector: "#image-collection-item-template",
                 itemClasses: "item",
-                dataUrl: "/api/images/" + query + '/' + imageSearchURL,
+                dataUrl: "/api/images/search",
                 disableAutoscroll: false,
+                requestData: {searchkey: query, url: imageSearchURL},
                 onAddItem: function(count, $col, $item, data){
                     $item.find('.add-item').on('click', function() {
                         that.trigger('image:selected', data.name);

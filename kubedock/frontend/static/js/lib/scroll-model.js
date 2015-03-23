@@ -47,9 +47,12 @@ var ScrollModel = Backbone.Model.extend({
             }
 
             var self = this;
-            $.ajax({
-                url: this.options.dataUrl + "?page=" + (++this.page) 
-            }).done(function(data) {
+            var ajax_params = {
+                url: this.options.dataUrl + "?page=" + (++this.page)
+            };
+            if(typeof this.options.requestData !== "undefined")
+                ajax_params['data'] = this.options.requestData;
+            $.ajax(ajax_params).done(function(data) {
                 var d = data.data;
                 if(parseInt(data.page) == parseInt(data.num_pages)){
                     self.set("noMoreItems", 1);

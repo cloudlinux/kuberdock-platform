@@ -38,9 +38,15 @@ def check_pod_name():
 
 
 @check_permission('get', 'pods')
-def get_pods_collection(user):
+def get_pods_collection():
     units = KubeResolver().resolve_all()
-    if user.is_administrator():
+    try:
+        user = current_user
+        admin = user.is_administrator()
+    except AttributeError:
+        user = g.user
+        admin = user.is_administrator()
+    if admin:
         return units
     return filter((lambda x: x['owner'] == user.username), units)
 
@@ -49,10 +55,7 @@ def get_pods_collection(user):
 @login_required_or_basic
 @check_permission('get', 'pods')
 def get_pods():
-    try:
-        coll = get_pods_collection(current_user)
-    except AttributeError:
-        coll = get_pods_collection(g.user)
+    coll = get_pods_collection()
     return jsonify({'status': 'OK', 'data': coll})
 
 
@@ -74,12 +77,17 @@ def create_item():
     save_only = data.pop('save_only', True)
     temp_uuid = str(uuid4())
     data.update({'id': temp_uuid, 'status': 'stopped'})
-    pod = Pod(name=data['name'], config=data, id=temp_uuid, status='stopped')
-    pod.owner = current_user
+    json_data = json.dumps(data)
+
+    pod = Pod(name=data['name'], config=json_data, id=temp_uuid, status='stopped')
+    try:
+        pod.owner = current_user
+    except AttributeError:
+        pod.owner = g.user
     try:
         db.session.add(pod)
         db.session.commit()
-    except Exception:
+    except Exception, e:
         db.session.rollback()
         raise APIError("Could not create database record for "
                        "'{0}'.".format(data['name']), status_code=409)
@@ -90,15 +98,17 @@ def create_item():
         except Exception, e:
             db.session.rollback()
             raise APIError(str(e), status_code=409)
-
+    
     if not save_only:    # trying to run service and pods right away
         try:
             service_rv = json.loads(run_service(data))
         except TypeError:
             service_rv = None
         config = make_config(data, item_id)
+        current_app.logger.debug(config)
         try:
             pod_rv = json.loads(tasks.create_containers_nodelay(config))
+            current_app.logger.debug(pod_rv)
         except TypeError:
             pod_rv = None
         if 'status' in pod_rv and pod_rv['status'] == 'Working':
@@ -110,7 +120,7 @@ def create_item():
 
         try:
             pod = db.session.query(Pod).get(temp_uuid)
-            pod.config = output
+            pod.config = json.dumps(output)
             output['id'] = temp_uuid
             db.session.commit()
         except Exception, e:
@@ -132,14 +142,20 @@ def delete_item(uuid):
     if item is None:
         raise APIError('No pod with id: {0}'.format(uuid), status_code=404)
     name = item.name
+    
     try:
-        public_ip = item.config['labels']['kuberdock-public-ip']
+        parsed_config = json.loads(item.config)
+    except (TypeError, ValueError):
+        parsed_config = {}
+        
+    try:
+        public_ip = parsed_config['labels']['kuberdock-public-ip']
         podip = PodIP.filter_by(
             ip_address=int(ipaddress.ip_address(public_ip)))
         podip.delete()
     except KeyError:
         pass
-    if item.config.get('cluster'):
+    if parsed_config.get('cluster'):
         replicas = tasks.get_replicas_nodelay()
 
         if 'items' not in replicas:
@@ -174,7 +190,7 @@ def delete_item(uuid):
     except KeyError, e:
         return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
 
-    if item.config.get('service'):
+    if parsed_config.get('service'):
         services = tasks.get_services_nodelay()
 
         if 'items' not in services:
@@ -204,7 +220,11 @@ def delete_item(uuid):
 def update_item(uuid):
     response = {}
     item = db.session.query(Pod).get(uuid)
-    u = db.session.query(User).filter_by(username=current_user.username).first()
+    try:
+        username = current_user.username
+    except AttributeError:
+        username = g.user.username
+    u = db.session.query(User).filter_by(username=username).first()
     if item is None:
         raise APIError('Pod not found', 404)
     data = request.json
@@ -223,14 +243,19 @@ def update_item(uuid):
         except Exception:
             db.session.rollback()
             return jsonify({'status': 'ERROR', 'reason': 'Error updating database entry'})
-
+    
+    try:
+        parsed_config = json.loads(item.config)
+    except (TypeError, ValueError):
+        parsed_config = {}
+        
     if 'command' in data:
         if data['command'] == 'start':
 
-            if item.config['cluster']:
+            if parsed_config.get('cluster'):
                 if is_alive(item.name):
                     # TODO check replica numbers and compare to ones set in config
-                    resize_replica(item.name, item.config['replicas'])
+                    resize_replica(item.name, parsed_config['replicas'])
                 else:
                     return jsonify({'status': 'OK', 'data': start_cluster(data)})
 
@@ -238,26 +263,24 @@ def update_item(uuid):
             else:
                 item_id = make_item_id(item.name)
                 service_rv = run_service(data)
-                config = make_config(item.config, item_id)
-                current_app.logger.debug(config)
+                config = make_config(parsed_config, item_id)
                 pod_rv = tasks.create_containers_nodelay(config)
                 output = prepare_for_output(pod_rv, service_rv)
 
                 try:
-                    pod = Pod(name=output['name'], config=output, id=output['id'], owner=u)
+                    pod = Pod(name=output['name'], config=json.dumps(output), id=output['id'], owner=u)
                     db.session.add(pod)
                     db.session.delete(item)
                     db.session.commit()
                     response = {'id': output['id']}
-                except Exception:
-                    current_app.logger.debug(output)
+                except Exception, e:
                     db.session.rollback()
-                    if service_rv is not None:
+                    if type(service_rv) is str or type(service_rv) is unicode:
                         srv = json.loads(service_rv)
                         if 'id' in srv:
                             tasks.delete_service_nodelay(srv['id'])
         elif data['command'] == 'stop':
-            if item.config['cluster']:
+            if parsed_config.get('cluster'):
                 resize_replica(item.name, 0)
                 response['data'] = {'status': 'Stopped'}
             else:
@@ -308,6 +331,10 @@ def do_action(host, action, container_id):
 def docker_action(data=None, containers_action=None):
     if data is None:
         data = request.json
+    try:
+        user = current_user
+    except AttributeError:
+        user = g.user
     action = data.get('action')
     if action not in ALLOWED_ACTIONS:
         raise APIError('This action is not allowed.', status_code=403)
@@ -316,14 +343,20 @@ def docker_action(data=None, containers_action=None):
     pod = db.session.query(Pod).get(data.get('pod_uuid'))
     if pod is None:
         raise APIError('Pod not found', status_code=404)
-    if pod.owner != current_user:
+    
+    try:
+        parsed_config = json.loads(pod.config)
+    except (TypeError, ValueError):
+        parsed_config = {}
+    
+    if pod.owner != user:
         raise APIError("You may do actions only on your own Pods",
                        status_code=403)
-    if pod.config.get('cluster'):
+    if parsed_config.get('cluster'):
         if action != 'inspect':     # special cases here
             raise APIError('This action is not allowed for replicated PODs',
                            status_code=403)
-    if pod.config.get('restartPolicy') == 'always' \
+    if parsed_config.get('restartPolicy') == 'always' \
             and action in ('start', 'stop'):
         raise APIError("POD with restart policy 'Always' can't "
                        "start or stop containers")
@@ -337,7 +370,7 @@ def docker_action(data=None, containers_action=None):
 
 
 def run_service(data):
-    if not data['service']:
+    if not data.get('service'):
         return
     dash_name = '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', data['name']))
     s = string.lowercase
@@ -393,6 +426,9 @@ def prepare_for_output(rv=None, s_rv=None):
     out = {}
     if rv is not None:
         try:
+            # Ugly workaround. Wants thorough consideration
+            if type(rv) is unicode or type(rv) is str:
+                rv = json.loads(rv)
             if rv['kind'] == 'ReplicationController':
                 out['cluster'] = True
                 out['name'] = rv['desiredState']['replicaSelector']['name']
@@ -419,14 +455,8 @@ def prepare_for_output(rv=None, s_rv=None):
             if 'replicas' in rv['desiredState']:
                 out['replicas'] = rv['desiredState']['replicas']
 
-        except (ValueError, TypeError), e: # Failed to process JSON
-            current_app.logger.debug(str(e))
-            return out
-
-        except KeyError, e:
-            current_app.logger.debug(str(e))
-            current_app.logger.debug(rv)
-            return out
+        except (ValueError, TypeError, KeyError): # Failed to process JSON
+            pass
 
     if s_rv is None:
         return out
@@ -443,10 +473,8 @@ def prepare_for_output(rv=None, s_rv=None):
             except KeyError:
                 continue
 
-    except (ValueError, TypeError), e: # Failed to process JSON
-        return out
-    except KeyError:
-        return out
+    except (ValueError, TypeError, KeyError):
+        pass
     return out
 
 

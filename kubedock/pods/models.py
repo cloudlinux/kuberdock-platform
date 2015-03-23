@@ -14,7 +14,7 @@ class Pod(db.Model):
     name = db.Column(db.String(length=255), unique=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     kubes = db.Column(db.Integer, nullable=False, default=1)
-    config = db.Column(postgresql.JSON)
+    config = db.Column(db.Text)
     status = db.Column(db.String(length=32), default='unknown')
     states = db.relationship('PodStates', backref='pod')
     

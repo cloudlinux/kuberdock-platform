@@ -1,9 +1,12 @@
+import json
 from .. import tasks
 from ..core import db
 from ..pods import Pod
 from ..users import User
 from uuid import uuid4
 from flask.ext.login import current_user
+from flask import current_app
+
 
 
 class KubeResolver(object):
@@ -147,7 +150,12 @@ class KubeResolver(object):
         data = {}
         for i in db.session.query(Pod).join(Pod.owner).filter(Pod.status!='deleted').values(
                 Pod.id, Pod.name, User.username, Pod.config):
-            data[i[1]] = {'id': i[0], 'username': i[2], 'config':i[3]}
+            # Ugly temporary workaround while DB has JSON and non-JSON entries
+            try:
+                conf = json.loads(i[3])
+            except (ValueError, TypeError):
+                conf = i[3]
+            data[i[1]] = {'id': i[0], 'username': i[2], 'config':conf}
         return data
 
     def _merge_with_db(self):
@@ -157,7 +165,9 @@ class KubeResolver(object):
         for pod_name in db_pods:
             if pod_name not in kube_names:
                 # add config for displaying in front-end
-                self._pods.append(db_pods[pod_name]['config'])
+                pending_pod = db_pods[pod_name]['config']
+                pending_pod['id'] = db_pods[pod_name]['id']
+                self._pods.append(pending_pod)
             else: # we want to substitute all pods UUIDs for database pods UUIDs
                 diff = filter((lambda x: x['name'] == pod_name), self._pods)
                 for pod in diff:
@@ -165,8 +175,8 @@ class KubeResolver(object):
         for pod in self._pods:
             try:
                 pod['owner'] = db_pods[pod['name']]['username']
-            except KeyError:
-                pod['owner'] = 'stranger'
+            except (KeyError, TypeError):
+                pod['owner'] = 'unknown'
 
     @staticmethod
     def _is_related(one, two):

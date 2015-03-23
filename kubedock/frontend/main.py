@@ -11,5 +11,5 @@ main = Blueprint('main', __name__)
 @main.route('/')
 @login_required
 def index():
-    coll = get_pods_collection(current_user)
+    coll = get_pods_collection()
     return render_template('index.html', pod_collection=json.dumps(coll))

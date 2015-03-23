@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+
+{% block head_extras %}
+<link rel="stylesheet" href="/static/css/jquery-ui.css">
+{% endblock %}
+
+{% block body %}
+    {% with items=MENU.navbar.get_items() %}
+    {% include "inc/navbar_menu.html" %}
+    {% endwith %}
+
+    <div id="globalError"></div>
+    <!-- contents container -->
+    <div id="contents" class="container"></div>
+
+    <script type="text/template" id="settings-layout-template">
+        <div id="main">main div text</div>
+    </script>
+
+    <script data-main="/static/js/settings_app/require_main.js" src="/static/js/lib/require.js"></script>
+
+    <script type="text/javascript">
+    //
+    </script>
+
+{% endblock %}

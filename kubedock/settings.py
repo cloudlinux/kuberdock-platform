@@ -63,11 +63,6 @@ try:
 except ImportError:
     pass
 
-if MASTER_IP == '':
-    raise Exception('YOU HAVE TO PROVIDE MASTER IP')
-if NODE_SSH_AUTH == '':
-    raise Exception('YOU HAVE TO PROVIDE SSH PASSWORD TO CONNECT WITH NODES')
-
 # Only after local settings
 DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
 SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + DB_CONNECT_STRING

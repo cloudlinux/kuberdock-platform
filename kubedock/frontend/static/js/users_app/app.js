@@ -265,21 +265,22 @@ define(['marionette', 'paginator', 'utils'],
             template: '#all-users-activities-template',
 
             ui: {
-                'dateFrom'  : 'input#dateFrom',
-                'dateTo'    : 'input#dateTo',
-                'usersList' : 'ul#users-list',
-                'tbody'     : '#users-activities-table'
+                'dateFrom'   : 'input#dateFrom',
+                'dateTo'     : 'input#dateTo',
+                'usersList'  : 'ul#users-list',
+                'tbody'      : '#users-activities-table',
+                'users_page' : 'div#users-page'
             },
 
             events: {
                 'change input.user-activity' : 'getUsersActivities',
                 'change input#dateFrom'      : 'getUsersActivities',
-                'change input#dateTo'        : 'getUsersActivities'
+                'change input#dateTo'        : 'getUsersActivities',
+                'click @ui.users_page'       : 'breadcrumbClick'
             },
 
             onRender: function(){
                 var that = this;
-                console.log(usersCollection);
                 // Make users list
                 $.each(usersCollection, function(i, user){
                     that.ui.usersList.append(
@@ -334,7 +335,12 @@ define(['marionette', 'paginator', 'utils'],
                         }
                     }
                 })
+            },
+
+            breadcrumbClick: function(){
+               App.router.navigate('/', {trigger: true});
             }
+
         });
 
         Views.UserCreateView = Backbone.Marionette.ItemView.extend({
@@ -388,7 +394,6 @@ define(['marionette', 'paginator', 'utils'],
             breadcrumbClick: function(){
                App.router.navigate('/', {trigger: true});
             }
-
         });
 
         Views.UserProfileView = Backbone.Marionette.ItemView.extend({

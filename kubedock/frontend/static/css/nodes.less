@@ -334,7 +334,7 @@
 }
 /* end general details page */
 
-#stats-page, #logs-page, #monitoring-page{
+#stats-page, #logs-page, #monitoring-page, #configuration-page{
 	.page-top-menu{
 		.clearfix;
 		display: block;
@@ -402,12 +402,12 @@
 /* logs details page */
 #logs-page{
 	.node-logs{
-        background: black;
-        color: white;
-        padding: 1em;
-        height: 26em;
-        width: 71em;
-        overflow: auto;
+		background: rgb(29, 29, 29);
+		color: white;
+		padding: 1em;
+		height: 26em;
+		overflow: auto;
+		margin: 14px 0;
     }
 }
 /* end logs details page */
@@ -480,23 +480,27 @@
 					color: #3197ee;
 					position: relative;
 					&:before{
-						top: 1px;
+						top: 21px;
 						left: 0;
-						content: '>';
-						color: inherit;
-						font-size: 12px;
+						content: '';
+						width: 5px;
+						height: 8px;
+						background: url('../img/show-arrow.png') 0 0 no-repeat;
 						font-weight: bold;
 						position: absolute;
 					}
 				}
 				&.control{
 					&:before{
+
 					}
 				}
 				&.control-hide{
 					display: none;
+					margin-right: 5px;
 					&:before{
 						.rotate(90deg);
+						left: -1px;
 					}
 				}
 			}

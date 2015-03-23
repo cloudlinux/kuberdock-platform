@@ -421,12 +421,47 @@ body{
 		}
 	}
 
+	.buttons{
+		.clearfix;
+		font-size: 0;
+		margin: 20px 0;
+		button{
+			margin-right: 10px;
+			height: 37px;
+			padding: 0;
+			width: 100px;
+			border: 1px solid;
+			text-align: center;
+			font-size: 16px;
+			font-family: @regular;
+			&:hover{
+				cursor: pointer;
+			}
+			&:active{
+				cursor: default;
+			}
+			&:first-child{
+				color: #1d1d1d;
+				background-color: #fcfcfc;
+				border-color: #ebebeb;
+			}
+			&:last-child{
+				background-color: #466eb1;
+				border-color: #466eb1;
+				color: #fff;
+			}
+		}
+	}
+
 	.no-padding-right{
 		padding-right: 0;
+	}
+	.no-padding{
+		padding: 0;
 	}
 
 	@import "pods.less";
 	@import "nodes.less";
 	@import "users.less";
-
+	@import "settings.less";
 }

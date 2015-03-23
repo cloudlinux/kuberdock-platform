@@ -1,0 +1,48 @@
+#settingsGeneralTab, #settingsNotificationTab, #settingsPermisionTab{
+	.content-body{
+		.clearfix;
+		border-bottom: 1px solid #e5e5e5;
+		.title-line{
+			padding-left: 0px;
+			font-size: 14px;
+			font-weight: bold;
+			font-family: @regular;
+			margin-bottom: 20px;
+		}
+	}
+}
+#settingsGeneralTab{
+	.content-body{
+		#timezone{
+			.box-shadow(none);
+			height: 49px;
+			outline: 0;
+			border: 1px solid #e5e5e5;
+			background-color: transparent;
+			width: 100%;
+			max-width: 366px;
+			padding: 0 20px;
+			font-weight: normal;
+			position: relative;
+		}
+		.image{
+			min-height: 88px;
+			margin-bottom: 88px;
+			&:after{
+				content: '';
+				position: absolute;
+				right: 30%;
+				top: -8px;
+				background: url('../img/settings-cube.png') 0 0 no-repeat;
+				width: 109px;
+				height: 94px;
+			}
+		}
+	}
+}
+#settingsNotificationTab{
+
+}
+#settingsPermisionTab{
+
+}

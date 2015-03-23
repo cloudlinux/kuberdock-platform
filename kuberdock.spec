@@ -1,4 +1,4 @@
-%global commit		6b2e8fda4bd4f49df9e4eb2c1c3bc7a583334a4e
+%global commit 6b2e8fda4bd4f49df9e4eb2c1c3bc7a583334a4e
 %global shortcommit	%(c=%{commit}; echo ${c:0:7})
 
 Version: 0.1

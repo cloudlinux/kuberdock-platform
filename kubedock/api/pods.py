@@ -7,6 +7,8 @@ import string
 import random
 import re
 import ipaddress
+import shlex
+import copy
 from ..models import User, Pod
 from ..core import db, check_permission, ssh_connect
 from .stream import send_event
@@ -17,7 +19,6 @@ from ..billing import kubes_to_limits
 from ..api import APIError
 from ..pods.models import PodIP
 from .. import signals
-import copy
 
 ALLOWED_ACTIONS = ('start', 'stop', 'inspect',)
 
@@ -229,6 +230,8 @@ def update_item(uuid):
         raise APIError('Pod not found', 404)
     data = request.json
     containers_action = data.pop('containers_action', None)
+    # Dirty workaround. This field even must not be here!
+    data.pop('free_host', None)
     check_change_pod_data(data)
 
     if containers_action and 'command' in data:
@@ -387,6 +390,14 @@ def run_service(data):
     return tasks.create_service_nodelay(conf)
 
 
+def parse_cmd_string(s):
+    lex = shlex.shlex(s, posix=True)
+    lex.whitespace_split = True
+    lex.commenters = ''
+    lex.wordchars += '.'
+    return list(lex)
+
+
 def prepare_container(data, key='ports'):
     a = []
     # if container name is missing generate from image
@@ -395,12 +406,17 @@ def prepare_container(data, key='ports'):
         data['name'] = "%s-%s" % (
             image, ''.join(random.sample(string.lowercase + string.digits, 10)))
 
+    command = data.get('command')
+    if command:
+        data['command'] = parse_cmd_string(command[0])
+
+    kube_type = 0   # mock
     try:
         kubes = int(data.pop('kubes'))
     except (KeyError, ValueError):
-        kubes = 1
-    kube_type = 0   # mock
-    data.update(kubes_to_limits(kubes, kube_type, version='v1beta1'))
+        pass
+    else:   # if we create pod, not start stopped
+        data.update(kubes_to_limits(kubes, kube_type, version='v1beta1'))
 
     # convert to int ports values
     data.setdefault(key, [])

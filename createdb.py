@@ -15,7 +15,7 @@ if __name__ == '__main__':
     
     # Create default package and kube
     k = Kube(id=0, name='standard', default=True, cpu=700, cpu_units='KCU',
-             memory=32, memory_units='MB', disk_space='0', total_traffic=0)
+             memory=64, memory_units='MB', disk_space='0', total_traffic=0)
     p = Package(id=0, name='basic', default=True, kube=k, amount=0,
                 currency='USD', period='hour')
     

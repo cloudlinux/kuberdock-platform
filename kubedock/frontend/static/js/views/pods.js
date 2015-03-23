@@ -945,7 +945,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                         that.model.set('workingDir', newValue);
                     }
                     else if ($(this).hasClass('command')) {
-                        that.model.set('command', ['sh', '-c', newValue]);
+                        that.model.set('command', [newValue]);
                     }
                 }
             });

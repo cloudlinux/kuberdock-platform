@@ -17,20 +17,21 @@ from .utils import get_api_url
 celery = make_celery()
 
 
-def search_image(term, url=None):
+def search_image(term, url=None, page=None):
+    page = page or 1
     if url is None:
         url = 'https://registry.hub.docker.com/v1/search'
     else:
         if not url.rstrip('/').endswith('v1/search'):
             url = '{0}/v1/search'.format(url.rstrip('/'))
-    data = {'q': term}
+    data = {'q': term, 'n': 10, 'page': page}
     r = requests.get(url, params=data)
     return r.text
 
 
 @celery.task()
-def get_container_images(term, url=None):
-    return search_image(term, url)
+def get_container_images(term, url=None, page=None):
+    return search_image(term, url, page)
 
 
 @celery.task()

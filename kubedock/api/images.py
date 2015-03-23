@@ -69,6 +69,42 @@ def get_list_by_keyword():
     return jsonify({'status': 'OK', 'data': data})
 
 
+@images.route('/<search_key>/<path:repo_url>', methods=['GET'])
+def search_image(search_key=None, repo_url=None):
+    page = int(request.args.get('page', 0)) + 1
+
+    # parse search string
+    if search_key.startswith('http://') or search_key.startswith('https://'):
+        protocol = 'http://' if search_key.startswith('http://') else 'https://'
+        host, urn = search_key.lstrip(protocol).split('/', 1)
+        search_key = '/'.join(urn.split('/')[-2:])
+        repo_url = protocol + host
+
+    check_container_image_name(search_key)
+    query_key = '{0}?{1}:{2}'.format(repo_url.rstrip('/'), search_key, page)
+    query = db.session.query(ImageCache).get(query_key)
+    if query is not None:
+        if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
+            return jsonify({'status': 'OK', 'data': query.data['results'],
+                            'num_pages': query.data['num_pages'],
+                            'page': page})
+    result = tasks.get_container_images.delay(
+        search_key, url=repo_url, page=page)
+    rv = result.wait()
+    # if you want to search an image directly without celery:
+    # rv = tasks.search_image(search_key, url=repo_url)
+    data = json.loads(rv)#['results']
+    if query is None:
+        db.session.add(ImageCache(query=query_key, data=data,
+                                  time_stamp=datetime.datetime.now()))
+    else:
+        query.data = data
+        query.time_stamp = datetime.datetime.now()
+    db.session.commit()
+    return jsonify({'status': 'OK', 'data': data['results'],
+                    'num_pages': data['num_pages'], 'page': page})
+
+
 @images.route('/new', methods=['POST'])
 def get_dockerfile_data():
     image = request.form.get('image', 'none')

@@ -85,7 +85,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
         parse: unwrapper,
         mode: 'client',
         state: {
-            pageSize: 5
+            pageSize: 10
         }
     });
     

@@ -25,6 +25,8 @@ vendor_js = Bundle(
     'js/lib/jquery.jqplot.min.js',
     'js/lib/jqplot.dateAxisRenderer.min.js',
     'js/lib/dropdowns-enhancement.js',
+    'js/lib/scroll-model.js',
+    'js/lib/scroll-view.js',
     filters="jsmin", output="js/lib.min.js")
 
 less_js = Bundle(

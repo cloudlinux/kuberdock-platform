@@ -334,9 +334,33 @@
                     <a href="/#pods" class="btn btn-default cancel-search" type="button">Cancel</a>
                 </span>
             </div><!-- input-group -->
-            <div id="data-collection"></div>
-            <div id="pager"></div>
+{#            <div id="data-collection"></div>#}
+{#            <div id="pager"></div>#}
+            <div id="search-results-scroll">
+                <div id="data-collection"></div>
+                <div class="btn btn-more btn-link" style="display: none;">Load more</div>
+                <div class="state no-more-state" style="display: none;">There are no more items</div>
+                <div class="state load-state" style="display: none;">Loading...</div>
+            </div>
         </script>
+
+        <script type="text/template" id="image-collection-item-template">
+            <div class="item-header">
+                <div class="item-status">
+                    <span class="glyphicon glyphicon-globe"></span>
+                </div>
+                <div class="item-header-title"><%= name || 'nameless' %></div>
+                <div class="item-header-controls">
+                    <span class="glyphicon glyphicon-plus add-item el-control"></span>
+                </div>
+            </div>
+            <div class="item-body">
+                <div class="item-body-info">
+                    <%= description || 'No description' %>
+                </div>
+            </div>
+        </script>
+
 
         <!-- Wizard set container port template -->
         <script type="text/template" id="wizard-set-container-ports-template">

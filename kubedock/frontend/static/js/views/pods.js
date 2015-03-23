@@ -611,16 +611,36 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     return;
                 } else {}
             }
+
             var that = this;
-            this.ui.spinner.spin({color: '#437A9E'});
-            this.collection.fetch({
-                data: {searchkey: query, url: imageSearchURL},
-                reset: true,
-                success: function(){
-                    that.ui.spinner.spin(false);
-                    that.trigger('image:fetched', that);
-                    that.ui.repo_url_repr.text(imageSearchURL);
+//            this.ui.spinner.spin({color: '#437A9E'});
+//            this.collection.fetch({
+//                data: {searchkey: query, url: imageSearchURL},
+//                reset: true,
+//                success: function(){
+//                    that.ui.spinner.spin(false);
+//                    that.trigger('image:fetched', that);
+//                    that.ui.repo_url_repr.text(imageSearchURL);
+//                }
+//            });
+            var options = {
+                columnsSelector: "#data-collection",
+                itemTemplateSelector: "#image-collection-item-template",
+                itemClasses: "item",
+                dataUrl: "/api/images/" + query + '/' + imageSearchURL,
+                disableAutoscroll: false,
+                onAddItem: function(count, $col, $item, data){
+                    $item.find('.add-item').on('click', function() {
+                        that.trigger('image:selected', data.name);
+                    });
+                    return $item;
                 }
+            };
+            var scrollModel = new ScrollModel({options: options});
+            new ScrollView({
+                el: $("#search-results-scroll"),
+                model: scrollModel,
+                options: options
             });
         },
 

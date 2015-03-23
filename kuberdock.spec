@@ -1,10 +1,10 @@
-%global commit 6b2e8fda4bd4f49df9e4eb2c1c3bc7a583334a4e
+# "commit" variable expected to be passed by cmdline via rpmbuild --define='...'
 %global shortcommit	%(c=%{commit}; echo ${c:0:7})
 
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 1.git%{shortcommit}%{?dist}.cloudlinux
+Release: 2.git%{shortcommit}%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License

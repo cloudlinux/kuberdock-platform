@@ -13,6 +13,9 @@ yum -y install epel-release
 # TODO we must open what we want instead
 systemctl stop firewalld; systemctl disable firewalld
 
+echo "Adding SELinux rule for http on port 9200"
+semanage port -a -t http_port_t -p tcp 9200
+
 
 #1. Add kubernetes repo
 cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF

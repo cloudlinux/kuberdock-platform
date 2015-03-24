@@ -30,7 +30,9 @@ EOF
 
 
 #2. Install kuberdock
-yum -y install kuberdock
+# TODO change when we provide auto build of package to our repo
+# yum -y install kuberdock
+yum -y install kuberdock.rpm
 
 #2.1 Fix package path bug
 mkdir /var/run/kubernetes
@@ -50,6 +52,8 @@ sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBE_CONF_DIR/controll
 
 
 #4. Create and populate DB
+systemctl enable postgresql
+systemctl start postgresql
 postgresql-setup initdb
 systemctl restart postgresql
 python $KUBERDOCK_DIR/postgresql_setup.py

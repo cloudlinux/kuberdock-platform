@@ -106,10 +106,8 @@ def create_item():
         except TypeError:
             service_rv = None
         config = make_config(data, item_id)
-        current_app.logger.debug(config)
         try:
             pod_rv = json.loads(tasks.create_containers_nodelay(config))
-            current_app.logger.debug(pod_rv)
         except TypeError:
             pod_rv = None
         if 'status' in pod_rv and pod_rv['status'] == 'Working':
@@ -168,7 +166,6 @@ def delete_item(uuid):
                 replicas['items'])
             for replica in filtered_replicas:
                 replica_rv = tasks.delete_replica_nodelay(replica['id'])
-                current_app.logger.debug(replica_rv)
                 if 'status' in replica_rv and replica_rv['status'].lower() not in ['success', 'working']:
                     return jsonify({'status': 'ERROR', 'reason': replica_rv['message']})
         except KeyError, e:
@@ -185,7 +182,6 @@ def delete_item(uuid):
             pods['items'])
         for pod in filtered_pods:
             pod_rv = tasks.delete_pod_nodelay(pod['id'])
-            current_app.logger.debug(pod_rv)
             if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
                 return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
     except KeyError, e:
@@ -203,7 +199,6 @@ def delete_item(uuid):
                 services['items'])
             for service in filtered_services:
                 service_rv = tasks.delete_service_nodelay(service['id'])
-                current_app.logger.debug(service_rv)
                 if 'status' in service_rv and service_rv['status'].lower() not in ['success', 'working']:
                     return jsonify({'status': 'ERROR', 'reason': service_rv['message']})
         except KeyError, e:
@@ -229,14 +224,9 @@ def update_item(uuid):
     if item is None:
         raise APIError('Pod not found', 404)
     data = request.json
-    containers_action = data.pop('containers_action', None)
     # Dirty workaround. This field even must not be here!
     data.pop('free_host', None)
     check_change_pod_data(data)
-
-    if containers_action and 'command' in data:
-        data['action'] = data['command']
-        return docker_action(data=data, containers_action=containers_action)
 
     if 'dbdiff' in data:
         update_dict(item.__dict__, data['dbdiff'])
@@ -331,17 +321,19 @@ def do_action(host, action, container_id):
 @pods.route('/containers', methods=['PUT'])
 @login_required_or_basic
 @check_permission('edit', 'pods')
-def docker_action(data=None, containers_action=None):
-    if data is None:
-        data = request.json
+def docker_action():
+    data = request.json or request.args or request.form
     try:
         user = current_user
     except AttributeError:
         user = g.user
     action = data.get('action')
+    host = data.get('host')
+    containers = data.get('containers', '').split(',')
+
     if action not in ALLOWED_ACTIONS:
         raise APIError('This action is not allowed.', status_code=403)
-    if not data.get('host'):
+    if not host:
         raise APIError('Node host is not provided')
     pod = db.session.query(Pod).get(data.get('pod_uuid'))
     if pod is None:
@@ -364,9 +356,8 @@ def docker_action(data=None, containers_action=None):
         raise APIError("POD with restart policy 'Always' can't "
                        "start or stop containers")
     # TODO validate containerId (escape) and his presents for different commands
-    if containers_action:
-        result = {cid: do_action(data['host'], data['action'], cid)
-                  for cid in data['containers']}
+    if containers:
+        result = {cid: do_action(host, action, cid) for cid in containers}
     else:
         result = do_action(data['host'], data['action'], data['containerId'])
     return jsonify({'status': 'OK', 'data': result})

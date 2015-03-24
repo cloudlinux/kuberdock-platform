@@ -195,7 +195,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             containerCollection.forEach(function(i){
                 if (i.get('checked') === true){
                     model = initPodCollection.fullCollection.get(i.get('parentID'));
-                    containers.push(i.get('name'));
+                    _.each(model.get('dockers'), function(itm){
+                        if(itm.info.imageID == i.get('imageID'))
+                            containers.push(itm.info.containerID);
+                    });
                 }
             });
             if(model)
@@ -250,17 +253,27 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             preloader.show();
             evt.stopPropagation();
             var model = initPodCollection.fullCollection.get(
-                this.model.get('parentID'));
-            model.save({command: cmd, 'containers_action': [this.model.get('name')]}, {
-                wait: true,
-                success: function(model, response, options){
-                    that.render();
+                this.model.get('parentID')),
+                _containers = [],
+                host = null;
+            _.each(model.get('dockers'), function(itm){
+                if(itm.info.imageID == that.model.get('imageID'))
+                    _containers.push(itm.info.containerID);
+                    host = itm.host;
+            });
+
+            $.ajax({
+                url: '/api/pods/containers',
+                data: {action: cmd, host: host, containers: _containers.join(','),
+                       pod_uuid: model.get('id')},
+                type: 'PUT',
+                dataType: 'JSON',
+                success: function(rs){
+                    console.log(rs);
                     preloader.hide();
                 },
-                error: function(model, response, options, data){
-                    that.render();
-                    preloader.hide();
-                    modelError(response);
+                error: function(xhr){
+                    modelError(xhr);
                 }
             });
         },

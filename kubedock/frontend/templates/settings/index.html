@@ -16,85 +16,159 @@
 
     <!-- main template -->
     <script type="text/template" id="settings-layout-template">
-    <div id="main">
-        <div class="breadcrumbs-wrapper">
-            <div class="container breadcrumbs" id="breadcrumbs">
-                <ul class="breadcrumb">
-                    <li class="active">
-                        <div>Settings</div>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div class="container">
-            <div class="row">
-                <div class="col-sm-3 col-md-2 sidebar">
-                    <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                        <li class="general active">
-                            <a href="#settingsGeneralTab" role="tab" data-toggle="tab">General</a>
-                        </li>
-                        <li class="notification">
-                            <a href="#settingsNotificationTab" role="tab" data-toggle="tab">Notification</a>
-                        </li>
-                        <li class="permision">
-                            <a href="#settingsPermisionTab" role="tab" data-toggle="tab">Permision</a>
-                        </li>
-                    </ul>
-                </div>
-                <div id="details_content" class="col-sm-10">
-                    <div class="row placeholders">
-                        <div class="tab-content col-xs-12 no-padding-right">
-                            <div class="tab-pane fade in active" id="settingsGeneralTab">
-                                <div class="content-body">
-                                    <div class="title-line col-md-11 col-md-offset-1">Timezone</div>
-                                    <div class="col-md-12 no-padding">
-                                        <div class="col-md-11 col-md-offset-1 no-padding image">
-                                            <select class="selectpicker" id="timezone">
-                                                <option>Select 1</option>
-                                                <option>Select 2</option>
-                                                <option>Select 3</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="buttons pull-right">
-                                    <button id="user-cancel-btn" class="" type="submit">Cencel</button>
-                                    <button id="user-add-btn" class="" type="submit">Submit</button>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade in" id="settingsNotificationTab">
-                                <div class="content-body">
-                                    <div class="title-line">Where should we notify you?</div>
-                                    <div class="col-md-12 no-padding">settingsNotificationTab tab content</div>
-                                </div>
-                                <div class="buttons pull-right">
-                                    <button id="user-cancel-btn" class="" type="submit">Cencel</button>
-                                    <button id="user-add-btn" class="" type="submit">Submit</button>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade in" id="settingsPermisionTab">
-                                <div class="content-body">
-                                    <div class="title-line">Permision tab</div>
-                                    <div class="col-md-12 no-padding">Permision tab content</div>
-                                </div>
-                                <div class="buttons pull-right">
-                                    <button id="user-cancel-btn" class="" type="submit">Cencel</button>
-                                    <button id="user-add-btn" class="" type="submit">Submit</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> 
-            </div>
-        </div>
-    </div>
-    </script>
-    <!-- main template -->
+	    <div id="main">
+	        <div class="breadcrumbs-wrapper">
+	            <div class="container breadcrumbs" id="breadcrumbs">
+	                <ul class="breadcrumb">
+	                    <li class="active">
+	                        <div>Settings</div>
+	                    </li>
+	                </ul>
+	            </div>
+	        </div>
+	        <div class="container">
+	            <div class="row">
+	                <div class="col-sm-3 col-md-2 sidebar">
+	                    <ul class="nav nav-sidebar list-unstyled" role="tablist">
+	                        <li class="general active">
+	                            <a href="#settingsGeneralTab" role="tab" data-toggle="tab">General</a>
+	                        </li>
+	                        <li class="notification">
+	                            <a href="#settingsNotificationTab" role="tab" data-toggle="tab">Notification</a>
+	                        </li>
+	                        <li class="permision">
+	                            <a href="#settingsPermisionTab" role="tab" data-toggle="tab">Permision</a>
+	                        </li>
+	                    </ul>
+	                </div>
+	                <div id="details_content" class="col-sm-10">
+	                    <div class="row placeholders">
+	                        <div class="tab-content col-xs-12 no-padding-right">
 
-    <script data-main="/static/js/settings_app/require_main.js" src="/static/js/lib/require.js"></script>
+	                        	<!--  settingsGeneralTab template -->
+	                            <div class="tab-pane fade in active" id="settingsGeneralTab">
+	                                <div class="content-body">
+	                                    <div class="col-md-12 no-padding">
+	                                        <div class="col-xs-5 col-xs-offset-1 no-padding">
+	                                    		<label>Timezone</label>
+	                                            <select class="selectpicker" id="timezone">
+	                                                <option>Select 1</option>
+	                                                <option>Select 2</option>
+	                                                <option>Select 3</option>
+	                                            </select>
+	                                        </div>
+	                                        <div class="image no-padding col-xs-5 col-xs-offset-1"></div>
+	                                    </div>
+	                                </div>
+	                                <div class="buttons pull-right">
+	                                    <button id="user-cancel-btn" class="" type="submit">Cencel</button>
+	                                    <button id="user-add-btn" class="" type="submit">Submit</button>
+	                                </div>
+	                            </div>
+	                            <!--  end settingsGeneralTab template -->
 
-    <script type="text/javascript">
-    //
-    </script>
+
+	                            <!--  settingsNotificationTab template -->
+	                            <div class="tab-pane fade in" id="settingsNotificationTab">
+	                                <div class="content-body">
+		                                <div class="row">
+		                                     <div class="col-xs-6 col-xs-offset-1">
+		                                    	<label for="notifyEmail">Where should we notify you?</label>
+		                                    	<input type="email" placeholder="Email" name="" id="notifyEmail">
+		                                    </div>
+		                                    <div class="col-xs-5 bell"></div>
+	                              		</div>
+	                                    <div class="row">
+		                                    <div class="col-xs-6 col-xs-offset-1">
+		                                    	<label for="smtp">SMTP</label>
+		                                    	<input type="text"  name="" id="smtp">
+		                                    </div>
+		                                    <div class="col-xs-5 inline">
+			                                    <input type="checkbox" id="autorization"/>
+			                                    <label for="autorization">Authorization needed</label>
+		                                    </div>
+		                                </div>
+		                                <div class="row">
+		                                    <div class="col-xs-6 col-xs-offset-1">
+		                                    	<label>Connection type</label>
+		                                    	<select class="selectpicker" id="conectionType">
+		                                        	<option>Select 1</option>
+		                                            <option>Select 2</option>
+		                                            <option>Select 3</option>
+		                                        </select>
+		                                    </div>
+										<div class="col-xs-5 inline">
+											<input type="checkbox" id="certificates"/>
+											<label for="certificates">Recieve certificates</label>
+											</div>
+										</div>
+										<div class="row notifications">
+											<div class="col-xs-11 col-xs-offset-1">
+												<label>Notification templates</label>
+												<div class="col-xs-12 no-padding group">
+													<span>User created</span>
+													<input type="checkbox" id="userCreatedNotification"/>
+													<label for="userCreatedNotification">send as html</label>
+												</div>
+												<div class="col-xs-12 no-padding group">
+													<span>User deleted</span>
+													<input type="checkbox" id="userDeletedNotification"/>
+													<label for="userDeletedNotification">send as html</label>
+												</div>
+												<div class="col-xs-12 no-padding group">
+													<span>New pod created</span>
+													<input type="checkbox" id="podCreatedNotification"/>
+													<label for="podCreatedNotification">send as html</label>
+												</div>
+											</div>
+		                                </div>
+	                                </div>
+	                                <div class="buttons pull-right">
+	                                    <button id="user-cancel-btn" class="" type="submit">Cencel</button>
+	                                    <button id="user-add-btn" class="" type="submit">Submit</button>
+	                                </div>
+	                            </div>
+	                            <!--  end settingsNotificationTab template -->
+
+
+	                            <!-- settingsNotificationTabEdit template -->
+
+
+	                            <!-- end settingsNotificationTabEdit template -->
+
+
+	                            <!-- settingsPermisionTab template -->
+	                            <div class="tab-pane fade in" id="settingsPermisionTab">
+	                                <div class="content-body">
+	                                    <div class="col-xs-6">
+	                                    	<label>Permision tab</label>
+	                                    	Permision tab content
+	                                    </div>
+	                                    <div class="col-xs-5 col-xs-offset-1"></div>
+	                                </div>
+	                                <div class="buttons pull-right">
+	                                    <button id="user-cancel-btn" class="" type="submit">Cencel</button>
+	                                    <button id="user-add-btn" class="" type="submit">Submit</button>
+	                                </div>
+	                            </div>
+	                            <!-- end settingsPermisionTab template -->
+	                        </div>
+	                    </div>
+	                </div> 
+	            </div>
+	        </div>
+	    </div>
+	</script>
+
+	<script type="text/template" id="settings-layout-general-tab-template">
+			dasdas
+	</script>
+	<!-- main template -->
+
+	<script data-main="/static/js/settings_app/require_main.js" src="/static/js/lib/require.js"></script>
+
+	<script type="text/javascript">
+	//
+	</script>
 
 {% endblock %}

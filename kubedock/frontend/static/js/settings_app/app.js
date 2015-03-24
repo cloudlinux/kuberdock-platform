@@ -21,7 +21,6 @@ define(['marionette', 'utils'],
         });
     });
 
-
     SettingsApp.module('SettingsCRUD', function(SettingsCRUD, App, Backbone, Marionette, $, _){
 
         SettingsCRUD.Controller = Marionette.Controller.extend({

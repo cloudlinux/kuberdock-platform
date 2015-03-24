@@ -132,6 +132,10 @@ cat > /etc/sysconfig/docker-network << EOF
 DOCKER_NETWORK_OPTIONS="--dns=$DOCKER_BRIDGE_IP"
 EOF
 
+# 8.1
+# Due to cycle dependency we need to regenerate /run/flannel/subnet.env
+systemctl restart flanneld
+
 
 
 # 9. install and configure dnsmasq

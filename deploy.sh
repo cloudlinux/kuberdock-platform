@@ -53,7 +53,6 @@ sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBE_CONF_DIR/controll
 
 #4. Create and populate DB
 systemctl enable postgresql
-systemctl start postgresql
 postgresql-setup initdb
 systemctl restart postgresql
 python $KUBERDOCK_DIR/postgresql_setup.py

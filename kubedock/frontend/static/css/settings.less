@@ -2,46 +2,132 @@
 	.content-body{
 		.clearfix;
 		border-bottom: 1px solid #e5e5e5;
-		.title-line{
+		label{
 			padding-left: 0px;
 			font-size: 14px;
 			font-weight: bold;
 			font-family: @regular;
 			margin-bottom: 20px;
+			display: block;
 		}
-	}
-}
-#settingsGeneralTab{
-	.content-body{
-		#timezone{
+		#timezone, #conectionType, input[type="text"], input[type="email"]{
 			.box-shadow(none);
 			height: 49px;
 			outline: 0;
 			border: 1px solid #e5e5e5;
 			background-color: transparent;
 			width: 100%;
-			max-width: 366px;
 			padding: 0 20px;
 			font-weight: normal;
 			position: relative;
 		}
+		input[type="text"], input[type="email"], select{
+			.placeholder(#1d1d1d);
+			margin-bottom: 25px;
+		}
+	}
+}
+#settingsGeneralTab{
+	.content-body{
 		.image{
 			min-height: 88px;
 			margin-bottom: 88px;
 			&:after{
+				left: 4%;
+				top: 30px;
 				content: '';
-				position: absolute;
-				right: 30%;
-				top: -8px;
-				background: url('../img/settings-cube.png') 0 0 no-repeat;
 				width: 109px;
 				height: 94px;
+				position: absolute;
+				background: url('../img/settings-cube.png') 0 0 no-repeat;
 			}
 		}
 	}
 }
 #settingsNotificationTab{
-
+	.content-body{
+		.bell{
+			&:after{
+				left: 4%;
+				top: 30px;
+				content: '';
+				width: 44%;
+				height: 94px;
+				min-width: 150px;
+				position: absolute;
+				background: url('../img/bell.png') center 0 no-repeat;
+			}
+		}
+		.inline{
+			display: inline-block;
+			font-size: 0;
+			margin-top: 54px;
+			label{
+				margin: 0;
+				font-weight: normal;
+				vertical-align: top;
+				display: inline-block;
+			}
+			input{
+				outline: 0;
+				width: 18px;
+				height: 18px;
+				margin-bottom: 0;
+				background: none;
+				margin: 0 12px 0 20px;
+				vertical-align: top;
+				display: inline-block;
+				border: 1px solid #e5e5e5;
+			}
+		}
+		.notifications{
+			margin-bottom: 66px;
+			span{
+				height: 20px;
+				color: #339aed;
+				font-size: 14px;
+				min-width: 170px;
+				padding-left: 25px;
+				position: relative;
+				margin-bottom: 18px;
+				font-weight: normal;
+				vertical-align: top;
+				display: inline-block;
+				font-family: @regular;
+				&:before{
+					top: 0;
+					left: 0;
+					width: 14px;
+					content: '';
+					height: 20px;
+					position: absolute;
+					background: url('../img/pencil.png') 0 center no-repeat;
+				}
+				&:hover{
+					cursor: pointer;
+				}
+			}
+			.group{
+				label, input{
+					font-weight: normal;
+					vertical-align: top;
+					display: inline-block;
+					margin: 0;
+				}
+				input{
+					outline: 0;
+					width: 18px;
+					height: 18px;
+					margin-bottom: 0;
+					background: none;
+					vertical-align: top;
+					display: inline-block;
+					margin: 0 10px 0 0;
+					border: 1px solid #e5e5e5;
+				}
+			}
+		}
+	}
 }
 #settingsPermisionTab{
 

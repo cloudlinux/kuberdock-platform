@@ -616,6 +616,7 @@
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
             <div class="col-md-4 col-md-offset-1">
+		{#
                 <table class="table">
                     <thead><tr><th></th><th>Cluster</th></tr></thead>
                     <tbody>
@@ -640,6 +641,7 @@
                         <% } %>
                     </tbody>
                 </table>
+		#}
                 <% if(freeHost) { %>
                 <table class="table">
                 <thead><tr><th></th><th>Public IP</th></tr></thead>
@@ -650,6 +652,7 @@
                 </tr></tbody>
                 </table>
                 <% } %>
+		{#
                 <% if (nodes.length !== 0){ %>
                 <table class="table">
                     <thead><tr><th></th><th>Node to run on</th></tr></thead>
@@ -669,14 +672,18 @@
                     </tbody>
                 </table>
                 <% } %>
+		#}
                 <% if (volumes.length !== 0){ %>
                 <table class="table">
-                    <thead><tr><th>Volume</th><th>Path</th></tr></thead>
+                    <thead><tr><th>Volume</th><th>Storage</th></tr></thead>
                     <tbody>
                         <% _.each(volumes, function(vol){ %>
                         <tr>
                             <td><%- vol['name'] %></td>
+			    {#
                             <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
+			    #}
+			    <td>local</td>
                         </tr>
                         <% }) %>
                     </tbody>

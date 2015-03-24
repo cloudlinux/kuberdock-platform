@@ -305,7 +305,8 @@ def do_action(host, action, container_id):
     ssh, error_message = ssh_connect(host)
     if error_message:
         raise APIError(error_message)
-    i, o, e = ssh.exec_command('docker {0} {1}'.format(action, container_id))
+    i, o, e = ssh.exec_command(
+        'docker {0} {1}'.format(action, container_id.lstrip('docker://')))
     exit_status = o.channel.recv_exit_status()
     if exit_status != 0:
         raise APIError('Docker error. Exit status: {0}. Error: {1}'

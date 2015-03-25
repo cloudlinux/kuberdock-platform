@@ -1,5 +1,5 @@
 import ipaddress
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 from . import APIError
 from ..core import db, check_permission
@@ -53,10 +53,33 @@ def create_item():
             data[key] = data[key][0]
     try:
         network = str(ipaddress.ip_network(unicode(data['network'])))
+        autoblock_list = []
+        for v in data.get('autoblock', '').split(','):
+            v = v.strip()
+            if v.isdigit():
+                autoblock_list.append(int(v))
+            elif v.find('-') > 0:
+                _start, _end = v.split('-')
+                if _start.isdigit() and _end.isdigit():
+                    r = xrange(int(_start), int(_end) + 1)
+                    autoblock_list.extend(
+                        [vv for vv in r if vv not in autoblock_list])
+        blocked_list = []
+        autoblock_list = list(set(autoblock_list))
+        autoblock_list.sort()
+        current_app.logger.debug(autoblock_list)
+        ip_prefix = '.'.join(network.split('/')[0].split('.')[:-1])
+        for i in autoblock_list:
+            _ip = int(ipaddress.ip_address(u'{0}.{1}'.format(ip_prefix, i)))
+            if _ip not in blocked_list:
+                blocked_list.append(_ip)
+        current_app.logger.debug(blocked_list)
         if IPPool.filter_by(network=network).first():
             raise Exception("Network '{0}' already exist".format(network))
         pool = IPPool.create(network=network)
         pool.save()
+        if autoblock_list:
+            pool.block_ip(blocked_list)
         return jsonify({'status': 'OK', 'data': pool.to_dict()})
     except KeyError:
         raise APIError('Network is not defined')

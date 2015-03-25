@@ -86,11 +86,15 @@ class IPPool(BaseModelMixin, db.Model):
                                        "{0}".format(e))
         return blocked_list
 
-
     def block_ip(self, ip):
         blocked_list = self.get_blocked_list(as_int=True)
-        if ip not in blocked_list:
-            blocked_list.append(int(ipaddress.ip_address(ip)))
+        if isinstance(ip, (tuple, list, set)):
+            for _ip in ip:
+                if _ip not in blocked_list:
+                    blocked_list.append(_ip)
+        else:
+            if ip not in blocked_list:
+                blocked_list.append(int(ipaddress.ip_address(ip)))
         self.blocked_list = json.dumps(blocked_list)
         self.save()
 

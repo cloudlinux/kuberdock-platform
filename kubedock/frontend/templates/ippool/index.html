@@ -41,19 +41,24 @@
                         <h1>Network form</h1>
                         <h2>Add</h2>
                     </div>
-
                 </div>
-                <div id="network-controls" class="col-md-6">
-                    <div class="form-group">
-                        <label for="network">Network</label>
-                        <input type="text" name="network" class="form-control masked-ip"
-                               id="network" placeholder="1.2.3.4/32">
+                <div class="row">
+                    <div id="network-controls" class="col-md-2">
+                        <div class="form-group">
+                            <label for="network">Network</label>
+                            <input type="text" name="network" class="form-control masked-ip"
+                                   id="network" placeholder="1.2.3.4/32">
+                        </div>
                     </div>
-
-                    <div>
+                    <div id="network-controls" class="col-md-3">
+                        <div class="form-group">
+                            <label for="network">Autoblock IPs</label>
+                            <input type="text" name="autoblock" class="form-control"
+                                   placeholder="1, 4-10, 15, 255">
+                        </div>
                         <button id="network-add-btn" class="btn btn-success"
                                 type="submit">
-                            SAVE
+                            ADD
                         </button>
                     </div>
                 </div>

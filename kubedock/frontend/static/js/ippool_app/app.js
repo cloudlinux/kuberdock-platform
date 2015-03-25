@@ -125,7 +125,8 @@ define(['marionette', 'utils'],
             tagName: 'div',
 
             ui: {
-                'network': 'input#network'
+                'network': 'input#network',
+                'autoblock': '[name="autoblock"]'
             },
 
             events: {
@@ -174,7 +175,7 @@ define(['marionette', 'utils'],
                 }
 
                 App.Data.networks.create({
-                    'network': network
+                    'network': network, 'autoblock': this.ui.autoblock.val()
                 }, {
                     wait: true,
                     success: function(){

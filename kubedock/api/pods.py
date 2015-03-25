@@ -78,6 +78,10 @@ def create_item():
     save_only = data.pop('save_only', True)
     temp_uuid = str(uuid4())
     data.update({'id': temp_uuid, 'status': 'stopped'})
+    for container in data.get('containers', []):
+        if container.get('command'):
+            container['command'] = parse_cmd_string(container['command'][0])
+
     json_data = json.dumps(data)
 
     pod = Pod(name=data['name'], config=json_data, id=temp_uuid, status='stopped')
@@ -119,7 +123,8 @@ def create_item():
 
         try:
             pod = db.session.query(Pod).get(temp_uuid)
-            pod.config = json.dumps(output)
+            pod.config = json.dumps(add_to_output(json.loads(pod.config),
+                                                  output))
             output['id'] = temp_uuid
             db.session.commit()
         except Exception, e:
@@ -241,7 +246,7 @@ def update_item(uuid):
         parsed_config = json.loads(item.config)
     except (TypeError, ValueError):
         parsed_config = {}
-        
+
     if 'command' in data:
         if data['command'] == 'start':
 
@@ -261,7 +266,9 @@ def update_item(uuid):
                 output = prepare_for_output(pod_rv, service_rv)
 
                 try:
-                    pod = Pod(name=output['name'], config=json.dumps(output), id=output['id'], owner=u)
+                    pod = Pod(name=output['name'],
+                              config=json.dumps(add_to_output(parsed_config, output)),
+                              id=output['id'], owner=u)
                     db.session.add(pod)
                     db.session.delete(item)
                     db.session.commit()
@@ -397,10 +404,6 @@ def prepare_container(data, key='ports'):
         image = '-'.join(map((lambda x: x.lower()), data['image'].split('/')))
         data['name'] = "%s-%s" % (
             image, ''.join(random.sample(string.lowercase + string.digits, 10)))
-
-    command = data.get('command')
-    if command:
-        data['command'] = parse_cmd_string(command[0])
 
     kube_type = 0   # mock
     try:
@@ -596,3 +599,12 @@ def start_cluster(data):
         rv.pop('service_ok')
         rv.pop('replica_ok')
     return rv
+
+
+def add_to_output(old_config, old_output):
+    conf_containers = old_config.get('containers')
+    kub_containers = old_output.get('containers')
+    if conf_containers and kub_containers:
+        for c_container, k_container in zip(conf_containers, kub_containers):
+            k_container['kubes'] = c_container['kubes']
+    return old_output

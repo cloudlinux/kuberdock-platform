@@ -13,13 +13,23 @@ if __name__ == '__main__':
     db.drop_all()
     db.create_all()
     
-    # Create default package and kube
-    k = Kube(id=0, name='standard', default=True, cpu=700, cpu_units='KCU',
-             memory=64, memory_units='MB', disk_space='0', total_traffic=0)
-    p = Package(id=0, name='basic', default=True, kube=k, amount=0,
+    # Create default packages and kubes
+    # Package and Kube with id=0 are default
+    # end must be undeletable (always present with id=0) for fallback
+    k1 = Kube(id=0, name='standard', cpu=700, cpu_units='KCU',
+              memory=64, memory_units='MB', disk_space='0', total_traffic=0)
+    k2 = Kube(name='hi memory', cpu=700, cpu_units='KCU',
+              memory=256, memory_units='MB', disk_space='0', total_traffic=0)
+    k3 = Kube(name='hi cpu', cpu=1400, cpu_units='KCU',
+              memory=64, memory_units='MB', disk_space='0', total_traffic=0)
+    db.session.add_all([k1, k2, k3])
+    db.session.commit()
+
+    p = Package(id=0, name='basic', kube=k1, amount=0,
                 currency='USD', period='hour')
     
-    # Create all roles with users that has same name and password as role_name. Useful to test permissions.
+    # Create all roles with users that has same name and password as role_name.
+    # Useful to test permissions.
     for rolename in gen_roles():
         role = Role.query.filter_by(rolename=rolename).first()
         if role is None:
@@ -27,7 +37,8 @@ if __name__ == '__main__':
             db.session.add(role)
         u = User.query.filter_by(username=rolename).first()
         if u is None:
-            u = User(username=rolename, password=rolename, role=role, package=p, active=True)
+            u = User(username=rolename, password=rolename, role=role, package=p,
+                     active=True)
             db.session.add(u)
     db.session.commit()
     
@@ -36,7 +47,8 @@ if __name__ == '__main__':
     r = db.session.query(Role).filter_by(rolename='SuperAdmin').first()
     u = User.query.filter_by(username='admin').first()
     if u is None:
-        u = User(username='admin', password='admin', role=r, package=p, active=True)
+        u = User(username='admin', password='admin', role=r, package=p,
+                 active=True)
         db.session.add(u)
     db.session.commit()
     

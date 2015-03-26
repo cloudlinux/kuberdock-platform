@@ -9,6 +9,15 @@ echo "Setting up firewall rules..."
 systemctl stop firewalld
 systemctl disable firewalld
 
+
+
+#0 Install ntp, we need correct time for node logs
+yum install -y ntp
+systemctl start ntpd; systemctl enable ntpd
+ntpq -p
+
+
+
 echo "Using MASTER_IP={{ master_ip }}"
 
 

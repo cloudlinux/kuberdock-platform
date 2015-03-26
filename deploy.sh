@@ -13,8 +13,19 @@ yum -y install epel-release
 # TODO we must open what we want instead
 systemctl stop firewalld; systemctl disable firewalld
 
+
+
+#0.1
 echo "Adding SELinux rule for http on port 9200"
 semanage port -a -t http_port_t -p tcp 9200
+
+
+
+#0.2 Install ntp, we need correct time for node logs
+yum install -y ntp
+systemctl start ntpd; systemctl enable ntpd
+ntpq -p
+
 
 
 #1. Add kubernetes repo

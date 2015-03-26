@@ -24,7 +24,9 @@ class Pod(db.Model):
 
     @property
     def kubes(self):
-        return sum([c.get('kubes', 1) for c in self.config['containers']])
+        return sum(
+            [c.get('kubes', 1) for c in json.loads(self.config)['containers']]
+        )
 
 
 class ContainerState(db.Model):

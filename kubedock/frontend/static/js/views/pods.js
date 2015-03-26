@@ -158,14 +158,19 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         initialize: function(){
             var that = this;
-            this.listenTo(this.info, 'show', function(view){
+            this.listenTo(this.controls, 'show', function(view){
                 that.listenTo(view, 'display:pod:stats', that.showPodStats);
+                that.listenTo(view, 'display:pod:list', that.showPodList);
             });
         },
 
         showPodStats: function(data){
-             this.trigger('display:pod:stats', data.model)
-         }
+            this.trigger('display:pod:stats', data);
+        },
+        
+        showPodList: function(data){
+            this.trigger('display:pod:list', data);
+        }
     });
 
     Views.PageHeader = Backbone.Marionette.ItemView.extend({
@@ -177,16 +182,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName   : 'div',
         className : 'container',
 
-        triggers: {
-            'click .stats' : 'display:pod:stats'
-        },
-
         events: {
             'click .start-checked'                 : 'startItems',
             'click .stop-checked'                  : 'stopItems',
-            'click .terminate-checked'             : 'terminateItems',
+            'click .terminate-checked'             : 'terminateItems'
         },
-
+        
         command: function(cmd){
             var preloader = $('#page-preloader');
                 preloader.show();
@@ -296,15 +297,29 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         className: 'pod-controls',
 
         events: {
+            'click .stats-btn'     : 'statsItem',
+            'click .list-btn'      : 'listItem',
             'click .start-btn'     : 'startItem',
             'click .stop-btn'      : 'stopItem',
             'click .terminate-btn' : 'terminateItem'
         },
-
+        
         getItem: function(){
             return initPodCollection.fullCollection.get(this.model.id);
         },
 
+        statsItem: function(evt){
+            evt.stopPropagation();
+            var item = this.getItem();
+            this.trigger('display:pod:stats', item);
+        },
+        
+        listItem: function(evt){
+            evt.stopPropagation();
+            var item = this.getItem();
+            this.trigger('display:pod:list', item);
+        },
+        
         startItem: function(evt){
             var item = this.getItem(),
                 that = this,
@@ -406,7 +421,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     points[i].push([record[0], record[i+1]])
                 }
             });
-            console.log(points);
             this.ui.chart.jqplot(points, options);
         }
     });
@@ -1014,19 +1028,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#wizard-set-container-complete-template',
         tagName: 'div',
         className: 'container',
-
-        initialize: function(options){
-            this.model = options.model;
-            this.nodes = options.nodes;
-            this.freeHost = options.freeHost;
-        },
-
-        templateHelpers: function(){
-            return {
-                nodes: this.nodes,
-                freeHost: this.freeHost
-            };
-        },
         
         ui: {
             ieditable: '.ieditable'

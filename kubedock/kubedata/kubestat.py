@@ -70,10 +70,10 @@ class KubeStat(object):
     SELECT_COLUMNS = [
         'cpu_cumulative_usage',
         'memory_usage',
-        #'rx_bytes',
-        #'rx_errors',
-        #'tx_bytes',
-        #'tx_errors',
+        'rx_bytes',
+        'rx_errors',
+        'tx_bytes',
+        'tx_errors',
         'container_name',
         'machine']
     
@@ -86,6 +86,7 @@ class KubeStat(object):
         
         self._folded = OrderedDict()
         self._unfolded = []
+        self._wanted_map = {}
         
         start_point = int(time.time() - 3600) if start is None else self.timestamp(start) 
         self._startcond = "time > %ds" % (start_point,)
@@ -183,18 +184,44 @@ class KubeStat(object):
             for item in containers[host]:
                 self._containers_checks.add((host, item[1]))
                 self._containers_map[item[1]] = item[2]
-                
+    
+    @staticmethod
+    def _get_item_id(entry):
+        try:
+            first_pos = entry['container_name'].index('_', 4) # we know that our string starts from 'k8n_'
+            last_pos = entry['container_name'].index('.', first_pos)
+            return entry['container_name'][first_pos+1:last_pos]
+        except (ValueError, KeyError):
+            return
+    
+    @staticmethod
+    def _get_item_uuid(entry):
+        try:
+            last_pos = entry['container_name'].rindex('_') # we know that our string starts from 'k8n_'
+            first_pos = entry['container_name'].rindex('_', 0, last_pos)
+            return entry['container_name'][first_pos+1:last_pos]
+        except (ValueError, KeyError):
+            return
+    
     def _is_wanted(self, entry):
         if entry['container_name'] == '/system.slice':
             return True
-        last_pos = entry['container_name'].rfind('_')
-        if last_pos == -1:
-            return False
-        first_pos = entry['container_name'].rfind('_', 0, last_pos)
-        if first_pos == -1:
-            return False
-        item = entry['container_name'][first_pos+1:last_pos]
-        if (entry['machine'], item) in self._containers_checks:
+        #last_pos = entry['container_name'].rfind('_')
+        #if last_pos == -1:
+        #    return False
+        #first_pos = entry['container_name'].rfind('_', 0, last_pos)
+        #if first_pos == -1:
+        #    return False
+        #item = entry['container_name'][first_pos+1:last_pos]
+        
+        # Pretty ugly workaround. First we search for UUID, then for uid
+        item = self._get_item_uuid(entry)
+        if item is not None and (entry['machine'], item) in self._containers_checks:
+            self._wanted_map[entry['container_name']] = item
+            return True
+        item = self._get_item_id(entry)
+        if item is not None and (entry['machine'], item) in self._containers_checks:
+            self._wanted_map[entry['container_name']] = item
             return True
         return False
 
@@ -208,9 +235,13 @@ class KubeStat(object):
         self._folded[key][entry['machine']]['system']['mem_count'] += 1
 
     def _fold_service(self, key, entry):
-        last_pos = entry['container_name'].rfind('_')
-        first_pos = entry['container_name'].rfind('_', 0, last_pos)
-        unit = entry['container_name'][first_pos+1:last_pos]
+        #last_pos = entry['container_name'].rfind('_')
+        #first_pos = entry['container_name'].rfind('_', 0, last_pos)
+        #unit = entry['container_name'][first_pos+1:last_pos]
+        try:
+            unit = self._wanted_map[entry['container_name']]
+        except KeyError:
+            return
         if unit not in self._folded[key][entry['machine']]:
             self._folded[key][entry['machine']][unit] = {}
         if entry['container_name'] not in self._folded[key][entry['machine']][unit]:

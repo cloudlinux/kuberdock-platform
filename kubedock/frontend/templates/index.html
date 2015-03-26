@@ -69,10 +69,11 @@
                 running: 'glyphicon glyphicon-play',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
-
+	    {#
             <div class="col-md-8">
                 <button class="btn btn-default stats">Stats</button>
             </div>
+	    #}
         </script>
 
         <!-- Page Container item template -->
@@ -222,10 +223,10 @@
 
             <!-- Page header -->
             <div class="container">
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <h1 id="masthead-title" class="text-left"></h1>
                 </div>
-                <div id="item-controls" class="col-md-4"></div>
+                <div id="item-controls" class="col-md-5"></div>
                 <div class="col-md-2 text-left">
                     <a href="/#pods" class="btn btn-default btn-lg back">
                         <span class="glyphicon glyphicon-share-alt back-btn"></span>
@@ -246,6 +247,17 @@
         <!-- A pod controls template -->
         <script type="text/template" id="pod-item-controls-template">
             <div class="btn-group btn-group-lg item-control" role="group" aria-roles="button">
+		<% if (graphs) { %>
+		<button class="btn btn-default btn-lg list-btn">
+                    <span class="glyphicon glyphicon-list-alt"></span>
+                    <span class="list-btn">Data</span>
+		</button>
+		<% } else { %>
+		<button class="btn btn-default btn-lg stats-btn">
+                    <span class="glyphicon glyphicon-stats"></span>
+                    <span class="stats-btn">Stats</span>
+		</button>
+		<% } %>
                 <button class="btn btn-default btn-lg start-btn">
                     <span class="glyphicon glyphicon-play"></span>
                     <span class="start-btn">Start</span>
@@ -267,13 +279,6 @@
                 running: 'glyphicon glyphicon-play',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
-
-            <div class="col-md-8">
-                <button class="btn btn-default stats">Stats</button>
-            </div>
-
-
-
             <div><a href="/#poditem/<%- parentID %>/<%-name %>"><%- image %></a></div>
         </script>
 
@@ -675,15 +680,12 @@
 		#}
                 <% if (volumes.length !== 0){ %>
                 <table class="table">
-                    <thead><tr><th>Volume</th><th>Storage</th></tr></thead>
+                    <thead><tr><th>Volume</th><th>Path</th></tr></thead>
                     <tbody>
                         <% _.each(volumes, function(vol){ %>
                         <tr>
                             <td><%- vol['name'] %></td>
-			    {#
                             <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
-			    #}
-			    <td>local</td>
                         </tr>
                         <% }) %>
                     </tbody>

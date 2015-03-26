@@ -80,7 +80,8 @@ systemctl restart redis
 systemctl enable influxdb > /dev/null 2>&1
 systemctl restart influxdb
 
-
+#5.1 Create cadvisor database
+curl -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "cadvisor"}'
 
 # Flannel
 echo "Setuping flannel config to etcd..."

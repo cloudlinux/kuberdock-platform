@@ -66,7 +66,7 @@ def get_pods():
 def create_item():
     data = request.json
     set_public_ip = data.pop('set_public_ip', None) == '1'
-    public_ip = data.pop('free_host', None)
+    public_ip = data.pop('freeHost', None)
     check_new_pod_data(data)
     pod = Pod.query.filter_by(name=data['name']).first()
     if pod:
@@ -230,7 +230,7 @@ def update_item(uuid):
         raise APIError('Pod not found', 404)
     data = request.json
     # Dirty workaround. This field even must not be here!
-    data.pop('free_host', None)
+    data.pop('freeHost', None)
     check_change_pod_data(data)
 
     if 'dbdiff' in data:

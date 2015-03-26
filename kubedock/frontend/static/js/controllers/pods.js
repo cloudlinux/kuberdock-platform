@@ -77,10 +77,6 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             var masthead = new App.Views.PageHeader({
                 model: new Backbone.Model({name: model.get('name')})
             });
-            
-            var controlsPanel = new App.Views.ControlsPanel({
-                model: new Backbone.Model({id: model.get('id')})
-            });
 
             var infoPanel = new App.Views.InfoPanel({
                 childView: App.Views.InfoPanelItem,
@@ -95,7 +91,10 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     data: {unit: data.get('id')},
                     reset: true,
                     success: function(){
-                        itemLayout.contents.show(new App.Views.PodGraph({
+                        itemLayout.controls.show(new App.Views.ControlsPanel({
+                            model: new Backbone.Model({id: model.get('id'), graphs: true})
+                        }));
+                        itemLayout.info.show(new App.Views.PodGraph({
                             collection: statCollection
                         }));
                     },
@@ -105,9 +104,22 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 })
             });
             
+            this.listenTo(itemLayout, 'display:pod:list', function(){
+                itemLayout.controls.show(new App.Views.ControlsPanel({
+                    model: new Backbone.Model({id: model.get('id'), graphs: false})
+                }));
+                itemLayout.info.show(new App.Views.InfoPanel({
+                    childView: App.Views.InfoPanelItem,
+                    childViewContainer: "tbody",
+                    collection: containerCollection
+                }));
+            });
+            
             this.listenTo(itemLayout, 'show', function(){
                 itemLayout.masthead.show(masthead);
-                itemLayout.controls.show(controlsPanel);
+                itemLayout.controls.show(new App.Views.ControlsPanel({
+                    model: new Backbone.Model({id: model.get('id'), graphs: false})
+                }));
                 itemLayout.info.show(infoPanel);
             });
             App.contents.show(itemLayout);
@@ -246,20 +258,14 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 }, {container: container});
                 var rqst = $.ajax({
                     type: 'GET',
-                    url: '/api/nodes'
+                    url: '/api/ippool/getFreeHost'
                 });
-                rqst.done(function(data){
-                    if (data.hasOwnProperty('data')) { data = data['data']; }
-                    $.ajax({
-                        url: '/api/ippool/getFreeHost',
-                        success: function(rs){
-                            model.set({free_host: rs.data});
-                            wizardLayout.steps.show(new App.Views.WizardCompleteSubView({
-                                nodes: data, model: model, freeHost: rs.data}));
-                        }
-                    })
+                rqst.done(function(rs){
+                    model.set({freeHost: rs.data});
+                    wizardLayout.steps.show(new App.Views.WizardCompleteSubView({
+                        model: model
+                    }));
                 });
-                //wizardLayout.steps.show(new App.Views.WizardCompleteSubView({nodes: nodes, model: model}));
             });
             this.listenTo(wizardLayout, 'image:selected', function(image){
                 var that = this,

@@ -45,6 +45,7 @@ echo "Installing kubernetes..."
 #yum -y install kubernetes
 yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.12.0-0.1.gitecca426.el7.centos.x86_64.rpm
 yum -y install flannel
+yum -y install cadvisor
 
 
 
@@ -262,5 +263,5 @@ EOF
 echo "Starting services..."
 systemctl enable kubelet; systemctl restart kubelet
 systemctl enable kube-proxy; systemctl restart kube-proxy
-#systemctl enable cadvisor; systemctl restart cadvisor
+systemctl enable cadvisor; systemctl restart cadvisor
 exit 0

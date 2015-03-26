@@ -71,7 +71,7 @@ new_pod_scheme = {
     'cluster': {'type': 'boolean'},
     'node': {'type': 'string', 'nullable': True},
     'save_only': {'type': 'boolean'},
-    'free_host': {'type': 'string', 'required': False},
+    'freeHost': {'type': 'string', 'required': False},
     'set_public_ip': {'type': 'string', 'required': False},
     'restartPolicy': {
         'type': 'dict',

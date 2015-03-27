@@ -52,9 +52,6 @@ ONLINE_LAST_MINUTES = 5
 # TODO We need to allow change it during cluster setup
 NODE_INET_IFACE = 'enp0s5'
 
-DOCKER_IF = 'docker0'
-ES_HOST = 'elasticsearch.kuberdock'
-
 LOCK_FILE_NAME = '/var/tmp/kuberdock.watch.pid'
 
 # Import local settings

@@ -79,14 +79,12 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             ui: {
-                'profileUser'   :   'button#profileUser',
-                'authIt'        :   'button#authIt'
+                'profileUser'   :   'button#profileUser'
             },
 
             events: {
                 'click @ui.profileUser' : 'profileUser_btn',
-                'click @ui.authIt'      : 'authIt_btn',
-                'click'                 : 'checkUser'
+                'click'                 : 'checkUser',
             },
 
             checkUser: function(){
@@ -104,33 +102,6 @@ define(['marionette', 'paginator', 'utils'],
             profileUser_btn: function(){
                 App.router.navigate('/profile/' + this.model.id + '/', {trigger: true});
             },
-
-            authIt_btn: function(){
-                var that = this;
-                utils.modalDialog({
-                    title: 'Authorize by user',
-                    body: "Are you sure want to authorize by user '" +
-                        this.model.get('username') + "'?",
-                    small: true,
-                    show: true,
-                    footer: {
-                        buttonOk: function(){
-                            $.ajax({
-                                url: '/api/users/loginA',
-                                type: 'POST',
-                                data: {user_id: that.model.id},
-                                dataType: 'JSON',
-                                success: function(rs){
-                                    if(rs.status == 'OK')
-                                        window.location.href = '/';
-                                }
-                            });
-                        },
-                        buttonCancel: true
-                    }
-                });
-            }
-
         });
 
         Views.OnlineUserItem = Marionette.ItemView.extend({
@@ -197,38 +168,34 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             editSelectedUser: function(e){
-                var models = this.collection.models;
-               
-                for (var i = 0; i < models.length; i++) {
-                    if (models[i].get('checked')){
+                _.each(this.collection.models,function(entry){
+                    if (entry.get('checked')){
                         App.router.navigate('/edit/' + models[i].id + '/', {trigger: true});
-                        break;
+                        return true;
                     }
-                }    
-                e.stopPropagation();      
+                });
+                e.stopPropagation();
             },
 
             blockSelectedUser: function(e){
-                var models = this.collection.models;
-               
-                for (var i = 0; i < models.length; i++) {
-                    if (models[i].get('checked')){
-                        models[i].set('active',false);
-                        break;
+                _.each(this.collection.models,function(entry){
+                    if (entry.get('checked')){
+                        entry.save({active: false}, {});
+                        return true;
                     }
-                }    
+                }); 
+                this.render();
                 e.stopPropagation();     
             },
 
             activateSelectedUser: function(e){
-                var models = this.collection.models;
-               
-                for (var i = 0; i < models.length; i++) {
-                    if (models[i].get('checked')){
-                        models[i].set('active',true);
-                        break;
+                _.each(this.collection.models,function(entry){
+                    if (entry.get('checked')){
+                        entry.save({active: true}, {});
+                        return true;
                     }
-                }    
+                }); 
+                this.render();
                 e.stopPropagation();  
             },
 
@@ -238,9 +205,16 @@ define(['marionette', 'paginator', 'utils'],
                 for (var i = 0; i < models.length; i++) {
                     if (models[i].get('checked')){
                         models[i].destroy();
+                        models[i].save(undefined, {
+                            wait: true,
+                            error: function(err){
+                                console.error(err);
+                            } 
+                        });
                         break;
                     }
-                }    
+                }
+                this.render(); 
                 e.stopPropagation();      
             },
 
@@ -415,11 +389,34 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             login_this_user: function(){
-               alert('Login this user event');
+                var that = this;
+                utils.modalDialog({
+                    title: 'Authorize by user',
+                    body: "Are you sure want to authorize by user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            $.ajax({
+                                url: '/api/users/loginA',
+                                type: 'POST',
+                                data: {user_id: that.model.id},
+                                dataType: 'JSON',
+                                success: function(rs){
+                                    if(rs.status == 'OK')
+                                        window.location.href = '/';
+                                }
+                            });
+                        },
+                        buttonCancel: true
+                    }
+                });
             },
 
             delete_user: function(){
-               alert('Delete User Event');
+                this.model.destroy();
+                App.router.navigate('/', {trigger: true});
             },
 
             cancel: function(){

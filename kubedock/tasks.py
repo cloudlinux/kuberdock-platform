@@ -338,17 +338,18 @@ def check_events():
             send_event('pull_nodes_state', 'ping')
 
     pods_list = redis.get('cached_pods')
-    if pods_list:
-        temp = requests.get(get_api_url('pods')).json()
-        temp = parse_pods_statuses(temp)
-        pods_list = json.loads(pods_list)
-        if temp != pods_list:
-            pods_list = temp
-    else:
+    if not pods_list:
         pods_list = requests.get(get_api_url('pods')).json()
         pods_list = parse_pods_statuses(pods_list)
-    redis.set('cached_pods', json.dumps(pods_list))
-    send_event('pull_pods_state', 'ping')
+        redis.set('cached_pods', json.dumps(pods_list))
+        send_event('pull_pods_state', 'ping')
+    else:
+        pods_list = json.loads(pods_list)
+        temp = requests.get(get_api_url('pods')).json()
+        temp = parse_pods_statuses(temp)
+        if temp != pods_list:
+            redis.set('cached_pods', json.dumps(temp))
+            send_event('pull_pods_state', 'ping')
 
     now = datetime.now()
     now = now.replace(microsecond=0)

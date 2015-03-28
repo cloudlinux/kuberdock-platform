@@ -129,50 +129,7 @@ EOF
 
 
 
-# 7. get docker bridge ip address
-systemctl enable flanneld; systemctl restart flanneld
-source /run/flannel/subnet.env
-DOCKER_BRIDGE_IP=$(echo $FLANNEL_SUBNET | cut -d/ -f1)
-
-
-
-# 8. setup docker dns server to use
-cat > /etc/sysconfig/docker-network << EOF
-# /etc/sysconfig/docker-network
-DOCKER_NETWORK_OPTIONS="--dns=$DOCKER_BRIDGE_IP"
-EOF
-
-# 8.1
-# Due to cycle dependency we need to regenerate /run/flannel/subnet.env
-systemctl restart flanneld
-
-
-
-# 9. install and configure dnsmasq
-echo "Setup dnsmasq..."
-
-yum -y install dnsmasq
-
-cat > /etc/dnsmasq.d/kuberdock.conf << EOF
-interface={{ docker_if }}
-no-dhcp-interface={{ docker_if }}
-EOF
-
-if grep -E 'etcd.kuberdock|{{ es_host }}' /etc/hosts > /dev/null; then
-  # remove etcd and elasticsearch entries from hosts
-  grep -Ev 'etcd.kuberdock|{{ es_host }}' /etc/hosts > /etc/hosts.tmp
-  mv -f /etc/hosts.tmp /etc/hosts
-fi
-
-# add new entries for etcd and elasticsearch to hosts
-echo {{ master_ip }} etcd.kuberdock >> /etc/hosts
-echo $DOCKER_BRIDGE_IP {{ es_host }} >> /etc/hosts
-
-systemctl enable dnsmasq; systemctl restart dnsmasq
-
-
-
-# 10. setup rsyslog forwarding
+# 7. setup rsyslog forwarding
 echo "Reconfiguring rsyslog..."
 cat > /etc/rsyslog.d/kuberdock.conf << EOF
 *.* @127.0.0.1:5140
@@ -182,7 +139,7 @@ systemctl restart rsyslog
 
 
 
-# 11. setup service pods
+# 8. setup service pods
 echo 'Setup service pods...'
 
 # pull images (update if already exists)
@@ -193,10 +150,8 @@ docker pull kuberdock/elasticsearch:1.0 > /dev/null 2>&1 &
 
 if [ -d /etc/kubernetes/manifests ]; then
   # remove old pods if exists
-  rm -f /etc/kubernetes/manifests/kuberdock-fluentd.manifest
-  rm -f /etc/kubernetes/manifests/kuberdock-elasticsearch.manifest
-
-  for c in $(docker ps -a | grep -E 'kuberdock-fluentd.file|kuberdock-elasticsearch.file' | awk '{print $1}'); do
+  rm -f /etc/kubernetes/manifests/kuberdock-*.manifest
+  for c in $(docker ps -a | grep 'kuberdock-.*\.file' | awk '{print $1}'); do
     docker rm -f $c > /dev/null 2>&1
   done
 else
@@ -208,38 +163,30 @@ if [ -d /var/lib/elasticsearch ]; then
   chown -R root:root /var/lib/elasticsearch
 fi
 
-cat > /etc/kubernetes/manifests/kuberdock-fluentd.manifest << EOF
-version: v1beta2
-id: kuberdock-fluentd
+cat > /etc/kubernetes/manifests/kuberdock-logs.manifest << EOF
+apiVersion: v1beta2
+id: kuberdock-logs
 containers:
   - name: fluentd
     image: kuberdock/fluentd:1.0
-    volumeMounts:
-      - name: docker-containers
-        mountPath: /var/lib/docker/containers
+    env:
+      - name: NODENAME
+        value: $(hostname)
+      - name: ES_HOST
+        value: 127.0.0.1
     ports:
       - name: syslog
         containerPort: 5140
         hostPort: 5140
         protocol: UDP
-    env:
-      - name: NODENAME
-        value: $(hostname)
-      - name: ES_HOST
-        value: {{ es_host }}
-volumes:
-  - name: docker-containers
-    source:
-      hostDir:
-        path: /var/lib/docker/containers
-EOF
-
-cat > /etc/kubernetes/manifests/kuberdock-elasticsearch.manifest << EOF
-apiVersion: v1beta2
-id: kuberdock-elasticsearch
-containers:
+    volumeMounts:
+      - name: docker-containers
+        mountPath: /var/lib/docker/containers
   - name: elasticsearch
     image: kuberdock/elasticsearch:1.0
+    env:
+      - name: ETCD_HOST
+        value: {{ master_ip }}
     ports:
       - name: es-port
         containerPort: 9200
@@ -251,6 +198,10 @@ containers:
       - name: es-persistent-storage
         mountPath: /elasticsearch/data
 volumes:
+  - name: docker-containers
+    source:
+      hostDir:
+        path: /var/lib/docker/containers
   - name: es-persistent-storage
     source:
       hostDir:
@@ -259,7 +210,7 @@ EOF
 
 
 
-# 12. enable services
+# 9. enable services
 echo "Starting services..."
 systemctl enable kubelet; systemctl restart kubelet
 systemctl enable kube-proxy; systemctl restart kube-proxy

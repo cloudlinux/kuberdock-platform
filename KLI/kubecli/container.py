@@ -7,12 +7,18 @@ import os
 import pwd
 import random
 import string
+import yaml
 
 from .image import Image
-from .utils import kubeQuery
+from .utils import kubeQuery, PrintOut
+
+try:
+    from logging import NullHandler
+except ImportError:
+    from .utils import NullHandler
 
 
-class Container(kubeQuery, object):
+class Container(kubeQuery, PrintOut, object):
     """
     Class for creating JSON structure for passing to KuberDock API
     """
@@ -24,8 +30,8 @@ class Container(kubeQuery, object):
         Constructor.
         """
         log = logging.getLogger(__name__)
-        log.addHandler(logging.NullHandler())
-
+        log.addHandler(NullHandler())
+        
         self.containers = []
         self.volumes = []
         self.in_json = True
@@ -57,8 +63,14 @@ class Container(kubeQuery, object):
             data = self._prepare()
             try:
                 res = self.post('/api/pods/', json.dumps(data), True)
-                print res
-            except TypeError:
+                if 'status' in res:
+                    if self.json:
+                        print json.dumps(res['status'])
+                    else:
+                        print res['status']
+                else:
+                    print res
+            except (TypeError, ValueError):
                 pass
         self.save()
 
@@ -135,7 +147,7 @@ class Container(kubeQuery, object):
         if not hasattr(self, '_data_path'):
             raise SystemExit("No data path. No place to save to")
 
-        # Trying to create the folder for storing configs.
+        # Try to create the folder for storing configs.
         try:
             os.mkdir(self._kube_path)
         except OSError, e:
@@ -146,6 +158,9 @@ class Container(kubeQuery, object):
             json.dump(self._prepare(), o)
 
     def _prepare(self):
+        """
+        Filter out unnecessary attributes and make dict from restartPolicy
+        """
         valid = set(['name', 'containers', 'volumes', 'service', 'cluster',
                      'replicas', 'set_public_ip', 'save_only', 'restartPolicy'])
 
@@ -173,19 +188,10 @@ class Container(kubeQuery, object):
         else:
             self._list_containers()
 
-    def _pull_containers(self):
-        try:
-            return self.get('/api/pods')['data']
-        except (AttributeError, TypeError, ValueError):
-            return []
-
     def _list_containers(self):
-        pulled_data = self._pull_containers()
-        if len(pulled_data) > 0:
-            print '-' * 80
-        for index, item in enumerate(pulled_data):
-            print '{0:>4}|{name:^24}>{status:^12}'.format(index+1, **item)
-            print '-' * 80
+        self.fields = ['name', 'status']
+        self.DIVIDER = '>'
+        self.out(self._unwrap(self.get('/api/pods/')))
 
     def _list_pending_containers(self):
         for item in os.listdir(self._kube_path):
@@ -196,25 +202,22 @@ class Container(kubeQuery, object):
                 continue
     
     def show_container(self):
-        pulled_data = self._pull_containers()
-        container = filter((lambda x: x['name'] == self.name), pulled_data)
-        for item in container:
-            print '-' * 80
-            print '{name:^24}>{status:^12}'.format(**item)
-            print '-' * 80
-            if item.get('containers'):
-                print '{0:^16}|{1:^24}:{2:^24}'.format('images', 'name', 'image')
-            for image in item.get('containers', []):
-                print '{0:16}|{name:^24}:{image:^24}'.format('',**image)
-                if image.get('ports'):
-                    print '{0:^16}|{1:^7}|{2:^15}:{3:^15}:{4:^15}'.format(
-                        '', 'ports', 'containerPort', 'protocol', 'hostPort')
-                for ports in image.get('ports', []):
-                    c_port = ports.get('containerPort', '-')
-                    proto = ports.get('protocol', 'tcp')
-                    h_port = ports.get('hostPort', '-')
-                    print '{0:>16}|{1:^7}|{2:^15}:{3:^15}:{4:^15}'.format(
-                        '', '', c_port, proto, h_port)
+        pulled_data = self._unwrap(self.get('/api/pods/'))
+        try:
+            container = filter((lambda x: x['name'] == self.name), pulled_data)[0]
+            if self.json:
+                print json.dumps(container)
+            else:
+                excessive = ['cluster', 'service', 'replicas', 'dockers',
+                             'id', 'sid']
+                container = dict(filter((lambda item: item[0] not in excessive),
+                    container.items()))
+                print yaml.safe_dump(container)
+        except (IndexError, TypeError):
+            if self.json:
+                print json.dumps({'status': 'No such container'})
+            else:
+                print "No such container"
     
     def _pick_container(self):
         try:

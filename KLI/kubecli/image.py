@@ -1,7 +1,14 @@
-class Image(object):
+import json
+from .utils import kubeQuery
+
+class Image(kubeQuery, object):
     
-    def __init__(self, data):
+    def __init__(self, data=None, **kw):
+        if data is None:
+            data = {}
         super(Image, self).__setattr__('_data', data)
+        for attr, value in kw.items():
+            super(Image, self).__setattr__(attr, value)
         
     def __getattr__(self, name):
         return self._data.get(name)
@@ -28,5 +35,35 @@ class Image(object):
     def set_protocol(self, proto, index=0):
         self._conf_port('protocol', proto, index)
         
+    def _get_registry(self):
+        if self.registry.startswith('http'):
+            return self.registry
+        return 'http://' + self.registry
+        
+    def search(self):
+        try:
+            payload={
+                'url': self.registry,
+                'searchkey': self.search_string,
+                'page': self.page}
+
+            data = self.get('/api/images/search', payload)['data']
+            if self.json:
+                print json.dumps(data)
+            else:
+                for i in data:
+                    print i['name']
+        except (ValueError, TypeError, KeyError), e:
+            raise SystemExit(str(e))
+        
+    def do_nothing(self):
+        pass
+    
+        
 def main(**kw):
-    pass
+    i = Image(**kw)
+    dispatcher = {
+        'search': i.search,
+        'nope': i.do_nothing}
+    
+    dispatcher.get(kw['i_action'], 'nope')()

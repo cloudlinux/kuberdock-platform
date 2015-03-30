@@ -3,7 +3,8 @@ from flask import Blueprint, render_template, session, current_app, redirect, fl
 from flask.ext.login import login_user, logout_user, current_user, login_required
 
 from ..api import users as api_users
-from ..users.models import User, Role
+from ..rbac.models import Role
+from ..users.models import User
 from ..users.utils import mark_online
 from ..users.signals import user_logged_out_by_another
 

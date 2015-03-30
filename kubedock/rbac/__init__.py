@@ -3,9 +3,29 @@ from flask.ext.login import current_user
 from rbac.acl import Registry
 from rbac.context import IdentityContext
 
+from ..utils import get_model
+from .models import Resource, Role
+
+
 acl = Registry()
 rbac_context = IdentityContext(acl)
 check_permission = rbac_context.check_permission
+
+
+def init_permissions():
+    if get_model('rbac_resource') is None or get_model('rbac_role') is None:
+        return
+    resources = {}
+    for res in Resource.all():
+        acl.add_resource(res.name)
+        resources[res.id] = res
+    for r in Role.all():
+        role = RoleWrapper(r.rolename)
+        for perm, res, allow in r.perms():
+            if allow:
+                role.allow(perm, res)
+            else:
+                role.deny(perm, res)
 
 
 @rbac_context.set_roles_loader
@@ -34,9 +54,13 @@ class RoleWrapper(object):
 
     def allow(self, action, resource):
         acl.allow(self.rolename, action, resource)
+        if (self.rolename, action, resource) in acl._denied:
+            del acl._denied[self.rolename, action, resource]
 
     def deny(self, action, resource):
         acl.deny(self.rolename, action, resource)
+        if (self.rolename, action, resource) in acl._allowed:
+            del acl._allowed[self.rolename, action, resource]
 
 
 import rbac_rules   # load after acl end RoleWrapper definition

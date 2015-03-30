@@ -6,20 +6,21 @@ from flask import current_app
 from flask.ext.login import UserMixin
 
 from ..core import db, login_manager
-from .utils import get_user_last_activity, get_online_users
 from ..models_mixin import BaseModelMixin
 from .signals import (
     user_logged_in, user_logged_out, user_logged_in_by_another,
     user_logged_out_by_another)
+from .utils import get_user_last_activity, get_online_users
 
 
 @login_manager.user_loader
 def load_users(user_id):
-    return db.session.query(User).get(int(user_id))
+    return User.query.get(int(user_id))
 
 
 class User(BaseModelMixin, UserMixin, db.Model):
     __tablename__ = 'users'
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     username = db.Column(db.String(64), unique=True)
     email = db.Column(db.String(64), unique=True)
@@ -29,7 +30,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
     middle_initials = db.Column(db.String(128), nullable=True)
     active = db.Column(db.Boolean, nullable=False, default=False)
     suspended = db.Column(db.Boolean, nullable=False, default=False)
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    role_id = db.Column(db.Integer, db.ForeignKey('rbac_role.id'))
+    permission_id = db.Column(db.Integer, db.ForeignKey('rbac_permission.id'))
     package_id = db.Column(db.Integer, db.ForeignKey('packages.id'))
     join_date = db.Column(db.DateTime, default=datetime.datetime.now)
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
@@ -147,16 +149,6 @@ class UserActivity(BaseModelMixin, db.Model):
         if isinstance(include, dict):
             data.update(include)
         return data
-
-
-class Role(BaseModelMixin, db.Model):
-    __tablename__ = 'roles'
-    id = db.Column(db.Integer, primary_key=True)
-    rolename = db.Column(db.String(64), unique=True)
-    users = db.relationship('User', backref='role', lazy='dynamic')
-    
-    def __repr__(self):
-        return "<Role(rolename='{0}')>".format(self.rolename)
 
 
 class SessionData(db.Model):

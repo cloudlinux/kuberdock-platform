@@ -10,7 +10,7 @@ from werkzeug.datastructures import CallbackDict
 from flask.sessions import SessionInterface, SessionMixin
 
 from flask import current_app
-from .models import SessionData
+from .users.models import SessionData
 from .core import db
 
 def _generate_sid():

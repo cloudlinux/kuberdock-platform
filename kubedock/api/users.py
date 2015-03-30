@@ -4,9 +4,11 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from . import APIError
 from ..billing import Package
-from ..core import db, check_permission
+from ..core import db
+from ..rbac import check_permission
+from ..rbac.models import Role
 from ..utils import login_required_or_basic
-from ..users.models import User, Role, UserActivity
+from ..users.models import User, UserActivity
 from ..users.signals import (
     user_logged_in_by_another, user_logged_out_by_another)
 

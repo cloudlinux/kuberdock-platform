@@ -5,10 +5,8 @@ from flask import current_app, request, jsonify, g
 from flask.ext.login import current_user
 from functools import wraps
 
-from .users import User
-from .api import APIError
+# from .users import User
 from .settings import KUBE_MASTER_URL
-from .rbac import get_user_role
 
 
 def login_required_or_basic(func):
@@ -21,12 +19,12 @@ def login_required_or_basic(func):
                 username = request.authorization.get('username', None)
                 passwd = request.authorization.get('password', None)
                 if username is not None and passwd is not None:
+                    User = get_model('users')
                     user = User.query.filter_by(username=username).first()
                     if user is not None and user.verify_password(passwd):
                         g.user = user
                         return func(*args, **kwargs)
             raise APIError('Not Authorized', status_code=401)
-            #return current_app.login_manager.unauthorized()
         return func(*args, **kwargs)
     return decorated_view
 
@@ -46,53 +44,7 @@ def check_perms(rolename):
         return decorated_view
     return wrapper
 
-#from flask import Blueprint
-#from flask.json import JSONEncoder as NativeJSONEncoder
-#
-#def register_blueprints(app, package_name, package_path):
-#    rv = []
-#    for _, name, _ in pkgutil.iter_modules(package_path):
-#        m = importlib.import_module('%s.%s' % (package_name, name))
-#        for item in dir(m):
-#            item = getattr(m, item)
-#            if isinstance(item, Blueprint):
-#                app.register_blueprint(item)
-#            rv.append(item)
-#    return rv
-#
-#class JSONEncoder(NativeJSONEncoder):
-#    def default(self, obj):
-#        if isinstance(obj, JsonSerializer):
-#            return obj.to_json()
-#        return super(JSONEncoder, self).default(obj)
-#    
-#class JsonSerializer(object):
-#    __json_public__ = None
-#    __json_hidden__ = None
-#    __json_modifiers__ = None
-#
-#    def get_field_names(self):
-#        for p in self.__mapper__.iterate_properties:
-#            yield p.key
-#
-#    def to_json(self):
-#        field_names = self.get_field_names()
-#
-#        public = self.__json_public__ or field_names
-#        hidden = self.__json_hidden__ or []
-#        modifiers = self.__json_modifiers__ or dict()
-#
-#        rv = dict()
-#        for key in public:
-#            rv[key] = getattr(self, key)
-#        for key, modifier in modifiers.items():
-#            value = getattr(self, key)
-#            rv[key] = modifier(value, self)
-#        for key in hidden:
-#            rv.pop(key, None)
-#        return rv
-#
-#
+
 def update_dict(src, diff):
     for key, value in diff.iteritems():
         if type(value) is dict and key in src:
@@ -104,3 +56,39 @@ def update_dict(src, diff):
 def get_api_url(*args, **kwargs):
     url = kwargs.get('url') or KUBE_MASTER_URL
     return '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
+
+
+def get_user(user_id=None):
+    if user_id is not None:
+        model = get_model('users')
+        user = SQLAlchemy().session.query(model).get(user_id)
+    else:
+        try:
+            user = current_user
+        except AttributeError:
+            user = g.user
+    return user
+
+
+# separate function because set_roles_loader decorator don't return function. Lib bug.
+def get_user_role():
+    print current_user.role
+    try:
+        return current_user.role.name
+    except AttributeError:
+        try:
+            return g.user.role.name
+        except AttributeError:
+            return 'AnonymousUser'
+
+
+def get_model(name):
+    return current_app.extensions['models'].get(name)
+
+
+class APIError(Exception):
+    def __init__(self, message, status_code=400):
+        if isinstance(message, (list, tuple, dict)):
+            message = str(message)
+        self.message = message
+        self.status_code = status_code

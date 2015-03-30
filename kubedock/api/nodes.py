@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify
 import socket
 from .. import tasks
 from ..models import Node
-from ..core import db, check_permission
+from ..core import db
+from ..rbac import check_permission
 from ..validation import check_int_id, check_node_data, check_hostname
 from . import APIError
 

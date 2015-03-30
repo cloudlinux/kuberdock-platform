@@ -2,13 +2,10 @@ import json
 from datetime import datetime
 from flask import render_template_string
 from flask.ext.login import current_user
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.orderinglist import ordering_list
 
 from ..core import db
 from ..rbac import get_user_role
-from ..users.models import Role
 from ..models_mixin import BaseModelMixin
 from .utils import slugify
 

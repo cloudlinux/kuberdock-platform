@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask.ext.login import current_user
 
 from . import APIError
-from ..core import check_permission
+from ..rbac import check_permission
 from ..static_pages.models import Menu, Page, MenuItem
 
 

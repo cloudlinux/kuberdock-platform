@@ -1,15 +1,16 @@
+import json
+import paramiko
+import redis
+import socket
+from sse import Sse
+from paramiko import ssh_exception
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.influxdb import InfluxDB
 from flask.ext.login import LoginManager
 from flask import current_app
-from sse import Sse
-import redis
-import json
-import paramiko
-from paramiko import ssh_exception
-import socket
+
 from .settings import DEBUG, NODE_SSH_AUTH
-from rbac import check_permission
+
 
 login_manager = LoginManager()
 login_manager.session_protection = 'strong'

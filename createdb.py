@@ -1,8 +1,10 @@
 from kubedock.frontend import create_app
 from kubedock.core import db
-from kubedock.models import Role, User
+from kubedock.models import User
 from kubedock.billing.models import Package, Kube
 from kubedock.rbac import gen_roles
+from kubedock.rbac.fixtures import add_permissions
+from kubedock.rbac.models import Role
 
 from kubedock.static_pages.fixtures import generate_menu
 
@@ -27,31 +29,28 @@ if __name__ == '__main__':
 
     p = Package(id=0, name='basic', kube=k1, amount=0,
                 currency='USD', period='hour')
-    
+
+    add_permissions()
+
     # Create all roles with users that has same name and password as role_name.
     # Useful to test permissions.
-    for rolename in gen_roles():
-        role = Role.query.filter_by(rolename=rolename).first()
-        if role is None:
-            role = Role(rolename=rolename)
-            db.session.add(role)
-        u = User.query.filter_by(username=rolename).first()
+    for role in Role.all():
+        u = User.filter_by(username=role.rolename).first()
         if u is None:
-            u = User(username=rolename, password=rolename, role=role, package=p,
-                     active=True)
+            u = User.create(username=role.rolename, password=role.rolename,
+                            role=role, package=p, active=True)
             db.session.add(u)
     db.session.commit()
-    
 
     # Special user for convenience to type and login
-    r = db.session.query(Role).filter_by(rolename='SuperAdmin').first()
-    u = User.query.filter_by(username='admin').first()
+    r = Role.filter_by(rolename='SuperAdmin').first()
+    u = User.filter_by(username='admin').first()
     if u is None:
-        u = User(username='admin', password='admin', role=r, package=p,
-                 active=True)
+        u = User.create(username='admin', password='admin', role=r, package=p,
+                        active=True)
         db.session.add(u)
     db.session.commit()
-    
+
     generate_menu()
 
     ac.pop()

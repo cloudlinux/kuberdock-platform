@@ -1,10 +1,11 @@
 import datetime
 #from ..utils import JSONEncoder
+from sqlalchemy.ext.automap import automap_base
 from .. import factory
 from .. import sessions
 from ..rbac import get_user_role
 from ..settings import NODE_INET_IFACE, KUBE_MASTER_URL
-from ..core import ssh_connect
+from ..core import ssh_connect, db
 
 from flask.ext.login import current_user
 from flask import jsonify
@@ -48,6 +49,12 @@ def create_app(settings_override=None):
     app.errorhandler(404)(on_404)
     app.errorhandler(PermissionDenied)(on_permission_denied)
     app.errorhandler(APIError)(on_app_error)
+
+    with app.app_context():
+        Base = automap_base()
+        Base.prepare(db.engine, reflect=True)
+        app.extensions['models'] = Base.classes
+
     return app
 
 

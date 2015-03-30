@@ -2,7 +2,7 @@ from flask import g, Blueprint, render_template
 from flask.ext.login import login_required
 
 from ..rbac import get_user_role
-from ..users.models import Role
+from ..rbac.models import Role
 from ..static_pages.models import Menu, Page
 
 

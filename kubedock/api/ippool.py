@@ -2,7 +2,8 @@ import ipaddress
 from flask import Blueprint, request, jsonify, current_app
 
 from . import APIError
-from ..core import db, check_permission
+from ..core import db
+from ..rbac import check_permission
 from ..utils import login_required_or_basic
 from ..pods.models import IPPool, PodIP
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from ..notifications.models import NotificationTemplate
 from ..notifications.events import NotificationEvent
-from ..core import db, check_permission
+from ..rbac import check_permission
 from . import APIError
 
 

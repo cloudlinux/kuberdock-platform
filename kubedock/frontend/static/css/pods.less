@@ -24,7 +24,7 @@
 				.tablesorter-header-inner{
 					margin-left: 10px;
 					.caret{
-						margin-left: 5px;
+						margin-left: 3px;
 					}
 				}
 			}
@@ -34,8 +34,10 @@
 		tr{
 			&.checked, &:hover{
 				background-color: #f5fafe;
-				td, button{
-
+				td{
+					.editPod{
+						background: url('../img/pencil-hover.png') 0 0 no-repeat;
+					}
 				}
 			}
 			&:last-child{
@@ -63,6 +65,27 @@
 							background-position: 0 -5px;
 						}
 					}
+				}
+				.start-btn, .stop-btn, .editPod{
+					display: none;
+					font-size: 0;
+					width: 20px;
+					height: 17px;
+					position: relative;
+					top: 4px;
+					left: 7px;
+					&:hover{
+						cursor: pointer;
+					}
+				}
+				.start-btn{
+					background: url('../img/start.png') 0 0 no-repeat;
+				}
+				.stop-btn{
+					background: url('../img/restart.png') 0 0 no-repeat;
+				}
+				.editPod{
+					display: inline-table;
 				}
 				.tooltip.bottom{
 					margin-top: 8px;
@@ -97,16 +120,15 @@
 					}
 				}
 			}
-			button, a{
-				color: #1d1d1d;
+			a{
 				font-size: 14px;
 				font-family: @regular;
 				text-decoration: none;
 				padding: 0;
+				color: #3197ee;
 				&:hover{
 					text-decoration: none;
 					cursor: pointer;
-					color: #3197ee;
 				}
 			}
 		}

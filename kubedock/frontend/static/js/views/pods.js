@@ -51,17 +51,20 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         ui: {
             checkbox    : '.check-item',
-            reditable   : '.reditable'
+            reditable   : '.reditable',
+            start       : '.start-btn',
+            stop        : '.stop-btn'
         },
 
         events: {
-            'click .start-btn'      : 'startItem',
-            'click .stop-btn'       : 'stopItem',
+            'click @ui.start'      : 'startItem',
+            'click @ui.stop'       : 'stopItem',
             'click .terminate-btn'  : 'terminateItem',
         },
 
         onRender: function(){
             var that = this;
+            var status = this.model.attributes.status;
             this.ui.reditable.editable({
                 type: 'text',
                 title: 'Change replicas number',
@@ -73,6 +76,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.model.save();
                 }
             });
+
+            status == "running" ? this.ui.stop.css('display','inline-table') : this.ui.stop.hide();
+            status == "stopped" ? this.ui.start.css('display','inline-table') : this.ui.start.hide();
         },
 
         startItem: function(evt){
@@ -304,6 +310,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .terminate-btn' : 'terminateItem'
         },
         
+
         getItem: function(){
             return initPodCollection.fullCollection.get(this.model.id);
         },
@@ -326,7 +333,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 preloader = $('#page-preloader');
                 preloader.show(); 
             evt.stopPropagation();
-            //item.set({'command': 'start'});
             item.save({command: 'start'}, {
                 wait: true,
                 success: function(model, response, options){
@@ -346,7 +352,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 preloader = $('#page-preloader');
                 preloader.show(); 
             evt.stopPropagation();
-            //item.set({'command': 'stop'});
             item.save({command: 'stop'}, {
                 wait: true,
                 success: function(model, response, options){

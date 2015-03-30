@@ -145,13 +145,13 @@
                     <table id="podlist-table" class="table tablesorter tablesorter-default">
                         <thead>
                             <tr class="tablesorter-headerRow">
-                                <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">#<b class="caret"></b></div></th>
-                                <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pod name<b class="caret"></b></div></th>
-                                <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Replicated<b class="caret"></b></div></th>
-                                <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
-                                <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Kube type<b class="caret"></b><br/>(kubes quantity)</div></th>
-                                <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Deployed<b class="caret"></b><br/>date</div></th>
-                                <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Controls<b class="caret"></b><br/>column</div></th>
+                                <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><input type="checkbox"></div></th>
+                                <th data-column="1" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><b class="caret"></b></div></th>
+                                <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pod name<b class="caret"></b></div></th>
+                                <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Replicated<b class="caret"></b></div></th>
+                                <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
+                                <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Kube type<b class="caret"></b><br/>(kubes quantity)</div></th>
+                                <th data-column="7" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Deployed<b class="caret"></b><br/>date</div></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -171,29 +171,35 @@
 
             <!-- table data row -->
             <td>
-                #
+                <input type="checkbox">
             </td>
 
+            <td>#</td>
             <td>
-                <span class="badge">
+                <!-- <span class="badge">
                     <%- containers.length %>
-                </span>
-                <a href="/#pods/<%- id %>"><%- name %></a>
+                </span> -->
+                <%- name %>
+                <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>
             </td>
 
             <td>
-                <span class=" glyphicon "></span>
+                <span class=" glyphicon"></span>
                 <% if (cluster){ %>
                     <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span>
+                <% }  else { %>
+                    none
                 <% } %>
             </td>
            
             <td>
                 <span><%- status %></span>
+                <span class="start-btn" title="Start <%- name %> pod">Start</span>
+                <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
+                <!-- <a class="terminate-btn" href="#">Delete</a> -->
             </td>
 
-            <td>
-                some kube type(10)
+            <td>some kube type(10)
                 <!-- <span class="glyphicon glyphicon-share <%- service ? 'service-on' : 'service-off' %>"></span>
                 <% if ( service && portalIP !== undefined) { %>
                     <span><%- portalIP %></span>
@@ -201,19 +207,6 @@
             </td>
             <td> 
                 01/02/2015
-            </td>
-
-            <td>
-                <div class="dropdown">
-                  <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true">
-                    Actions
-                  </button>
-                  <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
-                    <li role="presentation"><a class="start-btn" role="menuitem" tabindex="-1" href="#">Start</a></li>
-                    <li role="presentation"><a class="stop-btn" role="menuitem" tabindex="-1" href="#">Stop</a></li>
-                    <li role="presentation"><a class="terminate-btn" role="menuitem" tabindex="-1" href="#">Delete</a></li>
-                  </ul>
-                </div>
             </td>
             <!-- end of table data row -->
         </script>

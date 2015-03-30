@@ -133,6 +133,12 @@ body{
 							cursor: pointer;
 						}
 					}
+					&.active{
+						color: #65c7ff;
+					}
+					&:first-child{
+						color: #ffffff;
+					}
 				}
 				li + li:before{
 					padding: 0 7px;
@@ -209,6 +215,7 @@ body{
 						}
 					}
 					&#login_this_user{
+						padding: 0 0 0 29px;
 						&:before{
 							background: url('../img/small-profile-ico.png') 0 0 no-repeat;
 						}

@@ -191,9 +191,10 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                         that.showPods();
                     },
                     error: function(model, response, options, data){
+                        var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
                         modalDialog({
                             title: 'Error',
-                            body: response.responseJSON ? response.responseJSON.status : response.responseText,
+                            body: body,
                             show: true
                         });
                     }

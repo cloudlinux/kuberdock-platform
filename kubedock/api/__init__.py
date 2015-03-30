@@ -58,7 +58,7 @@ class APIError(Exception):
 
 
 def on_app_error(e):
-    return jsonify({'status': e.message}), e.status_code
+    return jsonify({'status': 'error', 'data': e.message}), e.status_code
 
 
 def on_permission_denied(e):

@@ -49,12 +49,19 @@ define(function () {
     // here you can define any useful functions or objects to use their in the project
 
     this.unwrapper = function (response) {
-        if (response.hasOwnProperty('data'))
-            return response['data'];
-        else if(response.hasOwnProperty('status') && typeof response.status === 'string'){
-            alert(response.status);
+        var data = response.hasOwnProperty('data') ? response['data'] : response
+        if (response.hasOwnProperty('status')) {
+            if(response.status == 'error' || response.status == 'warning') {
+                var err = data;
+                if(typeof data !== 'string') err = JSON.stringify(data);
+                $.notify(err, {
+                    autoHideDelay: 5000,
+                    globalPosition: 'top center',
+                    className: response.status == 'error' ? 'danger' : 'warning'
+                });
+            }
         }
-        return response;
+        return data;
     };
 
     this.BaseModel = Backbone.Model.extend({

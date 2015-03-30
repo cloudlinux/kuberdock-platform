@@ -15,7 +15,7 @@ function modalDialog(options){
 function modelError(b, t){
     modalDialog({
         title: t ? t : 'Error',
-        body: typeof b == "string" ? b : b.responseJSON ? b.responseJSON.status : b.responseText,
+        body: typeof b == "string" ? b : b.responseJSON ? JSON.stringify(b.responseJSON): b.responseText,
         show: true
     });
 }
@@ -276,7 +276,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 type: 'PUT',
                 dataType: 'JSON',
                 success: function(rs){
-                    console.log(rs);
                     preloader.hide();
                 },
                 error: function(xhr){

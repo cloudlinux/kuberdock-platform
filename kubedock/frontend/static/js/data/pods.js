@@ -2,15 +2,25 @@
  * This module provides data for pods
  */
 KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
-    
+
     var unwrapper = function(response) {
-        if (response.hasOwnProperty('data'))
-            return response['data'];
-        return response;
+        var data = response.hasOwnProperty('data') ? response['data'] : response
+        if (response.hasOwnProperty('status')) {
+            if(response.status == 'error' || response.status == 'warning') {
+                var err = data;
+                if(typeof data !== 'string') err = JSON.stringify(data);
+                $.notify(err, {
+                    autoHideDelay: 5000,
+                    globalPosition: 'top center',
+                    className: response.status == 'error' ? 'danger' : 'warning'
+                });
+            }
+        }
+        return data;
     };
-    
+
     Data.Pod = Backbone.Model.extend({
-        
+
         defaults: {
             name: 'Nameless',
             containers: [],
@@ -23,16 +33,16 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             port: null,
             node: null
         },
-        
+
         parse: unwrapper,
-        
+
         getContainerByImage: function(image){
             var filtered = _.filter(this.get('containers'), function(c){
                 return c['image'] === this.image;
             }, {image: image});
             return (filtered.length !== 0) ? filtered[0] : null;
         },
-        
+
         fillContainer: function(container, data){
             if (data.hasOwnProperty('ports')) {
                 _.each(data['ports'], function(p){
@@ -55,20 +65,20 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             });
         }
     });
-    
+
     Data.Image = Backbone.Model.extend({
-        
+
         defaults: {
             image: 'Imageless'
         },
-        
+
         parse: unwrapper
     });
-    
+
     Data.Stat = Backbone.Model.extend({
         parse: unwrapper
     });
-    
+
     Data.PodCollection = Backbone.PageableCollection.extend({
         url: '/api/pods/',
         model: Data.Pod,
@@ -78,7 +88,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             pageSize: 5
         }
     });
-    
+
     Data.ImageCollection = Backbone.PageableCollection.extend({
         url: '/api/images/',
         model: Data.Image,
@@ -88,7 +98,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             pageSize: 10
         }
     });
-    
+
     Data.StatsCollection = Backbone.Collection.extend({
         url: '/api/stats',
         model: Data.Stat,

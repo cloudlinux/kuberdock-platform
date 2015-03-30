@@ -55,6 +55,10 @@ echo "Starting etcd..."
 systemctl enable etcd
 systemctl restart etcd
 
+# Start early or curl connection refused
+systemctl enable influxdb > /dev/null 2>&1
+systemctl restart influxdb
+
 
 
 #3. Configure kubernetes
@@ -77,9 +81,6 @@ python createdb.py
 #5. Start services
 systemctl enable redis
 systemctl restart redis
-
-systemctl enable influxdb > /dev/null 2>&1
-systemctl restart influxdb
 
 
 

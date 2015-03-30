@@ -223,7 +223,7 @@ class Container(kubeQuery, PrintOut, object):
         try:
             return filter(
                 (lambda x: x['name'] == self.name),
-                self._pull_containers())[0]
+                self._unwrap(self.get('/api/pods/')))[0]
         except IndexError:
             return None
     

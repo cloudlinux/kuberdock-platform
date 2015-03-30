@@ -26,7 +26,7 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
 MASTER_IP = ''
 
-KUBE_API_VERSION = 'v1beta1'
+KUBE_API_VERSION = 'v1beta2'
 KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
 
 INFLUXDB_HOST = '127.0.0.1'

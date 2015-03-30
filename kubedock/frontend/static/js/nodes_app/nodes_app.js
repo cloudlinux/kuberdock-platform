@@ -231,13 +231,21 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         ui: {
 //            'node_ssh': 'select#node_ssh',
             'node_add_btn': 'button#node-add-btn',
-            'node_cancel_btn': 'button#node-cancel-btn'
+            'node_cancel_btn': 'button#node-cancel-btn',
+            'node_type_select': 'select.kube_type'
         },
 
         events:{
 //            'change @ui.node_ssh': 'validateStep',
             'click @ui.node_add_btn': 'complete',      // only if valid
-            'click @ui.node_cancel_btn' : 'cancel'
+            'click @ui.node_cancel_btn' : 'cancel',
+            'change @ui.node_type_select' : 'change_kube_type'
+        },
+
+        change_kube_type: function(evt) {
+            if (evt.target.value !== null) {
+                this.state.set('kube_type', parseInt(evt.target.value));
+            }
         },
 
 //        validateStep: function (evt) {
@@ -254,6 +262,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 ip: this.state.get('ip'),
                 hostname: this.state.get('hostname'),
                 status: 'pending',
+                kube_type: this.state.get('kube_type'),
                 annotations: {'sw_version': 'v1.1'}, // TODO implement real
                 labels: {'tier': 'testing'}          // TODO implement real
             }, {

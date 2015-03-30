@@ -13,6 +13,7 @@ systemctl disable firewalld
 
 #0 Install ntp, we need correct time for node logs
 yum install -y ntp
+ntpd -gq
 systemctl start ntpd; systemctl enable ntpd
 ntpq -p
 

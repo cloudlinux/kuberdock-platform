@@ -1038,6 +1038,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .cluster'     : 'toggleCluster',
             'click .node'        : 'toggleNode',
             'change .replicas'   : 'changeReplicas',
+            'change select.kube_type'   : 'changeKubeType'
         },
 
         triggers: {
@@ -1085,6 +1086,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));
+        },
+
+        changeKubeType: function(evt){
+            evt.stopPropagation();
+            this.model.set('kube_type', parseInt(evt.target.value));
         },
 
         onRender: function(){

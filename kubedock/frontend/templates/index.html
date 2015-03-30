@@ -702,6 +702,13 @@
                     </tr>
                 <% }) %>
                 </table>
+                <label for="extra-options">Extra Options</label>
+                <select class="kube_type" id="extra-options">
+                    <option value="Choose kube type" disabled selected>Choose kube type</option>
+                    {% for kube_type in kube_types %}
+                    <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
+                    {% endfor %}
+                </select>
                 <div class="view-controls text-right">
                     <button class="btn btn-warning save-container">Save</button>
                     <button class="btn btn-success save-run-container">Save and Run</button>

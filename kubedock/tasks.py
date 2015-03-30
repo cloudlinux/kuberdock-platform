@@ -13,6 +13,7 @@ from .utils import update_dict
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState
+from .settings import KUBE_API_VERSION
 
 from .utils import get_api_url
 
@@ -197,7 +198,7 @@ def compute_capacity(cpu_count, cpu_mhz, mem_total):
 
 
 @celery.task()
-def add_new_node(host):
+def add_new_node(host, kube_type):
     if DEBUG:
         send_event('install_logs',
                    'Connecting to {0} with ssh with user root ...'
@@ -261,12 +262,14 @@ def add_new_node(host):
 
         res = requests.post(get_api_url('nodes'),
                             json={'id': host,
-                                  'apiVersion': 'v1beta1',
+                                  'apiVersion': KUBE_API_VERSION,
                                   'resources': {
                                       'capacity': cap
                                   },
                                   'labels': {
-                                      'kuberdock-node-hostname': host
+                                      'kuberdock-node-hostname': host,
+                                      'kuberdock-kube-type': 'type_' +
+                                                             str(kube_type)
                                   }
                             }).json()
         send_event('install_logs', 'Adding Node completed successful.')

@@ -18,6 +18,7 @@ def _node_is_active(x):
 
 @check_permission('get', 'nodes')
 def get_nodes_collection():
+    # TODO handle kube_type during auto-scan
     new_flag = False
     oldcur = Node.query.all()
     db_hosts = [node.hostname for node in oldcur]
@@ -63,6 +64,7 @@ def get_list():
 @nodes.route('/<node_id>', methods=['GET'])
 @check_permission('get', 'nodes')
 def get_one_node(node_id):
+    # render here kube type
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)
     if m:
@@ -95,8 +97,7 @@ def create_item():
         m = Node(ip=data['ip'], hostname=data['hostname'])
         db.session.add(m)
         db.session.commit()
-        # TODO send labels, annotations, capacity etc.
-        r = tasks.add_new_node.delay(m.hostname)
+        r = tasks.add_new_node.delay(m.hostname, data.get('kube_type', 0))
         # r.wait()                              # maybe result?
         data.update({'id': m.id})
         return jsonify({'status': 'OK', 'data': data})
@@ -117,7 +118,6 @@ def put_item(node_id):
         if data['ip'] != m.ip:
             raise APIError("Error. Node ip can't be reassigned, "
                            "you need delete it and create new.")
-        check_hostname(data.get('hostname', ''))
         new_ip = socket.gethostbyname(data['hostname'])
         if new_ip != m.ip:
             raise APIError("Error. Node ip can't be reassigned, "

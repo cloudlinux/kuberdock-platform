@@ -19,6 +19,7 @@ from ..billing import kubes_to_limits
 from ..api import APIError
 from ..pods.models import PodIP
 from .. import signals
+from ..settings import KUBE_API_VERSION
 
 ALLOWED_ACTIONS = ('start', 'stop', 'inspect',)
 
@@ -380,7 +381,7 @@ def run_service(data):
         ''.join(random.sample(s + string.digits, 19))
     conf = {
         'kind': 'Service',
-        'apiVersion': 'v1beta2',
+        'apiVersion': KUBE_API_VERSION,
         'id': item_id,
         'selector': {'name': data['name']},
         'port': int(data['port']),
@@ -397,7 +398,7 @@ def parse_cmd_string(s):
     return list(lex)
 
 
-def prepare_container(data, key='ports'):
+def prepare_container(data, key='ports', kube_type=0):
     a = []
     # if container name is missing generate from image
     if 'name' not in data or not data['name']:
@@ -405,13 +406,12 @@ def prepare_container(data, key='ports'):
         data['name'] = "%s-%s" % (
             image, ''.join(random.sample(string.lowercase + string.digits, 10)))
 
-    kube_type = 0   # mock
     try:
         kubes = int(data.pop('kubes'))
     except (KeyError, ValueError):
         pass
     else:   # if we create pod, not start stopped
-        data.update(kubes_to_limits(kubes, kube_type, version='v1beta1'))
+        data.update(kubes_to_limits(kubes, kube_type))
 
     # convert to int ports values
     data.setdefault(key, [])
@@ -492,19 +492,24 @@ def prepare_for_output(rv=None, s_rv=None):
 def make_pod_config(data, sid, separate=True):
     # separate=True means that this is just a pod, not replica
     # to insert config into replicas config set separate to False
-    inner = {'version': 'v1beta1'}
+    inner = {'version': KUBE_API_VERSION}
     if separate:
         inner['id'] = sid
         inner['restartPolicy'] = data['restartPolicy']
     inner['volumes'] = data['volumes']
-    inner['containers'] = map(prepare_container, data['containers'])
+    kube_type = data.get('kube_type', 0)
+    inner['containers'] =\
+        [prepare_container(cont, kube_type=kube_type) for cont in data['containers']]
     outer = {}
     if separate:
         outer['kind'] = 'Pod'
-        outer['apiVersion'] = 'v1beta1'
+        outer['apiVersion'] = KUBE_API_VERSION
         outer['id'] = sid
+        outer['nodeSelector'] = {
+            'kuberdock-kube-type': 'type_' + str(kube_type)
+        }
         if 'node' in data and data['node'] is not None:
-            outer['nodeSelector'] = {'kuberdock-node-hostname': data['node']}
+            outer['nodeSelector']['kuberdock-node-hostname'] = data['node']
     outer['desiredState'] = {'manifest': inner}
     if 'labels' not in data:
         outer['labels'] = {'name': data['name']}
@@ -526,7 +531,7 @@ def make_config(data, sid=None):
         return make_pod_config(data, sid)
     return {
         'kind': 'ReplicationController',
-        'apiVersion': 'v1beta2',
+        'apiVersion': KUBE_API_VERSION,
         'id': sid,
         'desiredState': {
             'replicas': data['replicas'],
@@ -602,6 +607,7 @@ def start_cluster(data):
 
 
 def add_to_output(old_config, old_output):
+    old_output['kube_type'] = old_config['kube_type']
     conf_containers = old_config.get('containers')
     kub_containers = old_output.get('containers')
     if conf_containers and kub_containers:

@@ -23,6 +23,7 @@ semanage port -a -t http_port_t -p tcp 9200
 
 #0.2 Install ntp, we need correct time for node logs
 yum install -y ntp
+ntpd -gq
 systemctl start ntpd; systemctl enable ntpd
 ntpq -p
 

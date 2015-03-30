@@ -4,6 +4,7 @@ import cerberus.errors
 from copy import deepcopy
 
 from .api import APIError
+from .billing import Kube
 
 
 """
@@ -67,7 +68,7 @@ new_pod_scheme = {
     },
     'service': {'type': 'boolean'},
     'replicas': {'type': 'integer', 'min': 0},
-    'kubes': {'type': 'integer', 'min': 0},
+    'kube_type': {'type': 'integer', 'min': 0, 'required': True},
     'cluster': {'type': 'boolean'},
     'node': {'type': 'string', 'nullable': True},
     'save_only': {'type': 'boolean'},
@@ -114,7 +115,7 @@ new_pod_scheme = {
         'schema': {
             'type': 'dict',
             'schema': {
-                # TODO delete when swich from v1beta1 to newer
+                # TODO delete when swich from v1beta1 to 3
                 'cpu': {'type': 'integer', 'required': False},
                 'memory': {'type': 'integer', 'required': False},
                 'capabilities': {'type': 'dict', 'required': False},
@@ -292,6 +293,11 @@ def check_int_id(id):
         raise APIError('Invalid id')
 
 
+def check_kube_indb(kube_type):
+    if not Kube.query.get(kube_type):
+        raise APIError('No such kube_type: {0}'.format(kube_type))
+
+
 def check_container_image_name(searchkey):
     validator = V()
     if not validator.validate(
@@ -305,12 +311,15 @@ def check_node_data(data):
     validator = V(allow_unknown=True)
     if not validator.validate(data, {
             'hostname': hostname_scheme,
+            'kube_type': {'type': 'integer', 'min': 0, 'required': False},
             # 'annotations': '',
             # 'labels': '',
         }):
         raise APIError(validator.errors)
     if data['ip'] == data['hostname']:
         raise APIError('Please add nodes by hostname, not by ip')
+    kube_type = data.get('kube_type', 0)
+    check_kube_indb(kube_type)
 
 
 def check_hostname(hostname):
@@ -330,3 +339,5 @@ def check_new_pod_data(data):
     validator = V()
     if not validator.validate(data, new_pod_scheme):
         raise APIError(validator.errors)
+    kube_type = data.get('kube_type', 0)
+    check_kube_indb(kube_type)

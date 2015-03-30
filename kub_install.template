@@ -119,7 +119,7 @@ FLANNEL_ETCD_KEY="/kuberdock/network/"
 # Any additional options that you want to pass
 FLANNEL_OPTIONS="--iface={{ inet_iface }}"
 EOF
-
+systemctl enable flanneld; systemctl restart flanneld
 
 
 # 6. Setting kernel parameters

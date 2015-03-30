@@ -311,7 +311,7 @@ def check_node_data(data):
     validator = V(allow_unknown=True)
     if not validator.validate(data, {
             'hostname': hostname_scheme,
-            'kube_type': {'type': 'integer', 'min': 0, 'required': False},
+            'kube_type': {'type': 'integer', 'min': 0, 'required': True},
             # 'annotations': '',
             # 'labels': '',
         }):

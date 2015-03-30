@@ -81,8 +81,7 @@ systemctl restart redis
 systemctl enable influxdb > /dev/null 2>&1
 systemctl restart influxdb
 
-#5.1 Create cadvisor database
-curl -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "cadvisor"}'
+
 
 # Flannel
 echo "Setuping flannel config to etcd..."
@@ -152,11 +151,21 @@ ifup br0
 systemctl enable dnsmasq
 systemctl restart dnsmasq
 
-#7. Starting kubernetes...
+
+
+#7 Create cadvisor database
+# Only after influxdb is fully loaded
+curl -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "cadvisor"}'
+
+
+
+#8. Starting kubernetes...
 for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl enable $i;done
 for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl restart $i;done
 
-#8. Starting web-interface...
+
+
+#9. Starting web-interface...
 systemctl enable emperor.uwsgi
 systemctl restart emperor.uwsgi
 

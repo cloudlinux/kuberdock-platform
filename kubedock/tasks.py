@@ -351,11 +351,9 @@ def check_events():
         temp = requests.get(get_api_url('pods')).json()
         temp = parse_pods_statuses(temp)
         if temp != pods_list:
-            redis.set('cached_pods', json.dumps(temp))
+            pods_list = temp
+            redis.set('cached_pods', json.dumps(pods_list))
             send_event('pull_pods_state', 'ping')
-
-    now = datetime.now()
-    now = now.replace(microsecond=0)
 
     for pod in pods_list:
         if 'info' in pod:
@@ -371,23 +369,31 @@ def check_events():
                         end = datetime.strptime(end, DATETIME_FORMAT)
                     add_container_state(pod['uid'], container_name, kubes,
                                         start, end)
-        else:
-            end_container_state(pod['uid'], now)
 
-    pod_ids = [pod['uid'] for pod in pods_list]
+    cs1 = db.aliased(ContainerState, name='cs1')
+    cs2 = db.aliased(ContainerState, name='cs2')
+    cs_query = db.session.query(cs1, cs2.start_time).join(
+        cs2, db.and_(cs1.pod_id == cs2.pod_id,
+                     cs1.container_name == cs2.container_name,
+                     cs1.kubes == cs2.kubes)
+        ).filter(db.and_(cs1.start_time < cs2.start_time,
+                         db.or_(cs1.end_time > cs2.start_time,
+                                cs1.end_time.is_(None)))
+                 ).order_by(cs1.start_time, cs2.start_time)
+    prev_cs = None
+    for cs1_obj, cs2_start_time in cs_query:
+        if cs1_obj is not prev_cs:
+            cs1_obj.end_time = cs2_start_time
+        prev_cs = cs1_obj
+
     css = ContainerState.query.filter_by(end_time=None)
+    pod_ids = [pod['uid'] for pod in pods_list]
+    now = datetime.now().replace(microsecond=0)
+
     for cs in css:
-        exist = ContainerState.query.filter(ContainerState.pod_id == cs.pod_id,
-            ContainerState.container_name == cs.container_name,
-            ContainerState.start_time > cs.start_time).order_by(
-            ContainerState.start_time).first()
-        if exist is not None:
-            cs.end_time = exist.start_time
-            db.session.add(cs)
-            continue
         if cs.pod_id not in pod_ids:
             cs.end_time = now
-            db.session.add(cs)
+
     try:
         db.session.commit()
     except Exception:
@@ -404,13 +410,6 @@ def add_container_state(pod, container, kubes, start, end):
     else:
         cs = ContainerState(pod_id=pod, container_name=container,
                             kubes=kubes, start_time=start, end_time=end)
-        db.session.add(cs)
-
-
-def end_container_state(pod, now):
-    css = ContainerState.query.filter_by(pod_id=pod, end_time=None)
-    for cs in css:
-        cs.end_time = now
         db.session.add(cs)
 
 

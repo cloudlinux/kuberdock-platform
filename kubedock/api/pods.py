@@ -1,14 +1,14 @@
-from flask import Blueprint, request, current_app, jsonify, g
-from flask.ext.login import current_user
-from .. import tasks
 import json
-from uuid import uuid4
 import string
 import random
 import re
 import ipaddress
 import shlex
 import copy
+from uuid import uuid4
+from flask import Blueprint, request, current_app, jsonify, g
+from flask.ext.login import current_user
+from .. import tasks, signals
 from ..models import User, Pod
 from ..core import db, ssh_connect
 from ..rbac import check_permission
@@ -18,7 +18,7 @@ from ..validation import check_new_pod_data, check_change_pod_data
 from ..billing import kubes_to_limits
 from ..api import APIError
 from ..pods.models import PodIP
-from .. import signals
+from ..settings import KUBE_API_VERSION
 from .stream import send_event
 
 

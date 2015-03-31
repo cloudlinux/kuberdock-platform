@@ -172,6 +172,7 @@ class KubeResolver(object):
                 diff = filter((lambda x: x['name'] == pod_name), self._pods)
                 for pod in diff:
                     pod['id'] = db_pods[pod_name]['id']
+                    pod['kube_type'] = db_pods[pod_name]['config']['kube_type']
         for pod in self._pods:
             try:
                 pod['owner'] = db_pods[pod['name']]['username']

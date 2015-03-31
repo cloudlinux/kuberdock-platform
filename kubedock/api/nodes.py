@@ -5,6 +5,7 @@ from ..models import Node
 from ..core import db
 from ..rbac import check_permission
 from ..validation import check_int_id, check_node_data, check_hostname
+from ..billing import Kube
 from . import APIError
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
@@ -19,7 +20,6 @@ def _node_is_active(x):
 
 @check_permission('get', 'nodes')
 def get_nodes_collection():
-    # TODO handle kube_type during auto-scan
     new_flag = False
     oldcur = Node.query.all()
     db_hosts = [node.hostname for node in oldcur]
@@ -27,6 +27,7 @@ def get_nodes_collection():
     for host in kub_hosts:
         if host not in db_hosts:
             new_flag = True
+            default_kube = Kube.query.get(0)
             try:
                 resolved_ip = socket.gethostbyname(host)
             except socket.error:
@@ -35,7 +36,7 @@ def get_nodes_collection():
                     "Check /etc/hosts file for correct Node records"
                     .format(host))
             # TODO add resources capacity etc from kub_hosts[host] if needed
-            m = Node(ip=resolved_ip, hostname=host)
+            m = Node(ip=resolved_ip, hostname=host, kube=default_kube)
             db.session.add(m)
     if new_flag:
         db.session.commit()
@@ -48,6 +49,7 @@ def get_nodes_collection():
             'id': node.id,
             'ip': node.ip,
             'hostname': node.hostname,
+            'kube_type': node.kube.id,
             'status': 'running' if node.hostname in kub_hosts and
                                     _node_is_active(kub_hosts[node.hostname])
                                 else 'troubles',
@@ -65,7 +67,6 @@ def get_list():
 @nodes.route('/<node_id>', methods=['GET'])
 @check_permission('get', 'nodes')
 def get_one_node(node_id):
-    # render here kube type
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)
     if m:
@@ -78,6 +79,7 @@ def get_one_node(node_id):
             'id': m.id,
             'ip': m.ip,
             'hostname': m.hostname,
+            'kube_type': m.kube.id,
             'status': 'running' if _node_is_active(res) else 'troubles',
             'annotations': m.annotations,
             'labels': m.labels,
@@ -95,10 +97,11 @@ def create_item():
     check_node_data(data)
     m = db.session.query(Node).filter_by(hostname=data['hostname']).first()
     if not m:
-        m = Node(ip=data['ip'], hostname=data['hostname'])
+        kube = Kube.query.get(data.get('kube_type', 0))
+        m = Node(ip=data['ip'], hostname=data['hostname'], kube=kube)
         db.session.add(m)
         db.session.commit()
-        r = tasks.add_new_node.delay(m.hostname, data.get('kube_type', 0))
+        r = tasks.add_new_node.delay(m.hostname, kube.id)
         # r.wait()                              # maybe result?
         data.update({'id': m.id})
         return jsonify({'status': 'OK', 'data': data})

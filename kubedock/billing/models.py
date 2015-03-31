@@ -26,4 +26,7 @@ class Kube(db.Model):
     disk_space = db.Column(db.Integer, default=0, nullable=False)
     total_traffic = db.Column(db.Integer, default=0, nullable=False)
     package = db.relationship('Package', backref='kube')
+    nodes = db.relationship('Node', backref='kube')
 
+    def __repr__(self):
+        return "<Kube(id='{0}', name='{1}')>".format(self.id, self.name)

@@ -7,6 +7,7 @@ class Node(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     ip = db.Column(db.String(40), unique=True)
     hostname = db.Column(db.String(255), unique=True)
+    kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
     cpu_cores = db.Column(db.Integer, nullable=False)
     ram = db.Column(db.BigInteger, nullable=False)
     disk = db.Column(db.BigInteger, nullable=False)  # all? free? visible to docker?
@@ -42,4 +43,5 @@ class Node(db.Model):
         self.disk = 10*1024*1024*1024
 
     def __repr__(self):
-        return "<Node(hostname='{0}', ip='{1}')>".format(self.hostname, self.ip)
+        return "<Node(hostname='{0}', ip='{1}', kube_type='{2} ({3})')>".format(
+            self.hostname, self.ip, self.kube.id, self.kube.name)

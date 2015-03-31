@@ -22,6 +22,14 @@ define(['marionette', 'utils'],
 
     SettingsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
+        Views.GeneralView = Marionette.CompositeView.extend({
+            template: '#general-settings-template'
+        });
+
+        Views.NotificationsView = Marionette.CompositeView.extend({
+            template: '#notifications-settings-template'
+        });
+
         Views.PermissionItemView = Marionette.ItemView.extend({
             template: '#permission-item-template',
             tagName: 'tr',
@@ -49,7 +57,7 @@ define(['marionette', 'utils'],
                         .find('tr').append('<th>');
                 $.each(roles, function(id, itm){
                     tr.append($('<th>').text(itm.rolename));
-                })
+                });
             },
             togglePerm: function(evt){
                 var $el = $(evt.target),
@@ -73,6 +81,28 @@ define(['marionette', 'utils'],
             template: '#settings-layout-template',
             regions: {
                 main: 'div#details_content'
+            },
+            ui: {
+                generalBtn: '#general-btn',
+                permissionsBtn: '#permissions-btn',
+                notificationsBtn: '#notifications-btn'
+            },
+            events: {
+                'click #general-btn': 'redirectToGeneral',
+                'click #permissions-btn': 'redirectToPermissions',
+                'click #notifications-btn': 'redirectToNotifications'
+            },
+            redirectToGeneral: function(evt){
+                App.router.navigate('/', {trigger: true});
+                return false;
+            },
+            redirectToPermissions: function(evt){
+                App.router.navigate('/permissions/', {trigger: true});
+                return false;
+            },
+            redirectToNotifications: function(evt){
+                App.router.navigate('/notifications/', {trigger: true});
+                return false;
             }
         });
 
@@ -97,6 +127,22 @@ define(['marionette', 'utils'],
                     layout_view.main.show(permissions_view);
                 });
                 App.contents.show(layout_view);
+            },
+            showNotifications: function(){
+                var layout_view = new App.Views.SettingsLayout();
+                var notifications_view = new App.Views.NotificationsView();
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(notifications_view);
+                });
+                App.contents.show(layout_view);
+            },
+            showGeneral: function(){
+                var layout_view = new App.Views.SettingsLayout();
+                var general_view = new App.Views.GeneralView();
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(general_view);
+                });
+                App.contents.show(layout_view);
             }
         });
 
@@ -105,8 +151,10 @@ define(['marionette', 'utils'],
             App.router = new Marionette.AppRouter({
                 controller: controller,
                 appRoutes: {
-                    '': 'showSettings',
-                    'permissions/': 'showPermissions'
+                    '': 'showGeneral',
+                    'permissions/': 'showPermissions',
+                    'notifications/': 'showNotifications',
+                    'general/': 'showGeneral'
                 }
             });
         });

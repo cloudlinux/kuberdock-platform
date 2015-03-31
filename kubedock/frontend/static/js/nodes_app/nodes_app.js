@@ -1,5 +1,23 @@
 "use strict";
 
+function modalDialog(options){
+    var modal = $('.modal');
+    if(options.title) modal.find('.modal-title').html(options.title);
+    if(options.body) modal.find('.modal-body').html(options.body);
+    if(options.large) modal.addClass('bs-example-modal-lg');
+    if(options.small) modal.addClass('bs-example-modal-sm');
+    if(options.show) modal.modal('show');
+    return modal;
+}
+
+function modelError(b, t){
+    modalDialog({
+        title: t ? t : 'Error',
+        body: typeof b == "string" ? b : b.responseJSON ? JSON.stringify(b.responseJSON): b.responseText,
+        show: true
+    });
+}
+
 var NodesApp = new Backbone.Marionette.Application({
     regions: {
         contents: '#contents'
@@ -212,7 +230,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.state.set('hostname', data.hostname);
                 }).error(function(resp) {
                     that.state.set('isFinished', false);
-                    alert(resp.responseJSON.status);
+                    modelError(resp);
+//                    alert(resp.responseJSON.status);
                 });
                 that.ui.spinner.spin(false);
             } else {
@@ -271,7 +290,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.trigger('show_console');
                 },
                 error: function(){
-                    alert('error while saving! Maybe some fields required.')
+                    modelError('error while saving! Maybe some fields required.');
+//                    alert('error while saving! Maybe some fields required.')
                 }
             });
         },
@@ -366,7 +386,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     App.router.navigate('/', {trigger: true})
                 },
                 error: function(){
-                    alert('error while updating! Maybe some fields required.')
+                    modelError('error while updating! Maybe some fields required.');
+//                    alert('error while updating! Maybe some fields required.')
                 }
             });
         },

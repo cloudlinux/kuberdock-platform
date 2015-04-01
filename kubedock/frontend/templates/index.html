@@ -34,32 +34,17 @@
 
         <!-- Page Info Panel template -->
         <script type="text/template" id="page-info-panel-template">
-            <!-- page actions -->
-            <div class="row">
-                <div class="col-md-1 col-md-offset-0 left-action">
-                    <button type="button" class="btn invert login-btn dropdown-toggle green disabled containers-actions-btn" data-toggle="dropdown" aria-expanded="false">
-                        Actions <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu bulk-action-menu" role="menu">
-	                    <li role="presentation"><a class="start-checked" role="menuitem" tabindex="-1" href="#">Start</a></li>
-	                    <li role="presentation"><a class="stop-checked" role="menuitem" tabindex="-1" href="#">Stop</a></li>
-	                    <li role="presentation"><a class="terminate-checked" role="menuitem" tabindex="-1" href="#">Delete</a>
-                    </ul>
-                </div>
-            </div>
-            <!-- end of page actions -->
-
-            <table class="table table-hover">
+            <table class="table" id="imagelist-table">
             <thead>
                 <tr>
-                    <th><input type="checkbox"></th>
-                    <th>#</th>
-                    <th>Container name</th>
-                    <th>Image name</th>
-                    <th>Status</th>
-                    <th>Kubes</th>
-                    <th>Deployed</th>
-                    <th>Control</th>
+                    <th data-column="0" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><input type="checkbox"></div></th>
+                    <th data-column="1" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><b class="caret"></b></div></th>
+                    <th data-column="2" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Image name<b class="caret"></b></div></th>
+                    <th data-column="3" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">IP<b class="caret"></b></div></th>
+                    <th data-column="4" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
+                    <th data-column="5" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube quantity<b class="caret"></b></div></th>
+                    <th data-column="6" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Deployed<b class="caret"></b></div></th>
+
                 </tr>
             </thead>
             <tbody></tbody>
@@ -67,6 +52,7 @@
 
             <% states = {
                 running: 'glyphicon glyphicon-play',
+                stopped: 'glyphicon glyphicon-stop',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
 	    {#
@@ -78,37 +64,25 @@
 
         <!-- Page Container item template -->
         <script type="text/template" id="page-container-item-template">
-            <% states = {
-                running: 'glyphicon glyphicon-play',
-                unknown: 'glyphicon glyphicon-question-sign',
-                termination: 'glyphicon glyphicon-off'
-            } %>
             <td><input type="checkbox" class="check-item"></td>
-
             <td><%- index %></td>
-            <td><a href="#poditem/<%- parentID %>/<%- name %>"><%- name %></a></td>
-            <td><span><%- image %></span></td>
             <td>
-                <span class="<%- state_repr %> <%- info.state.hasOwnProperty(state_repr) ? states[state_repr] : states['unknown'] %>"></span>
-                <span class="<%- state_repr %>"><%- state_repr %></span>
+            	<a href="#poditem/<%- parentID %>/<%- name %>"><%- image %></a>
+                <span class="terminate-btn">Delete</span>
             </td>
-            <td><span><%- kubes %></span></td>
+            <td><span>10.10.10.10</span></td>
             <td>
-                <span>
-                    <%- startedAt ? 'Started at: ' + startedAt : '' %>
-                </span>
+                <% if (state_repr == 'running' )  { %>
+                    <span><%- state_repr %></span>
+                    <span class="stop-btn">Stop</span>
+                <% } else { %>
+                    <span><%- state_repr %></span>
+                    <span class="start-btn">Start</span>
+                <% } %>
             </td>
-            <td class="text-right">
-                <div class="dropdown">
-                    <button class="btn invert login-btn dropdown-toggle green"
-                            type="button" id="dropdownMenu1" data-toggle="dropdown"
-                            aria-expanded="true">Actions</button>
-                    <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
-                        <li role="presentation"><a class="start-btn" role="menuitem" tabindex="-1" href="#">Start</a></li>
-                        <li role="presentation"><a class="stop-btn" role="menuitem" tabindex="-1" href="#">Stop</a></li>
-                        <li role="presentation"><a class="terminate-btn" role="menuitem" tabindex="-1" href="#">Delete</a></li>
-                    </ul>
-                </div>
+            <td><span><%- kubes ? kubes : 'unknown' %></span></td>
+            <td>
+                <span><%- startedAt ? startedAt : '' %></span>
             </td>
         </script>
 
@@ -150,8 +124,8 @@
                                 <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pod name<b class="caret"></b></div></th>
                                 <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Replicated<b class="caret"></b></div></th>
                                 <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
-                                <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Kube type<b class="caret"></b><br/>(kubes quantity)</div></th>
-                                <th data-column="7" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"></b>Deployed<b class="caret"></b><br/>date</div></th>
+                                <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube type<b class="caret"></b><br/>(kubes quantity)</div></th>
+                                <th data-column="7" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Deployed<b class="caret"></b><br/>date</div></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -168,12 +142,10 @@
                 running: 'glyphicon glyphicon-play',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
-
             <!-- table data row -->
             <td>
                 <input type="checkbox">
             </td>
-
             <td>#</td>
             <td>
                 <!-- <span class="badge">
@@ -182,7 +154,6 @@
                 <%- name %>
                 <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>
             </td>
-
             <td>
                 <span class=" glyphicon"></span>
                 <% if (cluster){ %>
@@ -191,14 +162,20 @@
                     none
                 <% } %>
             </td>
-           
             <td>
-                <span><%- status %></span>
-                <span class="start-btn" title="Start <%- name %> pod">Start</span>
-                <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
-                <!-- <a class="terminate-btn" href="#">Delete</a> -->
+            	<% if ( status = 'running') { %>
+            		<span><%- status %></span>
+                	<span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
+            	<% } else if ( status = 'stopped' ) { %>
+            		<span><%- status %></span>
+                	<span class="start-btn" title="Start <%- name %> pod">Start</span>
+               	<% } else if ( status = 'waiting' ) { %>
+            		<span><%- status %></span>
+                	<span class="start-btn" title="Start <%- name %> pod">Start</span>
+				<% } else { %>
+					<span><%- status %></span>
+				<% } %>
             </td>
-
             <td>some kube type(10)
                 <!-- <span class="glyphicon glyphicon-share <%- service ? 'service-on' : 'service-off' %>"></span>
                 <% if ( service && portalIP !== undefined) { %>
@@ -213,19 +190,34 @@
 
         <!-- Pods item Details LayoutView template -->
         <script type="text/template" id="layout-pod-item-template">
-
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            <div id="podlistPage">Pods</div>
+                        </li>
+                        <li class="active">
+                            pod name
+                        </li>
+                    </ul>
+                    <div class="control-group">
+                        <button id="add_pod">Add container</button>
+                        <button id="rename_pod">Rename pod</button>
+                        <div class="nav-search" id="nav-search">
+                            <form class="form-search">
+                                <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
+                                <i class="nav-search-icon"></i>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Page header -->
             <div class="container">
                 <div class="col-md-5">
                     <h1 id="masthead-title" class="text-left"></h1>
                 </div>
                 <div id="item-controls" class="col-md-5"></div>
-                <div class="col-md-2 text-left">
-                    <a href="/#pods" class="btn btn-default btn-lg back">
-                        <span class="glyphicon glyphicon-share-alt back-btn"></span>
-                        <span class="back-btn">Back to pods</span>
-                    </a>
-                </div>
             </div><!-- end of page header -->
 
             <div class="container">
@@ -671,20 +663,6 @@
                 </table>
                 <% } %>
 		#}
-		<table class="table">
-		    <thead><tr><th>Restart Policy</th></tr></thead>
-		    <tbody>
-			<tr>
-			    <td>
-				<select class="restart-policy">
-				    <option selected="selected" value="always">Always</option>
-				    <option value="never">Never</option>
-				    <option value="onFailure">On Failure</option>
-				</select>
-			    </td>
-			</tr>
-		    </tbody>
-		</table>
                 <% if (volumes.length !== 0){ %>
                 <table class="table">
                     <thead><tr><th>Volume</th><th>Path</th></tr></thead>

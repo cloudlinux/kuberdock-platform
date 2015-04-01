@@ -150,7 +150,7 @@ body{
 			.control-group{
 				.clearfix;
 				float: right;
-				#add_node, #nav-search, #add_user, #add_pod{
+				#add_node, #nav-search, #add_user, #add_pod, #rename_pod{
 					float: left;
 				}
 				/* delete after fix */
@@ -220,7 +220,7 @@ body{
 							background: url('../img/small-profile-ico.png') 0 0 no-repeat;
 						}
 					}
-					&#rename_node{
+					&#rename_node, &#rename_pod{
 						margin-right: 17px;
 						padding: 0 0 0 38px;
 						&:before{
@@ -258,6 +258,7 @@ body{
 				}
 				#nav-search{
 					position: relative; 
+					float: right;
 					#nav-search-input{
 						.border-radius(3px);
 						.box-sizing(border-box);

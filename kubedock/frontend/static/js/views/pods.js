@@ -53,13 +53,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             checkbox    : '.check-item',
             reditable   : '.reditable',
             start       : '.start-btn',
-            stop        : '.stop-btn'
+            stop        : '.stop-btn',
+            terminate   : '.terminate-btn',
         },
 
         events: {
             'click @ui.start'      : 'startItem',
             'click @ui.stop'       : 'stopItem',
-            'click .terminate-btn'  : 'terminateItem',
+            'click @ui.terminate'  : 'terminateItem',
         },
 
         onRender: function(){
@@ -76,9 +77,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.model.save();
                 }
             });
-
-            status == "running" ? this.ui.stop.css('display','inline-table') : this.ui.stop.hide();
-            status == "stopped" ? this.ui.start.css('display','inline-table') : this.ui.start.hide();
         },
 
         startItem: function(evt){
@@ -99,6 +97,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
+
         stopItem: function(evt){
             var that = this,
                 preloader = $('#page-preloader');
@@ -189,9 +188,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         className : 'container',
 
         events: {
-            'click .start-checked'                 : 'startItems',
-            'click .stop-checked'                  : 'stopItems',
-            'click .terminate-checked'             : 'terminateItems'
+            'click .stop-checked'      : 'stopItems',
+            'click .start-checked'     : 'startItems',
+            'click .terminate-checked' : 'terminateItems'
         },
         
         command: function(cmd){
@@ -246,12 +245,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 index: modelIndex + 1
             }
         },
+        ui: {
+            start : '.start-btn',
+            stop : '.stop-btn',
+        },
 
         events: {
             /*'change .check-item'    : 'checkItem',*/
-            'click .start-btn'      : 'startItem',
-            'click .stop-btn'       : 'stopItem',
-            'click .terminate-btn'  : 'terminateItem',
+            'click @ui.start' : 'startItem',
+            'click @ui.stop'  : 'stopItem',
         },
 
         command: function(evt, cmd){
@@ -289,11 +291,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         stopItem: function(evt){
             this.command(evt, 'stop');
         },
-
-        terminateItem: function(evt){
-            // TODO: terminate container
-        }
-
     });
 
     Views.ControlsPanel = Backbone.Marionette.ItemView.extend({
@@ -1038,12 +1035,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click .delete-item'      : 'deleteItem',
-            'click .cluster'          : 'toggleCluster',
-            'click .node'             : 'toggleNode',
-            'change .replicas'        : 'changeReplicas',
-            'change select.kube_type' : 'changeKubeType',
-            'change .restart-policy'  : 'changePolicy'
+            'click .delete-item' : 'deleteItem',
+            'click .cluster'     : 'toggleCluster',
+            'click .node'        : 'toggleNode',
+            'change .replicas'   : 'changeReplicas',
+            'change select.kube_type'   : 'changeKubeType'
         },
 
         triggers: {
@@ -1098,14 +1094,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.model.set('kube_type', parseInt(evt.target.value));
         },
 
-        changePolicy: function(evt){
-            evt.stopPropagation();
-            var policy = $(evt.target).val(),
-                struct = {};
-            struct[policy] = {};
-            this.model.set('restartPolicy', struct)
-        },
-        
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({

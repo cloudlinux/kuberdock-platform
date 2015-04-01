@@ -1,5 +1,5 @@
 /* pod-main */
-#podlist-table{
+#podlist-table, #imagelist-table{
 	thead{
 		background-color: transparent;
 		&.min-opacity{
@@ -38,6 +38,15 @@
 					.editPod{
 						background: url('../img/pencil-hover.png') 0 0 no-repeat;
 					}
+					.start-btn{
+						background: url('../img/start.png') 0 0 no-repeat;
+					}
+					.stop-btn{
+						background: url('../img/restart.png') 0 0 no-repeat;
+					}
+					.terminate-btn{
+						background: url('../img/recycling.png') 0 0 no-repeat;	
+					}
 				}
 			}
 			&:last-child{
@@ -66,8 +75,8 @@
 						}
 					}
 				}
-				.start-btn, .stop-btn, .editPod{
-					display: none;
+				.start-btn, .stop-btn, .editPod, .terminate-btn{
+					display: inline-table;
 					font-size: 0;
 					width: 20px;
 					height: 17px;
@@ -77,12 +86,6 @@
 					&:hover{
 						cursor: pointer;
 					}
-				}
-				.start-btn{
-					background: url('../img/start.png') 0 0 no-repeat;
-				}
-				.stop-btn{
-					background: url('../img/restart.png') 0 0 no-repeat;
 				}
 				.editPod{
 					display: inline-table;

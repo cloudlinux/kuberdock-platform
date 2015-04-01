@@ -6,6 +6,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEBUG = True
 FLASKY_ADMIN = os.environ.get('AC_FLASKY_ADMIN', 'igor.bliss@gmail.com')
 
+DB_ENGINE = 'postgresql+psycopg2' # more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects
 DB_USER = 'kuberdock'
 DB_PASSWORD = 'kuberdock2go'
 DB_NAME = 'kuberdock'
@@ -62,4 +63,4 @@ except ImportError:
 
 # Only after local settings
 DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
-SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + DB_CONNECT_STRING
+SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)

@@ -157,7 +157,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             masthead : '#masthead-title',
             controls : '#item-controls',
             info     : '#item-info',
-            aside    : '#layout-aside',
             contents : '#layout-contents'
         },
 
@@ -185,7 +184,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.InfoPanel = Backbone.Marionette.CompositeView.extend({
         template  : '#page-info-panel-template',
         tagName   : 'div',
-        className : 'container',
+        className : 'col-md-12',
 
         events: {
             'click .stop-checked'      : 'stopItems',

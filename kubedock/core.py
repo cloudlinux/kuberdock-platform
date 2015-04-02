@@ -68,17 +68,38 @@ class EvtStream(object):
                     yield data.encode('u8')
 
 
+#def ssh_connect(host, timeout=10):
+#    ssh = paramiko.SSHClient()
+#    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+#    error_message = None
+#    try:
+#        if DEBUG:
+#            ssh.connect(hostname=host, username='root',
+#                        password=NODE_SSH_AUTH, timeout=timeout)
+#        else:
+#            ssh.connect(hostname=host, username='root',
+#                        key_filename=NODE_SSH_AUTH, timeout=timeout)
+#    except ssh_exception.AuthenticationException as e:
+#        error_message =\
+#            '{0} Check hostname, your credentials, and try again'.format(e)
+#    except socket.timeout:
+#        error_message = 'Connection timeout. Check hostname and try again'
+#    except socket.error as e:
+#        error_message =\
+#            '{0} Check hostname, your credentials, and try again'.format(e)
+#    return ssh, error_message
+
+
 def ssh_connect(host, timeout=10):
     ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.set_missing_host_key_policy(
+        paramiko.AutoAddPolicy())
     error_message = None
     try:
-        if DEBUG:
-            ssh.connect(hostname=host, username='root',
-                        password=NODE_SSH_AUTH, timeout=timeout)
-        else:
-            ssh.connect(hostname=host, username='root',
-                        key_filename=NODE_SSH_AUTH, timeout=timeout)
+        try:
+            ssh.connect(host, username='root', timeout=timeout)
+        except (paramiko.AuthenticationException, paramiko.SSHException):
+            ssh.connect(host, username='root', password=NODE_SSH_AUTH, timeout=timeout)
     except ssh_exception.AuthenticationException as e:
         error_message =\
             '{0} Check hostname, your credentials, and try again'.format(e)

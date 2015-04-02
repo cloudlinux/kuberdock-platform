@@ -55,5 +55,6 @@ requirejs.config({
 });
 require(['jquery', 'settings_app/app', 'notify', 'jquery-ui'], function(jQuery, SettingsApp){
     SettingsApp.Data.permissions = new SettingsApp.Data.PermissionsCollection(permissions);
+    SettingsApp.Data.notifications = new SettingsApp.Data.NotificationsCollection(notifications);
     SettingsApp.start();
 });

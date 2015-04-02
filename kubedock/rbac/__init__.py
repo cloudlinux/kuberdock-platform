@@ -1,4 +1,5 @@
-from flask import g
+from functools import wraps
+from flask import g, current_app
 from flask.ext.login import current_user
 from rbac.acl import Registry
 from rbac.context import IdentityContext
@@ -9,7 +10,27 @@ from .models import Resource, Role
 
 acl = Registry()
 rbac_context = IdentityContext(acl)
-check_permission = rbac_context.check_permission
+# check_permission = rbac_context.check_permission
+
+
+class check_permission(object):
+    def __init__(self, operation, resource, **exception_kwargs):
+        self.operation = operation
+        self.resource = resource
+        self.exception_kwargs = exception_kwargs
+
+    def __call__(self, m):
+        @wraps(m)
+        def _call_(*args, **kwargs):
+            if self.resource not in acl._resources:
+                current_app.logger.error(
+                    "RBAC failed: undefined resource '{0}'".format(
+                        self.resource))
+                return m(*args, **kwargs)
+            return rbac_context.check_permission(
+                self.operation, self.resource, **self.exception_kwargs)(m)(
+                    *args, **kwargs)
+        return _call_
 
 
 def init_permissions():

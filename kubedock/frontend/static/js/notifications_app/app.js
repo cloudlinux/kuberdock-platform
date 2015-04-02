@@ -73,11 +73,11 @@ define(['marionette', 'paginator'],
             template: '#template-create-template',
 
             ui: {
-                'event': 'select#id_event',
-                'text_plain': 'textarea#id_text_plain',
-                'text_html': 'textarea#id_text_html',
-                'as_html': 'input#id_as_html',
-                'event_keys': '#event_keys'
+                'event'      : 'select#id_event',
+                'text_plain' : 'textarea#id_text_plain',
+                'text_html'  : 'textarea#id_text_html',
+                'as_html'    : 'input#id_as_html',
+                'event_keys' : '#event_keys'
             },
 
             events: {

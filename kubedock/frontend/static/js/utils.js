@@ -55,7 +55,7 @@ define(function () {
                 var err = data;
                 if(typeof data !== 'string') err = JSON.stringify(data);
                 $.notify(err, {
-                    autoHideDelay: 5000,
+                    autoHideDelay: 10000,
                     globalPosition: 'top center',
                     className: response.status == 'error' ? 'danger' : 'warning'
                 });
@@ -65,6 +65,10 @@ define(function () {
     };
 
     this.BaseModel = Backbone.Model.extend({
+        parse: this.unwrapper
+    });
+
+    this.BaseCollection = Backbone.Collection.extend({
         parse: this.unwrapper
     });
 
@@ -94,8 +98,14 @@ define(function () {
                 }
             }
         }
-        console.log(modal)
         return modal;
+    };
+    this.modelError = function(b, t){
+        this.modalDialog({
+            title: t ? t : 'Error',
+            body: typeof b == "string" ? b : b.responseJSON ? JSON.stringify(b.responseJSON): b.responseText,
+            show: true
+        });
     };
 
     this.dateYYYYMMDD = function(date, sep){

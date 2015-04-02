@@ -13,12 +13,22 @@ define(['marionette', 'utils'],
             urlRoot: '/api/settings/permissions'
         });
 
-        Data.PermissionsCollection = Backbone.Collection.extend({
+        Data.PermissionsCollection = utils.BaseCollection.extend({
             url: '/api/settings/permissions',
             model: Data.PermissionModel
         });
 
+        Data.NotificationModel = utils.BaseModel.extend({
+            urlRoot: '/api/settings/notifications'
+        });
+
+        Data.NotificationsCollection = utils.BaseCollection.extend({
+            url: '/api/settings/notifications',
+            model: Data.NotificationModel
+        });
+
     });
+
 
     SettingsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
@@ -26,8 +36,104 @@ define(['marionette', 'utils'],
             template: '#general-settings-template'
         });
 
+        Views.NotificationCreateView = Backbone.Marionette.ItemView.extend({
+            template: '#notification-create-template',
+
+            ui: {
+                'label'      : 'label[for="id_event"]',
+                'event'      : 'select#id_event',
+                'text_plain' : 'textarea#id_text_plain',
+                'text_html'  : 'textarea#id_text_html',
+                'as_html'    : 'input#id_as_html',
+                'event_keys' : '#event_keys'
+            },
+
+            events: {
+                'click button#template-add-btn': 'onSave',
+                'change select#id_event': 'onSelectEvent'
+            },
+
+            onRender: function() {
+                var curEventKeys = eventsKeysList[this.ui.event.val()];
+                this.ui.event_keys.html(curEventKeys.join('<br/>'));
+                this.ui.event.show();
+                this.ui.label.text("Event");
+            },
+
+            onSave: function(){
+                // temp validation
+                App.Data.templates.create({
+                    'event': this.ui.event.val(),
+                    'text_plain': this.ui.text_plain.val(),
+                    'text_html': this.ui.text_html.val(),
+                    'as_html': this.ui.as_html.prop('checked')
+                }, {
+                    wait: true,
+                    success: function(){
+                        App.router.navigate('/notifications', {trigger: true})
+                    }
+                });
+            },
+
+            onSelectEvent: function(){
+                var curEventKeys = eventsKeysList[this.ui.event.val()];
+                this.ui.event_keys.html(curEventKeys.join('<br/>'));
+            }
+        });
+
+        Views.NotificationEditView = Views.NotificationCreateView.extend({
+
+            onRender: function(){
+                var curEventKeys = eventsKeysList[this.ui.event.val()];
+                this.ui.event_keys.html(curEventKeys.join('<br/>'));
+                this.ui.event.hide();
+                this.ui.label.text("Event: " + this.model.get('event').name);
+                this.ui.text_plain.val(this.model.get('text_plain'));
+                this.ui.text_html.val(this.model.get('text_html'));
+                this.ui.as_html.prop('checked', this.model.get('as_html'));
+            },
+
+            onSave: function(){
+                // temp validation
+                var data = {
+                    'event': this.ui.event.val(),
+                    'text_plain': this.ui.text_plain.text(),
+                    'text_html': this.ui.text_html.text(),
+                    'as_html': this.ui.as_html.prop('checked')
+                };
+
+                this.model.set(data);
+
+                this.model.save(undefined, {
+                    wait: true,
+                    success: function(){
+                        App.router.navigate('/notifications', {trigger: true})
+                    }
+                });
+            }
+
+        });
+
+        Views.NotificationItemView = Marionette.ItemView.extend({
+            template: '#notification-item-template',
+
+            events: {
+                'click span': 'editTemplate'
+            },
+
+            onRender: function(){
+            },
+
+            editTemplate: function(){
+                App.router.navigate('/notifications/edit/' + this.model.id + '/',
+                                    {trigger: true});
+            }
+        });
+
         Views.NotificationsView = Marionette.CompositeView.extend({
-            template: '#notifications-settings-template'
+            template: '#notifications-settings-template',
+            childViewContainer: '#notification-templates',
+            childView: Views.NotificationItemView
         });
 
         Views.PermissionItemView = Marionette.ItemView.extend({
@@ -48,9 +154,11 @@ define(['marionette', 'utils'],
                 permTable: '#permissions-table',
                 permToggle: '.perm-toggle'
             },
+
             events: {
                 'change input.perm-toggle': 'togglePerm'
             },
+
             onRender: function(){
                 var that = this,
                     tr = this.ui.permTable.find('thead').append('<tr>')
@@ -59,6 +167,7 @@ define(['marionette', 'utils'],
                     tr.append($('<th>').text(itm.rolename));
                 });
             },
+
             togglePerm: function(evt){
                 var $el = $(evt.target),
                     pid = $el.data('pid'),
@@ -69,11 +178,13 @@ define(['marionette', 'utils'],
                     type: 'PUT',
                     data: {'allow': checked},
                     success: function(rs){
-                        console.log(rs)
-                        $.notify('Permission changed successfully')
+                        $.notify('Permission changed successfully', {
+                            autoHideDelay: 10000,
+                            globalPosition: 'top right',
+                            className: 'success'
+                        });
                     }
                 });
-                console.log(pid)
             }
         });
 
@@ -108,7 +219,8 @@ define(['marionette', 'utils'],
 
     });
 
-    SettingsApp.module('SettingsCRUD', function(SettingsCRUD, App, Backbone, Marionette, $, _){
+    SettingsApp.module('SettingsCRUD', function(
+        SettingsCRUD, App, Backbone, Marionette, $, _){
 
         SettingsCRUD.Controller = Marionette.Controller.extend({
             showSettings: function(){
@@ -118,6 +230,7 @@ define(['marionette', 'utils'],
                 });
                 App.contents.show(layout_view);
             },
+
             showPermissions: function(){
                 var layout_view = new App.Views.SettingsLayout();
                 var permissions_view = new App.Views.PermissionsListView({
@@ -128,14 +241,38 @@ define(['marionette', 'utils'],
                 });
                 App.contents.show(layout_view);
             },
+
             showNotifications: function(){
                 var layout_view = new App.Views.SettingsLayout();
-                var notifications_view = new App.Views.NotificationsView();
+                var notifications_view = new App.Views.NotificationsView({
+                    collection: SettingsApp.Data.notifications
+                });
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show(notifications_view);
                 });
                 App.contents.show(layout_view);
             },
+
+            addNotifications: function(){
+                var layout_view = new App.Views.SettingsLayout();
+                var notifications_create_view = new App.Views.NotificationCreateView();
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(notifications_create_view);
+                });
+                App.contents.show(layout_view);
+            },
+
+            editNotifications: function(nid){
+                var layout_view = new App.Views.SettingsLayout();
+                var notifications_edit_view = new App.Views.NotificationEditView({
+                    model: SettingsApp.Data.notifications.get(parseInt(nid))
+                });
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(notifications_edit_view);
+                });
+                App.contents.show(layout_view);
+            },
+
             showGeneral: function(){
                 var layout_view = new App.Views.SettingsLayout();
                 var general_view = new App.Views.GeneralView();
@@ -154,6 +291,8 @@ define(['marionette', 'utils'],
                     '': 'showGeneral',
                     'permissions/': 'showPermissions',
                     'notifications/': 'showNotifications',
+                    'notifications/add/': 'addNotifications',
+                    'notifications/edit/:id/': 'editNotifications',
                     'general/': 'showGeneral'
                 }
             });

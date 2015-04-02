@@ -4,7 +4,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 7.git%{shortcommit}%{?dist}.cloudlinux
+Release: 11.git%{shortcommit}%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -77,6 +77,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/nginx/ssl/
 cp -r * %{buildroot}/var/opt/kuberdock
 %{__install} -D -m 0644 conf/kuberdock.ini %{buildroot}%{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
+%{__install} -D -m 0644 conf/kuberdock.conf %{buildroot}%{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 
 %clean
@@ -119,3 +120,4 @@ fi
 %dir %{_sysconfdir}/nginx/ssl
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %config %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
+%attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf

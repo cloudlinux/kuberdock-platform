@@ -189,10 +189,10 @@ def remove_node_by_host(host):
 
 
 def compute_capacity(cpu_count, cpu_mhz, mem_total):
-    CPU_SCALE_FACTOR = 0.2
+    CPU_SCALE_FACTOR = 1.0
     MEM_PART_FACTOR = 1.0
     return {
-        'cpu': int(round(cpu_count * cpu_mhz * CPU_SCALE_FACTOR)),
+        # 'cpu': int(round(cpu_count * cpu_mhz * CPU_SCALE_FACTOR)),
         'memory': int(round(mem_total * MEM_PART_FACTOR))
     }
 

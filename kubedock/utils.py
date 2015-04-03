@@ -7,6 +7,7 @@ from functools import wraps
 
 # from .users import User
 from .settings import KUBE_MASTER_URL
+from .users import User
 
 
 def login_required_or_basic(func):
@@ -19,12 +20,12 @@ def login_required_or_basic(func):
                 username = request.authorization.get('username', None)
                 passwd = request.authorization.get('password', None)
                 if username is not None and passwd is not None:
-                    User = get_model('users')
                     user = User.query.filter_by(username=username).first()
                     if user is not None and user.verify_password(passwd):
                         g.user = user
                         return func(*args, **kwargs)
             raise APIError('Not Authorized', status_code=401)
+            #return current_app.login_manager.unauthorized()
         return func(*args, **kwargs)
     return decorated_view
 
@@ -58,18 +59,6 @@ def get_api_url(*args, **kwargs):
     return '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
 
 
-def get_user(user_id=None):
-    if user_id is not None:
-        model = get_model('users')
-        user = SQLAlchemy().session.query(model).get(user_id)
-    else:
-        try:
-            user = current_user
-        except AttributeError:
-            user = g.user
-    return user
-
-
 # separate function because set_roles_loader decorator don't return function. Lib bug.
 def get_user_role():
     print current_user.role
@@ -80,10 +69,6 @@ def get_user_role():
             return g.user.role.name
         except AttributeError:
             return 'AnonymousUser'
-
-
-def get_model(name):
-    return current_app.extensions['models'].get(name)
 
 
 class APIError(Exception):

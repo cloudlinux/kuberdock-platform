@@ -1,7 +1,6 @@
 import datetime
 from flask import render_template
 from flask import jsonify
-from sqlalchemy.ext.automap import automap_base
 from rbac.context import PermissionDenied
 
 from .. import factory
@@ -48,9 +47,6 @@ def create_app(settings_override=None):
     app.context_processor(pages_helpers)
 
     with app.app_context():
-        Base = automap_base()
-        Base.prepare(db.engine, reflect=True)
-        app.extensions['models'] = Base.classes
         init_permissions()
 
     return app

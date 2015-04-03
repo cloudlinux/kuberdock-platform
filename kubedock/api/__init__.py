@@ -50,11 +50,6 @@ def create_app(settings_override=None):
     app.errorhandler(PermissionDenied)(on_permission_denied)
     app.errorhandler(APIError)(on_app_error)
 
-    with app.app_context():
-        Base = automap_base()
-        Base.prepare(db.engine, reflect=True)
-        app.extensions['models'] = Base.classes
-
     return app
 
 

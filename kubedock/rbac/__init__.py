@@ -4,7 +4,6 @@ from flask.ext.login import current_user
 from rbac.acl import Registry
 from rbac.context import IdentityContext
 
-from ..utils import get_model
 from .models import Resource, Role
 
 
@@ -34,8 +33,6 @@ class check_permission(object):
 
 
 def init_permissions():
-    if get_model('rbac_resource') is None or get_model('rbac_role') is None:
-        return
     resources = {}
     for res in Resource.all():
         acl.add_resource(res.name)

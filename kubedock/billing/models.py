@@ -30,3 +30,6 @@ class Kube(db.Model):
 
     def __repr__(self):
         return "<Kube(id='{0}', name='{1}')>".format(self.id, self.name)
+    
+    def to_dict(self):
+        return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])

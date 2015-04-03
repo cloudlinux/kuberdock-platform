@@ -475,6 +475,26 @@ body{
 		padding: 0;
 	}
 
+	label.custom{
+		margin: 0;
+		padding: 0;
+		span{
+			width: 12px;
+			height: 12px;
+			display: inline-block;
+			border: 1px solid #c0c6cb;
+		}
+		input[type="checkbox"]{
+			display: none;
+			&:checked{
+				+span{
+					background-color: #466eb1;
+				}
+			}
+		}
+	}
+
+
 	@import "pods.less";
 	@import "nodes.less";
 	@import "users.less";

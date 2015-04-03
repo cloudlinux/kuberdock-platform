@@ -37,7 +37,7 @@
             <table class="table" id="imagelist-table">
             <thead>
                 <tr>
-                    <th data-column="0" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><input type="checkbox"></div></th>
+                    <th data-column="0" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><label class="custom"><input type="checkbox"><span></span></label></div></th>
                     <th data-column="1" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><b class="caret"></b></div></th>
                     <th data-column="2" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Image name<b class="caret"></b></div></th>
                     <th data-column="3" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">IP<b class="caret"></b></div></th>
@@ -64,7 +64,7 @@
 
         <!-- Page Container item template -->
         <script type="text/template" id="page-container-item-template">
-            <td><input type="checkbox" class="check-item"></td>
+            <td><label class="custom"><input type="checkbox"><span></span></label></td>
             <td><%- index %></td>
             <td>
             	<a href="#poditem/<%- parentID %>/<%- name %>"><%- image %></a>
@@ -119,7 +119,7 @@
                     <table id="podlist-table" class="table tablesorter tablesorter-default">
                         <thead>
                             <tr class="tablesorter-headerRow">
-                                <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><input type="checkbox"></div></th>
+                                <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><label class="custom"><input type="checkbox"><span></span></label></div></th>
                                 <th data-column="1" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><b class="caret"></b></div></th>
                                 <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pod name<b class="caret"></b></div></th>
                                 <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Replicated<b class="caret"></b></div></th>
@@ -144,7 +144,7 @@
             } %>
             <!-- table data row -->
             <td>
-                <input type="checkbox">
+                <label class="custom"><input type="checkbox"><span></span></label>
             </td>
             <td>#</td>
             <td>

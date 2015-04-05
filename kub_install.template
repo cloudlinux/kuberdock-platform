@@ -215,5 +215,10 @@ EOF
 echo "Starting services..."
 systemctl enable kubelet; systemctl restart kubelet
 systemctl enable kube-proxy; systemctl restart kube-proxy
+
+CADVISOR_CONF=/etc/sysconfig/cadvisor
+sed -i "/^CADVISOR_STORAGE_DRIVER/ {s/\"\"/\"influxdb\"/}" $CADVISOR_CONF
+sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/{{ master_ip }}/}" $CADVISOR_CONF
 systemctl enable cadvisor; systemctl restart cadvisor
+
 exit 0

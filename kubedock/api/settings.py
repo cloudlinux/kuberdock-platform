@@ -2,7 +2,7 @@ import json
 from flask import Blueprint, request, jsonify
 
 from ..core import db
-from ..rbac import check_permission, init_permissions
+from ..rbac import check_permission, acl
 from ..rbac.models import Role, Resource, Permission
 from ..utils import login_required_or_basic, APIError
 from ..notifications.events import EVENTS, NotificationEvent
@@ -45,7 +45,7 @@ def permissions(pid):
         perm.set_allow()
     else:
         perm.set_deny()
-    init_permissions()
+    acl.init_permissions()
     return jsonify({'status': 'OK'})
 
 

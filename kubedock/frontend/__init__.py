@@ -5,9 +5,8 @@ from rbac.context import PermissionDenied
 
 from .. import factory
 from .. import sessions
-from ..rbac import init_permissions, get_user_role
+from ..rbac import acl, get_user_role
 from ..utils import APIError
-from ..core import db
 from . import assets
 
 
@@ -47,7 +46,7 @@ def create_app(settings_override=None):
     app.context_processor(pages_helpers)
 
     with app.app_context():
-        init_permissions()
+        acl.init_permissions()
 
     return app
 

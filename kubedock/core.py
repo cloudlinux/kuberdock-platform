@@ -8,8 +8,11 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.influxdb import InfluxDB
 from flask.ext.login import LoginManager
 from flask import current_app
+from werkzeug.contrib.cache import RedisCache
 
-from .settings import DEBUG, NODE_SSH_AUTH
+
+from .settings import DEBUG, NODE_SSH_AUTH, NODE_SSH_AUTH, REDIS_HOST, \
+    REDIS_PORT
 
 
 login_manager = LoginManager()
@@ -18,6 +21,7 @@ login_manager.login_view = 'auth.login'
 
 db = SQLAlchemy()
 influx_db = InfluxDB()
+cache = RedisCache(host=REDIS_HOST, port=REDIS_PORT)
 
 
 class AppError(Exception):

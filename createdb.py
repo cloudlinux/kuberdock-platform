@@ -2,11 +2,10 @@ from kubedock.frontend import create_app
 from kubedock.core import db
 from kubedock.models import User
 from kubedock.billing.models import Package, Kube
-from kubedock.rbac import gen_roles
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
-
 from kubedock.static_pages.fixtures import generate_menu
+
 
 if __name__ == '__main__':
     app = create_app()

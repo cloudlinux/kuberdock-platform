@@ -1,10 +1,53 @@
 from functools import wraps
 from flask import g, current_app
 from flask.ext.login import current_user
-from rbac.acl import Registry
+from rbac.acl import Registry as RegistryOrigin
 from rbac.context import IdentityContext
 
 from .models import Resource, Role
+from ..core import cache
+
+
+class Registry(RegistryOrigin):
+    @property
+    def _get_roles(self):
+        return cache.get('roles') or {}
+
+    @property
+    def _get_resources(self):
+        return cache.get('resources') or {}
+
+    @property
+    def _get_allowed(self):
+        return cache.get('allowed') or {}
+
+    @property
+    def _get_denied(self):
+        return cache.get('denied') or {}
+
+    def _set_registry(self, key, value):
+        cache.set(key, value)
+        setattr(self, '_{0}'.format(key), getattr(self, '_get_{0}'.format(key)))
+
+    def init_permissions(self):
+        resources = {}
+        for res in Resource.all():
+            resources[res.name] = set()
+        roles = {}
+        allowed = {}
+        denied = {}
+        for r in Role.all():
+            roles[r.rolename] = set()
+            for perm, res, allow in r.perms():
+                roles[r.rolename, perm, res] = None
+                if allow:
+                    allowed[r.rolename, perm, res] = None
+                else:
+                    denied[r.rolename, perm, res] = None
+        self._set_registry('roles', roles)
+        self._set_registry('resources', resources)
+        self._set_registry('allowed', allowed)
+        self._set_registry('denied', denied)
 
 
 acl = Registry()
@@ -30,20 +73,6 @@ class check_permission(object):
                 self.operation, self.resource, **self.exception_kwargs)(m)(
                     *args, **kwargs)
         return _call_
-
-
-def init_permissions():
-    resources = {}
-    for res in Resource.all():
-        acl.add_resource(res.name)
-        resources[res.id] = res
-    for r in Role.all():
-        role = RoleWrapper(r.rolename)
-        for perm, res, allow in r.perms():
-            if allow:
-                role.allow(perm, res)
-            else:
-                role.deny(perm, res)
 
 
 @rbac_context.set_roles_loader
@@ -79,13 +108,3 @@ class RoleWrapper(object):
         acl.deny(self.rolename, action, resource)
         if (self.rolename, action, resource) in acl._allowed:
             del acl._allowed[self.rolename, action, resource]
-
-
-import rbac_rules   # load after acl end RoleWrapper definition
-
-
-def gen_roles():    # only after load rbac_rules
-    for role in acl._roles:
-        if role == 'AnonymousUser':
-            continue
-        yield role

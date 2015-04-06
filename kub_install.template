@@ -66,7 +66,7 @@ sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|http://{{ master_ip }}:7080|}" $
 sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://{{ master_ip }}:6443|}" $KUBERNETES_CONF_DIR/kubelet
-sed -i '/^KUBELET_ARGS/ {s|""|"--config=/etc/kubernetes/manifests --auth_path=/var/lib/kubelet/kubernetes_auth --cadvisor_port=0"|}' $KUBERNETES_CONF_DIR/kubelet
+sed -i '/^KUBELET_ARGS/ {s|""|"--config=/etc/kubernetes/manifests --auth_path=/var/lib/kubelet/kubernetes_auth --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock"|}' $KUBERNETES_CONF_DIR/kubelet
 
 
 

@@ -343,13 +343,86 @@ for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl rest
 
 
 
-#9. Starting web-interface
+#16. Starting web-interface
 echo "Starting kuberdock web-interface..."
 systemctl enable emperor.uwsgi
 systemctl restart emperor.uwsgi
 
 systemctl enable nginx
 systemctl restart nginx
+
+
+
+#17. Setup cluster DNS
+echo "Setupping cluster DNS"
+
+cat << EOF | kubectl create -f -
+kind: ReplicationController
+apiVersion: v1beta1
+id: kuberdock-dns
+namespace: default
+labels:
+  k8s-app: kuberdock-dns
+  kubernetes.io/cluster-service: "true"
+desiredState:
+  replicas: 1
+  replicaSelector:
+    k8s-app: kuberdock-dns
+  podTemplate:
+    labels:
+      name: kuberdock-dns
+      k8s-app: kuberdock-dns
+      kubernetes.io/cluster-service: "true"
+    desiredState:
+      manifest:
+        version: v1beta2
+        id: kuberdock-dns
+        dnsPolicy: "Default"  # Don't use cluster DNS.
+        containers:
+          - name: etcd
+            image: quay.io/coreos/etcd:v2.0.3
+            command: [
+                    # entrypoint = "/etcd",
+                    "-listen-client-urls=http://0.0.0.0:2379,http://0.0.0.0:4001",
+                    "-initial-cluster-token=skydns-etcd",
+                    "-advertise-client-urls=http://127.0.0.1:4001",
+            ]
+          - name: kube2sky
+            image: gcr.io/google-containers/kube2sky:1.1
+            command: [
+                    # entrypoint = "/kube2sky",
+                    "-domain=kuberdock",
+            ]
+          - name: skydns
+            image: gcr.io/google-containers/skydns:2015-03-11-001
+            command: [
+                    # entrypoint = "/skydns",
+                    "-machines=http://localhost:4001",
+                    "-addr=0.0.0.0:53",
+                    "-domain=kuberdock.",
+            ]
+            ports:
+              - name: dns
+                containerPort: 53
+                protocol: UDP
+EOF
+
+cat << EOF | kubectl create -f -
+kind: Service
+apiVersion: v1beta1
+id: kuberdock-dns
+namespace: default
+protocol: UDP
+port: 53
+portalIP: 10.254.0.10
+containerPort: 53
+labels:
+  k8s-app: kuberdock-dns
+  name: kuberdock-dns
+  kubernetes.io/cluster-service: "true"
+selector:
+  k8s-app: kuberdock-dns
+EOF
 
 
 

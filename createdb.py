@@ -1,4 +1,4 @@
-from kubedock.frontend import create_app
+from kubedock.api import create_app
 from kubedock.core import db
 from kubedock.models import User
 from kubedock.billing.models import Package, Kube

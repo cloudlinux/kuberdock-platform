@@ -50,10 +50,26 @@ CELERYBEAT_SCHEDULE = {
 
 ONLINE_LAST_MINUTES = 5
 
-# TODO We need to allow change it during cluster setup
 NODE_INET_IFACE = 'enp0s5'
-
 LOCK_FILE_NAME = '/var/tmp/kuberdock.watch.pid'
+
+
+# Import hoster settings in update case
+if os.path.exists('/etc/sysconfig/kuberdock/kuberdock.conf'):
+    import ConfigParser
+    config = ConfigParser.RawConfigParser(defaults=globals())
+    try:
+        config.read('/etc/sysconfig/kuberdock/kuberdock.conf')
+        DB_USER = config.get('main', 'DB_USER')
+        DB_PASSWORD = config.get('main', 'DB_PASSWORD')
+        DB_NAME = config.get('main', 'DB_NAME')
+        MASTER_IP = config.get('main', 'MASTER_IP')
+        NODE_INET_IFACE = config.get('main', 'NODE_INET_IFACE')
+        # TODO remove in future:
+        NODE_SSH_AUTH = config.get('main', 'NODE_SSH_AUTH')
+    except ConfigParser.Error as e:
+        print 'ConfigParser Error: ', e
+
 
 # Import local settings
 try:

@@ -1,7 +1,59 @@
 #!/bin/bash
 
 KUBERDOCK_DIR=/var/opt/kuberdock
-KUBE_CONF_DIR=/etc/kubernetes
+KUBERNETES_CONF_DIR=/etc/kubernetes
+KUBERDOCK_MAIN_CONFIG=/etc/sysconfig/kuberdock/kuberdock.conf
+
+
+yesno()
+# $1 = Message prompt
+# Returns ans=0 for no, ans=1 for yes
+{
+   if [[ $dry_run -eq 1 ]]
+   then
+      echo "Would be asked here if you wanted to"
+      echo "$1 (y/n - y is assumed)"
+      ans=1
+   else
+      ans=2
+   fi
+
+   while [ $ans -eq 2 ]
+   do
+      echo -n "$1 (y/n)? " ; read reply
+      case "$reply" in
+      Y*|y*) ans=1 ;;
+      N*|n*) ans=0 ;;
+          *) echo "Please answer y or n" ;;
+      esac
+   done
+}
+
+
+
+# ====== Set initial vars, WILL WRITE THEM AFTER INSTALL kuberdock.rpm =========
+
+MASTER_IP=$(hostname -i)
+yesno "Is your MASTER IP $MASTER_IP"
+
+if [ ! $ans -eq 1 ]; then
+    read -p "Enter MASTER IP: " MASTER_IP
+    echo "Will use $MASTER_IP"
+fi
+
+NODE_INET_IFACE="enp0s5"
+yesno "Is your primary network interface(on nodes and master) $NODE_INET_IFACE"
+
+if [ ! $ans -eq 1 ]; then
+    read -p "Enter interface name: " NODE_INET_IFACE
+    echo "Will use $NODE_INET_IFACE"
+fi
+
+NODE_SSH_AUTH=""
+read -p "Enter root password on nodes: " NODE_SSH_AUTH
+echo "Will use $NODE_SSH_AUTH"
+
+# ==============================================================================
 
 
 
@@ -50,6 +102,12 @@ yum -y install kuberdock.rpm
 mkdir /var/run/kubernetes
 chown kube:kube /var/run/kubernetes
 
+#2.2 Write settings that hoster enter above (only after kuberdock.rpm)
+echo "MASTER_IP=$MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
+echo "NODE_INET_IFACE=$NODE_INET_IFACE" >> $KUBERDOCK_MAIN_CONFIG
+echo "NODE_SSH_AUTH=$NODE_SSH_AUTH" >> $KUBERDOCK_MAIN_CONFIG
+
+
 # Start as early as possible, because Flannel need it
 echo "Starting etcd..."
 systemctl enable etcd
@@ -62,8 +120,8 @@ systemctl restart influxdb
 
 
 #3. Configure kubernetes
-sed -i "/^KUBE_API_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBE_CONF_DIR/apiserver
-sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBE_CONF_DIR/controller-manager
+sed -i "/^KUBE_API_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBERNETES_CONF_DIR/controller-manager
 
 
 
@@ -92,7 +150,6 @@ etcdctl get /kuberdock/network/config
 
 
 #6. Setuping Flannel on master ==========================================
-# TODO automate inet_iface and etcd ip
 cat > /etc/sysconfig/flanneld << EOF
 # Flanneld configuration options
 
@@ -104,7 +161,7 @@ FLANNEL_ETCD="http://127.0.0.1:4001"
 FLANNEL_ETCD_KEY="/kuberdock/network/"
 
 # Any additional options that you want to pass
-# FLANNEL_OPTIONS="--iface={{ inet_iface }}"
+FLANNEL_OPTIONS="--iface=$NODE_INET_IFACE"
 EOF
 
 echo "Starting flannel..."

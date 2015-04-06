@@ -192,7 +192,7 @@ def compute_capacity(cpu_count, cpu_mhz, mem_total):
     CPU_SCALE_FACTOR = 1.0
     MEM_PART_FACTOR = 1.0
     return {
-        # 'cpu': int(round(cpu_count * cpu_mhz * CPU_SCALE_FACTOR)),
+        'cpu': int(round(cpu_count * cpu_mhz * CPU_SCALE_FACTOR)),
         'memory': int(round(mem_total * MEM_PART_FACTOR))
     }
 
@@ -214,6 +214,10 @@ def add_new_node(host, kube_type):
 
     sftp = ssh.open_sftp()
     sftp.put('kub_install.sh', '/kub_install.sh')
+    sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
+    sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
+    sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
+    sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
     sftp.close()
     i, o, e = ssh.exec_command('bash /kub_install.sh')
     s_time = time.time()
@@ -263,6 +267,7 @@ def add_new_node(host, kube_type):
         res = requests.post(get_api_url('nodes'),
                             json={'id': host,
                                   'apiVersion': KUBE_API_VERSION,
+                                  'externalID': host,
                                   'resources': {
                                       'capacity': cap
                                   },
@@ -271,11 +276,15 @@ def add_new_node(host, kube_type):
                                       'kuberdock-kube-type': 'type_' +
                                                              str(kube_type)
                                   }
-                            }).json()
-        send_event('install_logs', 'Adding Node completed successful.')
-        send_event('install_logs', '===================================')
+                            })
+        if res.status_code != requests.codes.ok:
+            send_event('install_logs', 'ERROR adding node.')
+            send_event('install_logs', res.text)
+        else:
+            send_event('install_logs', 'Adding Node completed successful.')
+            send_event('install_logs', '===================================')
     ssh.close()
-    return res
+    return res.json()
 
 
 def parse_pods_statuses(data):

@@ -1,6 +1,8 @@
 #!/bin/bash
 # install kubernetes components on Node host
 
+KUBERNETES_CONF_DIR=/etc/kubernetes
+
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 
@@ -44,73 +46,36 @@ rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLin
 # 2. install components
 echo "Installing kubernetes..."
 #yum -y install kubernetes
-yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.12.0-0.1.gitecca426.el7.centos.x86_64.rpm
-yum -y install flannel
-yum -y install cadvisor
+yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.14.1-0.1.el7.centos.x86_64.rpm
+yum -y install flannel cadvisor
 
 
 
-# 3. configure Node config
-echo "Configuring services..."
-cat > /etc/kubernetes/config << EOF
-###
-# kubernetes system config
-#
-# The following values are used to configure various aspects of all
-# kubernetes services, including
-#
-#   kubernetes-apiserver.service
-#   kubernetes-controller-manager.service
-#   kubernetes-scheduler.service
-#   kubelet.service
-#   kubernetes-proxy.service
-
-# Comma seperated list of nodes in the etcd cluster
-KUBE_ETCD_SERVERS="--etcd_servers=http://{{ master_ip }}:4001"
-
-# logging to stderr means we get it in the systemd journal
-KUBE_LOGTOSTDERR="--logtostderr=true"
-
-# journal message level, 0 is debug
-KUBE_LOG_LEVEL="--v=0"
-
-# Should this cluster be allowed to run privleged docker containers
-KUBE_ALLOW_PRIV="--allow_privileged=false"
-EOF
+# 3 copy kubelet auth token and etcd certs
+mv /kubelet_token.dat /var/lib/kubelet/kubernetes_auth
+mkdir -p /etc/pki/etcd
+mv /ca.crt /etc/pki/etcd/
+mv /etcd-client.crt /etc/pki/etcd/
+mv /etcd-client.key /etc/pki/etcd/
 
 
 
-# 4. configure Node kubelet
-
-cat > /etc/kubernetes/kubelet << EOF
-###
-# kubernetes kubelet (Node) config
-
-# The address for the info server to serve on (set to 0.0.0.0 or "" for all interfaces)
-KUBELET_ADDRESS="--address=0.0.0.0"
-
-# The port for the info server to serve on
-KUBELET_PORT="--port=10250"
-
-# You may leave this blank to use the actual hostname
-KUBELET_HOSTNAME=""
-
-# location of the api-server
-KUBELET_API_SERVER="--api_servers={{ master_ip }}:8080"
-
-# Additional configuration for using manifests on local node
-KUBELET_ARGS="--config=/etc/kubernetes/manifests"
-EOF
+# 4. configure Node config
+echo "Configuring kubernetes..."
+sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://{{ master_ip }}:7080|}" $KUBERNETES_CONF_DIR/config
+sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
+sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
+sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://{{ master_ip }}:6443|}" $KUBERNETES_CONF_DIR/kubelet
+sed -i '/^KUBELET_ARGS/ {s|""|"--config=/etc/kubernetes/manifests --auth_path=/var/lib/kubelet/kubernetes_auth"|}' $KUBERNETES_CONF_DIR/kubelet
 
 
 
 # 5. configure Flannel
-
 cat > /etc/sysconfig/flanneld << EOF
 # Flanneld configuration options
 
 # etcd url location.  Point this to the server where etcd runs
-FLANNEL_ETCD="http://{{ master_ip }}:4001"
+FLANNEL_ETCD="https://{{ master_ip }}:2379"
 
 # etcd config key.  This is the configuration key that flannel queries
 # For address range assignment
@@ -118,7 +83,36 @@ FLANNEL_ETCD_KEY="/kuberdock/network/"
 
 # Any additional options that you want to pass
 FLANNEL_OPTIONS="--iface={{ inet_iface }}"
+ETCD_CAFILE="/etc/pki/etcd/ca.crt"
+ETCD_CERTFILE="/etc/pki/etcd/etcd-client.crt"
+ETCD_KEYFILE="/etc/pki/etcd/etcd-client.key"
 EOF
+
+cat > /etc/systemd/system/flanneld.service << EOF
+[Unit]
+Description=Flanneld overlay address etcd agent
+After=network.target
+Before=docker.service
+
+[Service]
+Type=notify
+EnvironmentFile=/etc/sysconfig/flanneld
+EnvironmentFile=-/etc/sysconfig/docker-network
+ExecStart=/usr/bin/flanneld \
+    -etcd-endpoints=\${FLANNEL_ETCD} \
+    -etcd-prefix=\${FLANNEL_ETCD_KEY} \
+    -etcd-cafile=\${ETCD_CAFILE} \
+    -etcd-certfile=\${ETCD_CERTFILE} \
+    -etcd-keyfile=\${ETCD_KEYFILE} \
+    \${FLANNEL_OPTIONS}
+ExecStartPost=/usr/libexec/flannel/mk-docker-opts.sh -k DOCKER_NETWORK_OPTIONS -d /run/flannel/docker
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+
+echo "Starting Flanneld ..."
 systemctl enable flanneld; systemctl restart flanneld
 
 

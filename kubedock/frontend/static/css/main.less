@@ -157,7 +157,7 @@ body{
 			.control-group{
 				.clearfix;
 				float: right;
-				#add_node, #nav-search, #add_user, #add_pod, #rename_pod{
+				#add_node, #nav-search, #add_user, #add_pod{
 					float: left;
 				}
 				/* delete after fix */
@@ -218,6 +218,7 @@ body{
 					}
 					&#add_user{
 						&:before{
+							left: 5px;
 							background: url('../img/add-one-user.png') 0 0 no-repeat;
 						}
 					}
@@ -227,7 +228,7 @@ body{
 							background: url('../img/small-profile-ico.png') 0 0 no-repeat;
 						}
 					}
-					&#rename_node, &#rename_pod{
+					&#rename_node{
 						margin-right: 17px;
 						padding: 0 0 0 38px;
 						&:before{
@@ -347,6 +348,11 @@ body{
 					width: 28px;
 					height: 21px;
 					background: url('../img/recycling.png') 0 0 no-repeat;
+				}
+			}
+			&#deleteNode{
+				&:before{
+					height: 17px;
 				}
 			}
 			&#blockUser{

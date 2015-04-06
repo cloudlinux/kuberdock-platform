@@ -5,6 +5,7 @@ import time
 from ..core import db
 from ..pods import Pod
 from ..users import User
+from ..nodes.models import Node
 import socket
 import re
 import requests
@@ -17,7 +18,7 @@ class KubeUnitResolver(object):
     def __init__(self):
         self._names = []
         self._containers = {}
-    
+
     def by_unit(self, uuid):
         unit = db.session.query(Pod).get(uuid)
         if unit is None:
@@ -25,6 +26,8 @@ class KubeUnitResolver(object):
         self._names.append(unit.name)
         self._get_containers()
         return self._containers
+
+
 
     def all(self):
         data = db.session.query(Pod).all()
@@ -38,14 +41,14 @@ class KubeUnitResolver(object):
         self._names.extend([i[0] for i in data])
         self._get_containers()
         return self._containers
-    
+
     def __getattr__(self, name):
         if name == '_data':
             url = get_api_url('pods')
             r = requests.get(url)
             return r.json()
         raise AttributeError("No such attribute: %s" % (name,))
-    
+
     def _get_containers(self):
         if 'items' not in self._data:
             return
@@ -66,6 +69,7 @@ class KubeUnitResolver(object):
             except socket.herror:
                 pass
 
+
 class KubeStat(object):
     SELECT_COLUMNS = [
         'cpu_cumulative_usage',
@@ -76,25 +80,26 @@ class KubeStat(object):
         'tx_errors',
         'container_name',
         'machine']
-    
+
     TIME_FORMATS = [
         '%Y-%m-%d',
         '%Y-%m-%d %H:%M',
         '%Y-%m-%d %H:%M:%S']
 
     def __init__(self, start=None, end=None, resolution=60):
-        
+
         self._folded = OrderedDict()
         self._unfolded = []
         self._wanted_map = {}
-        
-        start_point = int(time.time() - 3600) if start is None else self.timestamp(start) 
+        self._resolution = resolution
+
+        start_point = int(time.time() - 3600) if start is None else self.timestamp(start)
         self._startcond = "time > %ds" % (start_point,)
-        
+
         end_point = None if end is None else self.timestamp(end)
         self._endcond = '' if end_point is None else "time < %ds" % (end_point,)
 
-        self._windows = self._make_windows(start_point, end_point, resolution)
+        self._windows = self._make_windows(start_point, end_point)
         colstr = ', '.join(['%s' % (c,) for c in self.SELECT_COLUMNS])
         conds = filter(None, [self._startcond, self._endcond])
         condstr = ' where %s' % (' and '.join(conds),) if len(conds) != 0 else ''
@@ -120,19 +125,19 @@ class KubeStat(object):
         #    self._make_query()
 
 
-    def _make_windows(self, start_point, end_point, resolution):
+    def _make_windows(self, start_point, end_point):
         if end_point is None:
             end_point = int(time.time())
-        start_point = start_point - start_point % resolution
-        modulo = end_point % resolution
+        start_point = start_point - start_point % self._resolution
+        modulo = end_point % self._resolution
         if modulo != 0:
-            end_point = (end_point - modulo) + resolution
+            end_point = (end_point - modulo) + self._resolution
         span = []
         while start_point <= end_point:
             span.append(start_point)
-            start_point += resolution
+            start_point += self._resolution
         return span
-    
+
     def _get_window(self, timestamp):
         for val in self._windows:
             if val > timestamp:
@@ -162,13 +167,13 @@ class KubeStat(object):
             entry['cpu_cumulative_usage'] = 0
             return entry
         cpu_diff = entry['cpu_cumulative_usage'] - self._previous[(entry['machine'], entry['container_name'])]['cpu']
-        
+
         curr_rxb = entry['rx_bytes'] if ('rx_bytes' in entry and entry['rx_bytes'] is not None) else 0
         curr_txb = entry['tx_bytes'] if ('tx_bytes' in entry and entry['tx_bytes'] is not None) else 0
-        
+
         rxb_diff = curr_rxb - self._previous[(entry['machine'], entry['container_name'])]['rxb']
         txb_diff = curr_txb - self._previous[(entry['machine'], entry['container_name'])]['txb']
-        
+
         self._previous[(entry['machine'], entry['container_name'])]['cpu'] = entry['cpu_cumulative_usage']
         self._previous[(entry['machine'], entry['container_name'])]['rxb'] = curr_rxb
         self._previous[(entry['machine'], entry['container_name'])]['txb'] = curr_txb
@@ -184,7 +189,7 @@ class KubeStat(object):
             for item in containers[host]:
                 self._containers_checks.add((host, item[1]))
                 self._containers_map[item[1]] = item[2]
-    
+
     @staticmethod
     def _get_item_id(entry):
         try:
@@ -193,7 +198,7 @@ class KubeStat(object):
             return entry['container_name'][first_pos+1:last_pos]
         except (ValueError, KeyError):
             return
-    
+
     @staticmethod
     def _get_item_uuid(entry):
         try:
@@ -202,10 +207,10 @@ class KubeStat(object):
             return entry['container_name'][first_pos+1:last_pos]
         except (ValueError, KeyError):
             return
-    
+
     def _is_wanted(self, entry):
-        if entry['container_name'] == '/system.slice':
-            return True
+        #if entry['container_name'] == '/system.slice':
+        #    return True
         #last_pos = entry['container_name'].rfind('_')
         #if last_pos == -1:
         #    return False
@@ -213,7 +218,7 @@ class KubeStat(object):
         #if first_pos == -1:
         #    return False
         #item = entry['container_name'][first_pos+1:last_pos]
-        
+
         # Pretty ugly workaround. First we search for UUID, then for uid
         item = self._get_item_uuid(entry)
         if item is not None and (entry['machine'], item) in self._containers_checks:
@@ -225,14 +230,14 @@ class KubeStat(object):
             return True
         return False
 
-    def _fold_system(self, key, entry):
-        if 'system' not in self._folded[key][entry['machine']]:
-            self._folded[key][entry['machine']]['system'] = {
-                'cpu': 0, 'cpu_count': 0, 'mem': 0, 'mem_count': 0}
-        self._folded[key][entry['machine']]['system']['cpu'] += entry['cpu_cumulative_usage']
-        self._folded[key][entry['machine']]['system']['cpu_count'] += 1
-        self._folded[key][entry['machine']]['system']['mem'] += entry['memory_usage']
-        self._folded[key][entry['machine']]['system']['mem_count'] += 1
+    #def _fold_system(self, key, entry):
+    #    if 'system' not in self._folded[key][entry['machine']]:
+    #        self._folded[key][entry['machine']]['system'] = {
+    #            'cpu': 0, 'cpu_count': 0, 'mem': 0, 'mem_count': 0}
+    #    self._folded[key][entry['machine']]['system']['cpu'] += entry['cpu_cumulative_usage']
+    #    self._folded[key][entry['machine']]['system']['cpu_count'] += 1
+    #    self._folded[key][entry['machine']]['system']['mem'] += entry['memory_usage']
+    #    self._folded[key][entry['machine']]['system']['mem_count'] += 1
 
     def _fold_service(self, key, entry):
         #last_pos = entry['container_name'].rfind('_')
@@ -263,44 +268,69 @@ class KubeStat(object):
             self._folded[key] = {}
         if entry['machine'] not in self._folded[key]:
             self._folded[key][entry['machine']] = {}
-        if entry['container_name'] == '/system.slice':
-            self._fold_system(key, entry)
-        else:
-            self._fold_service(key, entry)
+        #if entry['container_name'] == '/system.slice':
+        #    self._fold_system(key, entry)
+        #else:
+        #    self._fold_service(key, entry)
+        self._fold_service(key, entry)
 
     def _unfold(self):
         for cell in self._folded:
             for host in self._folded[cell]:
-                try:
-                    system = self._folded[cell][host].pop('system')
-                    sys_cpu = float(system['cpu']) / system['cpu_count']
-                    sys_mem = float(system['mem']) / system['mem_count']
-                except KeyError:
-                    continue
+                #try:
+                #    system = self._folded[cell][host].pop('system')
+                #    sys_cpu = float(system['cpu']) / system['cpu_count']
+                #    sys_mem = float(system['mem']) / system['mem_count']
+                #except KeyError:
+                #    continue
                 for unit in self._folded[cell][host]:
                     for item in self._folded[cell][host][unit]:
                         cpu = mem = rxb = txb = 0
-                        if self._folded[cell][host][unit][item]['cpu_count'] != 0:
-                            cpu = float(self._folded[cell][host][unit][item]['cpu']) / self._folded[cell][host][unit][item]['cpu_count']
+                        #if self._folded[cell][host][unit][item]['cpu_count'] != 0:
+                        #    cpu = float(self._folded[cell][host][unit][item]['cpu']) / self._folded[cell][host][unit][item]['cpu_count']
                         if self._folded[cell][host][unit][item]['mem_count'] != 0:
                             mem = float(self._folded[cell][host][unit][item]['mem']) / self._folded[cell][host][unit][item]['mem_count']
                         if self._folded[cell][host][unit][item]['rxb_count'] != 0:
                             rxb = float(self._folded[cell][host][unit][item]['rxb']) / self._folded[cell][host][unit][item]['rxb_count']
                         if self._folded[cell][host][unit][item]['txb_count'] != 0:
                             txb = float(self._folded[cell][host][unit][item]['txb']) / self._folded[cell][host][unit][item]['txb_count']
-                        item_cpu = cpu / sys_cpu * 100 if sys_cpu != 0 else 0
-                        item_mem = mem / sys_mem * 100 if sys_mem != 0 else 0
+                        #item_cpu = cpu / sys_cpu * 100 if sys_cpu != 0 else 0
+                        #item_mem = mem / sys_mem * 100 if sys_mem != 0 else 0
                         self._unfolded.append({
                             'time_window': cell,
                             'host': host,
                             'unit_name': self._containers_map[unit],
                             'container': item,
-                            'cpu': item_cpu,
-                            'memory': item_mem,
+                            #'cpu': item_cpu,
+                            #'memory': item_mem,
+                            'cpu': self._count_cpu(host, self._folded[cell][host][unit][item]['cpu']),
+                            'memory': mem / 1048576,
                             'rxb': rxb,
                             'txb': txb})
 
+    def _count_cpu(self, node, value):
+        """
+        Calculates percentage from nanoseconds of usage
+        :param node: string -- node name or ipaddress
+        :param value: float -- cpu usage value to calculate
+        :return: float -- cpu usage percentage
+        """
+        try:
+            cores = self._nodes[node]['cores']
+            return float(value) / (1000000000 * self._resolution * cores)
+        except KeyError:
+            return 0
+
+
+    def _get_nodes(self):
+        self._nodes = {}
+        data = db.session.query(Node.hostname, Node.cpu_cores, Node.ram).all()
+        for node, cores, ram in data:
+            self._nodes[node] = {'cores': cores, 'ram': ram}
+
     def stats(self, containers):
+        if not hasattr(self, '_nodes'):
+            self._get_nodes()
         if not hasattr(self, '_containers_checks'):
             self._make_checker(containers)
         if not hasattr(self, '_data'):

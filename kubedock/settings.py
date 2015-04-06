@@ -12,7 +12,7 @@ DB_PASSWORD = 'kuberdock2go'
 DB_NAME = 'kuberdock'
 
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
-
+#SQLALCHEMY_ECHO=True
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
 
 if DEBUG:

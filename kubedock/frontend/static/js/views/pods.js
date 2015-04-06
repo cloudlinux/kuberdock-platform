@@ -82,7 +82,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         startItem: function(evt){
             var that = this,
                 preloader = $('#page-preloader');
-            preloader.show(); 
+            preloader.show();
             evt.stopPropagation();
             this.model.save({command: 'start'}, {
                 wait: true,
@@ -171,7 +171,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         showPodStats: function(data){
             this.trigger('display:pod:stats', data);
         },
-        
+
         showPodList: function(data){
             this.trigger('display:pod:list', data);
         }
@@ -191,7 +191,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .start-checked'     : 'startItems',
             'click .terminate-checked' : 'terminateItems'
         },
-        
+
         command: function(cmd){
             var preloader = $('#page-preloader');
                 preloader.show();
@@ -304,7 +304,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .stop-btn'      : 'stopItem',
             'click .terminate-btn' : 'terminateItem'
         },
-        
+
 
         getItem: function(){
             return initPodCollection.fullCollection.get(this.model.id);
@@ -315,18 +315,18 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             var item = this.getItem();
             this.trigger('display:pod:stats', item);
         },
-        
+
         listItem: function(evt){
             evt.stopPropagation();
             var item = this.getItem();
             this.trigger('display:pod:list', item);
         },
-        
+
         startItem: function(evt){
             var item = this.getItem(),
                 that = this,
                 preloader = $('#page-preloader');
-                preloader.show(); 
+                preloader.show();
             evt.stopPropagation();
             item.save({command: 'start'}, {
                 wait: true,
@@ -345,7 +345,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             var item = this.getItem(),
                 that = this,
                 preloader = $('#page-preloader');
-                preloader.show(); 
+                preloader.show();
             evt.stopPropagation();
             item.save({command: 'stop'}, {
                 wait: true,
@@ -383,7 +383,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     Views.PodGraphItem = Backbone.Marionette.ItemView.extend({
         template: '#pod-item-graph-template',
-       
+
         ui: {
             chart: '.graph-item'
         },
@@ -455,6 +455,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 that.listenTo(view, 'step:envconf', that.envConf);
                 that.listenTo(view, 'step:resconf', that.resConf);
                 that.listenTo(view, 'step:otherconf', that.otherConf);
+                that.listenTo(view, 'step:statsconf', that.statsConf);
                 that.listenTo(view, 'step:logsconf', that.logsConf);
                 that.listenTo(view, 'step:complete', that.completeConf);
                 that.listenTo(view, 'image:fetched', that.imageFetched);
@@ -489,6 +490,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
         otherConf: function(data){
             this.trigger('step:otherconf', data.model);
+        },
+        statsConf: function(data){
+            this.trigger('step:statsconf', data.model);
         },
         logsConf: function(data){
             this.trigger('step:logsconf', data.model);
@@ -705,7 +709,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click .add-port': 'addItem',
         },
-        
+
         ui: {
             ieditable: '.ieditable',
             iseditable: '.iseditable'
@@ -718,6 +722,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
             'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },
 
@@ -726,7 +731,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.model.get('ports').push({containerPort: null, hostPort: null, protocol: 'tcp'});
             this.render();
         },
-        
+
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({
@@ -755,7 +760,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#wizard-set-container-volumes-template',
         tagName: 'div',
         className: 'col-md-8 col-md-offset-2',
-        
+
         initialize: function(){
             if (!this.model.has('volumeMounts')) {
                 this.model.set({'volumeMounts': []});
@@ -785,6 +790,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
             'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },
 
@@ -793,7 +799,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.model.get('volumeMounts').push({name: null, mountPath: null, readOnly: false});
             this.render();
         },
-        
+
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({
@@ -853,6 +859,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-volumes'   : 'step:volconf',
             'click .go-to-resources' : 'step:resconf',
             'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },
 
@@ -898,6 +905,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-volumes' : 'step:volconf',
             'click .go-to-envs'    : 'step:envconf',
             'click .go-to-other'   : 'step:otherconf',
+            'click .go-to-stats'   : 'step:statsconf',
             'click .go-to-logs'    : 'step:logsconf',
         },
 
@@ -926,7 +934,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#wizard-set-container-other-template',
         tagName: 'div',
         className: 'col-md-8 col-md-offset-2',
-        
+
         ui: {
             ieditable: '.ieditable'
         },
@@ -944,9 +952,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-volumes'   : 'step:volconf',
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
+            'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },
-        
+
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({
@@ -961,6 +970,110 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     }
                 }
             });
+        }
+    });
+
+    Views.WizardStatsSubItemView = Backbone.Marionette.ItemView.extend({
+        template: '#pod-item-graph-template',
+
+        ui: {
+            chart: '.graph-item'
+        },
+
+        onShow: function(){
+            var lines = this.model.get('lines');
+            var options = {
+                title: this.model.get('title'),
+                axes: {
+                    xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
+                    yaxis: {label: this.model.get('ylabel')}
+                },
+                seriesDefaults: {
+                    showMarker: false,
+                    rendererOptions: {
+                        smooth: true
+                    }
+                },
+                grid: {
+                    background: '#ffffff',
+                    drawBorder: false,
+                    shadow: false
+                }
+            };
+
+            var points = [];
+            for (var i=0; i<lines; i++) {
+                if (points.length < i+1) {
+                    points.push([])
+                }
+            }
+
+            this.model.get('points').forEach(function(record){
+                for (var i=0; i<lines; i++) {
+                    points[i].push([record[0], record[i+1]])
+                }
+            });
+            this.ui.chart.jqplot(points, options);
+        }
+    });
+
+    Views.WizardStatsSubView = Backbone.Marionette.CompositeView.extend({
+        childView: Views.WizardStatsSubItemView,
+        childViewContainer: "div.container-stats",
+        template: '#wizard-set-container-stats-template',
+        tagName: 'div',
+        className: 'col-md-8 col-md-offset-2',
+
+        initialize: function(options){
+            this.containerModel = options.containerModel;
+        },
+
+        events: {
+            'click .go-to-ports'     : 'onPortsClick',
+            'click .go-to-volumes'   : 'onVolumesClick',
+            'click .go-to-envs'      : 'onEnvsClick',
+            'click .go-to-resources' : 'onResClick',
+            'click .go-to-other'     : 'onOtherClick',
+            'click .go-to-logs'      : 'onLogsClick'
+        },
+
+        templateHelpers: function(){
+            return {
+                parentID: this.containerModel.get('parentID'),
+                isPending: !this.containerModel.has('parentID'),
+                image: this.containerModel.get('image'),
+                name: this.containerModel.get('name'),
+            };
+        },
+
+        onPortsClick: function(evt){
+            evt.stopPropagation();
+            this.trigger('step:portconf', {model: this.containerModel});
+        },
+
+        onVolumesClick: function(evt){
+            evt.stopPropagation();
+            this.trigger('step:volconf', {model: this.containerModel});
+        },
+
+        onEnvsClick: function(evt){
+            evt.stopPropagation();
+            this.trigger('step:envconf', {model: this.containerModel});
+        },
+
+        onResClick: function(evt){
+            evt.stopPropagation();
+            this.trigger('step:resconf', {model: this.containerModel});
+        },
+
+        onOtherClick: function(evt){
+            evt.stopPropagation();
+            this.trigger('step:otherconf', {model: this.containerModel});
+        },
+
+        onLogsClick: function(evt){
+            evt.stopPropagation();
+            this.trigger('step:logsconf', {model: this.containerModel});
         }
     });
 
@@ -986,6 +1099,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
             'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-stats'     : 'step:statsconf'
         },
 
         initialize: function() {
@@ -1028,7 +1142,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#wizard-set-container-complete-template',
         tagName: 'div',
         className: 'container',
-        
+
         ui: {
             ieditable: '.ieditable'
         },
@@ -1082,7 +1196,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.model.set('node', node);
             this.render();
         },
-        
+
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));

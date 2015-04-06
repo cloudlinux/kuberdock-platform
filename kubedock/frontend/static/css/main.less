@@ -81,6 +81,24 @@ body{
 			.nav.navbar-nav{
 				padding: 15px 0;
 				> li{
+					&.profile-menu{
+						padding-left: 25px;
+  						position: relative;
+  						&:before{
+  							left: 0;
+  							top: 1px;
+  							content: '';
+  							width: 16px;
+  							height: 15px;
+  							position: absolute;
+  							background: url('../img/userpic.png') 0 0 no-repeat;
+  						}
+  						a{
+  							&:first-letter{
+  								text-transform: uppercase;
+  							}
+  						}
+					}
 					> a {
 						padding: 0;
 						color: #3197ee;
@@ -292,89 +310,6 @@ body{
 		}
 	}
 	/* end bredkrumb */
-	.active-item-control{
-		z-index: 1;
-		width: 100%;
-		height: 50px;
-		font-size: 0;
-		display: none;
-		max-width: 1140px;
-		position: absolute;
-
-		span,button{
-			color: #1d1d1d;
-			font-size: 14px;
-			vertical-align: top;
-			font-family: @regular;
-		}
-		span{
-			font-weight: bold;
-			margin-right: 20px;
-			&#editUser{
-				&:hover{
-					cursor: pointer;
-				}
-			}
-		}
-		button{
-			margin: 0;
-			border: 0;
-			outline: 0;
-			padding: 0;
-			position: relative;
-			padding-left: 25px;
-			margin-right: 20px;
-			line-height: inherit;
-			&:before{
-				content: '';
-				position: absolute;
-			}
-			&:hover{
-				color: #3197ee;
-				cursor: pointer;
-				text-decoration: none;
-			}
-			&:focus{
-				color: initial;
-				text-decoration: none;
-				&:hover{
-					color: #3197ee;
-				}
-			}
-			&#deleteNode, &#deleteUser{
-				&:before{
-					top: 0;
-					left: 2px;
-					width: 28px;
-					height: 21px;
-					background: url('../img/recycling.png') 0 0 no-repeat;
-				}
-			}
-			&#deleteNode{
-				&:before{
-					height: 17px;
-				}
-			}
-			&#blockUser{
-				&:before{
-					top: 0;
-					left: 0;
-					height: 15px;
-					width: 15px;
-					background: url('../img/block-user-ico.png') 0 0 no-repeat;
-				}
-			}
-			&#activeteUser{
-				&:before{
-					top: 1px;
-					left: -2px;
-					width: 19px;
-					height: 14px;
-					background: url('../img/activate-user-ico.png') 0 0 no-repeat;
-				}
-			}
-		}
-	}
 
 	/* details-node, sidebar-user */
 	.sidebar{
@@ -484,22 +419,30 @@ body{
 	label.custom{
 		margin: 0;
 		padding: 0;
-		span{
-			width: 12px;
-			height: 12px;
-			display: inline-block;
-			border: 1px solid #c0c6cb;
-		}
 		input[type="checkbox"]{
 			display: none;
 			&:checked{
 				+span{
-					background-color: #466eb1;
+					&:before{
+						top: -1px;
+						left: -1px;
+						width: 16px;
+						content: '';
+						height: 11px;
+						position: absolute;;
+						background: url('../img/checkbox-checked.png') 0 0 no-repeat;
+					}
 				}
 			}
 		}
+		span{
+			width: 12px;
+			height: 12px;
+			position: relative;
+			display: inline-block;
+			border: 1px solid #c0c6cb;
+		}
 	}
-
 
 	@import "pods.less";
 	@import "nodes.less";

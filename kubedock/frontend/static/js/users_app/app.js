@@ -74,29 +74,32 @@ define(['marionette', 'paginator', 'utils'],
         Views.UserItem = Backbone.Marionette.ItemView.extend({
             template: '#user-item-template',
             tagName: 'tr',
-            className: function(){
-                if (this.model.get('checked')) return 'checked';
-            },
 
             ui: {
-                'profileUser'   :   'button#profileUser'
+                'remove_user'    : '#deleteUser',
+                'block_user'     : '#blockUser',
+                'activated_user' : '#activeteUser',
+                'profileUser'    : '#profileUser'
             },
 
             events: {
-                'click @ui.profileUser' : 'profileUser_btn',
-                'click'                 : 'checkUser',
+                'click @ui.profileUser'    : 'profileUser_btn',
+                'click @ui.remove_user'    : 'removeUser',
+                'click @ui.block_user'     : 'blockUser',
+                'click @ui.activated_user' : 'activatedUser'
+            },
+            removeUser: function(){
+                this.destroy();
             },
 
-            checkUser: function(){
-                var models = this.model.collection.models;
-                this.model.get('checked') ? this.model.set('checked',false) : this.model.set('checked',true);
-           
-                this.$el.toggleClass('checked').siblings().removeClass('checked');
+            blockUser: function(){
+                this.model.save({active: false}, {});
+                this.render();
+            },
 
-                for (var i = 0; i < models.length; i++) {
-                    if ( this.model.get('id') == models[i].get('id') ) continue;
-                    models[i].unset('checked');
-                };
+            activatedUser: function(){
+                this.model.save({active: true}, {});
+                this.render();
             },
 
             profileUser_btn: function(){
@@ -131,17 +134,11 @@ define(['marionette', 'paginator', 'utils'],
             childViewContainer: "tbody",
 
             ui: {
-                'add_user'               : 'button#add_user',
-                'control'                : 'div.active-item-control',
-                'thead'                  : 'thead',
-                'remove_selected_user'   : 'button#deleteUser',
-                'edit_selected_user'     : 'span#editUser',
-                'block_selected_user'    : 'button#blockUser',
-                'activate_selected_user' : 'button#activeteUser'
+                'add_user'           : 'button#add_user',
+                'edit_selected_user' : 'span#editUser',
             },
 
             events: {
-                'click tbody tr'                   : 'activeMenu',
                 'click @ui.add_user'               : 'addUser',
                 'click @ui.remove_selected_user'   : 'removeSelectedUser',
                 'click @ui.edit_selected_user'     : 'editSelectedUser',
@@ -149,73 +146,15 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.activate_selected_user' : 'activateSelectedUser'
             },
 
-            activeMenu: function(){
-                var models = this.collection.models;
-
-                for (var i = 0; i < models.length; i++) {
-                    if ( models[i].get('checked') ) {
-                        var name = models[i].attributes.username;
-                        
-                        this.ui.control.show();
-                        this.ui.thead.addClass('min-opacity');
-                        this.ui.edit_selected_user.text(name);
-                        break;
-                    } else {
-                        this.ui.control.hide();
-                        this.ui.thead.removeClass('min-opacity');
-                    }
-                };
-            },
 
             editSelectedUser: function(e){
                 _.each(this.collection.models,function(entry){
                     if (entry.get('checked')){
-                        App.router.navigate('/edit/' + models[i].id + '/', {trigger: true});
+                        App.router.navigate('/edit/' + entry.id + '/', {trigger: true});
                         return true;
                     }
                 });
                 e.stopPropagation();
-            },
-
-            blockSelectedUser: function(e){
-                _.each(this.collection.models,function(entry){
-                    if (entry.get('checked')){
-                        entry.save({active: false}, {});
-                        return true;
-                    }
-                }); 
-                this.render();
-                e.stopPropagation();     
-            },
-
-            activateSelectedUser: function(e){
-                _.each(this.collection.models,function(entry){
-                    if (entry.get('checked')){
-                        entry.save({active: true}, {});
-                        return true;
-                    }
-                }); 
-                this.render();
-                e.stopPropagation();  
-            },
-
-            removeSelectedUser: function(e){
-                var models = this.collection.models;
-               
-                for (var i = 0; i < models.length; i++) {
-                    if (models[i].get('checked')){
-                        models[i].destroy();
-                        models[i].save(undefined, {
-                            wait: true,
-                            error: function(err){
-                                console.error(err);
-                            } 
-                        });
-                        break;
-                    }
-                }
-                this.render(); 
-                e.stopPropagation();      
             },
 
             addUser: function(){

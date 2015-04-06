@@ -49,8 +49,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName     : 'tr',
         className   : 'pod-item',
 
+        templateHelpers: function(){        
+            var modelIndex = this.model.collection.indexOf(this.model);
+            
+            return {
+                index: modelIndex + 1
+            }
+        },
+
         ui: {
-            checkbox    : '.check-item',
             reditable   : '.reditable',
             start       : '.start-btn',
             stop        : '.stop-btn',
@@ -78,7 +85,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             });
         },
-
         startItem: function(evt){
             var that = this,
                 preloader = $('#page-preloader');

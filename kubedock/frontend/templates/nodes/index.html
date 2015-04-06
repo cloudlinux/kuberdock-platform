@@ -70,13 +70,17 @@
             <div class="page-top-menu">
                 <span>Choose kube type:</span>
                 <div class="checkbox">
-                    <label>
-                        <input type="checkbox"> Kube type 1
+                    <label class="custom">
+                        <input type="checkbox">
+                        <span></span>
+                        Kube type 1
                     </label>
                 </div>
                 <div class="checkbox">
-                    <label>
-                        <input type="checkbox"> Kube type 2
+                    <label class="custom">
+                        <input type="checkbox">
+                        <span></span>
+                        Kube type 2
                     </label>
                 </div>
             </div
@@ -390,6 +394,7 @@
             <button id="detailedNode" class="btn btn-xs btn-link" title="Settings">
                 Some node name 
             </button>
+            <span id="deleteNode" title="Remove node">&nbsp;</span>
         </td>
         <td><%- ip %></td>
         <td>
@@ -428,13 +433,7 @@
             </div>
         </div>
         <div class="container">
-            <div class="active-item-control">
-                <span>Some nod name</span>
-                <button id="deleteNode" class="btn btn-xs btn-link" title="Remove">Delete</button>
-            </div>
-
         <!--<div><strong>You have <%- totalNodes %> nodes</strong></div -->
-
             <table id="nodelist-table" class="table tablesorter tablesorter-default">
                 <thead>
                     <tr class="tablesorter-headerRow">

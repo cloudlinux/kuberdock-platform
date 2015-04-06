@@ -18,13 +18,11 @@
 				font-family: @regular;
 				text-align: left;
 				font-weight: normal;
-				padding-left: 0;
 				border: none;
 				&:focus{
 					outline: 0;
 				}
 				.tablesorter-header-inner{
-					margin-left: 10px;
 					.caret{
 						margin-left: 3px;
 					}
@@ -36,6 +34,26 @@
 		tr{
 			&.checked, &:hover{
 				background-color: #f5fafe;
+				span{
+					&#deleteUser{
+						background: url('../img/recycling.png') 0 0 no-repeat;
+						&:hover{
+							background-position: 0 -18px;
+						}
+					}
+					&#blockUser{
+						background: url('../img/block-user-ico.png') 0 0 no-repeat;
+						&:hover{
+							background-position: 0 -16px;
+						}
+					}
+					&#activeteUser{
+						background: url('../img/activate-user-ico.png') 0 0 no-repeat;
+						&:hover{
+							background-position: 0 -15px;
+						}
+					}
+				}
 			}
 			&:last-child{
 				td{
@@ -50,18 +68,27 @@
 				padding-bottom: 0;
 				vertical-align: middle;
 				height: 50px;
-				text-transform: capitalize;
+				&:first-letter{
+					text-transform: uppercase;
+				}
 				span{
-					&.more-ico{
-						background: url('../img/small-circles.png') 0 0 no-repeat;
-						height: 5px;
-						width: 20px;
+					&#deleteUser, &#blockUser, &#activeteUser{
+						top: 3px;
+						width: 28px;
+						height: 17px;
+						margin-left: 5px;
+						position: relative;
 						display: inline-block;
-						vertical-align: middle;
 						&:hover{
-							cursor: default;
-							background-position: 0 -5px;
+							cursor: pointer;
 						}
+					}
+					&#deleteUser{
+						height: 17px;
+					}
+					&#blockUser, &#activeteUser{
+						width: 20px;
+						height: 15px;
 					}
 				}
 				.tooltip.bottom{
@@ -106,7 +133,9 @@
 				text-decoration: none;
 				font-family: @regular;
 				background-color: transparent;
-				text-transform: capitalize;
+				&:first-letter{
+					text-transform: uppercase;
+				}
 				&:hover{
 					cursor: pointer;
 					text-decoration: none;

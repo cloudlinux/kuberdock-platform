@@ -97,19 +97,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click button#detailedNode' : 'detailedNode',
             'click button#upgradeNode' : 'detailedNode',
             'click button#detailedConfigurationTab' : 'detailedConfigurationTab',
-            'click' : 'checkNode'
-        },
-
-        checkNode: function(){
-            var models = this.model.collection.models;
-            this.model.get('checked') ? this.model.set('checked',false) : this.model.set('checked',true);
-           
-            this.$el.toggleClass('checked').siblings().removeClass('checked');
-
-            for (var i = 0; i < models.length; i++) {
-                if ( this.model.get('id') == models[i].get('id') ) continue;
-                models[i].unset('checked');
-            };
         },
 
         detailedNode: function(){
@@ -128,37 +115,16 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         ui: {
             'addNode': 'button#add_node',
-            'control': 'div.active-item-control',
-            'thead' : 'thead',
-            'button': 'button#deleteNode'
         },
 
         events: {
             'click @ui.addNode' : 'addNode',
-            'click tbody tr' : 'activeMenu',
-            'click @ui.button' : 'removeSelectedNode'
         },
 
         collectionEvents: {
             "remove": function () {
                 this.render()
             }
-        },
-
-        activeMenu: function(){
-            var models = this.collection.models;
-
-            for (var i = 0; i < models.length; i++) {
-
-                if ( models[i].get('checked') ) {
-                    this.ui.control.show();
-                    this.ui.thead.addClass('min-opacity');
-                    break;
-                } else {
-                    this.ui.control.hide();
-                    this.ui.thead.removeClass('min-opacity');
-                }
-            };
         },
 
         templateHelpers: function(){
@@ -171,17 +137,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             App.router.navigate('/add/', {trigger: true});
         },
 
-        removeSelectedNode: function(e){
-            var models = this.collection.models;
-           
-            for (var i = 0; i < models.length; i++) {
-                if (models[i].get('checked')){
-                    models[i].destroy();
-                    break;
-                }
-            }    
-            e.stopPropagation();      
-        }
     });
 
     // =========== Add Node wizard ====================================

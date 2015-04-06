@@ -184,26 +184,26 @@
 						                <thead>
 						                    <tr>
 						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Containers</div>
+						                        	<div>Pods</div>
 						                        </th>
 						                        <th unselectable="on" style="-webkit-user-select: none;">
 						                        	<div>Average<br/>CPU usage</div>
 						                        </th>
 						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Pods</div>
+						                        	<div>Kube type column<br>(kubes quantity)</div>
 						                        </th>
 						                    </tr>
 						                </thead>
 						                <tbody>
 						                	<tr>
-						                		<td>Some case 2</td>
+						                		<td>Some pode name 1</td>
 						                		<td>20%</td>
-						                		<td>Some pod name</td>
+						                		<td>Kube quantity</td>
 						                	</tr>
 						                	<tr>
-						                		<td>Some case 2</td>
+						                		<td>Some pode name 2</td>
 						                		<td>20%</td>
-						                		<td>Some pod name</td>
+						                		<td>Kube quantity</td>
 						                	</tr>
 						                </tbody>
 						            </table>
@@ -254,14 +254,22 @@
 
     <script type="text/template" id="user-item-template">
         <td>
-            <button id="profileUser">
+            <button id="profileUser" title="Show <%- username %> profile">
                 <%- username %>
             </button>
+            <span id="deleteUser" title="Remove <%- username %>"></span>
         </td>
         <td>20</td>
         <td>89</td>
         <td><%- email ? email : 'No mail' %></td>
-        <td><%- active ? 'Active' : 'Blocked' %></td>
+        <td>
+            <%- active ? 'Active' : 'Blocked' %>
+            <% if (active) { %>
+                <span id="blockUser" title="Block <%- username %>"></span>
+            <% } else { %> 
+                <span id="activeteUser" title="Activate <%- username %>"></span>
+            <% } %>
+        </td>
         <td>25</td>
     </script>
 
@@ -331,12 +339,6 @@
             </div>
         </div>
         <div class="container">
-            <div class="active-item-control">
-                <span id="editUser" title="Edit this user"></span>
-                <button id="blockUser" class="btn btn-xs btn-link" title="Block this user">Block</button>
-                <button id="activeteUser" class="btn btn-xs btn-link" title="Activate this user">Activate</button>
-                <button id="deleteUser" class="btn btn-xs btn-link" title="Remove this user">Delete</button>
-            </div>
             <table id="userslist-table" class="table">
                 <thead>
                     <tr class="tablesorter-headerRow">

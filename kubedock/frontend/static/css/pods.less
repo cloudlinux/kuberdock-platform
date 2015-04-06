@@ -11,7 +11,6 @@
 				color: #b1b9c0;
 				padding-top: 0;
 				font-size: 14px;
-				padding-left: 0;
 				text-align: left;
 				font-weight: normal;
 				vertical-align: top;
@@ -29,7 +28,6 @@
 					}
 				}
 				.tablesorter-header-inner{
-					margin-left: 10px;
 					.caret{
 						margin-left: 3px;
 					}
@@ -81,7 +79,9 @@
 				padding-bottom: 0;
 				vertical-align: middle;
 				font-family: @regular;
-				text-transform: capitalize;
+				&:first-letter{
+					text-transform: uppercase;
+				}
 				span{
 					&.more-ico{
 						background: url('../img/small-circles.png') 0 0 no-repeat;
@@ -111,12 +111,11 @@
 					display: inline-table;
 				}
 				.tooltip.bottom{
+					.opacity(1);
+					.box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
 					margin-top: 8px;
 					border-color: #bdc4c9;
 					background-color: #fff;
-					.box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
-					.opacity(1);
-
 					.tooltip-arrow{
 						display: none;
 					}
@@ -243,76 +242,81 @@
 		vertical-align: top;
 		display: inline-block;
 		font-family: "ProximaNovaReg";
+		&:hover{
+			color: #1d1d1d;
+			cursor: pointer;
+		}
+		&:first-letter{
+			text-transform: uppercase;
+		}
+		&:first-child{
+			color: #1d1d1d;
+			font-weight: bold;
+			position: relative;
+			padding-left: 37px;
+			margin-right: 40px;
 			&:hover{
-				color: #1d1d1d;
-				cursor: pointer;
+				cursor: default;
 			}
-			&:first-child{
-				color: #1d1d1d;
-				font-weight: bold;
-				position: relative;
-				padding-left: 37px;
-				margin-right: 40px;
-				&:hover{
-					cursor: default;
-				}
-			}
+		}
+		&:before{
+			.border-radius(50%);
+			left: 11px;
+			width: 13px;
+			content: '';
+			height: 13px;
+			bottom: 20px;
+			position: absolute;
+		}
+		&.running{
 			&:before{
-				.border-radius(50%);
-				left: 11px;
-				width: 13px;
+				background-color: #98cc79;
+				border: 1px solid #5d973c;
+			}
+		}
+		&.stopped{
+			&:before{
+				background-color: #f25552;
+				border: 1px solid #bc2322;
+			}
+		}
+		&.troubles, &.pending{
+			&:before{
+				background-color: #efd66d;
+				border: 1px solid #c1a741;
+			}
+		}
+		&.rename_pod{
+			float: right;
+			margin-top: 5px;
+			margin-left: 22px;
+			position: relative;
+			margin-right: 10px;
+			line-height: 22px;
+			color: #030303;
+			border-bottom: 1px dashed #000000;
+			height: 22px;
+			&:before{
+				top: 0px;
+				left: -31px;
+				width: 23px;
+				height: 19px;
 				content: '';
-				height: 13px;
-				bottom: 20px;
 				position: absolute;
+				background: url('../img/pencil-big.png') 100% 2px no-repeat;
 			}
-			&.running{
+			&:hover{
 				&:before{
-					background-color: #98cc79;
-					border: 1px solid #5d973c;
-				}
-			}
-			&.stopped{
-				&:before{
-					background-color: #f25552;
-					border: 1px solid #bc2322;
-				}
-			}
-			&.troubles, &.pending{
-				&:before{
-					background-color: #efd66d;
-					border: 1px solid #c1a741;
-				}
-			}
-			&.rename_pod{
-				float: right;
-				margin-left: 22px;
-				position: relative;
-				margin-right: 10px;
-				line-height: 22px;
-				color: #030303;
-				border-bottom: 1px dashed #000000;
-				height: 22px;
-				&:before{
-					top: 0px;
-					left: -31px;
-					width: 23px;
-					height: 19px;
-					content: '';
-					position: absolute;
-					background: url('../img/pencil-big.png') 100% 2px no-repeat;
-				}
-				&:hover{
-					&:before{
-						background-position: 100% bottom;
-					}
+					background-position: 100% bottom;
 				}
 			}
 		}
 	}
-	/* end-pod-main */
+}
+/* end-pod-main */
 
-	/* add pod */
-	.add-item{
-		cursor: pointer;
-	}
+/* add pod */
+.add-item{
+	cursor: pointer;
+}
+

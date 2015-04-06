@@ -22,7 +22,6 @@
 					outline: 0;
 				}
 				.tablesorter-header-inner{
-					margin-left: 10px;
 					.caret{
 						margin-left: 3px;
 					}
@@ -34,6 +33,17 @@
 		tr{
 			&.checked, &:hover{
 				background-color: #f5fafe;
+				td{
+					span{
+						&#deleteNode{
+							background: url('../img/recycling.png') 0 0 no-repeat;
+							&:hover{
+								cursor: pointer;
+								background-position: 0 -18px;
+							}
+						}
+					}
+				}
 			}
 			&:last-child{
 				td{
@@ -48,7 +58,9 @@
 				padding-bottom: 0;
 				font-family: @regular;
 				vertical-align: middle;
-				text-transform: capitalize;
+				&:first-letter{
+					text-transform: uppercase;
+				}
 				span{
 					&.more-ico{
 						background: url('../img/small-circles.png') 0 0 no-repeat;
@@ -60,6 +72,13 @@
 							cursor: default;
 							background-position: 0 -5px;
 						}
+					}
+					&#deleteNode{
+						width: 28px;
+						height: 17px;
+						margin-left: 5px;
+						position: relative;
+						display: inline-block;
 					}
 				}
 				.tooltip.bottom{
@@ -392,7 +411,20 @@
 				color: #1d1d1d;
 				font-size: 14px;
 				font-family: @regular;
-				padding-left: 25px;
+				&.custom{
+					span{
+						top: -2px;
+						width: 20px;
+						height: 20px;
+						margin-right: 8px;
+						vertical-align: middle;
+						&:before{
+							width: 20px;
+							height: 20px;
+							background-position: center;
+						}
+					}
+				}
 			}
 		}
 	}

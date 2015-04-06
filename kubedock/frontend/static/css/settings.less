@@ -67,17 +67,18 @@
 				font-weight: normal;
 				vertical-align: top;
 				display: inline-block;
-			}
-			input{
-				outline: 0;
-				width: 18px;
-				height: 18px;
-				margin-bottom: 0;
-				background: none;
-				margin: 0 12px 0 20px;
-				vertical-align: top;
-				display: inline-block;
-				border: 1px solid #e5e5e5;
+				span{
+					width: 20px;
+  					height: 20px;
+  					margin: 0 12px 0 20px;
+  					&:before{
+  						top: 0;
+  						left: 0;
+  						width: 18px;
+  						height: 18px;
+  						background-position: center;
+  					}
+				}
 			}
 		}
 		.notifications{
@@ -132,5 +133,11 @@
 #permissions-table{
 	td{
 		text-transform: capitalize;
+		label{
+			font-weight: normal;
+			span{
+				margin-right: 6px;
+			}
+		}
 	}
 }

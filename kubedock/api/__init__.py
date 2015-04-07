@@ -1,10 +1,8 @@
 import datetime
-#from ..utils import JSONEncoder
-from sqlalchemy.ext.automap import automap_base
 from .. import factory
 from .. import sessions
 from ..rbac import get_user_role
-from ..settings import NODE_INET_IFACE, KUBE_MASTER_URL
+from ..settings import NODE_TOBIND_EXTERNAL_IPS, KUBE_MASTER_URL
 from ..core import ssh_connect, db
 
 from flask.ext.login import current_user
@@ -105,25 +103,25 @@ def process_event(kub_event):
     if errors:
         print errors
         return False
-    ssh.exec_command(IP_ADDR.format(cmd, public_ip, NODE_INET_IFACE))
+    ssh.exec_command(IP_ADDR.format(cmd, public_ip, NODE_TOBIND_EXTERNAL_IPS))
     if cmd == 'add':
-        ssh.exec_command(ARPING.format(NODE_INET_IFACE, public_ip))
+        ssh.exec_command(ARPING.format(NODE_TOBIND_EXTERNAL_IPS, public_ip))
     for container in conts:
         for port_spec in container['ports']:
             if cmd == 'add':
                 i, o, e = ssh.exec_command(
-                    IPTABLES.format('C', NODE_INET_IFACE, public_ip,
+                    IPTABLES.format('C', NODE_TOBIND_EXTERNAL_IPS, public_ip,
                                     port_spec['containerPort'],
                                     pod_ip))
                 exit_status = o.channel.recv_exit_status()
                 if exit_status != 0:
                     ssh.exec_command(
-                        IPTABLES.format('I', NODE_INET_IFACE, public_ip,
+                        IPTABLES.format('I', NODE_TOBIND_EXTERNAL_IPS, public_ip,
                                         port_spec['containerPort'],
                                         pod_ip))
             else:
                 ssh.exec_command(
-                    IPTABLES.format('D', NODE_INET_IFACE, public_ip,
+                    IPTABLES.format('D', NODE_TOBIND_EXTERNAL_IPS, public_ip,
                                     port_spec['containerPort'],
                                     pod_ip))
     ssh.close()

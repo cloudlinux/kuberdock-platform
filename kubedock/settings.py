@@ -22,8 +22,6 @@ REDIS_PORT = '6379'
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
-MASTER_IP = ''
-
 KUBE_API_VERSION = 'v1beta2'
 KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
 
@@ -47,7 +45,6 @@ CELERYBEAT_SCHEDULE = {
 
 ONLINE_LAST_MINUTES = 5
 
-NODE_INET_IFACE = 'enp0s5'
 LOCK_FILE_NAME = '/var/tmp/kuberdock.watch.pid'
 
 
@@ -61,7 +58,9 @@ if os.path.exists('/etc/sysconfig/kuberdock/kuberdock.conf'):
         DB_PASSWORD = config.get('main', 'DB_PASSWORD')
         DB_NAME = config.get('main', 'DB_NAME')
         MASTER_IP = config.get('main', 'MASTER_IP')
-        NODE_INET_IFACE = config.get('main', 'NODE_INET_IFACE')
+        MASTER_TOBIND_FLANNEL = config.get('main', 'MASTER_TOBIND_FLANNEL')
+        NODE_TOBIND_EXTERNAL_IPS = config.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
+        NODE_TOBIND_FLANNEL = config.get('main', 'NODE_TOBIND_FLANNEL')
     except ConfigParser.Error as e:
         print 'ConfigParser Error: ', e
 

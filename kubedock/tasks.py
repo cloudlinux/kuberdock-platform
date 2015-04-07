@@ -94,7 +94,8 @@ def delete_service_nodelay(item):
     return json.loads(r.text)
 
 
-def get_dockerfile_nodelay(data):
+@celery.task()
+def get_dockerfile(data):
     url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(
         data.strip('/'))
     r = requests.get(url)

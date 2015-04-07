@@ -43,12 +43,30 @@ if [ ! $ans -eq 1 ]; then
     echo "Will use $MASTER_IP"
 fi
 
-NODE_INET_IFACE="enp0s5"
-yesno "Is your primary network interface(on nodes and master) $NODE_INET_IFACE"
+# TODO make if '' provided than don't use any customizations
+
+NODE_TOBIND_EXTERNAL_IPS="enp0s5"
+yesno "On which node interface to bind external ips? $NODE_TOBIND_EXTERNAL_IPS"
 
 if [ ! $ans -eq 1 ]; then
-    read -p "Enter interface name: " NODE_INET_IFACE
-    echo "Will use $NODE_INET_IFACE"
+    read -p "Enter interface name: " NODE_TOBIND_EXTERNAL_IPS
+    echo "Will use $NODE_TOBIND_EXTERNAL_IPS"
+fi
+
+MASTER_TOBIND_FLANNEL="enp0s5"
+yesno "Interface to bind for Flannel network on master $MASTER_TOBIND_FLANNEL"
+
+if [ ! $ans -eq 1 ]; then
+    read -p "Enter interface name(ip accepted too): " MASTER_TOBIND_FLANNEL
+    echo "Will use $MASTER_TOBIND_FLANNEL"
+fi
+
+NODE_TOBIND_FLANNEL="enp0s5"
+yesno "Interface to bind for Flannel network on nodes(inter-host comminication and with master) $NODE_TOBIND_FLANNEL"
+
+if [ ! $ans -eq 1 ]; then
+    read -p "Enter interface name(ip accepted too): " NODE_TOBIND_FLANNEL
+    echo "Will use $NODE_TOBIND_FLANNEL"
 fi
 
 # ==============================================================================
@@ -100,7 +118,9 @@ chown kube:kube /var/run/kubernetes
 
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
 echo "MASTER_IP=$MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
-echo "NODE_INET_IFACE=$NODE_INET_IFACE" >> $KUBERDOCK_MAIN_CONFIG
+echo "MASTER_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
+echo "NODE_TOBIND_EXTERNAL_IPS=$NODE_TOBIND_EXTERNAL_IPS" >> $KUBERDOCK_MAIN_CONFIG
+echo "NODE_TOBIND_FLANNEL=$NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 
 
 
@@ -218,7 +238,6 @@ chown $WEBAPP_USER $KUBERNETES_CONF_DIR/kubelet_token.dat
 
 
 #9. Configure kubernetes
-sed -i "/^KUBE_API_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE\"|}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBERNETES_CONF_DIR/controller-manager
 
@@ -261,7 +280,7 @@ FLANNEL_ETCD="http://127.0.0.1:4001"
 FLANNEL_ETCD_KEY="/kuberdock/network/"
 
 # Any additional options that you want to pass
-FLANNEL_OPTIONS="--iface=$NODE_INET_IFACE"
+FLANNEL_OPTIONS="--iface=$MASTER_TOBIND_FLANNEL"
 EOF
 
 echo "Starting flannel..."
@@ -337,4 +356,4 @@ systemctl restart nginx
 # ======================================================================
 echo "WARNING: Firewalld was disabled. You need to configure it to work right"
 echo "WARNING: $WEBAPP_USER user must have ssh access to nodes as 'root'"
-echo "Successfully done."
+echo "Successfully done. Your Kuberdock is on https://$MASTER_IP"

@@ -4,7 +4,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 19.git%{shortcommit}%{?dist}.cloudlinux
+Release: 20.git%{shortcommit}%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License

@@ -206,7 +206,7 @@ def add_new_node(host, kube_type):
                                                              str(kube_type)
                                   }
                             })
-        if res.status_code != requests.codes.ok:
+        if not res.ok:
             send_event('install_logs', 'ERROR adding node.')
             send_event('install_logs', res.text)
         else:

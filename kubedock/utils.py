@@ -5,7 +5,6 @@ from flask import current_app, request, jsonify, g
 from flask.ext.login import current_user
 from functools import wraps
 
-# from .users import User
 from .settings import KUBE_MASTER_URL
 from .users import User
 

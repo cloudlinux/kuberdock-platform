@@ -19,14 +19,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
 REDIS_HOST = 'localhost'
 REDIS_PORT = '6379'
 
-
-if DEBUG:
-    # root password to connect to nodes
-    NODE_SSH_AUTH = ''
-else:
-    # ssh key filename to connect to nodes (in production)
-    NODE_SSH_AUTH = ''
-
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
@@ -70,8 +62,6 @@ if os.path.exists('/etc/sysconfig/kuberdock/kuberdock.conf'):
         DB_NAME = config.get('main', 'DB_NAME')
         MASTER_IP = config.get('main', 'MASTER_IP')
         NODE_INET_IFACE = config.get('main', 'NODE_INET_IFACE')
-        # TODO remove in future:
-        NODE_SSH_AUTH = config.get('main', 'NODE_SSH_AUTH')
     except ConfigParser.Error as e:
         print 'ConfigParser Error: ', e
 

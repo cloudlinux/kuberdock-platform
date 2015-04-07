@@ -51,11 +51,6 @@ if [ ! $ans -eq 1 ]; then
     echo "Will use $NODE_INET_IFACE"
 fi
 
-# TODO JUST FOR DEVELOPMENT -- remove soon!!!!!!!
-NODE_SSH_AUTH=""
-read -p "Enter root password on nodes: " NODE_SSH_AUTH
-echo "Will use $NODE_SSH_AUTH"
-
 # ==============================================================================
 
 
@@ -106,7 +101,6 @@ chown kube:kube /var/run/kubernetes
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
 echo "MASTER_IP=$MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
 echo "NODE_INET_IFACE=$NODE_INET_IFACE" >> $KUBERDOCK_MAIN_CONFIG
-echo "NODE_SSH_AUTH=$NODE_SSH_AUTH" >> $KUBERDOCK_MAIN_CONFIG
 
 
 

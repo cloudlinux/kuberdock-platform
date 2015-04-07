@@ -209,14 +209,12 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#node-final-step-template',
 
         ui: {
-//            'node_ssh': 'select#node_ssh',
             'node_add_btn': 'button#node-add-btn',
             'node_cancel_btn': 'button#node-cancel-btn',
             'node_type_select': 'select.kube_type'
         },
 
         events:{
-//            'change @ui.node_ssh': 'validateStep',
             'click @ui.node_add_btn': 'complete',      // only if valid
             'click @ui.node_cancel_btn' : 'cancel',
             'change @ui.node_type_select' : 'change_kube_type'
@@ -227,14 +225,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 this.state.set('kube_type', parseInt(evt.target.value));
             }
         },
-
-//        validateStep: function (evt) {
-//            if (evt.target.value !== '') {
-//                this.state.set('isFinished', true);
-//            } else {
-//                this.state.set('isFinished', false);
-//            }
-//        },
 
         complete: function () {
             var that = this;

@@ -5,7 +5,6 @@ import operator
 from collections import OrderedDict
 from datetime import datetime
 
-from .settings import DEBUG, NODE_SSH_AUTH
 from .api.stream import send_event
 from .core import ConnectionPool, db, ssh_connect, fast_cmd
 from .factory import make_celery
@@ -128,14 +127,9 @@ def compute_capacity(cpu_count, cpu_mhz, mem_total):
 
 @celery.task()
 def add_new_node(host, kube_type):
-    if DEBUG:
-        send_event('install_logs',
-                   'Connecting to {0} with ssh with user root ...'
-                   .format(host))
-    else:
-        send_event('install_logs',
-                   'Connecting to {0} with ssh with user = root and '
-                   'ssh_key_filename = {1} ...'.format(host, NODE_SSH_AUTH))
+    send_event('install_logs',
+               'Connecting to {0} with ssh with user "root" ...'
+               .format(host))
     ssh, error_message = ssh_connect(host)
     if error_message:
         send_event('install_logs', error_message)

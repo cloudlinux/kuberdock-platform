@@ -3,7 +3,7 @@ import paramiko
 import redis
 import socket
 from sse import Sse
-from paramiko import ssh_exception
+from paramiko.ssh_exception import AuthenticationException, SSHException
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.influxdb import InfluxDB
 from flask.ext.login import LoginManager
@@ -11,8 +11,7 @@ from flask import current_app
 from werkzeug.contrib.cache import RedisCache
 
 
-from .settings import DEBUG, NODE_SSH_AUTH, NODE_SSH_AUTH, REDIS_HOST, \
-    REDIS_PORT
+from .settings import REDIS_HOST, REDIS_PORT
 
 
 login_manager = LoginManager()
@@ -77,13 +76,12 @@ def ssh_connect(host, timeout=10):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     error_message = None
     try:
-        try:
-            ssh.connect(host, username='root', timeout=timeout)
-        except (paramiko.AuthenticationException, paramiko.SSHException):
-            ssh.connect(host, username='root', password=NODE_SSH_AUTH, timeout=timeout)
-    except ssh_exception.AuthenticationException as e:
+        ssh.connect(host, username='root', timeout=timeout)
+    except (AuthenticationException, SSHException) as e:
         error_message =\
-            '{0} Check hostname, your credentials, and try again'.format(e)
+            '{0}.\nCheck hostname, check that user from which '.format(e) +\
+            'Kuberdock runs (usually nginx) has ability to login as root on ' +\
+            'this node, and try again'
     except socket.timeout:
         error_message = 'Connection timeout. Check hostname and try again'
     except socket.error as e:

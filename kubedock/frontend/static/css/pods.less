@@ -241,13 +241,11 @@
 		margin-right: 25px;
 		vertical-align: top;
 		display: inline-block;
+		text-transform: capitalize;
 		font-family: "ProximaNovaReg";
 		&:hover{
 			color: #1d1d1d;
 			cursor: pointer;
-		}
-		&:first-letter{
-			text-transform: uppercase;
 		}
 		&:first-child{
 			color: #1d1d1d;
@@ -268,7 +266,7 @@
 			bottom: 20px;
 			position: absolute;
 		}
-		&.running{
+		&.running, &.OK{
 			&:before{
 				background-color: #98cc79;
 				border: 1px solid #5d973c;
@@ -280,7 +278,7 @@
 				border: 1px solid #bc2322;
 			}
 		}
-		&.troubles, &.pending{
+		&.troubles, &.pending, &.waiting{
 			&:before{
 				background-color: #efd66d;
 				border: 1px solid #c1a741;

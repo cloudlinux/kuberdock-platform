@@ -311,6 +311,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .terminate-btn' : 'terminateItem'
         },
 
+        templateHelpers: function(){
+            return {
+                status: initPodCollection.fullCollection.get(this.model.id).attributes.status
+            };
+        },
 
         getItem: function(){
             return initPodCollection.fullCollection.get(this.model.id);

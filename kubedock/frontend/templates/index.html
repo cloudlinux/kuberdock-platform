@@ -223,9 +223,12 @@
         <!-- A pod controls template -->
         <script type="text/template" id="pod-item-controls-template">
             <div class="no-padding">
-                <span class="status-line running">Status: Running</span>
-                <span class="start-btn">start</span>
-                <span class="stop-btn">stop</span>
+                <span class="status-line <%- status %>">Status: <%- status %></span>
+                <% if ( status == "running") { %>
+                    <span class="stop-btn">stop</span>
+                <% } else { %>
+                    <span class="start-btn">start</span>
+                <% } %>
                 <span class="terminate-btn">delete</span>
                 <% if (graphs) { %>
                     <span class="list-btn">data</span>

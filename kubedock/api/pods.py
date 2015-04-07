@@ -113,6 +113,7 @@ def create_item():
             service_rv = None
         config = make_config(data, item_id)
         try:
+            # TODO rename to "create pod" when refactor
             pod_rv = json.loads(tasks.create_containers_nodelay(config))
         except TypeError:
             pod_rv = None

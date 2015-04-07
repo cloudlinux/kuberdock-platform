@@ -39,12 +39,13 @@ hostname_scheme = {
 }
 
 
-pod_name = r"^[a-zA-Z0-9_]+[a-zA-Z0-9._\- ]*$"
+# Kubernetes restriction, names must be dns-compatible
+pod_name = r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])+$"
 pod_name_scheme = {
     'type': 'string',
     'empty': False,
     'required': True,
-    'maxlength': 255,
+    'maxlength': 63,    # kubernetes restriction
     'regex': pod_name,
 }
 

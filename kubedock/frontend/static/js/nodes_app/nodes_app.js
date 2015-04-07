@@ -89,14 +89,20 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.NodeItem = Backbone.Marionette.ItemView.extend({
         template: '#node-item-template',
         tagName: 'tr',
-        className: function(){
-            if (this.model.get('checked')) return 'checked';
+
+        ui: {
+        	'deleteNode' : '#deleteNode',
         },
         
         events: {
-            'click button#detailedNode' : 'detailedNode',
-            'click button#upgradeNode' : 'detailedNode',
+        	'click @ui.deleteNode'					: 'deleteNode',
+            'click button#detailedNode' 			: 'detailedNode',
+            'click button#upgradeNode' 				: 'detailedNode',
             'click button#detailedConfigurationTab' : 'detailedConfigurationTab',
+        },
+
+        deleteNode: function(){
+        	this.model.destroy();
         },
 
         detailedNode: function(){
@@ -348,7 +354,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         deleteNode: function() {
-            alert('delete event')
+            this.model.destroy();
+            App.router.navigate('/', {trigger: true})
         },
 
         stopNode: function() {

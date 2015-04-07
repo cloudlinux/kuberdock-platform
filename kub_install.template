@@ -156,10 +156,19 @@ fi
 # fix elasticsearch home directory ownership (if ES was running as service)
 if [ -d /var/lib/elasticsearch ]; then
   chown -R root:root /var/lib/elasticsearch
+else
+  mkdir -p /var/lib/elasticsearch
 fi
+chcon -Rt svirt_sandbox_file_t /var/lib/elasticsearch
+
+if [ ! -d /var/lib/docker/containers ]; then
+  mkdir -p /var/lib/docker/containers
+fi
+chcon -Rt svirt_sandbox_file_t /var/lib/docker/containers
+
 
 cat > /etc/kubernetes/manifests/kuberdock-logs.manifest << EOF
-apiVersion: v1beta2
+version: v1beta2
 id: kuberdock-logs
 containers:
   - name: fluentd
@@ -180,7 +189,7 @@ containers:
   - name: elasticsearch
     image: kuberdock/elasticsearch:1.0
     env:
-      - name: ETCD_HOST
+      - name: MASTER
         value: {{ master_ip }}
     ports:
       - name: es-port

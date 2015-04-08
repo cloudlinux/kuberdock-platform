@@ -194,7 +194,7 @@ class KubeStat(object):
     def _get_item_id(entry):
         try:
             first_pos = entry['container_name'].index('_', 4) # we know that our string starts from 'k8n_'
-            last_pos = entry['container_name'].index('.', first_pos)
+            last_pos = entry['container_name'].index('_', first_pos+1)
             return entry['container_name'][first_pos+1:last_pos]
         except (ValueError, KeyError):
             return

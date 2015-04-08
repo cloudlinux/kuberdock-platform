@@ -186,7 +186,7 @@ def delete_item(uuid):
 
     try:
         filtered_pods = filter(
-            (lambda x: x['labels']['name'] == name),
+            (lambda x: 'labels' in x and x['labels']['name'] == name),
             pods['items'])
         for pod in filtered_pods:
             pod_rv = tasks.delete_pod_nodelay(pod['id'])
@@ -294,7 +294,7 @@ def update_item(uuid):
 
                 try:
                     filtered_pods = filter(
-                        (lambda x: x['labels']['name'] == item.name),
+                        (lambda x: 'labels' in x and x['labels']['name'] == item.name),
                         pods['items'])
                     for pod in filtered_pods:
                         pod_rv = tasks.delete_pod_nodelay(pod['id'])

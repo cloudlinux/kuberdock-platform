@@ -81,6 +81,16 @@ class KubeResolver(object):
         if 'items' not in data:
             return pods
         for item in data['items']:  # iterate through pods list
+
+            # filter out service pods
+            try:
+                if item.get('labels')['kubernetes.io/cluster-service']:
+                    continue
+            except KeyError:
+                pass
+            except TypeError:
+                continue
+
             try:    # getting UUID
                 item_uuid = item['desiredState']['manifest']['uuid']
             except KeyError:

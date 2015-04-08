@@ -11,7 +11,7 @@ from flask import current_app
 from werkzeug.contrib.cache import RedisCache
 
 
-from .settings import REDIS_HOST, REDIS_PORT
+from .settings import REDIS_HOST, REDIS_PORT, SSH_KEY_FILENAME
 
 
 login_manager = LoginManager()
@@ -76,7 +76,7 @@ def ssh_connect(host, timeout=10):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     error_message = None
     try:
-        ssh.connect(host, username='root', timeout=timeout)
+        ssh.connect(host, username='root', key_filename=SSH_KEY_FILENAME, timeout=timeout)
     except (AuthenticationException, SSHException) as e:
         error_message =\
             '{0}.\nCheck hostname, check that user from which '.format(e) +\

@@ -224,7 +224,10 @@ def parse_pods_statuses(data):
     res = []
     for item in items:
         current_state = item['currentState']
-        pod_name = item['labels']['name']
+        try:
+            pod_name = item['labels']['name']
+        except KeyError:
+            pod_name = item['id']
         if pod_name in db_pods:
             current_state['uid'] = db_pods[pod_name]['uid']
             if 'info' in current_state:

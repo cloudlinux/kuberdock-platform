@@ -26,6 +26,18 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.PodListLayout = Backbone.Marionette.LayoutView.extend({
         template: '#layout-pod-list-template',
 
+        ui: {
+            'addpod' : '#add_pod',
+        },
+
+        events: {
+            'click @ui.addpod' : 'addpod',
+        },
+
+        addpod: function(){
+            console.log('router');
+        },
+
         initialize: function(){
             var that = this;
             this.listenTo(this.list, 'show', function(view){
@@ -124,7 +136,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         terminateItem: function(evt){
-            evt.stopPropagation();
             var that = this,
                 name = this.model.get('name'),
                 preloader = $('#page-preloader');
@@ -141,6 +152,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     modelError(response);
                 }
             });
+            evt.stopPropagation();
         },
     });
 
@@ -250,15 +262,18 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 index: modelIndex + 1
             }
         },
+
         ui: {
-            start : '.start-btn',
-            stop : '.stop-btn',
+            'start'  : '.start-btn',
+            'stop'   : '.stop-btn',
+            'delete' : '.terminate-btn'
         },
 
         events: {
             /*'change .check-item'    : 'checkItem',*/
             'click @ui.start' : 'startItem',
             'click @ui.stop'  : 'stopItem',
+            'click @ui.delete'  : 'deleteItem',
         },
 
         command: function(evt, cmd){
@@ -296,6 +311,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         stopItem: function(evt){
             this.command(evt, 'stop');
         },
+        deleteItem: function(evt){
+            this.command(evt, 'delete');
+        }
     });
 
     Views.ControlsPanel = Backbone.Marionette.ItemView.extend({
@@ -312,8 +330,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         templateHelpers: function(){
+            var thisItem = initPodCollection.fullCollection.get(this.model.id);
             return {
-                status: initPodCollection.fullCollection.get(this.model.id).attributes.status
+                name:     thisItem.attributes.name,
+                status:   thisItem.attributes.status,
+                replicas: thisItem.attributes.replicas,
+                portalIP: thisItem.attributes.portalIP,
+                kubes:    thisItem.attributes.kube_type,
             };
         },
 
@@ -526,9 +549,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
 
     Views.PodHeaderView = Backbone.Marionette.ItemView.extend({
-        template: _.template('<h2 class="peditable"><%- name %></h2>'),
+        template: '#breadcrumb-header',
         tagName: 'div',
-        className: 'col-md-8 col-md-offset-2',
 
         initialize: function(options){
             this.model = options.model;

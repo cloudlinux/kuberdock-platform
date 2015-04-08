@@ -242,13 +242,13 @@
                     <div class="col-xs-6 info">
                         <div>Status: Init</div>
                         <div>Endpoint: 190.22.120.50</div>
-                        <div>Internal IP: 10.122.10.20</div>
+                        <div>Internal IP: <%- portalIP ? portalIP : 'none'%></div>
                     </div>
                     <div class="col-xs-6 servers">
-                        <div><b>My best Pod</b></div>
+                        <div><b><%- name %></b></div>
                         <div>Kube type: SSD Power</div>
                         <div>Restart police: Never or replicas quantity</div>
-                        <div>Kube/replica: 100 (total 84)</div>
+                        <div>Kube/replica:  <%- kubes ? kubes : '0' %> ( <%- replicas ? replicas : '0' %> )</div>
                         <div>Price: 55$/month</div>
                         <div class="edit">Edit pod</div>
                     </div>
@@ -282,10 +282,34 @@
 
         <!-- A Pod creation wizard layout template -->
         <script type="text/template" id="layout-wizard-template">
-            <div id="header-steps" class="container"></div>
+            <div id="header-steps"></div>
             <div id="steps" class="row"></div>
             <div id="footer-steps" class="container"></div>
         </script>
+
+        <!-- A Pod creation wizard breadcrumb-header template -->
+        <script type="text/template" id="breadcrumb-header">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            Pods
+                        </li>
+                        <li>
+                            My best pod
+                        </li>
+                        <li>
+                            Containers
+                        </li>
+                        <li class="active">
+                            Add container
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="container"><h2 class="peditable"><%- name %></h2></div>
+        </script>
+
 
         <!-- An image collection item template -->
         <script type="text/template" id="wizard-image-collection-item-template">

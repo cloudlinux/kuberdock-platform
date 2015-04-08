@@ -77,7 +77,10 @@ def process_event(kub_event):
     except ValueError:
         print 'Wrong event data in process_event: "{0}"'.format(kub_event)
         return True
-    public_ip = kub_event['object']['labels'].get('kuberdock-public-ip')
+    try:
+        public_ip = kub_event['object']['labels']['kuberdock-public-ip']
+    except KeyError:
+        public_ip = False
     if (not public_ip) or (kub_event['type'] == "ADDED"):
         return False
     pod_ip = kub_event['object']['currentState'].get('podIP')

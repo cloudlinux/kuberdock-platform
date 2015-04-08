@@ -55,11 +55,11 @@
                 stopped: 'glyphicon glyphicon-stop',
                 unknown: 'glyphicon glyphicon-question-sign'
             } %>
-	    {#
+        {#
             <div class="col-md-8">
                 <button class="btn btn-default stats">Stats</button>
             </div>
-	    #}
+        #}
         </script>
 
         <!-- Page Container item template -->
@@ -67,7 +67,7 @@
             <td><label class="custom"><input type="checkbox"><span></span></label></td>
             <td><%- index %></td>
             <td>
-            	<a href="#poditem/<%- parentID %>/<%- name %>"><%- image %></a>
+                <a href="#poditem/<%- parentID %>/<%- name %>"><%- image %></a>
                 <span class="terminate-btn">Delete</span>
             </td>
             <td><span>10.10.10.10</span></td>
@@ -163,18 +163,18 @@
                 <% } %>
             </td>
             <td>
-            	<% if ( status = 'running') { %>
-            		<span><%- status %></span>
-                	<span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
-            	<% } else if ( status = 'stopped' ) { %>
-            		<span><%- status %></span>
-                	<span class="start-btn" title="Start <%- name %> pod">Start</span>
-               	<% } else if ( status = 'waiting' ) { %>
-            		<span><%- status %></span>
-                	<span class="start-btn" title="Start <%- name %> pod">Start</span>
-				<% } else { %>
-					<span><%- status %></span>
-				<% } %>
+                <% if ( status == 'running') { %>
+                    <span><%- status %></span>
+                    <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
+                <% } else if ( status == 'stopped' ) { %>
+                    <span><%- status %></span>
+                    <span class="start-btn" title="Start <%- name %> pod">Start</span>
+                <% } else if ( status == 'waiting' ) { %>
+                    <span><%- status %></span>
+                    <span class="start-btn" title="Start <%- name %> pod">Start</span>
+                <% } else { %>
+                    <span><%- status %></span>
+                <% } %>
             </td>
             <td>some kube type(10)
                 <!-- <span class="glyphicon glyphicon-share <%- service ? 'service-on' : 'service-off' %>"></span>
@@ -194,12 +194,14 @@
                 <div class="container breadcrumbs" id="breadcrumbs">
                     <ul class="breadcrumb">
                         <li>
-                            <div id="podlistPage">Pods</div>
+                            <div id="podlistPage">
+                                <a href="/#pods">Pods</a>
+                            </div>
                         </li>
                         <li id="masthead-title" class="active"></li>
                     </ul>
                     <div class="control-group">
-                        <button id="add_pod">Add container</button>
+                        <a id="add_pod" href="/#newpod">Add container</a>
                         <div class="nav-search" id="nav-search">
                             <form class="form-search">
                                 <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
@@ -235,7 +237,6 @@
                 <% } else { %>
                     <span class="stats-btn">stats</span>
                 <% } %>
-                <span class="rename_pod">My best pod</span>
             </div>
             <div class="row placeholders">
                 <div class="col-xs-10 col-xs-offset-2">
@@ -283,7 +284,7 @@
         <!-- A Pod creation wizard layout template -->
         <script type="text/template" id="layout-wizard-template">
             <div id="header-steps"></div>
-            <div id="steps" class="row"></div>
+            <div id="steps" class="container"></div>
             <div id="footer-steps" class="container"></div>
         </script>
 
@@ -293,23 +294,18 @@
                 <div class="container breadcrumbs" id="breadcrumbs">
                     <ul class="breadcrumb">
                         <li>
-                            Pods
+                            <a href="/#pods">Pods</a>
                         </li>
                         <li>
-                            My best pod
-                        </li>
-                        <li>
-                            Containers
+                            Add container
                         </li>
                         <li class="active">
-                            Add container
+                            <span class="peditable"><%- name %><span>
                         </li>
                     </ul>
                 </div>
             </div>
-            <div class="container"><h2 class="peditable"><%- name %></h2></div>
         </script>
-
 
         <!-- An image collection item template -->
         <script type="text/template" id="wizard-image-collection-item-template">
@@ -331,29 +327,64 @@
 
         <!-- Wizard get image template -->
         <script type="text/template" id="wizard-get-image-template">
-            <p class="text-info">
-                Default repository:
-                <span id="search-image-default-repo" class="editable editable-click"
-                      style="font-weight: bold; cursor: pointer;">
-                    registry.hub.docker.com
-                </span>
-            </p>
-            <div class="input-group">
-                <input type="text" id="search-image-field" class="form-control"
-                       placeholder="Enter image or part of image name to search">
-                <span class="input-group-btn">
-                    <button class="btn btn-default search-image" type="button">Search!</button>
-                    <a href="/#pods" class="btn btn-default cancel-search" type="button">Cancel</a>
-                </span>
-            </div><!-- input-group -->
-{#            <div id="data-collection"></div>#}
-{#            <div id="pager"></div>#}
-            <div id="search-results-scroll">
-                <div id="data-collection"></div>
-                <div class="btn btn-more btn-link" style="display: none;">Load more</div>
-                <div class="state no-more-state" style="display: none;">There are no more items</div>
-                <div class="state load-state" style="display: none;">Loading...</div>
+            <div id="find-image">
+                <div class="col-md-3 sidebar">
+                    <ul class="nav nav-sidebar">
+                        <li role="presentation" class="active">Choose image</li>
+                        <li role="presentation" class="">Set up image</li>
+                        <li role="presentation" class="">Environment variables</li>
+                        <li role="presentation" class="">Final</li>
+                    </ul>
+                </div>
+                <div id="details_content" class="col-sm-9">
+                    <div id="tab-content">
+                        <label>Search from directories</label>
+                    <div>
+                </div>
+                <!-- <p class="text-info">
+                    Default repository:
+                    <span id="search-image-default-repo" class="editable editable-click"
+                          style="font-weight: bold; cursor: pointer;">
+                        registry.hub.docker.com
+                    </span>
+                </p> -->
+                <div class="clearfix">
+                    <div class="col-md-3 no-padding">
+                        <select class="image-source">
+                            <option>Docker hub</option>
+                            <option>Private images</option>
+                            <option>Other registies</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8 no-padding">
+                        <input type="text" id="search-image-field" class="form-control" placeholder="Enter image or part of image name to search">
+                    </div>
+                    <div class="col-md-1 no-padding">
+                        <button class="search-image" type="button"></button>
+                    </div>
+                </div>
+                <div class="login-user row">
+                    <div class="col-md-6">
+                        <label>Enter username</label>
+                        <input type="text">
+                    </div>
+                    <div class="col-md-6">
+                        <label>Create password</label>
+                        <input type="text">
+                    </div>
+                </div>
+                <div id="search-results-scroll">
+                    <div id="data-collection"></div>
+                    <div class="btn btn-more btn-link" style="display: none;">Load more</div>
+                    <div class="state no-more-state" style="display: none;">There are no more items</div>
+                    <div class="state load-state" style="display: none;">Loading...</div>
+                </div>
+                <div class="buttons pull-right">
+                    <a href="/#pods" class="">Cencel</button>
+                    <a href="#" class="">Next</button>
+                </div>
             </div>
+
         </script>
 
         <script type="text/template" id="image-collection-item-template">
@@ -658,7 +689,7 @@
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
             <div class="col-md-4 col-md-offset-1">
-		{#
+        {#
                 <table class="table">
                     <thead><tr><th></th><th>Cluster</th></tr></thead>
                     <tbody>
@@ -683,7 +714,7 @@
                         <% } %>
                     </tbody>
                 </table>
-		#}
+        #}
                 <% if(freeHost) { %>
                 <table class="table">
                 <thead><tr><th></th><th>Public IP</th></tr></thead>
@@ -694,7 +725,7 @@
                 </tr></tbody>
                 </table>
                 <% } %>
-		{#
+        {#
                 <% if (nodes.length !== 0){ %>
                 <table class="table">
                     <thead><tr><th></th><th>Node to run on</th></tr></thead>
@@ -714,7 +745,7 @@
                     </tbody>
                 </table>
                 <% } %>
-		#}
+        #}
                 <% if (volumes.length !== 0){ %>
                 <table class="table">
                     <thead><tr><th>Volume</th><th>Path</th></tr></thead>

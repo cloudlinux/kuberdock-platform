@@ -47,22 +47,30 @@ ONLINE_LAST_MINUTES = 5
 
 LOCK_FILE_NAME = '/var/tmp/kuberdock.watch.pid'
 
+MASTER_IP = ''
+MASTER_TOBIND_FLANNEL = 'enp0s5'
+NODE_TOBIND_EXTERNAL_IPS = 'enp0s5'
+NODE_TOBIND_FLANNEL = 'enp0s5'
+
 
 # Import hoster settings in update case
-if os.path.exists('/etc/sysconfig/kuberdock/kuberdock.conf'):
-    import ConfigParser
-    config = ConfigParser.RawConfigParser(defaults=globals())
-    try:
-        config.read('/etc/sysconfig/kuberdock/kuberdock.conf')
-        DB_USER = config.get('main', 'DB_USER')
-        DB_PASSWORD = config.get('main', 'DB_PASSWORD')
-        DB_NAME = config.get('main', 'DB_NAME')
-        MASTER_IP = config.get('main', 'MASTER_IP')
-        MASTER_TOBIND_FLANNEL = config.get('main', 'MASTER_TOBIND_FLANNEL')
-        NODE_TOBIND_EXTERNAL_IPS = config.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
-        NODE_TOBIND_FLANNEL = config.get('main', 'NODE_TOBIND_FLANNEL')
-    except ConfigParser.Error as e:
-        print 'ConfigParser Error: ', e
+import ConfigParser
+config = ConfigParser.RawConfigParser(
+    defaults=dict([(k, v) for k, v in globals().items() if k[0].isupper()])
+)
+try:
+    config.read('/etc/sysconfig/kuberdock/kuberdock.conf')
+    if not config.has_section('main'):
+        config.add_section('main')
+    DB_USER = config.get('main', 'DB_USER')
+    DB_PASSWORD = config.get('main', 'DB_PASSWORD')
+    DB_NAME = config.get('main', 'DB_NAME')
+    MASTER_IP = config.get('main', 'MASTER_IP')
+    MASTER_TOBIND_FLANNEL = config.get('main', 'MASTER_TOBIND_FLANNEL')
+    NODE_TOBIND_EXTERNAL_IPS = config.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
+    NODE_TOBIND_FLANNEL = config.get('main', 'NODE_TOBIND_FLANNEL')
+except ConfigParser.Error as e:
+    print 'ConfigParser Error: ', e
 
 
 # Import local settings

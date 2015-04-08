@@ -54,18 +54,18 @@ if [ ! $ans -eq 1 ]; then
 fi
 
 MASTER_TOBIND_FLANNEL="enp0s5"
-yesno "Interface to bind for Flannel network on master $MASTER_TOBIND_FLANNEL"
+yesno "Interface to bind for Flannel network on master is $MASTER_TOBIND_FLANNEL"
 
 if [ ! $ans -eq 1 ]; then
-    read -p "Enter interface name(ip accepted too): " MASTER_TOBIND_FLANNEL
+    read -p "Enter interface name: " MASTER_TOBIND_FLANNEL
     echo "Will use $MASTER_TOBIND_FLANNEL"
 fi
 
 NODE_TOBIND_FLANNEL="enp0s5"
-yesno "Interface to bind for Flannel network on nodes(inter-host comminication and with master) $NODE_TOBIND_FLANNEL"
+yesno "Interface to bind for Flannel network on nodes(inter-host comminication and with master) is $NODE_TOBIND_FLANNEL"
 
 if [ ! $ans -eq 1 ]; then
-    read -p "Enter interface name(ip accepted too): " NODE_TOBIND_FLANNEL
+    read -p "Enter interface name: " NODE_TOBIND_FLANNEL
     echo "Will use $NODE_TOBIND_FLANNEL"
 fi
 
@@ -429,4 +429,4 @@ EOF
 # ======================================================================
 echo "WARNING: Firewalld was disabled. You need to configure it to work right"
 echo "WARNING: $WEBAPP_USER user must have ssh access to nodes as 'root'"
-echo "Successfully done. Your Kuberdock is on https://$MASTER_IP"
+echo "Successfully done. Your Kuberdock is on https://$MASTER_IP/"

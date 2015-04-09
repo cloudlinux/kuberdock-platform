@@ -746,6 +746,35 @@
                 </table>
                 <% } %>
         #}
+                <table class="table">
+                    <thead><tr><th>Restart Policy</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <select class="restart-policy">
+                                    <option selected="selected" value="always">Always</option>
+                                    <option value="never">Never</option>
+                                    <option value="onFailure">On Failure</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="table">
+                    <thead><tr><th>Extra Options</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <select class="kube_type" id="extra-options">
+                                    <option value="Choose kube type" disabled selected>Choose kube type</option>
+                                    {% for kube_type in kube_types %}
+                                    <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 <% if (volumes.length !== 0){ %>
                 <table class="table">
                     <thead><tr><th>Volume</th><th>Path</th></tr></thead>

@@ -190,7 +190,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
         },
 
         createPod: function(){
-            var model = new App.Data.Pod({name: "Unnamed 1", containers: [], volumes: []}),
+            var model = new App.Data.Pod({name: "Unnamed-1", containers: [], volumes: []}),
                 wizardLayout = new App.Views.PodWizardLayout(),
                 that = this;
 

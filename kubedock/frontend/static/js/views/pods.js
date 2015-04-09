@@ -1185,7 +1185,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .cluster'     : 'toggleCluster',
             'click .node'        : 'toggleNode',
             'change .replicas'   : 'changeReplicas',
-            'change select.kube_type'   : 'changeKubeType'
+            'change select.kube_type'   : 'changeKubeType',
+            'change .restart-policy'    : 'changePolicy'
         },
 
         triggers: {
@@ -1240,6 +1241,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.model.set('kube_type', parseInt(evt.target.value));
         },
 
+        changePolicy: function(evt){
+            evt.stopPropagation();
+            var policy = $(evt.target).val(),
+                struct = {};
+            struct[policy] = {};
+            this.model.set('restartPolicy', struct)
+        },
+        
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({

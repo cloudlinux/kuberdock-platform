@@ -143,7 +143,11 @@
                         <div id="users-page">Users</div>
                     </li>
                     <li class="active">
-                        <%- username ? username : 'Add user' %>
+                        <% if( typeof username == "undefined" ) { %>
+                            Add user
+                        <% } else { %>
+                            <%- username %>
+                        <% } %>
                     </li>
                 </ul>
                 <div class="control-group">
@@ -168,82 +172,83 @@
                     <div class="row placeholders">
                         <div class="tab-content col-xs-12 no-padding-right">
                             <div class="tab-pane fade in active" id="userGeneralTab">
-                            	<div class="col-xs-2 col-offset-1 user"></div>
-								<div class="col-xs-3">
-				                    <div>Name: Adam Smith</div>
-				                    <div>Regestered: 12 Jan 2015</div>
-				                    <div>Last login: 04 May 2015</div>
-				                </div>
-				                <div class="col-xs-2 col-offset-1 info"></div>
-				                <div class="col-xs-3">
-				                    <div>Kubes: 220</div>
-				                    <div>Plan: Basic</div>
-				                </div>
-	                            <div class="col-xs-12">
-		                            <table id="user-profile-general-table" class="table">
-						                <thead>
-						                    <tr>
-						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Pods</div>
-						                        </th>
-						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Average<br/>CPU usage</div>
-						                        </th>
-						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Kube type column<br>(kubes quantity)</div>
-						                        </th>
-						                    </tr>
-						                </thead>
-						                <tbody>
-						                	<tr>
-						                		<td>Some pode name 1</td>
-						                		<td>20%</td>
-						                		<td>Kube quantity</td>
-						                	</tr>
-						                	<tr>
-						                		<td>Some pode name 2</td>
-						                		<td>20%</td>
-						                		<td>Kube quantity</td>
-						                	</tr>
-						                </tbody>
-						            </table>
-	                            </div>
+                                <div class="col-xs-2 col-offset-1 user"></div>
+                                <div class="col-xs-3">
+                                    <div>Name: <%- first_name %> <%- last_name %></div>
+                                    <div>Regestered: <%- join_date %></div>
+                                    <div>Last login: <%- last_login %></div>
+                                    <div>Last activity: <%- last_activity %></div>
+                                </div>
+                                <div class="col-xs-2 col-offset-1 info"></div>
+                                <div class="col-xs-3">
+                                    <div>Kubes: 220</div>
+                                    <div>Plan: Basic</div>
+                                </div>
+                                <div class="col-xs-12">
+                                    <table id="user-profile-general-table" class="table">
+                                        <thead>
+                                            <tr>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Pods</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Average<br/>CPU usage</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Kube type column<br>(kubes quantity)</div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Some pode name 1</td>
+                                                <td>20%</td>
+                                                <td>Kube quantity</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Some pode name 2</td>
+                                                <td>20%</td>
+                                                <td>Kube quantity</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="tab-pane fade" id="userLogsTab">
                                 <div class="col-xs-12 no-padding-right">
                                     <table id="user-profile-logs-table" class="table">
-						                <thead>
-						                    <tr>
-						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Login</div>
-						                        </th>
-						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Duration</div>
-						                        </th>
-						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>Logout</div>
-						                        </th>
-						                        <th unselectable="on" style="-webkit-user-select: none;">
-						                        	<div>IP</div>
-						                        </th>
-						                    </tr>
-						                </thead>
-						                <tbody>
-						                	<tr>
-						                		<td>12 Jan 2014 at 12:00 AM</td>
-						                		<td>5h 20min</td>
-						                		<td>12 Jan 2014 at 5:20 PM</td>
-						                		<td>192.168.0.1</td>
-						                	</tr>
-						                	<tr>
-						                		<td>13 May 2013 at 11:32 PM</td>
-						                		<td>32h 10min</td>
-						                		<td>15 May 2013 at 1:42 AM</td>
-						                		<td>122.12.32.11</td>
-						                	</tr>
-						                </tbody>
-						            </table>
-                                </div
+                                        <thead>
+                                            <tr>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Login</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Duration</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Logout</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>IP</div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>12 Jan 2014 at 12:00 AM</td>
+                                                <td>5h 20min</td>
+                                                <td>12 Jan 2014 at 5:20 PM</td>
+                                                <td>192.168.0.1</td>
+                                            </tr>
+                                            <tr>
+                                                <td>13 May 2013 at 11:32 PM</td>
+                                                <td>32h 10min</td>
+                                                <td>15 May 2013 at 1:42 AM</td>
+                                                <td>122.12.32.11</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>

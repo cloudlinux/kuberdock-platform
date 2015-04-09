@@ -66,10 +66,33 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def last_activity(self):
         return get_user_last_activity(self.id)
 
+    def pods_to_dict(self):
+        states = lambda x: dict(
+            pod_id=x.pod_id,
+            container_name=x.container_name,
+            kubes=x.kubes,
+            start_time=x.start_time.isoformat(sep=' ')[:19]
+                if x.start_time else None,
+            end_time=x.end_time.isoformat(sep=' ')[:19]
+                if x.end_time else None
+        )
+        return [
+            dict(
+                id=p.id,
+                name=p.name,
+                owner_id=p.owner_id,
+                kube_id=p.kube_id,
+                config=p.config,
+                status=p.status,
+                states=[states(state) for state in p.states]
+            ) for p in self.pods
+        ]
+
     def to_dict(self, include=None, exclude=None):
         last_activity = self.last_activity
         package = self.package.name if self.package else None
-        return dict(
+        last_login = self.last_login
+        data = dict(
             id=self.id,
             username=self.username,
             email=self.email,
@@ -81,8 +104,15 @@ class User(BaseModelMixin, UserMixin, db.Model):
             rolename=self.role.rolename,
             join_date=self.join_date.isoformat(sep=' ')[:19],
             package=package,
+            pods=self.pods_to_dict(),
+            package_info=self.package_info(),
             last_activity=last_activity.isoformat(sep=' ')[:19] \
-                if last_activity else '', )
+                if last_activity else '',
+            last_login=last_login.isoformat(sep=' ')[:19] \
+                if last_login else None
+        )
+
+        return data
 
     def history_logged_in(self):
         ua = UserActivity.create(action=UserActivity.LOGIN, user_id=self.id)
@@ -95,6 +125,29 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def user_activity(self):
         data = [ua.to_dict() for ua in self.activities]
         return data
+
+    @property
+    def last_login(self):
+        last_login = UserActivity.filter_by(
+            action=UserActivity.LOGIN,
+            user_id=self.id).order_by(UserActivity.ts.desc()).first()
+        if last_login:
+            return last_login.ts
+        return None
+
+    def package_info(self):
+        pkg = self.package
+        if pkg is None:
+            return {}
+        return dict(
+            id=pkg.id,
+            name=pkg.name,
+            kube_id=pkg.kube_id,
+            kube_info=pkg.kube.to_dict() if pkg.kube_id else {},
+            amount=pkg.amount,
+            currency=pkg.currency,
+            period=pkg.period
+        )
 
     def __repr__(self):
         return "<User(username='{0}', email='{1}')>".format(self.username, self.email)

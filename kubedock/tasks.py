@@ -314,7 +314,10 @@ def add_container_state(pod, container, kubes, start, end):
 
 @celery.task()
 def pull_hourly_stats():
-    data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
+    try:
+        data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
+    except Exception:
+        data = []
     time_windows = set(map(operator.itemgetter('time_window'), data))
     rv = db.session.query(StatWrap5Min).filter(
         StatWrap5Min.time_window.in_(time_windows))

@@ -12,7 +12,7 @@ define(['marionette', 'utils'],
         Data.NetworkModel = utils.BaseModel.extend({
             urlRoot: '/api/ippool/'
         });
-        Data.NetworksCollection = Backbone.Collection.extend({
+        Data.NetworksCollection = utils.BaseCollection.extend({
             url: '/api/ippool/',
             model: Data.NetworkModel
         });

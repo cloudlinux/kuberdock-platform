@@ -6,12 +6,13 @@ define(function () {
         statusCode: {
             400: function(xhr){
                 var err = xhr.statusText;
-                if(xhr.responseJSON && xhr.responseJSON.status)
-                    err = xhr.responseJSON.status;
+                if(xhr.responseJSON && xhr.responseJSON.data)
+                    err = xhr.responseJSON.data;
                 $.notify(err, {
-                    autoHideDelay: 5000,
+                    autoHideDelay: 15000,
+                    clickToHide: true,
                     globalPosition: 'top center',
-                    className: 'danger'
+                    className: 'error'
                 });
             },
             401: function (xhr) {
@@ -49,7 +50,7 @@ define(function () {
     // here you can define any useful functions or objects to use their in the project
 
     this.unwrapper = function (response) {
-        var data = response.hasOwnProperty('data') ? response['data'] : response
+        var data = response.hasOwnProperty('data') ? response['data'] : response;
         if (response.hasOwnProperty('status')) {
             if(response.status == 'error' || response.status == 'warning') {
                 var err = data;

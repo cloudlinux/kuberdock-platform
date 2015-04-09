@@ -88,6 +88,7 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.block_user'     : 'blockUser',
                 'click @ui.activated_user' : 'activatedUser'
             },
+
             removeUser: function(){
                 this.destroy();
             },
@@ -104,7 +105,7 @@ define(['marionette', 'paginator', 'utils'],
 
             profileUser_btn: function(){
                 App.router.navigate('/profile/' + this.model.id + '/', {trigger: true});
-            },
+            }
         });
 
         Views.OnlineUserItem = Marionette.ItemView.extend({
@@ -135,7 +136,7 @@ define(['marionette', 'paginator', 'utils'],
 
             ui: {
                 'add_user'           : 'button#add_user',
-                'edit_selected_user' : 'span#editUser',
+                'edit_selected_user' : 'span#editUser'
             },
 
             events: {
@@ -517,8 +518,9 @@ define(['marionette', 'paginator', 'utils'],
 
             showProfileUser: function(user_id){
                 var layout_view = new App.Views.UsersLayout();
+                var user_model = App.Data.users.fullCollection.get(parseInt(user_id));
                 var user_profile_view = new App.Views.UserProfileView({
-                    model: App.Data.users.get(parseInt(user_id))
+                    model: user_model
                 });
 
                 this.listenTo(layout_view, 'show', function () {

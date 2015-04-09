@@ -1,4 +1,5 @@
 requirejs.config({
+    waitSeconds: 200,
     baseUrl: '/static/js',
     paths: {
         backbone: 'lib/backbone',

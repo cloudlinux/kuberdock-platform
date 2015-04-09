@@ -84,6 +84,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 kube_id=p.kube_id,
                 config=p.config,
                 status=p.status,
+                containers_count=p.containers_count,
                 states=[states(state) for state in p.states]
             ) for p in self.pods
         ]
@@ -92,6 +93,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
         last_activity = self.last_activity
         package = self.package.name if self.package else None
         last_login = self.last_login
+        pods = self.pods_to_dict()
+        containers_count = sum([p['containers_count'] for p in pods])
         data = dict(
             id=self.id,
             username=self.username,
@@ -104,7 +107,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
             rolename=self.role.rolename,
             join_date=self.join_date.isoformat(sep=' ')[:19],
             package=package,
-            pods=self.pods_to_dict(),
+            pods=pods,
+            containers_count=containers_count,
+            pods_count=len(pods),
             package_info=self.package_info(),
             last_activity=last_activity.isoformat(sep=' ')[:19] \
                 if last_activity else '',

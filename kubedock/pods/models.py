@@ -28,6 +28,10 @@ class Pod(db.Model):
             [c.get('kubes', 1) for c in json.loads(self.config)['containers']]
         )
 
+    @property
+    def containers_count(self):
+        return len(json.loads(self.config).get('containers', []))
+
 
 class ContainerState(db.Model):
     __tablename__ = 'container_states'

@@ -676,7 +676,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 itemTemplateSelector: "#image-collection-item-template",
                 itemClasses: "item",
                 dataUrl: "/api/images/search",
-                disableAutoscroll: false,
+                disableAutoscroll: true,
                 requestData: {searchkey: query, url: imageSearchURL},
                 onAddItem: function(count, $col, $item, data){
                     $item.find('.add-item').on('click', function() {

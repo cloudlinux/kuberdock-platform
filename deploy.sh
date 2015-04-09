@@ -239,6 +239,8 @@ chown $WEBAPP_USER $KUBERNETES_CONF_DIR/kubelet_token.dat
 
 #9. Configure kubernetes
 sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE\"|}" $KUBERNETES_CONF_DIR/apiserver
+# This plugins enabled by default
+# sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceAutoProvision,LimitRanger,ResourceQuota||}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBERNETES_CONF_DIR/controller-manager
 
 

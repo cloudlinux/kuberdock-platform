@@ -117,15 +117,6 @@ def remove_node_by_host(host):
     return r.json()
 
 
-def compute_capacity(cpu_count, cpu_mhz, mem_total):
-    CPU_SCALE_FACTOR = 1.0
-    MEM_PART_FACTOR = 1.0
-    return {
-        'cpu': int(round(cpu_count * cpu_mhz * CPU_SCALE_FACTOR)),
-        'memory': int(round(mem_total * MEM_PART_FACTOR))
-    }
-
-
 @celery.task()
 def add_new_node(host, kube_type):
     send_event('install_logs',
@@ -163,38 +154,10 @@ def add_new_node(host, kube_type):
             .format(s, e.read())
         send_event('install_logs', res)
     else:
-        ok, data = fast_cmd(ssh, 'lscpu | grep ^CPU\(s\) | cut -f 2 -d\:')
-        if not ok:
-            send_event('install_logs', "Can't retrieve cpu count using lscpu")
-            ssh.close()
-            return data
-        cpu_count = int(data.strip())
-
-        # TODO this MHz is not true
-        ok, data = fast_cmd(ssh, 'lscpu | grep ^CPU\ MHz | cut -f 2 -d\:')
-        if not ok:
-            send_event('install_logs', "Can't retrieve cpu MHz using lscpu")
-            ssh.close()
-            return data
-        cpu_mhz = float(data.strip())
-
-        ok, data = fast_cmd(ssh, 'cat /proc/meminfo | grep MemTotal |'
-                                 ' cut -f 2 -d\: | cut -f 1 -dk')
-        if not ok:
-            send_event('install_logs', "Can't retrieve MemTotal using /proc")
-            ssh.close()
-            return data
-        mem_total = int(data.strip()) * 1024  # was in Kb
-
-        cap = compute_capacity(cpu_count, cpu_mhz, mem_total)
-
         res = requests.post(get_api_url('nodes'),
                             json={'id': host,
                                   'apiVersion': KUBE_API_VERSION,
                                   'externalID': host,
-                                  'resources': {
-                                      'capacity': cap
-                                  },
                                   'labels': {
                                       'kuberdock-node-hostname': host,
                                       'kuberdock-kube-type': 'type_' +

@@ -749,12 +749,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-            'click .complete'        : 'step:complete',
+/*            'click .complete'        : 'step:complete',*/
             'click .next-step'       : 'step:volconf',
-            'click .go-to-volumes'   : 'step:volconf',
+/*            'click .go-to-volumes'   : 'step:volconf',
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
-            'click .go-to-other'     : 'step:otherconf',
+            'click .go-to-other'     : 'step:otherconf',*/
             'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },

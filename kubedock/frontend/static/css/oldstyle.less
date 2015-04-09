@@ -29,7 +29,7 @@ html{
 		}
 		.editable {
 		    display: inline-block;
-		    border-color: #4DB04D;
+		    border-color: #466EB1;
 		    color: #5c5c5c;
 		    &:hover{
 		    	cursor: pointer;
@@ -104,14 +104,11 @@ html{
 	  				padding: 55px 0 65px 0; 
 	  				a{
 	  					&.logo{
-	  						margin-top: 5px;
-							float: left;
-							width: 227px;
-							height: 31px;
-							background-image: url(../img/header-logo.png);
-							background-size: 227px 31px;
-							background-repeat: no-repeat;
-							text-indent: -9999px; 
+                            float: left;
+                            width: 155px;
+                            height: 48px;
+                            background-image: url(../img/logo2.png);
+                            background-size: 155px 48px;
 	  					}
 	  					&.login-btn{
 	  						float: right;
@@ -225,110 +222,9 @@ html{
 	    		}
 	    	}
 		}
-		/* settings page */
-		.form-settings{
-			max-width: 400px;
-			padding: 15px;
-			margin: 0 auto;
-			h2{
-				margin-top: 0;
-			}
-			.group{
-				margin-bottom: 27px;
-				width: 100%;
-				input, textarea{
-					.border-radius(6px);
-					.box-shadow(none);
-					.box-sizing(border-box);
-					.transition(all 300ms);	
-					border: 1px solid #E8E5E5;
-					font-size: 30px;	
-
-					&:focus{
-						border-color: #4DB04D;
-					}
-				}
-				input{
-					padding: 0 15px;
-					height: 62px;
-				}
-				textarea{
-					resize: none;
-					height: auto;
-					overflow: hidden;
-					min-height: 170px;
-				}
-			}
-			button{
-				.border-radius(10px);
-				padding: 15px 0;
-				font-size: 20px;
-			}
-		}
-		/* end settings page */
-
 		/*end  need refactoring */
 
     	/* content */
-		#data-collection{
-			margin-top: 20px;
-			.item {
-				.border-radius(.24em);
-				margin: .5em 0em;
-				background-color: #FFF;
-				border: 1px solid #d8d8d8;
-				color: #545454;
-				padding: 10px;
-				&:hover{
-					.box-shadow(0px 1px 10px 1px rgba(0, 0, 0, 0.2));
-				}
-				.item-header {
-					border-bottom: 1px dotted #d8d8d8;
-					height: 2.4em;
-					margin: 0 .8em;
-					clear: left;
-					.item-status {
-						.box-sizing (border-box);
-						width: 1.2em;
-						height: 1.2em;
-						border-radius: .18em;
-						font-size: 1.3em;
-						margin-top: .3em;
-						float: left;
-						.glyphicon-globe{
-							color: rgb(77, 176, 77);
-						}
-					}
-					.item-header-title {
-						float: left;
-						margin: .52em 0 0 1em;
-						height: 1.2em;
-						line-height: 1.2em;
-						font-size: 1.12em;
-					}
-					.item-header-controls{
-						float: right;
-						height: 2.4em;
-						line-height: 2.4em;
-						margin-right: 0.5em;
-						.glyphicon-plus{
-							.opacity(0.5);
-							color: #4DB04D;
-							&:hover{
-								.opacity(1);
-							}
-						}
-					}
-				}
-				.item-body{
-					margin: 0 .8em;
-					padding: .3em 0;
-					.item-body-info{
-						font-style: italic;
-					}
-				}
-			}
-		}
     	/* error pages */
 		.messages-wrapper{
 			margin: 0 auto;

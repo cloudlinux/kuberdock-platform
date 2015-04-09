@@ -312,7 +312,6 @@ define(['marionette', 'paginator', 'utils'],
         Views.UserProfileView = Backbone.Marionette.ItemView.extend({
             template: '#user-profile-template',
             tagName: 'div',
-            
 
             ui: {
                 'users_page'          : 'div#users-page',
@@ -320,11 +319,16 @@ define(['marionette', 'paginator', 'utils'],
                 'user_cancel_btn'     : 'button#user-cancel-btn',
                 'login_this_user_btn' : 'button#login_this_user'
             },
+
             events: {
                 'click @ui.users_page'          : 'breadcrumbClick',
                 'click @ui.user_cancel_btn'     : 'cancel',
                 'click @ui.delete_user_btn'     : 'delete_user',
                 'click @ui.login_this_user_btn' : 'login_this_user'
+            },
+
+            onRender: function(){
+//                console.log(this.model)
             },
 
             login_this_user: function(){

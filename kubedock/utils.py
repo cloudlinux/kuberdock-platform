@@ -2,7 +2,7 @@
 #import importlib
 
 from flask import current_app, request, jsonify, g
-from flask.ext.login import current_user
+from flask.ext.login import current_user, logout_user
 from functools import wraps
 
 from .settings import KUBE_MASTER_URL
@@ -60,14 +60,17 @@ def get_api_url(*args, **kwargs):
 
 # separate function because set_roles_loader decorator don't return function. Lib bug.
 def get_user_role():
-    print current_user.role
+    rolename = 'AnonymousUser'
     try:
-        return current_user.role.name
+        rolename = current_user.role.rolename
     except AttributeError:
         try:
-            return g.user.role.name
+            rolename = g.user.role.rolename
         except AttributeError:
-            return 'AnonymousUser'
+            pass
+    if rolename == 'AnonymousUser':
+        logout_user()
+    return rolename
 
 
 class APIError(Exception):

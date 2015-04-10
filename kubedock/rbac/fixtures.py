@@ -4,37 +4,9 @@ from .models import Resource, Role, Permission
 RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages", 
              "notifications")
 
-ROLES = ("AnonymousUser", "SuperAdmin", "Administrator", "User", "TrialUser")
+ROLES = ("SuperAdmin", "Administrator", "User", "TrialUser")
 
 PERMISSIONS = (
-    # AnonymousUser
-    ("users", "AnonymousUser", "create", False),
-    ("users", "AnonymousUser", "get", False),
-    ("users", "AnonymousUser", "edit", False),
-    ("users", "AnonymousUser", "delete", False),
-    ("users", "AnonymousUser", "auth_by_another", False),
-    ("nodes", "AnonymousUser", "create", False),
-    ("nodes", "AnonymousUser", "get", False),
-    ("nodes", "AnonymousUser", "edit", False),
-    ("nodes", "AnonymousUser", "delete", False),
-    ("pods", "AnonymousUser", "create", False),
-    ("pods", "AnonymousUser", "get", False),
-    ("pods", "AnonymousUser", "edit", False),
-    ("pods", "AnonymousUser", "delete", False),
-    ("ippool", "AnonymousUser", "create", False),
-    ("ippool", "AnonymousUser", "get", False),
-    ("ippool", "AnonymousUser", "edit", False),
-    ("ippool", "AnonymousUser", "delete", False),
-    ("ippool", "AnonymousUser", "view", False),
-    ("static_pages", "AnonymousUser", "create", False),
-    ("static_pages", "AnonymousUser", "get", False),
-    ("static_pages", "AnonymousUser", "edit", False),
-    ("static_pages", "AnonymousUser", "delete", False),
-    ("static_pages", "AnonymousUser", "view", False),
-    ("notifications", "AnonymousUser", "create", False),
-    ("notifications", "AnonymousUser", "get", False),
-    ("notifications", "AnonymousUser", "edit", False),
-    ("notifications", "AnonymousUser", "delete", False),
     # SuperAdmin
     ("users", "SuperAdmin", "create", True),
     ("users", "SuperAdmin", "get", True),

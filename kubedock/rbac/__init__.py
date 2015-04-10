@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import g, current_app
-from flask.ext.login import current_user
+from flask.ext.login import current_user, logout_user
 from rbac.acl import Registry as RegistryOrigin
 from rbac.context import IdentityContext
 
@@ -82,13 +82,17 @@ def roles_loader():
 
 # separate function because set_roles_loader decorator don't return function. Lib bug.
 def get_user_role():
+    rolename = 'AnonymousUser'
     try:
-        return current_user.role.rolename
+        rolename = current_user.role.rolename
     except AttributeError:
         try:
-            return g.user.role.rolename
+            rolename = g.user.role.rolename
         except AttributeError:
-            return 'AnonymousUser'
+            pass
+    if rolename == 'AnonymousUser':
+        logout_user()
+    return rolename
 
 
 class RoleWrapper(object):

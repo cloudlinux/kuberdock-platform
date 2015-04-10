@@ -1,15 +1,12 @@
-# "commit" variable expected to be passed by cmdline via rpmbuild --define='...'
-%global shortcommit	%(c=%{commit}; echo ${c:0:7})
-
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 23.git%{shortcommit}%{?dist}.cloudlinux
+Release: 23%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
-Url: http://www.kernelcare.com
-Source0: %{name}-%{shortcommit}.tar.gz
+URL: http://www.cloudlinux.com
+Source0: %{name}-%{version}.tar.bz2
 
 Requires: nginx
 Requires: influxdb
@@ -121,3 +118,8 @@ fi
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %config %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
+
+%changelog
+
+* Fri Apr 10 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-1
+- First release

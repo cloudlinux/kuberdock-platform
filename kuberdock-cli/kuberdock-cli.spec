@@ -3,7 +3,7 @@
 Name: kuberdock-cli
 Version: 0.1
 Release: 1%{?dist}.cloudlinux
-Summary: Libraries and executables for introducing a panel server to CLHA domain
+Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
 URL: http://www.cloudlinux.com

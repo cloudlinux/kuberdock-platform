@@ -11,6 +11,7 @@ img, a, input {
 
 @import "oldstyle.less";
 
+
 /* new design */ 
 @regular: "ProximaNovaReg";
 
@@ -20,6 +21,12 @@ body{
 	}
 	@import "fonts.less";
 	font-family: @regular;
+
+	button:disabled{
+		&:hover{
+			cursor: not-allowed !important;
+		}
+	}
 
 	/* header */
 	.navbar{

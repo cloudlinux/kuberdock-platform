@@ -284,7 +284,7 @@
         <!-- A Pod creation wizard layout template -->
         <script type="text/template" id="layout-wizard-template">
             <div id="header-steps"></div>
-            <div id="steps" class="container"></div>
+            <div id="steps"></div>
             <div id="footer-steps" class="container"></div>
         </script>
 
@@ -297,7 +297,7 @@
                             <a href="/#pods">Pods</a>
                         </li>
                         <li>
-                            Add container
+                            <a href="/#newpod">Add container</a>
                         </li>
                         <li class="active">
                             <span class="peditable"><%- name %><span>
@@ -327,7 +327,7 @@
 
         <!-- Wizard get image template -->
         <script type="text/template" id="wizard-get-image-template">
-            <div id="find-image">
+            <div id="find-image" class="container">
                 <div class="col-md-3 sidebar">
                     <ul class="nav nav-sidebar">
                         <li role="presentation" class="active">Choose image</li>
@@ -353,7 +353,7 @@
                         <select class="image-source">
                             <option>Docker hub</option>
                             <option>Private images</option>
-                            <option>Other registies</option>
+                            <option>Other registries</option>
                         </select>
                     </div>
                     <div class="col-md-8 no-padding">
@@ -375,31 +375,32 @@
                 </div>
                 <div id="search-results-scroll">
                     <div id="data-collection"></div>
-                    <div class="btn btn-more btn-link" style="display: none;">Load more</div>
-                    <div class="state no-more-state" style="display: none;">There are no more items</div>
-                    <div class="state load-state" style="display: none;">Loading...</div>
+                    <div class="search-control">
+                        <div class="btn btn-more btn-link" style="display: none;">Load more</div>
+                        <div class="state no-more-state" style="display: none;">There are no more items</div>
+                        <div class="state load-state" style="display: none;">Loading...</div>
+                    </div>
                 </div>
                 <div class="buttons pull-right">
-                    <a href="/#pods" class="">Cencel</button>
-                    <a href="#" class="">Next</a>
+                    <a href="/#pods" class="">Cencel</a>
+                    <button disabled="disabled" class="nextStep">Next</button>
                 </div>
             </div>
 
         </script>
 
         <script type="text/template" id="image-collection-item-template">
-            <div class="item-header">
-                <div class="item-status">
-                    <span class="glyphicon glyphicon-globe"></span>
+            <div class="col-xs-12 no-padding">
+                <div class="col-xs-10 no-padding">
+                    <div class="item-header-title"><%= name || 'nameless' %></div>
+                    <div class="item-body-info">
+                        <%= description || 'No description' %>
+                    </div>
+                    <div class="more">more...</div>
                 </div>
-                <div class="item-header-title"><%= name || 'nameless' %></div>
-                <div class="item-header-controls">
-                    <span class="glyphicon glyphicon-plus add-item el-control"></span>
-                </div>
-            </div>
-            <div class="item-body">
-                <div class="item-body-info">
-                    <%= description || 'No description' %>
+                <div class="col-xs-2 no-padding">
+                    <button class="like">41</button>
+                    <button class="add-item">Select</button>
                 </div>
             </div>
         </script>
@@ -407,7 +408,8 @@
 
         <!-- Wizard set container port template -->
         <script type="text/template" id="wizard-set-container-ports-template">
-            <div id="find-image">
+           	<% if (isPending) { %>
+            <div id="find-image" class="container">
                 <div class="col-md-3 sidebar">
                     <ul class="nav nav-sidebar">
                         <li role="presentation" class="success">Choose image</li>
@@ -510,39 +512,108 @@
                     <div>
                 </div>
                 <div class="buttons pull-right">
-                    <% if (isPending) { %>
                     <a href="/#pods" class="">Cencel</a>
                     <button class="next-step">Next</button>
-                    <% } else { %>
-                    <a href="/#pods/<%- parentID %>">Back</a>
-                    <button class="next-step">Next</button>
-                    <% } %>
                 </div>
             </div>
-
-            <div class="row title">
-                <div class="col-md-7">
-                    <ul class="nav nav-pills">
-                        <% if (!isPending) { %>
-                        <li role="presentation"><span class="go-to-stats btn btn-info">Stats</span></li>
-                        <li role="presentation"><span class="go-to-logs btn btn-info">Logs</span></li>
-                        <% } %>
-                    </ul>
+            <% } else { %>
+            <div id="container-page">
+            	<div class="breadcrumbs-wrapper">
+                    <div class="container breadcrumbs" id="breadcrumbs">
+                        <ul class="breadcrumb">
+                            <li>
+                                <a href="/#pods">Pods</a>
+                            </li>
+                            <li>
+                                <a href="/#pods/<%- parentID %>">My best Pod</a>
+                            </li>
+                            <li>
+                                <a href="/#pods/<%- parentID %>">Containers</a>
+                            </li>
+                            <li class="active"><%- nodeName %></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="container">
+                    <div class="row">
+                        <div class="col-sm-3 col-md-2 sidebar">
+                            <ul class="nav nav-sidebar">
+                                <li role="presentation" class="general go-to-general">General</li>
+                                <li role="presentation" class="stats go-to-logs">Logs</li>
+                                <li role="presentation" class="go-to-stats">Stats</li>
+                                <li role="presentation" class="">Monitoring</li>
+                                <li role="presentation" class="">Timelines</li>
+                                <li role="presentation" class="configuration  active">Configuration
+                                    <ul class="nav sub-nav">
+                                        <li role="presentation" class="active">General</li>
+                                        <li role="presentation" class="">Variables</li>
+                                        <li role="presentation" class="">Limits</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                        <div id="details_content" class="col-sm-10">
+                            <div class="status-line running">Status: Running
+                                <span>Stop</span>
+                                <span>Terminate</span>
+                                <span>Redeploy</span>
+                            </div>
+                            <div id="tab-content">
+                                <div class="col-xs-10">
+                                    <div class="info">
+                                        <div>Image tag: <%- image %></div>
+                                        <div>Deploy tags: some tags</div>
+                                    </div>
+                                    <table id="ports-table" class="table">
+                                        <thead><tr><th>Container port</th><th>Protocol</th><th>Published</th></tr></thead>
+                                        <tbody>
+                                        <% _.each(ports, function(p){ %>
+                                            <tr>
+                                                <td class="containerPort"><%- p.containerPort %></td>
+                                                <td><%- p.protocol %></td>
+                                                <td class="hostPort">yes</td>
+                                            </tr>
+                                        <% }) %>
+                                        </tbody>
+                                    </table>
+                                    <div class="volumes">
+                                        <label>Volumes:</label>
+                                        <div class="row">
+                                            <div class="col-xs-12">
+                                                <table class="table" id="volumes-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Container path</th>
+                                                            <th>Persistent</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td><span>/www/data</span></td>
+                                                            <td>
+                                                                <label class="custom">
+                                                                    <input type="checkbox"/>
+                                                                    <span></span>
+                                                                </label>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="view-controls text-right">
-                <% if (isPending) { %>
-     <!--           <button class="btn btn-default next-step">Next</button>
-                <button class="btn btn-primary complete">Complete</button> -->
-
-                <% } else { %>
-                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
-                <% } %>
-            </div>
+            <% } %>
         </script>
 
         <!-- Wizard set container volumes template -->
         <script type="text/template" id="wizard-set-container-volumes-template">
+        <div class="container">
             <div class="row title">
                 <div class="col-md-4">
                     <h4><%- image %></h4>
@@ -589,10 +660,12 @@
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>
             </div>
+        </div>
         </script>
 
         <!-- Wizard set container envvars template -->
         <script type="text/template" id="wizard-set-container-env-template">
+        <div class="container">
             <div class="row title">
                 <div class="col-md-4">
                     <h4><%- image %></h4>
@@ -636,10 +709,12 @@
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>
             </div>
+        </div>
         </script>
 
         <!-- Wizard set container limits template -->
         <script type="text/template" id="wizard-set-container-resources-template">
+        <div class="container">
             <div class="row title">
                 <div class="col-md-4">
                     <h4><%- image %></h4>
@@ -681,10 +756,12 @@
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>
             </div>
+        </div>
         </script>
 
         <!-- Wizard set container other params template -->
         <script type="text/template" id="wizard-set-container-other-template">
+       	<div class="container">
             <div class="row title">
                 <div class="col-md-4">
                     <h4><%- image %></h4>
@@ -722,10 +799,12 @@
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
                 <% } %>
             </div>
+        </div>
         </script>
 
         <!-- Wizard set container stats template -->
         <script type="text/template" id="wizard-set-container-stats-template">
+       	<div class="container">
             <div class="row title">
                 <div class="col-md-4">
                     <h4><%- image %></h4>
@@ -746,10 +825,12 @@
             <div class="view-controls text-right">
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
             </div>
+        </div>
         </script>
 
         <!-- Wizard set container logs template -->
         <script type="text/template" id="wizard-set-container-logs-template">
+        <div class="container">
             <div class="row title">
                 <div class="col-md-4">
                     <h4><%- image %></h4>
@@ -774,10 +855,12 @@
             <div class="view-controls text-right">
                 <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
             </div>
+        </div>
         </script>
 
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
+        <div class="container">
             <div class="col-md-4 col-md-offset-1">
         {#
                 <table class="table">
@@ -895,6 +978,7 @@
                     <button class="btn btn-primary add-more">Add more services</button>
                 </div>
             </div>
+        </div>
         </script>
 
         <!-- paginator template -->

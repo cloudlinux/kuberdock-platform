@@ -26,18 +26,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.PodListLayout = Backbone.Marionette.LayoutView.extend({
         template: '#layout-pod-list-template',
 
-        ui: {
-            'addpod' : '#add_pod',
-        },
-
-        events: {
-            'click @ui.addpod' : 'addpod',
-        },
-
-        addpod: function(){
-            console.log('router');
-        },
-
         initialize: function(){
             var that = this;
             this.listenTo(this.list, 'show', function(view){
@@ -592,7 +580,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         className: 'item',
 
         events: {
-            'click .add-item' : 'addItem'
+            'click .add-item'  : 'addItem',
         },
 
         addItem: function(evt){
@@ -622,7 +610,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         events: {
             'click .search-image'              : 'onSearchClick',
             'keypress #search-image-field'     : 'onInputKeypress',
-            'click #search-image-default-repo' : 'onChangeRepoURL'
+            'click #search-image-default-repo' : 'onChangeRepoURL',
+            'click @ui.buttonNext'             : 'nextStep',
+            'change @ui.select'                : 'selectChanche'
         },
 
         childEvents: {
@@ -630,9 +620,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         ui: {
+            buttonNext      : '.nextStep',
             repo_url_repr   : 'span#search-image-default-repo',
             input           : 'input#search-image-field',
-            spinner         : '#data-collection'
+            spinner         : '#data-collection',
+            searchControl   : '.search-control',
+            loginForm       : '.login-user',
+            select          : '.image-source'
         },
 
         onRender: function(){
@@ -656,7 +650,17 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         onSearchClick: function(evt){
             evt.stopPropagation();
+            this.ui.searchControl.show();
             this.fetchCollection(this.ui.input.val().trim());
+
+        },
+        selectChanche: function(evt){
+            var index = this.ui.select.find('option:selected').index();
+            if (index == 1){
+                this.ui.loginForm.slideDown();
+            } else {
+                this.ui.loginForm.slideUp();
+            }
         },
 
         fetchCollection: function(query){
@@ -680,7 +684,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 requestData: {searchkey: query, url: imageSearchURL},
                 onAddItem: function(count, $col, $item, data){
                     $item.find('.add-item').on('click', function() {
-                        that.trigger('image:selected', data.name);
+                        var name = $(this).parents('.col-xs-12').find('.item-header-title').text()
+                       
+                        that.ui.spinner.find('.item').remove();
+                        that.ui.input.val(name);
+                        that.ui.searchControl.hide();
+                        that.ui.buttonNext.data('name', data.name).removeAttr('disabled');
                     });
                     return $item;
                 }
@@ -695,6 +704,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         onShow: function(){
             this.ui.input.focus();
+        },
+
+        nextStep : function(evt){
+            this.trigger('image:selected', this.ui.buttonNext.data('name'));
         },
 
         onBeforeDestroy: function(){
@@ -723,7 +736,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         templateHelpers: function(){
             return {
-                isPending: !this.model.has('parentID')
+                isPending: !this.model.has('parentID'),
+                nodeName: this.model.get('node')
             };
         },
 
@@ -749,12 +763,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         triggers: {
-/*            'click .complete'        : 'step:complete',*/
-            'click .next-step'       : 'step:volconf',
-/*            'click .go-to-volumes'   : 'step:volconf',
+            'click .complete'        : 'step:complete',
+            'click .go-to-volumes'   : 'step:volconf',
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
-            'click .go-to-other'     : 'step:otherconf',*/
+            'click .go-to-other'     : 'step:otherconf',
+
+            'click .next-step'       : 'step:volconf',
             'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },

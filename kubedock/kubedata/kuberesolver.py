@@ -176,6 +176,22 @@ class KubeResolver(object):
             if pod_name not in kube_names:
                 # add config for displaying in front-end
                 pending_pod = db_pods[pod_name]['config']
+                dockers = []
+                for container in pending_pod['containers']:
+                    container['imageID'] = 'docker://'
+                    dockers.append({
+                        'host': '',
+                        'info': {
+                            'containerID': 'docker://',
+                            'image': container['image'],
+                            'imageID': container['imageID'],
+                            'lastState': {},
+                            'ready': False,
+                            'restartCount': 0,
+                            'state': {'stopped': {}},
+                        }
+                    })
+                pending_pod['dockers'] = dockers
                 pending_pod['id'] = db_pods[pod_name]['id']
                 self._pods.append(pending_pod)
             else: # we want to substitute all pods UUIDs for database pods UUIDs

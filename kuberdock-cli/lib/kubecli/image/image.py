@@ -1,7 +1,6 @@
-import json
-from .utils import kubeQuery
+from ..helper import KubeQuery, PrintOut
 
-class Image(kubeQuery, object):
+class Image(KubeQuery, PrintOut, object):
     
     def __init__(self, data=None, **kw):
         if data is None:
@@ -9,6 +8,7 @@ class Image(kubeQuery, object):
         super(Image, self).__setattr__('_data', data)
         for attr, value in kw.items():
             super(Image, self).__setattr__(attr, value)
+        
         
     def __getattr__(self, name):
         return self._data.get(name)
@@ -41,29 +41,16 @@ class Image(kubeQuery, object):
         return 'http://' + self.registry
         
     def search(self):
-        try:
-            payload={
-                'url': self.registry,
-                'searchkey': self.search_string,
-                'page': self.page}
-
-            data = self.get('/api/images/search', payload)['data']
-            if self.json:
-                print json.dumps(data)
-            else:
-                for i in data:
-                    print i['name']
-        except (ValueError, TypeError, KeyError), e:
-            raise SystemExit(str(e))
+        payload={
+            'url': self._get_registry(),
+            'searchkey': self.search_string,
+            'page': self.page}
+        data = self._unwrap(self._get('/api/images/search', payload))
+        self._list(data)
         
-    def do_nothing(self):
-        pass
-    
+    def ps(self):
+        super(Image, self).__setattr__('_FIELDS', (('image', 32),))
+        data = self._unwrap(self._get('/api/pods'))[0]
+        dockers = data.get('dockers', [])
+        self._list([i['info'] for i in dockers])
         
-def main(**kw):
-    i = Image(**kw)
-    dispatcher = {
-        'search': i.search,
-        'nope': i.do_nothing}
-    
-    dispatcher.get(kw['i_action'], 'nope')()

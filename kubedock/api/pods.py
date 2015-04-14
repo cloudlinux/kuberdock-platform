@@ -50,8 +50,17 @@ def get_pods_collection():
         user = g.user
         admin = user.is_administrator()
     if admin:
-        return units
-    return filter((lambda x: x['owner'] == user.username), units)
+        data = units
+    else:
+        data = filter((lambda x: x['owner'] == user.username), units)
+    pods = {d['id']: i for i, d in enumerate(data)}
+    for pod in Pod.query.filter(Pod.id.in_(pods.keys())):
+        idx = pods[pod.id]
+        try:
+            data[idx]['price'] = pod.price_per_hour
+        except IndexError:
+            pass
+    return data
 
 
 @pods.route('/', methods=['GET'])

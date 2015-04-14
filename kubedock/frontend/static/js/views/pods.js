@@ -61,13 +61,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             reditable   : '.reditable',
             start       : '.start-btn',
             stop        : '.stop-btn',
-            terminate   : '.terminate-btn',
+            terminate   : '.terminate-btn'
         },
 
         events: {
             'click @ui.start'      : 'startItem',
             'click @ui.stop'       : 'stopItem',
-            'click @ui.terminate'  : 'terminateItem',
+            'click @ui.terminate'  : 'terminateItem'
         },
 
         onRender: function(){
@@ -320,7 +320,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         templateHelpers: function(){
             var thisItem = initPodCollection.fullCollection.get(this.model.id);
             var portalIP = '',
-                kubeType = '';
+                kubeType = '',
+                restartPolicy = '';
             _.each(thisItem.get('dockers'), function(d){
                 if(d.podIP && d.podIP.length >= 7){
                     portalIP = d.podIP;
@@ -330,14 +331,19 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 if(parseInt(kube.id) == parseInt(thisItem.get('kube_type')))
                     kubeType = kube.name;
             });
+            for(var k in thisItem.get('restartPolicy')){
+                restartPolicy = k;
+            }
             return {
-                name:     thisItem.attributes.name,
-                status:   thisItem.attributes.status,
-                replicas: thisItem.attributes.replicas,
-                portalIP: portalIP,
-                kubes:    thisItem.attributes.kube_type,
-                kubeType: kubeType,
-                podIP:    thisItem.attributes.labels['kuberdock-public-ip']
+                name:          thisItem.attributes.name,
+                status:        thisItem.attributes.status,
+                replicas:      thisItem.attributes.replicas,
+                portalIP:      portalIP,
+                kubes:         thisItem.attributes.kube_type,
+                kubeType:      kubeType,
+                podIP:         thisItem.attributes.labels['kuberdock-public-ip'],
+                price:         thisItem.get('price'),
+                restartPolicy: restartPolicy
             };
         },
 

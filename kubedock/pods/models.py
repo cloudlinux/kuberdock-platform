@@ -5,6 +5,7 @@ from flask import current_app
 from ..core import db
 from ..models_mixin import BaseModelMixin
 from .. import signals
+from ..billing.models import Package
 
 
 class Pod(db.Model):
@@ -31,6 +32,13 @@ class Pod(db.Model):
     @property
     def containers_count(self):
         return len(json.loads(self.config).get('containers', []))
+
+    @property
+    def price_per_hour(self):
+        package = Package.query.filter_by(kube_id=self.kube_id).first()
+        if package is None:
+            return 0
+        return self.kubes * package.amount
 
 
 class ContainerState(db.Model):

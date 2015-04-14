@@ -248,9 +248,9 @@
                     <div class="col-xs-6 servers">
                         <div><b><%- name %></b></div>
                         <div>Kube type: <%- kubeType %></div>
-                        <div>Restart police: Never or replicas quantity</div>
+                        <div>Restart police: <%- restartPolicy %></div>
                         <div>Kube/replica:  <%- kubes ? kubes : '0' %> ( <%- replicas ? replicas : '0' %> )</div>
-                        <div>Price: 55$/month</div>
+                        <div>Price: <%- price %>$/month</div>
                         <div class="edit">Edit pod</div>
                     </div>
                 </div>

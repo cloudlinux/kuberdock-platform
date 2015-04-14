@@ -241,13 +241,13 @@
             <div class="row placeholders">
                 <div class="col-xs-10 col-xs-offset-2">
                     <div class="col-xs-6 info">
-                        <div>Status: Init</div>
-                        <div>Endpoint: 190.22.120.50</div>
+                        <div>Status: <%- status %></div>
+                        <div>Endpoint: <%- podIP ? podIP : 'none' %></div>
                         <div>Internal IP: <%- portalIP ? portalIP : 'none'%></div>
                     </div>
                     <div class="col-xs-6 servers">
                         <div><b><%- name %></b></div>
-                        <div>Kube type: SSD Power</div>
+                        <div>Kube type: <%- kubeType %></div>
                         <div>Restart police: Never or replicas quantity</div>
                         <div>Kube/replica:  <%- kubes ? kubes : '0' %> ( <%- replicas ? replicas : '0' %> )</div>
                         <div>Price: 55$/month</div>
@@ -1032,6 +1032,7 @@
             <script type="text/javascript">
                 var initPodCollection = new KubeDock.Data.PodCollection({{ pod_collection|safe }});
                 var containerCollection;
+                var kubeTypes = {{ kube_types|tojson|safe }};
             </script>
         {% endblock %}
 

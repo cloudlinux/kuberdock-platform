@@ -65,7 +65,8 @@ class KubeResolver(object):
                 continue
             dockers.append({
                 'host': data['currentState']['host'],
-                'info': pod_info
+                'info': pod_info,
+                'podIP': data['currentState'].get('podIP', '')
             })
         return dockers
 

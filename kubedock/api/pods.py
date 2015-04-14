@@ -67,7 +67,7 @@ def get_pods():
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
-    set_public_ip = data.pop('set_public_ip', None) == '1'
+    set_public_ip = data.pop('set_public_ip')
     public_ip = data.pop('freeHost', None)
     check_new_pod_data(data)
     pod = Pod.query.filter_by(name=data['name']).first()
@@ -103,7 +103,8 @@ def create_item():
         try:
             signals.allocate_ip_address.send([temp_uuid, public_ip])
         except Exception, e:
-            db.session.rollback()
+            db.session.delete(pod)
+            db.session.commit()
             raise APIError(str(e), status_code=409)
     
     if not save_only:    # trying to run service and pods right away

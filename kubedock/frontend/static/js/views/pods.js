@@ -319,12 +319,25 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         templateHelpers: function(){
             var thisItem = initPodCollection.fullCollection.get(this.model.id);
+            var portalIP = '',
+                kubeType = '';
+            _.each(thisItem.get('dockers'), function(d){
+                if(d.podIP && d.podIP.length >= 7){
+                    portalIP = d.podIP;
+                }
+            });
+            _.each(kubeTypes, function(kube){
+                if(parseInt(kube.id) == parseInt(thisItem.get('kube_type')))
+                    kubeType = kube.name;
+            });
             return {
                 name:     thisItem.attributes.name,
                 status:   thisItem.attributes.status,
                 replicas: thisItem.attributes.replicas,
-                portalIP: thisItem.attributes.portalIP,
+                portalIP: portalIP,
                 kubes:    thisItem.attributes.kube_type,
+                kubeType: kubeType,
+                podIP:    thisItem.attributes.labels['kuberdock-public-ip']
             };
         },
 

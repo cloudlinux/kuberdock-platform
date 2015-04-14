@@ -121,5 +121,6 @@ fi
 
 %changelog
 
-* Fri Apr 10 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-1
+* Fri Apr 10 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-23
 - First release
+

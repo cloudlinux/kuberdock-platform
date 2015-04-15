@@ -23,7 +23,11 @@ def login():
         elif user.verify_password(passwd):
             login_user(user)
             user_logged_in.send(user.id)
-            return redirect(request.args.get('next') or url_for('main.index'))
+            main_index = url_for('main.index')
+            next_ = request.args.get('next') or main_index
+            if user.is_administrator() and next_ == main_index:
+                return redirect(url_for('nodes.index'))
+            return redirect(next_)
         flash(error, 'error')
     return render_template('auth/login.html')
 

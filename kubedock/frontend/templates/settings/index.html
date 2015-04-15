@@ -44,7 +44,7 @@
                         <textarea id="id_text_html" rows="10" style="width: 100%; height: 60px; font-size: 12px;"></textarea>
                     </div>
                     <div class="checkbox">
-                        <label>
+                        <label class="">
                             <input type="checkbox" name="as_html" id="id_as_html">
                             <span></span>
                             Send as HTML
@@ -58,18 +58,19 @@
         </div>
     </script>
 
-
     <script type="text/template" id="notification-item-template">
         <div class="col-xs-12 no-padding group">
             <span> <%- event.name %> </span>
-            <input type="checkbox" class="sendAsHTML" id="itm<%- id %>"
-                    <% if(as_html) { %>checked<% } %> />
-            <label for="itm<%- id %>">send as html</label>
+            <label class="custom" for="itm<%- id %>">
+                <input type="checkbox" class="sendAsHTML" id="itm<%- id %>" <% if(as_html) { %>checked<% } %> />
+
+                send as html
+            </label>
         </div>
     </script>
 
+    <!--  settingsNotificationTab template -->
     <script type="text/template" id="notifications-settings-template">
-        <!--  settingsNotificationTab template -->
         <div class="tab-pane fade in" id="settingsNotificationTab">
             <div class="content-body">
                 <div class="row">
@@ -120,11 +121,10 @@
                 <button id="user-add-btn" class="" type="submit">Submit</button>
             </div>
         </div>
-        <!--  end settingsNotificationTab template -->
     </script>
 
+    <!--  settingsGeneralTab template -->
     <script type="text/template" id="general-settings-template">
-        <!--  settingsGeneralTab template -->
         <div id="settingsGeneralTab">
             <div class="content-body">
                 <div class="col-md-12 no-padding">
@@ -164,8 +164,8 @@
     <% }) %>
     </script>
 
+    <!-- settingsPermisionTab template -->
     <script type="text/template" id="permissions-template">
-        <!-- settingsPermisionTab template -->
         <div class="content-body">
             <div class="col-xs-12 no-padding">
                 <table class="table" id="permissions-table">
@@ -175,11 +175,6 @@
             </div>
             <div class="col-xs-5 col-xs-offset-1"></div>
         </div>
-        <!-- <div class="buttons pull-right"> -->
-            <!-- <button id="user-cancel-btn" class="" type="submit">Cencel</button> -->
-            <!-- <button id="user-add-btn" class="" type="submit">Submit</button> -->
-        <!-- </div> -->
-        <!-- end settingsPermisionTab template -->
     </script>
 
 

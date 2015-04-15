@@ -318,7 +318,7 @@
     cursor: pointer;
 }
 
-#find-image{
+#add-image{
     .sidebar{
         .nav-sidebar{
             li{
@@ -340,8 +340,7 @@
                     }
                 }
                 &:hover{
-                    color: #1a1a1a;
-                    cursor: pointer;
+                    cursor: default;
                 }
             }
         }
@@ -351,6 +350,9 @@
             #tab-content{
                 margin-bottom: 15px;
                 border-bottom: 1px solid #e5e5e5;
+                &.clearfix{
+                    margin-bottom: 0;
+                }
                 label{
                     &.custom{
                         display: block;
@@ -642,6 +644,42 @@
         }
     }
     #details_content{
+        &.logs-tab{
+            #tab-content{
+                > .col-xs-10{
+                    margin: 0px 0px 0px 3%;
+                }
+                .info, .servers{
+                    margin-bottom: 30px;
+                }
+                .servers{
+                    position: relative;
+                    padding-left: 103px;
+                    min-height: 70px;
+                    &:before{
+                        top: 0;
+                        left: 0;
+                        width: 80px;
+                        content: '';
+                        height: 66px;
+                        position: absolute;
+                        background: url('../img/servers.png') 0 0 no-repeat;
+                    }
+                }
+            }
+            .container-logs{
+                background: black;
+                color: white;
+                padding: 1em;
+                height: 38em;
+                overflow: auto;
+                font-size: 10pt;
+                line-height: 1em;
+                p{
+                    margin: 0 0 6px;
+                }
+            }
+        }
         .status-line{
             span{
                 color: #3197ee;
@@ -657,17 +695,18 @@
             #ports-table{
                 margin-bottom: 35px;
             }
+            .info{
+                height: 70px;
+                margin-bottom: 45px;
+            }
             .col-xs-10{
                 margin: 27px 0px 45px 3%;
-                .info{
-                    height: 70px;
-                    margin-bottom: 45px;
-                }
             }
             .volumes{
                 margin-bottom: 22px;
             }
+            /* container logs */
+            /* end container logs */
         }
     }
 }
-

@@ -422,11 +422,10 @@ body{
 		button, a{
 			margin-right: 10px;
 			height: 37px;
-			padding: 0;
-			width: 100px;
+			padding: 0 31px;
+			font-size: 16px;
 			border: 1px solid;
 			text-align: center;
-			font-size: 16px;
 			font-family: @regular;
 			&:hover{
 				cursor: pointer;
@@ -439,10 +438,15 @@ body{
 				background-color: #fcfcfc;
 				border-color: #ebebeb;
 			}
-			&:last-child{
+			&:last-child, &.blue{
 				background-color: #466eb1;
 				border-color: #466eb1;
 				color: #fff;
+			}
+			&.gray{
+				color: #1d1d1d;
+				background-color: #fcfcfc;
+				border-color: #ebebeb;
 			}
 		}
 		a{

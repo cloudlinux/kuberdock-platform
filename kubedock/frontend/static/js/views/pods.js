@@ -684,16 +684,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         fetchCollection: function(query){
             var that = this;
-//            this.ui.spinner.spin({color: '#437A9E'});
-//            this.collection.fetch({
-//                data: {searchkey: query, url: imageSearchURL},
-//                reset: true,
-//                success: function(){
-//                    that.ui.spinner.spin(false);
-//                    that.trigger('image:fetched', that);
-//                    that.ui.repo_url_repr.text(imageSearchURL);
-//                }
-//            });
             var options = {
                 columnsSelector: "#data-collection",
                 itemTemplateSelector: "#image-collection-item-template",
@@ -703,12 +693,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 requestData: {searchkey: query, url: imageSearchURL},
                 onAddItem: function(count, $col, $item, data){
                     $item.find('.add-item').on('click', function() {
-                        var name = $(this).parents('.col-xs-12').find('.item-header-title').text()
-                       
-                        that.ui.spinner.find('.item').remove();
-                        that.ui.input.val(name);
-                        that.ui.searchControl.hide();
-                        that.ui.buttonNext.data('name', data.name).removeAttr('disabled');
+                        that.trigger('image:selected', data.name);
                     });
                     return $item;
                 }
@@ -770,10 +755,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     this.model = options.model
                 }
             }
+            if (!this.model.has('volumeMounts')) {
+                this.model.set({'volumeMounts': []});
+            }
         },
 
         events: {
-            'click .add-port': 'addItem',
+            'click .add-port'    : 'addItem',
+            'click .readonly'    : 'toggleReadOnly',
+            'click .add-volume'  : 'addVolume',
         },
 
         ui: {
@@ -787,8 +777,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
             'click .go-to-other'     : 'step:otherconf',
+            'click .next-step'       : 'step:envconf',
 
-            'click .next-step'       : 'step:volconf',
             'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },
@@ -799,6 +789,25 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
         },
 
+        addVolume: function(env){
+            env.stopPropagation();
+            this.model.get('volumeMounts').push({mountPath: null, readOnly: false});
+            this.render();
+        },
+
+        toggleReadOnly: function(evt){
+            evt.stopPropagation();
+            index = $(evt.target).closest('tr').index()
+            var on = this.model.get('volumeMounts')[index]['readOnly'];
+            if (on) {
+                this.model.get('volumeMounts')[index]['readOnly'] = false;
+            }
+            else {
+                this.model.get('volumeMounts')[index]['readOnly'] = true;
+            }
+            this.render();
+        },
+
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({
@@ -806,8 +815,16 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 mode: 'inline',
                 success: function(response, newValue) {
                     var index = $(this).closest('tr').index(),
-                        item = $(this).parent().attr('class');
-                    that.model.get('ports')[index][item] = parseInt(newValue);
+                        className = $(this).parent().attr('class'),
+                        item = $(this);
+                    that.model.get('ports')[index][className] = parseInt(newValue);
+
+                    if (item.hasClass('name')) {
+                        that.model.get('volumeMounts')[index]['name'] = newValue;
+                    }
+                    else if (item.hasClass('mountPath')) {
+                        that.model.get('volumeMounts')[index]['mountPath'] = newValue;
+                    }
                 }
             });
             this.ui.iseditable.editable({
@@ -839,8 +856,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click .readonly' : 'toggleReadOnly',
-            'click .add-vol'  : 'addItem'
+
         },
 
         templateHelpers: function(){
@@ -861,41 +877,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-logs'      : 'step:logsconf',
         },
 
-        addItem: function(env){
-            env.stopPropagation();
-            this.model.get('volumeMounts').push({name: null, mountPath: null, readOnly: false});
-            this.render();
-        },
-
-        onRender: function(){
-            var that = this;
-            this.ui.ieditable.editable({
-                type: 'text',
-                mode: 'inline',
-                success: function(response, newValue) {
-                    var item = $(this),
-                        index = item.closest('tr').index();
-                    if (item.hasClass('name')) {
-                        that.model.get('volumeMounts')[index]['name'] = newValue;
-                    }
-                    else if (item.hasClass('mountPath')) {
-                        that.model.get('volumeMounts')[index]['mountPath'] = newValue;
-                    }
-                }
-            });
-        },
-        toggleReadOnly: function(evt){
-            evt.stopPropagation();
-            index = $(evt.target).closest('tr').index()
-            var on = this.model.get('volumeMounts')[index]['readOnly'];
-            if (on) {
-                this.model.get('volumeMounts')[index]['readOnly'] = false;
-            }
-            else {
-                this.model.get('volumeMounts')[index]['readOnly'] = true;
-            }
-            this.render();
-        }
     });
 
     Views.WizardEnvSubView = Backbone.Marionette.ItemView.extend({
@@ -920,7 +901,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         triggers: {
             'click .complete'        : 'step:complete',
-            'click .next-step'       : 'step:resconf',
+            'click .next-step'       : 'step:complete',
             'click .prev-step'       : 'step:volconf',
             'click .go-to-ports'     : 'step:portconf',
             'click .go-to-volumes'   : 'step:volconf',
@@ -1208,7 +1189,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-complete-template',
         tagName: 'div',
-        className: 'container',
 
         ui: {
             ieditable: '.ieditable'

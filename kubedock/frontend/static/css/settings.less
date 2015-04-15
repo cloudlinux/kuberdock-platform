@@ -98,14 +98,17 @@
 				&:before{
 					top: 0;
 					left: 0;
-					width: 14px;
+					width: 18px;
 					content: '';
-					height: 20px;
+					height: 18px;
 					position: absolute;
-					background: url('../img/pencil.png') 0 center no-repeat;
+					background: url('../img/pencil-big.png') 0 0 no-repeat;
 				}
 				&:hover{
 					cursor: pointer;
+					&:before{
+						background-position: 0 -18px;
+					}
 				}
 			}
 			.group{

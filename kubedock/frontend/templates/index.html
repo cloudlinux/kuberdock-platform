@@ -327,7 +327,7 @@
 
         <!-- Wizard get image template -->
         <script type="text/template" id="wizard-get-image-template">
-            <div id="find-image" class="container">
+            <div id="add-image" class="container">
                 <div class="col-md-3 sidebar">
                     <ul class="nav nav-sidebar">
                         <li role="presentation" class="active">Choose image</li>
@@ -382,8 +382,7 @@
                     </div>
                 </div>
                 <div class="buttons pull-right">
-                    <a href="/#pods" class="">Cencel</a>
-                    <button disabled="disabled" class="nextStep">Next</button>
+                    <a href="/#pods" class="gray">Cencel</a>
                 </div>
             </div>
 
@@ -396,7 +395,9 @@
                     <div class="item-body-info">
                         <%= description || 'No description' %>
                     </div>
-                    <div class="more">more...</div>
+                    <% if (description) { %>
+                        <div class="more">more...</div>
+                    <% } %>
                 </div>
                 <div class="col-xs-2 no-padding">
                     <button class="like">41</button>
@@ -409,7 +410,7 @@
         <!-- Wizard set container port template -->
         <script type="text/template" id="wizard-set-container-ports-template">
            	<% if (isPending) { %>
-            <div id="find-image" class="container">
+            <div id="add-image" class="container">
                 <div class="col-md-3 sidebar">
                     <ul class="nav nav-sidebar">
                         <li role="presentation" class="success">Choose image</li>
@@ -452,7 +453,9 @@
                                         <tbody>
                                         <% _.each(ports, function(p){ %>
                                             <tr>
-                                                <td class="containerPort"><span class="ieditable"><%- p.containerPort %></span></td>
+                                                <td class="containerPort">
+                                                    <span class="ieditable"><%- p.containerPort %></span>
+                                                </td>
                                                 <td><span class="iseditable"><%- p.protocol %></span></td>
                                                 <td class="hostPort"><span class="ieditable"><%- p.hostPort %></span></td>
                                             </tr>
@@ -492,15 +495,30 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td><span>/www/data</span></td>
-                                                <td>
-                                                    <label class="custom">
-                                                        <input type="checkbox"/>
-                                                        <span></span>
-                                                    </label>
-                                                </td>
-                                            </tr>
+                                            <% _.each(volumeMounts, function(v){ %>
+                                                <tr>
+                                                    <td>
+                                                        <span class="ieditable mountPath">
+                                                            <%- v.mountPath %>
+                                                        </span>
+                                                    </td>
+                                                    <% if (v.readOnly){ %>
+                                                    <td>
+                                                        <label class="custom">
+                                                            <input checked type="checkbox"/>
+                                                            <span></span>
+                                                        </label>
+                                                    </td>
+                                                    <% } else { %>
+                                                    <td>
+                                                        <label class="custom">
+                                                            <input type="checkbox"/>
+                                                            <span></span>
+                                                        </label>
+                                                    </td>
+                                                    <% } %>
+                                                </tr>
+                                            <% }) %>
                                         </tbody>
                                     </table>
                                     <div>
@@ -527,9 +545,6 @@
                             <li>
                                 <a href="/#pods/<%- parentID %>">My best Pod</a>
                             </li>
-                            <li>
-                                <a href="/#pods/<%- parentID %>">Containers</a>
-                            </li>
                             <li class="active"><%- nodeName %></li>
                         </ul>
                     </div>
@@ -538,16 +553,14 @@
                     <div class="row">
                         <div class="col-sm-3 col-md-2 sidebar">
                             <ul class="nav nav-sidebar">
-                                <li role="presentation" class="general go-to-general">General</li>
                                 <li role="presentation" class="stats go-to-logs">Logs</li>
-                                <li role="presentation" class="go-to-stats">Stats</li>
-                                <li role="presentation" class="">Monitoring</li>
-                                <li role="presentation" class="">Timelines</li>
-                                <li role="presentation" class="configuration  active">Configuration
+                                <li role="presentation" class="go-to-stats">Monitoring</li>
+                                <li role="presentation" class="go-to-volumes">Timelines</li>
+                                <li role="presentation" class="configuration active">Configuration
                                     <ul class="nav sub-nav">
                                         <li role="presentation" class="active">General</li>
-                                        <li role="presentation" class="">Variables</li>
-                                        <li role="presentation" class="">Limits</li>
+                                        <li role="presentation" class="go-to-other">Variables</li>
+                                        <li role="presentation" class="go-to-resources">Limits</li>
                                     </ul>
                                 </li>
                             </ul>
@@ -588,15 +601,30 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
+                                                    <% _.each(volumeMounts, function(v){ %>
                                                         <tr>
-                                                            <td><span>/www/data</span></td>
+                                                            <td>
+                                                                <span class="ieditable mountPath">
+                                                                    <%- v.mountPath %>
+                                                                </span>
+                                                            </td>
+                                                            <% if (v.readOnly){ %>
+                                                            <td>
+                                                                <label class="custom">
+                                                                    <input checked type="checkbox"/>
+                                                                    <span></span>
+                                                                </label>
+                                                            </td>
+                                                            <% } else { %>
                                                             <td>
                                                                 <label class="custom">
                                                                     <input type="checkbox"/>
                                                                     <span></span>
                                                                 </label>
                                                             </td>
+                                                            <% } %>
                                                         </tr>
+                                                    <% }) %>
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -613,370 +641,482 @@
 
         <!-- Wizard set container volumes template -->
         <script type="text/template" id="wizard-set-container-volumes-template">
-        <div class="container">
-            <div class="row title">
-                <div class="col-md-4">
-                    <h4><%- image %></h4>
-                </div>
-                <div class="col-md-7">
-                    <ul class="nav nav-pills">
-                        <li role="presentation"><span class="go-to-ports btn btn-info">Ports</span></li>
-                        <li role="presentation"><span class="active btn btn-info">Volumes</span></li>
-                        <li role="presentation"><span class="go-to-envs btn btn-info">Envvars</span></li>
-                        <li role="presentation"><span class="go-to-resources btn btn-info">Limits</span></li>
-                        <li role="presentation"><span class="go-to-other btn btn-info">Other</span></li>
-                        <% if (!isPending) { %>
-                        <li role="presentation"><span class="go-to-stats btn btn-info">Stats</span></li>
-                        <li role="presentation"><span class="go-to-logs btn btn-info">Logs</span></li>
-                        <% } %>
+        <div id="container-page">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            <a href="/#pods">Pods</a>
+                        </li>
+                        <li>
+                            <a href="/#pods/<%- parentID %>">My best Pod</a>
+                        </li>
+                        <li class="active">nodeName</li>
                     </ul>
                 </div>
             </div>
-            <table class="table">
-                <thead><tr><th>Name</th><th>Mount path</th><th>Read Only</th></tr></thead>
-                <tbody>
-                <% _.each(volumeMounts, function(v){ %>
-                    <tr>
-                        <td><span class="ieditable name"><%- v.name %></span></td>
-                        <td><span class="ieditable mountPath"><%- v.mountPath %></span></td>
-                        <% if (v.readOnly){ %>
-                        <td><span class="glyphicon glyphicon-check readonly readonly-on"></span></td>
-                        <% } else { %>
-                        <td><span class="glyphicon glyphicon-unchecked readonly readonly-off"></span></td>
-                        <% } %>
-                    </tr>
-                <% }) %>
-                </tbody>
-            </table>
-            <div>
-                <button type="button" class="btn btn-success btn-sm btn-block add-vol">Add</button>
-            </div>
-            <div class="view-controls text-right">
-                <% if (isPending) { %>
-                <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-default next-step">Next</button>
-                <button class="btn btn-primary complete">Complete</button>
-                <% } else { %>
-                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
-                <% } %>
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-3 col-md-2 sidebar">
+                        <ul class="nav nav-sidebar">
+                            <li role="presentation" class="stats go-to-logs">Logs</li>
+                            <li role="presentation" class="go-to-stats">Monitoring</li>
+                            <li role="presentation" class="active">Timelines</li>
+                            <li role="presentation" class="configuration">
+                                <span class="go-to-ports">Configuration</span>
+                                <ul class="nav sub-nav">
+                                    <li role="presentation" class="go-to-ports">General</li>
+                                    <li role="presentation" class="go-to-others">Variables</li>
+                                    <li role="presentation" class="go-to-resources">Limits</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="details_content" class="col-sm-10 logs-tab">
+                        <div id="tab-content">
+                            <div class="col-xs-10">
+                                <div class="info col-xs-6">
+                                    <div>Image tag: <%- image %></div>
+                                    <div>Deploy tags: some tags</div>
+                                </div>
+                                <div class="col-xs-6 servers">
+                                    <div>Kube type: ssd power</div>
+                                    <div>Restart police: never</div>
+                                    <div>Endpoints:  102.128.9.95</div>                                    
+                                </div>
+                            </div>
+                            <div class="col-xs-12">
+                                wizard-set-container-timelines-template
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         </script>
 
         <!-- Wizard set container envvars template -->
         <script type="text/template" id="wizard-set-container-env-template">
-        <div class="container">
-            <div class="row title">
-                <div class="col-md-4">
-                    <h4><%- image %></h4>
-                </div>
-                <div class="col-md-7">
-                    <ul class="nav nav-pills">
-                        <li role="presentation"><span class="go-to-ports btn btn-info">Ports</span></li>
-                        <li role="presentation"><span class="go-to-volumes btn btn-info">Volumes</span></li>
-                        <li role="presentation"><span class="active btn btn-info">Envvars</span></li>
-                        <li role="presentation"><span class="go-to-resources btn btn-info">Limits</span></li>
-                        <li role="presentation"><span class="go-to-other btn btn-info">Other</span></li>
-                        <% if (!isPending) { %>
-                        <li role="presentation"><span class="go-to-stats btn btn-info">Stats</span></li>
-                        <li role="presentation"><span class="go-to-logs btn btn-info">Logs</span></li>
-                        <% } %>
+        <% if (isPending) { %>
+            <div class="container" id="add-image">
+                <div class="col-md-3 sidebar">
+                    <ul class="nav nav-sidebar">
+                        <li role="presentation" class="success">Choose image</li>
+                        <li role="presentation" class="success">Set up image</li>
+                        <li role="presentation" class="active">Environment variables</li>
+                        <li role="presentation" class="">Final</li>
                     </ul>
                 </div>
+                <div id="details_content" class="col-sm-9 set-up-image">
+                    <div id="tab-content">
+                        <table id="data-table" class="table">
+                            <thead><tr><th class="text-center">Key</th><th class="text-center">Value</th></tr></thead>
+                            <tbody>
+                            <% _.each(env, function(e){ %>
+                                <tr>
+                                    <td class="text-center"><span class="ieditable name"><%- e.name ? e.name : 'not set' %></span></td>
+                                    <td class="text-center"><span class="ieditable value"><%- e.value ? e.value : 'not set' %></span></td>
+                                </tr>
+                            <% }) %>
+                            </tbody>
+                        </table>
+                    <div>
+                </div>
+                <div class="buttons pull-right">
+                    <button class="go-to-ports">Back</button>
+                    <button class="next-step">Next</button>
+                </div>
             </div>
-            <div>
-                <table id="data-table" class="table">
-                    <thead><tr><th class="text-center">Key</th><th class="text-center">Value</th></tr></thead>
-                    <tbody>
-                    <% _.each(env, function(e){ %>
-                        <tr>
-                            <td class="text-center"><span class="ieditable name"><%- e.name ? e.name : 'not set' %></span></td>
-                            <td class="text-center"><span class="ieditable value"><%- e.value ? e.value : 'not set' %></span></td>
-                        </tr>
-                    <% }) %>
-                    </tbody>
-                </table>
+            <% } else { %>
+            <div class="container">
+                <div class="row title">
+                    <div class="col-md-4">
+                        <h4><%- image %></h4>
+                    </div>
+                    <div class="col-md-7">
+                        <ul class="nav nav-pills">
+                            <li role="presentation"><span class="go-to-ports btn btn-info">Ports</span></li>
+                            <li role="presentation"><span class="go-to-volumes btn btn-info">Volumes</span></li>
+                            <li role="presentation"><span class="active btn btn-info">Envvars</span></li>
+                            <li role="presentation"><span class="go-to-resources btn btn-info">Limits</span></li>
+                            <li role="presentation"><span class="go-to-other btn btn-info">Other</span></li>
+                            <li role="presentation"><span class="go-to-stats btn btn-info">Stats</span></li>
+                            <li role="presentation"><span class="go-to-logs btn btn-info">Logs</span></li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <table id="data-table" class="table">
+                        <thead><tr><th class="text-center">Key</th><th class="text-center">Value</th></tr></thead>
+                        <tbody>
+                        <% _.each(env, function(e){ %>
+                            <tr>
+                                <td class="text-center"><span class="ieditable name"><%- e.name ? e.name : 'not set' %></span></td>
+                                <td class="text-center"><span class="ieditable value"><%- e.value ? e.value : 'not set' %></span></td>
+                            </tr>
+                        <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-success btn-sm btn-block add-env">Add</button>
+                </div>
+                <div class="view-controls text-right">
+                    <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+                </div>
             </div>
-            <div>
-                <button type="button" class="btn btn-success btn-sm btn-block add-env">Add</button>
-            </div>
-            <div class="view-controls text-right">
-                <% if (isPending) { %>
-                <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-default next-step">Next</button>
-                <button class="btn btn-primary complete">Complete</button>
-                <% } else { %>
-                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
-                <% } %>
-            </div>
-        </div>
+            <% } %>
         </script>
 
         <!-- Wizard set container limits template -->
         <script type="text/template" id="wizard-set-container-resources-template">
-        <div class="container">
-            <div class="row title">
-                <div class="col-md-4">
-                    <h4><%- image %></h4>
-                </div>
-                <div class="col-md-7">
-                    <ul class="nav nav-pills">
-                        <li role="presentation"><span class="go-to-ports btn btn-info">Ports</span></li>
-                        <li role="presentation"><span class="go-to-volumes btn btn-info">Volumes</span></li>
-                        <li role="presentation"><span class="go-to-envs btn btn-info">Envvars</span></li>
-                        <li role="presentation"><span class="active btn btn-info">Limits</span></li>
-                        <li role="presentation"><span class="go-to-other btn btn-info">Other</span></li>
-                        <% if (!isPending) { %>
-                        <li role="presentation"><span class="go-to-stats btn btn-info">Stats</span></li>
-                        <li role="presentation"><span class="go-to-logs btn btn-info">Logs</span></li>
-                        <% } %>
+        <div id="container-page">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            <a href="/#pods">Pods</a>
+                        </li>
+                        <li>
+                            <a href="/#pods/<%- parentID %>">My best Pod</a>
+                        </li>
+                        <li class="active">nodeName</li>
                     </ul>
                 </div>
-            </div >
-            <div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <td class="text-center">Kubes</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="text-center"><span class="ieditable kubes"><%- kubes ? kubes : '1' %></span></td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
-            <div class="view-controls text-right">
-                <% if (isPending) { %>
-                <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-default next-step">Next</button>
-                <button class="btn btn-primary complete">Complete</button>
-                <% } else { %>
-                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
-                <% } %>
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-3 col-md-2 sidebar">
+                        <ul class="nav nav-sidebar">
+                            <li role="presentation" class="stats go-to-logs">Logs</li>
+                            <li role="presentation" class="go-to-stats">Monitoring</li>
+                            <li role="presentation" class="go-to-volumes">Timelines</li>
+                            <li role="presentation" class="configuration">
+                                <span class="go-to-ports">Configuration</span>
+                                <ul class="nav sub-nav">
+                                    <li role="presentation" class="go-to-ports">General</li>
+                                    <li role="presentation" class="go-to-other">Variables</li>
+                                    <li role="presentation" class="go-to-resources active">Limits</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="details_content" class="col-xs-10 logs-tab">
+                        <div id="tab-content">
+                            <div class="col-xs-12">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <td class="text-center">Kubes</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-center"><span class="ieditable kubes"><%- kubes ? kubes : '1' %></span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                wizard-set-container-variables-template
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         </script>
 
         <!-- Wizard set container other params template -->
         <script type="text/template" id="wizard-set-container-other-template">
-       	<div class="container">
-            <div class="row title">
-                <div class="col-md-4">
-                    <h4><%- image %></h4>
-                </div>
-                <div class="col-md-7">
-                    <ul class="nav nav-pills">
-                        <li role="presentation"><span class="go-to-ports btn btn-info">Ports</span></li>
-                        <li role="presentation"><span class="go-to-volumes btn btn-info">Volumes</span></li>
-                        <li role="presentation"><span class="go-to-envs btn btn-info">Envvars</span></li>
-                        <li role="presentation"><span class="go-to-resources btn btn-info">Limits</span></li>
-                        <li role="presentation"><span class="active btn btn-info">Other</span></li>
-                        <% if (!isPending) { %>
-                        <li role="presentation"><span class="go-to-stats btn btn-info">Stats</span></li>
-                        <li role="presentation"><span class="go-to-logs btn btn-info">Logs</span></li>
-                        <% } %>
+        <div id="container-page">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            <a href="/#pods">Pods</a>
+                        </li>
+                        <li>
+                            <a href="/#pods/<%- parentID %>">My best Pod</a>
+                        </li>
+                        <li class="active">nodeName</li>
                     </ul>
                 </div>
             </div>
-            <div>
-                <table class="table">
-                    <thead><tr><th class="text-center">Working directory</th><th class="text-center">Command</th></tr></thead>
-                    <tbody>
-                        <tr>
-                            <td class="text-center"><span class="ieditable working-dir"><%- workingDir ? workingDir : '' %></span></td>
-                            <td class="text-center"><span class="ieditable command"><%- command ? command.join(' ') : '' %></span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="view-controls text-right">
-                <% if (isPending) { %>
-                <button class="btn btn-default prev-step">Previous</button>
-                <button class="btn btn-primary complete">Complete</button>
-                <% } else { %>
-                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
-                <% } %>
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-3 col-md-2 sidebar">
+                        <ul class="nav nav-sidebar">
+                            <li role="presentation" class="stats go-to-logs">Logs</li>
+                            <li role="presentation" class="">Monitoring</li>
+                            <li role="presentation" class="go-to-volumes">Timelines</li>
+                            <li role="presentation" class="configuration">
+                                <span class="go-to-ports">Configuration</span>
+                                <ul class="nav sub-nav">
+                                    <li role="presentation" class="go-to-ports">General</li>
+                                    <li role="presentation" class="active">Variables</li>
+                                    <li role="presentation" class="go-to-resources">Limits</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="details_content" class="col-xs-10 logs-tab">
+                        <div id="tab-content">
+                            <div class="col-xs-12">
+                                wizard-set-container-variables-template
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         </script>
 
         <!-- Wizard set container stats template -->
         <script type="text/template" id="wizard-set-container-stats-template">
-       	<div class="container">
-            <div class="row title">
-                <div class="col-md-4">
-                    <h4><%- image %></h4>
-                </div>
-                <div class="col-md-7">
-                    <ul class="nav nav-pills">
-                        <li role="presentation"><span class="go-to-ports btn btn-info">Ports</span></li>
-                        <li role="presentation"><span class="go-to-volumes btn btn-info">Volumes</span></li>
-                        <li role="presentation"><span class="go-to-envs btn btn-info">Envvars</span></li>
-                        <li role="presentation"><span class="go-to-resources btn btn-info">Limits</span></li>
-                        <li role="presentation"><span class="go-to-other btn btn-info">Other</span></li>
-                        <li role="presentation"><span class="active btn btn-info">Stats</span></li>
-                        <li role="presentation"><span class="go-to-logs btn btn-info">Logs</span></li>
+        <div id="container-page">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            <a href="/#pods">Pods</a>
+                        </li>
+                        <li>
+                            <a href="/#pods/<%- parentID %>">My best Pod</a>
+                        </li>
+                        <li class="active">nodeName</li>
                     </ul>
                 </div>
             </div>
-            <div class="container-stats"></div>
-            <div class="view-controls text-right">
-                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+            <div class="container container-stats">
+                <div class="row">
+                    <div class="col-sm-3 col-md-2 sidebar">
+                        <ul class="nav nav-sidebar">
+                            <li role="presentation" class="stats go-to-logs">Logs</li>
+                            <li role="presentation" class="active">Monitoring</li>
+                            <li role="presentation" class="go-to-volumes">Timelines</li>
+                            <li role="presentation" class="configuration">
+                                <span class="go-to-ports">Configuration</span>
+                                <ul class="nav sub-nav">
+                                    <li role="presentation" class="go-to-ports">General</li>
+                                    <li role="presentation" class="">Variables</li>
+                                    <li role="presentation" class="go-to-resources">Limits</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="details_content" class="col-xs-10 logs-tab">
+                        <div id="tab-content">
+                            <div class="col-xs-10">
+                                <div class="info col-xs-6">
+                                    <div>Image tag: <%- image %></div>
+                                    <div>Deploy tags: some tags</div>
+                                </div>
+                                <div class="col-xs-6 servers">
+                                    <div>Kube type: ssd power</div>
+                                    <div>Restart police: never</div>
+                                    <div>Endpoints:  102.128.9.95</div>                                    
+                                </div>
+                            </div>
+                            <div class="col-xs-12">
+                                wizard-set-container-monitoring-template
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         </script>
 
         <!-- Wizard set container logs template -->
         <script type="text/template" id="wizard-set-container-logs-template">
-        <div class="container">
-            <div class="row title">
-                <div class="col-md-4">
-                    <h4><%- image %></h4>
-                </div>
-                <div class="col-md-7">
-                    <ul class="nav nav-pills">
-                        <li role="presentation"><span class="go-to-ports btn btn-info">Ports</span></li>
-                        <li role="presentation"><span class="go-to-volumes btn btn-info">Volumes</span></li>
-                        <li role="presentation"><span class="go-to-envs btn btn-info">Envvars</span></li>
-                        <li role="presentation"><span class="go-to-resources btn btn-info">Limits</span></li>
-                        <li role="presentation"><span class="go-to-other btn btn-info">Other</span></li>
-                        <li role="presentation"><span class="go-to-stats btn btn-info">Stats</span></li>
-                        <li role="presentation"><span class="active btn btn-info">Logs</span></li>
+        <div id="container-page">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            <a href="/#pods">Pods</a>
+                        </li>
+                        <li>
+                            <a href="/#pods/<%- parentID %>">My best Pod</a>
+                        </li>
+                        <li class="active">nodeName</li>
                     </ul>
                 </div>
             </div>
-            <div class="container-logs">
-                <% _.each(logs, function(line){ %>
-                <p><%- line['@timestamp'] %>: <%- line['log'] %></p>
-                <% }) %>
-            </div>
-            <div class="view-controls text-right">
-                <a class="btn btn-default" href="/#pods/<%- parentID %>">Back</a>
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-3 col-md-2 sidebar">
+                        <ul class="nav nav-sidebar">
+                            <li role="presentation" class="stats go-to-logs active">Logs</li>
+                            <li role="presentation" class="go-to-stats">Monitoring</li>
+                            <li role="presentation" class="go-to-volumes ">Timelines</li>
+                            <li role="presentation" class="configuration">
+                                <span class="go-to-ports">Configuration</span>
+                                <ul class="nav sub-nav">
+                                    <li role="presentation" class="go-to-ports">General</li>
+                                    <li role="presentation" class="go-to-other">Variables</li>
+                                    <li role="presentation" class="go-to-resources">Limits</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="details_content" class="col-xs-10 logs-tab">
+                        <div id="tab-content">
+                            <div class="col-xs-10">
+                                <div class="info col-xs-6">
+                                    <div>Image tag: <%- image %></div>
+                                    <div>Deploy tags: some tags</div>
+                                </div>
+                                <div class="col-xs-6 servers">
+                                    <div>Kube type: ssd power</div>
+                                    <div>Restart police: never</div>
+                                    <div>Endpoints:  102.128.9.95</div>                                    
+                                </div>
+                            </div>
+                            <div class="col-xs-12">
+                                <div class="container-logs">
+                                    <% _.each(logs, function(line){ %>
+                                    <p><%- line['@timestamp'] %>: <%- line['log'] %></p>
+                                    <% }) %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         </script>
 
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
-        <div class="container">
-            <div class="col-md-4 col-md-offset-1">
-        {#
-                <table class="table">
-                    <thead><tr><th></th><th>Cluster</th></tr></thead>
-                    <tbody>
-                        <% if (cluster){ %>
-                        <tr>
-                            <td><span class="glyphicon glyphicon-check cluster cluster-on"></span></td>
-                            <td>Replicated</td>
-                        </tr>
-                        <tr>
-                            <td><input class="replicas" type="number" value="<%- replicas %>"></td>
-                            <td>Replicas</td>
-                        </tr>
-                        <tr>
-                            <td><span class="glyphicon glyphicon-share entrypoint entrypoint-on"></span></td>
-                            <td><span><%- portalIP ? portalIP : 'dynamic' %></span>:<span class="ieditable port"><%- port %></span></td>
-                        </tr>
-                        <% } else { %>
-                        <tr>
-                            <td><span class="glyphicon glyphicon-unchecked cluster cluster-off"></span></td>
-                            <td>Replicated</td>
-                        </tr>
-                        <% } %>
-                    </tbody>
-                </table>
-        #}
-                <% if(freeHost) { %>
-                <table class="table">
-                <thead><tr><th></th><th>Public IP</th></tr></thead>
-                <tbody><tr>
-                    <td><input type="checkbox" id="set_public_ip"
-                               name="set_public_ip" value="1"/></td>
-                    <th><label for="set_public_ip">Set public IP: <%- freeHost %></label></th>
-                </tr></tbody>
-                </table>
-                <% } %>
-        {#
-                <% if (nodes.length !== 0){ %>
-                <table class="table">
-                    <thead><tr><th></th><th>Node to run on</th></tr></thead>
-                    <tbody>
-                        <% _.each(nodes, function(n){ %>
-                        <tr>
-                            <td>
-                            <% if (node !== null && node === n.hostname){ %>
-                            <span class="glyphicon glyphicon-check node node-selected"></span>
-                            <% } else { %>
-                            <span class="glyphicon glyphicon-unchecked node node-unselected"></span>
-                            <% } %>
-                            </td>
-                            <td><%- n.hostname %></td>
-                        </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-                <% } %>
-        #}
-                <table class="table">
-                    <thead><tr><th>Restart Policy</th></tr></thead>
-                    <tbody>
-                        <tr>
-                            <td>
-                                <select class="restart-policy">
-                                    <option selected="selected" value="always">Always</option>
-                                    <option value="never">Never</option>
-                                    <option value="onFailure">On Failure</option>
-                                </select>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="table">
-                    <thead><tr><th>Extra Options</th></tr></thead>
-                    <tbody>
-                        <tr>
-                            <td>
-                                <select class="kube_type" id="extra-options">
-                                    <option value="Choose kube type" disabled selected>Choose kube type</option>
-                                    {% for kube_type in kube_types %}
-                                    <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <% if (volumes.length !== 0){ %>
-                <table class="table">
-                    <thead><tr><th>Volume</th><th>Path</th></tr></thead>
-                    <tbody>
-                        <% _.each(volumes, function(vol){ %>
-                        <tr>
-                            <td><%- vol['name'] %></td>
-                            <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
-                        </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-                <% } %>
+        <div class="container" id="add-image">
+            <div class="col-md-3 sidebar">
+                <ul class="nav nav-sidebar">
+                    <li role="presentation" class="success">Choose image</li>
+                    <li role="presentation" class="success">Set up image</li>
+                    <li role="presentation" class="success">Environment variables</li>
+                    <li role="presentation" class="active">Final</li>
+                </ul>
             </div>
-            <div class="col-md-5">
-                <table class="table">
-                    <thead><tr><th>Services</th><th></th></tr></thead>
-                <% _.each(containers, function(c){ %>
-                    <tr>
-                        <td class="lead"><%- c.image %></td>
-                        <td class="text-right"><button class="btn btn-danger btn-sm delete-item"><span class="glyphicon glyphicon-trash"></span>&nbsp;Delete</button></td>
-                    </tr>
-                <% }) %>
-                </table>
-                <div class="view-controls text-right">
-                    <button class="btn btn-warning save-container">Save</button>
-                    <button class="btn btn-success save-run-container">Save and Run</button>
-                    <button class="btn btn-primary add-more">Add more services</button>
+            <div id="details_content" class="col-sm-9 set-up-image">
+                <div id="tab-content" class="clearfix">
+                    <div class="col-md-6">
+                {#
+                        <table class="table">
+                            <thead><tr><th></th><th>Cluster</th></tr></thead>
+                            <tbody>
+                                <% if (cluster){ %>
+                                <tr>
+                                    <td><span class="glyphicon glyphicon-check cluster cluster-on"></span></td>
+                                    <td>Replicated</td>
+                                </tr>
+                                <tr>
+                                    <td><input class="replicas" type="number" value="<%- replicas %>"></td>
+                                    <td>Replicas</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="glyphicon glyphicon-share entrypoint entrypoint-on"></span></td>
+                                    <td><span><%- portalIP ? portalIP : 'dynamic' %></span>:<span class="ieditable port"><%- port %></span></td>
+                                </tr>
+                                <% } else { %>
+                                <tr>
+                                    <td><span class="glyphicon glyphicon-unchecked cluster cluster-off"></span></td>
+                                    <td>Replicated</td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                #}
+                        <% if(freeHost) { %>
+                        <table class="table">
+                        <thead><tr><th></th><th>Public IP</th></tr></thead>
+                        <tbody><tr>
+                            <td><input type="checkbox" id="set_public_ip"
+                                       name="set_public_ip" value="1"/></td>
+                            <th><label for="set_public_ip">Set public IP: <%- freeHost %></label></th>
+                        </tr></tbody>
+                        </table>
+                        <% } %>
+                {#
+                        <% if (nodes.length !== 0){ %>
+                        <table class="table">
+                            <thead><tr><th></th><th>Node to run on</th></tr></thead>
+                            <tbody>
+                                <% _.each(nodes, function(n){ %>
+                                <tr>
+                                    <td>
+                                    <% if (node !== null && node === n.hostname){ %>
+                                    <span class="glyphicon glyphicon-check node node-selected"></span>
+                                    <% } else { %>
+                                    <span class="glyphicon glyphicon-unchecked node node-unselected"></span>
+                                    <% } %>
+                                    </td>
+                                    <td><%- n.hostname %></td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                        <% } %>
+                #}
+                        <table class="table">
+                            <thead><tr><th>Restart Policy</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <select class="restart-policy">
+                                            <option selected="selected" value="always">Always</option>
+                                            <option value="never">Never</option>
+                                            <option value="onFailure">On Failure</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="table">
+                            <thead><tr><th>Extra Options</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <select class="kube_type" id="extra-options">
+                                            <option value="Choose kube type" disabled selected>Choose kube type</option>
+                                            {% for kube_type in kube_types %}
+                                            <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <% if (volumes.length !== 0){ %>
+                        <table class="table">
+                            <thead><tr><th>Volume</th><th>Path</th></tr></thead>
+                            <tbody>
+                                <% _.each(volumes, function(vol){ %>
+                                <tr>
+                                    <td><%- vol['name'] %></td>
+                                    <td><span class="ieditable volume"><%- vol.hasOwnProperty('source') && vol['source'].hasOwnProperty('hostDir') && vol['source']['hostDir'].hasOwnProperty('path') ? vol['source']['hostDir']['path'] : null %></span></td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                        <% } %>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table">
+                            <thead><tr><th>Services</th><th></th></tr></thead>
+                        <% _.each(containers, function(c){ %>
+                            <tr>
+                                <td class="lead"><%- c.image %></td>
+                                <td class="text-right"><button class="btn btn-danger btn-sm delete-item"><span class="glyphicon glyphicon-trash"></span>&nbsp;Delete</button></td>
+                            </tr>
+                        <% }) %>
+                        </table>
+                    </div>
                 </div>
+            </div>
+            <div class="buttons pull-right">
+                <button class="prev-step gray">Back</button>
+                <button class="add-more blue">Add more container</button>
+                <button class="save-container">Save</button>
             </div>
         </div>
         </script>

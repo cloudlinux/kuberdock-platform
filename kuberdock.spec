@@ -60,7 +60,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Kuberdock
 
 %prep
-%setup -c
+%setup -n %{name}-%{version}
 
 %build
 

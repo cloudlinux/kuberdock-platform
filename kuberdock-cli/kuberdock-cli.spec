@@ -48,6 +48,6 @@ rm -rf %{buildroot}
 
 %changelog
 
-* Fri Apr 10 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-1
+* Wed Apr 15 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-1
 - First release
 

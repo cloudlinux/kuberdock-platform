@@ -27,7 +27,7 @@
         </div>
       </header>
         <div class="container login-form">
-        <form id="loginForm" method="post" action="/login">
+        <form id="loginForm" method="post" action="/login?next={{ request.args.next|safe }}">
             <ul class="form-group">
               <li class="group">
                 <label for="login-form-username-field">Login</label>

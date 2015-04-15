@@ -16,8 +16,14 @@ define(function () {
                 });
             },
             401: function (xhr) {
+                $.notify(xhr.statusText, {
+                    autoHideDelay: 5000,
+                    globalPosition: 'top center',
+                    className: 'danger'
+                });
+
                 // Redirect to the login page.
-//                    Backbone.history.navigate("login", true);
+                    window.location.href = "/login";
             },
             403: function (xhr) {
                 // 403 -- Access denied

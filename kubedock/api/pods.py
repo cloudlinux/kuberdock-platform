@@ -76,7 +76,7 @@ def get_pods():
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
-    set_public_ip = data.pop('set_public_ip')
+    set_public_ip = data.pop('set_public_ip', None)
     public_ip = data.pop('freeHost', None)
     check_new_pod_data(data)
     pod = Pod.query.filter_by(name=data['name']).first()

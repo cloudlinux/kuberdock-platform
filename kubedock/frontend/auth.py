@@ -11,6 +11,8 @@ auth = Blueprint('auth', __name__)
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated():
+        return redirect(url_for('main.index'))
     username = request.form.get('login-form-username-field')
     passwd = request.form.get('login-form-password-field')
     if username is not None and passwd is not None:

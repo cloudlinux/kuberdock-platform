@@ -4,6 +4,7 @@ from .. import sessions
 from ..rbac import get_user_role
 from ..settings import NODE_TOBIND_EXTERNAL_IPS, KUBE_MASTER_URL
 from ..core import ssh_connect, db
+from ..utils import APIError
 
 from flask.ext.login import current_user
 from flask import jsonify
@@ -49,12 +50,6 @@ def create_app(settings_override=None):
     app.errorhandler(APIError)(on_app_error)
 
     return app
-
-
-class APIError(Exception):
-    def __init__(self, message, status_code=400):
-        self.message = message
-        self.status_code = status_code
 
 
 def on_app_error(e):

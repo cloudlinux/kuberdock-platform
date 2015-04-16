@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 26%{?dist}.cloudlinux
+Release: 27%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -120,6 +120,13 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+
+* Thu Apr 16 2014 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com> 0.1-27
+- Merge "AC-202: Default page for admin and user roles"
+- set_public_ip fix, next redirect on login fix, 401 status code fix
+- Add new design to add pod template, fix some bugs in settings,
+  create new templates in container page
+- Introduce new desgn login page
 
 * Wed Apr 15 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-26
 - First release

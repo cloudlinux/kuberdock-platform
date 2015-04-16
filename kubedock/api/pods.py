@@ -58,6 +58,7 @@ def get_pods_collection():
         idx = pods[pod.id]
         try:
             data[idx]['price'] = pod.price_per_hour
+            data[idx]['kubes'] = pod.kubes
         except IndexError:
             pass
     return data

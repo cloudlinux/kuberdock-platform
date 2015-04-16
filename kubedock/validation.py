@@ -249,6 +249,9 @@ change_pod_scheme.update({
         'type': 'dict',
         'required': False
     },
+    # service params
+    'price': {'type': 'strnum', 'empty': True, 'required': False},
+    'kubes': {'type': 'strnum', 'empty': True, 'required': False},
 })
 change_pod_scheme['containers']['schema']['schema']['volumeMounts']\
 ['schema']['schema']['path'] = {
@@ -271,6 +274,12 @@ class V(cerberus.Validator):
             socket.inet_pton(socket.AF_INET, value)
         except socket.error:
             self._error(field, 'Invalid ipv4 address')
+
+    def _validate_type_strnum(self, field, value):
+        try:
+            float(value)
+        except ValueError:
+            self._error(field, '{0} should be string or number'.format(field))
 
     def _validate_resolvable(self, resolvable, field, value):
         if resolvable:

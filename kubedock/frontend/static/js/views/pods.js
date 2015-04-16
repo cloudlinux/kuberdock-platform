@@ -321,7 +321,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             var thisItem = initPodCollection.fullCollection.get(this.model.id);
             var portalIP = '',
                 kubeType = '',
-                restartPolicy = '';
+                restartPolicy = '',
+                labels = thisItem.get('labels'),
+                publicIP = labels !== undefined ? labels['kuberdock-public-ip'] : '';
             _.each(thisItem.get('dockers'), function(d){
                 if(d.podIP && d.podIP.length >= 7){
                     portalIP = d.podIP;
@@ -335,14 +337,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 restartPolicy = k;
             }
             return {
-                name:          thisItem.attributes.name,
-                status:        thisItem.attributes.status,
-                replicas:      thisItem.attributes.replicas,
-                portalIP:      portalIP,
-                kubes:         thisItem.attributes.kube_type,
-                kubeType:      kubeType,
-                podIP:         thisItem.attributes.labels['kuberdock-public-ip'],
+                name:          thisItem.get('name'),
+                status:        thisItem.get('status'),
+                replicas:      thisItem.get('replicas'),
+                kubes:         thisItem.get('kubes'),
                 price:         thisItem.get('price'),
+                kubeType:      kubeType,
+                podIP:         publicIP,
+                portalIP:      portalIP,
                 restartPolicy: restartPolicy
             };
         },

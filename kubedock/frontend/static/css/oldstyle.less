@@ -1,248 +1,63 @@
 html{
-	min-height: 100%;
-	position: relative;
-	body{
-		#page-preloader {
-			position: fixed;
-			left: 0;
-			top: 0;
-			right: 0;
-			bottom: 0;
-			z-index: 100500;
-			display: none;
-		}
-		#page-preloader{
-			width: 60px;
-			height: 60px;
-			top: 0;
-			bottom: 0;
-			left: 0;
-			right: 0;
-			margin: auto;
-			position: absolute;
-			background: url('../img/preloader.gif') 0 0 no-repeat;
-			z-index: 999;
-		}
-		/* need refactoring */
-		.container-data {
-		    float: left;
-		}
-		.editable {
-		    display: inline-block;
-		    border-color: #466EB1;
-		    color: #5c5c5c;
-		    &:hover{
-		    	cursor: pointer;
-		    }
-		}
-		div.container-list-item, div.view-controls {
-		    margin-top: 10px;
-		}
-		.title {
-		    margin-bottom: 6px;
-		}
-		.uppercase{
-			text-transform: uppercase;
-		}
-		.green{
-		  color: #4DB04D ;
-		  border-color: #4DB04D;
-		}
-		.green-background{
-		    background-color: #4DB04D;
-		    color: #fff;
-		}
-		.btn{
-			outline: none;
-			&:focus, 
-			&:active,
-			&:active:focus,
-			&:focus:active{
-				.box-shadow(none);
-				outline: 0;
-			}
-			&.invert{
-				color: #4DB04D;
-  				background-color: transparent;
-  				&:hover{
-  					.transition(all 200ms);
-  					color: #fff;
-					background-color: #4DB04D;
-  				}
-			}
-			&.shdw{
-				.box-shadow(0px 4px 0px 0px #388E38);
-				&:hover{
-					.transition(all 200ms);
-					background-color: #70c070;
-					color: #fff;
-				}
-				&:active{
-					.transition(all 200ms);
-					.box-shadow(0px 4px 0px 0px #388E38); 
-					background-color: #4db04d;
-					color: #fff; 
-					cursor: pointer;
-				}
-				&.btn-success{
-					padding: 9px 19px;
-					border-color: transparent;
-					&:focus{
-						.box-shadow(0px 4px 0px 0px #388E38);
-					}
-					span{
-						text-transform: uppercase;
-					}
-				}
-			}
-		}
-		.wrapper{
-			.clearfix;
-	    	header{
-	    		&.main-header{
-	    			width: 100%;
-	  				padding: 55px 0 65px 0; 
-	  				a{
-	  					&.logo{
-                            float: left;
-                            width: 155px;
-                            height: 48px;
-                            background-image: url(../img/logo2.png);
-                            background-size: 155px 48px;
-	  					}
-	  					&.login-btn{
-	  						float: right;
-							text-transform: uppercase;
-							font-weight: 600;
-							font-size: 14px;
-							padding: 7px 31px;
-							border-radius: 6px;
-							letter-spacing: 0.88px; 
-	  					}
-	  					&.user-nav{
-	  						font-size: 14px;
-							padding: 7px 10px;
-							&:after{
-								content: '';
-								display: inline-block;
-								border-left: 5px solid transparent;
-								border-right: 5px solid transparent;
-								border-top: 6px solid #4DB04D;
-								margin-left: 8px;
-								letter-spacing: 0.88px;
-								margin-bottom: 2px;
-								&:hover{
-									border-top: 6px solid #fff; 
-								}
-							}
-	  					}
-	  				}
-	    		}
-	    	}
-	    	.container{
-	    		&.my-containers{
-	    			h3{
-	    				&.title{
-	    					font-size: 20px;
-							margin-bottom: 50px
-	    				}
-	    			}
-	    			table{
-	    				tbody{
-	    					td{
-	    						max-width: 120px;
-								padding: 30px 0;
-								vertical-align: middle;
-								&.name{
-									max-width: 50px;
-									padding-right: 100px; 
-								}
-								&.elements{
-									font-size: 12px;
-									width: 220px;
-								}
-								&.entrypoint{
-									max-width: 100px;
-								}
-								&.actions{
-									padding-right: 10px;
-									text-align: right;
-									a{
-										&.btn{
-											font-size: 12px;
-											padding: 3px 20px;
-										}
-									}
-								}
-	    					}
-	    				}
-	    			}
-	    			.add-container{
-	    				margin-top: 20px;
-	    			}
-	    		}
-	    		&.login-form{
-					padding: 106px 0 100px 0;
-					max-width: 400px;
-					margin: 0 auto;
-					display: block;
-					.form-group{
-						.group{
-							outline: 0; 
-							display: block;
-							margin-bottom: 27px;
-							label {
-								display: block;
-								font-size: 16px;
-								color: #000;
-								margin-bottom: 5px; 
-							}
-							input[type="text"], input[type="email"], input[type="password"] {
-								height: 62px;
-								width: 400px; 
-								font-size: 30px;
-								border: 1px solid #E8E5E5;
-								border-radius: 6px;
-								padding: 0 15px;
-								.box-sizing (border-box);
-								.transition (all 300ms); 
+    min-height: 100%;
+    position: relative;
+    body{
+        #page-preloader {
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100500;
+            display: none;
+        }
+        #page-preloader{
+            width: 60px;
+            height: 60px;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+            position: absolute;
+            background: url('../img/preloader.gif') 0 0 no-repeat;
+            z-index: 999;
+        }
+        /* need refactoring */
+        .editable {
+            display: inline-block;
+            border-color: #466EB1;
+            color: #5c5c5c;
+            &:hover{
+                cursor: pointer;
+            }
+        }
+        div.container-list-item, div.view-controls {
+            margin-top: 10px;
+        }
+        .title {
+            margin-bottom: 6px;
+        }
+        /*end  need refactoring */
 
-								&:focus{
-									outline: 0;
-  									border-color: #4DB04D; 
-								}
-							}
-							.submit{
-								padding: 15px 0;
-								border-radius: 10px;
-								font-size: 20px;
-							}
-						}
-					}
-	    		}
-	    	}
-		}
-		/*end  need refactoring */
+        /* error pages */
+        .messages-wrapper{
+            margin: 0 auto;
+            max-width: 50%;
+        }
+        /*end error pages*/
 
-    	/* content */
-    	/* error pages */
-		.messages-wrapper{
-			margin: 0 auto;
-			max-width: 50%;
-		}
-    	/*end error pages*/
-
-    	/*end content */
-		.modal{
-			.modal-header{
-				.close{
-					outline: 0;
-					margin-top: 0;
-				}
-			}
-			.modal-footer{
-				background-color: rgba(242, 242, 253, 0.25);
-			}
-		}
-	}
+        /*end content */
+        .modal{
+            .modal-header{
+                .close{
+                    outline: 0;
+                    margin-top: 0;
+                }
+            }
+            .modal-footer{
+                background-color: rgba(242, 242, 253, 0.25);
+            }
+        }
+    }
 }

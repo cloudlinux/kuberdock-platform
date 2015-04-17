@@ -15,6 +15,8 @@ Requires: postgresql-server
 Requires: kubernetes
 Requires: flannel >= 0.3.0
 Requires: dnsmasq >= 2.66
+# For semanage:
+Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
 Requires: python-cerberus >= 0.7.2
 Requires: python-flask >= 0.10.1
@@ -45,7 +47,7 @@ Requires: python-kombu >= 3.0.23
 Requires: python-nose >= 1.3.0
 Requires: python-paramiko >= 1.12.4
 Requires: python-psutil >= 0.7
-Requires: python-psycopg2 >= 2.5.1
+Requires: python-psycopg2 >= 2.5.4
 Requires: python-redis >= 2.10.3
 Requires: python-requests >= 2.4.3
 Requires: python-simple-rbac >= 0.1.1
@@ -111,6 +113,10 @@ root@${FQDN}
 EOF
 fi
 
+# TODO check if selinux enabled?
+semanage fcontext -a -t httpd_sys_content_t /var/opt/kuberdock/kubedock/frontend/static\(/.\*\)\?
+restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
+
 %files
 %defattr(-,root,root)
 %attr (-,nginx,nginx) /var/opt/kuberdock
@@ -121,13 +127,13 @@ fi
 
 %changelog
 
-* Thu Apr 16 2014 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com> 0.1-27
+* Thu Apr 16 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com> 0.1-27
 - Merge "AC-202: Default page for admin and user roles"
 - set_public_ip fix, next redirect on login fix, 401 status code fix
 - Add new design to add pod template, fix some bugs in settings,
   create new templates in container page
 - Introduce new desgn login page
 
-* Wed Apr 15 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-26
+* Wed Apr 15 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-26
 - First release
 

@@ -6,6 +6,10 @@ KUBERDOCK_MAIN_CONFIG=/etc/sysconfig/kuberdock/kuberdock.conf
 KNOWN_TOKENS_FILE="$KUBERNETES_CONF_DIR/known_tokens.csv"
 WEBAPP_USER=nginx
 
+if [ $USER != "root" ]; then
+    echo "Superuser privileges required"
+    exit 1
+fi
 
 yesno()
 # $1 = Message prompt
@@ -433,7 +437,36 @@ selector:
   k8s-app: kuberdock-dns
 EOF
 
+# 19. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir
+ENT=$(getent passwd $WEBAPP_USER)
+if [ -z "$ENT" ]; then
+    echo "User $WEBAPP_USER does not exist"
+    exit 1
+fi
 
+KEY=id_rsa
+PUB=id_rsa.pub
+DIR=$HOME/.ssh
+KEY_PATH=$DIR/$KEY
+PUB_PATH=$DIR/$PUB
+TGT_HOME=$(echo $ENT | cut -d: -f6)
+TGT_PATH=$TGT_HOME/.ssh
+
+if [ ! -d $DIR ];then
+    mkdir -p $DIR
+fi
+
+if [ ! -e $KEY_PATH ]; then
+    ssh-keygen -N "" -f $KEY_PATH
+fi
+
+if [ ! -d $TGT_PATH ];then
+    mkdir -p $TGT_PATH
+fi
+
+cp -f $KEY_PATH $TGT_PATH
+cp -f $PUB_PATH $TGT_PATH
+chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_PATH
 
 # ======================================================================
 echo "WARNING: Firewalld was disabled. You need to configure it to work right"

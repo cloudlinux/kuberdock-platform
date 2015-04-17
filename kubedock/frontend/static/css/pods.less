@@ -344,14 +344,133 @@
                 }
             }
         }
+        .added-containers{
+            .border-radius(5px);
+            border: 1px solid #e5e5e5;
+            padding: 18px 0 20px 23px;
+            margin: 30px 0px 10px 10px;
+            > div{
+                margin-bottom: 10px;
+            }
+            label{
+                margin-bottom: 15px;
+            }
+            button{
+                outline: 0;
+                width: 17px;
+                border: none;
+                color: #ffffff;
+                background: none;
+                margin-left: 10px;
+                line-height: 17px;
+                position: relative;
+                display: inline-block;
+                font-family: @regular;
+                &:before{
+                    top: 0px;
+                    left: 0px;
+                    content: '';
+                    position: absolute;
+                }
+                &.delete-item{
+                    &:before{
+                        width: 16px;
+                        height: 17px;
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                    }
+                    &:hover{
+                        &:before{
+                            background-position: 0 -18px; 
+                        }
+                    }
+                }
+                &.edit-item{
+                    &:before{
+                        width: 18px;
+                        height: 17px;
+                        background: url('../img/pencil-big.png') 0 0 no-repeat;
+                    }
+                    &:hover{
+                        &:before{
+                            background-position: 0 -18px; 
+                        }
+                    }
+                }
+            }   
+        }
     }
     #details_content{
         &.set-up-image{
             #tab-content{
-                margin-bottom: 15px;
+                margin-bottom: 0px;
+                padding-left: 45px;
                 border-bottom: 1px solid #e5e5e5;
                 &.clearfix{
                     margin-bottom: 0;
+                }
+                &.complete{
+                    padding-left: 45px;
+                    padding-right: 10px;
+                    .left{
+                        margin-bottom: 29px;
+                        border-bottom: 1px solid #e5e5e5;
+                    }
+                    .right{
+                        position: relative;
+                        padding: 72px 30px 30px;
+                        border: 1px solid #e5e5e5;
+                        &:before{
+                            top: -18px;
+                            right: 25px;
+                            content: '';
+                            width: 67px;
+                            height: 64px;
+                            position: absolute;
+                            background: url('../img/clip.png') 0 0 no-repeat;
+                        }
+                        .clearfix{
+                            margin-bottom: 0;
+                        }
+                        .total{
+                            color: #3f920e;
+                            font-size: 22px;
+                            margin-top: 30px;
+                            margin-bottom: 0;
+                            text-align: center;
+                        }
+                    }
+                    .servers{
+                        margin-bottom: 35px;
+                        padding-left: 107px;
+                        position: relative;
+                        > div{
+                            line-height: 23px
+                        }
+                        &:before{
+                            top: 0;
+                            left: 0;
+                            width: 107px;
+                            content: '';
+                            height: 66px;
+                            position: absolute;
+                            background: url('../img/servers.png') 0 0 no-repeat;
+                        }
+                    }
+                    label{
+                        display: block;
+                    }
+                    select{
+                        height: 52px;
+                        color: #1d1d1d;
+                        padding: 0 15px;
+                        vertical-align: top;
+                        margin-bottom: 29px;
+                        background-color: #fff;
+                        border: 1px solid #e5e5e5;
+                        &.kube_type{
+                            width: 100%;
+                        }
+                    }
                 }
                 label{
                     &.custom{
@@ -404,6 +523,17 @@
                     }
                     #ports-table{
                         margin-bottom: 15px;
+                        tbody{
+                            tr{
+                                td{
+                                    label{
+                                        &.custom{
+                                            margin-bottom: 0;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     .radio{
                         position: initial;
@@ -484,6 +614,67 @@
                                     background-position: 0 0;
                                 }
                             }
+                        }
+                    }
+                }
+                &.environment{
+                    .fields{
+                        .clearfix;
+                        > div{
+                            &:first-child{
+                                margin-right: 4px;
+                            }
+                        }
+                        input{
+                            width: 100%;
+                            height: 52px;
+                            padding: 0 15px;
+                            margin-bottom: 5px;
+                            vertical-align: top;
+                            display: inline-block;
+                            border: 1px solid #e5e5e5;
+                        }
+                    }
+                    label{
+                        display: block;
+                    }
+                    .bottom{
+                        label{
+                            margin-top: 25px;
+                        }
+                    }
+                    .reset{
+                        margin-bottom: 143px;
+                    }
+                    button{
+                        .box-shadow(none);
+                        outline: 0;
+                        border: none;
+                        position: relative;
+                        margin-bottom: 35px;
+                        background: transparent;
+                        &.add-env{
+                            color: #3297ed;
+                            margin-top: 12px;
+                            padding-left: 35px;
+                            &:before{
+                                top: 2px;
+                                left: 10px;
+                                content: '';
+                                width: 15px;
+                                height: 15px;
+                                background: url('../img/add-port-plus.png') 0 0 no-repeat;
+                                position: absolute;
+                            }
+                        }
+                        &.reset-button{
+                            height: 37px;
+                            color: #ffffff;
+                            padding: 0 30px;
+                            font-size: 16px;
+                            margin-bottom: 0;
+                            font-family: @regular;
+                            background-color: #466eb1;
                         }
                     }
                 }
@@ -612,6 +803,9 @@
                 margin-bottom: 15px;
             }
         }
+    }
+    .description{
+        line-height: 78px;
     }
 }
 #container-page{

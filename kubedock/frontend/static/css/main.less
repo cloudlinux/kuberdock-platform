@@ -22,12 +22,6 @@ body{
     @import "fonts.less";
     font-family: @regular;
 
-    button:disabled{
-        &:hover{
-            cursor: not-allowed !important;
-        }
-    }
-
     /* header */
     .navbar{
         border: 0;
@@ -216,7 +210,6 @@ body{
                 #add_node, #nav-search, #add_user, #add_pod{
                     float: left;
                 }
-                /* delete after fix */
                 a{
                     &#add_pod{
                         outline: 0;
@@ -243,7 +236,6 @@ body{
                         }
                     }
                 }
-                /* end delete after fix */
                 button{
                     outline: 0;
                     border: none;
@@ -505,7 +497,7 @@ body{
                 padding: 0;
                 margin: auto;
                 width: 313px;
-                height: 333px;
+                height: 430px;
                 display: block;
                 position: absolute;
                 .form-group{
@@ -581,6 +573,56 @@ body{
             background-color: #466eb1;
         }
     }
+
+    /* modal */
+
+    .modal{
+        background-color: rgba(61, 76, 85, 0.45);
+        .modal-dialog{
+            .modal-content{
+                .box-shadow(none);
+                border: none;
+                .modal-header{
+                    height: 64px;
+                    padding: 0 30px;
+                    .border-radius(none);
+                    .close{
+                        outline: 0;
+                        width: 14px;
+                        height: 16px;
+                        margin-right: 0;
+                        margin-top: 24px;
+                        background: url('../img/modal-cross.png') 0 0 no-repeat;
+                        &:hover{
+                            .opacity(1);
+                            background-position: 0 -16px;
+                        }
+                    }
+                    .modal-title{
+                        color: #1e1e1e;
+                        font-size: 18px;
+                        line-height: 63px;
+                        font-family: @regular;
+                    }
+                }
+                .modal-body{
+                    color: #1e1e1e;
+                    font-size: 14px;
+                    padding: 50px 30px;
+                    font-family: @regular;
+                    background-color: #f5fafe;
+                }
+                .modal-footer{
+                    .border-radius( 5px );
+                    margin: 0;
+                    border: none;
+                    padding: 15px 20px;
+                    background-color: #f5fafe;
+                }
+            }
+        }
+    }
+    /* end modal */
     
     @import "pods.less";
     @import "nodes.less";

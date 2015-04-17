@@ -331,12 +331,12 @@
                 <div class="col-md-3 sidebar">
                     <ul class="nav nav-sidebar">
                         <li role="presentation" class="active">Choose image</li>
-                        <li role="presentation" class="">Set up image</li>
-                        <li role="presentation" class="">Environment variables</li>
-                        <li role="presentation" class="">Final</li>
+                        <li role="presentation">Set up image</li>
+                        <li role="presentation">Environment variables</li>
+                        <li role="presentation">Final</li>
                     </ul>
                 </div>
-                <div id="details_content" class="col-sm-9">
+                <div id="details_content" class="col-sm-9 no-padding">
                     <div id="tab-content">
                         <label>Search from directories</label>
                     <div>
@@ -382,7 +382,7 @@
                     </div>
                 </div>
                 <div class="buttons pull-right">
-                    <a href="/#pods" class="gray">Cencel</a>
+                    <a href="/#pods" class="gray">Cancel</a>
                 </div>
             </div>
 
@@ -415,11 +415,11 @@
                     <ul class="nav nav-sidebar">
                         <li role="presentation" class="success">Choose image</li>
                         <li role="presentation" class="active">Set up image</li>
-                        <li role="presentation" class="">Environment variables</li>
-                        <li role="presentation" class="">Final</li>
+                        <li role="presentation">Environment variables</li>
+                        <li role="presentation">Final</li>
                     </ul>
                 </div>
-                <div id="details_content" class="col-sm-9 set-up-image">
+                <div id="details_content" class="col-sm-9 set-up-image no-padding">
                     <div id="tab-content">
                         <label>Adding: <%- image %></label>
                         <label class="custom">
@@ -432,24 +432,25 @@
                                 <label>Replace policy</label>
                             </div>
                             <div class="col-md-6">
-                                <select>
-                                    <option>1</option>
-                                    <option>2</option>
+                                <select class="restart-policy">
+                                    <option selected="selected" value="always">Always</option>
+                                    <option value="never">Never</option>
+                                    <option value="onFailure">On Failure</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                       <!--     <div class="col-md-3">
                                 <select>
                                     <option>Replication QTU</option>
                                     <option>2</option>
                                 </select>
-                            </div>
+                            </div> -->
                         </div>
                         <div class="ports">
                             <label>Ports:</label>
                             <div class="row">
                                 <div class="col-xs-10">
                                     <table id="ports-table" class="table">
-                                        <thead><tr><th>Container port</th><th>Protocol</th><th>Host port</th></tr></thead>
+                                        <thead><tr><th>Container port</th><th>Protocol</th><th>Host port</th><th>Public</th></tr></thead>
                                         <tbody>
                                         <% _.each(ports, function(p){ %>
                                             <tr>
@@ -458,6 +459,12 @@
                                                 </td>
                                                 <td><span class="iseditable"><%- p.protocol %></span></td>
                                                 <td class="hostPort"><span class="ieditable"><%- p.hostPort %></span></td>
+                                                <td>
+                                                    <label class="custom">
+                                                        <input type="checkbox"/>
+                                                        <span></span>
+                                                    </label>
+                                                </td>
                                             </tr>
                                         <% }) %>
                                         </tbody>
@@ -527,11 +534,16 @@
                                 </div>
                             </div>
                         </div>
-                    <div>
+                    </div>
                 </div>
-                <div class="buttons pull-right">
-                    <a href="/#pods" class="">Cencel</a>
-                    <button class="next-step">Next</button>
+                <div class="col-xs-9 no-paddong col-xs-offset-3">
+                    <span class="description pull-left">
+                        * Public IP will reqiures additional payment
+                    </span>
+                    <span class="buttons pull-right">
+                        <a href="/#pods" class="">Cancel</a>
+                        <button class="next-step">Next</button>
+                    </span>
                 </div>
             </div>
             <% } else { %>
@@ -565,7 +577,7 @@
                                 </li>
                             </ul>
                         </div>
-                        <div id="details_content" class="col-sm-10">
+                        <div id="details_content" class="col-sm-10 no-padding">
                             <div class="status-line running">Status: Running
                                 <span>Stop</span>
                                 <span>Terminate</span>
@@ -578,13 +590,16 @@
                                         <div>Deploy tags: some tags</div>
                                     </div>
                                     <table id="ports-table" class="table">
-                                        <thead><tr><th>Container port</th><th>Protocol</th><th>Published</th></tr></thead>
+                                        <thead><tr><th>Container port</th><th>Protocol</th><th>Host Port</th><th>Published</th></tr></thead>
                                         <tbody>
                                         <% _.each(ports, function(p){ %>
                                             <tr>
                                                 <td class="containerPort"><%- p.containerPort %></td>
                                                 <td><%- p.protocol %></td>
-                                                <td class="hostPort">yes</td>
+                                                <td class="hostPort"><%- p.hostPort %></td>
+                                                <td>
+                                                    yes
+                                                </td>
                                             </tr>
                                         <% }) %>
                                         </tbody>
@@ -666,13 +681,13 @@
                                 <span class="go-to-ports">Configuration</span>
                                 <ul class="nav sub-nav">
                                     <li role="presentation" class="go-to-ports">General</li>
-                                    <li role="presentation" class="go-to-others">Variables</li>
+                                    <li role="presentation" class="go-to-other">Variables</li>
                                     <li role="presentation" class="go-to-resources">Limits</li>
                                 </ul>
                             </li>
                         </ul>
                     </div>
-                    <div id="details_content" class="col-sm-10 logs-tab">
+                    <div id="details_content" class="col-sm-10 logs-tab no-padding">
                         <div id="tab-content">
                             <div class="col-xs-10">
                                 <div class="info col-xs-6">
@@ -704,28 +719,51 @@
                         <li role="presentation" class="success">Choose image</li>
                         <li role="presentation" class="success">Set up image</li>
                         <li role="presentation" class="active">Environment variables</li>
-                        <li role="presentation" class="">Final</li>
+                        <li role="presentation">Final</li>
                     </ul>
                 </div>
-                <div id="details_content" class="col-sm-9 set-up-image">
-                    <div id="tab-content">
-                        <table id="data-table" class="table">
-                            <thead><tr><th class="text-center">Key</th><th class="text-center">Value</th></tr></thead>
-                            <tbody>
-                            <% _.each(env, function(e){ %>
-                                <tr>
-                                    <td class="text-center"><span class="ieditable name"><%- e.name ? e.name : 'not set' %></span></td>
-                                    <td class="text-center"><span class="ieditable value"><%- e.value ? e.value : 'not set' %></span></td>
-                                </tr>
-                            <% }) %>
-                            </tbody>
-                        </table>
+                <div id="details_content" class="col-sm-9 set-up-image clearfix no-padding">
+                    <div id="tab-content" class="environment clearfix">
+                        <label>Image variables</label>
+                        <div class="col-sm-12 no-padding fields">
+                            <div class="col-sm-4 no-padding">
+                                <input type="text" placeholder="Variable name value">
+                            </div>
+                            <div class="col-sm-4 no-padding">
+                                <input type="text">
+                            </div>
+                        </div>
+                        <div class="col-sm-12 no-padding fields">
+                            <div class="col-sm-4 no-padding">
+                                <input type="text" placeholder="Variable name value">
+                            </div>
+                            <div class="col-sm-4 no-padding">
+                                <input type="text">
+                            </div>
+                        </div>
+                        <div class="col-xs-12 no-padding bottom"><label>Additional variables</label></div>
+                        <% _.each(env, function(e){ %>
+                        <div class="col-sm-12 no-padding fields">
+                            <div class="col-sm-4 no-padding">
+                                <input type="text" placeholder="Variable name value" value="<%- e.name ? e.name : '' %>">
+                            </div>
+                            <div class="col-sm-4 no-padding">
+                                <input type="text" value="<%- e.value ? e.value : '' %>">
+                            </div>
+                        </div>
+                         <% }) %>
+                        <div class="col-sm-12 no-padding">
+                            <button type="button" class="add-env">Add field</button>
+                        </div>
+                        <div class="col-sm-12 no-padding reset">
+                            <button type="button" class="reset-button">Reset to image values</button>
+                        </div>
                     <div>
                 </div>
-                <div class="buttons pull-right">
-                    <button class="go-to-ports">Back</button>
-                    <button class="next-step">Next</button>
-                </div>
+            </div>
+            <div class="buttons pull-right">
+                <button class="go-to-ports">Back</button>
+                <button class="next-step">Next</button>
             </div>
             <% } else { %>
             <div class="container">
@@ -791,7 +829,7 @@
                             <li role="presentation" class="stats go-to-logs">Logs</li>
                             <li role="presentation" class="go-to-stats">Monitoring</li>
                             <li role="presentation" class="go-to-volumes">Timelines</li>
-                            <li role="presentation" class="configuration">
+                            <li role="presentation" class="configuration active">
                                 <span class="go-to-ports">Configuration</span>
                                 <ul class="nav sub-nav">
                                     <li role="presentation" class="go-to-ports">General</li>
@@ -801,7 +839,7 @@
                             </li>
                         </ul>
                     </div>
-                    <div id="details_content" class="col-xs-10 logs-tab">
+                    <div id="details_content" class="col-xs-10 logs-tab no-padding">
                         <div id="tab-content">
                             <div class="col-xs-12">
                                 <table class="table">
@@ -846,9 +884,9 @@
                     <div class="col-sm-3 col-md-2 sidebar">
                         <ul class="nav nav-sidebar">
                             <li role="presentation" class="stats go-to-logs">Logs</li>
-                            <li role="presentation" class="">Monitoring</li>
+                            <li role="presentation" class="go-to-stats">Monitoring</li>
                             <li role="presentation" class="go-to-volumes">Timelines</li>
-                            <li role="presentation" class="configuration">
+                            <li role="presentation" class="configuration active">
                                 <span class="go-to-ports">Configuration</span>
                                 <ul class="nav sub-nav">
                                     <li role="presentation" class="go-to-ports">General</li>
@@ -858,7 +896,7 @@
                             </li>
                         </ul>
                     </div>
-                    <div id="details_content" class="col-xs-10 logs-tab">
+                    <div id="details_content" class="col-xs-10 logs-tab no-padding">
                         <div id="tab-content">
                             <div class="col-xs-12">
                                 wizard-set-container-variables-template
@@ -897,13 +935,13 @@
                                 <span class="go-to-ports">Configuration</span>
                                 <ul class="nav sub-nav">
                                     <li role="presentation" class="go-to-ports">General</li>
-                                    <li role="presentation" class="">Variables</li>
+                                    <li role="presentation" class="go-to-other">Variables</li>
                                     <li role="presentation" class="go-to-resources">Limits</li>
                                 </ul>
                             </li>
                         </ul>
                     </div>
-                    <div id="details_content" class="col-xs-10 logs-tab">
+                    <div id="details_content" class="col-xs-10 logs-tab no-padding">
                         <div id="tab-content">
                             <div class="col-xs-10">
                                 <div class="info col-xs-6">
@@ -959,7 +997,7 @@
                             </li>
                         </ul>
                     </div>
-                    <div id="details_content" class="col-xs-10 logs-tab">
+                    <div id="details_content" class="col-xs-10 logs-tab no-padding">
                         <div id="tab-content">
                             <div class="col-xs-10">
                                 <div class="info col-xs-6">
@@ -989,104 +1027,55 @@
         <!-- Wizard new pod summary template -->
         <script type="text/template" id="wizard-set-container-complete-template">
         <div class="container" id="add-image">
-            <div class="col-md-3 sidebar">
+            <div class="col-md-3 sidebar no-padding">
                 <ul class="nav nav-sidebar">
                     <li role="presentation" class="success">Choose image</li>
                     <li role="presentation" class="success">Set up image</li>
                     <li role="presentation" class="success">Environment variables</li>
                     <li role="presentation" class="active">Final</li>
                 </ul>
+                <div class="added-containers">
+                    <label>Added items</label>
+                    <% if (containers.length > 0){ %>
+                        <% _.each(containers, function(c){ %>
+                            <div>
+                                <span><%- c.image %></span>
+                                <span>
+                                    <button class="edit-item">&nbsp;</button>
+                                    <button class="delete-item">&nbsp;</button>
+                                </span>
+                            </div>
+                        <% }) %>
+                    <% } %>
+                </div>
             </div>
-            <div id="details_content" class="col-sm-9 set-up-image">
-                <div id="tab-content" class="clearfix">
-                    <div class="col-md-6">
-                {#
-                        <table class="table">
-                            <thead><tr><th></th><th>Cluster</th></tr></thead>
-                            <tbody>
-                                <% if (cluster){ %>
-                                <tr>
-                                    <td><span class="glyphicon glyphicon-check cluster cluster-on"></span></td>
-                                    <td>Replicated</td>
-                                </tr>
-                                <tr>
-                                    <td><input class="replicas" type="number" value="<%- replicas %>"></td>
-                                    <td>Replicas</td>
-                                </tr>
-                                <tr>
-                                    <td><span class="glyphicon glyphicon-share entrypoint entrypoint-on"></span></td>
-                                    <td><span><%- portalIP ? portalIP : 'dynamic' %></span>:<span class="ieditable port"><%- port %></span></td>
-                                </tr>
-                                <% } else { %>
-                                <tr>
-                                    <td><span class="glyphicon glyphicon-unchecked cluster cluster-off"></span></td>
-                                    <td>Replicated</td>
-                                </tr>
-                                <% } %>
-                            </tbody>
-                        </table>
-                #}
+            <div id="details_content" class="col-sm-9 set-up-image no-padding">
+                <div id="tab-content" class="clearfix complete">
+                    <div class="col-md-6 no-padding left">
+                        <label>Type</label>
+                        <select class="kube_type" id="extra-options">
+                            <option value="Available kube types" disabled selected>Available kube types</option>
+                            {% for kube_type in kube_types %}
+                            <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <label>Kubes/replica:</label>
+                        <select class="replicas">
+                            <option value="1-20">1-20</option>
+                            <option value="21-40">21-40</option>
+                        </select>
+
+                    <!-- public ip -->
                         <% if(freeHost) { %>
-                        <table class="table">
-                        <thead><tr><th></th><th>Public IP</th></tr></thead>
-                        <tbody><tr>
-                            <td><input type="checkbox" id="set_public_ip"
-                                       name="set_public_ip" value="1"/></td>
-                            <th><label for="set_public_ip">Set public IP: <%- freeHost %></label></th>
-                        </tr></tbody>
-                        </table>
+                            <label class="custom">
+                                <input type="checkbox"/>
+                                <span></span>
+                                Publik ip
+                            </label>
                         <% } %>
-                {#
-                        <% if (nodes.length !== 0){ %>
-                        <table class="table">
-                            <thead><tr><th></th><th>Node to run on</th></tr></thead>
-                            <tbody>
-                                <% _.each(nodes, function(n){ %>
-                                <tr>
-                                    <td>
-                                    <% if (node !== null && node === n.hostname){ %>
-                                    <span class="glyphicon glyphicon-check node node-selected"></span>
-                                    <% } else { %>
-                                    <span class="glyphicon glyphicon-unchecked node node-unselected"></span>
-                                    <% } %>
-                                    </td>
-                                    <td><%- n.hostname %></td>
-                                </tr>
-                                <% }) %>
-                            </tbody>
-                        </table>
-                        <% } %>
-                #}
-                        <table class="table">
-                            <thead><tr><th>Restart Policy</th></tr></thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <select class="restart-policy">
-                                            <option selected="selected" value="always">Always</option>
-                                            <option value="never">Never</option>
-                                            <option value="onFailure">On Failure</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <table class="table">
-                            <thead><tr><th>Extra Options</th></tr></thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <select class="kube_type" id="extra-options">
-                                            <option value="Choose kube type" disabled selected>Choose kube type</option>
-                                            {% for kube_type in kube_types %}
-                                            <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <% if (volumes.length !== 0){ %>
+                    <!-- end public ip -->
+
+                    <% if (volumes.length !== 0){ %>
                         <table class="table">
                             <thead><tr><th>Volume</th><th>Path</th></tr></thead>
                             <tbody>
@@ -1100,16 +1089,21 @@
                         </table>
                         <% } %>
                     </div>
-                    <div class="col-md-6">
-                        <table class="table">
-                            <thead><tr><th>Services</th><th></th></tr></thead>
-                        <% _.each(containers, function(c){ %>
-                            <tr>
-                                <td class="lead"><%- c.image %></td>
-                                <td class="text-right"><button class="btn btn-danger btn-sm delete-item"><span class="glyphicon glyphicon-trash"></span>&nbsp;Delete</button></td>
-                            </tr>
-                        <% }) %>
-                        </table>
+                    <div class="col-md-4 col-md-offset-2 right">
+                        <p class="clearfix">
+                            <span class="pull-left"><b>Container:</b></span>
+                            <span class="pull-right">180$</span>
+                        </p>
+                        <p class="clearfix">
+                            <span class="pull-left"><b>IP Adress:</b></span>
+                            <span class="pull-right">20$</span>
+                        </p>
+                        <p class="total"><b>Total price:</b> 200$</p>
+                    </div>
+                    <div class="col-xs-12 no-padding servers">
+                        <div>CPU: 8 cores with 3GHz</div>
+                        <div>RAM: 64GB DDR3 - 2000</div>
+                        <div>SDD: 20x320GB in Raid 0</div>                                    
                     </div>
                 </div>
             </div>
@@ -1139,15 +1133,16 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
+                            <span aria-hidden="true"></span>
                         </button>
                         <h4 class="modal-title"></h4>
                     </div>
                     <div class="modal-body">
                         One fine body
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <div class="modal-footer buttons">
+                        <button type="button" class="blue" data-dismiss="modal">Yes</button>
+                        <button type="button" class="gray" data-dismiss="modal">No</button>
                     </div>
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->

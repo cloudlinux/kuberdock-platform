@@ -740,6 +740,38 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'div',
         className: 'row',
 
+
+        events: {
+            'click .add-port'        : 'addItem',
+            'click .readonly'        : 'toggleReadOnly',
+            'click .add-volume'      : 'addVolume',
+            'change .restart-policy' : 'changePolicy'
+        },
+
+        ui: {
+            ieditable: '.ieditable',
+            iseditable: '.iseditable'
+        },
+
+        triggers: {
+            'click .complete'        : 'step:complete',
+            'click .go-to-volumes'   : 'step:volconf',
+            'click .go-to-envs'      : 'step:envconf',
+            'click .go-to-resources' : 'step:resconf',
+            'click .go-to-other'     : 'step:otherconf',
+            'click .next-step'       : 'step:envconf',
+            'click .go-to-stats'     : 'step:statsconf',
+            'click .go-to-logs'      : 'step:logsconf',
+        },
+        
+        changePolicy: function(evt){
+            evt.stopPropagation();
+            var policy = $(evt.target).val(),
+                struct = {};
+            struct[policy] = {};
+            this.model.set('restartPolicy', struct)
+        },
+
         templateHelpers: function(){
             return {
                 isPending: !this.model.has('parentID'),
@@ -760,29 +792,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             if (!this.model.has('volumeMounts')) {
                 this.model.set({'volumeMounts': []});
             }
-        },
-
-        events: {
-            'click .add-port'    : 'addItem',
-            'click .readonly'    : 'toggleReadOnly',
-            'click .add-volume'  : 'addVolume',
-        },
-
-        ui: {
-            ieditable: '.ieditable',
-            iseditable: '.iseditable'
-        },
-
-        triggers: {
-            'click .complete'        : 'step:complete',
-            'click .go-to-volumes'   : 'step:volconf',
-            'click .go-to-envs'      : 'step:envconf',
-            'click .go-to-resources' : 'step:resconf',
-            'click .go-to-other'     : 'step:otherconf',
-            'click .next-step'       : 'step:envconf',
-
-            'click .go-to-stats'     : 'step:statsconf',
-            'click .go-to-logs'      : 'step:logsconf',
         },
 
         addItem: function(env){
@@ -847,24 +856,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'div',
         className: 'row',
 
-        initialize: function(){
-            if (!this.model.has('volumeMounts')) {
-                this.model.set({'volumeMounts': []});
-            }
-        },
-
         ui: {
             ieditable: '.ieditable'
         },
 
         events: {
 
-        },
-
-        templateHelpers: function(){
-            return {
-                isPending: !this.model.has('parentID')
-            };
         },
 
         triggers: {
@@ -889,10 +886,13 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         ui: {
             ieditable: '.ieditable',
             table: '#data-table',
+            reset: '.reset-button',
+            inputs: 'input',
         },
 
         events: {
-            'click .add-env' : 'addItem',
+            'click .add-env'  : 'addItem',
+            'click @ui.reset' : 'resetFielsdsValue',
         },
 
         templateHelpers: function(){
@@ -917,6 +917,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             env.stopPropagation();
             this.model.get('env').push({name: null, value: null});
             this.render();
+        },
+
+        resetFielsdsValue: function(){
+            this.ui.inputs.val('');
         },
 
         onRender: function(){
@@ -1197,12 +1201,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click .delete-item' : 'deleteItem',
-            'click .cluster'     : 'toggleCluster',
-            'click .node'        : 'toggleNode',
-            'change .replicas'   : 'changeReplicas',
-            'change select.kube_type'   : 'changeKubeType',
-            'change .restart-policy'    : 'changePolicy'
+            'click .delete-item'      : 'deleteItem',
+            'click .cluster'          : 'toggleCluster',
+            'click .node'             : 'toggleNode',
+            'change .replicas'        : 'changeReplicas',
+            'change select.kube_type' : 'changeKubeType',
         },
 
         triggers: {
@@ -1214,7 +1217,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         deleteItem: function(evt){
             evt.stopPropagation();
-            var image = $(evt.target).closest('tr').children('td:first').text().trim();
+            var image = $(evt.target).closest('div').children('span:first').text().trim();
             this.model.attributes.containers = _.filter(this.model.get('containers'),
             function(i){ return i.image !== this.image }, {image: image});
             this.render();
@@ -1257,14 +1260,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.model.set('kube_type', parseInt(evt.target.value));
         },
 
-        changePolicy: function(evt){
-            evt.stopPropagation();
-            var policy = $(evt.target).val(),
-                struct = {};
-            struct[policy] = {};
-            this.model.set('restartPolicy', struct)
-        },
-        
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({

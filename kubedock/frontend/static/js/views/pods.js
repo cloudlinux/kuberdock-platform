@@ -775,7 +775,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         templateHelpers: function(){
             return {
                 isPending: !this.model.has('parentID'),
-                nodeName: this.model.get('node')
+                nodeName: this.model.get('node'),
+                ip: this.model.get('ip')
             };
         },
 
@@ -792,6 +793,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             if (!this.model.has('volumeMounts')) {
                 this.model.set({'volumeMounts': []});
             }
+            console.log(this);
         },
 
         addItem: function(env){
@@ -968,20 +970,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 isPending: !this.model.has('parentID')
             };
         },
-
-        onRender: function(){
-            var that = this;
-            this.ui.ieditable.editable({
-                type: 'text',
-                mode: 'inline',
-                success: function(response, newValue) {
-                    if ($(this).hasClass('kubes')) {
-                        that.model.set('kubes', parseInt(newValue));
-                    }
-                }
-            });
-        }
-
     });
 
     Views.WizardOtherSubView = Backbone.Marionette.ItemView.extend({

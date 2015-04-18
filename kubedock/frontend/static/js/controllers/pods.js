@@ -126,7 +126,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
         },
 
         showPodContainer: function(id, name){
-            wizardLayout = new App.Views.PodWizardLayout(),
+        	var wizardLayout = new App.Views.PodWizardLayout(),
                 parent_model = initPodCollection.fullCollection.get(id),
                 model_data = _.filter(
                     parent_model.get('containers'),
@@ -137,20 +137,26 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     parent_model.get('dockers'),
                     function(i){return i.info.imageID === this.d},
                     {d: model_data.imageID}
-                )[0].info.containerID.split('/')),
-                model_data.container_id = container_id,
-                model_data.node = parent_model.get('dockers')[0].host;
+                )[0].info.containerID.split('/'));
+            model_data.container_id = container_id;
+            model_data.node = parent_model.get('dockers')[0].host;
             if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
             if (!model_data.hasOwnProperty('workingDir')) model_data['workingDir'] = undefined;
             if (!model_data.hasOwnProperty('command')) model_data['command'] = [];
             if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
             if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
 
+            //this.listenTo(wizardLayout, 'show', function(){
+            //    wizardLayout.steps.show(new App.Views.WizardPortsSubView({
+            //        model: new App.Data.Image(model_data)
+            //    }));
+            //});
             this.listenTo(wizardLayout, 'show', function(){
-                wizardLayout.steps.show(new App.Views.WizardPortsSubView({
+                wizardLayout.steps.show(new App.Views.WizardLogsSubView({
                     model: new App.Data.Image(model_data)
                 }));
             });
+
             this.listenTo(wizardLayout, 'step:portconf', function(data){
                 wizardLayout.steps.show(new App.Views.WizardPortsSubView({model: data}));
             });

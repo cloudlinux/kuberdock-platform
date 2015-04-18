@@ -1,5 +1,5 @@
 /* pod-main */
-#podlist-table, #imagelist-table, #ports-table, #volumes-table{
+#podlist-table, #imagelist-table, #ports-table, #volumes-table, .variables-table{
     thead{
         background-color: transparent;
         &.min-opacity{
@@ -155,6 +155,9 @@
             }
         }
     }
+}
+.variables-table{
+    margin-top: 10px;
 }
 #item-controls{
     margin-bottom: 0px;
@@ -517,6 +520,10 @@
                     }
                     label{
                         display: block;
+                        .ip{
+                            color: #d1d1d1;
+                            font-weight: normal;
+                        }
                     }
                     .col-xs-10{
                         margin: 0;
@@ -838,10 +845,62 @@
         }
     }
     #details_content{
+        &.variables-tab{
+            .variables-table{
+                width: 97%;
+                margin-top: 27px;
+                margin-left: 3%;
+            }
+        }
+        &.configuration-general-tab{
+            #tab-content{
+                .clearfix;
+                .col-xs-10{
+                    margin-bottom: 0;
+                    .info{
+                        margin-bottom: 27px;
+                    }
+                }
+            }
+        }
         &.logs-tab{
             #tab-content{
+                .curent-margin{
+                    margin-bottom: 27px;
+                }
                 > .col-xs-10{
                     margin: 0px 0px 0px 3%;
+                }
+                &.limits{
+                    .servers{
+                        margin-top: 27px;
+                        padding-left: 140px;
+                        &:before{
+                            width: 150px;
+                            background-position: center;
+                        }
+                        > div{
+                            line-height: 18px;
+                            &.edit{
+                                top: 74px;
+                                left: 65px;
+                                color: #3197ee;
+                                position: absolute;
+                                &:before{
+                                    content: '';
+                                    left: -16px;
+                                    top: 1px;
+                                    width: 13px;
+                                    height: 14px;
+                                    position: absolute;
+                                    background: url('../img/pencil-small.png') 0 -14 no-repeat;
+                                }
+                                &:hover{
+                                    cursor: pointer;
+                                }
+                            }
+                        }
+                    }
                 }
                 .info, .servers{
                     margin-bottom: 30px;

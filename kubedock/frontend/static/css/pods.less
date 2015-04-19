@@ -82,6 +82,11 @@
                 &:first-letter{
                     text-transform: uppercase;
                 }
+                &.containerProtocol{
+                    &:first-letter{
+                        text-transform: none;
+                    }
+                }
                 span{
                     &.more-ico{
                         background: url('../img/small-circles.png') 0 0 no-repeat;
@@ -845,6 +850,37 @@
         }
     }
     #details_content{
+        &.timelines-tab, &.monitoring-tab{
+            #tab-content{
+                .clearfix;
+                .col-xs-10{
+                    margin-bottom: 0;
+                    .info{
+                        margin-bottom: 27px;
+                    }
+                }
+            }
+        }
+        &.monitoring-tab{
+            #tab-content{
+                #monitoring-page{
+                    .page-top-menu{
+                        span{
+                            &:first-child{
+                                width: 95px;
+                            }
+                        }
+                        label{
+                            font-weight: normal;
+                            span{
+                                top: 2px;
+                                margin-right: 5px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         &.variables-tab{
             .variables-table{
                 width: 97%;
@@ -863,48 +899,8 @@
                 }
             }
         }
-        &.logs-tab{
-            #tab-content{
-                .curent-margin{
-                    margin-bottom: 27px;
-                }
-                > .col-xs-10{
-                    margin: 0px 0px 0px 3%;
-                }
-                &.limits{
-                    .servers{
-                        margin-top: 27px;
-                        padding-left: 140px;
-                        &:before{
-                            width: 150px;
-                            background-position: center;
-                        }
-                        > div{
-                            line-height: 18px;
-                            &.edit{
-                                top: 74px;
-                                left: 65px;
-                                color: #3197ee;
-                                position: absolute;
-                                &:before{
-                                    content: '';
-                                    left: -16px;
-                                    top: 1px;
-                                    width: 13px;
-                                    height: 14px;
-                                    position: absolute;
-                                    background: url('../img/pencil-small.png') 0 -14 no-repeat;
-                                }
-                                &:hover{
-                                    cursor: pointer;
-                                }
-                            }
-                        }
-                    }
-                }
-                .info, .servers{
-                    margin-bottom: 30px;
-                }
+        &.logs-tab,  &.monitoring-tab,  &.timelines-tab{
+             #tab-content{
                 .servers{
                     position: relative;
                     padding-left: 103px;
@@ -918,6 +914,60 @@
                         position: absolute;
                         background: url('../img/servers.png') 0 0 no-repeat;
                     }
+                }
+             }
+        }
+        &.limits-tab{
+            #tab-content{
+                &.limits{
+                    .servers{
+                        margin-top: 27px;
+                        padding-left: 140px;
+                        &:before{
+                            top: 0;
+                            left: 0;
+                            width: 150px;
+                            content: '';
+                            height: 66px;
+                            position: absolute;
+                            background: url('../img/servers.png') center no-repeat;
+                        }
+                        > div{
+                            line-height: 18px;
+                            &.edit{
+                                top: 74px;
+                                left: 65px;
+                                color: #3197ee;
+                                position: absolute;
+                                &:before{
+                                    content: '';
+                                    left: -18px;
+                                    top: 1px;
+                                    width: 13px;
+                                    height: 14px;
+                                    position: absolute;
+                                    background: url('../img/pencil-small.png') 0 -14px no-repeat;
+                                }
+                                &:hover{
+                                    cursor: pointer;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        &.logs-tab{
+            #tab-content{
+                .curent-margin{
+                    margin-bottom: 27px;
+                }
+                > .col-xs-10{
+                    margin: 0px 0px 0px 3%;
+                }
+
+                .info, .servers{
+                    margin-bottom: 30px;
                 }
             }
             .container-logs{
@@ -945,8 +995,15 @@
             }
         }
         #tab-content{
+            #ports-table, .volumes, #monitoring-page, .container-logs-wrapper, #timelines-page{
+                width: 97%;
+                margin-left: 3%;
+            }
             #ports-table{
                 margin-bottom: 35px;
+            }
+            .volumes{
+                margin-bottom: 22px;
             }
             .info{
                 height: 70px;
@@ -955,11 +1012,6 @@
             .col-xs-10{
                 margin: 27px 0px 45px 3%;
             }
-            .volumes{
-                margin-bottom: 22px;
-            }
-            /* container logs */
-            /* end container logs */
         }
     }
 }

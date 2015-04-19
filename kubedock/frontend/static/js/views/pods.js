@@ -617,7 +617,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         childView: Views.ImageListItemView,
         childViewContainer: '#data-collection',
         tagName: 'div',
-        className: 'row',
 
         initialize: function(options){
             this.collection = new App.Data.ImageCollection();
@@ -738,8 +737,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardPortsSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-ports-template',
         tagName: 'div',
-        className: 'row',
-
 
         events: {
             'click .add-port'        : 'addItem',
@@ -793,7 +790,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             if (!this.model.has('volumeMounts')) {
                 this.model.set({'volumeMounts': []});
             }
-            console.log(this);
         },
 
         addItem: function(env){
@@ -856,10 +852,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardVolumesSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-volumes-template',
         tagName: 'div',
-        className: 'row',
 
         ui: {
-            ieditable: '.ieditable'
+
         },
 
         events: {
@@ -883,7 +878,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardEnvSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-env-template',
         tagName: 'div',
-        className: 'row',
 
         ui: {
             ieditable: '.ieditable',
@@ -947,7 +941,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardResSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-resources-template',
         tagName: 'div',
-        className: 'row',
 
         ui: {
             ieditable: '.ieditable'
@@ -975,7 +968,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardOtherSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-other-template',
         tagName: 'div',
-        className: 'row',
 
         ui: {
             ieditable: '.ieditable'
@@ -1064,7 +1056,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         childViewContainer: "div.container-stats",
         template: '#wizard-set-container-stats-template',
         tagName: 'div',
-        className: 'row',
 
         initialize: function(options){
             this.containerModel = options.containerModel;
@@ -1122,7 +1113,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.WizardLogsSubView = Backbone.Marionette.ItemView.extend({
         template: '#wizard-set-container-logs-template',
         tagName: 'div',
-        className: 'row',
 
         ui: {
             ieditable: '.ieditable',

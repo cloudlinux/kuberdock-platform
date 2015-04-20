@@ -14,45 +14,44 @@
     <div id="contents"></div>
 
     <script type="text/template" id="notification-create-template">
-        <div id="user-contents">
-            <div class="row">
-                <div class="col-md-3">
-                    <div id="template-header">
-                        <h1>Template form</h1>
-                        <h2>Add</h2>
+        <div id="settingsNotificationEditTab">
+            <div id="user-contents" class="row">
+                <div id="user-controls">
+                    <div class="status-line">
+                        <label>User Created Notification template</label>
                     </div>
-                    <div class="help_text">
-                        <strong>Template keys</strong>:<br/>
-                        <i id="event_keys"></i>
+                    <div class="col-xs-8 col-xs-offset-1">
+                        <div class="form-group">
+                            <label for="id_text_html">HTML</label>
+                            <textarea id="id_text_html" rows="10"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="id_text_plain">Plain Text</label>
+                            <textarea id="id_text_plain" rows="10"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="id_event">Event</label>
+                            <select name="event" id="id_event">
+                                {% for eid, event in events.items() %}<option value="{{ eid }}">{{ event }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="help_text">
+                            <strong>Template keys</strong>:<br/>
+                            <i id="event_keys"></i>
+                        </div>
+                        <div class="checkbox">
+                            <label class="">
+                                <input type="checkbox" name="as_html" id="id_as_html">
+                                <span></span>
+                                Send as HTML
+                            </label>
+                        </div>
                     </div>
-
                 </div>
-                <div id="user-controls" class="col-md-6">
-                    <div class="form-group">
-                        <label for="id_event">Event</label>
-                        <select name="event" id="id_event">
-                            {% for eid, event in events.items() %}<option value="{{ eid }}">{{ event }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="id_text_plain">Text plain</label>
-                        <textarea id="id_text_plain" rows="10" style="width: 100%; height: 60px; font-size: 12px;"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="id_text_html">Text HTML</label>
-                        <textarea id="id_text_html" rows="10" style="width: 100%; height: 60px; font-size: 12px;"></textarea>
-                    </div>
-                    <div class="checkbox">
-                        <label class="">
-                            <input type="checkbox" name="as_html" id="id_as_html">
-                            <span></span>
-                            Send as HTML
-                        </label>
-                    </div>
-                    <div>
-                        <button id="template-add-btn" class="btn btn-success" type="submit">SAVE</button>
-                    </div>
+                <div class="buttons pull-right">
+                    <button id="template-back-btn">Cancel</button>
+                    <button id="template-add-btn" class="" type="submit">Submit</button>
                 </div>
             </div>
         </div>
@@ -117,7 +116,7 @@
                 </div>
             </div>
             <div class="buttons pull-right">
-                <button id="user-cancel-btn" class="" type="submit">Cencel</button>
+                <button id="user-cancel-btn" class="" type="submit">Cancel</button>
                 <button id="user-add-btn" class="" type="submit">Submit</button>
             </div>
         </div>
@@ -179,7 +178,7 @@
 
 
     <script type="text/template" id="settings-layout-template">
-        <div >
+        <div>
             <div class="breadcrumbs-wrapper">
                 <div class="container breadcrumbs" id="breadcrumbs">
                     <ul class="breadcrumb">

@@ -53,9 +53,9 @@
                         }
                     }
                     .stop-btn{
-                        background: url('../img/restart.png') 0 0 no-repeat;
+                        background: url('../img/stop.png') 0 0 no-repeat;
                         &:hover{
-                            background-position: 0 -18px;
+                            background-position: 0 -17px;
                         }
                     }
                     .terminate-btn{
@@ -87,6 +87,9 @@
                         text-transform: none;
                     }
                 }
+                &.index{
+                    color: #b1b9c0;
+                }
                 span{
                     &.more-ico{
                         background: url('../img/small-circles.png') 0 0 no-repeat;
@@ -97,6 +100,39 @@
                         &:hover{
                             cursor: default;
                             background-position: 0 -5px;
+                        }
+                    }
+                }
+                span{
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting{
+                        position: relative;
+                        padding-left: 22px;
+                        &:before{
+                            .border-radius(50%);
+                            left: 2px;
+                            width: 12px;
+                            content: '';
+                            height: 12px;
+                            bottom: 3px;
+                            position: absolute;
+                        }     
+                    }
+                    &.running, &.OK{
+                        &:before{
+                            background-color: #97cd75;
+                            border: 1px solid #589630;
+                        }
+                    }
+                    &.stopped{
+                        &:before{
+                            border: 1px solid #bc1b14;
+                            background-color: #f5544d;
+                        }
+                    }
+                    &.troubles, &.pending, &.waiting{
+                        &:before{
+                            border: 1px solid #c0a630;
+                            background-color: #f0d765;
                         }
                     }
                 }
@@ -276,20 +312,20 @@
         }
         &.running, &.OK{
             &:before{
-                background-color: #98cc79;
-                border: 1px solid #5d973c;
+                background-color: #97cd75;
+                border: 1px solid #589630;
             }
         }
         &.stopped{
             &:before{
-                background-color: #f25552;
-                border: 1px solid #bc2322;
+                border: 1px solid #bc1b14;
+                background-color: #f5544d;
             }
         }
         &.troubles, &.pending, &.waiting{
             &:before{
-                background-color: #efd66d;
-                border: 1px solid #c1a741;
+                border: 1px solid #c0a630;
+                background-color: #f0d765;
             }
         }
         &.rename_pod{

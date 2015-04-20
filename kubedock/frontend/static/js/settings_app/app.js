@@ -45,12 +45,15 @@ define(['marionette', 'utils'],
                 'text_plain' : 'textarea#id_text_plain',
                 'text_html'  : 'textarea#id_text_html',
                 'as_html'    : 'input#id_as_html',
-                'event_keys' : '#event_keys'
+                'event_keys' : '#event_keys',
+                'save'       : 'button#template-add-btn',
+                'back'       : 'button#template-back-btn',
             },
 
             events: {
-                'click button#template-add-btn': 'onSave',
-                'change select#id_event': 'onSelectEvent'
+                'click @ui.save'         : 'onSave',
+                'click @ui.back'         : 'back',
+                'change select#id_event' : 'onSelectEvent'
             },
 
             onRender: function() {
@@ -58,6 +61,10 @@ define(['marionette', 'utils'],
                 this.ui.event_keys.html(curEventKeys.join('<br/>'));
                 this.ui.event.show();
                 this.ui.label.text("Event");
+            },
+
+            back: function(){
+                App.router.navigate('/notifications/', {trigger: true});
             },
 
             onSave: function(){

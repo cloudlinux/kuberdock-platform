@@ -1318,17 +1318,13 @@
                             <option value="1-20">1-20</option>
                             <option value="21-40">21-40</option>
                         </select>
-
-                    <!-- public ip -->
                         <% if(freeHost) { %>
                             <label class="custom">
-                                <input type="checkbox"/>
+                                <input type="checkbox" id="set_public_ip" name="set_public_ip" value="1"/>
                                 <span></span>
-                                Publik ip
+                                Public ip
                             </label>
                         <% } %>
-                    <!-- end public ip -->
-
                     <% if (volumes.length !== 0){ %>
                         <table class="table">
                             <thead><tr><th>Volume</th><th>Path</th></tr></thead>

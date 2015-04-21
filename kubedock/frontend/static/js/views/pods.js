@@ -49,9 +49,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName     : 'tr',
         className   : 'pod-item',
 
-        templateHelpers: function(){        
+        templateHelpers: function(){
             var modelIndex = this.model.collection.indexOf(this.model);
-            
+
             return {
                 index: modelIndex + 1
             }
@@ -760,7 +760,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },
-        
+
         changePolicy: function(evt){
             evt.stopPropagation();
             var policy = $(evt.target).val(),
@@ -1190,7 +1190,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .add-more'           : 'step:getimage',
             'click .prev-step'          : 'step:envconf',
             'click .save-container'     : 'pod:save',
-            'click .save-run-container' : 'pod:run'
+            'click .save-run-container' : 'pod:run',
         },
 
         deleteItem: function(evt){

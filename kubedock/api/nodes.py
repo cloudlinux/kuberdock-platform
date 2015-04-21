@@ -18,14 +18,6 @@ def _node_is_active(x):
         return False
 
 
-def _node_info_dict(node):
-    return dict(
-        cpu_cores=node.cpu_cores,
-        ram=node.ram,
-        disk=node.disk
-    )
-
-
 @check_permission('get', 'nodes')
 def get_nodes_collection():
     new_flag = False
@@ -63,7 +55,6 @@ def get_nodes_collection():
                                 else 'troubles',
             'annotations': node.annotations,
             'labels': node.labels,
-            'info': _node_info_dict(node),
         })
     return nodes_list
 
@@ -92,7 +83,6 @@ def get_one_node(node_id):
             'status': 'running' if _node_is_active(res) else 'troubles',
             'annotations': m.annotations,
             'labels': m.labels,
-            'info': _node_info_dict(m),
         }
         return jsonify({'status': 'OK', 'data': data})
     else:

@@ -1,3 +1,4 @@
+import json
 from .models import Menu, MenuItem, Page
 
 MENUS = [
@@ -6,8 +7,10 @@ MENUS = [
         name='Navbar menu',
         items=[
             dict(name="Main", path="/", ordering=0),
-            dict(name="Nodes", path="/nodes/", ordering=1),
-            dict(name="Users", path="/users/", ordering=2),
+            dict(name="Nodes", path="/nodes/", ordering=1,
+                 roles=json.dumps(["Admin"])),
+            dict(name="Users", path="/users/", ordering=2,
+                 roles=json.dumps(["Admin"])),
             # dict(
             #     name="Helpdesk",
             #     children=[
@@ -47,7 +50,8 @@ MENUS = [
                     # dict(name="Static pages and menus",
                     #      path='/admin/static_pages/',
                     #      ordering=3)
-                ]
+                ],
+                roles=json.dumps(["Admin"])
             ),
         ]
     ),

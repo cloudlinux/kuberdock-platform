@@ -157,13 +157,14 @@ class KubeResolver(object):
     def _select_pods_from_db():
         data = {}
         for i in db.session.query(Pod).join(Pod.owner).filter(Pod.status!='deleted').values(
-                Pod.id, Pod.name, User.username, Pod.config):
+                Pod.id, Pod.name, User.username, Pod.config, Pod.status):
             # Ugly temporary workaround while DB has JSON and non-JSON entries
             try:
                 conf = json.loads(i[3])
             except (ValueError, TypeError):
                 conf = i[3]
-            data[i[1]] = {'id': i[0], 'username': i[2], 'config':conf}
+            data[i[1]] = {'id': i[0], 'username': i[2], 'config':conf,
+                          'status': i[4]}
         return data
 
     def _merge_with_db(self):
@@ -190,6 +191,7 @@ class KubeResolver(object):
                         }
                     })
                 pending_pod['dockers'] = dockers
+                pending_pod['status'] = db_pods[pod_name]['status']
                 pending_pod['id'] = db_pods[pod_name]['id']
                 self._pods.append(pending_pod)
             else: # we want to substitute all pods UUIDs for database pods UUIDs

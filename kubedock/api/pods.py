@@ -90,7 +90,7 @@ def create_item():
     item_id = make_item_id(data['name'])
     save_only = data.pop('save_only', True)
     temp_uuid = str(uuid4())
-    data.update({'id': temp_uuid, 'status': 'stopped'})
+    data.update({'id': temp_uuid})
 
     for container in data.get('containers', []):
         if container.get('command'):
@@ -267,15 +267,6 @@ def update_item(uuid):
     data.pop('freeHost', None)
     check_change_pod_data(data)
 
-    if 'dbdiff' in data:
-        update_dict(item.__dict__, data['dbdiff'])
-        try:
-            db.session.add(item)
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            return jsonify({'status': 'ERROR', 'reason': 'Error updating database entry'})
-    
     try:
         parsed_config = json.loads(item.config)
     except (TypeError, ValueError):
@@ -283,7 +274,8 @@ def update_item(uuid):
 
     if 'command' in data:
         if data['command'] == 'start':
-
+            response['data'] = {'status': 'pending'}
+            item.status = 'pending'
             if parsed_config.get('cluster'):
                 if is_alive(item.name):
                     # TODO check replica numbers and compare to ones set in config
@@ -294,22 +286,11 @@ def update_item(uuid):
                 item_id = make_item_id(item.name)
                 config = make_config(parsed_config, item_id)
                 pod_rv = tasks.create_containers_nodelay(config)
-                output = prepare_for_output(pod_rv, None)
-
-                try:
-                    pod = Pod(name=output['name'],
-                              config=json.dumps(add_to_output(parsed_config, output)),
-                              id=output['id'], owner=u)
-                    db.session.add(pod)
-                    db.session.delete(item)
-                    db.session.commit()
-                    response = {'id': output['id']}
-                except Exception, e:
-                    db.session.rollback()
         elif data['command'] == 'stop':
+            response['data'] = {'status': 'stopped'}
+            item.status = 'stopped'
             if parsed_config.get('cluster'):
                 resize_replica(item.name, 0)
-                response['data'] = {'status': 'Stopped'}
             else:
                 pods = tasks.get_pods_nodelay()
 
@@ -331,6 +312,11 @@ def update_item(uuid):
             resize_replica(item.name, replicas)
         else:
             return jsonify({'status': 'ERROR', 'reason': 'Unknown command'})
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return jsonify({'status': 'ERROR', 'reason': 'Error updating database entry'})
     response.update({'status': 'OK'})
     return jsonify(response)
 

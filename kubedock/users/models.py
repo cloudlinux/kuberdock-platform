@@ -57,7 +57,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def is_administrator(self):     # TODO remove this, prefer normal permission check
-        if self.role.rolename == 'SuperAdmin':
+        if self.role.rolename == 'Admin':
             return True
         else:
             return False
@@ -84,6 +84,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 kube_id=p.kube_id,
                 config=p.config,
                 status=p.status,
+                kubes=p.kubes,
                 containers_count=p.containers_count,
                 states=[states(state) for state in p.states]
             ) for p in self.pods
@@ -175,6 +176,7 @@ class UserActivity(BaseModelMixin, db.Model):
     action = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User')
+    remote_ip = db.Column(db.String)
 
     @classmethod
     def get_users_activities(cls, user_ids, date_from=None, date_to=None,
@@ -197,12 +199,45 @@ class UserActivity(BaseModelMixin, db.Model):
                                for a in activities])
         return activities
 
+    @classmethod
+    def get_sessions(cls, user_id, date_from=None, date_to=None):
+        activities = cls.query.filter_by(user_id=user_id)
+        if date_from:
+            activities = activities.filter(
+                cls.ts >= '{0} 00:00:00'.format(date_from))
+        if date_to:
+            activities = activities.filter(
+                cls.ts <= '{0} 23:59:59'.format(date_to))
+        a = None
+        b = None
+        history = []
+        for act in activities:
+            action = act.action
+            if action == cls.LOGIN:
+                if a is None:
+                    a = act
+            elif action == cls.LOGIN_A:
+                if b is None:
+                    b = act
+            elif action == cls.LOGOUT:
+                if a:
+                    history.append((a.ts, (act.ts - a.ts).seconds, act.ts,
+                                    a.remote_ip, action))
+                    a = None
+            elif action == cls.LOGOUT_A:
+                if b:
+                    history.append((b.ts, (act.ts - b.ts).seconds, act.ts,
+                                    b.remote_ip, action))
+                    b = None
+        return history
+
     def to_dict(self, include=None, exclude=None):
         data = dict(
             id=self.id,
             ts=self.ts.isoformat(sep=' ')[:19],
             action=UserActivity.ACTIONS.get(self.action),
-            user_id=self.user_id
+            user_id=self.user_id,
+            remote_ip=self.remote_ip or ''
         )
         if isinstance(include, dict):
             data.update(include)
@@ -228,9 +263,11 @@ class SessionData(db.Model):
 #####################
 ### Users signals ###
 @user_logged_in.connect
-def user_logged_in_signal(user_id):
+def user_logged_in_signal(args):
+    user_id, remote_ip = args
     current_app.logger.debug('user_logged_in_signal {0}'.format(user_id))
-    ua = UserActivity.create(action=UserActivity.LOGIN, user_id=user_id)
+    ua = UserActivity.create(
+        action=UserActivity.LOGIN, user_id=user_id, remote_ip=remote_ip)
     ua.save()
 
 

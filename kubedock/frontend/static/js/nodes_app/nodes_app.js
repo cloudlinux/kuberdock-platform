@@ -24,7 +24,67 @@ var NodesApp = new Backbone.Marionette.Application({
     }
 });
 
+var _ajaxStatusCodes = {
+    statusCode: {
+        400: function(xhr){
+            var err = xhr.statusText;
+            if(xhr.responseJSON && xhr.responseJSON.data)
+                err = xhr.responseJSON.data;
+            if(typeof err === "object")
+                err = JSON.stringify(err);
+            $.notify(err, {
+                autoHideDelay: 15000,
+                clickToHide: true,
+                globalPosition: 'top center',
+                className: 'error'
+            });
+        },
+        401: function (xhr) {
+            var err = xhr.statusText;
+            if(xhr.responseJSON && xhr.responseJSON.data)
+                err = xhr.responseJSON.data;
+            if(typeof err === "object")
+                err = JSON.stringify(err);
+            $.notify(err, {
+                autoHideDelay: 5000,
+                globalPosition: 'top center',
+                className: 'danger'
+            });
+
+            // Redirect to the login page.
+                window.location.href = "/login";
+        },
+        403: function (xhr) {
+            // 403 -- Access denied
+//                    Backbone.history.navigate("login", true);
+        },
+        404: function(xhr){
+            $('body').html(
+                '404 Page not found'
+            );
+        },
+        500: function(xhr){
+            var err = xhr.statusText;
+            if(xhr.responseJSON && xhr.responseJSON.data)
+                err = xhr.responseJSON.data;
+            if(typeof err === "object")
+                err = JSON.stringify(err);
+            $.notify(err, {
+                autoHideDelay: 5000,
+                globalPosition: 'top center',
+                className: 'danger'
+            });
+        }
+    }
+};
+
 NodesApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
+
+    Backbone.ajax = function() {
+        // Invoke $.ajaxSetup in the context of Backbone.$
+        Backbone.$.ajaxSetup.call(Backbone.$, _ajaxStatusCodes);
+        return Backbone.$.ajax.apply(Backbone.$, arguments);
+    };
 
     var unwrapper = function(response) {
         if (response.hasOwnProperty('data'))
@@ -99,6 +159,19 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click button#detailedNode' 			: 'detailedNode',
             'click button#upgradeNode' 				: 'detailedNode',
             'click button#detailedConfigurationTab' : 'detailedConfigurationTab',
+        },
+
+        templateHelpers: function(){
+            var model = this.model,
+                kubeType = '';
+            console.log(model)
+            _.each(kubeTypes, function(itm){
+                if(itm.id == model.get('kube_type'))
+                    kubeType = itm.name;
+            });
+            return {
+                'kubeType': kubeType
+            }
         },
 
         deleteNode: function(){

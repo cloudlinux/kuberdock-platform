@@ -49,17 +49,18 @@
     </script>
 
     <script type="text/template" id="node-general-tab-template">
+        <% var ram = resources.capacity.memory / (1024*1024*1024); %>
         <div class="row placeholders">
             <div class="col-xs-10">
                 <div class="col-xs-6 info">
                     <div>IP: <%- ip %></div>
-                    <div>Kube capacity: 100</div>
-                    <div>Used kubes: 50</div>
+{#                    <div>Kube capacity: 100</div>#}
+{#                    <div>Used kubes: 50</div>#}
                 </div>
                 <div class="col-xs-6 servers">
-                    <div class="server-ico">CPU: 8 cores with 3GHz</div>
-                    <div class="server-ico">RAM: 64GB DDR3 - 2000</div>
-                    <div class="server-ico">SDD: 20x320GB in Raid 0</div>
+                    <div class="server-ico">CPU: <%- resources.capacity.cpu %> cores with 3GHz</div>
+                    <div class="server-ico">RAM: <%- ram %>GB DDR3 - 2000</div>
+{#                    <div class="server-ico">SDD: 0GB in Raid 0</div>#}
                 </div>
             <div>
         </div>
@@ -389,14 +390,14 @@
     <script type="text/template" id="node-item-template">
         <td>
             <button id="detailedNode" class="btn btn-xs btn-link" title="Settings">
-                Some node name
+                <%- hostname ? hostname : ip ? ip : 'Not specified' %>
             </button>
             <span id="deleteNode" title="Remove node">&nbsp;</span>
         </td>
         <td><%- ip %></td>
         <td>
-            <%- hostname ? hostname : 'Not specified' %>
-            <span class="more-ico"  data-toggle="tooltip" data-placement="bottom" title="<%- hostname ? hostname : 'Not specified' %>"></span>
+            <%- kubeType %>
+{#            <span class="more-ico"  data-toggle="tooltip" data-placement="bottom" title="<%- hostname ? hostname : 'Not specified' %>"></span>#}
         </td>
         <% var st_type = 'text-danger';
            switch (status) {
@@ -404,9 +405,9 @@
                 case 'removing...': st_type = 'text-info'; break;
            }
         %>
-        <td>50/100</td>
-        <td>51%</td>
-        <td>20 (100)</td>
+{#        <td>50/100</td>#}
+{#        <td>51%</td>#}
+{#        <td>20 (100)</td>#}
         <td><%- status %></td>
     </script>
 
@@ -437,9 +438,9 @@
                         <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Node<b class="caret"></b></div></th>
                         <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">IP<b class="caret"></b></div></th>
                         <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube type<b class="caret"></b></div></th>
-                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube capacity<b class="caret"></b><br>(used/max)</div></th>
-                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Average<b class="caret"></b><br>CPU usage</div></th>
-                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Active pods<b class="caret"></b><br>(containers)</div></th>
+{#                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube capacity<b class="caret"></b><br>(used/max)</div></th>#}
+{#                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Average<b class="caret"></b><br>CPU usage</div></th>#}
+{#                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Active pods<b class="caret"></b><br>(containers)</div></th>#}
                         <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
                     </tr>
                 </thead>
@@ -477,5 +478,6 @@
     {% endassets %}
     <script type="text/javascript">
         NodesApp.Data.nodes = new NodesApp.Data.NodesCollection({{ nodes_collection|safe }});
+        kubeTypes = {{ kube_types|tojson|safe }};
     </script>
 {% endblock %}

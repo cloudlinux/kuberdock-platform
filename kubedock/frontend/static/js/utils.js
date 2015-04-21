@@ -8,6 +8,8 @@ define(function () {
                 var err = xhr.statusText;
                 if(xhr.responseJSON && xhr.responseJSON.data)
                     err = xhr.responseJSON.data;
+                if(typeof err === "object")
+                    err = JSON.stringify(err);
                 $.notify(err, {
                     autoHideDelay: 15000,
                     clickToHide: true,
@@ -16,7 +18,12 @@ define(function () {
                 });
             },
             401: function (xhr) {
-                $.notify(xhr.statusText, {
+                var err = xhr.statusText;
+                if(xhr.responseJSON && xhr.responseJSON.data)
+                    err = xhr.responseJSON.data;
+                if(typeof err === "object")
+                    err = JSON.stringify(err);
+                $.notify(err, {
                     autoHideDelay: 5000,
                     globalPosition: 'top center',
                     className: 'danger'
@@ -35,7 +42,12 @@ define(function () {
                 );
             },
             500: function(xhr){
-                $.notify(xhr.statusText, {
+                var err = xhr.statusText;
+                if(xhr.responseJSON && xhr.responseJSON.data)
+                    err = xhr.responseJSON.data;
+                if(typeof err === "object")
+                    err = JSON.stringify(err);
+                $.notify(err, {
                     autoHideDelay: 5000,
                     globalPosition: 'top center',
                     className: 'danger'
@@ -69,6 +81,20 @@ define(function () {
             }
         }
         return data;
+    };
+
+    this.toHHMMSS = function (seconds) {
+        var sec_num = parseInt(seconds, 10); // don't forget the second param
+        var hours = Math.floor(sec_num / 3600);
+        var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+        var secs = sec_num - (hours * 3600) - (minutes * 60);
+        if (hours   < 10)
+            hours = "0" + hours;
+        if (minutes < 10)
+            minutes = "0" + minutes;
+        if (secs < 10)
+            secs = "0" + secs;
+        return hours + ':' + minutes + ':' + secs;
     };
 
     this.BaseModel = Backbone.Model.extend({

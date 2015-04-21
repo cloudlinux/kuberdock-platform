@@ -8,23 +8,23 @@ MENUS = [
             dict(name="Main", path="/", ordering=0),
             dict(name="Nodes", path="/nodes/", ordering=1),
             dict(name="Users", path="/users/", ordering=2),
-            dict(
-                name="Helpdesk",
-                children=[
-                    dict(
-                        name="FAQ",
-                        page=dict(
-                            title="FAQ",
-                            slug="FAQ",
-                            content="<h1>Helpdesk</h1>"
-                                    "<p>text here</p>"
-                                    "<i>Static page sample</i>"
-                        ),
-                        ordering=0
-                    )
-                ],
-                ordering=3
-            ),
+            # dict(
+            #     name="Helpdesk",
+            #     children=[
+            #         dict(
+            #             name="FAQ",
+            #             page=dict(
+            #                 title="FAQ",
+            #                 slug="FAQ",
+            #                 content="<h1>Helpdesk</h1>"
+            #                         "<p>text here</p>"
+            #                         "<i>Static page sample</i>"
+            #             ),
+            #             ordering=0
+            #         )
+            #     ],
+            #     ordering=3
+            # ),
             dict(name="Settings", path="/settings/", ordering=4),
             dict(
                 name="Administration",
@@ -42,11 +42,11 @@ MENUS = [
                         ]
                     ),
                     dict(name="IP pool", path="/ippool/", ordering=1),
-                    dict(name="Notifications", path="/notifications/",
-                         ordering=2),
-                    dict(name="Static pages and menus",
-                         path='/admin/static_pages/',
-                         ordering=3)
+                    # dict(name="Notifications", path="/notifications/",
+                    #      ordering=2),
+                    # dict(name="Static pages and menus",
+                    #      path='/admin/static_pages/',
+                    #      ordering=3)
                 ]
             ),
         ]

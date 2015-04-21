@@ -33,16 +33,18 @@ if __name__ == '__main__':
 
     # Create all roles with users that has same name and password as role_name.
     # Useful to test permissions.
-    for role in Role.all():
-        u = User.filter_by(username=role.rolename).first()
-        if u is None:
-            u = User.create(username=role.rolename, password=role.rolename,
-                            role=role, package=p, active=True)
-            db.session.add(u)
-    db.session.commit()
+    # Delete all users from setup KuberDock. Only admin must be after install.
+    # AC-228
+    # for role in Role.all():
+    #     u = User.filter_by(username=role.rolename).first()
+    #     if u is None:
+    #         u = User.create(username=role.rolename, password=role.rolename,
+    #                         role=role, package=p, active=True)
+    #         db.session.add(u)
+    # db.session.commit()
 
     # Special user for convenience to type and login
-    r = Role.filter_by(rolename='SuperAdmin').first()
+    r = Role.filter_by(rolename='Admin').first()
     u = User.filter_by(username='admin').first()
     if u is None:
         u = User.create(username='admin', password='admin', role=r, package=p,

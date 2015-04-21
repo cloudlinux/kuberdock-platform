@@ -43,7 +43,7 @@
                     <th data-column="3" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">IP<b class="caret"></b></div></th>
                     <th data-column="4" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
                     <th data-column="5" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube quantity<b class="caret"></b></div></th>
-                    <th data-column="6" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Deployed<b class="caret"></b></div></th>
+{#                    <th data-column="6" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Deployed<b class="caret"></b></div></th>#}
 
                 </tr>
             </thead>
@@ -176,11 +176,11 @@
                     <span class="<%- status %>"><%- status %></span>
                 <% } %>
             </td>
-            <td>some kube type(10)
+            <td><%- kubeTypes[kube_type].name %> (<%- kubes %>)
             </td>
-            <td>
-                01/02/2015
-            </td>
+{#            <td>#}
+{#                01/02/2015#}
+{#            </td>#}
             <!-- end of table data row -->
         </script>
 

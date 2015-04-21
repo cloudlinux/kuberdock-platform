@@ -96,6 +96,20 @@ def get_users_activities():
     return jsonify({'data': objects_list})
 
 
+@users.route('/logHistory', methods=['GET'])
+@login_required_or_basic
+@check_permission('get', 'users')
+def get_user_log_history():
+    data = request.args
+    uid = data.get('uid')
+    data_from = data.get('date_from')
+    date_to = data.get('date_to')
+    if not uid:
+        raise APIError("Undefined user")
+    objects_list = UserActivity.get_sessions(uid, data_from, date_to)
+    return jsonify({'data': objects_list})
+
+
 @users.route('/online/', methods=['GET'])
 @login_required_or_basic
 @check_permission('get', 'users')

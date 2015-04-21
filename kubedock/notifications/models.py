@@ -124,7 +124,8 @@ kubedock.users.models module
 #####################
 ### Users signals ###
 @user_logged_in.connect
-def user_logged_in_signal(user_id):
+def user_logged_in_signal(args):
+    user_id, remote_ip = args
     user = User.filter_by(id=user_id).first()
     context_data = dict(user=user)
     NotificationTemplate.send_notification(USER_LOGGEDIN, **context_data)

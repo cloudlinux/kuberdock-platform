@@ -89,6 +89,15 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.activated_user' : 'activatedUser'
             },
 
+            templateHelpers: function(){
+                var podsCount = this.model.get('pods_count'),
+                    containersCount = this.model.get('containers_count');
+                return {
+                    podsCount: podsCount ? podsCount : 0,
+                    containersCount: containersCount ? containersCount : 0
+                }
+            },
+
             removeUser: function(){
                 this.destroy();
             },
@@ -328,8 +337,38 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.login_this_user_btn' : 'login_this_user'
             },
 
+            templateHelpers: function(){
+                var pods = this.model.get('pods'),
+                    kubesCount = 0;
+                _.each(pods, function(pod){
+                    var config = JSON.parse(pod.config);
+                    _.each(config.containers, function(c){
+                        kubesCount += c.kubes;
+                    });
+                });
+                return {
+                    'kubeTypes': kubeTypes,
+                    'kubes': kubesCount,
+                    toHHMMSS: utils.toHHMMSS
+                }
+            },
+
             onRender: function(){
-//                console.log(this.model)
+                $.ajax({
+                    url: '/api/users/logHistory',
+                    data: {'uid': this.model.get('id')},
+                    success: function(rs){
+                        var tb = $('#user-profile-logs-table tbody');
+                        _.each(rs.data, function(itm){
+                            tb.append($('<tr>').append(
+                                '<td>' + itm[0] + '</td>' +
+                                '<td>' + utils.toHHMMSS(itm[1]) + '</td>' +
+                                '<td>' + itm[2] + '</td>' +
+                                '<td>' + itm[3] + '</td>'
+                            ))
+                        });
+                    }
+                });
             },
 
             login_this_user: function(){

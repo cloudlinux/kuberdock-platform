@@ -55,6 +55,7 @@ def get_nodes_collection():
                                 else 'troubles',
             'annotations': node.annotations,
             'labels': node.labels,
+            'resources': kub_hosts.get(node.hostname, {}).get('resources', {})
         })
     return nodes_list
 
@@ -83,6 +84,7 @@ def get_one_node(node_id):
             'status': 'running' if _node_is_active(res) else 'troubles',
             'annotations': m.annotations,
             'labels': m.labels,
+            'resources': res.get('resources', {})
         }
         return jsonify({'status': 'OK', 'data': data})
     else:

@@ -62,6 +62,7 @@
                         <th>Role</th>
                         <th>Active</th>
                         <th>Last activity</th>
+                        <th>Action</th>
                     </tr>
                     </thead>
                     <tbody id="users-activities-table"></tbody>
@@ -191,28 +192,33 @@
                                                 <th unselectable="on" style="-webkit-user-select: none;">
                                                     <div>Pods</div>
                                                 </th>
+{#                                                <th unselectable="on" style="-webkit-user-select: none;">#}
+{#                                                    <div>Average<br/>CPU usage</div>#}
+{#                                                </th>#}
+{#                                                <th unselectable="on" style="-webkit-user-select: none;">#}
+{#                                                    <div>Kube type column<br>(kubes quantity)</div>#}
+{#                                                </th>#}
                                                 <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Average<br/>CPU usage</div>
+                                                    <div>Kube type</div>
                                                 </th>
                                                 <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Kube type column<br>(kubes quantity)</div>
+                                                    <div>Kubes</div>
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>Some pode name 1</td>
-                                                <td>20%</td>
-                                                <td>Kube quantity</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Some pode name 2</td>
-                                                <td>20%</td>
-                                                <td>Kube quantity</td>
-                                            </tr>
+                                        <% _.each(pods, function(pod){ %><tr>
+                                            <%
+                                                var podConfig = JSON.parse(pod.config),
+                                                    kubeType = kubeTypes[podConfig.kube_type];
+                                            %>
+                                            <td><%- pod.name %></td>
+                                            <td><%- kubeType %></td>
+                                            <td><%- pod.kubes %></td>
+                                        </tr> <% }) %>
                                         </tbody>
                                     </table>
-                                </div>
+                                <% } %></div>
                             </div>
                             <div class="tab-pane fade" id="userLogsTab">
                                 <div class="col-xs-12 no-padding-right">
@@ -234,18 +240,18 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>12 Jan 2014 at 12:00 AM</td>
-                                                <td>5h 20min</td>
-                                                <td>12 Jan 2014 at 5:20 PM</td>
-                                                <td>192.168.0.1</td>
-                                            </tr>
-                                            <tr>
-                                                <td>13 May 2013 at 11:32 PM</td>
-                                                <td>32h 10min</td>
-                                                <td>15 May 2013 at 1:42 AM</td>
-                                                <td>122.12.32.11</td>
-                                            </tr>
+{#                                            <tr>#}
+{#                                                <td>12 Jan 2014 at 12:00 AM</td>#}
+{#                                                <td>5h 20min</td>#}
+{#                                                <td>12 Jan 2014 at 5:20 PM</td>#}
+{#                                                <td>192.168.0.1</td>#}
+{#                                            </tr>#}
+{#                                            <tr>#}
+{#                                                <td>13 May 2013 at 11:32 PM</td>#}
+{#                                                <td>32h 10min</td>#}
+{#                                                <td>15 May 2013 at 1:42 AM</td>#}
+{#                                                <td>122.12.32.11</td>#}
+{#                                            </tr>#}
                                         </tbody>
                                     </table>
                                 </div>
@@ -264,8 +270,8 @@
             </button>
             <span id="deleteUser" title="Remove <%- username %>"></span>
         </td>
-        <td><%- pods_count %></td>
-        <td><%- containers_count %></td>
+        <td><%- podsCount %></td>
+        <td><%- containersCount %></td>
         <td><%- email ? email : 'No mail' %></td>
         <td>
             <%- active ? 'Active' : 'Blocked' %>
@@ -418,9 +424,10 @@
     <script data-main="/static/js/users_app/require_main.js" src="/static/js/lib/require.js"></script>
 
     <script type="text/javascript">
-    var usersCollection = {{ users_collection|safe }};
-    var onlineUsersCollection = {{ online_users_collection|safe }};
-    var userActivity = {{ user_activity|safe }}
+    var usersCollection = {{ users_collection|tojson|safe }};
+    var onlineUsersCollection = {{ online_users_collection|tojson|safe }};
+    var userActivity = {{ user_activity|tojson|safe }};
+    var kubeTypes = {{ kube_types|tojson|safe }};
     </script>
 
 {% endblock %}

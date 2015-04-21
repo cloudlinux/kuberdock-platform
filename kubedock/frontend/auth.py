@@ -24,7 +24,7 @@ def login():
             return render_template('errors/user_inactive.html'), 403
         elif user.verify_password(passwd):
             login_user(user)
-            user_logged_in.send(user.id)
+            user_logged_in.send((user.id, request.remote_addr))
             main_index = url_for('main.index')
             next_ = request.args.get('next') or main_index
             if user.is_administrator() and next_ == main_index:

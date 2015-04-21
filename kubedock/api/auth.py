@@ -21,7 +21,7 @@ def login():
                 raise APIError("User '{0}' is blocked".format(username), 403)
             elif user.verify_password(passwd):
                 login_user(user)
-                user_logged_in.send(user.id)
+                user_logged_in.send((user.id, request.remote_addr))
                 return jsonify({'status': 'OK',
                                 'next': request.args.get('next')})
             raise APIError('Username or password invalid', 401)

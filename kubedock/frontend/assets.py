@@ -27,6 +27,7 @@ vendor_js = Bundle(
     'js/lib/dropdowns-enhancement.js',
     'js/lib/scroll-model.js',
     'js/lib/scroll-view.js',
+    'js/lib/notify.min.js',
     filters="jsmin", output="js/lib.min.js")
 
 less_js = Bundle(

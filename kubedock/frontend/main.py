@@ -12,6 +12,10 @@ main = Blueprint('main', __name__)
 @main.route('/')
 @login_required
 def index():
+    # In setup KuberDock admin has no access to pods pages (AC-228)
+    if current_user.is_administrator():
+        return redirect(url_for('nodes.index'))
+
     coll = get_pods_collection()
     return render_template(
         'index.html',

@@ -209,7 +209,8 @@ def delete_item(uuid):
             pods['items'])
         for pod in filtered_pods:
             pod_rv = tasks.delete_pod_nodelay(pod['id'])
-            print 'DELETING POD', pod['id'], pod_rv
+            if SERVICES_VERBOSE_LOG >= 2:
+                print 'DELETING POD', pod['id'], pod_rv
             if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
                 return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
     except KeyError, e:

@@ -4,6 +4,7 @@ import random
 import re
 import ipaddress
 import shlex
+import requests
 import copy
 from uuid import uuid4
 from flask import Blueprint, request, current_app, jsonify, g
@@ -12,13 +13,13 @@ from .. import tasks, signals
 from ..models import User, Pod
 from ..core import db, ssh_connect
 from ..rbac import check_permission
-from ..utils import update_dict, login_required_or_basic
+from ..utils import update_dict, login_required_or_basic, modify_node_ips
 from ..kubedata.kuberesolver import KubeResolver
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..billing import kubes_to_limits
 from ..api import APIError
 from ..pods.models import PodIP
-from ..settings import KUBE_API_VERSION
+from ..settings import KUBE_API_VERSION, SERVICES_VERBOSE_LOG
 from .stream import send_event
 
 
@@ -90,10 +91,15 @@ def create_item():
     save_only = data.pop('save_only', True)
     temp_uuid = str(uuid4())
     data.update({'id': temp_uuid, 'status': 'stopped'})
+
     for container in data.get('containers', []):
         if container.get('command'):
             container['command'] = parse_cmd_string(container['command'][0])
 
+    if set_public_ip and public_ip:
+        data['public_ip'] = public_ip
+
+    service_rv = json.loads(run_service(data))
     json_data = json.dumps(data)
 
     pod = Pod(name=data['name'], config=json_data, id=temp_uuid, status='stopped')
@@ -106,49 +112,50 @@ def create_item():
         db.session.commit()
     except Exception, e:
         db.session.rollback()
+        tasks.delete_service_nodelay(service_rv['metadata']['name'])
         raise APIError("Could not create database record for "
                        "'{0}'.".format(data['name']), status_code=409)
-    if set_public_ip and public_ip:
-        data['public_ip'] = public_ip
+    if data.get('public_ip'):
         try:
             signals.allocate_ip_address.send([temp_uuid, public_ip])
         except Exception, e:
+            tasks.delete_service_nodelay(service_rv['metadata']['name'])
             db.session.delete(pod)
             db.session.commit()
             raise APIError(str(e), status_code=409)
-    
-    if not save_only:    # trying to run service and pods right away
-        try:
-            service_rv = json.loads(run_service(data))
-        except TypeError:
-            service_rv = None
-        config = make_config(data, item_id)
-        try:
-            # TODO rename to "create pod" when refactor
-            pod_rv = json.loads(tasks.create_containers_nodelay(config))
-        except TypeError:
-            pod_rv = None
-        if 'status' in pod_rv and pod_rv['status'] == 'Working':
-            current_app.logger.debug('WORKING')
-            output = copy.deepcopy(data)
-            output.update(prepare_for_output(None, service_rv))
-        else:
-            output = prepare_for_output(pod_rv, service_rv)
 
-        try:
-            pod = db.session.query(Pod).get(temp_uuid)
-            pod.config = json.dumps(add_to_output(json.loads(pod.config),
-                                                  output))
-            output['id'] = temp_uuid
-            db.session.commit()
-        except Exception, e:
-            current_app.logger.debug('DB_EXCEPTION:'+str(e))
-            db.session.rollback()
-            if data['service'] and service_rv is not None:
-                srv = json.loads(service_rv)
-                if 'id' in srv:
-                    tasks.delete_service_nodelay(srv['id'])
-        return jsonify({'status': 'OK', 'data': output})
+    # if not save_only:    # trying to run service and pods right away
+    #     try:
+    #         service_rv = json.loads(run_service(data))
+    #     except TypeError:
+    #         service_rv = None
+    #     config = make_config(data, item_id)
+    #     try:
+    #         # TODO rename to "create pod" when refactor
+    #         pod_rv = json.loads(tasks.create_containers_nodelay(config))
+    #     except TypeError:
+    #         pod_rv = None
+    #     if 'status' in pod_rv and pod_rv['status'] == 'Working':
+    #         current_app.logger.debug('WORKING')
+    #         output = copy.deepcopy(data)
+    #         output.update(prepare_for_output(None, service_rv))
+    #     else:
+    #         output = prepare_for_output(pod_rv, service_rv)
+    #
+    #     try:
+    #         pod = db.session.query(Pod).get(temp_uuid)
+    #         pod.config = json.dumps(add_to_output(json.loads(pod.config),
+    #                                               output))
+    #         output['id'] = temp_uuid
+    #         db.session.commit()
+    #     except Exception, e:
+    #         current_app.logger.debug('DB_EXCEPTION:'+str(e))
+    #         db.session.rollback()
+    #         if data['service'] and service_rv is not None:
+    #             srv = json.loads(service_rv)
+    #             if 'id' in srv:
+    #                 tasks.delete_service_nodelay(srv['id'])
+    #     return jsonify({'status': 'OK', 'data': output})
     return jsonify({'status': 'OK', 'data': data})
 
 
@@ -156,6 +163,7 @@ def create_item():
 @login_required_or_basic
 @check_permission('delete', 'pods')
 def delete_item(uuid):
+    # TODO refactor to item => pod
     item = db.session.query(Pod).get(uuid)
     if item is None:
         raise APIError('No pod with id: {0}'.format(uuid), status_code=404)
@@ -165,9 +173,9 @@ def delete_item(uuid):
         parsed_config = json.loads(item.config)
     except (TypeError, ValueError):
         parsed_config = {}
-        
+
     try:
-        public_ip = parsed_config['labels']['kuberdock-public-ip']
+        public_ip = parsed_config['public_ip']
         podip = PodIP.filter_by(
             ip_address=int(ipaddress.ip_address(public_ip)))
         podip.delete()
@@ -201,27 +209,38 @@ def delete_item(uuid):
             pods['items'])
         for pod in filtered_pods:
             pod_rv = tasks.delete_pod_nodelay(pod['id'])
+            print 'DELETING POD', pod['id'], pod_rv
             if 'status' in pod_rv and pod_rv['status'].lower() not in ['success', 'working']:
                 return jsonify({'status': 'ERROR', 'reason': pod_rv['message']})
     except KeyError, e:
         return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
 
-    if parsed_config.get('service'):
-        services = tasks.get_services_nodelay()
-
-        if 'items' not in services:
-            return jsonify({'status': 'ERROR', 'reason': 'no items entry'})
-
-        try:
-            filtered_services = filter(
-                (lambda x: is_related(x['selector'], {'name': name})),
-                services['items'])
-            for service in filtered_services:
-                service_rv = tasks.delete_service_nodelay(service['id'])
-                if 'status' in service_rv and service_rv['status'].lower() not in ['success', 'working']:
-                    return jsonify({'status': 'ERROR', 'reason': service_rv['message']})
-        except KeyError, e:
-            return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
+    # Deleting service
+    # services = tasks.get_services_nodelay()
+    # TODO remove when switch to v1beta3
+    services = requests.get('http://127.0.0.1:8080/api/v1beta3/namespaces/default/services/').json()
+    if 'items' not in services:
+        raise APIError('No services items')
+    try:
+        filtered_services = filter(
+            (lambda x: is_related(x['spec']['selector'], {'name': name})),
+            services['items'])
+        for service in filtered_services:
+            if SERVICES_VERBOSE_LOG >= 2:
+                print 'SERVICE DURING DELETING', service
+            state = json.loads(service['metadata']['annotations']['public-ip-state'])
+            if 'assigned-to' in state:
+                res = modify_node_ips(state['assigned-to'], 'del',
+                                      state['assigned-pod-ip'],
+                                      state['assigned-public-ip'],
+                                      service['spec']['ports'])
+                if not res:
+                    raise APIError("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
+            service_rv = tasks.delete_service_nodelay(service['metadata']['name'])
+            if 'status' in service_rv and service_rv['status'].lower() not in ['success', 'working']:
+                raise APIError(service_rv['message'])
+    except KeyError, e:
+        raise APIError('Key not found (%s)' % (e.message,))
 
     item.name += ('__' + ''.join(random.sample(string.lowercase + string.digits, 8)))
     item.status = 'deleted'
@@ -270,14 +289,11 @@ def update_item(uuid):
                     resize_replica(item.name, parsed_config['replicas'])
                 else:
                     return jsonify({'status': 'OK', 'data': start_cluster(data)})
-
-
             else:
                 item_id = make_item_id(item.name)
-                service_rv = run_service(data)
                 config = make_config(parsed_config, item_id)
                 pod_rv = tasks.create_containers_nodelay(config)
-                output = prepare_for_output(pod_rv, service_rv)
+                output = prepare_for_output(pod_rv, None)
 
                 try:
                     pod = Pod(name=output['name'],
@@ -289,10 +305,6 @@ def update_item(uuid):
                     response = {'id': output['id']}
                 except Exception, e:
                     db.session.rollback()
-                    if type(service_rv) is str or type(service_rv) is unicode:
-                        srv = json.loads(service_rv)
-                        if 'id' in srv:
-                            tasks.delete_service_nodelay(srv['id'])
         elif data['command'] == 'stop':
             if parsed_config.get('cluster'):
                 resize_replica(item.name, 0)
@@ -386,21 +398,43 @@ def docker_action():
 
 
 def run_service(data):
-    if not data.get('service'):
-        return
     dash_name = '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', data['name']))
     s = string.lowercase
     item_id = s[random.randrange(len(s))] +\
         ''.join(random.sample(s + string.digits, 19))
+    ports = []
+    for numCont, cont in enumerate(data['containers']):
+        for numPort, port_spec in enumerate(cont['ports']):
+            host_port = port_spec.pop('hostPort', None) or port_spec['containerPort']
+            ports.append({
+                "name": 'c{0}-p{1}'.format(numCont, numPort),
+                "port": host_port,
+                "protocol": port_spec['protocol'],
+                "targetPort": port_spec['containerPort']})
+
     conf = {
         'kind': 'Service',
-        'apiVersion': KUBE_API_VERSION,
-        'id': item_id,
-        'selector': {'name': data['name']},
-        'port': int(data['port']),
-        'labels': {'name': dash_name + '-service'}
+        'apiVersion': 'v1beta3',
+        # 'generateName': 'prefix',
+        'metadata': {
+            'name': item_id,
+            'labels': {'name': dash_name + '-service'},
+            'annotations': {
+                'public-ip-state': json.dumps({
+                    'assigned-public-ip': data.get('public_ip')
+                })
+            },
+        },
+        'spec': {
+            'selector': {'name': data['name']},
+            'ports': ports,
+        }
     }
-    return tasks.create_service_nodelay(conf)
+
+    r = tasks.create_service_nodelay(conf)
+    # TODO for old algo, delete later
+    data['annotations'] = {'kuberdock-ports': json.dumps(ports)}
+    return r
 
 
 def parse_cmd_string(s):
@@ -485,20 +519,20 @@ def prepare_for_output(rv=None, s_rv=None):
     if s_rv is None:
         return out
 
-    try:
-        if s_rv['kind'] == 'Service':
-            out['service'] = True
-        else:
-            out['service'] = False
-
-        for k in 'port', 'containerPort', 'portalIP':
-            try:
-                out[k] = s_rv[k]
-            except KeyError:
-                continue
-
-    except (ValueError, TypeError, KeyError):
-        pass
+    # try:
+    #     if s_rv['kind'] == 'Service':
+    #         out['service'] = True
+    #     else:
+    #         out['service'] = False
+    #
+    #     for k in 'port', 'containerPort', 'portalIP':
+    #         try:
+    #             out[k] = s_rv[k]
+    #         except KeyError:
+    #             continue
+    #
+    # except (ValueError, TypeError, KeyError):
+    #     pass
     return out
 
 
@@ -530,6 +564,11 @@ def make_pod_config(data, sid, separate=True):
             outer['labels']['kuberdock-public-ip'] = data.pop('public_ip')
     else:
         outer['labels'] = data['labels']
+    # TODO for old algo, delete later
+    if 'annotations' not in data:
+        outer['annotations'] = {}
+    else:
+        outer['annotations'] = data['annotations']
     return outer
 
 
@@ -621,6 +660,8 @@ def start_cluster(data):
 
 def add_to_output(old_config, old_output):
     old_output['kube_type'] = old_config['kube_type']
+    # TODO delete later
+    # old_output['annotations'] = old_config['annotations']
     conf_containers = old_config.get('containers')
     kub_containers = old_output.get('containers')
     if conf_containers and kub_containers:

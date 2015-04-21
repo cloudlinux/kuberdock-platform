@@ -1207,14 +1207,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 this.model.set('cluster', false);
             }
             else {
-                if (this.model.get('port') === null) {
-                    var containers = this.model.get('containers'),
-                        port = containers[0]['ports'][0]['containerPort'],
-                        obj = {cluster: true, port: port, service: true};
-                }
-                else {
-                    var obj = {cluster: true};
-                }
+                var obj = {cluster: true};
                 this.model.set(obj);
             }
             this.render();

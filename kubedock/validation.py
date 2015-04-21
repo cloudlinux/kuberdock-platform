@@ -62,19 +62,18 @@ nullable_port_scheme['nullable'] = True
 new_pod_scheme = {
     'name': pod_name_scheme,
     'lastAddedImage': lastadded_image_scheme,       # ignored
-    'port': nullable_port_scheme,                   # ignore, read-only
     'portalIP': {                                   # ignore, read-only
         'type': 'ipv4',
         'nullable': True
     },
-    'service': {'type': 'boolean'},
     'replicas': {'type': 'integer', 'min': 0},
     'kube_type': {'type': 'integer', 'min': 0, 'required': True},
     'cluster': {'type': 'boolean'},
     'node': {'type': 'string', 'nullable': True},
     'save_only': {'type': 'boolean'},
     'freeHost': {'type': 'string', 'required': False},
-    'set_public_ip': {'type': 'string', 'required': False},
+    'set_public_ip': {'type': 'boolean', 'required': False},
+    'public_ip': {'type': 'ipv4', 'required': False},
     'restartPolicy': {
         'type': 'dict',
         'restart_polices': ['always', 'onFailure', 'never']
@@ -249,6 +248,10 @@ change_pod_scheme.update({
         'type': 'dict',
         'required': False
     },
+    'annotations': {
+        'type': 'dict',
+        'required': False
+    },
     # service params
     'price': {'type': 'strnum', 'empty': True, 'required': False},
     'kubes': {'type': 'strnum', 'empty': True, 'required': False},
@@ -337,6 +340,12 @@ def check_hostname(hostname):
     if not validator.validate({'Hostname': hostname},
                               {'Hostname': hostname_scheme}):
         raise APIError(validator.errors)
+    try:
+        int(hostname)
+    except ValueError:
+        pass
+    else:
+        raise APIError('Hostname is invalid')
 
 
 def check_change_pod_data(data):

@@ -28,9 +28,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             cluster: false,
             replicas: 1,
             restartPolicy: {'always': {}},
-            service: false,
             portalIP: null,
-            port: null,
             node: null
         },
 

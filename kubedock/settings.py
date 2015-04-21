@@ -11,6 +11,9 @@ DB_USER = 'kuberdock'
 DB_PASSWORD = 'kuberdock2go'
 DB_NAME = 'kuberdock'
 
+# Test whether it solves db bugs:
+SQLALCHEMY_POOL_SIZE = 10
+
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 #SQLALCHEMY_ECHO=True
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
@@ -27,6 +30,8 @@ KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
 
 # If None, defaults will be used
 SSH_KEY_FILENAME = None
+
+SERVICES_VERBOSE_LOG = 1
 
 INFLUXDB_HOST = '127.0.0.1'
 INFLUXDB_PORT = 8086

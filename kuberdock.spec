@@ -12,7 +12,8 @@ Requires: nginx
 Requires: influxdb
 Requires: redis
 Requires: postgresql-server
-Requires: kubernetes
+Requires: etcd == 2.0.8-0.1.el7.centos
+Requires: kubernetes == 0.14.2-0.1.gitfce3e5a.el7.centos
 Requires: flannel >= 0.3.0
 Requires: dnsmasq >= 2.66
 # For semanage:
@@ -113,7 +114,7 @@ root@${FQDN}
 EOF
 fi
 
-# TODO check if selinux enabled?
+# Even if SELinux disabled, we set labels for future
 semanage fcontext -a -t httpd_sys_content_t /var/opt/kuberdock/kubedock/frontend/static\(/.\*\)\?
 restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 

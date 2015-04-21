@@ -7,6 +7,8 @@ from functools import wraps
 
 from .settings import KUBE_MASTER_URL
 from .users import User
+from .core import ssh_connect
+from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG
 
 
 def login_required_or_basic(func):
@@ -77,3 +79,52 @@ class APIError(Exception):
     def __init__(self, message, status_code=400):
         self.message = message
         self.status_code = status_code
+
+
+def modify_node_ips(host, cmd, pod_ip, public_ip, ports):
+    ARPING = 'arping -I {0} -A {1} -c 10 -w 1'
+    IP_ADDR = 'ip addr {0} {1}/32 dev {2}'
+    IPTABLES = 'iptables -t nat -{0} PREROUTING ' \
+               '-i {1} ' \
+               '-p {2} -d {3} ' \
+               '--dport {4} -j DNAT ' \
+               '--to-destination {5}:{6}'
+    ssh, errors = ssh_connect(host)
+    if errors:
+        print errors
+        return False
+    ssh.exec_command(IP_ADDR.format(cmd, public_ip, NODE_TOBIND_EXTERNAL_IPS))
+    if cmd == 'add':
+        ssh.exec_command(ARPING.format(NODE_TOBIND_EXTERNAL_IPS, public_ip))
+    for port_spec in ports:
+        containerPort = port_spec['targetPort']
+        publicPort = port_spec.get('port', containerPort)
+        protocol = port_spec.get('protocol', 'tcp')
+        if cmd == 'add':
+            if SERVICES_VERBOSE_LOG >= 1:
+                print '==ADDED PORTS==', publicPort, containerPort, protocol
+            i, o, e = ssh.exec_command(
+                IPTABLES.format('C', NODE_TOBIND_EXTERNAL_IPS, protocol,
+                                public_ip,
+                                publicPort,
+                                pod_ip,
+                                containerPort))
+            exit_status = o.channel.recv_exit_status()
+            if exit_status != 0:
+                ssh.exec_command(
+                    IPTABLES.format('I', NODE_TOBIND_EXTERNAL_IPS, protocol,
+                                    public_ip,
+                                    publicPort,
+                                    pod_ip,
+                                    containerPort))
+        else:
+            if SERVICES_VERBOSE_LOG >= 1:
+                print '==DELETED PORTS==', publicPort, containerPort, protocol
+            ssh.exec_command(
+                IPTABLES.format('D', NODE_TOBIND_EXTERNAL_IPS, protocol,
+                                public_ip,
+                                publicPort,
+                                pod_ip,
+                                containerPort))
+    ssh.close()
+    return True

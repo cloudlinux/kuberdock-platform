@@ -112,8 +112,8 @@ EOF
 
 
 #4. Install kuberdock
+yum -y install http://el6.cloudlinux.com/kubernetes-0.14.2-0.1.gitfce3e5a.el7.centos.x86_64.rpm
 # TODO change when we provide auto build of package to our repo
-# yum -y install kuberdock
 yum -y install kuberdock
 if [ $? -ne 0 ];then
     echo "Package in repo not found, trying to install local one"
@@ -124,7 +124,7 @@ for p in $(ls kuberdock*.rpm);do
 done
 
 #4.1 Fix package path bug
-mkdir /var/run/kubernetes
+mkdir /var/run/kubernetes || /bin/true
 chown kube:kube /var/run/kubernetes
 
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
@@ -249,7 +249,7 @@ chown $WEBAPP_USER $KUBERNETES_CONF_DIR/kubelet_token.dat
 
 
 #9. Configure kubernetes
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --public_address_override=$MASTER_IP\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--runtime_config=api/v1beta3 --token_auth_file=$KNOWN_TOKENS_FILE --public_address_override=$MASTER_IP\"|}" $KUBERNETES_CONF_DIR/apiserver
 # This plugins enabled by default
 # sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceAutoProvision,LimitRanger,ResourceQuota||}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBERNETES_CONF_DIR/controller-manager
@@ -452,23 +452,27 @@ PUB_PATH=$DIR/$PUB
 TGT_HOME=$(echo $ENT | cut -d: -f6)
 TGT_PATH=$TGT_HOME/.ssh
 
-if [ ! -d $DIR ];then
-    mkdir -p $DIR
-fi
+if [ ! -e $TGT_PATH/$KEY ];then
+    if [ ! -d $DIR ];then
+        mkdir -p $DIR
+    fi
 
-if [ ! -e $KEY_PATH ]; then
-    ssh-keygen -N "" -f $KEY_PATH
-fi
+    if [ ! -e $KEY_PATH ]; then
+        ssh-keygen -N "" -f $KEY_PATH
+    fi
 
-if [ ! -d $TGT_PATH ];then
-    mkdir -p $TGT_PATH
-fi
+    if [ ! -d $TGT_PATH ];then
+        mkdir -p $TGT_PATH
+    fi
 
-cp -f $KEY_PATH $TGT_PATH
-cp -f $PUB_PATH $TGT_PATH
-chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_PATH
+    cp -f $KEY_PATH $TGT_PATH
+    cp -f $PUB_PATH $TGT_PATH
+    chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_PATH
+else
+    echo "User $WEBAPP_USER already has $KEY. Will use it."
+fi
 
 # ======================================================================
 echo "WARNING: Firewalld was disabled. You need to configure it to work right"
-echo "WARNING: $WEBAPP_USER user must have ssh access to nodes as 'root'"
-echo "Successfully done. Your Kuberdock is on https://$MASTER_IP/"
+echo "WARNING: $WEBAPP_USER user will have ssh access to nodes as 'root'"
+echo "Installation Completed. KuberDock is available at https://$MASTER_IP/"

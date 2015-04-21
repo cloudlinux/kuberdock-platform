@@ -16,7 +16,9 @@ application = DispatcherMiddleware(
     frontend.create_app(),
     {'/api': api.create_app()}
 )
-gevent.spawn(api.listen_kub_events)
+# TODO old for fallback
+# gevent.spawn(api.listen_kub_events)
+gevent.spawn(api.listen_endpoints)
 
 if __name__ == "__main__":
 

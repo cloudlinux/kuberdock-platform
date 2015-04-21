@@ -4,8 +4,8 @@ from ..core import db
 from ..pods import Pod
 from ..users import User
 from uuid import uuid4
-from flask.ext.login import current_user
-from flask import current_app
+# from flask.ext.login import current_user
+# from flask import current_app
 
 
 
@@ -110,7 +110,6 @@ class KubeResolver(object):
                          'dockers': self._get_dockers(item),
                          'containers': containers,
                          'volumes': item['desiredState']['manifest']['volumes'],
-                         'service': False,
                          'labels': item['labels']}
             except KeyError:
                 continue
@@ -147,9 +146,7 @@ class KubeResolver(object):
                 for pod in self._pods:
                     try:
                         if self._is_related(pod['labels'], item['selector']):
-                            pod['port'] = item['port']
                             pod['portalIP'] = item['portalIP']
-                            pod['service'] = True
                             pod['servicename'] = item['labels']['name']
                             break
                     except KeyError:

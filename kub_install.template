@@ -46,7 +46,8 @@ rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLin
 # 2. install components
 echo "Installing kubernetes..."
 #yum -y install kubernetes
-yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.14.2-0.1.el7.centos.x86_64.rpm
+#yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.14.2-0.1.el7.centos.x86_64.rpm
+yum -y install http://el6.cloudlinux.com/kubernetes-0.14.2-0.1.gitfce3e5a.el7.centos.x86_64.rpm
 yum -y install flannel cadvisor
 
 

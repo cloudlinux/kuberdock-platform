@@ -738,16 +738,19 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#wizard-set-container-ports-template',
         tagName: 'div',
 
+
+        ui: {
+            ieditable: '.ieditable',
+            iseditable: '.iseditable',
+            removeItem: 'span.remove'
+        },
+
         events: {
             'click .add-port'        : 'addItem',
             'click .readonly'        : 'toggleReadOnly',
             'click .add-volume'      : 'addVolume',
-            'change .restart-policy' : 'changePolicy'
-        },
-
-        ui: {
-            ieditable: '.ieditable',
-            iseditable: '.iseditable'
+            'change .restart-policy' : 'changePolicy',
+            'click @ui.removeItem'   : 'removeItem',
         },
 
         triggers: {
@@ -775,6 +778,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 nodeName: this.model.get('node'),
                 ip: this.model.get('ip')
             };
+        },
+
+        removeItem: function(e){
+
         },
 
         initialize: function(options){

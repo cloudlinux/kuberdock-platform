@@ -91,30 +91,18 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'tr',
 
         ui: {
-            'deleteNode' : '#deleteNode'
+        	'deleteNode' : '#deleteNode',
         },
         
         events: {
-            'click @ui.deleteNode'                  : 'deleteNode',
-            'click button#detailedNode'             : 'detailedNode',
-            'click button#upgradeNode'              : 'detailedNode',
-            'click button#detailedConfigurationTab' : 'detailedConfigurationTab'
-        },
-
-        templateHelpers: function(){
-            var model = this.model,
-                kubeType = '';
-            _.each(kubeTypes, function(itm){
-                if(itm.id == model.get('kube_type'))
-                    kubeType = itm.name;
-            });
-            return {
-                'kubeType': kubeType
-            }
+        	'click @ui.deleteNode'					: 'deleteNode',
+            'click button#detailedNode' 			: 'detailedNode',
+            'click button#upgradeNode' 				: 'detailedNode',
+            'click button#detailedConfigurationTab' : 'detailedConfigurationTab',
         },
 
         deleteNode: function(){
-            this.model.destroy();
+        	this.model.destroy();
         },
 
         detailedNode: function(){
@@ -380,15 +368,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
 
     Views.NodeGeneralTabView = Backbone.Marionette.ItemView.extend({
-        template: '#node-general-tab-template',
-
-        templateHelpers: function(){
-            console.log(this.model)
-            return {
-
-            };
-        }
-
+        template: '#node-general-tab-template'
     });
 
     Views.NodeStatsTabView = Backbone.Marionette.ItemView.extend({

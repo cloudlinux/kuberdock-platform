@@ -102,6 +102,11 @@
                             background-position: 0 -5px;
                         }
                     }
+                    + .editable-container{
+                        button{
+                           margin-bottom: 0 !important;
+                        }
+                    }
                 }
                 span{
                     &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting{
@@ -115,7 +120,7 @@
                             height: 12px;
                             bottom: 3px;
                             position: absolute;
-                        }     
+                        }
                     }
                     &.running, &.OK{
                         &:before{
@@ -424,7 +429,7 @@
                     }
                     &:hover{
                         &:before{
-                            background-position: 0 -18px; 
+                            background-position: 0 -18px;
                         }
                     }
                 }
@@ -436,11 +441,11 @@
                     }
                     &:hover{
                         &:before{
-                            background-position: 0 -18px; 
+                            background-position: 0 -18px;
                         }
                     }
                 }
-            }   
+            }
         }
     }
     #details_content{
@@ -583,6 +588,30 @@
                             }
                         }
                     }
+                    #ports-table, #volumes-table{
+                        tr{
+                            td{
+                                &:last-child{
+                                    position: relative;
+                                    span{
+                                        &.remove{
+                                            top: 0;
+                                            bottom: 0;
+                                            width: 15px;
+                                            margin: auto;
+                                            height: 15px;
+                                            right: -30px;
+                                            position: absolute;
+                                            background: url('../img/remove-line.png') 0 0 no-repeat;
+                                            &:hover{
+                                                cursor: pointer;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     .radio{
                         position: initial;
                         min-height: initial;
@@ -642,6 +671,11 @@
                                 background: url('../img/add-port-plus.png') 0 0 no-repeat;
                                 position: absolute;
                             }
+                        }
+                        &.btn-primary{
+                            color: #fff;
+                            border-color: #357ebd;
+                            background-color: #428bca;
                         }
                     }
                 }
@@ -757,7 +791,7 @@
                     font-size: 0;
                     color: transparent;
                     background: #466eb1 url('../img/search-ico-big.png') center center no-repeat;
-                }   
+                }
             }
             .login-user{
                 display: none;
@@ -824,7 +858,7 @@
                                 height: 20px;
                                 position: absolute;
                                 background: url('../img/like.png') 0 0 no-repeat;
-                                
+
                             }
                         }
                         .add-item{
@@ -881,7 +915,7 @@
             &:hover{
                 &:before{
                    background-color: #272727;
-                }   
+                }
             }
         }
     }

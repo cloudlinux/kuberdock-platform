@@ -112,8 +112,6 @@ EOF
 
 
 #4. Install kuberdock
-yum -y install http://el6.cloudlinux.com/kubernetes-0.14.2-0.1.gitfce3e5a.el7.centos.x86_64.rpm
-# TODO change when we provide auto build of package to our repo
 yum -y install kuberdock
 if [ $? -ne 0 ];then
     echo "Package in repo not found, trying to install local one"

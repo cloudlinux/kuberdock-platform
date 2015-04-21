@@ -245,7 +245,7 @@
                         <div><b><%- name %></b></div>
                         <div>Kube type: <%- kubeType %></div>
                         <div>Restart policy: <%- restartPolicy %></div>
-                        <div>Kubes:  <%- kubes ? kubes : '0' %> ( <%- replicas ? replicas : '0' %> )</div>
+                        <div>Kubes:  <%- kubes ? kubes : '0' %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
                         <div>Price: <%- price ? price : '0' %>$/hour</div>
                         <div class="edit">Edit pod</div>
                     </div>
@@ -396,7 +396,7 @@
                     <% } %>
                 </div>
                 <div class="col-xs-2 no-padding">
-                    <button class="like">41</button>
+                    <!-- <button class="like">41</button> -->
                     <button class="add-item">Select</button>
                 </div>
             </div>
@@ -1387,8 +1387,7 @@
                         One fine body
                     </div>
                     <div class="modal-footer buttons">
-                        <button type="button" class="blue" data-dismiss="modal">Yes</button>
-                        <button type="button" class="gray" data-dismiss="modal">No</button>
+                        <button type="button" class="blue" data-dismiss="modal">ok</button>
                     </div>
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->

@@ -93,7 +93,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         ui: {
         	'deleteNode' : '#deleteNode',
         },
-        
+
         events: {
         	'click @ui.deleteNode'					: 'deleteNode',
             'click button#detailedNode' 			: 'detailedNode',
@@ -156,12 +156,12 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         ui: {
-            'nodes_page' : 'div#nodes-page' 
+            'nodes_page' : 'div#nodes-page'
         },
 
         events:{
             'click @ui.nodes_page' : 'breadcrumbClick'
-        }, 
+        },
 
         breadcrumbClick: function(){
            App.router.navigate('/', {trigger: true})
@@ -322,7 +322,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 //            this.ui.description.val(this.model.get('description'));
 //            this.ui.active_chkx.prop('checked', this.model.get('active'));
 //        },
-        
+
         saveNode: function () {
             // validation
             this.model.set({

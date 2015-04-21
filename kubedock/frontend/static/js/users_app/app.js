@@ -27,7 +27,7 @@ define(['marionette', 'paginator', 'utils'],
             parse: utils.unwrapper,
             mode: 'client',
             state: {
-                pageSize: 5
+                pageSize: 100
             }
         });
 
@@ -37,7 +37,7 @@ define(['marionette', 'paginator', 'utils'],
             parse: utils.unwrapper,
             mode: 'client',
             state: {
-                pageSize: 15
+                pageSize: 100
             }
         });
     });
@@ -111,7 +111,7 @@ define(['marionette', 'paginator', 'utils'],
         Views.OnlineUserItem = Marionette.ItemView.extend({
             template: '#online-user-item-template',
             tagName: 'tr',
-            ui: { 
+            ui: {
                 'userActivityHistory' : "button#userActivityHistory"
             },
 

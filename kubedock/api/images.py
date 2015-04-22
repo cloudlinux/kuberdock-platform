@@ -86,11 +86,11 @@ def search_image():
             return jsonify({'status': 'OK', 'data': query.data['results'],
                             'num_pages': query.data['num_pages'],
                             'page': page})
-    result = tasks.get_container_images.delay(
-        search_key, url=repo_url, page=page)
-    rv = result.wait()
+    #result = tasks.get_container_images.delay(
+    #    search_key, url=repo_url, page=page)
+    #rv = result.wait()
     # if you want to search an image directly without celery:
-    # rv = tasks.search_image(search_key, url=repo_url)
+    rv = tasks.search_image(search_key, url=repo_url, page=page)
     data = json.loads(rv)#['results']
     if query is None:
         db.session.add(ImageCache(query=query_key, data=data,

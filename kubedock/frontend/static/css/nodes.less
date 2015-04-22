@@ -7,17 +7,17 @@
 		}
 		tr{
 			th{
+				border: none;
 				padding-top: 0;
-				vertical-align: top;
-				border-bottom: 1px solid #e5e5e5;
-				padding-bottom: 10px;
-				font-size: 14px;
 				color: #b1b9c0;
-				font-family: @regular;
+				font-size: 14px;
+				padding-left: 0;
 				text-align: left;
 				font-weight: normal;
-				padding-left: 0;
-				border: none;
+				vertical-align: top;
+				padding-bottom: 10px;
+				font-family: @regular;
+				border-bottom: 1px solid #e5e5e5;
 				&:focus{
 					outline: 0;
 				}
@@ -115,14 +115,17 @@
 				}
 			}
 			button{
-				font-size: 14px;
-				font-family: @regular;
-				text-decoration: none;
 				padding: 0;
+				border: none;
+				outline: none;
 				color: #3197ee;
+				font-size: 14px;
+				text-decoration: none;
+				font-family: @regular;
+				background-color: transparent;
 				&:hover{
-					text-decoration: none;
 					cursor: pointer;
+					text-decoration: none;
 				}
 			}
 		}
@@ -381,7 +384,7 @@
 				color: #1d1d1d;
 				&:hover{
 					cursor: default;
-				}	
+				}
 			}
 			&:first-child{
 				color: #b1b9c0;
@@ -472,7 +475,7 @@
 		max-width: 94%;
 		display: block;
 		margin: 0 auto;
-		border-left: 1px solid #e8e8e8; 
+		border-left: 1px solid #e8e8e8;
 		border-bottom: 1px solid #e8e8e8;
 		margin-bottom: 40px;
 		.box-shadow( -1px 1px 0px 0px rgba(252,252,252,1) );
@@ -599,4 +602,4 @@
 }
 /* end configuration details page */
 
-/* end details-node */	
+/* end details-node */

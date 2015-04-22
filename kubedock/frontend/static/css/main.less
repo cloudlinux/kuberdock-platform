@@ -3,24 +3,40 @@
 
 * { padding: 0; margin: 0}
 
-img, a, input {
+img, a, input, button{
     &:focus{
         outline: 0;
     }
 }
 
-@import "oldstyle.less";
-
-
-/* new design */ 
+/* new design */
 @regular: "ProximaNovaReg";
 
 body{
+    font-family: @regular;
+    @import "fonts.less";
+
+    /* need refactoring */
+    .editable {
+        display: inline-block;
+        border-color: #466EB1;
+        color: #5c5c5c;
+        &:hover{
+            cursor: pointer;
+        }
+    }
+    div.container-list-item, div.view-controls {
+        margin-top: 10px;
+    }
+    .messages-wrapper{
+        margin: 0 auto;
+        max-width: 50%;
+    }
+    /*end  need refactoring */
+
     *:focus{
         outline: 0;
     }
-    @import "fonts.less";
-    font-family: @regular;
 
     /* header */
     .navbar{
@@ -313,7 +329,7 @@ body{
                     }
                 }
                 #nav-search{
-                    position: relative; 
+                    position: relative;
                     float: right;
                     #nav-search-input{
                         .border-radius(3px);
@@ -502,7 +518,7 @@ body{
                 position: absolute;
                 .form-group{
                     .group{
-                        outline: 0; 
+                        outline: 0;
                         display: block;
                         margin-bottom: 0;
                         &:last-child{
@@ -513,7 +529,7 @@ body{
                             .transition (all 300ms);
                             .placeholder(#b4b4b4);
                             height: 42px;
-                            width: 313px; 
+                            width: 313px;
                             padding: 0 15px;
                             font-size: 14px;
                             margin-bottom: 20px;
@@ -623,7 +639,27 @@ body{
         }
     }
     /* end modal */
-    
+    #page-preloader {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: none;
+        z-index: 100500;
+        position: fixed;
+    }
+    #page-preloader{
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 60px;
+        height: 60px;
+        margin: auto;
+        z-index: 999;
+        position: absolute;
+        background: url('../img/preloader.gif') 0 0 no-repeat;
+    }
     @import "pods.less";
     @import "nodes.less";
     @import "users.less";

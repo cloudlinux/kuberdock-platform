@@ -164,7 +164,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         templateHelpers: function(){
             var model = this.model,
                 kubeType = '';
-            console.log(model)
             _.each(kubeTypes, function(itm){
                 if(itm.id == model.get('kube_type'))
                     kubeType = itm.name;

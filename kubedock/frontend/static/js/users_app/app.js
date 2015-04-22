@@ -99,7 +99,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             removeUser: function(){
-                this.destroy();
+                this.model.destroy();
             },
 
             blockUser: function(){

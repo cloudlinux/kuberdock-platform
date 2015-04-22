@@ -1312,10 +1312,18 @@
                             <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
                             {% endfor %}
                         </select>
-                        <label>Kubes/replica:</label>
+                        <label>Kubes per container:</label>
                         <select class="replicas">
-                            <option value="1-20">1-20</option>
-                            <option value="21-40">21-40</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
                         </select>
                         <% if(freeHost) { %>
                             <label class="custom">
@@ -1342,19 +1350,18 @@
                     </div>
                     <div class="col-md-4 col-md-offset-2 right">
                         <p class="clearfix">
-                            <span class="pull-left"><b>Container:</b></span>
-                            <span class="pull-right">180$</span>
+                            <span class="pull-left"><b>Container(s):</b></span>
+                            <span class="pull-right"><span id="containers_price"></span></span>
                         </p>
                         <p class="clearfix">
                             <span class="pull-left"><b>IP Adress:</b></span>
-                            <span class="pull-right">20$</span>
+                            <span class="pull-right"><span id="ipaddress_price"></span></span>
                         </p>
-                        <p class="total"><b>Total price:</b> 200$</p>
+                        <p class="total"><b>Total price:</b> <span id="total_price"></span></p>
                     </div>
                     <div class="col-xs-12 no-padding servers">
-                        <div>CPU: 8 cores with 3GHz</div>
-                        <div>RAM: 64GB DDR3 - 2000</div>
-                        <div>SDD: 20x320GB in Raid 0</div>
+                        <div>CPU: <span id="total_cpu"></span></div>
+                        <div>RAM: <span id="total_ram"></span></div>
                     </div>
                 </div>
             </div>
@@ -1418,6 +1425,8 @@
                 var initPodCollection = new KubeDock.Data.PodCollection({{ pod_collection|safe }});
                 var containerCollection;
                 var kubeTypes = {{ kube_types|tojson|safe }};
+                var packages = {{ packages|tojson|safe }};
+                var extraTaxes = {{ extra_taxes|tojson|safe }};
             </script>
         {% endblock %}
 

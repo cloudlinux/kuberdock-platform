@@ -1,7 +1,7 @@
 from kubedock.api import create_app
 from kubedock.core import db
 from kubedock.models import User
-from kubedock.billing.models import Package, Kube
+from kubedock.billing.models import Package, Kube, ExtraTax
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
 from kubedock.static_pages.fixtures import generate_menu
@@ -26,8 +26,16 @@ if __name__ == '__main__':
     db.session.add_all([k1, k2, k3])
     db.session.commit()
 
-    p = Package(id=0, name='basic', kube=k1, amount=0,
-                currency='USD', period='hour')
+    p1 = Package(id=0, name='basic', kube=k1, amount=1,
+                 currency='USD', period='hour')
+    p2 = Package(id=1, name='professional', kube=k2, amount=2,
+                 currency='USD', period='hour')
+    p3 = Package(id=2, name='enterprise', kube=k3, amount=3,
+                 currency='USD', period='hour')
+    e1 = ExtraTax(id=0, key='public_ip', name='public ip', amount=6,
+                  currency='USD', period='hour')
+    db.session.add_all([p1, p2, p3, e1])
+    db.session.commit()
 
     add_permissions()
 
@@ -47,7 +55,7 @@ if __name__ == '__main__':
     r = Role.filter_by(rolename='Admin').first()
     u = User.filter_by(username='admin').first()
     if u is None:
-        u = User.create(username='admin', password='admin', role=r, package=p,
+        u = User.create(username='admin', password='admin', role=r, package=p1,
                         active=True)
         db.session.add(u)
     db.session.commit()

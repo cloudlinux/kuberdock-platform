@@ -14,6 +14,9 @@ class Package(db.Model):
     period = db.Column(db.String(16), default="hour", nullable=False)
     users = db.relationship("User", backref="package")
 
+    def to_dict(self):
+        return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])
+
 
 class Kube(db.Model):
     __tablename__ = 'kubes'
@@ -31,5 +34,18 @@ class Kube(db.Model):
     def __repr__(self):
         return "<Kube(id='{0}', name='{1}')>".format(self.id, self.name)
     
+    def to_dict(self):
+        return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])
+
+
+class ExtraTax(db.Model):
+    __tablename__ = 'extra_taxes'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    key = db.Column(db.String(64), unique=True)
+    name = db.Column(db.String(64), unique=True)
+    amount = db.Column(db.Float, default=0.0, nullable=False)
+    currency = db.Column(db.String(16), default="USD", nullable=False)
+    period = db.Column(db.String(16), default="hour", nullable=False)
+
     def to_dict(self):
         return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])

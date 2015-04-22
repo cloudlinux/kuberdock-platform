@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for
 from flask.ext.login import current_user, login_required
 
 from ..api.pods import get_pods_collection
-from ..billing import Kube
+from ..billing import Kube, Package, ExtraTax
 
 
 main = Blueprint('main', __name__)
@@ -17,7 +17,13 @@ def index():
         return redirect(url_for('nodes.index'))
 
     coll = get_pods_collection()
+    packages = [package.to_dict() for package in Package.query.all()]
+    extra_taxes_list = [e.to_dict() for e in ExtraTax.query.all()]
+    extra_taxes = {e.pop('key'): e for e in extra_taxes_list}
     return render_template(
         'index.html',
         pod_collection=json.dumps(coll),
-        kube_types=[{'id': x.id, 'name': x.name} for x in Kube.query.all()])
+        kube_types=[{'id': x.id, 'name': x.name} for x in Kube.query.all()],
+        packages=packages,
+        extra_taxes=extra_taxes
+    )

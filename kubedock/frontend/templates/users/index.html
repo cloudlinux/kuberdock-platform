@@ -65,7 +65,7 @@
                         <th>Action</th>
                     </tr>
                     </thead>
-                    <tbody id="users-activities-table"></tbody>
+                        <tbody id="users-activities-table"></tbody>
                     </table>
                 </div>
             </div>
@@ -286,13 +286,13 @@
     <script type="text/template" id="online-user-item-template">
         <td>
             <%- username %>
-            <button id="userActivityHistory" class="btn btn-link btn-xs pull-left">
+            <button id="userActivityHistory" class="btn btn-link btn-xs pull-right">
                 <i class="glyphicon glyphicon-search"></i>
             </button>
         </td>
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
-        <td><i class="glyphicon glyphicon-<%- active ? 'ok text-success' : 'remove text-danger' %>"></i></td>
+        <td><%- active ? 'Active' : 'Blocked' %></td>
         <td><%- last_activity %></td>
     </script>
 
@@ -301,7 +301,9 @@
             <div class="container breadcrumbs" id="breadcrumbs">
                 <ul class="breadcrumb">
                     <li>
-                        <div id="users-page">Users</div>
+                        <a href="{{ url_for('users.index') }}" tite="Back to Users page">
+                            Users
+                        </a>
                     </li>
                     <li class="active">
                         Online
@@ -310,17 +312,13 @@
             </div>
         </div>
         <div class="container">
-            <a href="{{ url_for('users.index') }}">
-                <i class="glyphicon glyphicon-chevron-left"></i>
-                back to the users list
-            </a>
-            <table class="table">
+            <table id="users-online-table" class="table">
                 <thead>
                     <tr>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Role</th>
-                        <th>Active</th>
+                        <th>Status</th>
                         <th>Last activity</th>
                     </tr>
                 </thead>

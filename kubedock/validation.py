@@ -341,11 +341,11 @@ def check_hostname(hostname):
                               {'Hostname': hostname_scheme}):
         raise APIError(validator.errors)
     try:
-        int(hostname)
-    except ValueError:
+        socket.inet_pton(socket.AF_INET, hostname)
+    except socket.error:
         pass
     else:
-        raise APIError('Hostname is invalid')
+        raise APIError('Please, enter hostname, not ip address.')
 
 
 def check_change_pod_data(data):

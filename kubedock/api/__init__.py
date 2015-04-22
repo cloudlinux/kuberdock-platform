@@ -336,7 +336,8 @@ def listen_endpoints():
             print '=WATCH TIMEOUT='
     while True:
         try:
-            print '==START WATCH ENDPOINTS== pid:', os.getpid()
+            if SERVICES_VERBOSE_LOG >= 1:
+                print '==START WATCH ENDPOINTS== pid:', os.getpid()
             r = requests.get(KUBE_MASTER_URL.replace('v1beta2', 'v1beta3') + '/watch/endpoints', stream=True)
             if r.status_code != 200:
                 gevent.sleep(0.1)

@@ -47,7 +47,8 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
                     container['ports'].push({
                         containerPort: parseInt(p),
                         protocol: 'tcp',
-                        hostPort: null
+                        hostPort: null,
+                        isPublic: false
                     })
                 });
             }

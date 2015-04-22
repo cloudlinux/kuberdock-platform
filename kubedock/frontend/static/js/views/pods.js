@@ -751,6 +751,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .add-volume'      : 'addVolume',
             'change .restart-policy' : 'changePolicy',
             'click @ui.removeItem'   : 'removeItem',
+            'click input.public'     : 'togglePublic'
         },
 
         triggers: {
@@ -801,7 +802,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         addItem: function(env){
             env.stopPropagation();
-            this.model.get('ports').push({containerPort: null, hostPort: null, protocol: 'tcp'});
+            this.model.get('ports').push({containerPort: null, hostPort: null, protocol: 'tcp', isPublic: false});
             this.render();
         },
 
@@ -824,6 +825,19 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
         },
 
+        togglePublic: function(evt){
+            evt.stopPropagation();
+            var index = $(evt.target).closest('tr').index();
+                entry = this.model.get('ports')[index];
+            if (entry.isPublic) {
+                entry.isPublic = false;
+            }
+            else {
+                entry.isPublic = true;
+            }
+            this.render();
+        },
+
         onRender: function(){
             var that = this;
             this.ui.ieditable.editable({
@@ -833,7 +847,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     var index = $(this).closest('tr').index(),
                         className = $(this).parent().attr('class'),
                         item = $(this);
-                        
+
                     if (className !== undefined) {
                         that.model.get('ports')[index][className] = parseInt(newValue);
                     }

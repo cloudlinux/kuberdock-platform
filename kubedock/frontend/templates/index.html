@@ -457,7 +457,11 @@
                                                 <td class="hostPort"><span class="ieditable"><%- p.hostPort %></span></td>
                                                 <td class="public">
                                                     <label class="custom">
-                                                        <input type="checkbox"/>
+                                                        <% if (p.isPublic){ %>
+                                                        <input class="public" checked type="checkbox"/>
+                                                        <% } else { %>
+                                                        <input class="public" type="checkbox"/>
+                                                        <% } %>
                                                         <span></span>
                                                     </label>
                                                     <span class="remove"></span>
@@ -470,6 +474,7 @@
                                         <button type="button" class="add-port">Add port</button>
                                     </div>
                                     <div class="col-xs-12 no-padding">
+                                        {#
                                         <label>Set up IP version<!-- <span class="ip"> - your ip will be: 192.168.0.1</span>--></label>
                                         <div class="radio">
                                             <label>
@@ -483,6 +488,7 @@
                                                 IPv6
                                             </label>
                                         </div>
+                                        #}
                                     </div>
                                 </div>
                             </div>
@@ -1318,6 +1324,7 @@
                                 Public ip
                             </label>
                         <% } %>
+                    {#
                     <% if (volumes.length !== 0){ %>
                         <table class="table">
                             <thead><tr><th>Volume</th><th>Path</th></tr></thead>
@@ -1331,6 +1338,7 @@
                             </tbody>
                         </table>
                         <% } %>
+                    #}
                     </div>
                     <div class="col-md-4 col-md-offset-2 right">
                         <p class="clearfix">

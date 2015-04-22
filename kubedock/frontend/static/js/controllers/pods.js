@@ -261,6 +261,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 processRequest(data);
             });
             this.listenTo(wizardLayout, 'step:complete', function(data){
+                model.attributes['set-public-ip'] = false;
                 if(data.get('ports').length == 0){
                     modelError('Please, setup ports of container.');
                     wizardLayout.steps.show(new App.Views.WizardPortsSubView({model: data}));
@@ -274,6 +275,11 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                         if (!volumes.length) {
                             model.get('volumes').push({name: mp['name']});
                         }
+                    }
+                });
+                _.each(data.get('ports'), function(p){
+                    if (p.isPublic) {
+                        model.attributes['set-public-ip'] = true;
                     }
                 });
                 var container = model.getContainerByImage(model.get('lastAddedImage'));

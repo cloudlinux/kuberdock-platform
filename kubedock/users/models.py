@@ -36,6 +36,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     join_date = db.Column(db.DateTime, default=datetime.datetime.now)
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     activities = db.relationship('UserActivity', back_populates="user")
+    settings = db.Column(db.Text)
 
     @classmethod
     def get_online_collection(cls, to_json=None):
@@ -89,6 +90,14 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 states=[states(state) for state in p.states]
             ) for p in self.pods
         ]
+
+    def get_settings(self):
+        return json.loads(self.settings) if self.settings else {}
+
+    def set_settings(self, k, v):
+        data = self.get_settings()
+        data[k] = v
+        self.settings = json.dumps(data)
 
     def to_dict(self, include=None, exclude=None):
         last_activity = self.last_activity

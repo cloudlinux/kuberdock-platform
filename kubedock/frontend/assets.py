@@ -28,6 +28,8 @@ vendor_js = Bundle(
     'js/lib/scroll-model.js',
     'js/lib/scroll-view.js',
     'js/lib/notify.min.js',
+    'js/lib/moment.min.js',
+    'js/lib/moment-timezone-with-data.min.js',
     filters="jsmin", output="js/lib.min.js")
 
 less_js = Bundle(

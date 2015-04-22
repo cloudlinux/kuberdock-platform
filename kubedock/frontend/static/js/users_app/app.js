@@ -339,7 +339,12 @@ define(['marionette', 'paginator', 'utils'],
 
             templateHelpers: function(){
                 var pods = this.model.get('pods'),
-                    kubesCount = 0;
+                    kubesCount = 0,
+                    join_date = this.model.get('join_date'),
+                    last_login = this.model.get('last_login'),
+                    last_activity = this.model.get('last_activity'),
+                    first_name = this.model.get('first_name'),
+                    last_name = this.model.get('last_name');
                 _.each(pods, function(pod){
                     var config = JSON.parse(pod.config);
                     _.each(config.containers, function(c){
@@ -347,6 +352,12 @@ define(['marionette', 'paginator', 'utils'],
                     });
                 });
                 return {
+                    first_name: first_name ? first_name : '',
+                    last_name: last_name ? last_name : '',
+                    join_date: join_date ? join_date : '',
+                    last_login: last_login ? last_login : '',
+                    last_activity: last_activity ? last_activity : '',
+                    pods: pods ? pods : [],
                     'kubeTypes': kubeTypes,
                     'kubes': kubesCount,
                     toHHMMSS: utils.toHHMMSS

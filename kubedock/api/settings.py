@@ -1,5 +1,7 @@
 import json
-from flask import Blueprint, request, jsonify
+from pytz import common_timezones
+from flask import Blueprint, request, jsonify, current_app
+from flask.ext.login import current_user
 
 from ..core import db
 from ..rbac import check_permission, acl
@@ -136,3 +138,20 @@ def delete_template(tid):
             raise APIError("Template '{0}' delete failed: {1}".format(
                 tid, e.message))
     raise APIError("Template {0} doesn't exists".format(tid), 404)
+
+
+@settings.route('/timezone', methods=['GET'])
+@check_permission('get_timezone', 'settings')
+def get_timezone():
+    s = request.args.get('s')
+    timezones_list = [tz for tz in common_timezones
+                      if tz.find(s) >= 0 or tz.find(s.title()) >= 0][:5]
+    return jsonify({'status': 'OK', 'data': timezones_list})
+
+
+@settings.route('/timezone', methods=['PUT'])
+@check_permission('set_timezone', 'settings')
+def set_timezone():
+    tz = request.form.get('timezone')
+    current_user.set_settings('timezone', tz)
+    return jsonify({'status': 'OK', 'data': tz})

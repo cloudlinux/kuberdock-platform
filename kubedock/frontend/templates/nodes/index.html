@@ -480,5 +480,6 @@
     <script type="text/javascript">
         NodesApp.Data.nodes = new NodesApp.Data.NodesCollection({{ nodes_collection|safe }});
         kubeTypes = {{ kube_types|tojson|safe }};
+        var userSettings = {{ user_settings|tojson|safe }};
     </script>
 {% endblock %}

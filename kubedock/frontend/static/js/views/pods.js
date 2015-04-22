@@ -20,6 +20,16 @@ function modelError(b, t){
     });
 }
 
+function localizeDatetime(dt, tz){
+    try {
+        return moment(dt).tz(tz).format('YYYY-MM-DD hh:mm:ss');
+    } catch (e){
+        console.log(e);
+    }
+    return s;
+}
+
+
 KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     // this layout view shows the main page: basic pods list
@@ -51,9 +61,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         templateHelpers: function(){
             var modelIndex = this.model.collection.indexOf(this.model);
-
+            var kubes = this.model.get('kubes');
             return {
-                index: modelIndex + 1
+                index: modelIndex + 1,
+                kubes: kubes ? kubes : 0
             }
         },
 
@@ -246,8 +257,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         templateHelpers: function(){
             var modelIndex = this.model.collection.indexOf(this.model);
+            var kubes = this.model.get('kubes');
+            var startedAt = this.model.get('startedAt');
             return {
-                index: modelIndex + 1
+                index: modelIndex + 1,
+                kubes: kubes ? kubes : 0,
+                startedAt: localizeDatetime(startedAt, userSettings.timezone)
             }
         },
 

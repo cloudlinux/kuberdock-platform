@@ -8,6 +8,9 @@ requirejs.config({
         underscore: 'lib/underscore',
         marionette: 'lib/backbone.marionette',
         bootstrap: 'lib/bootstrap',
+        'bootstrap3-typeahead': 'lib/bootstrap3-typeahead.min',
+        moment: 'lib/moment.min',
+        'moment-timezone': 'lib/moment-timezone-with-data.min',
         paginator: 'lib/backbone.paginator',
         tpl: 'lib/tpl',
         text: 'lib/text',
@@ -51,10 +54,15 @@ requirejs.config({
         },
         dde: {
             deps: ['jquery', 'bootstrap']
+        },
+        'moment-timezone': {
+            deps: ['moment']
         }
     }
 });
-require(['jquery', 'settings_app/app', 'notify', 'jquery-ui'], function(jQuery, SettingsApp){
+require(['jquery', 'settings_app/app', 'moment', 'notify', 'jquery-ui', 'bootstrap3-typeahead',
+        'moment', 'moment-timezone'],
+function(jQuery, SettingsApp, moment){
     SettingsApp.Data.permissions = new SettingsApp.Data.PermissionsCollection(permissions);
     SettingsApp.Data.notifications = new SettingsApp.Data.NotificationsCollection(notifications);
     SettingsApp.start();

@@ -18,12 +18,13 @@ def index():
 
     coll = get_pods_collection()
     packages = [package.to_dict() for package in Package.query.all()]
+    kube_types = [kube.to_dict() for kube in Kube.query.all()]
     extra_taxes_list = [e.to_dict() for e in ExtraTax.query.all()]
     extra_taxes = {e.pop('key'): e for e in extra_taxes_list}
     return render_template(
         'index.html',
         pod_collection=json.dumps(coll),
-        kube_types=[{'id': x.id, 'name': x.name} for x in Kube.query.all()],
+        kube_types=kube_types,
         packages=packages,
         extra_taxes=extra_taxes
     )

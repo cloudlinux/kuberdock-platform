@@ -174,6 +174,7 @@ new_pod_scheme = {
                         'schema': {
                             'containerPort': port_scheme,
                             'hostPort': nullable_port_scheme,  # TODO nullable?
+                            'isPublic': {'type': 'boolean'},
                             'protocol': {
                                 'type': 'string',
                                 'maxlength': 255

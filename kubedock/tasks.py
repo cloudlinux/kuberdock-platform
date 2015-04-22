@@ -31,6 +31,8 @@ def search_image(term, url=None, page=None):
         if not url.rstrip('/').endswith('v1/search'):
             url = '{0}/v1/search'.format(url.rstrip('/'))
     data = {'q': term, 'n': 10, 'page': page}
+    # TODO del when we delete gevent
+    url = url.replace('https', 'http')
     r = requests.get(url, params=data)
     return r.text
 

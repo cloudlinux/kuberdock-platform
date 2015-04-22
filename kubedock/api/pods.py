@@ -393,11 +393,15 @@ def run_service(data):
     for numCont, cont in enumerate(data['containers']):
         for numPort, port_spec in enumerate(cont['ports']):
             host_port = port_spec.pop('hostPort', None) or port_spec['containerPort']
+            port_name = 'c{0}-p{1}'.format(numCont, numPort)
+            if port_spec.get('isPublic'):
+                port_name += '-public'
             ports.append({
-                "name": 'c{0}-p{1}'.format(numCont, numPort),
+                "name": port_name,
                 "port": host_port,
                 "protocol": port_spec['protocol'],
-                "targetPort": port_spec['containerPort']})
+                "targetPort": port_spec['containerPort']
+            })
 
     conf = {
         'kind': 'Service',

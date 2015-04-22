@@ -262,10 +262,10 @@ def process_endpoints_event(data):
         if event_type == 'ADDED':
             # Handle here if public-ip added during runtime
             if SERVICES_VERBOSE_LOG >= 2:
-                print 'SERVICE IN ADDED', service
+                print 'SERVICE IN ADDED(pods 0)', service
         elif event_type == 'MODIFIED':      # when stop pod
             if SERVICES_VERBOSE_LOG >= 2:
-                print 'SERVICE IN MODIF', service
+                print 'SERVICE IN MODIF(pods 0)', service
             state = json.loads(service['metadata']['annotations']['public-ip-state'])
             if 'assigned-to' in state:
                 res = modify_node_ips(state['assigned-to'], 'del',
@@ -283,13 +283,18 @@ def process_endpoints_event(data):
         else:
             print 'Unknown event type in endpoints event listener:', event_type
     elif len(pods) == 1:
-        podname = pods[0]['addresses'][0]['targetRef']['name']
-        ports = service['spec']['ports']
-        # TODO change to v3
-        kub_pod = requests.get('http://127.0.0.1:8080/api/v1beta2/pods/' + podname).json()
         state = json.loads(service['metadata']['annotations']['public-ip-state'])
         public_ip = state['assigned-public-ip']
+        if not public_ip:
+            # TODO change with "release ip" feature
+            return
         assigned_to = state.get('assigned-to')
+        podname = pods[0]['addresses'][0]['targetRef']['name']
+        # TODO change to v3
+        kub_pod = requests.get('http://127.0.0.1:8080/api/v1beta2/pods/' + podname).json()
+        ports = service['spec']['ports']
+        # TODO what to do here when pod yet not assigned to node at this moment?
+        # skip only this event or reconnect(like now)?
         current_host = kub_pod['currentState']['host']
         pod_ip = pods[0]['addresses'][0]['IP']
         if not assigned_to:

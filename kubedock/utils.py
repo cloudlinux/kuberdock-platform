@@ -97,6 +97,8 @@ def modify_node_ips(host, cmd, pod_ip, public_ip, ports):
     if cmd == 'add':
         ssh.exec_command(ARPING.format(NODE_TOBIND_EXTERNAL_IPS, public_ip))
     for port_spec in ports:
+        if not port_spec['name'].endswith('-public'):
+            continue
         containerPort = port_spec['targetPort']
         publicPort = port_spec.get('port', containerPort)
         protocol = port_spec.get('protocol', 'tcp')

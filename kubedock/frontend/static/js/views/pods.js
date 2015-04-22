@@ -827,7 +827,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         togglePublic: function(evt){
             evt.stopPropagation();
-            var index = $(evt.target).closest('tr').index();
+            var index = $(evt.target).closest('tr').index(),
                 entry = this.model.get('ports')[index];
             if (entry.isPublic) {
                 entry.isPublic = false;

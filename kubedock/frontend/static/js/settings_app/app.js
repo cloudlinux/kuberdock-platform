@@ -33,7 +33,48 @@ define(['marionette', 'utils'],
     SettingsApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         Views.GeneralView = Marionette.CompositeView.extend({
-            template: '#general-settings-template'
+            template: '#general-settings-template',
+
+            ui: {
+                'timezone': '#timezone'
+            },
+
+            onRender: function(){
+                var that = this;
+                this.ui.timezone.typeahead({
+                    autoSelect: false,
+                    source: function(query, process){
+                        $.ajax({
+                            url: '/api/settings/timezone',
+                            data: {'s': that.ui.timezone.val()},
+                            cache: false,
+                            success: function(rs){
+                                process(rs.data);
+                            }
+                        })
+                    },
+                    updater: function(v){
+                        if(v.length > 3){
+                            $.ajax({
+                                url: '/api/settings/timezone',
+                                dataType: 'JSON',
+                                data: {timezone: v},
+                                type: 'PUT',
+                                cache: false,
+                                success: function(rs){
+                                    if(rs.status == 'OK')
+                                        $.notify('Timezone changed to ' + rs.data, {
+                                            autoHideDelay: 10000,
+                                            globalPosition: 'top center',
+                                            className: 'success'
+                                        });
+                                }
+                            })
+                        }
+                        return v;
+                    }
+                });
+            }
         });
 
         Views.NotificationCreateView = Backbone.Marionette.ItemView.extend({

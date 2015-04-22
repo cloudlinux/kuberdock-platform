@@ -97,6 +97,15 @@ define(function () {
         return hours + ':' + minutes + ':' + secs;
     };
 
+    this.localizeDatetime = function(dt, tz){
+        try {
+            return moment(dt).tz(tz).format('YYYY-MM-DD hh:mm:ss');
+        } catch (e){
+            console.log(e);
+        }
+        return s;
+    };
+
     this.BaseModel = Backbone.Model.extend({
         parse: this.unwrapper
     });

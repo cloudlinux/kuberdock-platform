@@ -18,6 +18,15 @@ function modelError(b, t){
     });
 }
 
+function localizeDatetime(dt, tz){
+    try {
+        return moment(dt).tz(tz).format('YYYY-MM-DD hh:mm:ss');
+    } catch (e){
+        console.log(e);
+    }
+    return s;
+}
+
 var NodesApp = new Backbone.Marionette.Application({
     regions: {
         contents: '#contents'

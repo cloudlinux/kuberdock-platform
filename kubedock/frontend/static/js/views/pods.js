@@ -1213,15 +1213,27 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'div',
 
         ui: {
-            ieditable: '.ieditable'
+            ieditable: '.ieditable',
+            kubeQuantity: 'select.kube-quantity',
+            kubeTypes: 'select.kube_type'
         },
 
+        templateHelpers: function(){
+            return {
+                cpu_data: this.cpu_data,
+                ram_data: this.ram_data,
+                container_price: this.container_price,
+                total_price: this.total_price
+            };
+        },
+        
         events: {
             'click .delete-item'      : 'deleteItem',
             'click .cluster'          : 'toggleCluster',
             'click .node'             : 'toggleNode',
             'change .replicas'        : 'changeReplicas',
-            'change select.kube_type' : 'changeKubeType',
+            'change .kube_type' : 'changeKubeType',
+            'change .kube-quantity' : 'changeKubeQuantity',
         },
 
         triggers: {
@@ -1262,11 +1274,64 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));
+            
         },
 
+        changeKubeQuantity: function(evt){
+            evt.stopPropagation();
+            var num = parseInt(evt.target.value),
+                kube_id = parseInt(this.ui.kubeTypes.find(':selected').val()),
+                containers = this.model.get('containers'),
+                container_length = containers.length,
+                pack = _.filter(packages, function(p){
+                    return p.kube_id === kube_id
+                });
+            if (pack.length === 0) {
+                this.container_price = '0 USD';
+                this.total_price = '0 USD';
+            }
+            else {
+                this.container_price = (pack[0].amount * num) + pack[0].currency;
+                this.total_price = (pack[0].amount * num * container_length) + pack[0].currency;
+            }
+            _.each(containers, function(c){ c.kubes = num });
+            this.render();
+            this.ui.kubeTypes.val(kube_id);
+            this.ui.kubeQuantity.val(num);
+        },
+        
         changeKubeType: function(evt){
             evt.stopPropagation();
-            this.model.set('kube_type', parseInt(evt.target.value));
+            var kube_id = parseInt(evt.target.value),
+                num = parseInt(this.ui.kubeQuantity.find(':selected').text()),
+                containers = this.model.get('containers'),
+                container_length = containers.length,
+                kube_data = _.filter(kubeTypes, function(k){
+                    return k.id === kube_id
+                }),
+                pack = _.filter(packages, function(p){
+                    return p.kube_id === kube_id
+                });
+            this.model.set('kube_type', kube_id);
+            if (kube_data.length === 0) {
+                this.cpu_data = '0 MHz';
+                this.ram_data = '0 MB';
+            }
+            else {
+                this.cpu_data = kube_data[0].cpu + ' MHz';
+                this.ram_data = kube_data[0].memory + ' ' + kube_data[0].memory_units;
+            }
+            if (pack.length === 0) {
+                this.container_price = '0 USD';
+                this.total_price = '0 USD';
+            }
+            else {
+                this.container_price = (pack[0].amount * num) + pack[0].currency;
+                this.total_price = (pack[0].amount * num * container_length) + pack[0].currency;
+            }
+            this.render();
+            this.ui.kubeTypes.val(kube_id);
+            this.ui.kubeQuantity.val(num);
         },
 
         onRender: function(){
@@ -1291,6 +1356,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             });
         }
     });
+
 
     Views.PaginatorView = Backbone.Marionette.ItemView.extend({
         template: '#paginator-template',

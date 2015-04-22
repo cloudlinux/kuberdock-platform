@@ -1313,7 +1313,7 @@
                             {% endfor %}
                         </select>
                         <label>Kubes per container:</label>
-                        <select class="replicas">
+                        <select class="kube-quantity">
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>
@@ -1353,17 +1353,17 @@
                     <div class="col-md-4 col-md-offset-2 right">
                         <p class="clearfix">
                             <span class="pull-left"><b>Container(s):</b></span>
-                            <span class="pull-right"><span id="containers_price"></span></span>
+                            <span class="pull-right"><span id="containers_price"><%- container_price %></span></span>
                         </p>
                         <p class="clearfix">
                             <span class="pull-left"><b>IP Adress:</b></span>
                             <span class="pull-right"><span id="ipaddress_price"></span></span>
                         </p>
-                        <p class="total"><b>Total price:</b> <span id="total_price"></span></p>
+                        <p class="total"><b>Total price:</b> <span id="total_price"><%- total_price %></span></p>
                     </div>
                     <div class="col-xs-12 no-padding servers">
-                        <div>CPU: <span id="total_cpu"></span></div>
-                        <div>RAM: <span id="total_ram"></span></div>
+                        <div>CPU: <span id="total_cpu"><%- cpu_data %></span></div>
+                        <div>RAM: <span id="total_ram"><%- ram_data %></span></div>
                     </div>
                 </div>
             </div>

@@ -49,7 +49,7 @@
     </script>
 
     <script type="text/template" id="node-general-tab-template">
-        <% var ram = resources.capacity.memory / (1024*1024*1024); %>
+        <% var ram = (resources.capacity.memory / (1024*1024*1024)).toFixed(2); %>
         <div class="row placeholders">
             <div class="col-xs-10 clearfix">
                 <div class="col-xs-6 info no-padding">
@@ -58,9 +58,9 @@
 {#                    <div>Used kubes: 50</div>#}
                 </div>
                 <div class="col-xs-6 servers no-padding">
-                    <div class="server-ico">CPU: <%- resources.capacity.cpu %> cores with 3GHz</div>
-                    <div class="server-ico">RAM: <%- ram %>GB DDR3 - 2000</div>
-{#                    <div class="server-ico">SDD: 0GB in Raid 0</div>#}
+                    <div class="server-ico">CPU: <%- resources.capacity.cpu %> cores <!-- with 3GHz --></div>
+                    <div class="server-ico">RAM: <%- ram %> GB <!--DDR3 - 2000 --></div>
+                    <div class="server-ico"><!-- SDD: 0GB in Raid 0 --></div>
                 </div>
             </div>
         </div>
@@ -109,14 +109,14 @@
 
     <script type="text/template" id="node-monitoring-tab-template">
         <div id="monitoring-page" class="col-sm-12">
-            <div class="page-top-menu">
+           <!-- <div class="page-top-menu">
                 <span>Choose period:</span>
                 <span>Last 6 Hours</span>
                 <span class="active">24 Hours</span>
                 <span>1 week</span>
                 <span>1 month</span>
                 <span>1 year</span>
-            </div>
+            </div> -->
             <p class="name first">CPU graph</p>
             <div class="cpu-graph"></div>
             <p class="name">Memory graph</p>
@@ -378,13 +378,14 @@
     </script>
 
     <script type="text/template" id="node-console-template">
-        <hr>
         <div class="well">
             <% _.each(text, function(x){ %>
-            <p><strong><%- x %></strong></p>
+            <p><%- x %></p>
             <% }) %>
         </div>
-        <button id="main" class="btn btn-lg btn-success">TO MAIN</button>
+        <div class="buttons pull-right">
+            <button id="main">Back</button>
+        </div>
     </script>
 
     <script type="text/template" id="node-item-template">

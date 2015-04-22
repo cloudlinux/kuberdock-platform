@@ -5,7 +5,7 @@
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    
+
     {% assets "app_css" -%}
         <link rel="stylesheet"href="{{ ASSET_URL }}">
     {%- endassets %}
@@ -22,7 +22,7 @@
     <div class="login-page clearfix">
         <div class="container login-form">
         <form id="loginForm" method="post" action="/login?next={{ request.args.next|safe }}">
-            <div class="form-group logo"></div> 
+            <div class="form-group logo"></div>
             <ul class="form-group">
               <li class="group">
                 <input type="text" id="login-form-username-field" name="login-form-username-field" placeholder="login"/>
@@ -36,16 +36,16 @@
                 </label>
                 <button type="submit" class="login pull-right">Log in</button>
               </li>
-              <li class="group">
+              <!-- <li class="group">
                 <a href="#" class="lost">Lost your password?</a>
-              </li>
+              </li> -->
             </ul>
         </form>
         </div>
         <div class="blue-line"><div>
       </div>
     </div>
-    
+
     {% assets "vendor_js" -%}
       <script src="{{ ASSET_URL }}"></script>
     {% endassets %}

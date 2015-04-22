@@ -833,8 +833,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     var index = $(this).closest('tr').index(),
                         className = $(this).parent().attr('class'),
                         item = $(this);
-                    that.model.get('ports')[index][className] = parseInt(newValue);
-
+                        
+                    if (className !== undefined) {
+                        that.model.get('ports')[index][className] = parseInt(newValue);
+                    }
                     if (item.hasClass('name')) {
                         that.model.get('volumeMounts')[index]['name'] = newValue;
                     }

@@ -766,7 +766,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .add-volume'      : 'addVolume',
             'change .restart-policy' : 'changePolicy',
             'click @ui.removeItem'   : 'removeItem',
-            'click input.public'     : 'togglePublic'
+            'click input.public'     : 'togglePublic',
+            'click .remove'          : 'removePortEntry'
         },
 
         triggers: {
@@ -850,6 +851,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             else {
                 entry.isPublic = true;
             }
+            this.render();
+        },
+
+        removePortEntry: function(evt){
+            evt.stopPropagation();
+            var tgt = $(evt.target),
+                index = tgt.closest('tr').index(),
+                ports = this.model.get('ports');
+            ports.splice(index, 1);
             this.render();
         },
 
@@ -1226,7 +1236,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 total_price: this.total_price
             };
         },
-        
+
         events: {
             'click .delete-item'      : 'deleteItem',
             'click .cluster'          : 'toggleCluster',
@@ -1274,7 +1284,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         changeReplicas: function(evt){
             evt.stopPropagation();
             this.model.set('replicas', parseInt($(evt.target).val().trim()));
-            
+
         },
 
         changeKubeQuantity: function(evt){
@@ -1299,7 +1309,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.ui.kubeTypes.val(kube_id);
             this.ui.kubeQuantity.val(num);
         },
-        
+
         changeKubeType: function(evt){
             evt.stopPropagation();
             var kube_id = parseInt(evt.target.value),

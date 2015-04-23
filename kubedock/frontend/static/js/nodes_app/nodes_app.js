@@ -252,37 +252,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.NodeFindStep = Backbone.Marionette.ItemView.extend({
         template: '#node-find-step-template',
 
-        ui: {
-            'node_name': 'input#node_address',
-            'spinner': '#address-spinner'
-        },
-
-        events:{
-            'change @ui.node_name': 'validateStep'
-        },
-
-        validateStep: function (evt) {
-            var val = evt.target.value;
-            if (val !== '') {
-                var that = this;
-                this.ui.spinner.spin({color: '#437A9E'});
-                Backbone.ajax({ url:"/api/nodes/checkhost/" + val }).done(function (data) {
-                    that.state.set('isFinished', true);
-                    that.state.set('ip', data.ip);
-                    that.state.set('hostname', data.hostname);
-                }).error(function(resp) {
-                    that.state.set('isFinished', false);
-                    modelError(resp);
-//                    alert(resp.responseJSON.status);
-                });
-                that.ui.spinner.spin(false);
-            } else {
-                this.state.set('isFinished', false);
-            }
-        },
-
         initialize: function () {
-            this.state = new Backbone.Model({ isFinished: false });
+            this.state = new Backbone.Model({ isFinished: true });
         }
     });
 
@@ -290,19 +261,24 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#node-final-step-template',
 
         ui: {
-            'node_add_btn': 'button#node-add-btn',
-            'node_cancel_btn': 'button#node-cancel-btn',
-            'node_type_select': 'select.kube_type'
+            'node_add_btn'     : 'button#node-add-btn',
+            'node_cancel_btn'  : 'button#node-cancel-btn',
+            'node_type_select' : 'select.kube_type',
+            'node_name'        : 'input#node_address',
+            'spinner'          : '#address-spinner',
         },
 
         events:{
-            'click @ui.node_add_btn': 'complete',      // only if valid
-            'click @ui.node_cancel_btn' : 'cancel',
-            'change @ui.node_type_select' : 'change_kube_type'
+            'click @ui.node_add_btn'      : 'complete',
+            'click @ui.node_cancel_btn'   : 'cancel',
+            'change @ui.node_type_select' : 'change_kube_type',
+            'change @ui.node_name'        : 'validateStep',
+            'click @ui.node_name'         : 'removeExtraClass',
         },
 
         change_kube_type: function(evt) {
-            if (evt.target.value !== null) {
+            if (this.ui.node_type_select.value !== null) {
+                this.ui.node_type_select.addClass('success');
                 this.state.set('kube_type', parseInt(evt.target.value));
             }
         },
@@ -326,6 +302,28 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 //                    alert('error while saving! Maybe some fields required.')
                 }
             });
+        },
+
+        validateStep: function (evt) {
+            var val = evt.target.value;
+            if (val !== '') {
+                var that = this;
+                this.ui.spinner.spin({color: '#437A9E'});
+                Backbone.ajax({ url:"/api/nodes/checkhost/" + val }).done(function (data) {
+                    that.state.set('ip', data.ip);
+                    that.state.set('hostname', data.hostname);
+                    that.ui.node_name.addClass('success');
+                }).error(function(resp) {
+                    modelError(resp);
+                    that.ui.node_name.addClass('error');
+                });
+                that.ui.spinner.spin(false);
+            }
+        },
+
+        removeExtraClass: function(){
+            this.ui.node_name.hasClass('error') ? this.ui.node_name.removeClass('error') : '';
+            this.ui.node_name.hasClass('success') ? this.ui.node_name.removeClass('success') : '';
         },
 
         cancel: function () {

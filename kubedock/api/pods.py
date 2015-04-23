@@ -5,7 +5,6 @@ import re
 import ipaddress
 import shlex
 import requests
-import copy
 from uuid import uuid4
 from flask import Blueprint, request, current_app, jsonify, g
 from flask.ext.login import current_user
@@ -423,8 +422,6 @@ def run_service(data):
     }
 
     r = tasks.create_service_nodelay(conf)
-    # TODO for old algo, delete later
-    data['annotations'] = {'kuberdock-ports': json.dumps(ports)}
     return r
 
 
@@ -433,7 +430,10 @@ def parse_cmd_string(s):
     lex.whitespace_split = True
     lex.commenters = ''
     lex.wordchars += '.'
-    return list(lex)
+    try:
+        return list(lex)
+    except ValueError:
+        raise APIError('Incorrect cmd string')
 
 
 def prepare_container(data, key='ports', kube_type=0):
@@ -555,11 +555,6 @@ def make_pod_config(data, sid, separate=True):
             outer['labels']['kuberdock-public-ip'] = data.pop('public_ip')
     else:
         outer['labels'] = data['labels']
-    # TODO for old algo, delete later
-    if 'annotations' not in data:
-        outer['annotations'] = {}
-    else:
-        outer['annotations'] = data['annotations']
     return outer
 
 

@@ -359,6 +359,12 @@
 
     <script type="text/template" id="node-final-step-template">
         <div id="address-spinner"></div>
+        <div class="col-md-12 clearfix no-padding information">
+            <label><i>Keep in mind please</i></label>
+            <div>
+                To successfully add a node you must first create a pair of keys with <i>ssh-keygen</i> and then place them to a node to be added with <i>ssh-copy-id</i> under user <i>nginx</i>
+            </div>
+        </div>
         <div class="form-field col-lg-6">
             <label for="node_address">Enter Node name</label>
             <input class="find-input" type="text" placeholder="Hostname" id="node_address" name="node_address"/>
@@ -366,7 +372,7 @@
         <div class="col-lg-12">
             <div class="col-lg-6">
                 <label for="extra-options">Choose kube type</label>
-              	<select class="kube_type" id="extra-options">
+                <select class="kube_type" id="extra-options">
                     <option selected disabled>Choose kube type</option>
                     {% for kube_type in kube_types %}
                     <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>

@@ -767,7 +767,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'change .restart-policy' : 'changePolicy',
             'click @ui.removeItem'   : 'removeItem',
             'click input.public'     : 'togglePublic',
-            'click .remove'          : 'removePortEntry'
+            'click .remove-port'     : 'removePortEntry',
+            'click .remove-volume'   : 'removeVolumeEntry',
         },
 
         triggers: {
@@ -860,6 +861,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 index = tgt.closest('tr').index(),
                 ports = this.model.get('ports');
             ports.splice(index, 1);
+            this.render();
+        },
+
+        removeVolumeEntry: function(evt){
+            evt.stopPropagation();
+            var tgt = $(evt.target),
+                index = tgt.closest('tr').index(),
+                volumes = this.model.get('volumeMounts');
+            volumes.splice(index, 1);
             this.render();
         },
 

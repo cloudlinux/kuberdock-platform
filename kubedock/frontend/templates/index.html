@@ -163,17 +163,21 @@
                 <% } %>
             </td>
             <td>
-                <% if ( status == 'running') { %>
-                    <span class="<%- status %>"><%- status %></span>
-                    <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
-                <% } else if ( status == 'stopped' ) { %>
-                    <span class="<%- status %>"><%- status %></span>
-                    <span class="start-btn" title="Start <%- name %> pod">Start</span>
-                <% } else if ( status == 'waiting' ) { %>
-                    <span class="<%- status %>"><%- status %></span>
-                    <span class="start-btn" title="Start <%- name %> pod">Start</span>
+                <% if (status) { %>
+                    <% if ( status == 'running') { %>
+                        <span class="<%- status %>"><%- status %></span>
+                        <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
+                    <% } else if ( status == 'stopped' ) { %>
+                        <span class="<%- status %>"><%- status %></span>
+                        <span class="start-btn" title="Start <%- name %> pod">Start</span>
+                    <% } else if ( status == 'waiting' ) { %>
+                        <span class="<%- status %>"><%- status %></span>
+                        <span class="start-btn" title="Start <%- name %> pod">Start</span>
+                    <% } else { %>
+                        <span class="<%- status %>"><%- status %></span>
+                    <% } %>
                 <% } else { %>
-                    <span class="<%- status %>"><%- status %></span>
+                    <span class="pending">pending</span>
                 <% } %>
             </td>
             <td><%- kubeTypes[kube_type].name %> (<%- kubes %>)
@@ -247,7 +251,7 @@
                         <div>Restart policy: <%- restartPolicy %></div>
                         <div>Kubes:  <%- kubes ? kubes : '0' %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
                         <div>Price: <%- price ? price : '0' %>$/hour</div>
-                        <div class="edit">Edit pod</div>
+                        <!-- <div class="edit">Edit pod</div> -->
                     </div>
                 </div>
             </div>
@@ -464,7 +468,7 @@
                                                         <% } %>
                                                         <span></span>
                                                     </label>
-                                                    <span class="remove"></span>
+                                                    <span class="remove-port"></span>
                                                 </td>
                                             </tr>
                                         <% }) %>
@@ -525,6 +529,7 @@
                                                             <input type="checkbox"/>
                                                             <span></span>
                                                         </label>
+                                                        <span class="remove-volume"></span>
                                                     </td>
                                                     <% } %>
                                                 </tr>
@@ -919,7 +924,7 @@
                 </div>
                 <div id="details_content" class="col-sm-9 set-up-image clearfix no-padding">
                     <div id="tab-content" class="environment clearfix">
-                        <label>Image variables</label>
+                        <!-- <label>Image variables</label>
                         <div class="col-sm-12 no-padding fields">
                             <div class="col-sm-4 no-padding">
                                 <input type="text" placeholder="Variable name value">
@@ -935,8 +940,8 @@
                             <div class="col-sm-4 no-padding">
                                 <input type="text">
                             </div>
-                        </div>
-                        <div class="col-xs-12 no-padding bottom"><label>Additional variables</label></div>
+                        </div> -->
+                        <div class="col-xs-12 no-padding bottom"><label>Setup environment variables</label></div>
                         <% _.each(env, function(e){ %>
                         <div class="col-sm-12 no-padding fields">
                             <div class="col-sm-4 no-padding">
@@ -951,7 +956,7 @@
                             <button type="button" class="add-env">Add field</button>
                         </div>
                         <div class="col-sm-12 no-padding reset">
-                            <button type="button" class="reset-button">Reset to image values</button>
+                            <button type="button" class="reset-button">Reset values</button>
                         </div>
                     <div>
                 </div>
@@ -1294,7 +1299,7 @@
                             <div>
                                 <span><%- c.image %></span>
                                 <span>
-                                    <button class="edit-item">&nbsp;</button>
+                                    <!-- <button class="edit-item">&nbsp;</button> -->
                                     <button class="delete-item">&nbsp;</button>
                                 </span>
                             </div>

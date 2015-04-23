@@ -42,13 +42,14 @@
                 </div>
                 <div id="details_content" class="col-sm-10">
                     <div class="status-line <%- status %>">Status: <%- status %></div>
-                    <div id="tab-content">div tab_content</div>
+                    <div id="tab-content"></div>
                 </div>
             </div>
         </div>
     </script>
 
     <script type="text/template" id="node-general-tab-template">
+        <% switch (status) { case 'running': %>
         <% var ram = (resources.capacity.memory / (1024*1024*1024)).toFixed(2); %>
         <div class="row placeholders">
             <div class="col-xs-10 clearfix">
@@ -64,6 +65,11 @@
                 </div>
             </div>
         </div>
+        <% break; case 'pending': %>
+        <div>Node is in installation progress</div>
+        <% break; case 'troubles': %>
+        <div>There are some problems with this node. See logs.</div>
+        <% break; } %>
     </script>
 
     <script type="text/template" id="node-stats-tab-template">

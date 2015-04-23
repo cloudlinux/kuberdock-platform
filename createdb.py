@@ -13,16 +13,16 @@ if __name__ == '__main__':
     ac.push()
     db.drop_all()
     db.create_all()
-    
+
     # Create default packages and kubes
     # Package and Kube with id=0 are default
     # end must be undeletable (always present with id=0) for fallback
     k1 = Kube(id=0, name='Standart kube', cpu=700, cpu_units='KCU',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0)
-    k2 = Kube(name='High CPU', cpu=700, cpu_units='KCU',
-              memory=256, memory_units='MB', disk_space='0', total_traffic=0)
-    k3 = Kube(name='Hight memory', cpu=1400, cpu_units='KCU',
+    k2 = Kube(name='High CPU', cpu=1400, cpu_units='KCU',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0)
+    k3 = Kube(name='Hight memory', cpu=700, cpu_units='KCU',
+              memory=254, memory_units='MB', disk_space='0', total_traffic=0)
     db.session.add_all([k1, k2, k3])
     db.session.commit()
 

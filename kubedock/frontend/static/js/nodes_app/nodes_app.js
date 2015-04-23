@@ -366,8 +366,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         ui: {
             'nodes_page' : 'div#nodes-page',
             'delete'     : 'button#delete_node',
-            'stop'       : 'button#stop_node',
-            'rename'     : 'button#rename_node'
         },
 
         events: {
@@ -375,8 +373,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click button#node-add-btn' : 'saveNode',
             'click @ui.nodes_page'      : 'breadcrumbClick',
             'click @ui.delete'          : 'deleteNode',
-            'click @ui.stop'            : 'stopNode',
-            'click @ui.rename'          : 'renameNode'
         },
 
         initialize: function (options) {
@@ -417,7 +413,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 },
                 error: function(){
                     modelError('error while updating! Maybe some fields required.');
-//                    alert('error while updating! Maybe some fields required.')
                 }
             });
         },
@@ -425,14 +420,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         deleteNode: function() {
             this.model.destroy();
             App.router.navigate('/', {trigger: true})
-        },
-
-        stopNode: function() {
-            alert('stop event')
-        },
-
-        renameNode: function() {
-            alert('rename event')
         },
 
         breadcrumbClick: function(){

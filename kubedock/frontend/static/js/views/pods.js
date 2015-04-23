@@ -765,7 +765,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .readonly'        : 'toggleReadOnly',
             'click .add-volume'      : 'addVolume',
             'change .restart-policy' : 'changePolicy',
-            'click @ui.removeItem'   : 'removeItem',
             'click input.public'     : 'togglePublic',
             'click .remove-port'     : 'removePortEntry',
             'click .remove-volume'   : 'removeVolumeEntry',
@@ -796,10 +795,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 nodeName: this.model.get('node'),
                 ip: this.model.get('ip')
             };
-        },
-
-        removeItem: function(e){
-
         },
 
         initialize: function(options){
@@ -1336,16 +1331,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             if (kube_data.length === 0) {
                 this.cpu_data = '0 MHz';
                 this.ram_data = '0 MB';
-            }
-            else {
+            } else {
                 this.cpu_data = kube_data[0].cpu + ' MHz';
                 this.ram_data = kube_data[0].memory + ' ' + kube_data[0].memory_units;
             }
             if (pack.length === 0) {
                 this.container_price = '0 USD';
                 this.total_price = '0 USD';
-            }
-            else {
+            } else {
                 this.container_price = (pack[0].amount * num) + pack[0].currency;
                 this.total_price = (pack[0].amount * num * container_length) + pack[0].currency;
             }

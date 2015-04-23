@@ -825,8 +825,6 @@
                             position: absolute;
                             background: url('../img/container-image.png') 0 0 no-repeat;
                         }
-
-
                         .item-header-title {
                             font-size: 16px;
                             font-weight: bold;
@@ -876,9 +874,24 @@
                         }
                     }
                 }
-                .btn-more, .no-more-state, .load-state{
-                    margin-bottom: 5px;
+                .search-control{
                     text-align: center;
+                    > div {
+                        line-height: 20px;
+                        margin-bottom: 5px;
+                        padding: 6px 12px;
+                        display: none;
+                        span{
+                            line-height: 16px;
+                            display: inline-block;
+                            vertical-align: middle;
+                            &.small-loader{
+                                width: 16px;
+                                height: 16px;
+                                background: url('../img/small-loader.gif') 0 0 no-repeat;
+                            }
+                        }
+                    }
                 }
             }
             label{

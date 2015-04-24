@@ -58,9 +58,6 @@
                 padding-bottom: 0;
                 font-family: @regular;
                 vertical-align: middle;
-                &:first-letter{
-                    text-transform: uppercase;
-                }
                 span{
                     &.more-ico{
                         background: url('../img/small-circles.png') 0 0 no-repeat;
@@ -337,6 +334,16 @@
 }
 /* general details page */
 #tab-content{
+    .details{
+        padding: 10px;
+        span{
+            color: #3197ee;
+            &:hover{
+                color: #1d1d1d;
+                cursor: pointer;
+            }
+        }
+    }
     .row{
         &.placeholders{
             .col-xs-10{
@@ -484,7 +491,7 @@
         padding: 1em;
         height: 38em;
         overflow: auto;
-        margin: 37px 0 10px;
+        margin: 15px 0 10px;
         font-size: 10pt;
         line-height: 1em;
         p{
@@ -502,7 +509,7 @@
         font-family: @regular;
         color: #1d1d1d;
         &.first{
-            margin-top: 40px;
+            margin-top: 15px;
         }
     }
     .cpu-graph, .memory-graph, .bandwith-graph{

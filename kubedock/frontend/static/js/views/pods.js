@@ -1247,8 +1247,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .cluster'          : 'toggleCluster',
             'click .node'             : 'toggleNode',
             'change .replicas'        : 'changeReplicas',
-            'change .kube_type' : 'changeKubeType',
-            'change .kube-quantity' : 'changeKubeQuantity',
+            'change .kube_type'       : 'changeKubeType',
+            'change .kube-quantity'   : 'changeKubeQuantity',
         },
 
         triggers: {

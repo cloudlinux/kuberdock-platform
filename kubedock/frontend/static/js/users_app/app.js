@@ -99,7 +99,21 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             removeUser: function(){
-                this.model.destroy();
+                var that = this;
+                utils.modalDialog({
+                    title: "Delete " + this.model.get('username') + "?",
+                    body: "Are you sure want to delete user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            that.model.destroy();
+                            App.router.navigate('/', {trigger: true});
+                        },
+                        buttonCancel: true
+                    }
+                });
             },
 
             blockUser: function(){
@@ -405,7 +419,7 @@ define(['marionette', 'paginator', 'utils'],
             login_this_user: function(){
                 var that = this;
                 utils.modalDialog({
-                    title: 'Authorize by user',
+                    title: "Authorize by " + this.model.get('username'),
                     body: "Are you sure want to authorize by user '" +
                         this.model.get('username') + "'?",
                     small: true,
@@ -429,8 +443,21 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             delete_user: function(){
-                this.model.destroy();
-                App.router.navigate('/', {trigger: true});
+                var that = this;
+                utils.modalDialog({
+                    title: "Delete " + this.model.get('username') + "?",
+                    body: "Are you sure want to delete user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            that.model.destroy();
+                            App.router.navigate('/', {trigger: true});
+                        },
+                        buttonCancel: true
+                    }
+                });
             },
 
             cancel: function(){

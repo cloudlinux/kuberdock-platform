@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 KUBERDOCK_DIR=/var/opt/kuberdock
 KUBERNETES_CONF_DIR=/etc/kubernetes
@@ -11,66 +11,107 @@ if [ $USER != "root" ]; then
     exit 1
 fi
 
-yesno()
-# $1 = Message prompt
-# Returns ans=0 for no, ans=1 for yes
-{
-   if [[ $dry_run -eq 1 ]]
-   then
-      echo "Would be asked here if you wanted to"
-      echo "$1 (y/n - y is assumed)"
-      ans=1
-   else
-      ans=2
-   fi
-
-   while [ $ans -eq 2 ]
-   do
-      echo -n "$1 (y/n)? " ; read reply
-      case "$reply" in
-      Y*|y*) ans=1 ;;
-      N*|n*) ans=0 ;;
-          *) echo "Please answer y or n" ;;
-      esac
-   done
-}
+#yesno()
+## $1 = Message prompt
+## Returns ans=0 for no, ans=1 for yes
+#{
+#   if [[ $dry_run -eq 1 ]]
+#   then
+#      echo "Would be asked here if you wanted to"
+#      echo "$1 (y/n - y is assumed)"
+#      ans=1
+#   else
+#      ans=2
+#   fi
+#
+#   while [ $ans -eq 2 ]
+#   do
+#      echo -n "$1 (y/n)? " ; read reply
+#      case "$reply" in
+#      Y*|y*) ans=1 ;;
+#      N*|n*) ans=0 ;;
+#          *) echo "Please answer y or n" ;;
+#      esac
+#   done
+#}
 
 
 
 # ====== Set initial vars, WILL WRITE THEM AFTER INSTALL kuberdock.rpm =========
 
-MASTER_IP=$(hostname -i)
-yesno "Is your MASTER IP $MASTER_IP"
+#MASTER_IP=$(hostname -i)
+#yesno "Is your MASTER IP $MASTER_IP"
+#
+#if [ ! $ans -eq 1 ]; then
+#    read -p "Enter MASTER IP: " MASTER_IP
+#    echo "Will use $MASTER_IP"
+#fi
+#
+## TODO make if '' provided than don't use any customizations
+#
+#NODE_TOBIND_EXTERNAL_IPS="enp0s5"
+#yesno "On which node interface to bind external ips? $NODE_TOBIND_EXTERNAL_IPS"
+#
+#if [ ! $ans -eq 1 ]; then
+#    read -p "Enter interface name: " NODE_TOBIND_EXTERNAL_IPS
+#    echo "Will use $NODE_TOBIND_EXTERNAL_IPS"
+#fi
+#
+#MASTER_TOBIND_FLANNEL="enp0s5"
+#yesno "Interface to bind for Flannel network on master is $MASTER_TOBIND_FLANNEL"
+#
+#if [ ! $ans -eq 1 ]; then
+#    read -p "Enter interface name: " MASTER_TOBIND_FLANNEL
+#    echo "Will use $MASTER_TOBIND_FLANNEL"
+#fi
+#
+#NODE_TOBIND_FLANNEL="enp0s5"
+#yesno "Interface to bind for Flannel network on nodes(inter-host comminication and with master) is $NODE_TOBIND_FLANNEL"
+#
+#if [ ! $ans -eq 1 ]; then
+#    read -p "Enter interface name: " NODE_TOBIND_FLANNEL
+#    echo "Will use $NODE_TOBIND_FLANNEL"
+#fi
 
-if [ ! $ans -eq 1 ]; then
-    read -p "Enter MASTER IP: " MASTER_IP
-    echo "Will use $MASTER_IP"
+# ==== More elaborate interfaces setting ====
+
+DEFAULT_IFACE=""
+DEFAULT_MASTER_IP=""
+
+DEFAULT_IFACE=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;exit}}')
+
+read -p "Enter interface for inter-host communication[$DEFAULT_IFACE]: " IFACE
+if [ -z "$IFACE" ];then
+    IFACE=$DEFAULT_IFACE
 fi
 
-# TODO make if '' provided than don't use any customizations
-
-NODE_TOBIND_EXTERNAL_IPS="enp0s5"
-yesno "On which node interface to bind external ips? $NODE_TOBIND_EXTERNAL_IPS"
-
-if [ ! $ans -eq 1 ]; then
-    read -p "Enter interface name: " NODE_TOBIND_EXTERNAL_IPS
-    echo "Will use $NODE_TOBIND_EXTERNAL_IPS"
+if [ -n "$IFACE" ];then
+    DEFAULT_MASTER_IP=$(ip -o -4 address show $IFACE|awk 'NR>1 {exit}; /inet/ {sub(/\/.*$/, "", $4); print $4}')
+    if [ -n "$DEFAULT_MASTER_IP" ];then
+        PROMPT="Enter master IP address [$DEFAULT_MASTER_IP]: "
+    else
+        PROMPT="Enter master IP address: "
+    fi
 fi
 
-MASTER_TOBIND_FLANNEL="enp0s5"
-yesno "Interface to bind for Flannel network on master is $MASTER_TOBIND_FLANNEL"
-
-if [ ! $ans -eq 1 ]; then
-    read -p "Enter interface name: " MASTER_TOBIND_FLANNEL
-    echo "Will use $MASTER_TOBIND_FLANNEL"
+read -p "$PROMPT" MASTER_IP
+if [ -z "$MASTER_IP" ];then
+    MASTER_IP=$DEFAULT_MASTER_IP
 fi
 
-NODE_TOBIND_FLANNEL="enp0s5"
-yesno "Interface to bind for Flannel network on nodes(inter-host comminication and with master) is $NODE_TOBIND_FLANNEL"
+read -p "Enter a node interface for binding to public IPs [$DEFAULT_IFACE]: " NODE_TOBIND_EXTERNAL_IP
+if [ -z "$NODE_TOBIND_EXTERNAL_IP" ];then
+    NODE_TOBIND_EXTERNAL_IP=$DEFAULT_IFACE
+fi
 
-if [ ! $ans -eq 1 ]; then
-    read -p "Enter interface name: " NODE_TOBIND_FLANNEL
-    echo "Will use $NODE_TOBIND_FLANNEL"
+read -p "Enter master interface for flanneld [$DEFAULT_IFACE]: " MASTER_TOBIND_FLANNEL
+if [ -z "$MASTER_TOBIND_FLANNEL" ];then
+    MASTER_TOBIND_FLANNEL=$DEFAULT_IFACE
+fi
+
+read -p "Enter a node interface for flanneld (inter-host communication) [$DEFAULT_IFACE]: " NODE_TOBIND_FLANNEL
+if [ -z "$NODE_TOBIND_FLANNEL" ];then
+    NODE_TOBIND_FLANNEL=$DEFAULT_IFACE
 fi
 
 # ==============================================================================
@@ -443,32 +484,19 @@ if [ -z "$ENT" ]; then
 fi
 
 KEY=id_rsa
-PUB=id_rsa.pub
-DIR=$HOME/.ssh
-KEY_PATH=$DIR/$KEY
-PUB_PATH=$DIR/$PUB
 TGT_HOME=$(echo $ENT | cut -d: -f6)
-TGT_PATH=$TGT_HOME/.ssh
+TGT_DIR=$TGT_HOME/.ssh
+TGT_PATH=$TGT_DIR/$KEY
 
-if [ ! -e $TGT_PATH/$KEY ];then
-    if [ ! -d $DIR ];then
-        mkdir -p $DIR
-    fi
-
-    if [ ! -e $KEY_PATH ]; then
-        ssh-keygen -N "" -f $KEY_PATH
-    fi
-
-    if [ ! -d $TGT_PATH ];then
-        mkdir -p $TGT_PATH
-    fi
-
-    cp -f $KEY_PATH $TGT_PATH
-    cp -f $PUB_PATH $TGT_PATH
-    chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_PATH
-else
-    echo "User $WEBAPP_USER already has $KEY. Will use it."
+if [ ! -d $TGT_DIR ];then
+    mkdir -p $TGT_DIR
 fi
+
+if [ ! -e $TGT_PATH ]; then
+    ssh-keygen -N "" -f $TGT_PATH
+fi
+
+chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR
 
 # ======================================================================
 echo "WARNING: Firewalld was disabled. You need to configure it to work right"

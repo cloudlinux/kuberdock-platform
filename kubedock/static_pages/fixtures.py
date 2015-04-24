@@ -6,11 +6,11 @@ MENUS = [
         region=Menu.REGION_NAVBAR,
         name='Navbar menu',
         items=[
-            dict(name="Main", path="/", ordering=0),
+            dict(name="Pods", path="/", ordering=0, roles=json.dumps(["User"])),
             dict(name="Nodes", path="/nodes/", ordering=1,
                  roles=json.dumps(["Admin"])),
-            dict(name="Users", path="/users/", ordering=2,
-                 roles=json.dumps(["Admin"])),
+            # dict(name="Users", path="/users/", ordering=2,
+            #      roles=json.dumps(["Admin"])),
             # dict(
             #     name="Helpdesk",
             #     children=[

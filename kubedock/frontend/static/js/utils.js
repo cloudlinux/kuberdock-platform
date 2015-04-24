@@ -103,7 +103,7 @@ define(function () {
         } catch (e){
             console.log(e);
         }
-        return s;
+        return dt;
     };
 
     this.BaseModel = Backbone.Model.extend({

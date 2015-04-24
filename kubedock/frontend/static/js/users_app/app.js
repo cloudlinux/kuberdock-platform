@@ -192,7 +192,8 @@ define(['marionette', 'paginator', 'utils'],
                 'dateTo'     : 'input#dateTo',
                 'usersList'  : 'ul#users-list',
                 'tbody'      : '#users-activities-table',
-                'users_page' : 'div#users-page'
+                'users_page' : 'div#users-page',
+                'username'   : '#username'
             },
 
             events: {
@@ -202,44 +203,16 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.users_page'       : 'breadcrumbClick'
             },
 
-            onRender: function(){
+            _getActivities: function(username, dateFrom, dateTo){
                 var that = this;
-                // Make users list
-                $.each(usersCollection, function(i, user){
-                    that.ui.usersList.append(
-                        '<li><label><input type="checkbox" name="uachb" value="' +
-                            user.id + '" class="user-activity"/> ' +
-                            user.username + '</label></li>'
-                    );
-                });
-                // Init datepicker
-                this.ui.dateFrom.datepicker({dateFormat: "yy-mm-dd"});
-                this.ui.dateTo.datepicker({dateFormat: "yy-mm-dd"});
-                // Set default date
-                var now = utils.dateYYYYMMDD();
-                this.ui.dateFrom.val(now);
-                this.ui.dateTo.val(now);
-            },
-
-            getUsersActivities: function(){
-                var that = this,
-                    users = [];
-                that.ui.tbody.empty();
-                $('.user-activity').each(function(i, el){
-                    if($(el).is(':checked')) users.push(parseInt($(el).val()));
-                });
-                if(users.length == 0) {
-                    return false;
-                }
                 $.ajax({
-                    url: '/api/users/activities',
-                    data: {date_from: this.ui.dateFrom.val(),
-                           date_to: this.ui.dateTo.val(),
-                           users_ids: users.join(',')},
+                    url: '/api/users/a/' + username,
+                    data: {date_from: dateFrom, date_to: dateTo},
                     dataType: 'JSON',
-                    type: 'POST',
                     success: function(rs){
+                        console.log(rs)
                         if(rs.data){
+                            that.ui.tbody.empty();
                             if(rs.data.length == 0){
                                 that.ui.tbody.append($('<tr>').append(
                                     '<td colspan="5" align="center">Nothing found</td>'
@@ -247,17 +220,64 @@ define(['marionette', 'paginator', 'utils'],
                             } else {
                                 $.each(rs.data, function (i, itm) {
                                     that.ui.tbody.append($('<tr>').append(
-                                        '<td>' + itm.user.username + '</td>' +
-                                        '<td>' + itm.user.email + '</td>' +
-                                        '<td>' + itm.user.rolename + '</td>' +
-                                        '<td>' + itm.user.active + '</td>' +
-                                        '<td>' + itm.ts + '</td>'
+//                                        '<td>' + itm.username + '</td>' +
+//                                        '<td>' + itm.email + '</td>' +
+//                                        '<td>' + itm.rolename + '</td>' +
+                                        '<td>' + itm.ts + '</td>' +
+                                        '<td>' + itm.action + '</td>'
+//                                        '<td>' + itm.ts + '</td>'
                                     ));
                                 })
                             }
                         }
                     }
-                })
+                });
+            },
+
+            onRender: function(){
+                var that = this;
+                // Init datepicker
+                this.ui.dateFrom.datepicker({dateFormat: "yy-mm-dd"});
+                this.ui.dateTo.datepicker({dateFormat: "yy-mm-dd"});
+                // Set default date
+                var now = utils.dateYYYYMMDD();
+                this.ui.dateFrom.val(now);
+                this.ui.dateTo.val(now);
+                // init user autocomplete field
+                this.ui.username.typeahead({
+                    autoSelect: false,
+                    source: function(query, process){
+                        that.ui.username.data('ready', false);
+                        $.ajax({
+                            url: '/api/users/q',
+                            data: {'s': that.ui.username.val()},
+                            cache: false,
+                            success: function(rs){
+                                process(rs.data);
+                            }
+                        })
+                    },
+                    updater: function(v){
+                        that.ui.username.data('ready', true);
+                        that._getActivities(
+                            v,
+                            that.ui.dateFrom.val(),
+                            that.ui.dateTo.val()
+                        );
+                        return v;
+                    }
+                });
+            },
+
+            getUsersActivities: function(){
+                if(!this.ui.username.data('ready')) return;
+                var that = this;
+                that.ui.tbody.empty();
+                that._getActivities(
+                    that.ui.username.val(),
+                    that.ui.dateFrom.val(),
+                    that.ui.dateTo.val()
+                );
             },
 
             breadcrumbClick: function(){

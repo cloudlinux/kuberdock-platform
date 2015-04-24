@@ -1,3 +1,4 @@
+import json
 from flask import Blueprint, request, jsonify, current_app, session
 from flask.ext.login import login_user, logout_user, current_user
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
@@ -39,10 +40,25 @@ def get_users_collection():
     return [u.to_dict() for u in User.all()]
 
 
+@check_permission('get', 'users')
+def get_users_usernames(s):
+    objects_list = User.query.filter(User.username.contains(s))
+    data = [u.username for u in objects_list]
+    return data
+
+
 @users.route('/', methods=['GET'])
 @login_required_or_basic
 def get_list():
-    return jsonify({'status': 'OK', 'data': get_users_collection()})
+    data = get_users_collection(request.args.get('s'))
+    return jsonify({'status': 'OK', 'data': data})
+
+
+@users.route('/q', methods=['GET'])
+@login_required_or_basic
+def get_usernames():
+    data = get_users_usernames(request.args.get('s'))
+    return jsonify({'status': 'OK', 'data': data})
 
 
 @users.route('/roles', methods=['GET'])
@@ -71,14 +87,56 @@ def get_one_user(user_id):
     return jsonify({'status': 'OK', 'data': u.to_dict()})
 
 
-@users.route('/a/<user_id>', methods=['GET'])
+@check_permission('get', 'users')
+def user_activities(user, date_from=None, date_to=None, to_dict=None,
+                        to_json=None):
+    """
+    Requests the activities list of the user
+    :param user: username, user Id, user object
+    :param date_from: activities from
+    :param date_to: activities to
+    :param to_dict: returns [obj.to_dict(), ...]
+    :param to_json: returns in JSON format
+    :return: queryset or list or JSON string
+    """
+    if isinstance(user, basestring):
+        if user.isdigit():
+            user = User.query.get(int(user))
+        else:
+            user = User.query.filter_by(username=user).first()
+    elif isinstance(user, int):
+        user = UserActivity.query.get(user)
+    if user is None:
+        raise Exception("User not found")
+    try:
+        activities = UserActivity.query.filter(UserActivity.user_id == user.id)
+    except AttributeError:
+        current_app.logger.warning('UserActivity.get_user_activities '
+                                   'failed: {0}'.format(user))
+        raise Exception("User not found")
+    if date_from:
+        activities = activities.filter(
+            UserActivity.ts >= '{0} 00:00:00'.format(date_from))
+    if date_to:
+        activities = activities.filter(
+            UserActivity.ts <= '{0} 23:59:59'.format(date_to))
+    if to_dict or to_json:
+        data = [a.to_dict() for a in activities]
+        if to_json:
+            data = json.dumps(data)
+        return data
+    return activities
+
+
+@users.route('/a/<user>', methods=['GET'])
 @login_required_or_basic
 @check_permission('get', 'users')
-def get_user_activities(user_id):
-    u = User.filter_by(id=user_id).first()
-    if u:
-        return jsonify({'status': 'OK', 'data': u.user_activity()})
-    raise APIError("User {0} doesn't exists".format(user_id))
+def get_user_activities(user):
+    data = request.args
+    data_from = data.get('date_from')
+    date_to = data.get('date_to')
+    data = user_activities(user, data_from, date_to, to_dict=True)
+    return jsonify({'status': 'OK', 'data': data})
 
 
 @users.route('/activities', methods=['POST'])
@@ -86,13 +144,13 @@ def get_user_activities(user_id):
 @check_permission('get', 'users')
 def get_users_activities():
     data = request.form
-    user_ids = data.get('users_ids', '').split(',')
+    username = data.get('username', '').split(',')
     data_from = data.get('date_from')
     date_to = data.get('date_to')
-    if not user_ids:
-        raise APIError("Select at least one user")
-    objects_list = UserActivity.get_users_activities(
-        user_ids, data_from, date_to, to_dict=True)
+    if not username:
+        raise APIError("Select username")
+    objects_list = UserActivity.get_user_activities(
+        username, data_from, date_to, to_dict=True)
     return jsonify({'data': objects_list})
 
 

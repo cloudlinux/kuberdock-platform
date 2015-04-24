@@ -8,6 +8,7 @@ requirejs.config({
         underscore: 'lib/underscore',
         marionette: 'lib/backbone.marionette',
         bootstrap: 'lib/bootstrap',
+        'bootstrap3-typeahead': 'lib/bootstrap3-typeahead.min',
         paginator: 'lib/backbone.paginator',
         tpl: 'lib/tpl',
         text: 'lib/text',
@@ -49,7 +50,8 @@ requirejs.config({
         }
     }
 });
-require(['jquery', 'users_app/app', 'notify', 'jquery-ui', 'dde'], function(jQuery, UsersApp){
+require(['jquery', 'users_app/app', 'notify', 'jquery-ui', 'dde', 'bootstrap3-typeahead'],
+function(jQuery, UsersApp){
     UsersApp.Data.users = new UsersApp.Data.UsersPageableCollection(usersCollection);
     UsersApp.Data.onlineUsers = new UsersApp.Data.UsersPageableCollection(onlineUsersCollection);
     UsersApp.Data.userActivity = new UsersApp.Data.ActivitiesCollection(userActivity);

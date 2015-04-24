@@ -98,6 +98,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         data = self.get_settings()
         data[k] = v
         self.settings = json.dumps(data)
+        self.save()
 
     def to_dict(self, include=None, exclude=None):
         last_activity = self.last_activity
@@ -199,13 +200,10 @@ class UserActivity(BaseModelMixin, db.Model):
                 cls.ts <= '{0} 23:59:59'.format(date_to))
         users = User.filter(User.id.in_([a.user_id for a in activities]))
         users = {u.id: u.to_dict() for u in users}
-        if to_dict:
-            data = [a.to_dict(include={'user': users.get(a.user_id)})
-                    for a in activities]
-            return data
+        data = [a.to_dict(include={'user': users.get(a.user_id)})
+                for a in activities]
         if to_json:
-            return json.dumps([a.to_dict(include={'user': users.get(a.user_id)})
-                               for a in activities])
+            return json.dumps(data)
         return activities
 
     @classmethod

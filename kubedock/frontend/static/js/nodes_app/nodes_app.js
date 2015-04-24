@@ -24,7 +24,7 @@ function localizeDatetime(dt, tz){
     } catch (e){
         console.log(e);
     }
-    return s;
+    return dt;
 }
 
 var NodesApp = new Backbone.Marionette.Application({

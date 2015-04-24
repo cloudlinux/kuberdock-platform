@@ -39,6 +39,10 @@ define(['marionette', 'utils'],
                 'timezone': '#timezone'
             },
 
+            events: {
+                'click [type="submit"]': 'submitSettings'
+            },
+
             onRender: function(){
                 var that = this;
                 this.ui.timezone.typeahead({
@@ -52,28 +56,30 @@ define(['marionette', 'utils'],
                                 process(rs.data);
                             }
                         })
-                    },
-                    updater: function(v){
-                        if(v.length > 3){
-                            $.ajax({
-                                url: '/api/settings/timezone',
-                                dataType: 'JSON',
-                                data: {timezone: v},
-                                type: 'PUT',
-                                cache: false,
-                                success: function(rs){
-                                    if(rs.status == 'OK')
-                                        $.notify('Timezone changed to ' + rs.data, {
-                                            autoHideDelay: 10000,
-                                            globalPosition: 'top center',
-                                            className: 'success'
-                                        });
-                                }
-                            })
-                        }
-                        return v;
                     }
                 });
+            },
+
+            submitSettings: function(){
+                var data = {
+                    timezone: this.ui.timezone.val()
+                };
+                $.ajax({
+                    url: '/api/settings/timezone',
+                    dataType: 'JSON',
+                    data: data,
+                    type: 'PUT',
+                    cache: false,
+                    success: function(rs){
+                        if(rs.status == 'OK')
+                            $.notify('Settings changed successfully', {
+                                autoHideDelay: 10000,
+                                globalPosition: 'top center',
+                                className: 'success'
+                        });
+                    }
+                })
+
             }
         });
 

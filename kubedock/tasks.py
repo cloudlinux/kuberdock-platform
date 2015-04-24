@@ -2,11 +2,12 @@ import json
 import requests
 import time
 import operator
+import sys
 from collections import OrderedDict
 from datetime import datetime
 
 from .api.stream import send_event
-from .core import ConnectionPool, db, ssh_connect, fast_cmd
+from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
 from .utils import update_dict
 from .stats import StatWrap5Min
@@ -32,7 +33,10 @@ def search_image(term, url=None, page=None):
             url = '{0}/v1/search'.format(url.rstrip('/'))
     data = {'q': term, 'n': 10, 'page': page}
     # TODO del when we delete gevent
-    url = url.replace('https', 'http')
+    # Gevent ssl incompatible with python 2.7.9
+    # https://github.com/gevent/gevent/issues/477
+    if sys.version_info[2] > 8:
+        url = url.replace('https', 'http')
     r = requests.get(url, params=data)
     return r.text
 

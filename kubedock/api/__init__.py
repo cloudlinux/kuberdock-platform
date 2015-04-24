@@ -77,8 +77,8 @@ def remove_lock(*args):
 def set_lock():
     with open(LOCK_FILE_NAME, 'wt') as f:
         f.write(str(os.getpid()))
-    signal.signal(signal.SIGINT, remove_lock)
-    signal.signal(signal.SIGTERM, remove_lock)
+signal.signal(signal.SIGINT, remove_lock)
+signal.signal(signal.SIGTERM, remove_lock)
 
 
 # TODO remove when migrate to v1beta3
@@ -185,12 +185,12 @@ def listen_endpoints():
             else:
                 return
     # Dirty hack for gevent first switch with uwsgi
-    r = None
-    with gevent.Timeout(1, False):
-        r = requests.get(KUBE_MASTER_URL.replace('v1beta2', 'v1beta3') + '/watch/endpoints', stream=True)
-    if r is None:
-        if SERVICES_VERBOSE_LOG >= 2:
-            print '=WATCH TIMEOUT='
+    # r = None
+    # with gevent.Timeout(1, False):
+    #     r = requests.get(KUBE_MASTER_URL.replace('v1beta2', 'v1beta3') + '/watch/endpoints', stream=True)
+    # if r is None:
+    #     if SERVICES_VERBOSE_LOG >= 2:
+    #         print '=WATCH TIMEOUT='
     while True:
         try:
             if SERVICES_VERBOSE_LOG >= 1:

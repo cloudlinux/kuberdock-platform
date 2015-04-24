@@ -339,6 +339,9 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             source.addEventListener('pull_pods_state', function (ev) {
                 initPodCollection.fetch();
             }, false);
+            source.onerror = function (e) {
+                console.log("SSE Error");
+            };
         }
     });
 });

@@ -133,11 +133,16 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     function(i){return i.name === this.n},
                     {n: name}
                 )[0],
-                container_id = _.last(_.filter(
-                    parent_model.get('dockers'),
-                    function(i){return i.info.imageID === this.d},
-                    {d: model_data.imageID}
-                )[0].info.containerID.split('/'));
+                container = _.filter(
+                        parent_model.get('dockers'),
+                        function(i){return i.info.imageID === this.d},
+                        {d: model_data.imageID}
+                    )[0],
+                container_id = _.last(container.info.containerID.split('/'));
+            $.each(container.info.state, function(k, v){
+                container['state_repr'] = k;
+                container['startedAt'] = v.startedAt;
+            });
             model_data.container_id = container_id;
             model_data.node = parent_model.get('dockers')[0].host;
             if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
@@ -145,6 +150,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             if (!model_data.hasOwnProperty('command')) model_data['command'] = [];
             if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
             if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
+            if (!model_data.hasOwnProperty('state_repr')) model_data['state_repr'] = container['state_repr'];
 
             //this.listenTo(wizardLayout, 'show', function(){
             //    wizardLayout.steps.show(new App.Views.WizardPortsSubView({

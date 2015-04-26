@@ -1129,6 +1129,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 isPending: !this.containerModel.has('parentID'),
                 image: this.containerModel.get('image'),
                 name: this.containerModel.get('name'),
+                state_repr: this.containerModel.get('state_repr'),
             };
         },
 

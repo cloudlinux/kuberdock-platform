@@ -586,7 +586,7 @@
                             </ul>
                         </div>
                         <div id="details_content" class="col-sm-10 no-padding configuration-general-tab">
-                            <div class="status-line running">Status: Running
+                            <div class="status-line <%- state_repr %>">Status: <%- state_repr %>
                                 <span>Stop</span>
                                 <span>Terminate</span>
                                 <span>Redeploy</span>
@@ -699,7 +699,7 @@
                     </div>
                     <div id="details_content" class="col-sm-10 timelines-tab no-padding">
                         <div id="tab-content">
-                             <div class="status-line running curent-margin">Status: Running
+                             <div class="status-line <%- state_repr %> curent-margin">Status: <%- state_repr %>
                                 <span>Stop</span>
                                 <span>Terminate</span>
                                 <span>Redeploy</span>
@@ -1041,7 +1041,7 @@
                     <div id="details_content" class="col-xs-10 limits-tab no-padding">
                         <div id="tab-content" class="limits">
                             <div class="col-xs-12 no-padding">
-                                <div class="status-line running">Status: Running
+                                <div class="status-line <%- state_repr %>">Status: <%- state_repr %>
                                     <span>Stop</span>
                                     <span>Terminate</span>
                                     <span>Redeploy</span>
@@ -1097,7 +1097,7 @@
                     <div id="details_content" class="col-xs-10 variables-tab no-padding">
                         <div id="tab-content">
                             <div class="col-xs-12 no-padding">
-                                <div class="status-line running">Status: Running
+                                <div class="status-line <%- state_repr %>">Status: <%- state_repr %>
                                     <span>Stop</span>
                                     <span>Terminate</span>
                                     <span>Redeploy</span>
@@ -1162,7 +1162,7 @@
                     </div>
                     <div id="details_content" class="col-xs-10 monitoring-tab no-padding">
                         <div id="tab-content">
-                            <div class="status-line running curent-margin">Status: Running
+                            <div class="status-line <%- state_repr %> curent-margin">Status: <%- state_repr %>
                                 <span>Stop</span>
                                 <span>Terminate</span>
                                 <span>Redeploy</span>
@@ -1252,7 +1252,7 @@
                     </div>
                     <div id="details_content" class="col-xs-10 logs-tab no-padding">
                         <div id="tab-content">
-                            <div class="status-line running curent-margin">Status: Running
+                            <div class="status-line <%- state_repr %> curent-margin">Status: <%- state_repr %>
                                 <span>Stop</span>
                                 <span>Terminate</span>
                                 <span>Redeploy</span>

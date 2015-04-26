@@ -45,14 +45,36 @@ def get_nodes_collection():
         cur = oldcur
     nodes_list = []
     for node in cur:
+        if node.hostname in kub_hosts:
+            if _node_is_active(kub_hosts[node.hostname]):
+                node_status = 'running'
+                node_reason = ''
+            else:
+                node_status = 'troubles'
+                condition = kub_hosts[node.hostname]['status']['conditions'][0]
+                node_reason = (
+                    'Node state is {0}\n'
+                    'Reason: "{1}"\n'
+                    'Last transition time: {2}'.format(
+                        condition['status'],
+                        condition['reason'],
+                        condition['lastTransitionTime']
+                    )
+                )
+        else:
+            node_status = 'troubles'
+            node_reason = (
+                'Node is not a member of KuberDock cluster\n'
+                'Possible reason is an error during installation'
+            )
+
         nodes_list.append({
             'id': node.id,
             'ip': node.ip,
             'hostname': node.hostname,
             'kube_type': node.kube.id,
-            'status': 'running' if node.hostname in kub_hosts and
-                                    _node_is_active(kub_hosts[node.hostname])
-                                else 'troubles',
+            'status': node_status,
+            'reason': node_reason,
             'annotations': node.annotations,
             'labels': node.labels,
             'resources': kub_hosts.get(node.hostname, {}).get('resources', {})

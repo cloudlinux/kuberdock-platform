@@ -68,7 +68,11 @@
         <% break; case 'pending': %>
         <div class="details">Node is in installation progress</div>
         <% break; case 'troubles': %>
-        <div class="details">There are some problems with this node. <span class="log-tab">See logs</span></div>
+        <div>
+        <% _.each(reason.split('\n'), function(line){ %>
+            <p><%- line %></p>
+        <% }) %>
+        </div>
         <% break; } %>
     </script>
 

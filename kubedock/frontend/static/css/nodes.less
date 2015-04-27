@@ -1,5 +1,7 @@
 /* node-main */
 #nodelist-table{
+    width: 99%;
+    margin-left: 10px;
     thead{
         background-color: transparent;
         &.min-opacity{
@@ -11,7 +13,6 @@
                 padding-top: 0;
                 color: #b1b9c0;
                 font-size: 14px;
-                padding-left: 0;
                 text-align: left;
                 font-weight: normal;
                 vertical-align: top;
@@ -140,12 +141,23 @@
     }
     .node-steps{
         .information{
-            .border-radius(5px);
-            margin-top: -20px;
-            padding: 10px 16px;
-            text-align: center;
-            margin-bottom: 18px;
-            background-color: #f5fafe;
+            text-align: left;
+            position: relative;
+            margin-bottom: 20px;
+            background-color: #fefef6;
+            border: 1px solid #e5e5e5;
+            padding: 10px 16px 10px 87px;
+            &:before{
+                top: 3px;
+                left: 5px;
+                content: '';
+                width: 80px;
+                height: 70px;
+                position: absolute;
+                position: absolute;
+                background: url('../img/info-ico.png') center no-repeat;
+                .background-size(63%);
+            }
             label{
                 margin: 0;
             }
@@ -294,22 +306,22 @@
 #details_content{
     .status-line{
         height: 40px;
-        margin-bottom: 0px;
-        border-bottom: 1px solid #e5e5e5;
         color: #1d1d1d;
         font-size: 16px;
-        font-family: @regular;
         font-weight: bold;
-        padding-left: 37px;
         line-height: 27px;
         position: relative;
+        padding-left: 45px;
+        margin-bottom: 0px;
+        font-family: @regular;
+        border-bottom: 1px solid #e5e5e5;
         &:before{
             .border-radius(50%);
             content: '';
             width: 13px;
             height: 13px;
             position: absolute;
-            left: 11px;
+            left: 20px;
             bottom: 20px;
         }
         &.running{
@@ -334,8 +346,8 @@
 }
 /* general details page */
 #tab-content{
-    .details{
-        padding: 10px;
+    .details, .reason{
+        padding: 10px 0 0 20px;
         span{
             color: #3197ee;
             &:hover{

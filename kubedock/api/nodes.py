@@ -18,6 +18,13 @@ def _node_is_active(x):
         return False
 
 
+def _get_node_condition(x):
+    try:
+        return x['status']['conditions'][0]
+    except KeyError:
+        return {}
+
+
 @check_permission('get', 'nodes')
 def get_nodes_collection():
     new_flag = False
@@ -51,16 +58,23 @@ def get_nodes_collection():
                 node_reason = ''
             else:
                 node_status = 'troubles'
-                condition = kub_hosts[node.hostname]['status']['conditions'][0]
-                node_reason = (
-                    'Node state is {0}\n'
-                    'Reason: "{1}"\n'
-                    'Last transition time: {2}'.format(
-                        condition['status'],
-                        condition['reason'],
-                        condition['lastTransitionTime']
+                condition = _get_node_condition(kub_hosts[node.hostname])
+                if condition:
+                    node_reason = (
+                        'Node state is {0}\n'
+                        'Reason: "{1}"\n'
+                        'Last transition time: {2}'.format(
+                            condition['status'],
+                            condition['reason'],
+                            condition['lastTransitionTime']
+                        )
                     )
-                )
+                else:
+                    node_reason = (
+                        'Node is a member of KuberDock cluster but '
+                        'does not provide information about its condition\n'
+                        'Possible reason -- node is in installation progress'
+                    )
         else:
             node_status = 'troubles'
             node_reason = (

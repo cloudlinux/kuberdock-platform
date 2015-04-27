@@ -385,9 +385,6 @@ def docker_action():
 
 def run_service(data):
     dash_name = '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', data['name']))
-    s = string.lowercase
-    item_id = s[random.randrange(len(s))] +\
-        ''.join(random.sample(s + string.digits, 19))
     ports = []
     for numCont, cont in enumerate(data['containers']):
         for numPort, port_spec in enumerate(cont['ports']):
@@ -405,9 +402,8 @@ def run_service(data):
     conf = {
         'kind': 'Service',
         'apiVersion': 'v1beta3',
-        # 'generateName': 'prefix',
         'metadata': {
-            'name': item_id,
+            'generateName': data['name'].lower() + '-service-',
             'labels': {'name': dash_name + '-service'},
             'annotations': {
                 'public-ip-state': json.dumps({

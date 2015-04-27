@@ -12,8 +12,8 @@ Requires: nginx
 Requires: influxdb
 Requires: redis
 Requires: postgresql-server
-Requires: etcd == 2.0.8-0.1.el7.centos
-Requires: kubernetes == 0.14.2-0.1.gitfce3e5a.el7.centos
+Requires: etcd == 2.0.9-1.el7.centos
+Requires: kubernetes == 0.15.0-4.el7.centos.1
 Requires: flannel >= 0.3.0
 Requires: dnsmasq >= 2.66
 # For semanage:

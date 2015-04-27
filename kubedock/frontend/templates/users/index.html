@@ -55,7 +55,7 @@
                             id="username">
                 </div>
                 <div class="col-md-10">
-                    <table class="table">
+                    <table class="table" id="all-users-activities-table">
                     <thead>
                     <tr>
 {#                        <th>Name</th>#}
@@ -63,7 +63,6 @@
 {#                        <th>Role</th>#}
 {#                        <th>Active</th>#}
                         <th>Last activity</th>
-                        <th>Action</th>
                     </tr>
                     </thead>
                         <tbody id="users-activities-table"></tbody>
@@ -285,16 +284,11 @@
     </script>
 
     <script type="text/template" id="online-user-item-template">
-        <td>
-            <%- username %>
-            <button id="userActivityHistory" class="btn btn-link btn-xs pull-right">
-                <i class="glyphicon glyphicon-search"></i>
-            </button>
-        </td>
+        <td><button id="userActivityHistory" title="<%- username %> activety history"><%- username %></button></td>
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
         <td><%- active ? 'Active' : 'Blocked' %></td>
-        <td><%- last_activity %></td>
+        <td><%- last_activity ? last_activity : 'none' %></td>
     </script>
 
     <script type="text/template" id="online-users-list-template">
@@ -373,10 +367,10 @@
             <div class="container breadcrumbs" id="breadcrumbs">
                 <ul class="breadcrumb">
                     <li>
-                        Users
+                        <a href="{{ url_for('users.index') }}">Users</a>
                     </li>
                     <li>
-                        Online
+                        <a href="{{ url_for('users.index') }}online/">Online</a>
                     </li>
                     <li class="active">
                         Username
@@ -385,11 +379,7 @@
             </div>
         </div>
         <div class="container">
-            <a href="{{ url_for('users.index') }}online/">
-                <i class="glyphicon glyphicon-arrow-left"></i>
-                back to the online user list
-            </a><hr/>
-            <table class="table">
+            <table class="table" id="users-activities">
                 <thead>
                     <tr>
                         <th>Date/Time</th>

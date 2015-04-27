@@ -434,7 +434,19 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
     });
 
     Views.NodeGeneralTabView = Backbone.Marionette.ItemView.extend({
-        template: '#node-general-tab-template'
+        template: '#node-general-tab-template',
+
+        ui: {
+            'nodeLogsTab' : 'span.log-tab'
+        },
+
+        events: {
+            'click @ui.nodeLogsTab' : 'nodeLogsTab',
+        },
+
+        nodeLogsTab: function(){
+            App.router.navigate('/detailed/' + this.model.id + '/logs/', {trigger: true});
+        }
     });
 
     Views.NodeStatsTabView = Backbone.Marionette.ItemView.extend({

@@ -1,8 +1,10 @@
 /* node-main */
 #userslist-table,
+#users-activities,
+#users-online-table,
 #user-profile-logs-table,
 #user-profile-general-table,
-#users-online-table{
+#all-users-activities-table{
 	thead{
 		background-color: transparent;
 		&.min-opacity{
@@ -10,16 +12,16 @@
 		}
 		tr{
 			th{
-				padding-top: 0;
-				vertical-align: top;
-				border-bottom: 1px solid #e5e5e5;
-				padding-bottom: 10px;
-				font-size: 14px;
+				border: none;
 				color: #b1b9c0;
-				font-family: @regular;
+				padding-top: 0;
+				font-size: 14px;
 				text-align: left;
 				font-weight: normal;
-				border: none;
+				vertical-align: top;
+				padding-bottom: 10px;
+				font-family: @regular;
+				border-bottom: 1px solid #e5e5e5;
 				&:focus{
 					outline: 0;
 				}
@@ -69,9 +71,6 @@
 				padding-bottom: 0;
 				vertical-align: middle;
 				height: 50px;
-				&:first-letter{
-					text-transform: uppercase;
-				}
 				span{
 					&#deleteUser, &#blockUser, &#activeteUser{
 						top: 3px;
@@ -134,9 +133,6 @@
 				text-decoration: none;
 				font-family: @regular;
 				background-color: transparent;
-				&:first-letter{
-					text-transform: uppercase;
-				}
 				&:hover{
 					cursor: pointer;
 					text-decoration: none;

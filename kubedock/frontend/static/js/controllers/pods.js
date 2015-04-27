@@ -347,6 +347,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             }, false);
             source.onerror = function (e) {
                 console.log("SSE Error");
+                // TODO Setup here timer to reconnect, maybe via location.reload
             };
         }
     });

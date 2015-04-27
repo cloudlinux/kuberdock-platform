@@ -55,6 +55,7 @@ Requires: python-simple-rbac >= 0.1.1
 Requires: python-sse >= 1.2
 Requires: python-webassets >= 0.10.1
 Requires: python-wsgiref >= 0.1.2
+Requires: python-psycogreen >= 1.0
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

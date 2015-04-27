@@ -209,11 +209,14 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             var processRequest = function(data){
                 if($('#set_public_ip').is(':checked'))
                     data.set('set_public_ip', true);
-                _.each(data.get('containers'), function(item){
-                    item.volumeMounts = _.filter(item.volumeMounts, function(mp){
-                        return mp['name'] !== null;
-                    });
-                });
+                //_.each(data.get('containers'), function(item){
+                //    item.volumeMounts = _.filter(item.volumeMounts, function(mp){
+                //        return mp['name'] !== null;
+                //    });
+                //});
+                
+                if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
+                
                 initPodCollection.fullCollection.create(data, {
                     success: function(){
                         routes.navigate('pods');
@@ -274,24 +277,43 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     return false;
                 }
                 _.each(data.get('volumeMounts'), function(mp){
-                    if (mp['name'] !== null) {
-                        var volumes = _.filter(model.get('volumes'), function(item){
-                            return item['name'] === mp['name'];
-                        });
-                        if (!volumes.length) {
-                            model.get('volumes').push({name: mp['name']});
+                    var row = model.get('volumes'),
+                        entry;
+                    if (mp.isPersistent) {
+                        entry = {name: mp.name, source: {persistentDisk: mp.persistentDisk}};
+                        var used = _.filter(data.attributes.persistentDrives,
+                            function(i){return i.pdName === mp.persistentDisk.pdName});
+                        if (used.length) {
+                            used[0].used = true;
                         }
                     }
+                    else {
+                        entry = {name: mp.name, source: {emptyDir: {}}};
+                    }
+                    row.push(entry);
+                    delete mp['isPersistent'];
+                    delete mp['persistentDisk'];
                 });
                 _.each(data.get('ports'), function(p){
                     if (p.isPublic) {
                         model.attributes['set_public_ip'] = true;
                     }
                 });
+                
+                // strip persistentDrives from a container if any
+                if (data.attributes.hasOwnProperty('persistentDrives')) {
+                    if (!model.has('persistentDrives')) {
+                        model.attributes['persistentDrives'] = data.attributes.persistentDrives;
+                    }
+                    delete data.attributes.persistentDrives;
+                }
+                
+                // Here we populate a pod model container
                 var container = model.getContainerByImage(model.get('lastAddedImage'));
                 _.each(data.attributes, function(value, key, obj){
                     this.container[key] = value;
                 }, {container: container});
+                
                 var rqst = $.ajax({
                     type: 'GET',
                     url: '/api/ippool/getFreeHost'
@@ -313,11 +335,15 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                         data: {image: image}
                     });
                 name += _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
-                model.get('containers').push({
+                var contents = {
                     image: image, name: name, workingDir: null,
                     ports: [], volumeMounts: [], env: [], command: [], kubes: 1,
                     terminationMessagePath: null
-                });
+                };
+                if (model.has('persistentDrives')) {
+                    contents['persistentDrives'] = model.get('persistentDrives');
+                }
+                model.get('containers').push(contents);
                 model.set('lastAddedImage', image);
                 rqst.done(function(data){
                     if (data.hasOwnProperty('data')) { data = data['data']; }

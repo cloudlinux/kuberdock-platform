@@ -498,6 +498,8 @@
                                         <thead>
                                             <tr>
                                                 <th>Container path</th>
+                                                <th></th>
+                                                <th></th>
                                                 <th>Persistent</th>
                                             </tr>
                                         </thead>
@@ -509,17 +511,34 @@
                                                             <%- v.mountPath %>
                                                         </span>
                                                     </td>
-                                                    <% if (v.readOnly){ %>
+                                                    <% if (v.isPersistent){ %>
+                                                    <td>
+                                                        <% if (hasPersistent){ %>
+                                                        <span class="iveditable mountPath">
+                                                        <% } else { %>
+                                                        <span>No drives found</span>
+                                                        <% } %>
+                                                    </td>
+                                                    <td>
+                                                        <% if (showPersistentAdd){ %>
+                                                        <span class="add-drive-disabled">Add drive</span>
+                                                        <% } else { %>
+                                                        <span class="add-drive">Add drive</span>
+                                                        <% } %>
+                                                    </td>
                                                     <td>
                                                         <label class="custom">
-                                                            <input checked type="checkbox"/>
+                                                            <input class="persistent" checked type="checkbox"/>
                                                             <span></span>
                                                         </label>
+                                                        <span class="remove-volume"></span>
                                                     </td>
                                                     <% } else { %>
+                                                    <td></td>
+                                                    <td></td>
                                                     <td>
                                                         <label class="custom">
-                                                            <input type="checkbox"/>
+                                                            <input class="persistent" type="checkbox"/>
                                                             <span></span>
                                                         </label>
                                                         <span class="remove-volume"></span>
@@ -527,6 +546,22 @@
                                                     <% } %>
                                                 </tr>
                                             <% }) %>
+                                            <% if (showPersistentAdd){ %>
+                                                <tr>
+                                                    <td>
+                                                        <input type="text" class="pd-name" placeholder="persistent-drive-name">
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="pd-size" placeholder="persistent-drive-size">
+                                                    </td>
+                                                    <td>
+                                                        <span class="add-drive">Add drive</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="add-drive-cancel">Cancel</span>
+                                                    </td>
+                                                </tr>
+                                            <% } %>
                                         </tbody>
                                     </table>
                                     <div>

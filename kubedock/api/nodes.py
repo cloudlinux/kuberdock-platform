@@ -1,12 +1,17 @@
 from flask import Blueprint, request, jsonify
+import operator
 import socket
 from .. import tasks
 from ..models import Node
 from ..core import db
 from ..rbac import check_permission
+from ..utils import login_required_or_basic
 from ..validation import check_int_id, check_node_data, check_hostname
 from ..billing import Kube
 from . import APIError
+from fabric.api import run, settings, env
+from fabric.tasks import execute
+
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
 
@@ -194,3 +199,32 @@ def check_host(hostname):
     check_hostname(hostname)
     ip = socket.gethostbyname(hostname)
     return jsonify({'status': 'OK', 'ip': ip, 'hostname': hostname})
+
+
+def poll():
+    devices = dict.fromkeys(run('rbd ls').split(), None)
+    mapped_list = [i.strip().split() for i in run('rbd showmapped').splitlines()]
+    # Maybe we'll want mounted later
+    #mounted_list = run('mount | grep /dev/rbd')
+    mapped = [dict(zip(mapped_list[0], i)) for i in mapped_list[1:]]
+    for i in mapped:
+        devices[i['image']] = dict(filter(
+            (lambda x: x[0] not in ['id', 'image', 'snap']),
+            i.items()))
+    return devices
+
+
+@nodes.route('/lookup', methods=['GET'])
+@login_required_or_basic
+@check_permission('get', 'pods')
+def pd_lookup():
+    env.user = 'root'
+    env.skip_bad_hosts = True
+    env.key_file = '/usr/home/bliss/.ssh/id_pub'
+    nodes = dict([(k, v)
+        for k, v in db.session.query(Node).values(Node.ip, Node.hostname)])
+    with settings(warn_only=True):
+        data = execute(poll, hosts=nodes.keys())
+    sets = [set(filter((lambda x: x[1] is None), i.items())) for i in data.values()]
+    intersection = map(operator.itemgetter(0), sets[0].intersection(*sets[1:]))
+    return jsonify({'status': 'OK', 'data': intersection})

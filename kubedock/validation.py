@@ -91,18 +91,37 @@ new_pod_scheme = {
                 },
                 'source': {
                     'type': 'dict',
-                    'keyschema': {
-                        'type': 'dict',
-                        'schema': {
-                            'path': {
-                                'type': 'string',
-                                'required': True,
-                                'nullable': True,
-                                'empty': False,
-                                'maxlength': PATH_LENGTH,
-                                # TODO validate that dir exists on node
-                                # 'dirExist': True
+                    'schema': {
+                        'hostDir': {
+                            'type': 'dict',
+                            'schema': {
+                                'path': {
+                                    'type': 'string',
+                                    'required': False,
+                                    'nullable': True,
+                                    'empty': False,
+                                    'maxlength': PATH_LENGTH,
+                                    # TODO validate that dir exists on node
+                                    # 'dirExist': True
+                                }
                             }
+                        },
+                        'persistentDisk': {
+                            'type': 'dict',
+                            'schema': {
+                                'pdName': {
+                                    'type': 'string'
+                                },
+                                'pdSize': {
+                                    'type': 'integer'
+                                }
+                            }
+                        },
+                        'emptyDir': {
+                            'type': 'dict'
+                        },
+                        'scriptableDisk': {
+                            'type': 'dict'
                         }
                     }
                 }

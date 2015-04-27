@@ -757,17 +757,22 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         ui: {
             ieditable: '.ieditable',
             iseditable: '.iseditable',
+            iveditable: '.iveditable',
             removeItem: 'span.remove'
         },
 
         events: {
             'click .add-port'        : 'addItem',
-            'click .readonly'        : 'toggleReadOnly',
+//            'click .readonly'        : 'toggleReadOnly',
             'click .add-volume'      : 'addVolume',
             'change .restart-policy' : 'changePolicy',
             'click input.public'     : 'togglePublic',
             'click .remove-port'     : 'removePortEntry',
             'click .remove-volume'   : 'removeVolumeEntry',
+            'click .persistent'      : 'togglePersistent',
+            'click .add-drive'       : 'addDrive',
+            'click .add-drive-cancel': 'cancelAddDrive',
+            'click .next-step'       : 'goNext'
         },
 
         triggers: {
@@ -776,7 +781,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .go-to-envs'      : 'step:envconf',
             'click .go-to-resources' : 'step:resconf',
             'click .go-to-other'     : 'step:otherconf',
-            'click .next-step'       : 'step:envconf',
+//            'click .next-step'       : 'step:envconf',
             'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
         },
@@ -792,7 +797,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         templateHelpers: function(){
             return {
                 isPending: !this.model.has('parentID'),
-                nodeName: this.model.get('node'),
+                hasPersistent: this.model.has('persistentDrives'),
+                showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
                 ip: this.model.get('ip')
             };
         },
@@ -812,30 +818,59 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
         },
 
-        addItem: function(env){
-            env.stopPropagation();
+        addItem: function(evt){
+            evt.stopPropagation();
             this.model.get('ports').push({containerPort: null, hostPort: null, protocol: 'tcp', isPublic: false});
             this.render();
         },
 
-        addVolume: function(env){
-            env.stopPropagation();
-            this.model.get('volumeMounts').push({mountPath: null, readOnly: false});
+        addVolume: function(evt){
+            evt.stopPropagation();
+            this.model.get('volumeMounts').push({mountPath: null, readOnly: false, isPersistent: false});
             this.render();
         },
 
-        toggleReadOnly: function(evt){
+        addDrive: function(evt){
             evt.stopPropagation();
-            index = $(evt.target).closest('tr').index()
-            var on = this.model.get('volumeMounts')[index]['readOnly'];
-            if (on) {
-                this.model.get('volumeMounts')[index]['readOnly'] = false;
+            var tgt = $(evt.target);
+            if (this.hasOwnProperty('showPersistentAdd')) {
+                var cells = tgt.closest('tr').children('td'),
+                    pdName = cells.eq(0).children('input').first().val().trim(),
+                    pdSize = parseInt(cells.eq(1).children('input').first().val().trim());
+                this.model.get('persistentDrives').push({pdName: pdName, pdSize: pdSize});
+                this.persistentDefault = pdName;
+                if (this.hasOwnProperty('currentIndex')) {
+                    this.model.get('volumeMounts')[this.currentIndex].persistentDisk = {pdName: pdName, pdSize: pdSize};
+                }
+                delete this.showPersistentAdd;
             }
             else {
-                this.model.get('volumeMounts')[index]['readOnly'] = true;
+                this.showPersistentAdd = true;
+                this.currentIndex = tgt.closest('tr').index();
             }
             this.render();
         },
+        
+        cancelAddDrive: function(evt){
+            evt.stopPropagation();
+            if (this.hasOwnProperty('showPersistentAdd')) {
+                delete this.showPersistentAdd;
+            }
+            this.render();
+        },
+        
+        //toggleReadOnly: function(evt){
+        //    evt.stopPropagation();
+        //    index = $(evt.target).closest('tr').index()
+        //    var on = this.model.get('volumeMounts')[index]['readOnly'];
+        //    if (on) {
+        //        this.model.get('volumeMounts')[index]['readOnly'] = false;
+        //    }
+        //    else {
+        //        this.model.get('volumeMounts')[index]['readOnly'] = true;
+        //    }
+        //    this.render();
+        //},
 
         togglePublic: function(evt){
             evt.stopPropagation();
@@ -850,6 +885,37 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
         },
 
+        togglePersistent: function(evt){
+            evt.stopPropagation();
+            var tgt = $(evt.target),
+                index = tgt.closest('tr').index(),
+                row = this.model.get('volumeMounts')[index],
+                that = this;
+            if (row.isPersistent) {
+                row.isPersistent = false;
+                this.render();
+            }
+            else {
+                if (!this.model.has('persistentDrives')) {
+                    var rqst = $.ajax({
+                        type: 'GET',
+                        url: '/api/nodes/lookup'
+                    });
+                    rqst.done(function(rs){
+                        that.model.set({persistentDrives: _.map(rs['data'], function(i){return {pdName: i, pdSize: null}})});
+                        row.isPersistent = true;
+                        row.persistentDisk = that.model.get('persistentDrives')[0];
+                        that.render();
+                    });
+                }
+                else {
+                    row.isPersistent = true;
+                    row.persistentDisk = that.model.get('persistentDrives')[0];
+                    that.render();
+                }
+            }
+        },
+        
         removePortEntry: function(evt){
             evt.stopPropagation();
             var tgt = $(evt.target),
@@ -868,8 +934,31 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
         },
 
+        goNext: function(evt){
+            var vm = this.model.get('volumeMounts');
+            for (var i=0; i<vm.length; i++) {
+                if (!vm[i].mountPath) {
+                    alert('mount path must be set!');
+                    return;
+                }
+                var itemName = vm[i].mountPath.charAt(0) === '/' ? vm[i].mountPath.substring(1) : vm[i].mountPath;
+                vm[i].name = itemName.replace(new RegExp('/','g'), '-') + _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
+            }
+            this.trigger('step:envconf', this);
+        },
+        
         onRender: function(){
-            var that = this;
+            var that = this,
+                disks = [];
+            
+            if (this.model.has('persistentDrives')) {
+                disks = _.map(this.model.get('persistentDrives'), function(i){
+                    var item = {value: i.pdName, text: i.pdName};
+                    if (i.hasOwnProperty('used')) { item.disabled = true; }
+                    return item;
+                });
+            }
+            
             this.ui.ieditable.editable({
                 type: 'text',
                 mode: 'inline',
@@ -880,9 +969,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
                     if (className !== undefined) {
                         that.model.get('ports')[index][className] = parseInt(newValue);
-                    }
-                    if (item.hasClass('name')) {
-                        that.model.get('volumeMounts')[index]['name'] = newValue;
                     }
                     else if (item.hasClass('mountPath')) {
                         that.model.get('volumeMounts')[index]['mountPath'] = newValue;
@@ -897,6 +983,18 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 success: function(response, newValue) {
                     var index = $(this).closest('tr').index();
                     that.model.get('ports')[index]['protocol'] = newValue;
+                }
+            });
+            this.ui.iveditable.editable({
+                type: 'select',
+                value: this.hasOwnProperty('persistentDefault') ? this.persistentDefault : disks.length ? disks[0].text : null,
+                source: disks,
+                mode: 'inline',
+                success: function(response, newValue) {
+                    var index = $(this).closest('tr').index(),
+                        entry = that.model.get('volumeMounts')[index],
+                        pEntry = _.filter(that.model.get('persistentDrives'), function(i){ return i.pdName === newValue; })[0];
+                    entry['persistentDisk'] = pEntry;
                 }
             });
         }

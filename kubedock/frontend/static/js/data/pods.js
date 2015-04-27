@@ -54,7 +54,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
             }
             if (data.hasOwnProperty('volumeMounts')) {
                 _.each(data['volumeMounts'], function(m){
-                    container['volumeMounts'].push({name: null, mountPath: m, readOnly: false})
+                    container['volumeMounts'].push({name: null, mountPath: m, readOnly: false, isPersistent: false})
                 });
             }
             _.each(['workingDir', 'command'], function(i){

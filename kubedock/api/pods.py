@@ -1,3 +1,4 @@
+import base64
 import json
 import string
 import random
@@ -94,6 +95,8 @@ def create_item():
     for container in data.get('containers', []):
         if container.get('command'):
             container['command'] = parse_cmd_string(container['command'][0])
+
+    compose_persistent(data)
 
     if set_public_ip and public_ip:
         data['public_ip'] = public_ip
@@ -650,3 +653,19 @@ def add_to_output(old_config, old_output):
         for c_container, k_container in zip(conf_containers, kub_containers):
             k_container['kubes'] = c_container['kubes']
     return old_output
+
+
+def compose_persistent(data):
+    if not data.get('volumes', False):
+        return
+    path = 'pd.sh'
+    for volume in data['volumes']:
+        if 'persistentDisk' not in volume['source']:
+            continue
+        name = volume['source']['persistentDisk']['pdName']
+        size = volume['source']['persistentDisk']['pdSize']
+        if size is None:
+            params = base64.b64encode("{0};{1};{2}".format('mount', name))
+        else:
+            params = base64.b64encode("{0};{1};{2}".format('create', name, size))
+        volume['source'] = {'scriptableDisk': {'pathToScript': path, 'params': params}}

@@ -99,9 +99,9 @@ if [ -z "$MASTER_IP" ];then
     MASTER_IP=$DEFAULT_MASTER_IP
 fi
 
-read -p "Enter a node interface for binding to public IPs [$DEFAULT_IFACE]: " NODE_TOBIND_EXTERNAL_IP
-if [ -z "$NODE_TOBIND_EXTERNAL_IP" ];then
-    NODE_TOBIND_EXTERNAL_IP=$DEFAULT_IFACE
+read -p "Enter a node interface for binding to public IPs [$DEFAULT_IFACE]: " NODE_TOBIND_EXTERNAL_IPS
+if [ -z "$NODE_TOBIND_EXTERNAL_IPS" ];then
+    NODE_TOBIND_EXTERNAL_IPS=$DEFAULT_IFACE
 fi
 
 read -p "Enter master interface for flanneld [$DEFAULT_IFACE]: " MASTER_TOBIND_FLANNEL
@@ -288,7 +288,7 @@ chown $WEBAPP_USER $KUBERNETES_CONF_DIR/kubelet_token.dat
 
 
 #9. Configure kubernetes
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--runtime_config=api/v1beta3 --token_auth_file=$KNOWN_TOKENS_FILE --public_address_override=$MASTER_IP\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --public_address_override=$MASTER_IP\"|}" $KUBERNETES_CONF_DIR/apiserver
 # This plugins enabled by default
 # sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceAutoProvision,LimitRanger,ResourceQuota||}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBERNETES_CONF_DIR/controller-manager
@@ -500,5 +500,6 @@ chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR
 
 # ======================================================================
 echo "WARNING: Firewalld was disabled. You need to configure it to work right"
-echo "WARNING: $WEBAPP_USER user will have ssh access to nodes as 'root'"
+echo "WARNING: $WEBAPP_USER need ssh access to nodes as 'root'"
+echo "We will use $TGT_PATH Please, copy it to all your nodes with ssh-copy-id"
 echo "Installation Completed. KuberDock is available at https://$MASTER_IP/"

@@ -5,6 +5,7 @@ KUBERNETES_CONF_DIR=/etc/kubernetes
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
+echo "Using MASTER_IP={{ master_ip }}"
 
 # TODO change rules, not disable
 echo "Setting up firewall rules..."
@@ -18,10 +19,6 @@ yum install -y ntp
 ntpd -gq
 systemctl start ntpd; systemctl enable ntpd
 ntpq -p
-
-
-
-echo "Using MASTER_IP={{ master_ip }}"
 
 
 
@@ -46,7 +43,7 @@ rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLin
 # 2. install components
 echo "Installing kubernetes..."
 #yum -y install kubernetes
-yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.14.2-0.1.gitfce3e5a.el7.centos.x86_64.rpm
+yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.15.0-4.el7.centos.1.x86_64.rpm
 yum -y install flannel cadvisor
 
 

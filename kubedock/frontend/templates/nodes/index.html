@@ -68,7 +68,7 @@
         <% break; case 'pending': %>
         <div class="details">Node is in installation progress</div>
         <% break; case 'troubles': %>
-        <div>
+        <div class="reason">
         <% _.each(reason.split('\n'), function(line){ %>
             <p><%- line %></p>
         <% }) %>
@@ -364,9 +364,9 @@
     <script type="text/template" id="node-final-step-template">
         <div id="address-spinner"></div>
         <div class="col-md-12 clearfix no-padding information">
-            <label><i>Keep in mind please</i></label>
+            <label>Keep in mind please</label>
             <div>
-                To successfully add a node you must first create a pair of keys with <i>ssh-keygen</i> and then place them to a node to be added with <i>ssh-copy-id</i> under user <i>nginx</i>
+                To successfully add a node you must first create a pair of keys with ssh-keygen and then place them to a node to be added with ssh-copy-id under user nginx
             </div>
         </div>
         <div class="form-field col-lg-6">
@@ -409,7 +409,6 @@
             <button id="detailedNode" title="<%- hostname %>">
                 <%- hostname ? hostname : ip ? ip : 'Not specified' %>
             </button>
-            <span id="deleteNode" title="Remove node">&nbsp;</span>
         </td>
         <td><%- ip %></td>
         <td>
@@ -425,7 +424,10 @@
 {#        <td>50/100</td>#}
 {#        <td>51%</td>#}
 {#        <td>20 (100)</td>#}
-        <td><%- status %></td>
+        <td>
+            <%- status %>
+            <span id="deleteNode" class="pull-right" title="Remove <%- hostname %> node">&nbsp;</span>
+        </td>
     </script>
 
     <script type="text/template" id="nodes-list-template">

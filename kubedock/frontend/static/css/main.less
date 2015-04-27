@@ -151,11 +151,12 @@ body{
         padding: 8px 0 9px;
         margin-bottom: 40px;
         background-color: #466eb1;
+        font-size: 0;
         #breadcrumbs{
             .clearfix;
             .breadcrumb{
                 float: left;
-                line-height: 34px;
+                line-height: 26px;
                 margin-left: 10px;
                 .border-radius(0);
                 padding: 0;
@@ -224,6 +225,8 @@ body{
             .control-group{
                 .clearfix;
                 float: right;
+                height: 34px;
+                position: relative;
                 #add_node, #nav-search, #add_user, #add_pod{
                     float: left;
                 }
@@ -253,7 +256,7 @@ body{
                         }
                     }
                 }
-                button{
+                button, a{
                     outline: 0;
                     border: none;
                     color: #ffffff;
@@ -330,8 +333,8 @@ body{
                     }
                 }
                 #nav-search{
-                    position: relative;
                     float: right;
+                    position: relative;
                     #nav-search-input{
                         .border-radius(3px);
                         .box-sizing(border-box);
@@ -339,6 +342,7 @@ body{
                         outline: 0;
                         width: 212px;
                         height: 34px;
+                        font-size: 14px;
                         padding: 0 10px 0 40px;
                     }
                     .nav-search-icon{

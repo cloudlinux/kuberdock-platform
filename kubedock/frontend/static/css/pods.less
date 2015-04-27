@@ -82,12 +82,15 @@
                 &.index{
                     color: #b1b9c0;
                 }
+                a, span, button{
+                    min-height: 12px;
+                    display: inline-block;
+                    vertical-align: top;
+                }
                 span{
                     &.more-ico{
                         width: 20px;
                         height: 5px;
-                        display: inline-block;
-                        vertical-align: middle;
                         background: url('../img/small-circles.png') 0 0 no-repeat;
                         &:hover{
                             cursor: default;
@@ -134,19 +137,19 @@
                     }
                 }
                 .start-btn, .stop-btn, .editPod, .terminate-btn{
-                    top: 4px;
+                    top: 2px;
                     left: 7px;
                     width: 20px;
                     height: 17px;
                     font-size: 0;
                     position: relative;
-                    display: inline-table;
+                    display: inline-block;
                     &:hover{
                         cursor: pointer;
                     }
                 }
                 .editPod{
-                    display: inline-table;
+                    display: inline-block;
                 }
                 .tooltip.bottom{
                     .opacity(1);

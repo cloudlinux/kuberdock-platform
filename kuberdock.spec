@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 31%{?dist}.cloudlinux
+Release: 32%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -13,7 +13,7 @@ Requires: influxdb
 Requires: redis
 Requires: postgresql-server
 Requires: etcd == 2.0.9-1.el7.centos
-Requires: kubernetes == 0.15.0-4.el7.centos.1
+Requires: kubernetes >= 0.15.0-4.el7.centos.1
 Requires: flannel >= 0.3.0
 Requires: dnsmasq >= 2.66
 # For semanage:
@@ -128,6 +128,16 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Mon Apr 27 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.1-32
+- Show true container state on container page
+- Add node troubles reason
+- Last small gevent related fixes
+- Fix for no node condition
+- Fix typo in deploy.sh with externalIPs feature.
+- Change to generateName in services
+- Design fixes AC: 270, 275, 279, 280, 284, 285, 286, 287
+- Added persistent drive script
+
 * Fri Apr 24 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-31
 - gevent fixes
 - deploy.sh improvemets

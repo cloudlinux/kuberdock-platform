@@ -10,7 +10,7 @@ from ..billing.models import Package
 
 class Pod(db.Model):
     __tablename__ = 'pods'
-    
+
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
     name = db.Column(db.String(length=255), unique=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -28,6 +28,10 @@ class Pod(db.Model):
         return sum(
             [c.get('kubes', 1) for c in json.loads(self.config)['containers']]
         )
+
+    @property
+    def is_deleted(self):
+        return self.status == 'deleted'
 
     @property
     def containers_count(self):

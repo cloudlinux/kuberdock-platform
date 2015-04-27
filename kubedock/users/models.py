@@ -67,7 +67,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def last_activity(self):
         return get_user_last_activity(self.id)
 
-    def pods_to_dict(self):
+    def pods_to_dict(self, exclude=None):
         states = lambda x: dict(
             pod_id=x.pod_id,
             container_name=x.container_name,
@@ -88,7 +88,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 kubes=p.kubes,
                 containers_count=p.containers_count,
                 states=[states(state) for state in p.states]
-            ) for p in self.pods
+            ) for p in self.pods if not p.is_deleted
         ]
 
     def get_settings(self):

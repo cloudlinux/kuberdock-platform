@@ -593,7 +593,7 @@
                             <li>
                                 <a href="/#pods/<%- parentID %>">My best Pod</a>
                             </li>
-                            <li class="active"><%- nodeName %></li>
+                            <li class="active">Container name</li>
                         </ul>
                     </div>
                 </div>
@@ -704,7 +704,7 @@
                         <li>
                             <a href="/#pods/<%- parentID %>">My best Pod</a>
                         </li>
-                        <li class="active">nodeName</li>
+                        <li class="active">Container name</li>
                     </ul>
                 </div>
             </div>
@@ -952,28 +952,18 @@
                 </div>
                 <div id="details_content" class="col-sm-9 set-up-image clearfix no-padding">
                     <div id="tab-content" class="environment clearfix">
-                        <!-- <label>Image variables</label>
                         <div class="col-sm-12 no-padding fields">
                             <div class="col-sm-4 no-padding">
-                                <input type="text" placeholder="Variable name value">
+                                <label>Name</label>
                             </div>
                             <div class="col-sm-4 no-padding">
-                                <input type="text">
+                                <label>Value</label>
                             </div>
                         </div>
-                        <div class="col-sm-12 no-padding fields">
-                            <div class="col-sm-4 no-padding">
-                                <input type="text" placeholder="Variable name value">
-                            </div>
-                            <div class="col-sm-4 no-padding">
-                                <input type="text">
-                            </div>
-                        </div> -->
-                        <div class="col-xs-12 no-padding bottom"><label>Setup environment variables</label></div>
                         <% _.each(env, function(e){ %>
                         <div class="col-sm-12 no-padding fields">
                             <div class="col-sm-4 no-padding">
-                                <input type="text" placeholder="Variable name value" value="<%- e.name ? e.name : '' %>">
+                                <input type="text" value="<%- e.name ? e.name : '' %>">
                             </div>
                             <div class="col-sm-4 no-padding">
                                 <input type="text" value="<%- e.value ? e.value : '' %>">
@@ -1168,6 +1158,7 @@
                         <li>
                             <a href="/#pods/<%- parentID %>">My best Pod</a>
                         </li>
+                        <li class="active">Container name</li>
                     </ul>
                 </div>
             </div>
@@ -1231,13 +1222,13 @@
                                             Replica 2
                                         </label>
                                     </span>
-                                </div> -->
+                                </div>
                                 <p class="name first">CPU graph</p>
                                 <div class="cpu-graph"></div>
                                 <p class="name">Memory graph</p>
                                 <div class="memory-graph"></div>
                                 <p class="name">Bandwith IN/OUT graph</p>
-                                <div class="bandwith-graph"></div>
+                                <div class="bandwith-graph"></div> -->
                             </div>
                         </div>
                     </div>
@@ -1258,6 +1249,7 @@
                         <li>
                             <a href="/#pods/<%- parentID %>">My best Pod</a>
                         </li>
+                        <li class="active">Container name</li>
                     </ul>
                 </div>
             </div>
@@ -1265,7 +1257,7 @@
                 <div class="row">
                     <div class="col-sm-3 col-md-2 sidebar">
                         <ul class="nav nav-sidebar">
-                            <li role="presentation" class="stats go-to-logs active">Logs</li>
+                            <li role="presentation" class="stats active">Logs</li>
                             <li role="presentation" class="go-to-stats">Monitoring</li>
                             <!-- <li role="presentation" class="go-to-volumes ">Timelines</li> -->
                             <li role="presentation" class="configuration">

@@ -53,9 +53,9 @@ body{
             background-color: transparent;
         }
         .dropdown-menu{
-            .box-shadow(none);
-            .border-radius(5px);
-            border: 1px solid #bdc4c9;
+            .box-shadow( 0px 0px 2px 0px rgba(0, 0, 0, 0.3) );
+            .border-radius(0);
+            border: none;
             top: 33px;
             li{
                 a{
@@ -63,17 +63,37 @@ body{
                     font-size: 14px;
                     font-family: @regular;
                     text-decoration: none;
+                    border-left: 3px solid transparent;
                     &:hover{
                         color: #3197ee;
-                        background-color: transparent;
+                        border-color: #3197ee;
+                        background-color: #f5fafe;
+                    }
+                }
+                &.dropdown-submenu{
+                    a{
+                        &.dropdown-toggle{
+                            &:before{
+                                border-left-color: gray;
+                            }
+                        }
+                    }
+                    &.open{
+                        > a{
+                            .opacity (1);
+                            .box-shadow (none);
+                            background-color: #f5fafe;
+                            border-left-color: #3197ee;
+
+                        }
                     }
                 }
             }
             .dropdown-submenu > .dropdown-menu{
                 top: 0;
                 left: 100%;
-                margin-top: -6px;
-                margin-left: -4px;
+                margin-top: -5px;
+                margin-left: -3px;
             }
         }
         .dropdown{
@@ -227,7 +247,7 @@ body{
                 float: right;
                 height: 34px;
                 position: relative;
-                #add_node, #nav-search, #add_user, #add_pod{
+                #add_node, #nav-search, #add_user, #add_pod, #create_network{
                     float: left;
                 }
                 a{
@@ -268,7 +288,7 @@ body{
                     &:before{
                         position: absolute;
                     }
-                    &#add_node, &#add_user, &#login_this_user, &#add_pod{
+                    &#add_node, &#add_user, &#login_this_user, &#add_pod, &#create_network{
                         margin-right: 25px;
                         padding: 0 0 0 38px;
                         &:before{
@@ -279,7 +299,7 @@ body{
                             height: 21px;
                         }
                     }
-                    &#add_node, &#add_pod{
+                    &#add_node, &#add_pod, &#create_network{
                         &:before{
                             background: url('../img/add-one.png') 0 0 no-repeat;
                         }
@@ -669,5 +689,6 @@ body{
     @import "pods.less";
     @import "nodes.less";
     @import "users.less";
+    @import "ippool.less";
     @import "settings.less";
 }

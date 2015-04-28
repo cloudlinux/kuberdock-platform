@@ -850,7 +850,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
             this.render();
         },
-        
+
         cancelAddDrive: function(evt){
             evt.stopPropagation();
             if (this.hasOwnProperty('showPersistentAdd')) {
@@ -858,7 +858,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
             this.render();
         },
-        
+
         //toggleReadOnly: function(evt){
         //    evt.stopPropagation();
         //    index = $(evt.target).closest('tr').index()
@@ -915,7 +915,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }
             }
         },
-        
+
         removePortEntry: function(evt){
             evt.stopPropagation();
             var tgt = $(evt.target),
@@ -946,11 +946,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
             this.trigger('step:envconf', this);
         },
-        
+
         onRender: function(){
             var that = this,
                 disks = [];
-            
+
             if (this.model.has('persistentDrives')) {
                 disks = _.map(this.model.get('persistentDrives'), function(i){
                     var item = {value: i.pdName, text: i.pdName};
@@ -958,7 +958,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     return item;
                 });
             }
-            
+
             this.ui.ieditable.editable({
                 type: 'text',
                 mode: 'inline',
@@ -1204,7 +1204,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
     Views.WizardStatsSubView = Backbone.Marionette.CompositeView.extend({
         childView: Views.WizardStatsSubItemView,
-        childViewContainer: "div.container-stats",
+        childViewContainer: "div.container-stats #monitoring-page",
         template: '#wizard-set-container-stats-template',
         tagName: 'div',
 

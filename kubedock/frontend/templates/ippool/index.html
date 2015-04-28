@@ -14,50 +14,61 @@
 
     <div id="globalError"></div>
     <!-- contents container -->
-    <div id="contents" class="container"></div>
+    <div id="contents"></div>
 
     <script type="text/template" id="networks-list-template">
-        <button id="create_network" class="btn btn-success">Add network</button>
-        <hr>
-        <table class="table table-bordered">
-        <thead><tr>
-            <th>Network</th>
-            <th>Status</th>
-        </tr></thead>
-        <tbody></tbody>
-        </table>
+        <div id="networksList">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li class="active">
+                            Network
+                        </li>
+                    </ul>
+                    <div class="control-group">
+                        <button id="create_network">Add network</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <table class="table table-bordered">
+            <thead><tr>
+                <th>Network</th>
+                <th>IP</th>
+            </tr></thead>
+            <tbody></tbody>
+            </table>
+        </div>
     </script>
 
     <script type="text/template" id="network-create-template">
-        <a href="{{ url_for('ippool.index') }}">
-            <i class="glyphicon glyphicon-chevron-left"></i>
-            back to the networks list
-        </a><hr>
-
-        <div id="network-contents">
-            <div class="row">
-                <div class="col-md-3">
-                    <div id="network-header">
-                        <h1>Network form</h1>
-                    </div>
+        <div id="createNetwork">
+            <div class="breadcrumbs-wrapper">
+                <div class="container breadcrumbs" id="breadcrumbs">
+                    <ul class="breadcrumb">
+                        <li>
+                            <a href="{{ url_for('ippool.index') }}">Network</a>
+                        </li>
+                        <li class="active">Add network</li>
+                    </ul>
                 </div>
+            </div>
+            <div id="network-contents" class="container">
                 <div class="row">
-                    <div id="network-controls" class="col-md-2">
+                    <div id="network-controls" class="col-sm-9 col-sm-offset-3 no-padding">
                         <div class="form-group">
                             <label for="network">Network</label>
-                            <input type="text" name="network" class="form-control masked-ip"
-                                   id="network" placeholder="1.2.3.4/32">
+                            <input type="text" name="network" class="masked-ip" id="network" placeholder="1.2.3.4/32">
                         </div>
-                    </div>
-                    <div id="network-controls" class="col-md-3">
                         <div class="form-group">
                             <label for="network">Exclude IPs</label>
-                            <input type="text" name="autoblock" class="form-control" placeholder="eg 2,3,4 or 2-4 or both">
+                            <input type="text" name="autoblock" class="" placeholder="eg 2,3,4 or 2-4 or both">
                         </div>
-                        <button id="network-add-btn" class="btn btn-success"
-                                type="submit">
-                            ADD
-                        </button>
+                    </div>
+                    <div class="buttons pull-right">
+                        <a class="gray" href="{{ url_for('ippool.index') }}">Cancel</a>
+                        <button id="network-add-btn" type="submit">Add</button>
                     </div>
                 </div>
             </div>

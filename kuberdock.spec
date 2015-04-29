@@ -76,6 +76,7 @@ mkdir -p %{buildroot}/var/opt/kuberdock
 mkdir -p %{buildroot}%{_sysconfdir}/uwsgi/vassals
 mkdir -p %{buildroot}%{_sysconfdir}/nginx/conf.d/
 mkdir -p %{buildroot}%{_sysconfdir}/nginx/ssl/
+mkdir -p %{buildroot}/var/log/kuberdock
 cp -r * %{buildroot}/var/opt/kuberdock
 %{__install} -D -m 0644 conf/kuberdock.ini %{buildroot}%{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
@@ -123,6 +124,7 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %files
 %defattr(-,root,root)
 %attr (-,nginx,nginx) /var/opt/kuberdock
+%attr (-,nginx,nginx) /var/log/kuberdock
 %dir %{_sysconfdir}/nginx/ssl
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %config %{_sysconfdir}/uwsgi/vassals/kuberdock.ini

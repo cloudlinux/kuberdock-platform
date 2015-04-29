@@ -394,6 +394,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 },
                 error: function(model, response, options, data){
                     preloader.hide();
+                    that.render();
                     modelError(response);
                 }
             });
@@ -1267,8 +1268,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'div',
 
         ui: {
-            ieditable: '.ieditable',
-            textarea: '.container-logs'
+            ieditable : '.ieditable',
+            textarea  : '.container-logs',
+            stopItem  : '#stopContainer',
+            startItem : '#startContainer',
+        },
+
+        events: {
+            'click @ui.stopItem'  : 'stopItem',
+            'click @ui.startItem' : 'startItem',
         },
 
         templateHelpers: function(){
@@ -1317,9 +1325,45 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             $.proxy(get_logs, this)();
         },
 
+        command: function(evt, cmd){
+            var that = this,
+                preloader = $('#page-preloader');
+            preloader.show();
+            evt.stopPropagation();
+            var model = initPodCollection.fullCollection.get(
+                this.model.get('parentID')),
+                _containers = [],
+                host = null;
+            _.each(model.get('dockers'), function(itm){
+                if(itm.info.imageID == that.model.get('imageID'))
+                    _containers.push(itm.info.containerID);
+                    host = itm.host;
+            });
+
+            $.ajax({
+                url: '/api/pods/containers',
+                data: {action: cmd, host: host, containers: _containers.join(','),
+                       pod_uuid: model.get('id')},
+                type: 'PUT',
+                dataType: 'JSON',
+                success: function(rs){
+                    preloader.hide();
+                },
+                error: function(xhr){
+                    modelError(xhr);
+                }
+            });
+        },
+
+        startItem: function(evt){
+            this.command(evt, 'start');
+        },
+        stopItem: function(evt){
+            this.command(evt, 'stop');
+        },
         onBeforeDestroy: function () {
             clearTimeout(this.model.get('timeout'));
-        }
+        },
     });
 
     Views.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({

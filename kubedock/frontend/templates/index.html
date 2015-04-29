@@ -76,7 +76,7 @@
                     <span class="<%- state_repr %>"><%- state_repr %></span>
                     <span class="stop-btn">Stop</span>
                 <% } else { %>
-                    <span><%- state_repr %></span>
+                    <span class="<%- state_repr %>"><%- state_repr %></span>
                     <span class="start-btn">Start</span>
                 <% } %>
             </td>
@@ -177,7 +177,7 @@
                         <span class="<%- status %>"><%- status %></span>
                     <% } %>
                 <% } else { %>
-                    <span class="pending">pending</span>
+                    <span class="stopped">stopped</span>
                 <% } %>
             </td>
             <td><%- kubeTypes[kube_type].name %> (<%- kubes %>)
@@ -615,9 +615,13 @@
                         </div>
                         <div id="details_content" class="col-sm-10 no-padding configuration-general-tab">
                             <div class="status-line <%- state_repr %>">Status: <%- state_repr %>
-                                <span>Stop</span>
-                                <span>Terminate</span>
-                                <span>Redeploy</span>
+                                <% if (state_repr == "running"){ %>
+                                    <span id="stopContainer">Stop</span>
+                                <% } else  if (state_repr == "stopped"){ %>
+                                    <span id="startContainer">Start</span>
+                                <% } %>
+                                <!-- <span>Terminate</span> -->
+                                <!-- <span>Redeploy</span> -->
                             </div>
                             <div id="tab-content">
                                 <div class="col-xs-10">
@@ -1182,9 +1186,13 @@
                     <div id="details_content" class="col-xs-10 monitoring-tab no-padding">
                         <div id="tab-content">
                             <div class="status-line <%- state_repr %> curent-margin">Status: <%- state_repr %>
-                                <span>Stop</span>
-                                <span>Terminate</span>
-                                <span>Redeploy</span>
+                                <% if (state_repr == "running"){ %>
+                                    <span id="stopContainer">Stop</span>
+                                <% } else  if (state_repr == "stopped"){ %>
+                                    <span id="startContainer">Start</span>
+                                <% } %>
+                                <!-- <span>Terminate</span> -->
+                                <!-- <span>Redeploy</span> -->
                             </div>
                             <div class="col-xs-10">
                                 <div class="info col-xs-6">
@@ -1273,9 +1281,13 @@
                     <div id="details_content" class="col-xs-10 logs-tab no-padding">
                         <div id="tab-content">
                             <div class="status-line <%- state_repr %> curent-margin">Status: <%- state_repr %>
-                                <span>Stop</span>
-                                <span>Terminate</span>
-                                <span>Redeploy</span>
+                                <% if (state_repr == "running"){ %>
+                                    <span id="stopContainer">Stop</span>
+                                <% } else  if (state_repr == "stopped"){ %>
+                                    <span id="startContainer">Start</span>
+                                <% } %>
+                                <!-- <span>Terminate</span> -->
+                                <!-- <span>Redeploy</span> -->
                             </div>
                             <div class="col-xs-10">
                                 <div class="info col-xs-6">

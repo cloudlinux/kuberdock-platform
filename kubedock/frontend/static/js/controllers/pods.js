@@ -214,9 +214,9 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 //        return mp['name'] !== null;
                 //    });
                 //});
-                
+
                 if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
-                
+
                 initPodCollection.fullCollection.create(data, {
                     success: function(){
                         routes.navigate('pods');
@@ -299,7 +299,7 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                         model.attributes['set_public_ip'] = true;
                     }
                 });
-                
+
                 // strip persistentDrives from a container if any
                 if (data.attributes.hasOwnProperty('persistentDrives')) {
                     if (!model.has('persistentDrives')) {
@@ -307,13 +307,13 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                     }
                     delete data.attributes.persistentDrives;
                 }
-                
+
                 // Here we populate a pod model container
                 var container = model.getContainerByImage(model.get('lastAddedImage'));
                 _.each(data.attributes, function(value, key, obj){
                     this.container[key] = value;
                 }, {container: container});
-                
+
                 var rqst = $.ajax({
                     type: 'GET',
                     url: '/api/ippool/getFreeHost'

@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 33%{?dist}.cloudlinux
+Release: 34%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -131,6 +131,14 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Wed Apr 29 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-34
+- AC-292 Node saves install log and shows it if in troubles state.
+- Design fixes AC: 266, 279, 281, 288, 299
+- Design fixes AC: 271, 276, 279, 297, 312, 31
+- Remove manifests from kubelet config as we no longer use them
+- AC-262: Run service pods as KuberDock Internal user
+- Reworked WHMCS API
+
 * Mon Apr 27 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-33
 - Added preliminary persistent storage implementation
 

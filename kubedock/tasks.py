@@ -186,7 +186,8 @@ def parse_pods_statuses(data):
     for pod in Pod.query.filter(Pod.status != 'deleted').values(
             Pod.name, Pod.id, Pod.config):
         kubes = {}
-        for container in json.loads(pod[2])['containers']:
+        containers = json.loads(pod[2]).get('containers', [])
+        for container in containers:
             if 'kubes' in container:
                 kubes[container['name']] = container['kubes']
         db_pods[pod[0]] = {'uid': pod[1], 'kubes': kubes}

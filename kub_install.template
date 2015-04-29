@@ -131,8 +131,8 @@ systemctl restart rsyslog
 
 
 
-# 8. setup service pods
-echo 'Setup service pods...'
+# 8. prepare things for logging pod
+echo 'Preparing logs collection...'
 
 # pull images (update if already exists)
 systemctl enable docker; systemctl restart docker
@@ -141,14 +141,12 @@ docker pull kuberdock/fluentd:1.0 > /dev/null 2>&1 &
 docker pull kuberdock/elasticsearch:1.0 > /dev/null 2>&1 &
 
 if [ -d /etc/kubernetes/manifests ]; then
-  # remove old pods if exists
-  rm -f /etc/kubernetes/manifests/kuberdock-*.manifest
-  for c in $(docker ps -a | grep 'kuberdock-.*\.file' | awk '{print $1}'); do
-    docker rm -f $c > /dev/null 2>&1
-  done
-else
-  mkdir /etc/kubernetes/manifests
+  rm -rf /etc/kubernetes/manifests/
 fi
+
+for c in $(docker ps -a | grep 'kuberdock-.*\.file' | awk '{print $1}'); do
+  docker rm -f $c > /dev/null 2>&1
+done
 
 # fix elasticsearch home directory ownership (if ES was running as service)
 if [ -d /var/lib/elasticsearch ]; then
@@ -162,53 +160,6 @@ if [ ! -d /var/lib/docker/containers ]; then
   mkdir -p /var/lib/docker/containers
 fi
 chcon -Rt svirt_sandbox_file_t /var/lib/docker/containers
-
-
-cat > /etc/kubernetes/manifests/kuberdock-logs.manifest << EOF
-version: v1beta2
-id: kuberdock-logs
-containers:
-  - name: fluentd
-    image: kuberdock/fluentd:1.0
-    env:
-      - name: NODENAME
-        value: $(hostname)
-      - name: ES_HOST
-        value: 127.0.0.1
-    ports:
-      - name: syslog
-        containerPort: 5140
-        hostPort: 5140
-        protocol: UDP
-    volumeMounts:
-      - name: docker-containers
-        mountPath: /var/lib/docker/containers
-  - name: elasticsearch
-    image: kuberdock/elasticsearch:1.0
-    env:
-      - name: MASTER
-        value: {{ master_ip }}
-    ports:
-      - name: es-port
-        containerPort: 9200
-        hostPort: 9200
-      - name: es-transport-port
-        containerPort: 9300
-        hostPort: 9300
-    volumeMounts:
-      - name: es-persistent-storage
-        mountPath: /elasticsearch/data
-volumes:
-  - name: docker-containers
-    source:
-      hostDir:
-        path: /var/lib/docker/containers
-  - name: es-persistent-storage
-    source:
-      hostDir:
-        path: /var/lib/elasticsearch
-EOF
-
 
 
 # 9. enable services

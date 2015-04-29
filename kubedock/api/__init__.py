@@ -89,11 +89,6 @@ def filter_event(data):
     metadata = data['object']['metadata']
     if metadata['name'] in ('kubernetes', 'kubernetes-ro'):
         return None
-    try:
-        if metadata['labels']['kubernetes.io/cluster-service'] == 'true':
-            return None
-    except KeyError:
-        pass
 
     return data
 

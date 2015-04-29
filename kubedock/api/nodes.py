@@ -1,19 +1,135 @@
 from flask import Blueprint, request, jsonify
+import json
+import math
 import operator
 import socket
+from uuid import uuid4
 from .. import tasks
-from ..models import Node
+from ..models import Node, User, Pod
 from ..core import db
 from ..rbac import check_permission
 from ..utils import login_required_or_basic
 from ..validation import check_int_id, check_node_data, check_hostname
-from ..billing import Kube
+from ..billing import Kube, kubes_to_limits
+from ..settings import MASTER_IP
 from . import APIError
+from .pods import make_config
 from fabric.api import run, settings, env
 from fabric.tasks import execute
 
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
+
+
+KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
+
+
+def get_kuberdock_logs_pod_name(node):
+    return 'kuberdock-logs-{0}'.format(node)
+
+
+def get_kuberdock_logs_config(node, name, kube_type, kubes, uuid, master_ip):
+    return {
+        "node": node,
+        "lastAddedImage": "kuberdock/elasticsearch",
+        "name": name,
+        "replicas": 1,
+        "cluster": False,
+        "restartPolicy": {
+            "always": {}
+        },
+        "volumes": [
+            {
+                "name": "docker-containers",
+                "source": {
+                    "hostDir": {
+                        "path": "/var/lib/docker/containers"
+                    }
+                }
+            },
+            {
+                "name": "es-persistent-storage",
+                "source": {
+                    "hostDir": {
+                        "path": "/var/lib/elasticsearch"
+                    }
+                }
+            }
+        ],
+        "kube_type": kube_type,
+        "id": uuid,
+        "containers": [
+            {
+                "terminationMessagePath": None,
+                "name": "fluentd",
+                "workingDir": "/root",
+                "image": "kuberdock/fluentd:1.0",
+                "volumeMounts": [
+                    {
+                        "readOnly": False,
+                        "name": "docker-containers",
+                        "mountPath": "/var/lib/docker/containers"
+                    }
+                ],
+                "command": ["./run.sh"],
+                "env": [
+                    {
+                        "name": "NODENAME",
+                        "value": node
+                    },
+                    {
+                        "name": "ES_HOST",
+                        "value": "127.0.0.1"
+                    }
+                ],
+                "ports": [
+                    {
+                        "isPublic": False,
+                        "protocol": "udp",
+                        "containerPort": 5140,
+                        "hostPort": 5140
+                    }
+                ],
+                "kubes": kubes
+            },
+            {
+                "terminationMessagePath": None,
+                "name": "elasticsearch",
+                "workingDir": "",
+                "image": "kuberdock/elasticsearch:1.0",
+                "volumeMounts": [
+                    {
+                        "readOnly": False,
+                        "name": "es-persistent-storage",
+                        "mountPath": "/elasticsearch/data"
+                    }
+                ],
+                "command": ["/elasticsearch/run.sh"],
+                "env": [
+                    {
+                        "name": "MASTER",
+                        "value": master_ip
+                    }
+                ],
+                "ports": [
+                    {
+                        "isPublic": False,
+                        "protocol": "tcp",
+                        "containerPort": 9200,
+                        "hostPort": 9200
+                    },
+                    {
+                        "isPublic": False,
+                        "protocol": "tcp",
+                        "containerPort": 9300,
+                        "hostPort": 9300
+                    }
+                ],
+                "kubes": kubes
+            }
+        ],
+        "portalIP": None
+    }
 
 
 def _node_is_active(x):
@@ -142,10 +258,34 @@ def create_item():
     if not m:
         kube = Kube.query.get(data.get('kube_type', 0))
         m = Node(ip=data['ip'], hostname=data['hostname'], kube=kube)
+        logs_kubes = 1
+        node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
+        logs_memory_limit = node_resources['limits']['memory']
+        if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
+            logs_kubes = int(math.ceil(
+                float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
+            ))
+        temp_uuid = str(uuid4())
+        ku = User.query.filter_by(username='kuberdock-internal').first()
+        logs_id = get_kuberdock_logs_pod_name(data['hostname'])
+        logs_config = get_kuberdock_logs_config(data['hostname'], logs_id,
+                                                kube.id, logs_kubes, temp_uuid,
+                                                MASTER_IP)
+        config = make_config(logs_config, logs_id)
+
+        logs_pod = Pod(
+            name=logs_id,
+            config=json.dumps(logs_config),
+            id=temp_uuid,
+            status='pending',
+            owner=ku,
+        )
         db.session.add(m)
+        db.session.add(logs_pod)
         db.session.commit()
         r = tasks.add_new_node.delay(m.hostname, kube.id)
         # r.wait()                              # maybe result?
+        tasks.create_containers_nodelay(config)
         data.update({'id': m.id})
         return jsonify({'status': 'OK', 'data': data})
     else:
@@ -183,6 +323,12 @@ def put_item(node_id):
 def delete_item(node_id):
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)
+    logs_pod_name = get_kuberdock_logs_pod_name(m.hostname)
+    logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name).first()
+    if logs_pod:
+        logs_pod.delete()
+        db.session.commit()
+    tasks.delete_pod_nodelay(logs_pod_name)
     if m:
         db.session.delete(m)
         db.session.commit()

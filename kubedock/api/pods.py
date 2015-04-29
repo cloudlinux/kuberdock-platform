@@ -245,8 +245,7 @@ def delete_item(uuid):
     except KeyError, e:
         raise APIError('Key not found (%s)' % (e.message,))
 
-    item.name += ('__' + ''.join(random.sample(string.lowercase + string.digits, 8)))
-    item.status = 'deleted'
+    item.delete()
     db.session.commit()
     return jsonify({'status': 'OK'})
 

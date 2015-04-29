@@ -1,5 +1,7 @@
 import json
 import ipaddress
+import random
+import string
 from sqlalchemy.dialects import postgresql
 from flask import current_app
 from ..core import db
@@ -43,6 +45,10 @@ class Pod(db.Model):
         if package is None:
             return 0
         return self.kubes * package.amount
+
+    def delete(self):
+        self.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
+        self.status = 'deleted'
 
 
 class ContainerState(db.Model):

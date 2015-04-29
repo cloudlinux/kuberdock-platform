@@ -100,7 +100,15 @@ class User(BaseModelMixin, UserMixin, db.Model):
         self.settings = json.dumps(data)
         self.save()
 
-    def to_dict(self, include=None, exclude=None):
+    def to_dict(self):
+        valid = ['id', 'username', 'email', 'first_name', 'last_name',
+                 'middle_initials', 'active', 'suspended']
+        data = dict([(k, v) for k, v in vars(self).items() if k in valid])
+        data['rolename'] = self.role.rolename
+        data['package'] = self.package.name
+        return data
+
+    def to_full_dict(self, include=None, exclude=None):
         last_activity = self.last_activity
         package = self.package.name if self.package else None
         last_login = self.last_login

@@ -10,10 +10,10 @@ define(['marionette', 'paginator', 'utils'],
     UsersApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
         Data.UserModel = utils.BaseModel.extend({
-            urlRoot: '/api/users/'
+            urlRoot: '/api/users/full'
         });
         Data.UsersCollection = Backbone.Collection.extend({
-            url: '/api/users/',
+            url: '/api/users/full',
             model: Data.UserModel
         });
 
@@ -22,7 +22,7 @@ define(['marionette', 'paginator', 'utils'],
         });
 
         Data.UsersPageableCollection = PageableCollection.extend({
-            url: '/api/users',
+            url: '/api/users/full',
             model: Data.UserModel,
             parse: utils.unwrapper,
             mode: 'client',

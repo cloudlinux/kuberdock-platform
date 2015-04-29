@@ -36,8 +36,17 @@ def auth_another():
 
 
 @check_permission('get', 'users')
-def get_users_collection():
-    return [u.to_dict() for u in User.all()]
+def get_users_collection(username=None):
+    if username is None:
+        return [u.to_dict() for u in db.session.query(User).all()]
+    data = db.session.query(User).filter_by(username=username)
+    for i in data:
+        return i.to_dict()
+
+
+@check_permission('get', 'users')
+def get_full_users_collection():
+    return [u.to_full_dict() for u in User.all()]
 
 
 @check_permission('get', 'users')
@@ -48,9 +57,17 @@ def get_users_usernames(s):
 
 
 @users.route('/', methods=['GET'])
+@users.route('/<username>', methods=['GET'])
 @login_required_or_basic
-def get_list():
-    data = get_users_collection(request.args.get('s'))
+def get_list(username=None):
+    data = get_users_collection(username)
+    return jsonify({'status': 'OK', 'data': data})
+
+
+@users.route('/full', methods=['GET'])
+@login_required_or_basic
+def get_full_list():
+    data = get_full_users_collection()
     return jsonify({'status': 'OK', 'data': data})
 
 
@@ -200,7 +217,7 @@ def create_item():
     except (IntegrityError, InvalidRequestError):
         db.session.rollback()
         raise APIError('Conflict: User "{0}" already '
-                       'exists'.format(data['username']))
+                       'exists'.format(str(data)))
 
 
 @users.route('/<user_id>', methods=['PUT'])

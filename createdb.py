@@ -87,24 +87,24 @@ if __name__ == '__main__':
     # Create default packages and kubes
     # Package and Kube with id=0 are default
     # end must be undeletable (always present with id=0) for fallback
-    k1 = Kube(id=0, name='Standart kube', cpu=700, cpu_units='KCU',
+    k1 = Kube(id=0, name='Standard kube', cpu=700, cpu_units='KCU',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0)
     k2 = Kube(name='High CPU', cpu=1400, cpu_units='KCU',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0)
-    k3 = Kube(name='Hight memory', cpu=700, cpu_units='KCU',
+    k3 = Kube(name='High memory', cpu=700, cpu_units='KCU',
               memory=254, memory_units='MB', disk_space='0', total_traffic=0)
-    db.session.add_all([k1, k2, k3])
-    db.session.commit()
 
-    p1 = Package(id=0, name='basic', kube=k1, amount=1,
-                 currency='USD', period='hour')
-    p2 = Package(id=1, name='professional', kube=k2, amount=2,
-                 currency='USD', period='hour')
-    p3 = Package(id=2, name='enterprise', kube=k3, amount=3,
-                 currency='USD', period='hour')
-    e1 = ExtraTax(id=0, key='public_ip', name='public ip', amount=6,
-                  currency='USD', period='hour')
-    db.session.add_all([p1, p2, p3, e1])
+    p1 = Package(id=0, name='basic', amount=1, currency='USD', period='hour')
+    p2 = Package(id=1, name='professional', amount=2, currency='USD', period='hour')
+    p3 = Package(id=2, name='enterprise', amount=3,currency='USD', period='hour')
+    
+    p1.kubes.append(k1)
+    p2.kubes.append(k1)
+    p2.kubes.append(k2)
+    p3.kubes.append(k1)
+    p3.kubes.append(k2)
+    p3.kubes.append(k3)
+    
     db.session.commit()
 
     add_permissions()

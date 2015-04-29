@@ -13,7 +13,7 @@ from .utils import update_dict
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState
-from .settings import KUBE_API_VERSION
+from .settings import KUBE_API_VERSION, NODE_INSTALL_LOG_FILE
 
 from .utils import get_api_url
 
@@ -126,58 +126,61 @@ def remove_node_by_host(host):
 
 @celery.task()
 def add_new_node(host, kube_type):
-    send_event('install_logs',
-               'Connecting to {0} with ssh with user "root" ...'
-               .format(host))
-    ssh, error_message = ssh_connect(host)
-    if error_message:
-        send_event('install_logs', error_message)
-        return error_message
+    with open(NODE_INSTALL_LOG_FILE.format(host), 'wt') as log_file:
+        send_event('install_logs',
+                   'Connecting to {0} with ssh with user "root" ...'
+                   .format(host), log_file)
+        ssh, error_message = ssh_connect(host)
+        if error_message:
+            send_event('install_logs', error_message, log_file)
+            return error_message
 
-    sftp = ssh.open_sftp()
-    sftp.put('kub_install.sh', '/kub_install.sh')
-    sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
-    sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
-    sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
-    sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
-    sftp.close()
-    i, o, e = ssh.exec_command('bash /kub_install.sh')
-    s_time = time.time()
-    while not o.channel.exit_status_ready():
-        if o.channel.recv_ready():
-            for line in o.channel.recv(1024).split('\n'):
-                send_event('install_logs', line)
-        if (time.time() - s_time) > 15*60:   # 15 min timeout
-            err = 'Timeout during install. Installation has failed.'
-            send_event('install_logs', err)
-            ssh.exec_command('rm /kub_install.sh')
-            ssh.close()
-            return err
-        time.sleep(0.2)
-    s = o.channel.recv_exit_status()
-    ssh.exec_command('rm /kub_install.sh')
-    if s != 0:
-        res = 'Installation script error. Exit status: {0}. Error: {1}'\
-            .format(s, e.read())
-        send_event('install_logs', res)
-    else:
-        res = requests.post(get_api_url('nodes'),
-                            json={'id': host,
-                                  'apiVersion': KUBE_API_VERSION,
-                                  'externalID': host,
-                                  'labels': {
-                                      'kuberdock-node-hostname': host,
-                                      'kuberdock-kube-type': 'type_' +
-                                                             str(kube_type)
-                                  }
-                            })
-        if not res.ok:
-            send_event('install_logs', 'ERROR adding node.')
-            send_event('install_logs', res.text)
+        sftp = ssh.open_sftp()
+        sftp.put('kub_install.sh', '/kub_install.sh')
+        sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
+        sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
+        sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
+        sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
+        sftp.close()
+        i, o, e = ssh.exec_command('bash /kub_install.sh')
+        s_time = time.time()
+        while not o.channel.exit_status_ready():
+            if o.channel.recv_ready():
+                for line in o.channel.recv(1024).split('\n'):
+                    send_event('install_logs', line, log_file)
+            if (time.time() - s_time) > 15*60:   # 15 min timeout
+                err = 'Timeout during install. Installation has failed.'
+                send_event('install_logs', err, log_file)
+                ssh.exec_command('rm /kub_install.sh')
+                ssh.close()
+                return err
+            time.sleep(0.2)
+        s = o.channel.recv_exit_status()
+        ssh.exec_command('rm /kub_install.sh')
+        if s != 0:
+            res = 'Installation script error. Exit status: {0}. Error: {1}'\
+                .format(s, e.read())
+            send_event('install_logs', res, log_file)
         else:
-            send_event('install_logs', 'Adding Node completed successful.')
-            send_event('install_logs', '===================================')
-    ssh.close()
+            res = requests.post(get_api_url('nodes'),
+                                json={'id': host,
+                                      'apiVersion': KUBE_API_VERSION,
+                                      'externalID': host,
+                                      'labels': {
+                                          'kuberdock-node-hostname': host,
+                                          'kuberdock-kube-type': 'type_' +
+                                                                 str(kube_type)
+                                      }
+                                })
+            if not res.ok:
+                send_event('install_logs', 'ERROR adding node.', log_file)
+                send_event('install_logs', res.text, log_file)
+            else:
+                send_event('install_logs', 'Adding Node completed successful.',
+                           log_file)
+                send_event('install_logs',
+                           '===================================', log_file)
+        ssh.close()
     return res.json()
 
 

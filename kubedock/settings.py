@@ -54,6 +54,7 @@ CELERYBEAT_SCHEDULE = {
 ONLINE_LAST_MINUTES = 5
 
 LOCK_FILE_NAME = '/var/tmp/kuberdock.watch.pid'
+NODE_INSTALL_LOG_FILE = '/var/log/kuberdock/node-install-log-{0}.log'
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'

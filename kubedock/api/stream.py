@@ -21,9 +21,16 @@ def send_stream():
         mimetype='text/event-stream')
 
 
-def send_event(event_name, data, channel='common'):
+def send_event(event_name, data, to_file=None, channel='common'):
     conn = ConnectionPool.get_connection()
     conn.publish(channel, json.dumps([event_name, data]))
+    if to_file is not None:
+        try:
+            to_file.write(data)
+            to_file.write('\n')
+            to_file.flush()
+        except Exception as e:
+            print 'Error writing to log file', e.__repr__()
     
 
 #def get_events():

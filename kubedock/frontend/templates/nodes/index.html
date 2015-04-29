@@ -72,6 +72,11 @@
         <% _.each(reason.split('\n'), function(line){ %>
             <p><%- line %></p>
         <% }) %>
+        <br>
+        <p>Node installation log:</p>
+        <% _.each(install_log.split('\n'), function(line){ %>
+            <p><%- line %></p>
+        <% }) %>
         </div>
         <% break; } %>
     </script>
@@ -94,7 +99,7 @@
                         Kube type 2
                     </label>
                 </div>
-            </div
+            </div>
         </div>
     </script>
 

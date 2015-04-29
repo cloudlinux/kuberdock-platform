@@ -11,7 +11,7 @@ from ..rbac import check_permission
 from ..utils import login_required_or_basic
 from ..validation import check_int_id, check_node_data, check_hostname
 from ..billing import Kube, kubes_to_limits
-from ..settings import MASTER_IP
+from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP
 from . import APIError
 from .pods import make_config
 from fabric.api import run, settings, env
@@ -163,7 +163,6 @@ def get_nodes_collection():
                     "Hostname {0} can't be resolved to ip during auto-scan."
                     "Check /etc/hosts file for correct Node records"
                     .format(host))
-            # TODO add resources capacity etc from kub_hosts[host] if needed
             m = Node(ip=resolved_ip, hostname=host, kube=default_kube)
             db.session.add(m)
     if new_flag:
@@ -200,8 +199,19 @@ def get_nodes_collection():
             node_status = 'troubles'
             node_reason = (
                 'Node is not a member of KuberDock cluster\n'
-                'Possible reason is an error during installation'
+                'Possible reasons:\n'
+                '1) node is in installation progress\n'
+                '2) error during node installation\n'
+                '3) no connection between node and master(firewall, node reboot, etc.)\n'
             )
+
+        if node_status == 'running':
+            install_log = ''
+        else:
+            try:
+                install_log = open(NODE_INSTALL_LOG_FILE.format(node.hostname)).read()
+            except IOError:
+                install_log = 'No install log available for this node.'
 
         nodes_list.append({
             'id': node.id,
@@ -210,6 +220,7 @@ def get_nodes_collection():
             'kube_type': node.kube.id,
             'status': node_status,
             'reason': node_reason,
+            'install_log': install_log,
             'annotations': node.annotations,
             'labels': node.labels,
             'resources': kub_hosts.get(node.hostname, {}).get('resources', {})

@@ -132,7 +132,8 @@ if __name__ == '__main__':
     ku = User.filter_by(username='kuberdock-internal').first()
     if ku is None:
         ku = User.create(username='kuberdock-internal', password='', role=kr,
-                         first_name='KuberDock Internal', active=True)
+                         package=p1, first_name='KuberDock Internal',
+                         active=True)
         db.session.add(ku)
     temp_uuid = str(uuid4())
     dns_config = get_dns_pod_config(temp_uuid, 'kuberdock', '10.254.0.10')

@@ -171,6 +171,10 @@ def delete_item(uuid):
         raise APIError('No pod with id: {0}'.format(uuid), status_code=404)
     name = item.name
     
+    ku = User.query.filter_by(username='kuberdock-internal').first()
+    if item.owner is ku:
+        raise APIError('Service pod removing prohibited')
+
     try:
         parsed_config = json.loads(item.config)
     except (TypeError, ValueError):

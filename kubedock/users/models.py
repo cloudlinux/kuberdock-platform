@@ -105,7 +105,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
                  'middle_initials', 'active', 'suspended']
         data = dict([(k, v) for k, v in vars(self).items() if k in valid])
         data['rolename'] = self.role.rolename
-        data['package'] = self.package.name
+        data['package'] = self.package.name if self.package else None
         return data
 
     def to_full_dict(self, include=None, exclude=None):

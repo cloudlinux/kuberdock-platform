@@ -57,7 +57,10 @@ def update_dict(src, diff):
 
 def get_api_url(*args, **kwargs):
     url = kwargs.get('url') or KUBE_MASTER_URL
-    return '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
+    res = '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
+    if kwargs.get('use_v3'):
+        res.replace('v1beta2', 'v1beta3/namespaces/default')
+    return res
 
 
 # separate function because set_roles_loader decorator don't return function. Lib bug.

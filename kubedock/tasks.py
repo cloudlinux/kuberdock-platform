@@ -70,9 +70,7 @@ def create_containers_nodelay(data):
 
 
 def create_service_nodelay(data):
-    url = get_api_url('services').replace('v1beta2', 'v1beta3/namespaces/default')
-    r = requests.post(url, data=json.dumps(data))
-    # r = requests.post(get_api_url('services'), data=json.dumps(data))
+    r = requests.post(get_api_url('services', use_v3=True), data=json.dumps(data))
     return r.text
 
 

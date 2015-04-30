@@ -130,7 +130,6 @@ new_pod_scheme = {
     },
     'containers': {
         'type': 'list',
-        'minlength': 1,
         'schema': {
             'type': 'dict',
             'schema': {

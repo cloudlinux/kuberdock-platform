@@ -166,22 +166,7 @@ class KubeResolver(object):
             if pod_name not in kube_names:
                 # add config for displaying in front-end
                 pending_pod = db_pods[pod_name]['config']
-                dockers = []
-                for container in pending_pod['containers']:
-                    container['imageID'] = 'docker://'
-                    dockers.append({
-                        'host': '',
-                        'info': {
-                            'containerID': 'docker://',
-                            'image': container['image'],
-                            'imageID': container['imageID'],
-                            'lastState': {},
-                            'ready': False,
-                            'restartCount': 0,
-                            'state': {'stopped': {}},
-                        }
-                    })
-                pending_pod['dockers'] = dockers
+                add_fake_dockers(pending_pod)
                 pending_pod['status'] = db_pods[pod_name]['status']
                 pending_pod['id'] = db_pods[pod_name]['id']
                 self._pods.append(pending_pod)
@@ -206,3 +191,23 @@ class KubeResolver(object):
             if one[k] != two[k]:
                 return False
             return True
+
+
+def add_fake_dockers(pod):
+    dockers = []
+    for container in pod['containers']:
+        container['imageID'] = 'docker://'
+        dockers.append({
+            'host': '',
+            'info': {
+                'containerID': 'docker://',
+                'image': container['image'],
+                'imageID': container['imageID'],
+                'lastState': {},
+                'ready': False,
+                'restartCount': 0,
+                'state': {'stopped': {}},
+            }
+        })
+    pod['dockers'] = dockers
+    return pod

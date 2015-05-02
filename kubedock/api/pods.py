@@ -14,7 +14,7 @@ from ..models import User, Pod
 from ..core import db, ssh_connect
 from ..rbac import check_permission
 from ..utils import update_dict, login_required_or_basic, modify_node_ips
-from ..kubedata.kuberesolver import KubeResolver
+from ..kubedata.kuberesolver import KubeResolver, add_fake_dockers
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..billing import kubes_to_limits
 from ..api import APIError
@@ -158,6 +158,8 @@ def create_item():
     #             if 'id' in srv:
     #                 tasks.delete_service_nodelay(srv['id'])
     #     return jsonify({'status': 'OK', 'data': output})
+    add_fake_dockers(data)
+    data['kubes'] = pod.kubes
     return jsonify({'status': 'OK', 'data': data})
 
 

@@ -94,6 +94,7 @@ new_pod_scheme = {
                     'schema': {
                         'hostDir': {
                             'type': 'dict',
+                            'nullable': True,
                             'schema': {
                                 'path': {
                                     'type': 'string',
@@ -108,6 +109,7 @@ new_pod_scheme = {
                         },
                         'persistentDisk': {
                             'type': 'dict',
+                            'nullable': True,
                             'schema': {
                                 'pdName': {
                                     'type': 'string'
@@ -118,10 +120,36 @@ new_pod_scheme = {
                             }
                         },
                         'emptyDir': {
-                            'type': 'dict'
+                            'type': 'dict',
+                            'nullable': True
                         },
                         'scriptableDisk': {
-                            'type': 'dict'
+                            'type': 'dict',
+                            'nullable': True
+                        },
+                        'awsElasticBlockStore': {
+                            'type': 'dict',
+                            'nullable': True
+                        },
+                        'gitRepo': {
+                            'type': 'dict',
+                            'nullable': True
+                        },
+                        'glusterfs': {
+                            'type': 'dict',
+                            'nullable': True
+                        },
+                        'iscsi': {
+                            'type': 'dict',
+                            'nullable': True
+                        },
+                        'nfs': {
+                            'type': 'dict',
+                            'nullable': True
+                        },
+                        'secret': {
+                            'type': 'dict',
+                            'nullable': True
                         }
                     }
                 }

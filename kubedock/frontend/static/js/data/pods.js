@@ -62,6 +62,14 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
                     container[i] = data[i];
                 }
             });
+        },
+
+        clearModel: function(){
+            _.each(this.get('containers'), function(container){
+                delete container['container_id'];
+                delete container['node'];
+                delete container['state_repr'];
+            });
         }
     });
 

@@ -101,6 +101,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 preloader = $('#page-preloader');
             preloader.show();
             evt.stopPropagation();
+            this.model.clearModel();
             this.model.save({command: 'start'}, {
                 wait: true,
                 success: function(model, response, options){
@@ -120,6 +121,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 preloader = $('#page-preloader');
             preloader.show();
             evt.stopPropagation();
+            this.model.clearModel();
             this.model.save({command: 'stop'}, {
                 wait: true,
                 success: function(model, response, options){

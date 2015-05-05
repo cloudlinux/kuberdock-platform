@@ -48,7 +48,7 @@ def get_one_network(network):
 def create_item():
     data = request.json
     if data is None:
-        data = dict(request.form)
+        data = request.form
     for key in data.keys():
         if type(data[key]) is list and len(data[key]) == 1:
             data[key] = data[key][0]
@@ -95,7 +95,7 @@ def create_item():
 def change_item(network):
     data = request.json
     if data is None:
-        data = dict(request.form)
+        data = request.form
     block_ip = data.get('block_ip')
     unblock_ip = data.get('unblock_ip')
     unbind_ip = data.get('unbind_ip')

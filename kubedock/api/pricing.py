@@ -43,7 +43,7 @@ def update_package(package_id):
         raise APIError('Package not found', 404)
     params = request.json
     if params is None:
-        params = dict(request.form)
+        params = request.form
     for key in params.keys():
         if hasattr(package, key):
             setattr(package, key, params[key])
@@ -58,7 +58,7 @@ def create_package():
     data = {}
     params = request.json
     if params is None:
-        params = dict(request.form)
+        params = request.form
     defaults = {'currency': 'USD', 'period': 'hour'}
     for attr in 'name', 'amount', 'currency', 'period':
         data[attr] = params.get(attr, defaults.get(attr))
@@ -115,7 +115,7 @@ def get_kube(kube_id=None):
 def create_kube():
     params = request.json
     if params is None:
-        params = dict(request.form)
+        params = request.form
     return jsonify(add_kube(params))
 
 
@@ -227,7 +227,7 @@ def add_kube_to_package(package_id, kube_id=None):
     if kube_id is None:
         params = request.json
         if params is None:
-            params = dict(request.form)
+            params = request.form
         if 'id' not in params:
             rv = add_kube(params)
             if 'data' not in rv:

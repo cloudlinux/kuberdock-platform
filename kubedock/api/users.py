@@ -198,7 +198,7 @@ def get_online_users():
 def create_item():
     data = request.json
     if data is None:
-        data = dict(request.form)
+        data = request.form
     for key in data.keys():
         if type(data[key]) is list and len(data[key]) == 1:
             data[key] = data[key][0]

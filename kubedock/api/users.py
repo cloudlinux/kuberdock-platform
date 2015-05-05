@@ -193,6 +193,7 @@ def get_online_users():
 
 
 @users.route('/', methods=['POST'])
+@users.route('/full', methods=['POST'])
 @login_required_or_basic
 @check_permission('create', 'users')
 def create_item():
@@ -221,6 +222,7 @@ def create_item():
 
 
 @users.route('/<user_id>', methods=['PUT'])
+@users.route('/full/<user_id>', methods=['PUT'])
 @login_required_or_basic
 @check_permission('edit', 'users')
 def put_item(user_id):
@@ -235,7 +237,7 @@ def put_item(user_id):
         for key in data.keys():
             if isinstance(data[key], list) and len(data[key]) == 1:
                 data[key] = data[key][0]
-        
+
         # after some validation, including username unique...
         if 'role' in data:
             rolename = rolename=data.pop('role', 'User')
@@ -253,6 +255,7 @@ def put_item(user_id):
 
 
 @users.route('/<user_id>', methods=['DELETE'])
+@users.route('/full/<user_id>', methods=['DELETE'])
 @login_required_or_basic
 @check_permission('delete', 'users')
 def delete_item(user_id):

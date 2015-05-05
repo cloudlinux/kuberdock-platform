@@ -59,8 +59,8 @@ def create_package():
     params = request.json
     if params is None:
         params = request.form
-    defaults = {'currency': 'USD', 'period': 'hour'}
-    for attr in 'name', 'amount', 'currency', 'period':
+    defaults = {'currency': 'USD', 'period': 'hour', 'setup_fee': 0.0}
+    for attr in 'name', 'setup_fee', 'currency', 'period':
         data[attr] = params.get(attr, defaults.get(attr))
         if data[attr] is None:
             return jsonify({

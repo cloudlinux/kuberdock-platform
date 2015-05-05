@@ -1443,17 +1443,15 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 kube_id = parseInt(this.ui.kubeTypes.find(':selected').val()),
                 containers = this.model.get('containers'),
                 container_length = containers.length,
+                kube_data = _.filter(kubeTypes, function(k){
+                    return k.id === kube_id
+                }),
                 pack = _.filter(packages, function(p){
                     return p.kube_id === kube_id
-                });
-            if (pack.length === 0) {
-                this.container_price = '0 USD';
-                this.total_price = '0 USD';
-            }
-            else {
-                this.container_price = (pack[0].amount * num) + pack[0].currency;
-                this.total_price = (pack[0].amount * num * container_length) + pack[0].currency;
-            }
+                }),
+                currency = pack.length ? pack[0].currency : 'USD';
+            this.container_price = (kube_data[0].price ? kube_data[0].price * num : 0) + currency;
+            this.total_price = ((kube_data[0].price ? kube_data[0].price * num : 0) * container_length) + currency;
             _.each(containers, function(c){ c.kubes = num });
             this.render();
             this.ui.kubeTypes.val(kube_id);
@@ -1469,9 +1467,10 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 kube_data = _.filter(kubeTypes, function(k){
                     return k.id === kube_id
                 }),
-                pack = _.filter(packages, function(p){
+                pack = _.filter(packages, function(p){  // 'packages' is taken from index.html
                     return p.kube_id === kube_id
-                });
+                }),
+                currency = pack.length ? pack[0].currency : 'USD';
             this.model.set('kube_type', kube_id);
             if (kube_data.length === 0) {
                 this.cpu_data = '0 MHz';
@@ -1480,13 +1479,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 this.cpu_data = kube_data[0].cpu + ' MHz';
                 this.ram_data = kube_data[0].memory + ' ' + kube_data[0].memory_units;
             }
-            if (pack.length === 0) {
-                this.container_price = '0 USD';
-                this.total_price = '0 USD';
-            } else {
-                this.container_price = (pack[0].amount * num) + pack[0].currency;
-                this.total_price = (pack[0].amount * num * container_length) + pack[0].currency;
-            }
+            this.container_price = (kube_data[0].price ? kube_data[0].price * num : 0) + currency;
+            this.total_price = ((kube_data[0].price ? kube_data[0].price * num : 0) * container_length) + currency;
             this.render();
             this.ui.kubeTypes.val(kube_id);
             this.ui.kubeQuantity.val(num);

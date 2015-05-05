@@ -49,11 +49,11 @@ class User(BaseModelMixin, UserMixin, db.Model):
     @property
     def password(self):
         raise AttributeError('password is not a readable attribute')
-    
+
     @password.setter
     def password(self, password):
         self.password_hash = generate_password_hash(password)
-        
+
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -168,14 +168,14 @@ class User(BaseModelMixin, UserMixin, db.Model):
             name=pkg.name,
             kube_id=pkg.kube_id,
             kube_info=pkg.kube.to_dict() if pkg.kube_id else {},
-            amount=pkg.amount,
+            setup_fee=pkg.setup_fee,
             currency=pkg.currency,
             period=pkg.period
         )
 
     def __repr__(self):
         return "<User(username='{0}', email='{1}')>".format(self.username, self.email)
-    
+
 
 class UserActivity(BaseModelMixin, db.Model):
     __tablename__ = 'users_activity'
@@ -264,7 +264,7 @@ class SessionData(db.Model):
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
     data = db.Column(db.PickleType, nullable=True)
     time_stamp = db.Column(db.DateTime, nullable=False)
-    
+
     def __init__(self, id, data=None):
         self.id = id
         self.data = data

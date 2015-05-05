@@ -20,7 +20,7 @@ class Pod(db.Model):
     config = db.Column(db.Text)
     status = db.Column(db.String(length=32), default='unknown')
     states = db.relationship('ContainerState', backref='pod')
-    
+
     def __repr__(self):
         return "<Pod(id='%s', name='%s', owner_id='%s', kubes='%s', config='%s', status='%s')>" % (
             self.id, self.name, self.owner_id, self.kubes, self.config, self.status)
@@ -44,7 +44,7 @@ class Pod(db.Model):
         package = Package.query.filter_by(kube_id=self.kube_id).first()
         if package is None:
             return 0
-        return self.kubes * package.amount
+        return self.kubes * self.kube.price
 
     def delete(self):
         self.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
@@ -58,18 +58,18 @@ class ContainerState(db.Model):
     kubes = db.Column(db.Integer, primary_key=True, nullable=False, default=1)
     start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
-    
+
     def __repr__(self):
         return "<ContainerState(pod_id='%s', container_name='%s', kubes='%s', start_time='%s', end_time='%s')>" % (
             self.pod_id, self.container_name, self.kubes, self.start_time, self.end_time)
 
 class ImageCache(db.Model):
     __tablename__ = 'image_cache'
-    
+
     query = db.Column(db.String(255), primary_key=True, nullable=False)
     data = db.Column(postgresql.JSON, nullable=False)
     time_stamp = db.Column(db.DateTime, nullable=False)
-    
+
     def __repr__(self):
         return "<ImageCache(query='%s', data='%s', time_stamp='%s'')>" % (
             self.query, self.data, self.time_stamp)
@@ -77,11 +77,11 @@ class ImageCache(db.Model):
 
 class DockerfileCache(db.Model):
     __tablename__ = 'dockerfile_cache'
-    
+
     image = db.Column(db.String(255), primary_key=True, nullable=False)
     data = db.Column(postgresql.JSON, nullable=False)
     time_stamp = db.Column(db.DateTime, nullable=False)
-    
+
     def __repr__(self):
         return "<DockerfileCache(image='%s', data='%s', time_stamp='%s'')>" % (
             self.image, self.data, self.time_stamp)

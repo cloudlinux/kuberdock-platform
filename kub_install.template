@@ -2,6 +2,16 @@
 # install kubernetes components on Node host
 
 KUBERNETES_CONF_DIR=/etc/kubernetes
+EXIT_MESSAGE="Installation error."
+
+check_status()
+{
+    local temp=$?
+    if [ $? -ne 0 ];then
+        echo $EXIT_MESSAGE
+        exit $temp
+    fi
+}
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
@@ -10,15 +20,23 @@ echo "Using MASTER_IP={{ master_ip }}"
 # TODO change rules, not disable
 echo "Setting up firewall rules..."
 systemctl stop firewalld
+check_status
 systemctl disable firewalld
+check_status
 
 
 
 #0 Install ntp, we need correct time for node logs
 yum install -y ntp
+check_status
 ntpd -gq
-systemctl start ntpd; systemctl enable ntpd
+check_status
+systemctl start ntpd
+check_status
+systemctl enable ntpd
+check_status
 ntpq -p
+check_status
 
 
 
@@ -37,6 +55,7 @@ EOF
 
 # 1.1 import CloudLinux key
 rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+check_status
 
 
 
@@ -44,16 +63,21 @@ rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLin
 echo "Installing kubernetes..."
 #yum -y install kubernetes
 yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.15.0-4.el7.centos.1.x86_64.rpm
+check_status
 yum -y install flannel cadvisor
+check_status
 
 
 
 # 3 copy kubelet auth token and etcd certs
+echo "Copy certificates and tokens..."
 mv /kubelet_token.dat /var/lib/kubelet/kubernetes_auth
 mkdir -p /etc/pki/etcd
+check_status
 mv /ca.crt /etc/pki/etcd/
 mv /etcd-client.crt /etc/pki/etcd/
 mv /etcd-client.key /etc/pki/etcd/
+check_status
 
 
 
@@ -64,6 +88,7 @@ sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://{{ master_ip }}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 sed -i '/^KUBELET_ARGS/ {s|""|"--auth_path=/var/lib/kubelet/kubernetes_auth --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock"|}' $KUBERNETES_CONF_DIR/kubelet
+check_status
 
 
 
@@ -110,11 +135,16 @@ EOF
 
 
 echo "Starting Flanneld ..."
-systemctl enable flanneld; systemctl restart flanneld
+systemctl enable flanneld
+check_status
+systemctl restart flanneld
+check_status
+
 
 
 # 6. Setting kernel parameters
 sysctl -w net.ipv4.ip_nonlocal_bind=1
+check_status
 cat > /etc/sysctl.d/75-kuberdock.conf << EOF
 net.ipv4.ip_nonlocal_bind = 1
 EOF
@@ -128,6 +158,7 @@ cat > /etc/rsyslog.d/kuberdock.conf << EOF
 EOF
 
 systemctl restart rsyslog
+check_status
 
 
 
@@ -135,7 +166,10 @@ systemctl restart rsyslog
 echo 'Preparing logs collection...'
 
 # pull images (update if already exists)
-systemctl enable docker; systemctl restart docker
+systemctl enable docker
+check_status
+systemctl restart docker
+check_status
 
 docker pull kuberdock/fluentd:1.0 > /dev/null 2>&1 &
 docker pull kuberdock/elasticsearch:1.0 > /dev/null 2>&1 &
@@ -154,22 +188,34 @@ if [ -d /var/lib/elasticsearch ]; then
 else
   mkdir -p /var/lib/elasticsearch
 fi
+check_status
 chcon -Rt svirt_sandbox_file_t /var/lib/elasticsearch
+check_status
 
 if [ ! -d /var/lib/docker/containers ]; then
   mkdir -p /var/lib/docker/containers
 fi
 chcon -Rt svirt_sandbox_file_t /var/lib/docker/containers
+check_status
 
 
 # 9. enable services
 echo "Starting services..."
-systemctl enable kubelet; systemctl restart kubelet
-systemctl enable kube-proxy; systemctl restart kube-proxy
+systemctl enable kubelet
+check_status
+systemctl restart kubelet
+check_status
+systemctl enable kube-proxy
+check_status
+systemctl restart kube-proxy
+check_status
 
 CADVISOR_CONF=/etc/sysconfig/cadvisor
 sed -i "/^CADVISOR_STORAGE_DRIVER/ {s/\"\"/\"influxdb\"/}" $CADVISOR_CONF
 sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/{{ master_ip }}/}" $CADVISOR_CONF
-systemctl enable cadvisor; systemctl restart cadvisor
+systemctl enable cadvisor
+check_status
+systemctl restart cadvisor
+check_status
 
 exit 0

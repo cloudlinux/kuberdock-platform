@@ -1,15 +1,49 @@
-#!/bin/sh
+#!/bin/bash
 
 KUBERDOCK_DIR=/var/opt/kuberdock
 KUBERNETES_CONF_DIR=/etc/kubernetes
 KUBERDOCK_MAIN_CONFIG=/etc/sysconfig/kuberdock/kuberdock.conf
 KNOWN_TOKENS_FILE="$KUBERNETES_CONF_DIR/known_tokens.csv"
 WEBAPP_USER=nginx
+DEPLOY_LOG_FILE=/var/tmp/kuberdock_master_deploy.log
+EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 
 if [ $USER != "root" ]; then
-    echo "Superuser privileges required"
+    echo "Superuser privileges required" | tee -a $DEPLOY_LOG_FILE
     exit 1
 fi
+
+
+# SOME HELPERS
+do_and_log()
+# Log all output to LOG-file and screen, and stop script on error
+{
+    $1 2>&1 | tee -a $DEPLOY_LOG_FILE
+    temp=$PIPESTATUS
+    if [ $temp -ne 0 ];then
+      echo $EXIT_MESSAGE
+      exit $temp
+    fi
+}
+
+log_errors()
+# Log only stderr to LOG-file, and stop script on error
+{
+    echo "Doing $1" >> $DEPLOY_LOG_FILE
+    $1 2> >(tee -a $DEPLOY_LOG_FILE)
+    temp=$PIPESTATUS
+    if [ $temp -ne 0 ];then
+      echo $EXIT_MESSAGE
+      exit $temp
+    fi
+}
+
+log_it()
+# Just log all output to LOG-file and screen
+{
+    $1 2>&1 | tee -a $DEPLOY_LOG_FILE
+    return $PIPESTATUS
+}
 
 #yesno()
 ## $1 = Message prompt
@@ -36,49 +70,11 @@ fi
 #}
 
 
-
-# ====== Set initial vars, WILL WRITE THEM AFTER INSTALL kuberdock.rpm =========
-
-#MASTER_IP=$(hostname -i)
-#yesno "Is your MASTER IP $MASTER_IP"
-#
-#if [ ! $ans -eq 1 ]; then
-#    read -p "Enter MASTER IP: " MASTER_IP
-#    echo "Will use $MASTER_IP"
-#fi
-#
-## TODO make if '' provided than don't use any customizations
-#
-#NODE_TOBIND_EXTERNAL_IPS="enp0s5"
-#yesno "On which node interface to bind external ips? $NODE_TOBIND_EXTERNAL_IPS"
-#
-#if [ ! $ans -eq 1 ]; then
-#    read -p "Enter interface name: " NODE_TOBIND_EXTERNAL_IPS
-#    echo "Will use $NODE_TOBIND_EXTERNAL_IPS"
-#fi
-#
-#MASTER_TOBIND_FLANNEL="enp0s5"
-#yesno "Interface to bind for Flannel network on master is $MASTER_TOBIND_FLANNEL"
-#
-#if [ ! $ans -eq 1 ]; then
-#    read -p "Enter interface name: " MASTER_TOBIND_FLANNEL
-#    echo "Will use $MASTER_TOBIND_FLANNEL"
-#fi
-#
-#NODE_TOBIND_FLANNEL="enp0s5"
-#yesno "Interface to bind for Flannel network on nodes(inter-host comminication and with master) is $NODE_TOBIND_FLANNEL"
-#
-#if [ ! $ans -eq 1 ]; then
-#    read -p "Enter interface name: " NODE_TOBIND_FLANNEL
-#    echo "Will use $NODE_TOBIND_FLANNEL"
-#fi
-
-# ==== More elaborate interfaces setting ====
-
 DEFAULT_IFACE=""
 DEFAULT_MASTER_IP=""
 
 DEFAULT_IFACE=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;exit}}')
+echo "DEFAULT_IFACE was set to $DEFAULT_IFACE" >> $DEPLOY_LOG_FILE
 
 read -p "Enter interface for inter-host communication[$DEFAULT_IFACE]: " IFACE
 if [ -z "$IFACE" ];then
@@ -93,50 +89,55 @@ if [ -n "$IFACE" ];then
         PROMPT="Enter master IP address: "
     fi
 fi
+echo "IFACE was set to $IFACE" >> $DEPLOY_LOG_FILE
 
 read -p "$PROMPT" MASTER_IP
 if [ -z "$MASTER_IP" ];then
     MASTER_IP=$DEFAULT_MASTER_IP
 fi
+echo "MASTER_IP was set to $MASTER_IP" >> $DEPLOY_LOG_FILE
 
 read -p "Enter a node interface for binding to public IPs [$DEFAULT_IFACE]: " NODE_TOBIND_EXTERNAL_IPS
 if [ -z "$NODE_TOBIND_EXTERNAL_IPS" ];then
     NODE_TOBIND_EXTERNAL_IPS=$DEFAULT_IFACE
 fi
+echo "NODE_TOBIND_EXTERNAL_IPS was set to $NODE_TOBIND_EXTERNAL_IPS" >> $DEPLOY_LOG_FILE
 
 read -p "Enter master interface for flanneld [$DEFAULT_IFACE]: " MASTER_TOBIND_FLANNEL
 if [ -z "$MASTER_TOBIND_FLANNEL" ];then
     MASTER_TOBIND_FLANNEL=$DEFAULT_IFACE
 fi
+echo "MASTER_TOBIND_FLANNEL was set to $MASTER_TOBIND_FLANNEL" >> $DEPLOY_LOG_FILE
 
 read -p "Enter a node interface for flanneld (inter-host communication) [$DEFAULT_IFACE]: " NODE_TOBIND_FLANNEL
 if [ -z "$NODE_TOBIND_FLANNEL" ];then
     NODE_TOBIND_FLANNEL=$DEFAULT_IFACE
 fi
-
-# ==============================================================================
+echo "NODE_TOBIND_FLANNEL was set to $NODE_TOBIND_FLANNEL" >> $DEPLOY_LOG_FILE
 
 
 
 #1 Import some keys
-rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-yum -y install epel-release
+do_and_log 'rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux'
+do_and_log 'rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7'
+log_errors 'yum -y install epel-release'
 
 # TODO we must open what we want instead
-echo "WARNING: we stop firewalld!"
-systemctl stop firewalld; systemctl disable firewalld
+log_it 'echo WARNING: we stop firewalld!'
+do_and_log 'systemctl stop firewalld'
+do_and_log 'systemctl disable firewalld'
 
-echo "Adding SELinux rule for http on port 9200"
-semanage port -a -t http_port_t -p tcp 9200
+log_it 'echo Adding SELinux rule for http on port 9200'
+do_and_log 'semanage port -a -t http_port_t -p tcp 9200'
 
 
 
 #2 Install ntp, we need correct time for node logs
-yum install -y ntp
-ntpd -gq
-systemctl start ntpd; systemctl enable ntpd
-ntpq -p
+log_errors 'yum install -y ntp'
+do_and_log 'ntpd -gq'
+do_and_log 'systemctl start ntpd'
+do_and_log 'systemctl enable ntpd'
+do_and_log 'ntpq -p'
 
 
 
@@ -153,18 +154,15 @@ EOF
 
 
 #4. Install kuberdock
-yum -y install kuberdock
-if [ $? -ne 0 ];then
-    echo "Package in repo not found, trying to install local one"
+PACKAGE=$(ls -1 |awk '/kuberdock.*\.rpm/ {print $1; exit}')
+if [ ! -z $PACKAGE ];then
+    log_errors "yum -y install $PACKAGE"
 fi
-for p in $(ls kuberdock*.rpm);do
-    yum -y install $p
-    break
-done
+log_errors 'yum -y install kuberdock'
 
 #4.1 Fix package path bug
 mkdir /var/run/kubernetes || /bin/true
-chown kube:kube /var/run/kubernetes
+do_and_log 'chown kube:kube /var/run/kubernetes'
 
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
 echo "MASTER_IP=$MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
@@ -175,28 +173,28 @@ echo "NODE_TOBIND_FLANNEL=$NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 
 
 #6 Setting up etcd
-yum -y install etcd-ca
-echo "Generating etcd-ca certificates..."
-mkdir /etc/pki/etcd
+log_errors 'yum -y install etcd-ca'
+log_it 'echo Generating etcd-ca certificates...'
+do_and_log 'mkdir /etc/pki/etcd'
 etcd-ca init --passphrase ""
 etcd-ca export --insecure --passphrase "" | tar -xf -
-mv ca.crt /etc/pki/etcd/
-rm -f ca.key.insecure
+do_and_log 'mv ca.crt /etc/pki/etcd/'
+do_and_log 'rm -f ca.key.insecure'
 
 # first instance of etcd cluster
 etcd1=$(hostname -f)
 etcd-ca new-cert --ip "127.0.0.1,$MASTER_IP" --passphrase "" $etcd1
 etcd-ca sign --passphrase "" $etcd1
 etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -
-mv $etcd1.crt /etc/pki/etcd/
-mv $etcd1.key.insecure /etc/pki/etcd/$etcd1.key
+do_and_log "mv $etcd1.crt /etc/pki/etcd/"
+do_and_log "mv $etcd1.key.insecure /etc/pki/etcd/$etcd1.key"
 
 # generate client's certificate
 etcd-ca new-cert --passphrase "" etcd-client
 etcd-ca sign --passphrase "" etcd-client
 etcd-ca export etcd-client --insecure --passphrase "" | tar -xf -
-mv etcd-client.crt /etc/pki/etcd/
-mv etcd-client.key.insecure /etc/pki/etcd/etcd-client.key
+do_and_log "mv etcd-client.crt /etc/pki/etcd/"
+do_and_log "mv etcd-client.key.insecure /etc/pki/etcd/etcd-client.key"
 
 
 cat > /etc/systemd/system/etcd.service << EOF
@@ -262,21 +260,22 @@ EOF
 
 
 #7 Start as early as possible, because Flannel need it
-echo "Starting etcd..."
-systemctl enable etcd
-systemctl restart etcd
+log_it 'echo Starting etcd...'
+do_and_log 'systemctl enable etcd'
+do_and_log 'systemctl restart etcd'
 
 
 
 # Start early or curl connection refused
-systemctl enable influxdb > /dev/null 2>&1
-systemctl restart influxdb
+do_and_log 'systemctl enable influxdb'
+do_and_log 'systemctl restart influxdb'
 
 
 
 #8 Generate a shared secret (bearer token) to
 # apiserver and kubelet so that kubelet can authenticate to
 # apiserver to send events.
+log_it 'echo Generate a bearer token'
 kubelet_token=$(cat /dev/urandom | base64 | tr -d "=+/" | dd bs=32 count=1 2> /dev/null)
 (umask u=rw,go= ; echo "$kubelet_token,kubelet,kubelet" > $KNOWN_TOKENS_FILE)
 # Kubernetes need to read it
@@ -296,26 +295,27 @@ sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBERNETES_CONF_DIR/co
 
 
 #10. Create and populate DB
-systemctl enable postgresql
-postgresql-setup initdb
-systemctl restart postgresql
-python $KUBERDOCK_DIR/postgresql_setup.py
-systemctl restart postgresql
+log_it 'echo Create and populate DB'
+do_and_log 'systemctl enable postgresql'
+do_and_log 'postgresql-setup initdb'
+do_and_log 'systemctl restart postgresql'
+do_and_log "python $KUBERDOCK_DIR/postgresql_setup.py"
+do_and_log 'systemctl restart postgresql'
 cd $KUBERDOCK_DIR
-python createdb.py
+do_and_log 'python createdb.py'
 
 
 
 #11. Start services
-systemctl enable redis
-systemctl restart redis
+do_and_log 'systemctl enable redis'
+do_and_log 'systemctl restart redis'
 
 
 
 #12 Flannel
-echo "Setuping flannel config to etcd..."
+log_it "echo Setuping flannel config to etcd..."
 etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
-etcdctl get /kuberdock/network/config
+do_and_log 'etcdctl get /kuberdock/network/config'
 
 
 
@@ -335,19 +335,19 @@ FLANNEL_ETCD_KEY="/kuberdock/network/"
 FLANNEL_OPTIONS="--iface=$MASTER_TOBIND_FLANNEL"
 EOF
 
-echo "Starting flannel..."
-systemctl enable flanneld
-systemctl restart flanneld
+log_it "echo Starting flannel..."
+do_and_log 'systemctl enable flanneld'
+do_and_log 'systemctl restart flanneld'
 
-echo "Adding bridge to flannel network..."
-source /run/flannel/subnet.env
+log_it "echo Adding bridge to flannel network..."
+do_and_log 'source /run/flannel/subnet.env'
 
 # with host-gw backend we don't have to change MTU (bridge.mtu)
 # If we have working NetworkManager we can just
 #nmcli -n c delete kuberdock-flannel-br0 &> /dev/null
 #nmcli -n connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
 
-yum -y install bridge-utils
+log_errors 'yum -y install bridge-utils'
 
 cat > /etc/sysconfig/network-scripts/ifcfg-kuberdock-flannel-br0 << EOF
 DEVICE=br0
@@ -370,43 +370,50 @@ NAME=kuberdock-flannel-br0
 ONBOOT=yes
 EOF
 
-echo "Starting bridge..."
-ifdown br0
-ifup br0
+log_it "echo Starting bridge..."
+do_and_log 'ifdown br0'
+do_and_log 'ifup br0'
 #========================================================================
 
 
 
-systemctl enable dnsmasq
-systemctl restart dnsmasq
+do_and_log 'systemctl enable dnsmasq'
+do_and_log 'systemctl restart dnsmasq'
 
 
 
 #14 Create cadvisor database
 # Only after influxdb is fully loaded
 curl -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "cadvisor"}'
+if [ $? -ne 0 ];then
+    log_it "echo Error create cadvisor database"
+    echo $EXIT_MESSAGE
+    exit 1
+fi
 
 
 
 #15. Starting kubernetes
-echo "Starting kubernetes..."
-for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl enable $i;done
-for i in kube-apiserver kube-controller-manager kube-scheduler;do systemctl restart $i;done
+log_it "echo Starting kubernetes..."
+for i in kube-apiserver kube-controller-manager kube-scheduler;
+    do do_and_log "systemctl enable $i";done
+for i in kube-apiserver kube-controller-manager kube-scheduler;
+    do do_and_log "systemctl restart $i";done
 
 
 
 #16. Starting web-interface
-echo "Starting kuberdock web-interface..."
-systemctl enable emperor.uwsgi
-systemctl restart emperor.uwsgi
+log_it "echo Starting kuberdock web-interface..."
+do_and_log 'systemctl enable emperor.uwsgi'
+do_and_log 'systemctl restart emperor.uwsgi'
 
-systemctl enable nginx
-systemctl restart nginx
+do_and_log 'systemctl enable nginx'
+do_and_log 'systemctl restart nginx'
 
 
 
 #17. Setup cluster DNS
-echo "Setupping cluster DNS"
+log_it "echo Setupping cluster DNS"
 
 cat << EOF | kubectl create -f -
 apiVersion: v1beta3
@@ -470,7 +477,7 @@ EOF
 # 19. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir
 ENT=$(getent passwd $WEBAPP_USER)
 if [ -z "$ENT" ]; then
-    echo "User $WEBAPP_USER does not exist"
+    log_it "echo User $WEBAPP_USER does not exist"
     exit 1
 fi
 
@@ -484,13 +491,15 @@ if [ ! -d $TGT_DIR ];then
 fi
 
 if [ ! -e $TGT_PATH ]; then
-    ssh-keygen -N "" -f $TGT_PATH
+    do_and_log "ssh-keygen -N '' -f $TGT_PATH"
 fi
 
-chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR
+do_and_log "chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR"
 
 # ======================================================================
-echo "WARNING: Firewalld was disabled. You need to configure it to work right"
-echo "WARNING: $WEBAPP_USER need ssh access to nodes as 'root'"
-echo "We will use $TGT_PATH Please, copy it to all your nodes with ssh-copy-id"
-echo "Installation Completed. KuberDock is available at https://$MASTER_IP/"
+log_it "echo WARNING: Firewalld was disabled. You need to configure it to work right"
+log_it "echo WARNING: $WEBAPP_USER need ssh access to nodes as 'root'"
+log_it "echo We will use $TGT_PATH Please, copy it to all your nodes with command like this:"
+log_it "echo ssh-copy-id -i $TGT_PATH.pub root@your_node"
+log_it "echo Installation completed and log saved to $DEPLOY_LOG_FILE"
+log_it "echo KuberDock is available at https://$MASTER_IP/"

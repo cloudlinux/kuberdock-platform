@@ -2,7 +2,7 @@ import datetime
 from .. import factory
 from .. import sessions
 from ..rbac import get_user_role
-from ..settings import NODE_TOBIND_EXTERNAL_IPS, KUBE_MASTER_URL
+from ..settings import KUBE_MASTER_URL
 from ..settings import SERVICES_VERBOSE_LOG
 from ..core import ssh_connect, db
 from ..utils import APIError, modify_node_ips, get_api_url
@@ -13,11 +13,7 @@ import json
 import requests
 import gevent
 import os
-import sys
-import signal
-import psutil
 from rbac.context import PermissionDenied
-from kubedock.settings import LOCK_FILE_NAME
 
 
 def create_app(settings_override=None):
@@ -64,21 +60,6 @@ def on_permission_denied(e):
 
 def on_404(e):
     return on_app_error(APIError('Not found', status_code=404))
-
-
-def remove_lock(*args):
-    try:
-        os.remove(LOCK_FILE_NAME)
-    except OSError:
-        pass
-    sys.exit(0)
-
-
-def set_lock():
-    with open(LOCK_FILE_NAME, 'wt') as f:
-        f.write(str(os.getpid()))
-signal.signal(signal.SIGINT, remove_lock)
-signal.signal(signal.SIGTERM, remove_lock)
 
 
 # TODO remove when migrate to v1beta3
@@ -171,14 +152,6 @@ def process_endpoints_event(data):
 
 
 def listen_endpoints():
-    if not os.path.exists(LOCK_FILE_NAME):
-        set_lock()
-    else:
-        with open(LOCK_FILE_NAME, 'rt') as f:
-            if not psutil.pid_exists(int(f.read())):
-                set_lock()
-            else:
-                return
     # Dirty hack for gevent first switch with uwsgi
     # r = None
     # with gevent.Timeout(1, False):

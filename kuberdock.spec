@@ -48,7 +48,6 @@ Requires: python-ipaddress >= 1.0.7
 Requires: python-kombu >= 3.0.23
 Requires: python-nose >= 1.3.0
 Requires: python-paramiko >= 1.12.4
-Requires: python-psutil >= 0.7
 Requires: python-psycopg2 >= 2.5.4
 Requires: python-redis >= 2.10.3
 Requires: python-requests >= 2.4.3

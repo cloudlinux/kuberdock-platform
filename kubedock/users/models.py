@@ -82,7 +82,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 id=p.id,
                 name=p.name,
                 owner_id=p.owner_id,
-                kube_id=p.kube_id,
+                kube_id=[k.id for k in p.kubes],
                 config=p.config,
                 status=p.status,
                 kubes=p.kubes,
@@ -166,8 +166,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return dict(
             id=pkg.id,
             name=pkg.name,
-            kube_id=pkg.kube_id,
-            kube_info=pkg.kube.to_dict() if pkg.kube_id else {},
+            kube_id=[k.id for k in pkg.kubes],
+            kube_info=[kube.to_dict() for kube in pkg.kubes],
             setup_fee=pkg.setup_fee,
             currency=pkg.currency,
             period=pkg.period

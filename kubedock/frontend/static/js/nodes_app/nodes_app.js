@@ -365,6 +365,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         ui: {
             'nodes_page' : 'div#nodes-page',
+            'redeploy'   : 'button#redeploy_node',
             'delete'     : 'button#delete_node',
         },
 
@@ -372,6 +373,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click ul.nav li'           : 'changeTab',
             'click button#node-add-btn' : 'saveNode',
             'click @ui.nodes_page'      : 'breadcrumbClick',
+            'click @ui.redeploy'        : 'redeployNode',
             'click @ui.delete'          : 'deleteNode',
         },
 
@@ -414,6 +416,12 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 error: function(){
                     modelError('error while updating! Maybe some fields required.');
                 }
+            });
+        },
+
+        redeployNode: function() {
+            $.ajax({
+                url: '/api/nodes/redeploy/' + this.model.id,
             });
         },
 

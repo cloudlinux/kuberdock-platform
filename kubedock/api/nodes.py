@@ -385,3 +385,12 @@ def pd_lookup():
     sets = [set(filter((lambda x: x[1] is None), i.items())) for i in data.values()]
     intersection = map(operator.itemgetter(0), sets[0].intersection(*sets[1:]))
     return jsonify({'status': 'OK', 'data': intersection})
+
+
+@nodes.route('/redeploy/<node_id>', methods=['GET'])
+@check_permission('redeploy', 'nodes')
+def redeploy_item(node_id):
+    check_int_id(node_id)
+    m = db.session.query(Node).get(node_id)
+    tasks.add_new_node.delay(m.hostname, m.kube.id)
+    return jsonify({'status': 'OK'})

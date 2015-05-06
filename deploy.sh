@@ -78,8 +78,8 @@ MASTER_IP=""
 if [ $IFACE_NUM -eq 0 ]; then    # no working interfaces found...
     read -p "No interfaces found. Enter inner network interface IP: " MASTER_IP
     if [ -z "$MASTER_IP" ]; then
-        echo "No IP addresses obtained. Exit" >> $DEPLOY_LOG_FILE
-        exit 0
+        log_it "echo No IP addresses obtained. Exit"
+        exit 1
     fi
 else
     # get first interface from found ones
@@ -100,15 +100,20 @@ fi
 
 # if entered ip not found or invalid
 if [ -z "$MASTER_TOBIND_FLANNEL" ]; then
-    echo "No IP addresses obtained. Exit" >> $DEPLOY_LOG_FILE
-    exit 0
+    log_it "echo No IP addresses obtained. Exit"
+    exit 1
 fi
 
 echo "MASTER_IP has been set to $MASTER_IP" >> $DEPLOY_LOG_FILE
 echo "MASTER_TOBIND_FLANNEL was set to $MASTER_TOBIND_FLANNEL" >> $DEPLOY_LOG_FILE
 
+# We question here for a node interface to bind external IPs to
+read -p "Enter interface to bind public IP addresses on nodes [$MASTER_TOBIND_FLANNEL]: " NODE_TOBIND_EXTERNAL_IPS
+if [ -z "$NODE_TOBIND_EXTERNAL_IPS" ]; then
+    NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
+fi
+
 # Just a workaround for compatibility
-NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
 NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
 

@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 34%{?dist}.cloudlinux
+Release: 35%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,25 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Wed May 06 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-35
+- Add package to kuberdock-internal user
+- AC-304 Containers without port and v1beta3 migration helper option
+- Prohibit service pods removing
+- fixed missing package of a user
+- AC-301: Show containers of just created pod
+- AC-316: Fix start/stop pod problem due to model extra fields
+- Deploy.sh logging and exit on first error. kub_install.sh now exits on first error.
+- Fix Gevent + uwsgi.
+- bugfix: removed creating dict from dict 'dict(response.form)'
+- fixed user creation
+- remove 'amount' from package's schema and add 'price' to kube's one
+- bugfixes connected to new kube model (more than one kube per package)
+- AC-326: Redeploy button for node
+- Batch node adding, add logging, remove make_scripts.
+- Now only same version of kubernetes on master and nodes. Code clean up.
+- deploy.sh is determining ip_address and interface on its own
+- node inner interface is deduced from master_ip
+
 * Wed Apr 29 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-34
 - AC-292 Node saves install log and shows it if in troubles state.
 - Design fixes AC: 266, 279, 281, 288, 299

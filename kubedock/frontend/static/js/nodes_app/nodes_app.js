@@ -290,16 +290,17 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 hostname: this.state.get('hostname'),
                 status: 'pending',
                 kube_type: this.state.get('kube_type'),
-                annotations: {'sw_version': 'v1.1'}, // TODO implement real
-                labels: {'tier': 'testing'}          // TODO implement real
+                install_log: ''
             }, {
-                wait: true,
+                wait: false,
+//                wait: true,
                 success: function(){
-                    that.trigger('show_console');
+                    // TODO redirect to this node page
+//                    that.trigger('show_console');
+                    App.router.navigate('/', {trigger: true});
                 },
                 error: function(){
                     modelError('error while saving! Maybe some fields required.');
-//                    alert('error while saving! Maybe some fields required.')
                 }
             });
         },
@@ -335,22 +336,13 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
+    // TODO delete this view at all, not needed
     Views.ConsoleView = Backbone.Marionette.ItemView.extend({
         template: '#node-console-template',
         model: new Backbone.Model({'text': []}),
 
         events: {
             'click button#main' : function () { App.router.navigate('/', {trigger: true}) }
-        },
-
-        initialize: function () {
-            this.model.set('text', []);
-            this.listenTo(App.vent, 'update_console_log', function (data) {
-                var lines = this.model.get('text');
-                lines.push(data);
-                this.model.set('text', lines);
-                this.render();
-            })
         }
     });
     // =========== //Add Node wizard ==================================
@@ -394,20 +386,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             else if (tgt.hasClass('nodeConfigurationTab')) App.router.navigate(url_ + '/configuration/', {trigger: true});
         },
 
-//        onRender: function(){
-            // load annotations and labels
-//            this.ui.description.val(this.model.get('description'));
-//            this.ui.active_chkx.prop('checked', this.model.get('active'));
-//        },
-
         saveNode: function () {
-            // validation
-            this.model.set({
-                // change annotations and labels
-//                'description': this.ui.description.val(),
-//                'active': this.ui.active_chkx.prop('checked'),
-            });
-
             this.model.save(undefined, {
                 wait: true,
                 success: function(){
@@ -449,11 +428,17 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events: {
-            'click @ui.nodeLogsTab' : 'nodeLogsTab',
+            'click @ui.nodeLogsTab' : 'nodeLogsTab'
         },
 
         nodeLogsTab: function(){
             App.router.navigate('/detailed/' + this.model.id + '/logs/', {trigger: true});
+        },
+
+        initialize: function () {
+            this.listenTo(App.vent, 'update_console_log', function () {
+                this.render();
+            })
         }
     });
 
@@ -636,7 +621,13 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
                 App.Data.nodes.fetch()
             }, false);
             source.addEventListener('install_logs', function (ev) {
-                App.vent.trigger('update_console_log', ev.data);
+                var decoded = JSON.parse(ev.data);
+//                console.log(decoded);
+                var node = App.Data.nodes.findWhere({'hostname': decoded.for_node});
+                if (typeof node != 'undefined') {
+                    node.set('install_log', node.get('install_log') + decoded.data + '\n');
+                    App.vent.trigger('update_console_log');
+                }
             }, false);
         }
     });

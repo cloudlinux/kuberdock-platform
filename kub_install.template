@@ -61,8 +61,7 @@ check_status
 
 # 2. install components
 echo "Installing kubernetes..."
-#yum -y install kubernetes
-yum -y install http://repo.cloudlinux.com/kubernetes/x86_64/kubernetes-0.15.0-4.el7.centos.1.x86_64.rpm
+yum -y install {{ cur_master_kubernetes }}
 check_status
 yum -y install flannel cadvisor
 check_status

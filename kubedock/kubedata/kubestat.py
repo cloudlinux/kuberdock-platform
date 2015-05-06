@@ -321,16 +321,7 @@ class KubeStat(object):
         except KeyError:
             return 0
 
-
-    def _get_nodes(self):
-        self._nodes = {}
-        data = db.session.query(Node.hostname, Node.cpu_cores, Node.ram).all()
-        for node, cores, ram in data:
-            self._nodes[node] = {'cores': cores, 'ram': ram}
-
     def stats(self, containers):
-        if not hasattr(self, '_nodes'):
-            self._get_nodes()
         if not hasattr(self, '_containers_checks'):
             self._make_checker(containers)
         if not hasattr(self, '_data'):

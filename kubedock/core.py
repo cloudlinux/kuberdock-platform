@@ -66,6 +66,8 @@ class EvtStream(object):
         for message in self.pubsub.listen():
             if message['type'] == 'message':
                 event, data = json.loads(message['data'])
+                if not isinstance(data, basestring):
+                    data = json.dumps(data)
                 ssev.add_message(event, data)
                 for data in ssev:
                     yield data.encode('u8')

@@ -367,13 +367,10 @@ def check_container_image_name(searchkey):
 
 
 def check_node_data(data):
-    # TODO remove when implement other fields
     validator = V(allow_unknown=True)
     if not validator.validate(data, {
             'hostname': hostname_scheme,
             'kube_type': {'type': 'integer', 'min': 0, 'required': True},
-            # 'annotations': '',
-            # 'labels': '',
         }):
         raise APIError(validator.errors)
     if data['ip'] == data['hostname']:

@@ -104,6 +104,7 @@ def process_endpoints_event(data):
                     del state['assigned-to']
                     del state['assigned-pod-ip']
                     service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
+                    # TODO what if resourceVersion has changed?
                     r = requests.put(SERVICES_V3_URL + service_name, json.dumps(service))
         elif event_type == 'DELETED':
             pass

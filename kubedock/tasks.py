@@ -5,14 +5,18 @@ import operator
 import sys
 from collections import OrderedDict
 from datetime import datetime
+import jinja2
+from StringIO import StringIO
+import subprocess
 
-from .api.stream import send_event
+from .api.stream import send_event, send_logs
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
 from .utils import update_dict
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState
+from .settings import MASTER_IP, NODE_TOBIND_FLANNEL
 from .settings import KUBE_API_VERSION, NODE_INSTALL_LOG_FILE
 
 from .utils import get_api_url
@@ -123,18 +127,48 @@ def remove_node_by_host(host):
 
 
 @celery.task()
-def add_new_node(host, kube_type):
-    with open(NODE_INSTALL_LOG_FILE.format(host), 'wt') as log_file:
-        send_event('install_logs',
-                   'Connecting to {0} with ssh with user "root" ...'
-                   .format(host), log_file)
+def add_new_node(host, kube_type, db_node):
+
+    with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
+
+        try:
+            current_master_kubernetes = subprocess.check_output(
+                ['rpm', '-q', 'kubernetes'])
+        except subprocess.CalledProcessError as e:
+            mes = 'Kuberdock needs correctly installed kubernetes' \
+                  ' on master. {0}'.format(e.output)
+            send_logs(host, mes, log_file)
+            db_node.state = 'completed'
+            db.session.add(db_node)
+            db.session.commit()
+            return mes
+        except OSError:     # no rpm
+            current_master_kubernetes = 'kubernetes'
+
+        send_logs(host, 'Current kubernetes package on master is'
+                        ' "{0}". Will install same package.'
+                        .format(current_master_kubernetes), log_file)
+
+        send_logs(host, 'Connecting to {0} with ssh with user "root" ...'
+                  .format(host), log_file)
         ssh, error_message = ssh_connect(host)
         if error_message:
-            send_event('install_logs', error_message, log_file)
+            send_logs(host, error_message, log_file)
+            db_node.state = 'completed'
+            db.session.add(db_node)
+            db.session.commit()
             return error_message
 
+        with open('kub_install.template') as f:
+            r = jinja2.Template(f.read()).render(
+                master_ip=MASTER_IP,
+                flannel_iface=NODE_TOBIND_FLANNEL,
+                cur_master_kubernetes=current_master_kubernetes,
+            )
+        script = StringIO(r)
+
         sftp = ssh.open_sftp()
-        sftp.put('kub_install.sh', '/kub_install.sh')
+        sftp.putfo(script, '/kub_install.sh')
         sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
@@ -145,12 +179,15 @@ def add_new_node(host, kube_type):
         while not o.channel.exit_status_ready():
             if o.channel.recv_ready():
                 for line in o.channel.recv(1024).split('\n'):
-                    send_event('install_logs', line, log_file)
+                    send_logs(host, line, log_file)
             if (time.time() - s_time) > 15*60:   # 15 min timeout
-                err = 'Timeout during install. Installation has failed.'
-                send_event('install_logs', err, log_file)
+                err = 'Timeout during install(15 min). Installation has failed.'
+                send_logs(host, err, log_file)
                 ssh.exec_command('rm /kub_install.sh')
                 ssh.close()
+                db_node.state = 'completed'
+                db.session.add(db_node)
+                db.session.commit()
                 return err
             time.sleep(0.2)
         s = o.channel.recv_exit_status()
@@ -158,7 +195,7 @@ def add_new_node(host, kube_type):
         if s != 0:
             res = 'Installation script error. Exit status: {0}. Error: {1}'\
                 .format(s, e.read())
-            send_event('install_logs', res, log_file)
+            send_logs(host, res, log_file)
         else:
             res = requests.post(get_api_url('nodes'),
                                 json={'id': host,
@@ -171,14 +208,16 @@ def add_new_node(host, kube_type):
                                       }
                                 })
             if not res.ok:
-                send_event('install_logs', 'ERROR adding node.', log_file)
-                send_event('install_logs', res.text, log_file)
+                send_logs(host, 'ERROR adding node.', log_file)
+                send_logs(host, res.text, log_file)
             else:
-                send_event('install_logs', 'Adding Node completed successful.',
-                           log_file)
-                send_event('install_logs',
-                           '===================================', log_file)
+                send_logs(host, 'Adding Node completed successful.',
+                          log_file)
+                send_logs(host, '===================================', log_file)
         ssh.close()
+        db_node.state = 'completed'
+        db.session.add(db_node)
+        db.session.commit()
     return res.json()
 
 

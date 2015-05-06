@@ -3,6 +3,7 @@ import json
 import math
 import operator
 import socket
+import os
 from uuid import uuid4
 from .. import tasks
 from ..models import Node, User, Pod
@@ -14,6 +15,7 @@ from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP
 from . import APIError
 from .pods import make_config
+from .stream import send_event
 from fabric.api import run, settings, env
 from fabric.tasks import execute
 
@@ -163,7 +165,8 @@ def get_nodes_collection():
                     "Hostname {0} can't be resolved to ip during auto-scan."
                     "Check /etc/hosts file for correct Node records"
                     .format(host))
-            m = Node(ip=resolved_ip, hostname=host, kube=default_kube)
+            m = Node(ip=resolved_ip, hostname=host, kube=default_kube,
+                     state='autoadded')
             db.session.add(m)
     if new_flag:
         db.session.commit()
@@ -193,17 +196,25 @@ def get_nodes_collection():
                     node_reason = (
                         'Node is a member of KuberDock cluster but '
                         'does not provide information about its condition\n'
-                        'Possible reason -- node is in installation progress'
+                        'Possible reasons:\n'
+                        '1) node is in installation progress on final step'
                     )
         else:
-            node_status = 'troubles'
-            node_reason = (
-                'Node is not a member of KuberDock cluster\n'
-                'Possible reasons:\n'
-                '1) node is in installation progress\n'
-                '2) error during node installation\n'
-                '3) no connection between node and master(firewall, node reboot, etc.)\n'
-            )
+            if node.state == 'pending':
+                node_status = 'pending'
+                node_reason = (
+                    'Node is not a member of KuberDock cluster\n'
+                    'Possible reasons:\n'
+                    'Node is in installation progress\n'
+                )
+            else:
+                node_status = 'troubles'
+                node_reason = (
+                    'Node is not a member of KuberDock cluster\n'
+                    'Possible reasons:\n'
+                    '1) error during node installation\n'
+                    '2) no connection between node and master(firewall, node reboot, etc.)\n'
+                )
 
         if node_status == 'running':
             install_log = ''
@@ -211,7 +222,7 @@ def get_nodes_collection():
             try:
                 install_log = open(NODE_INSTALL_LOG_FILE.format(node.hostname)).read()
             except IOError:
-                install_log = 'No install log available for this node.'
+                install_log = 'No install log available for this node.\n'
 
         nodes_list.append({
             'id': node.id,
@@ -221,8 +232,6 @@ def get_nodes_collection():
             'status': node_status,
             'reason': node_reason,
             'install_log': install_log,
-            'annotations': node.annotations,
-            'labels': node.labels,
             'resources': kub_hosts.get(node.hostname, {}).get('resources', {})
         })
     return nodes_list
@@ -250,8 +259,6 @@ def get_one_node(node_id):
             'hostname': m.hostname,
             'kube_type': m.kube.id,
             'status': 'running' if _node_is_active(res) else 'troubles',
-            'annotations': m.annotations,
-            'labels': m.labels,
             'resources': res.get('resources', {})
         }
         return jsonify({'status': 'OK', 'data': data})
@@ -268,7 +275,8 @@ def create_item():
     m = db.session.query(Node).filter_by(hostname=data['hostname']).first()
     if not m:
         kube = Kube.query.get(data.get('kube_type', 0))
-        m = Node(ip=data['ip'], hostname=data['hostname'], kube=kube)
+        m = Node(ip=data['ip'], hostname=data['hostname'], kube=kube,
+                 state='pending')
         logs_kubes = 1
         node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
         logs_memory_limit = node_resources['limits']['memory']
@@ -294,10 +302,17 @@ def create_item():
         db.session.add(m)
         db.session.add(logs_pod)
         db.session.commit()
-        r = tasks.add_new_node.delay(m.hostname, kube.id)
-        # r.wait()                              # maybe result?
+
+        try:
+            # clear old log before it pulled by SSE event
+            os.remove(NODE_INSTALL_LOG_FILE.format(m.hostname))
+        except OSError:
+            pass
+
+        r = tasks.add_new_node.delay(m.hostname, kube.id, m)
         tasks.create_containers_nodelay(config)
         data.update({'id': m.id})
+        send_event('pull_nodes_state', 'ping')
         return jsonify({'status': 'OK', 'data': data})
     else:
         raise APIError(

@@ -31,6 +31,19 @@ def send_event(event_name, data, to_file=None, channel='common'):
             to_file.flush()
         except Exception as e:
             print 'Error writing to log file', e.__repr__()
+
+
+def send_logs(node, data, to_file=None, channel='common'):
+    conn = ConnectionPool.get_connection()
+    conn.publish(channel, json.dumps(['install_logs',
+                                      {'for_node': node, 'data': data}]))
+    if to_file is not None:
+        try:
+            to_file.write(data)
+            to_file.write('\n')
+            to_file.flush()
+        except Exception as e:
+            print 'Error writing to log file', e.__repr__()
     
 
 #def get_events():

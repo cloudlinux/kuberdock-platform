@@ -10,9 +10,6 @@ from gevent.wsgi import WSGIServer
 
 from kubedock import frontend, api
 
-# This renders install scripts with latest settings at every start
-import make_scripts
-
 application = DispatcherMiddleware(
     frontend.create_app(),
     {'/api': api.create_app()}

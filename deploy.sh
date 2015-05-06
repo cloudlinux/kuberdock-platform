@@ -69,51 +69,47 @@ log_it()
 #   done
 #}
 
+# Get number of interfaces up
+IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)
 
-DEFAULT_IFACE=""
-DEFAULT_MASTER_IP=""
+MASTER_TOBIND_FLANNEL=""
+MASTER_IP=""
 
-DEFAULT_IFACE=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;exit}}')
-echo "DEFAULT_IFACE was set to $DEFAULT_IFACE" >> $DEPLOY_LOG_FILE
+if [ $IFACE_NUM -eq 0 ]; then    # no working interfaces found...
+    read -p "No interfaces found. Enter inner network interface IP: " MASTER_IP
+    if [ -z "$MASTER_IP" ]; then
+        echo "No IP addresses obtained. Exit" >> $DEPLOY_LOG_FILE
+        exit 0
+    fi
+else
+    # get first interface from found ones
+    FIRST_IFACE=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;exit}}')
 
-read -p "Enter interface for inter-host communication[$DEFAULT_IFACE]: " IFACE
-if [ -z "$IFACE" ];then
-    IFACE=$DEFAULT_IFACE
-fi
+    # get this interface ip address
+    FIRST_IP=$(ip -o -4 address show $FIRST_IFACE|awk '/inet/ {sub(/\/.*$/, "", $4); print $4;exit;}')
 
-if [ -n "$IFACE" ];then
-    DEFAULT_MASTER_IP=$(ip -o -4 address show $IFACE|awk 'NR>1 {exit}; /inet/ {sub(/\/.*$/, "", $4); print $4}')
-    if [ -n "$DEFAULT_MASTER_IP" ];then
-        PROMPT="Enter master IP address [$DEFAULT_MASTER_IP]: "
+    # read user confirmation
+    read -p "Enter inner network interface IP address [$FIRST_IP]: " MASTER_IP
+    if [ -z "$MASTER_IP" ]; then
+        MASTER_IP=$FIRST_IP
+        MASTER_TOBIND_FLANNEL=$FIRST_IFACE
     else
-        PROMPT="Enter master IP address: "
+        MASTER_TOBIND_FLANNEL=$(ip -o -4 address show| awk "{sub(/\/.*\$/, \"\", \$4); if(\$4==\"$MASTER_IP\"){print \$2;exit}}")
     fi
 fi
-echo "IFACE was set to $IFACE" >> $DEPLOY_LOG_FILE
 
-read -p "$PROMPT" MASTER_IP
-if [ -z "$MASTER_IP" ];then
-    MASTER_IP=$DEFAULT_MASTER_IP
+# if entered ip not found or invalid
+if [ -z "$MASTER_TOBIND_FLANNEL" ]; then
+    echo "No IP addresses obtained. Exit" >> $DEPLOY_LOG_FILE
+    exit 0
 fi
-echo "MASTER_IP was set to $MASTER_IP" >> $DEPLOY_LOG_FILE
 
-read -p "Enter a node interface for binding to public IPs [$DEFAULT_IFACE]: " NODE_TOBIND_EXTERNAL_IPS
-if [ -z "$NODE_TOBIND_EXTERNAL_IPS" ];then
-    NODE_TOBIND_EXTERNAL_IPS=$DEFAULT_IFACE
-fi
-echo "NODE_TOBIND_EXTERNAL_IPS was set to $NODE_TOBIND_EXTERNAL_IPS" >> $DEPLOY_LOG_FILE
-
-read -p "Enter master interface for flanneld [$DEFAULT_IFACE]: " MASTER_TOBIND_FLANNEL
-if [ -z "$MASTER_TOBIND_FLANNEL" ];then
-    MASTER_TOBIND_FLANNEL=$DEFAULT_IFACE
-fi
+echo "MASTER_IP has been set to $MASTER_IP" >> $DEPLOY_LOG_FILE
 echo "MASTER_TOBIND_FLANNEL was set to $MASTER_TOBIND_FLANNEL" >> $DEPLOY_LOG_FILE
 
-read -p "Enter a node interface for flanneld (inter-host communication) [$DEFAULT_IFACE]: " NODE_TOBIND_FLANNEL
-if [ -z "$NODE_TOBIND_FLANNEL" ];then
-    NODE_TOBIND_FLANNEL=$DEFAULT_IFACE
-fi
-echo "NODE_TOBIND_FLANNEL was set to $NODE_TOBIND_FLANNEL" >> $DEPLOY_LOG_FILE
+# Just a workaround for compatibility
+NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
+NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
 
 

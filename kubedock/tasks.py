@@ -1,13 +1,16 @@
+import ipaddress
+import jinja2
 import json
-import requests
-import time
 import operator
+import re
+import requests
+import subprocess
 import sys
+import time
+
 from collections import OrderedDict
 from datetime import datetime
-import jinja2
 from StringIO import StringIO
-import subprocess
 
 from .api.stream import send_event, send_logs
 from .core import ConnectionPool, db, ssh_connect
@@ -16,8 +19,7 @@ from .utils import update_dict
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState
-from .settings import MASTER_IP, NODE_TOBIND_FLANNEL
-from .settings import KUBE_API_VERSION, NODE_INSTALL_LOG_FILE
+from .settings import KUBE_API_VERSION, NODE_INSTALL_LOG_FILE, MASTER_IP
 
 from .utils import get_api_url
 
@@ -158,17 +160,17 @@ def add_new_node(host, kube_type, db_node):
             db.session.add(db_node)
             db.session.commit()
             return error_message
-
+        
+        i, o, e = ssh.exec_command('ip -o -4 address show')
+        node_interface = get_node_interface(o.read())
+        sftp = ssh.open_sftp()
         with open('kub_install.template') as f:
             r = jinja2.Template(f.read()).render(
                 master_ip=MASTER_IP,
-                flannel_iface=NODE_TOBIND_FLANNEL,
-                cur_master_kubernetes=current_master_kubernetes,
-            )
-        script = StringIO(r)
-
-        sftp = ssh.open_sftp()
-        sftp.putfo(script, '/kub_install.sh')
+                flannel_iface=node_interface,
+                cur_master_kubernetes=current_master_kubernetes)
+            fo = StringIO(r)
+            sftp.putfo(fo, '/kub_install.sh')
         sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
@@ -375,3 +377,17 @@ def pull_hourly_stats():
             continue
         db.session.add(StatWrap5Min(**entry))
     db.session.commit()
+
+
+def get_node_interface(data):
+    if not MASTER_IP:
+        return
+    ip = ipaddress.ip_address(unicode(MASTER_IP))
+    patt = re.compile(r'(?P<iface>\w+)\s+inet\s+(?P<ip>[0-9\/\.]+)')
+    for line in data.splitlines():
+        m = patt.search(line)
+        if m is None:
+            continue
+        iface = ipaddress.ip_interface(unicode(m.group('ip')))
+        if ip in iface.network:
+            return m.group('iface')

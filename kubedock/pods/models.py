@@ -41,6 +41,8 @@ class Pod(db.Model):
 
     @property
     def price_per_hour(self):
+        if self.kube is None:
+            return 0
         return self.kubes * self.kube.price
 
     def delete(self):

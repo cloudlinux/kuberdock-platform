@@ -122,9 +122,9 @@ def create_kube():
 def add_kube(data):
     attrs = {}
     defaults = {'cpu': 0, 'cpu_units': 'MHz', 'memory': 0, 'memory_units': 'MB',
-                'disk_space': 0, 'total_traffic': 0, 'default': False}
+                'disk_space': 0, 'total_traffic': 0, 'default': False, 'price': 0.0}
     for attr in ('name',  'cpu', 'cpu_units', 'memory', 'memory_units',
-                 'disk_space', 'total_traffic'):
+                 'disk_space', 'total_traffic', 'price'):
         attrs[attr] = data.get(attr, defaults.get(attr))
         if attrs[attr] is None:
             return {

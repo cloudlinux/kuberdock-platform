@@ -133,8 +133,8 @@ do_and_log 'systemctl disable firewalld'
 
 #2 Install ntp, we need correct time for node logs
 log_errors 'yum install -y ntp'
-do_and_log 'ntpd -gq'
-do_and_log 'systemctl start ntpd'
+do_and_log 'ntpd -g'
+do_and_log 'systemctl restart ntpd'
 do_and_log 'systemctl enable ntpd'
 do_and_log 'ntpq -p'
 

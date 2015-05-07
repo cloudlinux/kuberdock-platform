@@ -29,9 +29,9 @@ check_status
 #0 Install ntp, we need correct time for node logs
 yum install -y ntp
 check_status
-ntpd -gq
+ntpd -g
 check_status
-systemctl start ntpd
+systemctl restart ntpd
 check_status
 systemctl enable ntpd
 check_status

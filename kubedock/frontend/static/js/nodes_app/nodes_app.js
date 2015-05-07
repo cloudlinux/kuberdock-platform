@@ -629,6 +629,11 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
                     App.vent.trigger('update_console_log');
                 }
             }, false);
+            source.onerror = function (e) {
+                // without this handler, even empty, browser doesn't do reconnect
+                console.log("SSE Error handler");
+                // TODO Setup here timer to reconnect, maybe via location.reload
+            };
         }
     });
 

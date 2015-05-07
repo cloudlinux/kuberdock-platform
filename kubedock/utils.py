@@ -59,7 +59,7 @@ def get_api_url(*args, **kwargs):
     url = kwargs.get('url') or KUBE_MASTER_URL
     res = '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
     if kwargs.get('use_v3'):
-        res.replace('v1beta2', 'v1beta3/namespaces/default')
+        res = res.replace('v1beta2', 'v1beta3/namespaces/default')
     return res
 
 

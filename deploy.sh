@@ -128,8 +128,6 @@ log_it 'echo WARNING: we stop firewalld!'
 do_and_log 'systemctl stop firewalld'
 do_and_log 'systemctl disable firewalld'
 
-log_it 'echo Adding SELinux rule for http on port 9200'
-do_and_log 'semanage port -a -t http_port_t -p tcp 9200'
 
 
 
@@ -164,6 +162,14 @@ log_errors 'yum -y install kuberdock'
 #4.1 Fix package path bug
 mkdir /var/run/kubernetes || /bin/true
 do_and_log 'chown kube:kube /var/run/kubernetes'
+
+
+#4.2 SELinux rules
+# After kuberdock, we need installed semanage
+log_it 'echo Adding SELinux rule for http on port 9200'
+do_and_log 'semanage port -a -t http_port_t -p tcp 9200'
+
+
 
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
 echo "MASTER_IP=$MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
@@ -492,7 +498,14 @@ if [ ! -d $TGT_DIR ];then
 fi
 
 if [ ! -e $TGT_PATH ]; then
-    do_and_log "ssh-keygen -N '' -f $TGT_PATH"
+    log_it "echo Trying to generate ssh-key..."
+    ssh-keygen -N '' -f $TGT_PATH
+    if [ $? -ne 0 ];then
+        log_it "echo Error during generating ssh-key"
+        echo $EXIT_MESSAGE
+        exit 1
+    fi
+    log_it "echo Generated new key: $TGT_PATH"
 fi
 
 do_and_log "chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR"
@@ -500,7 +513,7 @@ do_and_log "chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR"
 # ======================================================================
 log_it "echo WARNING: Firewalld was disabled. You need to configure it to work right"
 log_it "echo WARNING: $WEBAPP_USER need ssh access to nodes as 'root'"
-log_it "echo We will use $TGT_PATH Please, copy it to all your nodes with command like this:"
+log_it "echo Will be used $TGT_PATH Please, copy it to all your nodes with command like this:"
 log_it "echo ssh-copy-id -i $TGT_PATH.pub root@your_node"
 log_it "echo Installation completed and log saved to $DEPLOY_LOG_FILE"
 log_it "echo KuberDock is available at https://$MASTER_IP/"

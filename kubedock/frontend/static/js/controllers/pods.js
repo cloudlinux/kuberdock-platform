@@ -372,7 +372,8 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 initPodCollection.fetch();
             }, false);
             source.onerror = function (e) {
-                console.log("SSE Error");
+                // without this handler, even empty, browser doesn't do reconnect
+                console.log("SSE Error handler");
                 // TODO Setup here timer to reconnect, maybe via location.reload
             };
         }

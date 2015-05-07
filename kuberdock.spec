@@ -17,7 +17,7 @@ Requires: etcd == 2.0.9-1.el7.centos
 Requires: kubernetes >= 0.15.0-4.el7.centos.1
 Requires: flannel >= 0.3.0
 Requires: dnsmasq >= 2.66
-# For semanage:
+# For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
 Requires: python-cerberus >= 0.7.2

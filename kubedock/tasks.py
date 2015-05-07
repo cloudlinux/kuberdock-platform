@@ -160,7 +160,7 @@ def add_new_node(host, kube_type, db_node):
             db.session.add(db_node)
             db.session.commit()
             return error_message
-        
+
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read())
         sftp = ssh.open_sftp()

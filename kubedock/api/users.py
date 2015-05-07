@@ -3,6 +3,8 @@ from flask import Blueprint, request, jsonify, current_app, session
 from flask.ext.login import login_user, logout_user, current_user
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
+from werkzeug.datastructures import ImmutableMultiDict
+
 from . import APIError
 from ..billing import Package
 from ..core import db
@@ -57,6 +59,7 @@ def get_users_usernames(s):
 
 
 @users.route('/', methods=['GET'])
+@users.route('/all', methods=['GET'])
 @users.route('/<username>', methods=['GET'])
 @login_required_or_basic
 def get_list(username=None):
@@ -192,17 +195,18 @@ def get_online_users():
     return jsonify({'data': User.get_online_collection()})
 
 
-@users.route('/', methods=['POST'])
-@users.route('/full', methods=['POST'])
+@users.route('/', methods=['POST'], strict_slashes=False)
+@users.route('/full', methods=['POST'], strict_slashes=False)
 @login_required_or_basic
 @check_permission('create', 'users')
 def create_item():
     data = request.json
     if data is None:
         data = request.form
-    for key in data.keys():
-        if type(data[key]) is list and len(data[key]) == 1:
-            data[key] = data[key][0]
+    if type(data) is ImmutableMultiDict:
+        data = dict((key, data[key]) for key in data.keys())
+    current_app.logger.debug(data)
+    #return jsonify({'status': 'OK'})
     try:
         rolename = data.pop('rolename', 'User')
         package = data.pop('package', 'basic')
@@ -215,10 +219,9 @@ def create_item():
         u.save()
         data.update({'id': u.id, 'rolename': rolename, 'package': package})
         return jsonify({'status': 'OK', 'data': data})
-    except (IntegrityError, InvalidRequestError):
+    except (IntegrityError, InvalidRequestError), e:
         db.session.rollback()
-        raise APIError('Conflict: User "{0}" already '
-                       'exists'.format(str(data)))
+        raise APIError('Cannot create a user: {0}'.format(str(e)))
 
 
 @users.route('/<user_id>', methods=['PUT'])

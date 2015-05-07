@@ -420,24 +420,6 @@
                             <span></span>
                             On autoterminate
                         </label> -->
-                        <div class="row policy">
-                            <div class="col-xs-12">
-                                <label>Replace policy</label>
-                            </div>
-                            <div class="col-md-6">
-                                <select class="restart-policy">
-                                    <option selected="selected" value="always">Always</option>
-                                    <option value="never">Never</option>
-                                    <option value="onFailure">On Failure</option>
-                                </select>
-                            </div>
-                       <!--     <div class="col-md-3">
-                                <select>
-                                    <option>Replication QTU</option>
-                                    <option>2</option>
-                                </select>
-                            </div> -->
-                        </div>
                         <div class="ports">
                             <label>Ports:</label>
                             <div class="row">
@@ -1342,6 +1324,24 @@
             <div id="details_content" class="col-sm-9 set-up-image no-padding">
                 <div id="tab-content" class="clearfix complete">
                     <div class="col-md-6 no-padding left">
+                        <div class="row policy">
+                            <div class="col-xs-12">
+                                <label>Restart policy</label>
+                            </div>
+                            <div class="col-md-6">
+                                <select class="restart-policy">
+                                    <option selected="selected" value="always">Always</option>
+                                    <option value="never">Never</option>
+                                    <option value="onFailure">On Failure</option>
+                                </select>
+                            </div>
+                       <!--     <div class="col-md-3">
+                                <select>
+                                    <option>Replication QTU</option>
+                                    <option>2</option>
+                                </select>
+                            </div> -->
+                        </div>
                         <label>Type</label>
                         <select class="kube_type" id="extra-options">
                             <option value="Available kube types" disabled selected>Available kube types</option>

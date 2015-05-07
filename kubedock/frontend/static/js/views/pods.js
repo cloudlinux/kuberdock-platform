@@ -768,7 +768,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'click .add-port'        : 'addItem',
 //            'click .readonly'        : 'toggleReadOnly',
             'click .add-volume'      : 'addVolume',
-            'change .restart-policy' : 'changePolicy',
             'click input.public'     : 'togglePublic',
             'click .remove-port'     : 'removePortEntry',
             'click .remove-volume'   : 'removeVolumeEntry',
@@ -787,14 +786,6 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
 //            'click .next-step'       : 'step:envconf',
             'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf',
-        },
-
-        changePolicy: function(evt){
-            evt.stopPropagation();
-            var policy = $(evt.target).val(),
-                struct = {};
-            struct[policy] = {};
-            this.model.set('restartPolicy', struct)
         },
 
         templateHelpers: function(){
@@ -1394,6 +1385,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'change .replicas'        : 'changeReplicas',
             'change .kube_type'       : 'changeKubeType',
             'change .kube-quantity'   : 'changeKubeQuantity',
+            'change .restart-policy'  : 'changePolicy',
         },
 
         triggers: {
@@ -1484,6 +1476,14 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
             this.ui.kubeTypes.val(kube_id);
             this.ui.kubeQuantity.val(num);
+        },
+
+        changePolicy: function(evt){
+            evt.stopPropagation();
+            var policy = $(evt.target).val(),
+                struct = {};
+            struct[policy] = {};
+            this.model.set('restartPolicy', struct)
         },
 
         onRender: function(){

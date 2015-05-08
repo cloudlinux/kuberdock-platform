@@ -29,7 +29,7 @@ def get_total_usage():
             entry = unfold_entry(pod)
             entry.update({"kube_id": kube_id})
             data[user.username].append(entry)
-    return jsonify({'status': 'OK', 'data': data}) 
+    return jsonify({'status': 'OK', 'data': data})
 
 @usage.route('/<login>', methods=['GET'])
 @login_required_or_basic
@@ -61,7 +61,7 @@ def unfold_entry(row):
         'id': row.id,
         'name': row.name,
         'kubes': row.kubes,
-        'kube_id': row.owner.package.kube_id,
+        'kube_id': [k.id for k in row.owner.package.kubes],
         'time': time_,
         }
 

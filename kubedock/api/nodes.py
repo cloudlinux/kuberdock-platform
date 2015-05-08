@@ -136,7 +136,7 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, uuid, master_ip):
 
 def _node_is_active(x):
     try:
-        return x['status']['conditions'][0]['status'] == 'Full'
+        return x['status']['conditions'][0]['type'] == 'Ready'
     except KeyError:
         return False
 
@@ -153,7 +153,7 @@ def get_nodes_collection():
     new_flag = False
     oldcur = Node.query.all()
     db_hosts = [node.hostname for node in oldcur]
-    kub_hosts = {x['id']: x for x in tasks.get_all_nodes()}
+    kub_hosts = {x['metadata']['name']: x for x in tasks.get_all_nodes()}
     for host in kub_hosts:
         if host not in db_hosts:
             new_flag = True
@@ -224,6 +224,11 @@ def get_nodes_collection():
             except IOError:
                 install_log = 'No install log available for this node.\n'
 
+        try:
+            resources = kub_hosts[node.hostname]['status']['capacity']
+        except KeyError:
+            resources = {}
+
         nodes_list.append({
             'id': node.id,
             'ip': node.ip,
@@ -232,7 +237,7 @@ def get_nodes_collection():
             'status': node_status,
             'reason': node_reason,
             'install_log': install_log,
-            'resources': kub_hosts.get(node.hostname, {}).get('resources', {})
+            'resources': resources
         })
     return nodes_list
 
@@ -259,7 +264,7 @@ def get_one_node(node_id):
             'hostname': m.hostname,
             'kube_type': m.kube.id,
             'status': 'running' if _node_is_active(res) else 'troubles',
-            'resources': res.get('resources', {})
+            'resources': res['status'].get('capacity', {})
         }
         return jsonify({'status': 'OK', 'data': data})
     else:

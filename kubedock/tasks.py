@@ -15,13 +15,11 @@ from StringIO import StringIO
 from .api.stream import send_event, send_logs
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
-from .utils import update_dict
+from .utils import update_dict, get_api_url
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState
-from .settings import KUBE_API_VERSION, NODE_INSTALL_LOG_FILE, MASTER_IP
-
-from .utils import get_api_url
+from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP
 
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -56,17 +54,17 @@ def get_pods_nodelay(pod_id=None):
     if pod_id is not None:
         url = get_api_url('pods', pod_id)
     r = requests.get(url)
-    return json.loads(r.text)
+    return r.json()
 
 
 def get_replicas_nodelay():
     r = requests.get(get_api_url('replicationControllers'))
-    return json.loads(r.text)
+    return r.json()
 
 
 def get_services_nodelay():
-    r = requests.get(get_api_url('services'))
-    return json.loads(r.text)
+    r = requests.get(get_api_url('services', use_v3=True))
+    return r.json()
 
 
 def create_containers_nodelay(data):
@@ -82,12 +80,12 @@ def create_service_nodelay(data):
 
 def delete_pod_nodelay(item):
     r = requests.delete(get_api_url('pods', item))
-    return json.loads(r.text)
+    return r.json()
 
 
 def delete_replica_nodelay(item):
     r = requests.delete(get_api_url('replicationControllers', item))
-    return json.loads(r.text)
+    return r.json()
 
 
 def update_replica_nodelay(item, diff):
@@ -97,12 +95,12 @@ def update_replica_nodelay(item, diff):
     update_dict(data, diff)
     headers = {'Content-Type': 'application/json'}
     r = requests.put(url, data=json.dumps(data), headers=headers)
-    return json.loads(r.text)
+    return r.json()
 
 
 def delete_service_nodelay(item):
-    r = requests.delete(get_api_url('services', item))
-    return json.loads(r.text)
+    r = requests.delete(get_api_url('services', item, use_v3=True))
+    return r.json()
 
 
 @celery.task()
@@ -114,17 +112,17 @@ def get_dockerfile(data):
 
 
 def get_all_nodes():
-    r = requests.get(get_api_url('nodes'))
+    r = requests.get(get_api_url('nodes', use_v3=True, namespace=False))
     return r.json().get('items') or []
 
 
 def get_node_by_host(host):
-    r = requests.get(get_api_url('nodes', host))
+    r = requests.get(get_api_url('nodes', host, use_v3=True, namespace=False))
     return r.json()
 
 
 def remove_node_by_host(host):
-    r = requests.delete(get_api_url('nodes', host))
+    r = requests.delete(get_api_url('nodes', host, use_v3=True, namespace=False))
     return r.json()
 
 
@@ -199,15 +197,19 @@ def add_new_node(host, kube_type, db_node):
                 .format(s, e.read())
             send_logs(host, res, log_file)
         else:
-            res = requests.post(get_api_url('nodes'),
-                                json={'id': host,
-                                      'apiVersion': KUBE_API_VERSION,
-                                      'externalID': host,
-                                      'labels': {
-                                          'kuberdock-node-hostname': host,
-                                          'kuberdock-kube-type': 'type_' +
-                                                                 str(kube_type)
-                                      }
+            res = requests.post(get_api_url('nodes', use_v3=True, namespace=False),
+                                json={
+                                    'metadata': {
+                                        'name': host,
+                                        'labels': {
+                                            'kuberdock-node-hostname': host,
+                                            'kuberdock-kube-type':
+                                                'type_' + str(kube_type)
+                                        }
+                                    },
+                                    'spec': {
+                                        'externalID': host,
+                                    }
                                 })
             if not res.ok:
                 send_logs(host, 'ERROR adding node.', log_file)
@@ -259,8 +261,7 @@ def parse_nodes_statuses(items):
         try:
             conditions = item['status']['conditions']
             for cond in conditions:
-                status = cond['status']
-                res.append(status)
+                res.append(cond.get('type', ''))
         except KeyError:
             res.append('')
     return res

@@ -136,9 +136,9 @@ class KubeResolver(object):
             for item in data['items']:
                 for pod in self._pods:
                     try:
-                        if self._is_related(pod['labels'], item['selector']):
-                            pod['portalIP'] = item['portalIP']
-                            pod['servicename'] = item['labels']['name']
+                        if self._is_related(pod['labels'], item['spec']['selector']):
+                            pod['portalIP'] = item['spec']['portalIP']
+                            pod['servicename'] = item['metadata']['labels']['name']
                             break
                     except KeyError:
                         pass

@@ -3,8 +3,6 @@ from flask import Blueprint, request, jsonify, current_app, session
 from flask.ext.login import login_user, logout_user, current_user
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
-from werkzeug.datastructures import ImmutableMultiDict
-
 from . import APIError
 from ..billing import Package
 from ..core import db
@@ -14,7 +12,6 @@ from ..utils import login_required_or_basic
 from ..users.models import User, UserActivity
 from ..users.signals import (
     user_logged_in_by_another, user_logged_out_by_another)
-
 
 
 users = Blueprint('users', __name__, url_prefix='/users')
@@ -202,11 +199,7 @@ def get_online_users():
 def create_item():
     data = request.json
     if data is None:
-        data = request.form
-    if type(data) is ImmutableMultiDict:
-        data = dict((key, data[key]) for key in data.keys())
-    current_app.logger.debug(data)
-    #return jsonify({'status': 'OK'})
+        data = request.form.to_dict()
     try:
         rolename = data.pop('rolename', 'User')
         package = data.pop('package', 'basic')
@@ -233,28 +226,31 @@ def put_item(user_id):
         u = db.session.query(User).get(user_id)
     else:
         u = db.session.query(User).filter_by(username=user_id).first()
-    if u is not None:
-        data = request.json
-        if data is None:
-            data = request.form.to_dict()
-        for key in data.keys():
-            if isinstance(data[key], list) and len(data[key]) == 1:
-                data[key] = data[key][0]
+    if u is None:
+        raise APIError("User {0} doesn't exist".format(user_id))
+    data = request.json
+    if data is None:
+        data = request.form.to_dict()
+    if 'rolename' in data:
+        rolename = data.pop('rolename', 'User')
+        r = db.session.query(Role).filter_by(rolename=rolename).first()
+        if r is not None:
+            data['rolename'] = r
+        else:
+            data['rolename'] = db.session.query(Role).filter_by(rolename='User').first()
+    if 'package' in data:
+        package = data.pop('package', 'basic')
+        p = db.session.query(Package).filter_by(name=package).first()
+        if p is not None:
+            data['package'] = p
+        else:
+            data['package'] = db.session.query(Package).filter_by(name='basic').first()
+    data = dict(filter((lambda item: item[1] != ''), data.items()))
+    for attr in data.keys():
+        setattr(u, attr, data[attr])
+    u.save()
+    return jsonify({'status': 'OK'})
 
-        # after some validation, including username unique...
-        if 'role' in data:
-            rolename = rolename=data.pop('role', 'User')
-            r = db.session.query(Role).filter_by(rolename=rolename).first()
-            if r is not None:
-                data['role'] = r
-            else:
-                data['role'] = db.session.query(Role).filter_by(rolename='User').first()
-        data = dict(filter((lambda item: item[1] != ''), data.items()))
-        for attr in data.keys():
-            setattr(u, attr, data[attr])
-        u.save()
-        return jsonify({'status': 'OK'})
-    raise APIError("User {0} doesn't exists".format(user_id))
 
 
 @users.route('/<user_id>', methods=['DELETE'])

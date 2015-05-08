@@ -235,11 +235,24 @@ body{
                         color: #ffffff;
                     }
                 }
-                li + li:before{
-                    padding: 0 7px;
-                    color: #FFF;
-                    content: ">";
-                    font-size: 16px;
+                li + li{
+                	padding-left: 26px;
+                	position: relative;
+                	&:before{
+	                	background: url('../img/menu-arrow.png') 0 0 no-repeat;
+	                    width: 6px;
+	                    color: #FFF;
+	                    height: 9px;
+	                    content: '';
+	                    padding: 0;
+	                    font-size: 0px;
+	                    position: absolute;
+	                    left: 11px;
+	                    top: 0;
+	                    bottom: 0;
+	                    margin: auto;
+
+                	}
                 }
             }
             .control-group{
@@ -288,7 +301,7 @@ body{
                     &:before{
                         position: absolute;
                     }
-                    &#add_node, &#add_user, &#login_this_user, &#add_pod, &#create_network{
+                    &#add_node, &#add_user, &#login_this_user, &#add_pod, &#create_network, &#redeploy_node{
                         margin-right: 25px;
                         padding: 0 0 0 38px;
                         &:before{

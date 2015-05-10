@@ -271,11 +271,11 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
             });
             this.listenTo(wizardLayout, 'step:complete', function(data){
                 model.attributes['set_public_ip'] = false;
-                if(data.get('ports').length == 0){
-                    modelError('Please, setup ports of container.');
-                    wizardLayout.steps.show(new App.Views.WizardPortsSubView({model: data}));
-                    return false;
-                }
+//                if(data.get('ports').length == 0){
+//                    modelError('Please, setup ports of container.');
+//                    wizardLayout.steps.show(new App.Views.WizardPortsSubView({model: data}));
+//                    return false;
+//                }
                 _.each(data.get('volumeMounts'), function(mp){
                     var row = model.get('volumes'),
                         entry;

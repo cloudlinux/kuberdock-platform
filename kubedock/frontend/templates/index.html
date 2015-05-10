@@ -388,12 +388,15 @@
                     <div class="item-body-info">
                         <%= description || 'No description' %>
                     </div>
-                    <!-- <% if (description) { %>
-                        <div class="more">more...</div>
-                    <% } %> -->
+                    <% if (description && name) { %>
+                        <div class="more">
+                            <a href="http://<%= _options.requestData.url %>/u/<%= name %>"
+                               target="blank">more...</a>
+                        </div>
+                    <% } %>
                 </div>
                 <div class="col-xs-2 no-padding">
-                    <!-- <button class="like">41</button> -->
+                    <button class="like"><%= star_count %></button>
                     <button class="add-item">Select</button>
                 </div>
             </div>
@@ -1237,9 +1240,9 @@
                             <a href="/#pods">Pods</a>
                         </li>
                         <li>
-                            <a href="/#pods/<%- parentID %>">My best Pod</a>
+                            <a href="/#pods/<%- parentID %>"><%- podName %></a>
                         </li>
-                        <li class="active">Container name</li>
+                        <li class="active"><%- image %> (<%- name %>)</li>
                     </ul>
                 </div>
             </div>

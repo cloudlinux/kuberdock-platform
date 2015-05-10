@@ -1273,8 +1273,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         templateHelpers: function(){
+            var model = initPodCollection.fullCollection.get(
+                this.model.get('parentID'));
             return {
-                isPending: !this.model.has('parentID')
+                isPending: !this.model.has('parentID'),
+                podName: model.get('name')
             };
         },
 

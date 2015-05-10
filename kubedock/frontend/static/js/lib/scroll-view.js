@@ -181,6 +181,7 @@ var ScrollView = Backbone.View.extend({
                 classesStr = self.options.itemClasses(itemData);
             }
 
+            itemData['_options'] = self.options;
             var html = _.template(templateSrc)(itemData); //item html body
 
             //create an item DIV wrapper

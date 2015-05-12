@@ -5,7 +5,6 @@ import random
 import re
 import ipaddress
 import shlex
-import requests
 from uuid import uuid4
 from flask import Blueprint, request, current_app, jsonify, g
 from flask.ext.login import current_user
@@ -13,7 +12,7 @@ from .. import tasks, signals
 from ..models import User, Pod
 from ..core import db, ssh_connect
 from ..rbac import check_permission
-from ..utils import update_dict, login_required_or_basic, modify_node_ips
+from ..utils import login_required_or_basic, modify_node_ips
 from ..kubedata.kuberesolver import KubeResolver, add_fake_dockers
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..billing import kubes_to_limits
@@ -225,9 +224,7 @@ def delete_item(uuid):
         return jsonify({'status': 'ERROR', 'reason': 'Key not found (%s)' % (e.message,)})
 
     # Deleting service
-    # services = tasks.get_services_nodelay()
-    # TODO remove when switch to v1beta3
-    services = requests.get('http://127.0.0.1:8080/api/v1beta3/namespaces/default/services/').json()
+    services = tasks.get_services_nodelay()
     if 'items' not in services:
         raise APIError('No services items')
     try:
@@ -408,8 +405,6 @@ def run_service(data):
             })
 
     conf = {
-        'kind': 'Service',
-        'apiVersion': 'v1beta3',
         'metadata': {
             'generateName': data['name'].lower() + '-service-',
             'labels': {'name': dash_name + '-service'},
@@ -422,6 +417,7 @@ def run_service(data):
         'spec': {
             'selector': {'name': data['name']},
             'ports': ports,
+            'sessionAffinity': 'None'   # may be ClientIP is better
         }
     }
 

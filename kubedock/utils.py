@@ -56,11 +56,13 @@ def update_dict(src, diff):
 
 
 def get_api_url(*args, **kwargs):
-    url = kwargs.get('url') or KUBE_MASTER_URL
-    res = '{0}/{1}'.format(url, '/'.join([str(arg) for arg in args]))
-    if kwargs.get('use_v3'):
-        res = res.replace('v1beta2', 'v1beta3/namespaces/default')
-    return res
+    url = '{0}/{1}'.format(KUBE_MASTER_URL, '/'.join(map(str, args)))
+    if not kwargs.get('use_v3'):
+        return url
+    namespace = kwargs.get('namespace', 'default')
+    if namespace:
+        return url.replace('v1beta2', 'v1beta3/namespaces/{0}'.format(namespace))
+    return url.replace('v1beta2', 'v1beta3')
 
 
 # separate function because set_roles_loader decorator don't return function. Lib bug.

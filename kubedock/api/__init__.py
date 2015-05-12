@@ -2,9 +2,7 @@ import datetime
 from .. import factory
 from .. import sessions
 from ..rbac import get_user_role
-from ..settings import KUBE_MASTER_URL
 from ..settings import SERVICES_VERBOSE_LOG
-from ..core import ssh_connect, db
 from ..utils import APIError, modify_node_ips, get_api_url
 
 from flask.ext.login import current_user
@@ -62,10 +60,6 @@ def on_404(e):
     return on_app_error(APIError('Not found', status_code=404))
 
 
-# TODO remove when migrate to v1beta3
-SERVICES_V3_URL = get_api_url('services').replace('v1beta2', 'v1beta3/namespaces/default') + '/'
-
-
 def filter_event(data):
     metadata = data['object']['metadata']
     if metadata['name'] in ('kubernetes', 'kubernetes-ro'):
@@ -80,7 +74,7 @@ def process_endpoints_event(data):
     if SERVICES_VERBOSE_LOG >= 2:
         print 'ENDPOINT EVENT', data
     service_name = data['object']['metadata']['name']
-    r = requests.get(SERVICES_V3_URL + service_name)
+    r = requests.get(get_api_url('services', service_name, use_v3=True))
     if r.status_code == 404:
         return
     service = r.json()
@@ -105,7 +99,9 @@ def process_endpoints_event(data):
                     del state['assigned-pod-ip']
                     service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
                     # TODO what if resourceVersion has changed?
-                    r = requests.put(SERVICES_V3_URL + service_name, json.dumps(service))
+                    r = requests.put(
+                        get_api_url('services', service_name, use_v3=True),
+                        json.dumps(service))
         elif event_type == 'DELETED':
             pass
             # Handle here if public-ip removed during runtime
@@ -119,8 +115,8 @@ def process_endpoints_event(data):
             return
         assigned_to = state.get('assigned-to')
         podname = pods[0]['addresses'][0]['targetRef']['name']
-        # TODO change to v3
-        kub_pod = requests.get('http://127.0.0.1:8080/api/v1beta2/pods/' + podname).json()
+        # Can't use task.get_pods_nodelay due cyclic imports
+        kub_pod = requests.get(get_api_url('pods', podname)).json()
         ports = service['spec']['ports']
         # TODO what to do here when pod yet not assigned to node at this moment?
         # skip only this event or reconnect(like now)?
@@ -132,7 +128,9 @@ def process_endpoints_event(data):
                 state['assigned-to'] = current_host
                 state['assigned-pod-ip'] = pod_ip
                 service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                r = requests.put(SERVICES_V3_URL + service_name, json.dumps(service))
+                r = requests.put(
+                    get_api_url('services', service_name, use_v3=True),
+                    json.dumps(service))
         else:
             if current_host != assigned_to:     # migrate pod
                 if SERVICES_VERBOSE_LOG >= 2:
@@ -147,30 +145,26 @@ def process_endpoints_event(data):
                         state['assigned-to'] = current_host
                         state['assigned-pod-ip'] = pod_ip
                         service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                        r = requests.put(SERVICES_V3_URL + service_name, service)
+                        r = requests.put(
+                            get_api_url('services', service_name, use_v3=True),
+                            service)
     else:   # more? replica case
         pass
 
 
 def listen_endpoints():
-    # Dirty hack for gevent first switch with uwsgi
-    # r = None
-    # with gevent.Timeout(1, False):
-    #     r = requests.get(KUBE_MASTER_URL.replace('v1beta2', 'v1beta3') + '/watch/endpoints', stream=True)
-    # if r is None:
-    #     if SERVICES_VERBOSE_LOG >= 2:
-    #         print '=WATCH TIMEOUT='
     while True:
         try:
-            if SERVICES_VERBOSE_LOG >= 1:
+            if SERVICES_VERBOSE_LOG >= 2:
                 print '==START WATCH ENDPOINTS== pid:', os.getpid()
-            r = requests.get(KUBE_MASTER_URL.replace('v1beta2', 'v1beta3') + '/watch/endpoints', stream=True)
+            r = requests.get(
+                get_api_url('watch', 'endpoints', use_v3=True, namespace=False),
+                stream=True)
             if r.status_code != 200:
                 gevent.sleep(0.1)
                 print "CAN'T CONNECT TO KUBERNETES APISERVER WATCH. RECONNECT"
             while not r.raw.closed:
                 content_length = r.raw.readline().strip()
-                # print "LENGTH:", content_length
                 if content_length not in ('0', ''):
                     content = r.raw.read(int(content_length, 16)).strip()
                     data = json.loads(content)

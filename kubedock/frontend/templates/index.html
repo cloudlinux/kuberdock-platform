@@ -148,9 +148,6 @@
             </td>
             <td class="index"><%- index %></td>
             <td>
-                <!-- <span class="badge">
-                    <%- containers.length %>
-                </span> -->
                 <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" ><%- name %></a>
                 <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>
             </td>
@@ -226,7 +223,7 @@
         <script type="text/template" id="pod-item-controls-template">
             <div class="no-padding">
                 <span class="status-line <%- status %>">Status: <%- status %></span>
-                <% if ( status == "running") { %>
+                <% if ( status == "running" || status == "pending") { %>
                     <span class="stop-btn">stop</span>
                 <% } else { %>
                     <span class="start-btn">start</span>
@@ -243,7 +240,7 @@
                     <div class="col-xs-6 info">
                         <div>Status: <%- status %></div>
                         <div>Public IP: <%- podIP ? podIP : 'none' %></div>
-                        <div>Internal IP: <%- portalIP ? portalIP : 'none'%></div>
+                        <div>Endpoint: <%- portalIP ? portalIP : 'none'%></div>
                     </div>
                     <div class="col-xs-6 servers">
                         <div><b><%- name %></b></div>

@@ -160,13 +160,14 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'tr',
 
         ui: {
-        	'deleteNode' : '#deleteNode',
+            'deleteNode' : '#deleteNode',
         },
 
         events: {
-        	'click @ui.deleteNode'					: 'deleteNode',
-            'click button#detailedNode' 			: 'detailedNode',
-            'click button#upgradeNode' 				: 'detailedNode',
+            'click'                                 : 'checkItem',
+            'click @ui.deleteNode'                  : 'deleteNode',
+            'click button#detailedNode'             : 'detailedNode',
+            'click button#upgradeNode'              : 'detailedNode',
             'click button#detailedConfigurationTab' : 'detailedConfigurationTab',
         },
 
@@ -183,7 +184,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         deleteNode: function(){
-        	this.model.destroy();
+            this.model.destroy();
         },
 
         detailedNode: function(){
@@ -192,6 +193,10 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         detailedConfigurationTab: function(){
             App.router.navigate('/detailed/' + this.model.id + '/configuration/', {trigger: true});
+        },
+
+        checkItem: function(){
+            this.$el.toggleClass('checked').siblings().removeClass('checked');
         }
     });
 

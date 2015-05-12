@@ -37,7 +37,7 @@
     }
     tbody{
         tr{
-            &.checked, &:hover{
+            &:hover{
                 background-color: #f5fafe;
                 td{
                     .editPod{
@@ -62,6 +62,26 @@
                         background: url('../img/recycling.png') 0 0 no-repeat;
                         &:hover{
                             background-position: 0 -18px;
+                        }
+                    }
+                }
+            }
+            &.checked{
+                background-color: #f5fafe;
+                td{
+                    label{
+                        &.custom{
+                            span{
+                                &:before{
+                                    top: -1px;
+                                    left: -1px;
+                                    width: 16px;
+                                    content: '';
+                                    height: 11px;
+                                    position: absolute;;
+                                    background: url('../img/checkbox-checked.png') 0 0 no-repeat;
+                                }
+                            }
                         }
                     }
                 }

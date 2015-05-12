@@ -50,6 +50,21 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         regions: {
             list: '#layout-list',
             pager: '#layout-footer'
+        },
+
+        ui: {
+            'checkAll' : 'thead label.custom span',
+        },
+
+        events: {
+            'click @ui.checkAll' : 'checkAll',
+        },
+
+        checkAll: function(){
+            var items = initPodCollection.fullCollection.models
+            _.each(items, function(model){
+                console.log(model);
+            })
         }
     });
 
@@ -57,28 +72,33 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
     Views.PodListItem = Backbone.Marionette.ItemView.extend({
         template    : '#pod-list-item-template',
         tagName     : 'tr',
-        className   : 'pod-item',
-
-        templateHelpers: function(){
-            var modelIndex = this.model.collection.indexOf(this.model);
-            var kubes = this.model.get('kubes');
-            return {
-                index: modelIndex + 1,
-                kubes: kubes ? kubes : 0
-            }
+        className   : function(){
+            return this.model.get('checked') ? 'pod-item checked' : 'pod-item';
         },
 
         ui: {
             reditable   : '.reditable',
             start       : '.start-btn',
             stop        : '.stop-btn',
-            terminate   : '.terminate-btn'
+            terminate   : '.terminate-btn',
+            checkbox    : 'label.custom span',
         },
 
         events: {
             'click @ui.start'      : 'startItem',
             'click @ui.stop'       : 'stopItem',
-            'click @ui.terminate'  : 'terminateItem'
+            'click @ui.terminate'  : 'terminateItem',
+            'click @ui.checkbox'   : 'checkItem'
+        },
+
+        templateHelpers: function(){
+            var kubes = this.model.get('kubes');
+            var modelIndex = this.model.collection.indexOf(this.model);
+
+            return {
+                index: modelIndex + 1,
+                kubes: kubes ? kubes : 0
+            }
         },
 
         onRender: function(){
@@ -155,6 +175,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             });
             evt.stopPropagation();
         },
+
+        checkItem: function(){
+            this.model.set('checked', !this.model.get('checked'));
+            this.$el.toggleClass('checked');
+            this.render();
+        }
     });
 
     Views.PodCollection = Backbone.Marionette.CompositeView.extend({

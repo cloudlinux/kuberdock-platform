@@ -789,24 +789,11 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         templateHelpers: function(){
-            var parentID = this.model.get('parentID'),
-                parent = initPodCollection.fullCollection.get(parentID),
-                kube_id = parent.get('kube_type'),
-                restart_policy = parent.get('restartPolicy');
-            _.each(kubeTypes, function(kube){
-                if(parseInt(kube.id) == parseInt(kube_id))
-                    kubeType = kube;
-            });
-            for(var k in restart_policy){
-                restartPolicy = k;
-            }
             return {
                 isPending: !this.model.has('parentID'),
                 hasPersistent: this.model.has('persistentDrives'),
                 showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
-                ip: this.model.get('ip'),
-                kube_type: kubeType,
-                restart_policy: restartPolicy,
+                ip: this.model.get('ip')
             };
         },
 
@@ -1229,26 +1216,12 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         templateHelpers: function(){
-            var parentID = this.containerModel.get('parentID'),
-                parent = initPodCollection.fullCollection.get(parentID),
-                kube_id = parent.get('kube_type'),
-                restart_policy = parent.get('restartPolicy');
-            _.each(kubeTypes, function(kube){
-                if(parseInt(kube.id) == parseInt(kube_id))
-                    kubeType = kube;
-            });
-            for(var k in restart_policy){
-                restartPolicy = k;
-            }
             return {
-                parentID: parentID,
+                parentID: this.containerModel.get('parentID'),
                 isPending: !this.containerModel.has('parentID'),
                 image: this.containerModel.get('image'),
                 name: this.containerModel.get('name'),
                 state_repr: this.containerModel.get('state_repr'),
-                kube_type: kubeType,
-                restart_policy: restartPolicy,
-                kubes: this.containerModel.get('kubes'),
             };
         },
 
@@ -1300,21 +1273,8 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         templateHelpers: function(){
-            var parentID = this.model.get('parentID'),
-                parent = initPodCollection.fullCollection.get(parentID),
-                kube_id = parent.get('kube_type'),
-                restart_policy = parent.get('restartPolicy');
-            _.each(kubeTypes, function(kube){
-                if(parseInt(kube.id) == parseInt(kube_id))
-                    kubeType = kube;
-            });
-            for(var k in restart_policy){
-                restartPolicy = k;
-            }
             return {
-                isPending: !this.model.has('parentID'),
-                kube_type: kubeType,
-                restart_policy: restartPolicy,
+                isPending: !this.model.has('parentID')
             };
         },
 

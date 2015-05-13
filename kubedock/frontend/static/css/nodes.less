@@ -346,12 +346,20 @@
 }
 /* general details page */
 #tab-content{
-    .details, .reason{
+    .details, .reason, .spoiler{
         padding: 10px 0 0 20px;
         span{
             color: #3197ee;
             &:hover{
                 color: #1d1d1d;
+                cursor: pointer;
+            }
+        }
+        .spoiler-btn{
+            color: #3197ee;
+            padding-bottom: 10px;
+            display: inline-block;
+            &:hover{
                 cursor: pointer;
             }
         }

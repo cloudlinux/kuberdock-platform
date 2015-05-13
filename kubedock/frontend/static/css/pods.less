@@ -889,7 +889,9 @@
                                 height: 20px;
                                 position: absolute;
                                 background: url('../img/like.png') 0 0 no-repeat;
-
+                            }
+                            &:hover{
+                                cursor: default;
                             }
                         }
                         .add-item{
@@ -1015,7 +1017,7 @@
                 }
             }
         }
-        &.logs-tab,  &.monitoring-tab,  &.timelines-tab{
+        &.logs-tab,  &.monitoring-tab,  &.timelines-tab, &.configuration-general-tab{
              #tab-content{
                 .servers{
                     position: relative;
@@ -1122,7 +1124,7 @@
                 margin-bottom: 22px;
             }
             .info{
-                height: 70px;
+                min-height: 70px;
                 margin-bottom: 45px;
             }
             .col-xs-10{

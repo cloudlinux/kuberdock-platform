@@ -429,15 +429,21 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         template: '#node-general-tab-template',
 
         ui: {
-            'nodeLogsTab' : 'span.log-tab'
+            'nodeLogsTab'       : 'span.log-tab',
+            'logSpollerButton'  : '.spoiler-btn.log'
         },
 
         events: {
-            'click @ui.nodeLogsTab' : 'nodeLogsTab'
+            'click @ui.nodeLogsTab'      : 'nodeLogsTab',
+            'click @ui.logSpollerButton' : 'logSpoller',
         },
 
         nodeLogsTab: function(){
             App.router.navigate('/detailed/' + this.model.id + '/logs/', {trigger: true});
+        },
+
+        logSpoller: function(){
+            this.ui.logSpollerButton.parent().children('.spoiler-body').collapse('toggle');
         },
 
         initialize: function () {

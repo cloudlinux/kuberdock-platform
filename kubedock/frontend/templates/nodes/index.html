@@ -51,7 +51,7 @@
 
     <script type="text/template" id="node-general-tab-template">
         <% switch (status) { case 'running': %>
-        <% var ram = (resources.capacity.memory / (1024*1024*1024)).toFixed(2); %>
+        <% var ram = (resources.memory / (1024*1024*1024)).toFixed(2); %>
         <div class="row placeholders">
             <div class="col-xs-10 clearfix">
                 <div class="col-xs-6 info no-padding">
@@ -60,7 +60,7 @@
 {#                    <div>Used kubes: 50</div>#}
                 </div>
                 <div class="col-xs-6 servers no-padding">
-                    <div class="server-ico">CPU: <%- resources.capacity.cpu %> cores <!-- with 3GHz --></div>
+                    <div class="server-ico">CPU: <%- resources.cpu %> cores <!-- with 3GHz --></div>
                     <div class="server-ico">RAM: <%- ram %> GB <!--DDR3 - 2000 --></div>
                     <div class="server-ico"><!-- SDD: 0GB in Raid 0 --></div>
                 </div>

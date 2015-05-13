@@ -17,6 +17,20 @@ echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 echo "Using MASTER_IP={{ master_ip }}"
 
+# Workaround for CentOS 7 minimal CD bug.
+# https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
+SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
+if [ -z "$SWITCH" ];then
+    echo "WARNING: Can't find \"hosts:\" line in /etc/nsswitch.conf"
+    echo "Please, modify it to include myhostname at \"hosts:\" line"
+else
+    if [[ ! $SWITCH == *"myhostname"* ]];then
+        sed -i "/^hosts:/ {s/$SWITCH/$SWITCH myhostname/}" /etc/nsswitch.conf
+        echo 'We modify your /etc/nsswitch.conf to include "myhostname" at "hosts:" line'
+    fi
+fi
+
+
 # TODO change rules, not disable
 echo "Setting up firewall rules..."
 systemctl stop firewalld

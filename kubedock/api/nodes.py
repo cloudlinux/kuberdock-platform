@@ -368,6 +368,10 @@ def delete_item(node_id):
             raise APIError('Failure. {0} Code: {1}'
                            .format(res['message'], res['code']),
                            status_code=200)
+        try:
+            os.remove(NODE_INSTALL_LOG_FILE.format(m.hostname))
+        except OSError:
+            pass
     return jsonify({'status': 'OK'})
 
 

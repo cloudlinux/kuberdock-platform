@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 36%{?dist}.cloudlinux
+Release: 37%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,7 +130,10 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
-* Wed May 06 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-36
+* Thu May 14 2015 Andrey Lukyanov <alukyanov@cloudlinux.com> 0.1-37
+- unauthorized user namespaces fix
+
+* Thu May 14 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-36
 - Deploy fixes for semanage and ssh-keygen.
 - Fixed SSE on nodes page.
 - AC-328: Fix problem setting restart policy

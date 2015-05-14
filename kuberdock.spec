@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 39%{?dist}.cloudlinux
+Release: 40%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,10 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Thu May 14 2015 Andrey Lukyanov <alukyanov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>,  0.1-40
+- pod deleting fix (can delete if there are no services and pods)
+- AC-338: Show container environment variables
+
 * Thu May 14 2015 Andrey Lukyanov <alukyanov@cloudlinux.com> 0.1-39
 - unauthorized user namespaces fix
 

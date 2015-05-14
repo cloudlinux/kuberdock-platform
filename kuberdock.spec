@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 35%{?dist}.cloudlinux
+Release: 36%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,30 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Wed May 06 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-36
+- Deploy fixes for semanage and ssh-keygen.
+- Fixed SSE on nodes page.
+- AC-328: Fix problem setting restart policy
+- fixed non-settings kube price on kube creation
+- fixed usage REST API (connected to added ability for a package to have more than one kube)
+- AC-317 - Add fivecon, AC-320 - Fix design in nodes detailes page, AC-321 - fix menu arrow, fix redeploy button position
+- Switch to v1beta3 for nodes api and services api
+- AC-300: Show detailed container data
+- AC-304: ports validation disabled; AC-299: pod name, container name in breadcrumbs; AC-291: show image likes; AC-290: image "more" button;
+- AC-320 - Hide start button on pod page while pod has status pending
+- AC-181 - show all fields on add node page, AC-183 - Add style to logout button
+- AC171 - Add style to choose ip field
+- AC 334 - change endpoints name, Cloud-7 - fix style logo on login page
+- AC-319 fix select item on node pagelist
+- AC-300: Show detailed container data
+- AC-266: Add placeholders to environment variables step; AC-300: Fix design in container page; AC-292: Add spoiler to logs
+- AC-327 Enable firewalld on master. AC-333 nsswitch.conf workaround.
+- Improved deploy helpers.
+- Fix node capacity on node page.
+- Remove node install log with node.
+- AC-346 AWS detection and auto-change host-gw to udp if on amazon. Not tested.
+- Namespaces + pods API v1beta3 + some fixes
+
 * Wed May 06 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.1-35
 - Add package to kuberdock-internal user
 - AC-304 Containers without port and v1beta3 migration helper option

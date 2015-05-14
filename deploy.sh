@@ -74,6 +74,7 @@ check_amazon()
       log_it echo "Not on AWS."
     fi
 }
+check_amazon
 
 
 #yesno()

@@ -6,14 +6,27 @@ from ..users import User
 from uuid import uuid4
 # from flask.ext.login import current_user
 # from flask import current_app
-
+from ..api.namespaces import NamespacesPods
+from ..api.entities.pod import PodEntity, ServiceEntity
 
 
 class KubeResolver(object):
 
-    def resolve_all(self):
+    def resolve_all(self, use_v3=None):
         self._replicas = self._parse_replicas()
-        self._pods = self._parse_pods()
+        if use_v3 is None:
+            self._pods = self._parse_pods()
+            self._services = self._parse_services()
+        else:
+            self._pods = self._parse_pods_ns()
+            self._services = self._parse_services_ns()
+            self._pods = [p.to_dict() for p in self._pods]
+        self._merge_with_db()
+        return self._pods
+
+    def resolve_all_ns(self):
+        self._replicas = self._parse_replicas()
+        self._pods = self._parse_pods_ns()
         self._services = self._parse_services()
         self._merge_with_db()
         return self._pods
@@ -120,6 +133,24 @@ class KubeResolver(object):
                 pods.append(items)
         return pods
 
+    def _parse_pods_ns(self):
+        """
+        Parse received pods, learning if there are pods pertaining to certain replicas,
+        and modify attributes of such pods if any
+        """
+        pods = []
+        pod_index = set()
+        pods_list = NamespacesPods.user_pods()
+
+        for pod_data in pods_list:  # iterate through pods list
+            pod = PodEntity(pod_data, replicas=getattr(self, '_replicas', None))
+            pid = pod.id
+            if pod.id not in pod_index:
+                pod_index.add(pid)
+                pods.append(pod)
+
+        return pods
+
     @staticmethod
     def _get_services():
         return tasks.get_services_nodelay()
@@ -143,6 +174,24 @@ class KubeResolver(object):
                     except KeyError:
                         pass
         return data['items']
+
+    def _parse_services_ns(self):
+        """
+        Get services from REST API and mark pods which have entripoints
+        """
+        services_list = NamespacesPods.user_services()
+        if hasattr(self, '_pods'):
+            for data in services_list:
+                service = ServiceEntity(data)
+                for pod in self._pods:
+                    try:
+                        if self._is_related(pod.labels, service.selector):
+                            pod.portal_ip = service.portal_ip
+                            pod.servicename = service.service_name
+                            break
+                    except KeyError:
+                        pass
+        return services_list
 
     @staticmethod
     def _select_pods_from_db():

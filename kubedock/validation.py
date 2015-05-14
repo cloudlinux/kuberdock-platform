@@ -78,6 +78,7 @@ new_pod_scheme = {
         'type': 'dict',
         'restart_polices': ['always', 'onFailure', 'never']
     },
+    'namespace': {'type': 'string', 'required': True},
     'volumes': {
         'type': 'list',
         'schema': {
@@ -168,7 +169,7 @@ new_pod_scheme = {
                 'capabilities': {'type': 'dict', 'required': False},
                 'imagePullPolicy': {
                     'type': 'string',
-                    'allowed': ['PullAlways', 'PullIfNotPresent'],
+                    'allowed': ['PullAlways', 'PullIfNotPresent', 'IfNotPresent'],
                     'required': False
                 },
                 'resources': {

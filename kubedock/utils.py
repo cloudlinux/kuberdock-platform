@@ -1,6 +1,6 @@
 #import pkgutil
 #import importlib
-
+from json import JSONEncoder
 from flask import current_app, request, jsonify, g
 from flask.ext.login import current_user, logout_user
 from functools import wraps
@@ -56,7 +56,17 @@ def update_dict(src, diff):
 
 
 def get_api_url(*args, **kwargs):
-    url = '{0}/{1}'.format(KUBE_MASTER_URL, '/'.join(map(str, args)))
+    """
+    Returns URL
+    :param args:
+    :param kwargs:
+        namespace - namespace
+        use_v3 - True/False to use API version v1beta3
+    :return: string
+    """
+    url = KUBE_MASTER_URL
+    if args:
+        url = '{0}/{1}'.format(url.rstrip('/'), '/'.join(map(str, args)))
     if not kwargs.get('use_v3'):
         return url
     namespace = kwargs.get('namespace', 'default')
@@ -135,3 +145,10 @@ def modify_node_ips(host, cmd, pod_ip, public_ip, ports):
                                 containerPort))
     ssh.close()
     return True
+
+
+class JSONDefaultEncoder(JSONEncoder):
+    def default(self, o):
+        return o.__dict__
+
+

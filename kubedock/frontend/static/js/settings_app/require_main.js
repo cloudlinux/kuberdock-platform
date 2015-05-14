@@ -26,6 +26,9 @@ requirejs.config({
         'jquery-ui': {
             deps: ["jquery"]
         },
+        'bootstrap': {
+            deps: ["jquery"]
+        },
         underscore: {
             exports: "_"
         },

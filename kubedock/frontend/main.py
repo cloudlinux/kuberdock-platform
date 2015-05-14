@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for
 from flask.ext.login import current_user, login_required
 
 from ..api.pods import get_pods_collection
+from ..utils import JSONDefaultEncoder
 from ..billing import Kube, Package, ExtraTax
 
 
@@ -23,7 +24,7 @@ def index():
     extra_taxes = {e.pop('key'): e for e in extra_taxes_list}
     return render_template(
         'index.html',
-        pod_collection=json.dumps(coll),
+        pod_collection=json.dumps(coll, cls=JSONDefaultEncoder),
         kube_types=kube_types,
         packages=packages,
         extra_taxes=extra_taxes

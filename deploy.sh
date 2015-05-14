@@ -62,6 +62,20 @@ get_network()
     return 0
 }
 
+
+ISAMAZON=false
+check_amazon()
+{
+    log_it echo "Checking AWS..."
+    if [[ ! -z $(curl --connect-timeout 1 -s http://169.254.169.254/1.0/) ]];then
+      ISAMAZON=true
+      log_it echo "Looks like we are on AWS."
+    else
+      log_it echo "Not on AWS."
+    fi
+}
+
+
 #yesno()
 ## $1 = Message prompt
 ## Returns ans=0 for no, ans=1 for yes
@@ -383,7 +397,12 @@ do_and_log systemctl restart redis
 
 #12 Flannel
 log_it echo "Setuping flannel config to etcd..."
-etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
+if [ "$ISAMAZON" = true ];then
+    # host-gw don't work on AWS so we use udp
+    etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "udp"}}' 2> /dev/null
+else
+    etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
+fi
 do_and_log etcdctl get /kuberdock/network/config
 
 

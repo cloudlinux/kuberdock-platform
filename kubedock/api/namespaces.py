@@ -70,8 +70,8 @@ class Namespaces(object):
     def _user_namespaces_from_db(cls, user_id=None):
         user_id = user_id or current_user.id
         if user_id <= 0:
-            return []
-        user_namespaces = user_get_setting.send((user_id, 'namespaces'))[0][1]
+            return
+        user_namespaces = user_get_setting.send((user_id, 'namespaces'))[0][1] or []
         return user_namespaces
 
     @classmethod

@@ -45,6 +45,20 @@ class Pod(db.Model):
             return 0
         return self.kubes * self.kube.price
 
+    @property
+    def namespace(self):
+        try:
+            config = json.loads(self.config)
+            if 'namespace' in config:
+                return config['namespace']
+        except Exception, e:
+            current_app.logger.warning('Pod.namespace failed: {0}'.format(e))
+        return 'default'
+
+    @property
+    def is_default_ns(self):
+        return self.namespace == 'default'
+
     def delete(self):
         self.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
         self.status = 'deleted'

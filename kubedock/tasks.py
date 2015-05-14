@@ -13,6 +13,7 @@ from datetime import datetime
 from StringIO import StringIO
 
 from .api.stream import send_event, send_logs
+from .api.namespaces import Namespaces
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
 from .utils import update_dict, get_api_url
@@ -49,10 +50,10 @@ def get_container_images(term, url=None, page=None):
     return search_image(term, url, page)
 
 
-def get_pods_nodelay(pod_id=None):
-    url = get_api_url('pods')
+def get_pods_nodelay(pod_id=None, namespace=None):
+    url = get_api_url('pods', namespace=namespace)
     if pod_id is not None:
-        url = get_api_url('pods', pod_id)
+        url = get_api_url('pods', pod_id, namespace=namespace)
     r = requests.get(url)
     return r.json()
 
@@ -62,24 +63,39 @@ def get_replicas_nodelay():
     return r.json()
 
 
-def get_services_nodelay():
-    r = requests.get(get_api_url('services', use_v3=True))
+def get_services_nodelay(namespace=None):
+    if namespace:
+        url = get_api_url('services', namespace=namespace, use_v3=True)
+    else:
+        url = get_api_url('services', use_v3=True)
+    r = requests.get(url)
     return r.json()
 
 
 def create_containers_nodelay(data):
     kind = data['kind'][0].lower() + data['kind'][1:] + 's'
-    r = requests.post(get_api_url(kind), data=json.dumps(data))
+    namespace = data.get('namespace')
+    if namespace is not None:
+        if not Namespaces.get(namespace):
+            Namespaces.create(namespace)
+    url = get_api_url(kind, namespace=namespace, use_v3=True)
+    r = requests.post(url, data=json.dumps(data))
+    res = r.text
+    return res
+
+
+def create_service_nodelay(data, namespace=None):
+    r = requests.post(get_api_url('services', use_v3=True, namespace=namespace),
+                      data=json.dumps(data))
     return r.text
 
 
-def create_service_nodelay(data):
-    r = requests.post(get_api_url('services', use_v3=True), data=json.dumps(data))
-    return r.text
-
-
-def delete_pod_nodelay(item):
-    r = requests.delete(get_api_url('pods', item))
+def delete_pod_nodelay(item, namespace=None):
+    if namespace:
+        url = get_api_url('pods', item, namespace=namespace,  use_v3=True)
+    else:
+        url = get_api_url('pods', item)
+    r = requests.delete(url)
     return r.json()
 
 
@@ -98,8 +114,9 @@ def update_replica_nodelay(item, diff):
     return r.json()
 
 
-def delete_service_nodelay(item):
-    r = requests.delete(get_api_url('services', item, use_v3=True))
+def delete_service_nodelay(item, namespace=None):
+    r = requests.delete(get_api_url('services', item, namespace=namespace,
+                                    use_v3=True))
     return r.json()
 
 

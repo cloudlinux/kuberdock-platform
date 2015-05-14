@@ -9,7 +9,8 @@ from ..core import db, login_manager
 from ..models_mixin import BaseModelMixin
 from .signals import (
     user_logged_in, user_logged_out, user_logged_in_by_another,
-    user_logged_out_by_another)
+    user_logged_out_by_another, user_get_all_settings, user_get_setting,
+    user_set_setting)
 from .utils import get_user_last_activity, get_online_users
 
 
@@ -91,8 +92,11 @@ class User(BaseModelMixin, UserMixin, db.Model):
             ) for p in self.pods if not p.is_deleted
         ]
 
-    def get_settings(self):
-        return json.loads(self.settings) if self.settings else {}
+    def get_settings(self, key=None):
+        user_settings = json.loads(self.settings) if self.settings else {}
+        if key is not None:
+            return user_settings.get(key)
+        return user_settings
 
     def set_settings(self, k, v):
         data = self.get_settings()
@@ -310,3 +314,25 @@ def user_logged_out_by_another_signal(args):
     ua = UserActivity.create(action=UserActivity.LOGOUT_A,
                              user_id=target_user_id)
     ua.save()
+
+
+@user_get_all_settings.connect
+def user_get_all_settings_signal(user_id):
+    user = User.query.get(user_id)
+    return user.get_settings()
+
+
+@user_get_setting.connect
+def user_get_setting_signal(args):
+    user_id, key = args
+    user = User.query.get(user_id)
+    return user.get_settings(key=key)
+
+
+@user_set_setting.connect
+def user_set_setting_signal(args):
+    user_id, key, value = args
+    user = User.query.get(user_id)
+    user.set_settings(key, value)
+
+

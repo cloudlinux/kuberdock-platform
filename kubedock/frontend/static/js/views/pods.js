@@ -452,7 +452,9 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             var item = this.getItem(),
                 name = item.get('name'),
                 preloader = $('#page-preloader');
-                preloader.show();
+            if(!confirm("Delete pod '" + name + "'?"))
+                return;
+            preloader.show();
             item.destroy({
                 wait: true,
                 success: function(){

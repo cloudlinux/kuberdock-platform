@@ -83,6 +83,7 @@ def create_item():
 
     # Create new namespace for new pod
     namespace = '{0}-{1}-pods'.format(current_user.username, data['name'])
+    namespace = namespace.lower()
     Namespaces.create(namespace)
     data['namespace'] = namespace
 
@@ -221,7 +222,8 @@ def delete_item(uuid):
     pods_list = NamespacesPods(namespace).pods_entities
 
     if not pods_list:
-        raise APIError('no items entry')
+        current_app.logger.warning("DELETE POD: no items entry")
+        # raise APIError('no items entry')
     filtered_pods = filter((lambda pod: pod.name == item.name), pods_list)
     for pod in filtered_pods:
         res = NamespacesPods(namespace).stop(pod.id)

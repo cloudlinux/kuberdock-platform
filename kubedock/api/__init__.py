@@ -34,9 +34,10 @@ def create_app(settings_override=None):
     from .pricing import pricing
     from .ippool import ippool
     from .settings import settings
+    from .podapi import podapi
 
     for bp in images, pods, stream, nodes, stats, users, notifications, \
-              static_pages, usage, pricing, ippool, settings:
+              static_pages, usage, pricing, ippool, settings, podapi:
         app.register_blueprint(bp)
         
     #app.json_encoder = JSONEncoder

@@ -87,7 +87,7 @@ KubeDock.module('Data', function(Data, App, Backbone, Marionette, $, _){
     });
 
     Data.PodCollection = Backbone.PageableCollection.extend({
-        url: '/api/pods/',
+        url: '/api/podapi/',
         model: Data.Pod,
         parse: unwrapper,
         mode: 'client',

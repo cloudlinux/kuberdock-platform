@@ -8,6 +8,7 @@ from functools import wraps
 from .settings import KUBE_MASTER_URL
 from .users import User
 from .core import ssh_connect
+from .rbac import check_permission
 from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG
 
 
@@ -152,3 +153,54 @@ class JSONDefaultEncoder(JSONEncoder):
         return o.__dict__
 
 
+def run_ssh_command(host, command):
+    ssh, error_message = ssh_connect(host)
+    if error_message:
+        raise APIError(error_message)
+    stdin, stdout, stderr = ssh.exec_command(command)
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status == 0:
+        message = stdout.read()
+    else:
+        message = stderr.read()
+    ssh.close()
+    return exit_status, message
+
+class KubeUtils(object):
+        
+    def _get_current_user(self):
+        try:
+            current_user.username
+            return current_user
+        except AttributeError:
+            return g.user
+        
+    @classmethod
+    def jsonwrap(cls, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return jsonify({'status': 'OK', 'data': func(*args, **kwargs)})
+        return wrapper
+    
+    @classmethod
+    def pod_permissions(cls, func):
+        def inner(*args, **kwargs):
+            rv = check_permission('get', 'pods')(func)
+            return rv(*args, **kwargs)
+        return inner
+    
+    def _get_params(self):
+        data = request.json
+        if data is None:
+            data = request.form.to_dict()
+        return data
+
+
+def register_api(bp, view, endpoint, url, pk='id', pk_type='string', **kwargs):
+    view_func = view.as_view(endpoint)
+    bp.add_url_rule(url, view_func=view_func, methods=['GET'],
+                      defaults={pk: None}, **kwargs)
+    bp.add_url_rule(url, view_func=view_func, methods=['POST'], **kwargs)
+    bp.add_url_rule('{0}<{1}:{2}>'.format(url, pk_type, pk),
+                      view_func=view_func,
+                      methods=['GET', 'PUT', 'DELETE'], **kwargs)

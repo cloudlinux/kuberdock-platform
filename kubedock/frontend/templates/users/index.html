@@ -273,6 +273,7 @@
         <td><%- podsCount %></td>
         <td><%- containersCount %></td>
         <td><%- email ? email : 'No mail' %></td>
+        <td><%- rolename  %></td>
         <td>
             <%- active ? 'Active' : 'Blocked' %>
             <% if (active) { %>
@@ -349,7 +350,8 @@
                         <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pods<b class="caret"></b></div></th>
                         <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Containers<b class="caret"></b></div></th>
                         <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Email<b class="caret"></b></div></th>
-                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
+                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Role<b class="caret"></b></div></th>
+                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
                     </tr>
                 </thead>
                 <tbody></tbody>

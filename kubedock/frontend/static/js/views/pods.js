@@ -1070,15 +1070,20 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'div',
 
         ui: {
-            ieditable: '.ieditable',
-            table: '#data-table',
-            reset: '.reset-button',
-            inputs: 'input',
+            ieditable  : '.ieditable',
+            chngeInput : '.changeInput',
+            table      : '#data-table',
+            reset      : '.reset-button',
+            input      : '.change-input',
+            addItem    : '.add-env',
+            removeItem : '.remove-env',
         },
 
         events: {
-            'click .add-env'  : 'addItem',
-            'click @ui.reset' : 'resetFielsdsValue',
+            'click @ui.addItem'    : 'addItem',
+            'click @ui.removeItem' : 'removeItem',
+            'click @ui.reset'      : 'resetFielsdsValue',
+            'change @ui.input'     : 'onChangeInput',
         },
 
         templateHelpers: function(){
@@ -1105,18 +1110,46 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
             this.render();
         },
 
+        removeItem: function(e){
+            var env = this.model.get('env'),
+                item = $(e.currentTarget),
+                index = item.parents('.fields').index()-1;
+
+                env.splice(index, 1);
+                item.parents('.fields').remove();
+        },
+
         resetFielsdsValue: function(){
-            this.ui.inputs.val('');
+            var env = this.model.get('env');
+
+            env.forEach(function(item, i){
+                env[i] = {name: null, value: null}
+            })
+            this.render();
+        },
+
+        onChangeInput: function(e){
+            var env = this.model.get('env'),
+                item = $(e.currentTarget),
+                index = item.parents('.fields').index()-1;
+
+             if ( item.hasClass('name') ){
+                env[index] = { name: item.val(), value: item.parent().next().find('input').val() };
+                this.model.set('env', env);
+             } else {
+                env[index] = { name: item.parent().prev().find('input').val(), value: item.val() };
+                this.model.set('env', env);
+             }
         },
 
         onRender: function(){
-            var that = this;
+            /*var that = this;
             this.ui.ieditable.editable({
                 type: 'text',
                 mode: 'inline',
                 success: function(response, newValue) {
                     var item = $(this);
-                    index = item.closest('tr').index();
+                    index = item.closest('div.fields').index();
                     if (item.hasClass('name')) {
                         that.model.get('env')[index]['name'] = newValue;
                     }
@@ -1124,7 +1157,7 @@ KubeDock.module('Views', function(Views, App, Backbone, Marionette, $, _){
                         that.model.get('env')[index]['value'] = newValue;
                     }
                 }
-            });
+            });*/
         }
     });
 

@@ -51,14 +51,14 @@ KubeDock.module('WorkFlow', function(WorkFlow, App, Backbone, Marionette, $, _){
                 model = initPodCollection.fullCollection.get(id);
             _.each(model.get('containers'), function(i){
                     i.parentID = this.parentID;
-                    i.kubes = this.kubes;
+//                    i.kubes = this.kubes;
                 }, {parentID: id, kubes: model.get('kubes')});
             var _containerCollection = model.get('containers');
             var newContainerCollection = [];
             _.each(model.get('dockers'), function(el){
                 var container = {};
                 _.each(_containerCollection, function(c){
-                    if(c.imageID == el.info.imageID){
+                    if(c.imageID == el.info.imageID && c.image == el.info.image){
                         $.each(c, function(k, v){
                             container[k] = v;
                         });

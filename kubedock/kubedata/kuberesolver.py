@@ -210,6 +210,11 @@ class KubeResolver(object):
     def _merge_with_db(self):
         db_pods = self._select_pods_from_db()
         kube_names = set(map((lambda x: x['name']), self._pods))
+
+        def update_containers(orig, db, update_keys):
+            for k in update_keys:
+                orig[k] = db.get(k)
+
         # We check if a pod is present in DB (by name)
         for pod_name in db_pods:
             if pod_name not in kube_names:
@@ -224,6 +229,12 @@ class KubeResolver(object):
                 for pod in diff:
                     pod['id'] = db_pods[pod_name]['id']
                     pod['kube_type'] = db_pods[pod_name]['config']['kube_type']
+                    # update containers scheme from db
+                    for container in db_pods[pod_name]['config'].get('containers', []):
+                        for pod_container in pod['containers']:
+                            if container['name'] == pod_container['name']:
+                                update_containers(pod_container, container, ['kubes'])
+
         for pod in self._pods:
             try:
                 pod['owner'] = db_pods[pod['name']]['username']

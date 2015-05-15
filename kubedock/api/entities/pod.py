@@ -3,6 +3,7 @@ def quantities_converter(value, suffix, return_type):
     Read https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/resources.md#resource-quantities
     :param value: original value from kubernetes, e.g.: 64Mi
     :param suffix:
+    :param return_type:
     :return:
     """
     if isinstance(value, basestring):
@@ -57,12 +58,12 @@ class PodEntity(object):
         self.volumes = self._volumes_wrapper()
 
     def _dockers_wrapper(self):
-        if not self.is_running:
+        if not self.is_running or 'status' not in self.data:
             return []
         dockers = []
         self._images = {}
-        for container in self.data['status']['containerStatuses']:
-            if container['name'] == 'POD':
+        for container in self.data['status'].get('containerStatuses', []):
+            if not container.get('name') or container['name'] == 'POD':
                 continue
             self._images[container['name']] = container['imageID']
             dockers.append({
@@ -75,21 +76,25 @@ class PodEntity(object):
     def _containers_wrapper(self):
         containers = self.data['spec']['containers']
 
+        def container_wrapper(c):
+            memory = c.get(
+                'resources', {}).get(
+                'limits', {}).get(
+                'memory', '0Mi')
+            data = dict(
+                resources=c.get('resources', {}),
+                terminationMessagePath=c.get('terminationMessagePath', ''),
+                name=c.get('name', ''),
+                imagePullPolicy=c.get('imagePullPolicy', ''),
+                command=c.get('args', []),  # TODO: refactor
+                image=c.get('image', ''),
+                memory=quantities_converter(memory, 'Mi', int),
+                volumeMounts=c.get('volumeMounts'),
+                ports=c['ports'], capabilities=c['capabilities']
+            )
+            return data
 
-
-        data = [dict(
-            resources=c['resources'],
-            terminationMessagePath=c['terminationMessagePath'],
-            name=c['name'],
-            imagePullPolicy=c['imagePullPolicy'],
-            command=c['args'],                          # TODO: refactor
-            image=c['image'],
-            memory=quantities_converter(
-                c['resources']['limits']['memory'], 'Mi', int),
-            volumeMounts=c['volumeMounts'],
-            ports=c['ports'],
-            capabilities=c['capabilities']
-        ) for c in containers]
+        data = [container_wrapper(c) for c in containers]
         if self.is_running and self._images:
             for c in data:
                 c['imageID'] = self._images.get(c['name'])
@@ -97,20 +102,25 @@ class PodEntity(object):
 
     def _volumes_wrapper(self):
         volumes = self.data['spec']['volumes']
-        return [dict(
-            name=v['name'],
-            source=dict(
-                glusterfs=v['glusterfs'],
-                gitRepo=v['gitRepo'],
-                hostDir=v['hostPath'],                  # TODO: refactor
-                persistentDisk=v['gcePersistentDisk'],  # TODO: refactor
-                emptyDir=v['emptyDir'],
-                nfs=v['nfs'],
-                iscsi=v['iscsi'],
-                awsElasticBlockStore=v['awsElasticBlockStore'],
-                secret=v['secret']
+
+        def volume_wrapper(v):
+            data = dict(
+                name=v.get('name', ''),
+                source=dict(
+                    glusterfs=v.get('glusterfs'),
+                    gitRepo=v.get('gitRepo'),
+                    hostDir=v.get('hostPath'),                  # TODO: refactor
+                    persistentDisk=v.get('gcePersistentDisk'),  # TODO: refactor
+                    emptyDir=v.get('emptyDir', {}),
+                    nfs=v.get('nfs'),
+                    iscsi=v.get('iscsi'),
+                    awsElasticBlockStore=v.get('awsElasticBlockStore'),
+                    secret=v.get('secret')
+                )
             )
-        ) for v in volumes]
+            return data
+
+        return [volume_wrapper(v) for v in volumes]
 
     def _metadata(self, k=None):
         if k:

@@ -1,5 +1,5 @@
 /* pod-main */
-#podlist-table, #imagelist-table, #ports-table, #volumes-table, .variables-table{
+#podlist-table, #imagelist-table, #ports-table, #volumes-table, .variables-table, #env-table{
     thead{
         background-color: transparent;
         &.min-opacity{
@@ -734,6 +734,16 @@
                 &.environment{
                     .fields{
                         .clearfix;
+                        .remove-env{
+                            width: 40px;
+                            height: 50px;
+                            margin: auto;
+                            display: inline-block;
+                            background: url('../img/remove-line.png') center no-repeat;
+                            &:hover{
+                                cursor: pointer;
+                            }
+                        }
                         > div{
                             &:first-child{
                                 margin-right: 4px;

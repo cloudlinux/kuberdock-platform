@@ -942,10 +942,13 @@
                         <% _.each(env, function(e){ %>
                         <div class="col-sm-12 no-padding fields">
                             <div class="col-sm-4 no-padding">
-                                <input type="text" value="<%- e.name ? e.name : '' %>" placeholder="entet variable name">
+                                <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="eg. Variable_name">
                             </div>
                             <div class="col-sm-4 no-padding">
-                                <input type="text" value="<%- e.value ? e.value : '' %>" placeholder="entet variable value">
+                                <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="eg. Some_value_0-9">
+                            </div>
+                            <div class="col-xs-1 no-padding">
+                                <div class="remove-env"></div>
                             </div>
                         </div>
                          <% }) %>
@@ -1301,9 +1304,9 @@
                     <li role="presentation" class="success">Environment variables</li>
                     <li role="presentation" class="active">Final</li>
                 </ul>
+                <% if (containers.length > 1){ %>
                 <div class="added-containers">
                     <label>Added containers</label>
-                    <% if (containers.length > 0){ %>
                         <% _.each(containers, function(c){ %>
                             <div>
                                 <span><%- c.image %></span>
@@ -1313,8 +1316,8 @@
                                 </span>
                             </div>
                         <% }) %>
-                    <% } %>
                 </div>
+                <% } %>
             </div>
             <div id="details_content" class="col-sm-9 set-up-image no-padding">
                 <div id="tab-content" class="clearfix complete">

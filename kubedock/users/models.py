@@ -83,7 +83,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 id=p.id,
                 name=p.name,
                 owner_id=p.owner_id,
-                kube_id=[k.id for k in p.kubes],
+                kube_id=p.kube_id,
                 config=p.config,
                 status=p.status,
                 kubes=p.kubes,

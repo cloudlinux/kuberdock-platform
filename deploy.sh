@@ -380,6 +380,9 @@ sed -i "/^KUBELET_ADDRESSES/ {s/--machines=127.0.0.1//}" $KUBERNETES_CONF_DIR/co
 
 #10. Create and populate DB
 log_it echo 'Create and populate DB'
+cp /usr/lib/systemd/system/postgresql.service /etc/systemd/system/postgresql.service
+sed -i "/^ExecStart=/ {s/-t 300/-t 900/}" /etc/systemd/system/postgresql.service
+sed -i "/^TimeoutSec=/ {s/300/900/}" /etc/systemd/system/postgresql.service
 do_and_log systemctl enable postgresql
 do_and_log postgresql-setup initdb
 do_and_log systemctl restart postgresql

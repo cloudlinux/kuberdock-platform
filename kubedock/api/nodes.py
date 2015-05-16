@@ -134,18 +134,19 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, uuid, master_ip):
     }
 
 
-def _node_is_active(x):
-    try:
-        return x['status']['conditions'][0]['type'] == 'Ready'
-    except KeyError:
-        return False
-
-
 def _get_node_condition(x):
     try:
         return x['status']['conditions'][0]
     except KeyError:
         return {}
+
+
+def _node_is_active(x):
+    try:
+        cond = _get_node_condition(x)
+        return cond['type'] == 'Ready' and cond['status'] == 'True'
+    except KeyError:
+        return False
 
 
 @check_permission('get', 'nodes')

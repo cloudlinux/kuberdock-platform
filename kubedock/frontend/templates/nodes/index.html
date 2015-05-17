@@ -486,7 +486,7 @@
         <div id="main">main div text</div>
         <div id="pager">pager div text</div>
     </script>
-
+        
 {#    Copy from main app, delete when merge #}
     <script type="text/template" id="paginator-template">
         <% if ( c.state.pageSize < c.state.totalRecords){ %>
@@ -502,6 +502,11 @@
 {#    ===================================== #}
 
 {% endblock %}
+
+
+{% assets "vendor_js" -%}
+  <script src="{{ ASSET_URL }}"></script>
+{% endassets %}
 
 {% block app_js_asset %}{% endblock %} {# To cut off app_js temporary #}
 

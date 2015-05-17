@@ -78,7 +78,7 @@ new_pod_scheme = {
         'type': 'dict',
         'restart_polices': ['always', 'onFailure', 'never']
     },
-    'namespace': {'type': 'string', 'required': True},
+#    'namespace': {'type': 'string', 'required': True},
     'volumes': {
         'type': 'list',
         'schema': {

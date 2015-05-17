@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 42%{?dist}.cloudlinux
+Release: 43%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,9 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Sun May 17 2015 Igor Savenko <bliss@cloudlinux.com>  0.1-43
+- Switched pods application to AMD (require.js)
+
 * Fri May 15 2015 Igor Savenko <bliss@cloudlinux.com>  0.1-42
 - Refactored pods backend interface
 

@@ -26,7 +26,7 @@ class Kube(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     name = db.Column(db.String(64), unique=True)
     cpu = db.Column(db.Float, default=0.0, nullable=False)
-    cpu_units = db.Column(db.String(3), default='MHz', nullable=False)
+    cpu_units = db.Column(db.String(32), default='Cores', nullable=False)
     memory = db.Column(db.Integer, default=0.0, nullable=False)
     memory_units = db.Column(db.String(3), default='MB', nullable=False)
     disk_space = db.Column(db.Integer, default=0, nullable=False)

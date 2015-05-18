@@ -121,7 +121,7 @@ def create_kube():
 
 def add_kube(data):
     attrs = {}
-    defaults = {'cpu': 0, 'cpu_units': 'MHz', 'memory': 0, 'memory_units': 'MB',
+    defaults = {'cpu': 0, 'cpu_units': 'Cores', 'memory': 0, 'memory_units': 'MB',
                 'disk_space': 0, 'total_traffic': 0, 'default': False, 'price': 0.0}
     for attr in ('name',  'cpu', 'cpu_units', 'memory', 'memory_units',
                  'disk_space', 'total_traffic', 'price'):
@@ -161,7 +161,7 @@ def update_kube(kube_id):
         if hasattr(item, key):
             setattr(item, key, conv.get(key, str)(value))
     db.session.commit()
-    return jsonify({'status': 'OK'});
+    return jsonify({'status': 'OK'})
 
 
 @pricing.route('/kubes/<int:kube_id>', methods=['DELETE'])

@@ -1392,10 +1392,10 @@ define(['pods_app',
                     currency = pack.length ? pack[0].currency : 'USD';
                 this.model.set('kube_type', kube_id);
                 if (kube_data.length === 0) {
-                    this.cpu_data = '0 MHz';
+                    this.cpu_data = '0 Cores';
                     this.ram_data = '0 MB';
                 } else {
-                    this.cpu_data = kube_data[0].cpu + ' MHz';
+                    this.cpu_data = kube_data[0].cpu + ' Cores';
                     this.ram_data = kube_data[0].memory + ' ' + kube_data[0].memory_units;
                 }
                 this.container_price = (kube_data[0].price ? kube_data[0].price * num : 0) + currency;

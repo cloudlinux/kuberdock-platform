@@ -87,16 +87,16 @@ if __name__ == '__main__':
     # Create default packages and kubes
     # Package and Kube with id=0 are default
     # end must be undeletable (always present with id=0) for fallback
-    k1 = Kube(id=0, name='Standard kube', cpu=700, cpu_units='KCU',
+    k1 = Kube(id=0, name='Standard kube', cpu=1, cpu_units='Cores',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0, price=0)
-    k2 = Kube(name='High CPU', cpu=1400, cpu_units='KCU',
+    k2 = Kube(name='High CPU', cpu=2, cpu_units='Cores',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0, price=1)
-    k3 = Kube(name='High memory', cpu=700, cpu_units='KCU',
-              memory=254, memory_units='MB', disk_space='0', total_traffic=0, price=2)
+    k3 = Kube(name='High memory', cpu=1, cpu_units='Cores',
+              memory=256, memory_units='MB', disk_space='0', total_traffic=0, price=2)
 
     p1 = Package(id=0, name='basic', setup_fee=0, currency='USD', period='hour')
     p2 = Package(id=1, name='professional', setup_fee=1, currency='USD', period='hour')
-    p3 = Package(id=2, name='enterprise', setup_fee=2,currency='USD', period='hour')
+    p3 = Package(id=2, name='enterprise', setup_fee=2, currency='USD', period='hour')
 
     p1.kubes.append(k1)
     p2.kubes.append(k1)

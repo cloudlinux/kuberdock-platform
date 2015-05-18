@@ -48,7 +48,7 @@
                         <div class="col-xs-6 servers">
                             <div>Kube type: ssd power</div>
                             <div>Restart police: never</div>
-                            <div>Endpoints:  102.128.9.95</div>
+                            <div>Pod IP:  102.128.9.95</div>
                         </div>
                     </div>
                     <div id="monitoring-page" class="col-sm-12 no-padding">

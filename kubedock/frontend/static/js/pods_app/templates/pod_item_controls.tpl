@@ -17,7 +17,7 @@
         <div class="col-xs-6 info">
             <div>Status: <%- status %></div>
             <div>Public IP: <%- podIP ? podIP : 'none' %></div>
-            <div>Endpoint: <%- portalIP ? portalIP : 'none'%></div>
+            <div>Pod IP: <%- portalIP ? portalIP : 'none'%></div>
         </div>
         <div class="col-xs-6 servers">
             <div><b><%- name %></b></div>

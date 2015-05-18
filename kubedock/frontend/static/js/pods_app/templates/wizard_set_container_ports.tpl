@@ -21,7 +21,7 @@
                 <div class="row">
                     <div class="col-xs-10">
                         <table id="ports-table" class="table">
-                            <thead><tr><th>Container port</th><th>Protocol</th><th>Host port</th><th>Public</th></tr></thead>
+                            <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Public</th></tr></thead>
                             <tbody>
                             <% _.each(ports, function(p){ %>
                                 <tr>
@@ -194,7 +194,7 @@
                     </div>
                     <div class="col-xs-12 no-padding">
                         <table id="ports-table" class="table">
-                            <thead><tr><th>Container port</th><th>Protocol</th><th>Host Port</th><th>Published</th></tr></thead>
+                            <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Published</th></tr></thead>
                             <tbody>
                             <% _.each(ports, function(p){ %>
                                 <tr>

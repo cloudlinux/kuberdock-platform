@@ -22,11 +22,11 @@
                 <div class="container breadcrumbs" id="breadcrumbs">
                     <ul class="breadcrumb">
                         <li class="active">
-                            Network
+                            IP Pool
                         </li>
                     </ul>
                     <div class="control-group">
-                        <button id="create_network">Add network</button>
+                        <button id="create_network">Add subnet</button>
                     </div>
                 </div>
             </div>
@@ -42,7 +42,7 @@
                 <div id="tab-content">
                     <table class="table table-bordered">
                     <thead><tr>
-                        <th>Network</th>
+                        <th>Subnet</th>
                         <th>IP</th>
                     </tr></thead>
                     <tbody></tbody>
@@ -58,9 +58,9 @@
                 <div class="container breadcrumbs" id="breadcrumbs">
                     <ul class="breadcrumb">
                         <li>
-                            <a href="{{ url_for('ippool.index') }}">Network</a>
+                            <a href="{{ url_for('ippool.index') }}">IP Pool</a>
                         </li>
-                        <li class="active">Add network</li>
+                        <li class="active">Add subnet</li>
                     </ul>
                 </div>
             </div>
@@ -68,7 +68,7 @@
                 <div class="row">
                     <div id="network-controls" class="col-sm-9 col-sm-offset-3 no-padding">
                         <div class="form-group">
-                            <label for="network">Network</label>
+                            <label for="network">Subnet</label>
                             <input type="text" name="network" class="masked-ip" id="network" placeholder="1.2.3.4/32">
                         </div>
                         <div class="form-group">

@@ -81,11 +81,14 @@
         <% _.each(reason.split('\n'), function(line){ %>
             <p><%- line %></p>
         <% }) %>
-        <br>
-        <p>Node installation log:</p>
-        <% _.each(install_log.split('\n'), function(line){ %>
-            <p><%- line %></p>
-        <% }) %>
+            <div class="spoiler">
+                <div class="spoiler-btn log">Node installation log</div>
+                <div class="spoiler-body collapse">
+                    <% _.each(install_log.split('\n'), function(line){ %>
+                        <p><%- line %></p>
+                    <% }) %>
+                </div>
+            </div>
         </div>
         <% break; } %>
     </script>
@@ -486,7 +489,7 @@
         <div id="main">main div text</div>
         <div id="pager">pager div text</div>
     </script>
-        
+
 {#    Copy from main app, delete when merge #}
     <script type="text/template" id="paginator-template">
         <% if ( c.state.pageSize < c.state.totalRecords){ %>

@@ -177,6 +177,14 @@ class User(BaseModelMixin, UserMixin, db.Model):
             period=pkg.period
         )
 
+    def update(self, data):
+        for key, value in data.items():
+            if key in ('username', 'email', 'password', 'first_name',
+                       'last_name', 'middle_initials', 'active', 'suspended',
+                       'role', 'permission', 'package', 'join_date',
+                       'settings'):
+                setattr(self, key, value)
+
     def __repr__(self):
         return "<User(username='{0}', email='{1}')>".format(self.username, self.email)
 

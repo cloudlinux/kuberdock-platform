@@ -217,8 +217,8 @@ def create_item():
         raise APIError('Cannot create a user: {0}'.format(str(e)))
 
 
-@users.route('/<user_id>', methods=['PUT'])
-@users.route('/full/<user_id>', methods=['PUT'])
+@users.route('/<user_id>', methods=['PUT', 'PATCH'])
+@users.route('/full/<user_id>', methods=['PUT', 'PATCH'])
 @login_required_or_basic
 @check_permission('edit', 'users')
 def put_item(user_id):
@@ -235,9 +235,9 @@ def put_item(user_id):
         rolename = data.pop('rolename', 'User')
         r = db.session.query(Role).filter_by(rolename=rolename).first()
         if r is not None:
-            data['rolename'] = r
+            data['role'] = r
         else:
-            data['rolename'] = db.session.query(Role).filter_by(rolename='User').first()
+            data['role'] = db.session.query(Role).filter_by(rolename='User').first()
     if 'package' in data:
         package = data.pop('package', 'basic')
         p = db.session.query(Package).filter_by(name=package).first()
@@ -245,9 +245,7 @@ def put_item(user_id):
             data['package'] = p
         else:
             data['package'] = db.session.query(Package).filter_by(name='basic').first()
-    data = dict(filter((lambda item: item[1] != ''), data.items()))
-    for attr in data.keys():
-        setattr(u, attr, data[attr])
+    u.update(data)
     u.save()
     return jsonify({'status': 'OK'})
 

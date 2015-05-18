@@ -361,14 +361,16 @@ define(['marionette', 'paginator', 'utils'],
                 'users_page'          : 'div#users-page',
                 'delete_user_btn'     : 'button#delete_user',
                 'user_cancel_btn'     : 'button#user-cancel-btn',
-                'login_this_user_btn' : 'button#login_this_user'
+                'login_this_user_btn' : 'button#login_this_user',
+                'edit_user'           : 'button#edit_user',
             },
 
             events: {
                 'click @ui.users_page'          : 'breadcrumbClick',
                 'click @ui.user_cancel_btn'     : 'cancel',
                 'click @ui.delete_user_btn'     : 'delete_user',
-                'click @ui.login_this_user_btn' : 'login_this_user'
+                'click @ui.login_this_user_btn' : 'login_this_user',
+                'click @ui.edit_user'           : 'edit_user',
             },
 
             templateHelpers: function(){
@@ -460,6 +462,10 @@ define(['marionette', 'paginator', 'utils'],
                 });
             },
 
+            edit_user: function(){
+                App.router.navigate('/edit/' + this.model.id + '/', {trigger: true});
+            },
+
             cancel: function(){
                App.router.navigate('/', {trigger: true});
             },
@@ -477,6 +483,7 @@ define(['marionette', 'paginator', 'utils'],
                 this.ui.email.val(this.model.get('email'));
                 this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
                 this.ui.role_select.val(this.model.get('rolename'));
+                this.ui.user_add_btn.html('Save');
             },
 
             onSave: function(){
@@ -495,31 +502,30 @@ define(['marionette', 'paginator', 'utils'],
                     }
                     data['password'] = this.ui.password.val();
                 }
-                if(!data.email){
-                    this.ui.email.notify('E-mail is required');
-                    this.ui.email.focus();
-                    return false;
-                }
                 if(!data.username){
                     this.ui.username.notify('Username is required');
                     this.ui.username.focus();
                     return false;
                 }
                 if(!data.rolename){
-                    this.ui.role_select.notify('Username is required');
+                    this.ui.role_select.notify('Role is required');
                     this.ui.role_select.focus();
                     return false;
                 }
                 this.model.set(data);
 
-                this.model.save(undefined, {
+                this.model.save(this.model.changedAttributes(), {
                     wait: true,
-                    success: function(){
-                        App.router.navigate('/', {trigger: true})
+                    patch: true,
+                    success: function(model){
+                        App.router.navigate('/profile/' + model.id + '/', {trigger: true});
                     }
                 });
-            }
+            },
 
+            cancel: function(){
+                App.router.navigate('/profile/' + this.model.id + '/', {trigger: true});
+            },
         });
 
         Views.UsersLayout = Marionette.LayoutView.extend({

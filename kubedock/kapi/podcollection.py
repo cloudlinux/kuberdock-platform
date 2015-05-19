@@ -11,7 +11,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def __init__(self):
         self._get_pods()
-        current_app.logger.debug(self._collection)
         self._merge()
 
     def _get_replicas(self, name=None):
@@ -71,26 +70,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._collection[pod.name] = pod
             else:
                 self._collection[db_pod.name].id = db_pod.id
+                self._collection[db_pod.name].service = getattr(db_pod, 'service', None)
                 self._collection[db_pod.name].kube_type = json.loads(db_pod.config).get('kube_type')
             if not hasattr(self._collection[db_pod.name], 'owner'):
                 self._collection[db_pod.name].owner = db_pod.owner.username
-
-    @staticmethod
-    def _is_related(one, two):
-        if one is None or two is None:
-            return False
-        for k in two.keys():
-            if k not in one:
-                return False
-            if one[k] != two[k]:
-                return False
-            return True
 
     def _run_service(self, pod):
         ports = []
         for ci, c in enumerate(getattr(pod, 'containers', [])):
             for pi, p in enumerate(c.get('ports', [])):
-                host_port = p.pop('hostPort', p.get('containerPort'))
+                host_port = p.pop('hostPort', None) or p.get('containerPort')
                 port_name = 'c{0}-p{1}'.format(ci, pi)
                 if p.get('isPublic'):
                     port_name += '-public'
@@ -114,7 +103,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 'ports': ports,
             }
         }
-        return self._put(['services'], json.dumps(conf), True)
+        return self._post(['services'], json.dumps(conf), rest=True, use_v3=True)
 
     def _start_cluster(self):
         pass
@@ -197,6 +186,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
+        service_rv = self._run_service(pod)
+        pod.service = service_rv.get('metadata', {}).get('name')
+        self._update_pod_config(pod, **{'service': pod.service})
+
+        self._raise_if_failure(service_rv, "Could not start a service")
         pod.status = 'pending'
         if pod.cluster:
             replicas_number = self._resize_replicas(pod)
@@ -208,6 +202,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             rv=self._post([resource], json.dumps(config), True)
             #current_app.logger.debug(rv)
             self._make_persistent_drives(pod, rv)
+            self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
             return rv
 
     def _stop_pod(self, pod, data=None):
@@ -282,11 +277,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if hasattr(pod, 'sid'):
             rv = self._del(['pods', pod.sid])
             self._raise_if_failure(rv, "Could not remove a pod")
-            services_data = self._get(['services'])
-            services = filter(
-                (lambda x: self._is_related(x.get('spec', {}).get('selector'), {'name': pod.name})),
-                    services_data.get('items', []))
-            for service in services:
+            services_data = self._get(['services'], use_v3=True)
+            for service in services_data.get('items', []):
+                spec = service.get('spec', {}).get('selector')
+                if not self._is_related(spec, {'name': pod.name}):
+                    continue
                 state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
                 if 'assigned-to' in state:
                     res = modify_node_ips(
@@ -297,17 +292,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                         service.get('spec', {}).get('ports'))
                     if not res:
                         self._raise("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
-                rv = self._del([service.get('metadata', {}).get('name', '')])
+                rv = self._del(['services', service.get('metadata', {}).get('name', '')], use_v3=True)
                 self._raise_if_failure(rv, "Could not remove a service")
         self._mark_pod_as_deleted(pod)
+
+    @staticmethod
+    def _is_related(one, two):
+        if one is None or two is None:
+            return False
+        for k in two.keys():
+            if k not in one:
+                return False
+            if one[k] != two[k]:
+                return False
+            return True
 
 class DriveCollection(ModelQuery):
 
     def get_drives_for_node(self, ip, kub_id):
-        """
-        Returns ';;'-joined list of drives names to a node
-        :param ip: string -> IP address of node
-        :param kub_id: string UUID -> ID of inner kubernetes pod id to look for
-        :return: string
-        """
         return ';;'.join(self._get_node_persistent_drives(ip, kub_id))

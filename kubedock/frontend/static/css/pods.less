@@ -141,7 +141,7 @@
                     }
                 }
                 span{
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting{
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.terminated{
                         position: relative;
                         padding-left: 22px;
                         &:before{
@@ -170,6 +170,12 @@
                         &:before{
                             border: 1px solid #c0a630;
                             background-color: #f0d765;
+                        }
+                    }
+                    &.terminated{
+                        &:before{
+                            border: 1px solid #7c7c7c;
+                            background-color: #bbbfc3;
                         }
                     }
                 }
@@ -926,13 +932,34 @@
                         margin-bottom: 5px;
                         padding: 6px 12px;
                         display: none;
+                        &.btn-more{
+                            color: #3197ee;
+                            margin-bottom: 0;
+                            position: relative;
+                            padding-left: 26px;
+                            /*display: inline-block;*/
+                            &:before{
+                                top: 4px;
+                                left: -4px;
+                                bottom: 0;
+                                width: 16px;
+                                content: '';
+                                height: 16px;
+                                position: relative;
+                                display: inline-block;
+                                background: url('../img/load-more.png') 0 0 no-repeat;
+                            }
+                            &:hover{
+                                cursor: pointer;
+                            }
+                        }
                         span{
                             line-height: 16px;
                             display: inline-block;
                             vertical-align: middle;
                             &.small-loader{
-                                width: 16px;
-                                height: 16px;
+                                width: 20px;
+                                height: 20px;
                                 background: url('../img/small-loader.gif') 0 0 no-repeat;
                             }
                         }

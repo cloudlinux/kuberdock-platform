@@ -1,5 +1,5 @@
 define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
-    
+
     function modalDialog(options){
         var modal = $('.modal');
         if(options.title) modal.find('.modal-title').html(options.title);
@@ -9,21 +9,16 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
         if(options.show) modal.modal('show');
         return modal;
     }
-    
+
     Pods.module("WorkFlow", function(WorkFlow, App, Backbone, Marionette, $, _){
-        
+
         WorkFlow.getCollection = function(){
             if (!WorkFlow.hasOwnProperty('PodCollection')) {
-                console.log('Yet no collection');
                 WorkFlow.PodCollection = new App.Data.PodCollection(podCollectionData);
             }
-            else {
-                console.log('Pod collection found');
-            }
-            console.log(WorkFlow.PodCollection);
             return WorkFlow.PodCollection;
         }
-        
+
         WorkFlow.Router = Marionette.AppRouter.extend({
             appRoutes: {
                 'pods': 'showPods',
@@ -32,20 +27,18 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                 //'poditem/:id/:name': 'showPodContainer'
             }
         });
-        
+
         WorkFlow.Controller = Marionette.Controller.extend({
-    
+
             showPods: function(){
                 var that = this;
                 require(['pods_app/views/pods_list',
                          'pods_app/views/paginator'], function(){
                     var listLayout = new App.Views.List.PodListLayout();
-                    //WorkFlow.PodCollection = new App.Data.PodCollection(podCollectionData);
-        
                     var podCollection = new App.Views.List.PodCollection({
                         collection: WorkFlow.getCollection()
                     });
-        
+
                     that.listenTo(listLayout, 'show', function(){
                         listLayout.list.show(podCollection);
                         listLayout.pager.show(
@@ -60,14 +53,14 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     App.contents.show(listLayout);
                 });
             },
-    
+
             showPodItem: function(id){
                 var that = this;
                 require(['pods_app/views/pod_item',
                          'pods_app/views/paginator'], function(){
                     var itemLayout = new App.Views.Item.PodItemLayout(),
                         model = WorkFlow.getCollection().fullCollection.get(id);
-                    
+
                     if (model === undefined) {
                         Pods.navigate('pods');
                         that.showPods();
@@ -77,7 +70,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             i.parentID = this.parentID;
                             //i.kubes = this.kubes;
                         }, {parentID: id, kubes: model.get('kubes')});
-                    
+
                     var _containerCollection = model.get('containers');
                     var newContainerCollection = [];
                     _.each(model.get('dockers'), function(el){
@@ -87,7 +80,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 $.each(c, function(k, v){
                                     container[k] = v;
                                 });
-                
+
                                 container['info'] = el.info;
                                 $.each(container.info.state, function(k, v){
                                     container['state_repr'] = k;
@@ -98,17 +91,17 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         newContainerCollection.push(container);
                     });
                     containerCollection = new Backbone.Collection(newContainerCollection);
-                
+
                     var masthead = new App.Views.Item.PageHeader({
                         model: new Backbone.Model({name: model.get('name')})
                     });
-                
+
                     var infoPanel = new App.Views.Item.InfoPanel({
                         childView: App.Views.Item.InfoPanelItem,
                         childViewContainer: "tbody",
                         collection: containerCollection
                     });
-                
+
                     that.listenTo(itemLayout, 'display:pod:stats', function(data){
                         var statCollection = new App.Data.StatsCollection(),
                             that = this;
@@ -128,7 +121,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                         })
                     });
-                
+
                     that.listenTo(itemLayout, 'display:pod:list', function(){
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
                             model: new Backbone.Model({id: model.get('id'), graphs: false})
@@ -139,7 +132,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             collection: containerCollection
                         }));
                     });
-                
+
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.masthead.show(masthead);
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
@@ -150,7 +143,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     App.contents.show(itemLayout);
                 });
             },
-            
+
             showPodContainer: function(id, name){
                 var that = this;
                 require(['pods_app/views/pod_create',
@@ -181,7 +174,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
                     if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
                     if (!model_data.hasOwnProperty('state_repr')) model_data['state_repr'] = container['state_repr'];
-                
+
                     //this.listenTo(wizardLayout, 'show', function(){
                     //    wizardLayout.steps.show(new App.Views.WizardPortsSubView({
                     //        model: new App.Data.Image(model_data)
@@ -192,7 +185,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             model: new App.Data.Image(model_data)
                         }));
                     });
-                
+
                     that.listenTo(wizardLayout, 'step:portconf', function(data){
                         wizardLayout.steps.show(new App.Views.WizardPortsSubView({model: data}));
                     });
@@ -238,12 +231,26 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                          'pods_app/views/loading'], function(){
                     var model = new App.Data.Pod({name: "Unnamed-1", containers: [], volumes: []}),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout();
-                
+
                     var processRequest = function(data){
-                        if($('#set_public_ip').is(':checked')) {
-                            data.set('set_public_ip', true);
-                        }
+                        var hasPublic = function(containers){
+                            for (var i in containers) {
+                                for (var j in containers[i].ports) {
+                                    if (containers[i].ports[j].hasOwnProperty('isPublic')
+                                            && containers[i].ports[j].isPublic) {
+                                        return true;
+                                    }
+                                }
+                            }
+                            return false;
+                        };
                         if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
+                        if (hasPublic(data.get('containers'))) {
+                            data.attributes['set_public_ip'] = true;
+                        }
+                        else {
+                            data.attributes['set_public_ip'] = false;
+                        }
                         WorkFlow.getCollection().fullCollection.create(data.attributes, {
                             wait: true,
                             success: function(){
@@ -260,7 +267,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                         });
                     };
-                
+
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.header.show(new App.Views.NewItem.PodHeaderView({model: model}));
                         wizardLayout.steps.show(new App.Views.NewItem.GetImageView());
@@ -289,12 +296,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         processRequest(data);
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(data){
-                        model.attributes['set_public_ip'] = false;
-                        //if(data.get('ports').length == 0){
-                        //    modelError('Please, setup ports of container.');
-                        //    wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data}));
-                        //    return false;
-                        //}
                         _.each(data.get('volumeMounts'), function(mp){
                             var row = model.get('volumes'),
                                 entry;
@@ -313,12 +314,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             delete mp['isPersistent'];
                             delete mp['persistentDisk'];
                         });
-                        _.each(data.get('ports'), function(p){
-                            if (p.isPublic) {
-                                model.attributes['set_public_ip'] = true;
-                            }
-                        });
-                
+
                         // strip persistentDrives from a container if any
                         if (data.attributes.hasOwnProperty('persistentDrives')) {
                             if (!model.has('persistentDrives')) {
@@ -326,13 +322,13 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                             delete data.attributes.persistentDrives;
                         }
-                
+
                         // Here we populate a pod model container
                         var container = model.getContainerByImage(model.get('lastAddedImage'));
                         _.each(data.attributes, function(value, key, obj){
                             this.container[key] = value;
                         }, {container: container});
-                
+
                         var rqst = $.ajax({
                             type: 'GET',
                             url: '/api/ippool/getFreeHost'
@@ -376,7 +372,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                 });
             }
         });
-        
+
         WorkFlow.addInitializer(function(){
             var controller = new WorkFlow.Controller();
             new WorkFlow.Router({
@@ -395,15 +391,15 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                 };
             }
         });
-        
+
     });
-    
+
     Pods.on('pods:list', function(){
         console.log('Caught pods:list');
         var controller = new Pods.WorkFlow.Controller();
         Pods.navigate('pods');
         controller.showPods();
     });
-    
+
     return Pods.WorkFlow.Controller;
 });

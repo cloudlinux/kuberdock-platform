@@ -176,6 +176,7 @@ def add_new_node(host, kube_type, db_node):
             db.session.commit()
             return error_message
 
+        i, o, e = ssh.exec_command('mkdir -p /var/lib/kuberdock/scripts')
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read())
         sftp = ssh.open_sftp()
@@ -186,11 +187,17 @@ def add_new_node(host, kube_type, db_node):
                 cur_master_kubernetes=current_master_kubernetes)
             fo = StringIO(r)
             sftp.putfo(fo, '/kub_install.sh')
+        with open('pd.template') as f:
+            r = jinja2.Template(f.read()).render(
+                master_ip=MASTER_IP)
+            fo = StringIO(r)
+            sftp.putfo(fo, '/var/lib/kuberdock/scripts/pd.sh')
         sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.close()
+        i, o, e = ssh.exec_command('chmod +x /var/lib/kuberdock/scripts/pd.sh')
         i, o, e = ssh.exec_command('bash /kub_install.sh')
         s_time = time.time()
         while not o.channel.exit_status_ready():

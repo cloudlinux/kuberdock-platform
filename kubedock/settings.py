@@ -40,6 +40,8 @@ INFLUXDB_USER = 'root'
 INFLUXDB_PASSWORD = 'root'
 INFLUXDB_DATABASE = 'cadvisor'
 
+PD_SEPARATOR = '__SEP__'
+
 CELERYBEAT_SCHEDULE = {
     'event-stream': {
         'task': 'kubedock.tasks.check_events',

@@ -1,0 +1,91 @@
+#!/bin/bash
+TMS=$(date +"%Y-%m-%d %H:%M:%S")
+echo "$TMS $1 $2 $3" >> /tmp/pd.log
+
+ACTION=$1
+NAME=$2
+SIZE=$3
+NS=rbd
+PREFIX=/var/lib/kuberdock/mp
+MP="$PREFIX/$NAME"
+MASTER_IP={{ master_ip }}
+
+if [ $USER != root ];then
+    echo "Superuser privileges required"
+    exit 0
+fi
+
+function mkdir_if_missing {
+    if [ ! -d "$MP" ];then
+        mkdir -p "$MP"
+    fi
+}
+
+function create_map_and_mount {
+    mkdir_if_missing
+    rbd create $NAME --size=$SIZE
+    DEVICE=$(rbd map $NAME)
+    mkfs.ext4 $DEVICE
+    mount "$DEVICE" "$MP"
+}
+
+function map_and_mount {
+    rbd showmapped|awk "NR>1{if(\$3==\"$NAME\"){exit 1}}"
+    if [ $? -ne 0 ];then
+        echo "Drive $NAME is already mapped"
+        exit 1
+    fi
+    mkdir_if_missing
+    DEVICE=$(rbd map $NAME)
+    mount "$DEVICE" "$MP"
+}
+
+function lookup {
+    LIST=$(rbd ls)
+    if [ -z "$LIST" ];then
+        return 0
+    else
+        while read -r LINE; do
+            if [ $LINE == $NAME ];then
+                return 1
+            fi
+        done <<< "$LIST"
+        return 0
+    fi
+}
+
+function make_unmount {
+    DRIVES=$(curl -k -s -X GET "https://$MASTER_IP/api/podapi/pd/$NAME")
+    if [ -z "$DRIVES" ];then
+        exit 0
+    fi
+    IFS=';;' read -ra ARRAY <<< "$DRIVES"
+    for i in "${ARRAY[@]}";do
+        if [ -z "$i" ];then
+            continue
+        fi
+        DPATH="/dev/rbd/$NS/$i"
+        umount $DPATH
+        rbd unmap $DPATH
+    done
+}
+
+if [ $ACTION == "create" ];then
+    lookup
+    if [ $? -eq 0 ];then
+        create_map_and_mount
+    else
+        echo "Image $NAME exists"
+        exit 1
+    fi
+elif [ $ACTION == "mount" ];then
+    lookup
+    if [ $? -eq 0 ];then
+        echo "Image $NAME not found"
+        exit 1
+    else
+        map_and_mount
+    fi
+elif [ $ACTION == "umount" ];then
+    make_unmount
+fi

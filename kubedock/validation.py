@@ -116,7 +116,12 @@ new_pod_scheme = {
                                     'type': 'string'
                                 },
                                 'pdSize': {
-                                    'type': 'integer'
+                                    'type': 'integer',
+                                    'nullable': True,
+                                },
+                                'used': {
+                                    'type': 'boolean',
+                                    'required': False,
                                 }
                             }
                         },

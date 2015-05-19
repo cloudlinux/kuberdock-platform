@@ -6,17 +6,18 @@ from .pod import Pod
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..api.stream import send_event
 
+
 class PodCollection(KubeQuery, ModelQuery, Utilities):
-    
+
     def __init__(self):
         self._get_pods()
         current_app.logger.debug(self._collection)
         self._merge()
-    
+
     def _get_replicas(self, name=None):
         replicas = []
         data = self._get(['replicationControllers'])
-        
+
         for item in data['items']:
             try:
                 replica_item = {
@@ -32,14 +33,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             except KeyError:
                 pass
         return replicas
-    
+
     def _get_pods(self, name=None):
         self._collection = {}
         pod_index = set()
         replicas_data = self._get_replicas()
         data = self._get(['pods'])
         services_data = self._get(['services'])
-        
+
         for item in data['items']:  # iterate through pods list
             pod = Pod.populate(item)
 
@@ -49,13 +50,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     for i in 'id', 'sid', 'replicas':
                         setattr(pod, i, r[i])
                     break
-                
+
             for s in services_data.get('items', []):
                 if self._is_related(item.get('labels'), s.get('selector')):
                     pod.portalIP = s.get('portalIP')
                     pod.servicename = s.get('labels', {}).get('name')
                     break
-            
+
             if pod.sid not in pod_index:
                 self._collection[pod.name] = pod
                 pod_index.add(pod.sid)
@@ -98,7 +99,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     "port": host_port,
                     "protocol": p.get('protocol'),
                     "targetPort": p.get('containerPort')})
-    
+
         conf = {'kind': 'Service', 'apiVersion': 'v1beta3',
             'metadata': {'generateName': pod.name.lower() + '-service-',
                         'labels': {'name': pod._make_dash() + '-service'},
@@ -114,36 +115,39 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             }
         }
         return self._put(['services'], json.dumps(conf), True)
-    
+
     def _start_cluster(self):
-        item_id = make_item_id(data['name'])
-        rv = {}
-        try:
-            service_rv = json.loads(run_service(data))
-            if 'kind' in service_rv and service_rv['kind'] == 'Service':
-                rv['service_ok'] = True
-                rv['portalIP'] = service_rv['portalIP']
-        except TypeError:
-            rv['service_ok'] = False
-        except KeyError:
-            rv['portalIP'] = None
-    
-        config = make_config(data, item_id)
-    
-        try:
-            pod_rv = json.loads(tasks.create_containers_nodelay(config))
-            if 'kind' in pod_rv and pod_rv['kind'] == 'ReplicationController':
-                rv['replica_ok'] = True
-                rv['replicas'] = pod_rv['desiredState']['replicas']
-        except TypeError:
-            rv['replica_ok'] = False
-        except KeyError:
-            rv['replicas'] = 0
-        if rv['service_ok'] and rv['replica_ok']:
-            rv['status'] = 'Running'
-            rv.pop('service_ok')
-            rv.pop('replica_ok')
-        return rv
+        pass
+        # wants refactoring. Currently not used
+
+        #item_id = make_item_id(data['name'])
+        #rv = {}
+        #try:
+        #    service_rv = json.loads(run_service(data))
+        #    if 'kind' in service_rv and service_rv['kind'] == 'Service':
+        #        rv['service_ok'] = True
+        #        rv['portalIP'] = service_rv['portalIP']
+        #except TypeError:
+        #    rv['service_ok'] = False
+        #except KeyError:
+        #    rv['portalIP'] = None
+        #
+        #config = make_config(data, item_id)
+        #
+        #try:
+        #    pod_rv = json.loads(tasks.create_containers_nodelay(config))
+        #    if 'kind' in pod_rv and pod_rv['kind'] == 'ReplicationController':
+        #        rv['replica_ok'] = True
+        #        rv['replicas'] = pod_rv['desiredState']['replicas']
+        #except TypeError:
+        #    rv['replica_ok'] = False
+        #except KeyError:
+        #    rv['replicas'] = 0
+        #if rv['service_ok'] and rv['replica_ok']:
+        #    rv['status'] = 'Running'
+        #    rv.pop('service_ok')
+        #    rv.pop('replica_ok')
+        #return rv
 
     @staticmethod
     def _forge_dockers(pod):
@@ -165,13 +169,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if as_json:
             return json.dumps([pod.as_dict() for pod in self._collection.values()])
         return self._collection.values()
-    
+
     def get_by_username(self, username, as_json=False):
         pods = filter((lambda x: getattr(x, 'owner', '') == username), self._collection.values())
         if as_json:
             return json.dumps([pod.as_dict() for pod in pods])
         return pods
-    
+
     def get_by_id(self, pod_id, as_json=False):
         try:
             pod = filter((lambda x: x.id == pod_id), self._collection.values())[0]
@@ -180,7 +184,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return pod
         except IndexError:
             self._raise("No such item", 404)
-    
+
     def _resize_replicas(self, pod, data):
         number = int(data.get('replicas', getattr(pod, 'replicas', 0)))
         replicas = self._get_replicas(pod.name)
@@ -191,7 +195,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 json.loads({'desiredState': {'replicas': number}}))
             self._raise_if_failure(rv, "Could not resize a replica")
         return len(replicas)
-    
+
     def _start_pod(self, pod, data=None):
         pod.status = 'pending'
         if pod.cluster:
@@ -202,8 +206,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             config = pod.prepare()
             resource = '{0}{1}s'.format(config['kind'][0].lower(), config['kind'][1:])
             rv=self._post([resource], json.dumps(config), True)
+            #current_app.logger.debug(rv)
+            self._make_persistent_drives(pod, rv)
             return rv
-        
+
     def _stop_pod(self, pod, data=None):
         pod.status = 'stopped'
         if pod.cluster:
@@ -213,11 +219,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 rv = self._del(['pods', pod.sid])
                 self._raise_if_failure(rv, "Could not stop a pod")
                 return rv
-    
+
     def _unknown_command(self, pod, data=None):
         self._raise("Unknown command")
-    
-    def _do_container_action(action, data, strip_part='docker://'):
+
+    def _do_container_action(self, action, data, strip_part='docker://'):
         host = data.get('host')
         if not host:
             return
@@ -230,39 +236,40 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             command = 'docker {0} {1}'.format(action, id_)
             status, message = run_ssh_command(host, command)
             if status != 0:
-                raise APIError('Docker error: {0} ({1}).'.format(message, status))
+                self._raise('Docker error: {0} ({1}).'.format(message, status))
             if action in ('start', 'stop'):
                 send_event('pull_pod_state', message)
             rv[container] = message or 'OK'
         return rv
-    
+
     def _container_start(self, pod, data):
         self._do_container_action('start', data)
-    
+
     def _container_stop(self, pod, data):
         self._do_container_action('stop', data)
-    
+
     def _container_delete(self, pod, data):
         self._do_container_action('rm', data)
-    
+
     def update(self, pod, data):
         command = data.get('command')
         if command is None:
             return
-        {'start': self._start_pod,
-         'stop': self._stop_pod,
-         'resize': self._resize_replicas,
-         'container_start': self._container_start,
-         'container_stop': self._container_stop,
-         'container_delete': self._container_delete,
-         'unknown': self._unknown_command}.get(command, 'unknown')(pod, data)
-    
+        return {
+            'start': self._start_pod,
+            'stop': self._stop_pod,
+            'resize': self._resize_replicas,
+            'container_start': self._container_start,
+            'container_stop': self._container_stop,
+            'container_delete': self._container_delete,
+            'unknown': self._unknown_command}.get(command, 'unknown')(pod, data)
+
     def delete(self, pod):
         if pod.owner == 'kuberdock-internal':
             self._raise('Service pod cannot be removed')
         if hasattr(pod, 'public_ip'):
             self._free_ip(pod.public_ip)
-            
+
         #if pod.cluster:
         #    replicas_data = self._get_replicas()
         #    replicas = filter(
@@ -270,11 +277,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         #    for replica in replicas:
         #        rv = self._del([replicationControllers', replica.get('sid', '')])
         #        self._raise_if_failure(rv, "Could not remove a replica")
-        
+
         # when we start using replicas check if all replica pods are removed
         if hasattr(pod, 'sid'):
             rv = self._del(['pods', pod.sid])
-            current_app.logger.debug(rv)
             self._raise_if_failure(rv, "Could not remove a pod")
             services_data = self._get(['services'])
             services = filter(
@@ -294,3 +300,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 rv = self._del([service.get('metadata', {}).get('name', '')])
                 self._raise_if_failure(rv, "Could not remove a service")
         self._mark_pod_as_deleted(pod)
+
+class DriveCollection(ModelQuery):
+
+    def get_drives_for_node(self, ip, kub_id):
+        """
+        Returns ';;'-joined list of drives names to a node
+        :param ip: string -> IP address of node
+        :param kub_id: string UUID -> ID of inner kubernetes pod id to look for
+        :return: string
+        """
+        return ';;'.join(self._get_node_persistent_drives(ip, kub_id))

@@ -167,33 +167,42 @@ def run_ssh_command(host, command):
     return exit_status, message
 
 class KubeUtils(object):
-        
-    def _get_current_user(self):
+
+    @staticmethod
+    def _get_current_user():
         try:
             current_user.username
             return current_user
         except AttributeError:
             return g.user
-        
+
     @classmethod
     def jsonwrap(cls, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             return jsonify({'status': 'OK', 'data': func(*args, **kwargs)})
         return wrapper
-    
+
     @classmethod
     def pod_permissions(cls, func):
         def inner(*args, **kwargs):
             rv = check_permission('get', 'pods')(func)
             return rv(*args, **kwargs)
         return inner
-    
+
     def _get_params(self):
+        #pretty ugly. Wants refactoring
+        params = {}
+        data = request.args.to_dict()
+        if data is not None:
+            params.update(data)
         data = request.json
-        if data is None:
-            data = request.form.to_dict()
-        return data
+        if data is not None:
+            params.update(data)
+        data = request.form.to_dict()
+        if data is not None:
+            params.update(data)
+        return params
 
 
 def register_api(bp, view, endpoint, url, pk='id', pk_type='string', **kwargs):

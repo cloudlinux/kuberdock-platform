@@ -9,10 +9,10 @@ from .. import tasks
 from ..models import Node, User, Pod
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic
+from ..utils import login_required_or_basic, KubeUtils
 from ..validation import check_int_id, check_node_data, check_hostname
 from ..billing import Kube, kubes_to_limits
-from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP
+from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR
 from . import APIError
 from .pods import make_config
 from .stream import send_event
@@ -400,6 +400,7 @@ def poll():
 @login_required_or_basic
 @check_permission('get', 'pods')
 def pd_lookup():
+    drives = []
     env.user = 'root'
     env.skip_bad_hosts = True
     env.key_file = '/usr/home/bliss/.ssh/id_pub'
@@ -409,7 +410,15 @@ def pd_lookup():
         data = execute(poll, hosts=nodes.keys())
     sets = [set(filter((lambda x: x[1] is None), i.items())) for i in data.values()]
     intersection = map(operator.itemgetter(0), sets[0].intersection(*sets[1:]))
-    return jsonify({'status': 'OK', 'data': intersection})
+    username = KubeUtils._get_current_user().username
+    for item in intersection:
+        try:
+            drive, user = item.rsplit(PD_SEPARATOR, 1)
+        except ValueError:
+            continue
+        if user == username:
+            drives.append(drive)
+    return jsonify({'status': 'OK', 'data': drives})
 
 
 @nodes.route('/redeploy/<node_id>', methods=['GET'])

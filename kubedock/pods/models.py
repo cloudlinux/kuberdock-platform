@@ -301,6 +301,21 @@ class PodIP(BaseModelMixin, db.Model):
         )
 
 
+class PersistentDrive(db.Model):
+    __tablename__ = 'persistent_drives'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    pod_id = db.Column(postgresql.UUID, nullable=False)
+    kub_id = db.Column(postgresql.UUID, nullable=False, index=True)
+    name = db.Column(db.String, nullable=False)
+    owner = db.Column(db.String, nullable=False)
+    size = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String, nullable=False, default='unknown')
+
+    def __repr__(self):
+        return "<PersistentDrive(id='%s', pod_id='%s', kub_id='%s', name='%s', owner='%s', status='%s')>" % (
+            self.id, self.pod_id, self.kub_id, self.name, self.owner, self.status)
+
+
 ###############
 ### Signals ###
 @signals.allocate_ip_address.connect

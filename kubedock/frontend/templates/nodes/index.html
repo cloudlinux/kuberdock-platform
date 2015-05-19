@@ -68,27 +68,21 @@
         </div>
         <% break; case 'pending': %>
         <div class="details">Node is in installation progress</div>
-        <div class="spoiler">
-            <div class="spoiler-btn log">Node installation log</div>
-            <div class="spoiler-body collapse">
-                <% _.each(install_log.split('\n'), function(line){ %>
-                    <p><%- line %></p>
-                <% }) %>
-            </div>
+        <div class="reason">
+            <p>Node installation log</p>
+            <% _.each(install_log.split('\n'), function(line){ %>
+                <p><%- line %></p>
+            <% }) %>
         </div>
         <% break; case 'troubles': %>
         <div class="reason">
         <% _.each(reason.split('\n'), function(line){ %>
             <p><%- line %></p>
         <% }) %>
-            <div class="spoiler">
-                <div class="spoiler-btn log">Node installation log</div>
-                <div class="spoiler-body collapse">
-                    <% _.each(install_log.split('\n'), function(line){ %>
-                        <p><%- line %></p>
-                    <% }) %>
-                </div>
-            </div>
+            <p>Node installation log</p>
+            <% _.each(install_log.split('\n'), function(line){ %>
+                <p><%- line %></p>
+            <% }) %>
         </div>
         <% break; } %>
     </script>

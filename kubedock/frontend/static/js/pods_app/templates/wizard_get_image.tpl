@@ -42,7 +42,7 @@
     <div id="search-results-scroll">
         <div id="data-collection"></div>
         <div class="search-control">
-            <div class="btn btn-more btn-link">Load more</div>
+            <div class="btn-more">Load more</div>
             <div class="state no-more-state">There are no more items</div>
             <div class="state load-state"><span class="small-loader"></span> <span>Loading...</span></div>
         </div>

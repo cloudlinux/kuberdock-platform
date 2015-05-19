@@ -7,7 +7,6 @@ import requests
 import shlex
 import string
 from ..core import db
-from ..users.models import User
 from ..pods.models import Pod, PodIP, PersistentDrive
 from ..nodes.models import Node
 from ..api import APIError
@@ -44,14 +43,15 @@ class KubeQuery(object):
             raise SystemExit(error_string)
 
     @staticmethod
-    def _make_url(res):
+    def _make_url(res, use_v3=False):
         """
         Composes a full URL
         :param res: list -> list of URL path items
         """
+        kw = {'use_v3': use_v3}
         if res is not None:
-            return get_api_url(*res)
-        return get_api_url()
+            return get_api_url(*res, **kw)
+        return get_api_url(**kw)
 
     @staticmethod
     def _return_request(req):
@@ -64,7 +64,7 @@ class KubeQuery(object):
         except (ValueError, TypeError):
             return req.text
 
-    def _get(self, res=None, params=None):
+    def _get(self, res=None, params=None, use_v3=False):
         """
         GET request wrapper.
         :param res: list of URL path items
@@ -73,23 +73,23 @@ class KubeQuery(object):
         args = self._compose_args()
         if params:
             args['params'] = params
-        return self._run('get', res, args)
+        return self._run('get', res, args, use_v3)
 
-    def _post(self, res, data, rest=False):
+    def _post(self, res, data, rest=False, use_v3=False):
         args = self._compose_args(rest)
         args['data'] = data
-        return self._run('post', res, args)
+        return self._run('post', res, args, use_v3)
 
-    def _put(self, res, data, rest=False):
+    def _put(self, res, data, rest=False, use_v3=False):
         args = self._compose_args(rest)
         args['data'] = data
-        return self._run('put', res, args)
+        return self._run('put', res, args, use_v3)
 
-    def _del(self, res):
+    def _del(self, res, use_v3=False):
         args = self._compose_args()
-        return self._run('del', res, args)
+        return self._run('del', res, args, use_v3)
 
-    def _run(self, act, res, args):
+    def _run(self, act, res, args, use_v3):
         dispatcher = {
             'get': requests.get,
             'post': requests.post,
@@ -97,7 +97,7 @@ class KubeQuery(object):
             'del': requests.delete
         }
         try:
-            req = dispatcher.get(act, requests.get)(self._make_url(res), **args)
+            req = dispatcher.get(act, requests.get)(self._make_url(res, use_v3), **args)
             return self._return_request(req)
         except requests.exceptions.ConnectionError, e:
             return self._raise_error(str(e))
@@ -232,9 +232,10 @@ class Utilities(object):
         """
         if message is None:
             message = 'An error occurred'
-        status = return_value.get('status')
-        if status is not None and status.lower() not in ['success', 'working']:
-            self._raise(message)
+        #status = return_value.get('status')
+        current_app.logger.debug(return_value)
+        #if status is not None and status.lower() not in ['success', 'working']:
+        #    self._raise(message)
 
     def _make_dash(self):
         """

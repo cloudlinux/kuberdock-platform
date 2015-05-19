@@ -30,21 +30,22 @@ else
     fi
 fi
 
-
-# TODO change rules, not disable
-echo "Setting up firewall rules..."
-systemctl stop firewalld
-check_status
-systemctl disable firewalld
-check_status
+rpm -q firewalld && firewall-cmd --state
+if [ $? == 0 ];then
+    # TODO change rules, not disable
+    echo "Setting up firewall rules..."
+    systemctl stop firewalld
+    check_status
+    systemctl disable firewalld
+    check_status
+fi
 
 
 
 #0 Install ntp, we need correct time for node logs
 yum install -y ntp
 check_status
-ntpd -g
-check_status
+ntpd -gq
 systemctl restart ntpd
 check_status
 systemctl enable ntpd

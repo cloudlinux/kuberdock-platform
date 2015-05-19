@@ -5,7 +5,7 @@ KUBERNETES_CONF_DIR=/etc/kubernetes
 KUBERDOCK_MAIN_CONFIG=/etc/sysconfig/kuberdock/kuberdock.conf
 KNOWN_TOKENS_FILE="$KUBERNETES_CONF_DIR/known_tokens.csv"
 WEBAPP_USER=nginx
-DEPLOY_LOG_FILE=/var/tmp/kuberdock_master_deploy.log
+DEPLOY_LOG_FILE=/var/log/kuberdock_master_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 
 if [ $USER != "root" ]; then
@@ -179,7 +179,7 @@ fi
 log_it echo "CLUSTER_NETWORK has been determined as $CLUSTER_NETWORK"
 
 
-log_it firewall-cmd --state
+log_it rpm -q firewalld && firewall-cmd --state
 if [ $? -ne 0 ];then
     log_it echo 'Firewalld is not running. Skip adding any new rules.'
 else
@@ -187,6 +187,9 @@ else
     # nginx
     do_and_log firewall-cmd --permanent --zone=public --add-port=80/tcp
     do_and_log firewall-cmd --permanent --zone=public --add-port=443/tcp
+
+    # ntp
+    do_and_log firewall-cmd --permanent --zone=public --add-port=123/udp
 
     # this ports should be seen only from inside the cluster:
     log_it echo 'Adding cluster-only visible ports...'
@@ -196,6 +199,7 @@ else
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="8086" protocol="tcp" accept"
     # cluster dns
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="tcp" accept"
+    do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="udp" accept"
 
     # kube-apiserver secure
     do_and_log firewall-cmd --permanent --zone=public --add-port=6443/tcp
@@ -209,7 +213,7 @@ fi
 
 #2 Install ntp, we need correct time for node logs
 log_errors yum install -y ntp
-do_and_log ntpd -g
+log_it ntpd -gq
 do_and_log systemctl restart ntpd
 do_and_log systemctl enable ntpd
 do_and_log ntpq -p

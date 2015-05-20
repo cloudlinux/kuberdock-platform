@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 43%{?dist}.cloudlinux
+Release: 44%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,13 +130,24 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Wed May 20 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-44
+- Add spoiler to node install log, class Reason, AC-362,369: Rename some fields, AC-324: Fix design bug in breadcrumb (Safari)
+- AC-355: Edit user
+- AC-371 Cpu limits
+- Fix ntpd problem on Amazon (not tested). Improve firewalld rules. Fix bug with freehost
+- Added processing 'set_public_ip' attribute on the end of pod creation
+- Fix User blocked page, some design bugs, remove spoiler from node log instalation, AC-343
+- Basic functionality for ceph-based persistent drives
+- Removed pods_app/pods_views.js and pd.sh
+- added v1beta3 to KubeQuery
+
 * Sun May 17 2015 Igor Savenko <bliss@cloudlinux.com>  0.1-43
 - Switched pods application to AMD (require.js)
 
 * Fri May 15 2015 Igor Savenko <bliss@cloudlinux.com>  0.1-42
 - Refactored pods backend interface
 
-* Thu May 14 2015 Andrey Lukyanov <alukyanov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>,  0.1-40
+* Thu May 14 2015 Andrey Lukyanov <alukyanov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-40
 - pod deleting fix (can delete if there are no services and pods)
 - AC-338: Show container environment variables
 

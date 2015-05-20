@@ -5,9 +5,12 @@ define(['pods_app/app',
         'tpl!pods_app/templates/wizard_get_image.tpl',
         'tpl!pods_app/templates/wizard_set_container_ports.tpl',
         'tpl!pods_app/templates/wizard_set_container_env.tpl',
+        'tpl!pods_app/templates/wizard_set_container_logs.tpl',
+        'tpl!pods_app/templates/wizard_set_container_stats.tpl',
+        'tpl!pods_app/templates/pod_item_graph.tpl',
         'tpl!pods_app/templates/wizard_set_container_complete.tpl',
         'pods_app/utils',
-        'scroll-model', 'scroll-view', 'bootstrap', 'bootstrap-editable'],
+        'scroll-model', 'scroll-view', 'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer'],
        function(Pods,
                 layoutWizardTpl,
                 breadcrumbHeaderTpl,
@@ -15,11 +18,14 @@ define(['pods_app/app',
                 wizardGetImageTpl,
                 wizardSetContainerPortsTpl,
                 wizardSetContainerEnvTpl,
+                wizardSetContainerLogsTpl,
+                wizardSetContainerStatsTpl,
+                podItemGraphTpl,
                 wizardSetContainerCompleteTpl,
                 utils){
-    
+
     Pods.module('Views.NewItem', function(NewItem, App, Backbone, Marionette, $, _){
-        
+
         NewItem.PodWizardLayout = Backbone.Marionette.LayoutView.extend({
             template: layoutWizardTpl,
             initialize: function(){
@@ -90,19 +96,19 @@ define(['pods_app/app',
                 this.trigger('pod:run', data.model);
             }
         });
-        
+
         NewItem.PodHeaderView = Backbone.Marionette.ItemView.extend({
             template: breadcrumbHeaderTpl,
             tagName: 'div',
-    
+
             initialize: function(options){
                 this.model = options.model;
             },
-    
+
             ui: {
                 peditable: '.peditable'
             },
-    
+
             onRender: function(){
                 var that = this;
                 this.ui.peditable.editable({
@@ -127,38 +133,38 @@ define(['pods_app/app',
                 });
             }
         });
-        
+
         NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
             template: wizardImageCollectionItemTpl,
             tagName: 'div',
             className: 'item',
-    
+
             events: {
                 'click .add-item'  : 'addItem',
             },
-    
+
             addItem: function(evt){
                 evt.stopPropagation();
                 this.trigger('image:selected');
             }
         });
-        
+
         var imageSearchURL = 'registry.hub.docker.com';
         NewItem.GetImageView = Backbone.Marionette.CompositeView.extend({
             template: wizardGetImageTpl,
             childView: NewItem.ImageListItemView,
             childViewContainer: '#data-collection',
             tagName: 'div',
-    
+
             initialize: function(options){
                 this.collection = new App.Data.ImageCollection();
                 this.listenTo(this.collection, 'reset', this.render);
             },
-    
+
             triggers: {
                 'click .next-step' : 'step:next'
             },
-    
+
             events: {
                 'click .search-image'              : 'onSearchClick',
                 'keypress #search-image-field'     : 'onInputKeypress',
@@ -166,11 +172,11 @@ define(['pods_app/app',
                 'click @ui.buttonNext'             : 'nextStep',
                 'change @ui.select'                : 'selectChanche'
             },
-    
+
             childEvents: {
                 'image:selected' : 'childImageSelected'
             },
-    
+
             ui: {
                 buttonNext      : '.nextStep',
                 repo_url_repr   : 'span#search-image-default-repo',
@@ -180,7 +186,7 @@ define(['pods_app/app',
                 loginForm       : '.login-user',
                 select          : '.image-source'
             },
-    
+
             onRender: function(){
                 var that = this;
                 this.ui.repo_url_repr.editable({
@@ -192,19 +198,19 @@ define(['pods_app/app',
                     }
                 });
             },
-    
+
             onInputKeypress: function(evt){
                 evt.stopPropagation();
                 if (evt.which === 13) { // 'Enter' key
                     this.fetchCollection(this.ui.input.val().trim());
                 }
             },
-    
+
             onSearchClick: function(evt){
                 evt.stopPropagation();
                 this.ui.searchControl.show();
                 this.fetchCollection(this.ui.input.val().trim());
-    
+
             },
             selectChanche: function(evt){
                 var index = this.ui.select.find('option:selected').index();
@@ -214,7 +220,7 @@ define(['pods_app/app',
                     this.ui.loginForm.slideUp();
                 }
             },
-    
+
             fetchCollection: function(query){
                 var that = this;
                 var options = {
@@ -238,19 +244,19 @@ define(['pods_app/app',
                     options: options
                 });
             },
-    
+
             onShow: function(){
                 this.ui.input.focus();
             },
-    
+
             nextStep : function(evt){
                 this.trigger('image:selected', this.ui.buttonNext.data('name'));
             },
-    
+
             onBeforeDestroy: function(){
                 this.trigger('pager:clear');
             },
-    
+
             childImageSelected: function(data){
                 this.trigger('image:selected', data.model.get('name'));
             }
@@ -259,15 +265,15 @@ define(['pods_app/app',
         NewItem.WizardPortsSubView = Backbone.Marionette.ItemView.extend({
             template: wizardSetContainerPortsTpl,
             tagName: 'div',
-    
-    
+
+
             ui: {
                 ieditable: '.ieditable',
                 iseditable: '.iseditable',
                 iveditable: '.iveditable',
                 removeItem: 'span.remove'
             },
-    
+
             events: {
                 'click .add-port'        : 'addItem',
     //            'click .readonly'        : 'toggleReadOnly',
@@ -281,7 +287,7 @@ define(['pods_app/app',
                 'click .add-drive-cancel': 'cancelAddDrive',
                 'click .next-step'       : 'goNext'
             },
-    
+
             triggers: {
                 'click .complete'        : 'step:complete',
                 'click .go-to-volumes'   : 'step:volconf',
@@ -292,7 +298,7 @@ define(['pods_app/app',
                 'click .go-to-stats'     : 'step:statsconf',
                 'click .go-to-logs'      : 'step:logsconf',
             },
-    
+
             changePolicy: function(evt){
                 evt.stopPropagation();
                 var policy = $(evt.target).val(),
@@ -300,7 +306,7 @@ define(['pods_app/app',
                 struct[policy] = {};
                 this.model.set('restartPolicy', struct)
             },
-    
+
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     kubeType,
@@ -325,7 +331,7 @@ define(['pods_app/app',
                     restart_policy: restartPolicy,
                 };
             },
-    
+
             initialize: function(options){
                 try {
                     var image = options.model.get('lastAddedImage');
@@ -340,19 +346,19 @@ define(['pods_app/app',
                     this.model.set({'volumeMounts': []});
                 }
             },
-    
+
             addItem: function(evt){
                 evt.stopPropagation();
                 this.model.get('ports').push({containerPort: null, hostPort: null, protocol: 'tcp', isPublic: false});
                 this.render();
             },
-    
+
             addVolume: function(evt){
                 evt.stopPropagation();
                 this.model.get('volumeMounts').push({mountPath: null, readOnly: false, isPersistent: false});
                 this.render();
             },
-    
+
             addDrive: function(evt){
                 evt.stopPropagation();
                 var tgt = $(evt.target);
@@ -373,7 +379,7 @@ define(['pods_app/app',
                 }
                 this.render();
             },
-    
+
             cancelAddDrive: function(evt){
                 evt.stopPropagation();
                 if (this.hasOwnProperty('showPersistentAdd')) {
@@ -381,7 +387,7 @@ define(['pods_app/app',
                 }
                 this.render();
             },
-    
+
             togglePublic: function(evt){
                 evt.stopPropagation();
                 var index = $(evt.target).closest('tr').index(),
@@ -394,7 +400,7 @@ define(['pods_app/app',
                 }
                 this.render();
             },
-    
+
             togglePersistent: function(evt){
                 evt.stopPropagation();
                 var tgt = $(evt.target),
@@ -425,7 +431,7 @@ define(['pods_app/app',
                     }
                 }
             },
-    
+
             removePortEntry: function(evt){
                 evt.stopPropagation();
                 var tgt = $(evt.target),
@@ -434,7 +440,7 @@ define(['pods_app/app',
                 ports.splice(index, 1);
                 this.render();
             },
-    
+
             removeVolumeEntry: function(evt){
                 evt.stopPropagation();
                 var tgt = $(evt.target),
@@ -443,7 +449,7 @@ define(['pods_app/app',
                 volumes.splice(index, 1);
                 this.render();
             },
-    
+
             goNext: function(evt){
                 var vm = this.model.get('volumeMounts');
                 for (var i=0; i<vm.length; i++) {
@@ -456,11 +462,11 @@ define(['pods_app/app',
                 }
                 this.trigger('step:envconf', this);
             },
-    
+
             onRender: function(){
                 var that = this,
                     disks = [];
-    
+
                 if (this.model.has('persistentDrives')) {
                     disks = _.map(this.model.get('persistentDrives'), function(i){
                         var item = {value: i.pdName, text: i.pdName};
@@ -468,7 +474,7 @@ define(['pods_app/app',
                         return item;
                     });
                 }
-    
+
                 this.ui.ieditable.editable({
                     type: 'text',
                     mode: 'inline',
@@ -476,7 +482,7 @@ define(['pods_app/app',
                         var index = $(this).closest('tr').index(),
                             className = $(this).parent().attr('class'),
                             item = $(this);
-    
+
                         if (className !== undefined) {
                             that.model.get('ports')[index][className] = parseInt(newValue);
                         }
@@ -509,11 +515,11 @@ define(['pods_app/app',
                 });
             }
         });
-    
+
         NewItem.WizardEnvSubView = Backbone.Marionette.ItemView.extend({
             template: wizardSetContainerEnvTpl,
             tagName: 'div',
-    
+
             ui: {
                 ieditable  : '.ieditable',
                 chngeInput : '.changeInput',
@@ -523,20 +529,20 @@ define(['pods_app/app',
                 addItem    : '.add-env',
                 removeItem : '.remove-env',
             },
-    
+
             events: {
                 'click @ui.addItem'    : 'addItem',
                 'click @ui.removeItem' : 'removeItem',
                 'click @ui.reset'      : 'resetFielsdsValue',
                 'change @ui.input'     : 'onChangeInput',
             },
-    
+
             templateHelpers: function(){
                 return {
                     isPending: !this.model.has('parentID')
                 };
             },
-    
+
             triggers: {
                 'click .complete'        : 'step:complete',
                 'click .next-step'       : 'step:complete',
@@ -548,7 +554,7 @@ define(['pods_app/app',
                 'click .go-to-stats'     : 'step:statsconf',
                 'click .go-to-logs'      : 'step:logsconf',
             },
-    
+
             addItem: function(env){
                 env.stopPropagation();
                 this.model.get('env').push({name: null, value: null});
@@ -559,25 +565,25 @@ define(['pods_app/app',
                 var env = this.model.get('env'),
                     item = $(e.currentTarget),
                     index = item.parents('.fields').index()-1;
-    
+
                     env.splice(index, 1);
                     item.parents('.fields').remove();
             },
-            
+
             resetFielsdsValue: function(){
                 var env = this.model.get('env');
-    
+
                 env.forEach(function(item, i){
                     env[i] = {name: null, value: null}
                 })
                 this.render();
             },
-    
+
             onChangeInput: function(e){
                 var env = this.model.get('env'),
                     item = $(e.currentTarget),
                     index = item.parents('.fields').index()-1;
-    
+
                  if ( item.hasClass('name') ){
                     env[index] = { name: item.val(), value: item.parent().next().find('input').val() };
                     this.model.set('env', env);
@@ -586,7 +592,7 @@ define(['pods_app/app',
                     this.model.set('env', env);
                  }
             },
-    
+
             onRender: function(){
                 //var that = this;
                 //this.ui.ieditable.editable({
@@ -607,12 +613,12 @@ define(['pods_app/app',
         });
 
         NewItem.WizardStatsSubItemView = Backbone.Marionette.ItemView.extend({
-            template: '#pod-item-graph-template',
-    
+            template: podItemGraphTpl,
+
             ui: {
                 chart: '.graph-item'
             },
-    
+
             onShow: function(){
                 var lines = this.model.get('lines');
                 var options = {
@@ -633,14 +639,14 @@ define(['pods_app/app',
                         shadow: false
                     }
                 };
-    
+
                 var points = [];
                 for (var i=0; i<lines; i++) {
                     if (points.length < i+1) {
                         points.push([])
                     }
                 }
-    
+
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
                         points[i].push([record[0], record[i+1]])
@@ -653,13 +659,13 @@ define(['pods_app/app',
         NewItem.WizardStatsSubView = Backbone.Marionette.CompositeView.extend({
             childView: NewItem.WizardStatsSubItemView,
             childViewContainer: "div.container-stats #monitoring-page",
-            template: '#wizard-set-container-stats-template',
+            template: wizardSetContainerStatsTpl,
             tagName: 'div',
-    
+
             initialize: function(options){
                 this.containerModel = options.containerModel;
             },
-    
+
             events: {
                 'click .go-to-ports'     : 'onPortsClick',
                 'click .go-to-volumes'   : 'onVolumesClick',
@@ -668,7 +674,7 @@ define(['pods_app/app',
                 'click .go-to-other'     : 'onOtherClick',
                 'click .go-to-logs'      : 'onLogsClick'
             },
-    
+
             templateHelpers: function(){
                 var parentID = this.containerModel.get('parentID'),
                     model = App.WorkFlow.getCollection().fullCollection.get(parentID),
@@ -696,54 +702,54 @@ define(['pods_app/app',
                     kubes: this.containerModel.get('kubes'),
                 };
             },
-    
+
             onPortsClick: function(evt){
                 evt.stopPropagation();
                 this.trigger('step:portconf', {model: this.containerModel});
             },
-    
+
             onVolumesClick: function(evt){
                 evt.stopPropagation();
                 this.trigger('step:volconf', {model: this.containerModel});
             },
-    
+
             onEnvsClick: function(evt){
                 evt.stopPropagation();
                 this.trigger('step:envconf', {model: this.containerModel});
             },
-    
+
             onResClick: function(evt){
                 evt.stopPropagation();
                 this.trigger('step:resconf', {model: this.containerModel});
             },
-    
+
             onOtherClick: function(evt){
                 evt.stopPropagation();
                 this.trigger('step:otherconf', {model: this.containerModel});
             },
-    
+
             onLogsClick: function(evt){
                 evt.stopPropagation();
                 this.trigger('step:logsconf', {model: this.containerModel});
             }
         });
-    
+
         NewItem.WizardLogsSubView = Backbone.Marionette.ItemView.extend({
-            template: '#wizard-set-container-logs-template',
+            template: wizardSetContainerLogsTpl,
             tagName: 'div',
-    
+
             ui: {
                 ieditable : '.ieditable',
                 textarea  : '.container-logs',
                 stopItem  : '#stopContainer',
                 startItem : '#startContainer',
             },
-    
+
             events: {
                 'click @ui.stopItem'  : 'stopItem',
                 'click @ui.startItem' : 'startItem',
             },
-    
+
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(
                     this.model.get('parentID')),
@@ -767,7 +773,7 @@ define(['pods_app/app',
                     restart_policy: restartPolicy,
                 };
             },
-    
+
             triggers: {
                 'click .go-to-ports'     : 'step:portconf',
                 'click .go-to-volumes'   : 'step:volconf',
@@ -776,7 +782,7 @@ define(['pods_app/app',
                 'click .go-to-other'     : 'step:otherconf',
                 'click .go-to-stats'     : 'step:statsconf'
             },
-    
+
             initialize: function() {
                 this.model.set('logs', []);
                 function get_logs() {
@@ -807,7 +813,7 @@ define(['pods_app/app',
                 }
                 $.proxy(get_logs, this)();
             },
-    
+
             command: function(evt, cmd){
                 var that = this,
                     preloader = $('#page-preloader');
@@ -822,7 +828,7 @@ define(['pods_app/app',
                         _containers.push(itm.info.containerID);
                         host = itm.host;
                 });
-    
+
                 $.ajax({
                     url: '/api/pods/containers',
                     data: {action: cmd, host: host, containers: _containers.join(','),
@@ -837,7 +843,7 @@ define(['pods_app/app',
                     }
                 });
             },
-    
+
             startItem: function(evt){
                 this.command(evt, 'start');
             },
@@ -848,17 +854,17 @@ define(['pods_app/app',
                 clearTimeout(this.model.get('timeout'));
             },
         });
-        
+
         NewItem.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({
             template: wizardSetContainerCompleteTpl,
             tagName: 'div',
-    
+
             ui: {
                 ieditable: '.ieditable',
                 kubeQuantity: 'select.kube-quantity',
                 kubeTypes: 'select.kube_type'
             },
-    
+
             templateHelpers: function(){
                 return {
                     cpu_data: this.cpu_data,
@@ -867,7 +873,7 @@ define(['pods_app/app',
                     total_price: this.total_price
                 };
             },
-    
+
             events: {
                 'click .delete-item'      : 'deleteItem',
                 'click .cluster'          : 'toggleCluster',
@@ -877,14 +883,14 @@ define(['pods_app/app',
                 'change .kube-quantity'   : 'changeKubeQuantity',
                 'change .restart-policy'  : 'changePolicy'
             },
-    
+
             triggers: {
                 'click .add-more'           : 'step:getimage',
                 'click .prev-step'          : 'step:envconf',
                 'click .save-container'     : 'pod:save',
                 'click .save-run-container' : 'pod:run',
             },
-    
+
             deleteItem: function(evt){
                 evt.stopPropagation();
                 var image = $(evt.target).closest('div').children('span:first').text().trim();
@@ -892,7 +898,7 @@ define(['pods_app/app',
                 function(i){ return i.image !== this.image }, {image: image});
                 this.render();
             },
-    
+
             toggleCluster: function(evt){
                 evt.stopPropagation();
                 if (this.model.get('cluster')) {
@@ -904,7 +910,7 @@ define(['pods_app/app',
                 }
                 this.render();
             },
-    
+
             toggleNode: function(evt){
                 evt.stopPropagation();
                 var tgt = $(evt.target),
@@ -912,13 +918,13 @@ define(['pods_app/app',
                 this.model.set('node', node);
                 this.render();
             },
-    
+
             changeReplicas: function(evt){
                 evt.stopPropagation();
                 this.model.set('replicas', parseInt($(evt.target).val().trim()));
-    
+
             },
-    
+
             changeKubeQuantity: function(evt){
                 evt.stopPropagation();
                 var num = parseInt(evt.target.value),
@@ -939,7 +945,7 @@ define(['pods_app/app',
                 this.ui.kubeTypes.val(kube_id);
                 this.ui.kubeQuantity.val(num);
             },
-    
+
             changeKubeType: function(evt){
                 evt.stopPropagation();
                 var kube_id = parseInt(evt.target.value),
@@ -967,7 +973,7 @@ define(['pods_app/app',
                 this.ui.kubeTypes.val(kube_id);
                 this.ui.kubeQuantity.val(num);
             },
-            
+
             changePolicy: function(evt){
                 evt.stopPropagation();
                 var policy = $(evt.target).val(),
@@ -975,7 +981,7 @@ define(['pods_app/app',
                 struct[policy] = {};
                 this.model.set('restartPolicy', struct)
             },
-            
+
             onRender: function(){
                 var that = this;
                 this.ui.ieditable.editable({
@@ -998,8 +1004,8 @@ define(['pods_app/app',
                 });
             }
         });
-        
+
     });
-    
+
     return Pods.Views.NewItem;
 });

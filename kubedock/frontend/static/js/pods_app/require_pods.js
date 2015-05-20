@@ -34,7 +34,8 @@ requirejs.config({
         marionette: ['backbone'],
         'bootstrap-editable': ['bootstrap'],
         'jquery-spin': ['spin'],
-        tpl: ['text']
+        tpl: ['text'],
+        'jqplot-axis-renderer': ['jqplot'],
     },
     config: {
         moment: {

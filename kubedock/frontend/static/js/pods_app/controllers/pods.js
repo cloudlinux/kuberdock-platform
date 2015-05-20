@@ -24,7 +24,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                 'pods': 'showPods',
                 'pods/:id': 'showPodItem',
                 'newpod': 'createPod',
-                //'poditem/:id/:name': 'showPodContainer'
+                'poditem/:id/:name': 'showPodContainer'
             }
         });
 
@@ -149,8 +149,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                 require(['pods_app/views/pod_create',
                          'pods_app/views/paginator',
                          'pods_app/views/loading'], function(){
-                    var wizardLayout = new App.Views.PodWizardLayout(),
-                        parent_model = initPodCollection.fullCollection.get(id),
+                    var wizardLayout = new App.Views.NewItem.PodWizardLayout(),
+                        parent_model = WorkFlow.getCollection().fullCollection.get(id),
                         model_data = _.filter(
                             parent_model.get('containers'),
                             function(i){return i.name === this.n},
@@ -181,25 +181,25 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     //    }));
                     //});
                     that.listenTo(wizardLayout, 'show', function(){
-                        wizardLayout.steps.show(new App.Views.WizardLogsSubView({
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardLogsSubView({
                             model: new App.Data.Image(model_data)
                         }));
                     });
 
                     that.listenTo(wizardLayout, 'step:portconf', function(data){
-                        wizardLayout.steps.show(new App.Views.WizardPortsSubView({model: data}));
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data}));
                     });
                     that.listenTo(wizardLayout, 'step:volconf', function(data){
-                        wizardLayout.steps.show(new App.Views.WizardVolumesSubView({model: data}));
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardVolumesSubView({model: data}));
                     });
                     that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        wizardLayout.steps.show(new App.Views.WizardEnvSubView({model: data}));
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({model: data}));
                     });
                     that.listenTo(wizardLayout, 'step:resconf', function(data){
-                        wizardLayout.steps.show(new App.Views.WizardResSubView({model: data}));
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardResSubView({model: data}));
                     });
                     that.listenTo(wizardLayout, 'step:otherconf', function(data){
-                        wizardLayout.steps.show(new App.Views.WizardOtherSubView({model: data}));
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardOtherSubView({model: data}));
                     });
                     that.listenTo(wizardLayout, 'step:statsconf', function(data){
                         var statCollection = new App.Data.StatsCollection();
@@ -207,7 +207,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             data: {unit: data.get('parentID'), container: data.get('name')},
                             reset: true,
                             success: function(){
-                                wizardLayout.steps.show(new App.Views.WizardStatsSubView({
+                                wizardLayout.steps.show(new App.Views.NewItem.WizardStatsSubView({
                                     containerModel: data,
                                     collection:statCollection
                                 }));
@@ -218,7 +218,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         });
                     });
                     that.listenTo(wizardLayout, 'step:logsconf', function(data){
-                        wizardLayout.steps.show(new App.Views.WizardLogsSubView({model: data}));
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardLogsSubView({model: data}));
                     });
                     App.contents.show(wizardLayout);
                 });

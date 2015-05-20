@@ -210,13 +210,18 @@ class ModelQuery(object):
             return []
         return self._get_persistent_drives(kub_ip)
 
+    def get_config(self, param=None, default=None):
+        db_pod = db.session.query(Pod).get(self.id)
+        if param is None:
+            return json.loads(db_pod.config)
+        return json.loads(db_pod.config).get(param, default)
+
     @staticmethod
     def _update_pod_config(pod, **attrs):
         db_pod = db.session.query(Pod).get(pod.id)
         try:
             data = json.loads(db_pod.config)
-            for k, v in attrs.items():
-                data[k] = v
+            data.update(attrs)
             db_pod.config = json.dumps(data)
             db.session.commit()
         except Exception:

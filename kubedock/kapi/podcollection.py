@@ -94,7 +94,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'apiVersion': 'v1beta3',
             'metadata': {
                 # 'generateName': pod.name.lower() + '-service-',
-                'generateName': 'Service-',
+                'generateName': 'service-',
                 'labels': {'name': pod._make_dash() + '-service'},
                 'annotations': {
                     'public-ip-state': json.dumps({

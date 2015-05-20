@@ -136,6 +136,76 @@
         </div>
     </script>
 
+    <script type="text/template" id="user-profile-log-history-template">
+        <div class="breadcrumbs-wrapper">
+            <div class="container breadcrumbs" id="breadcrumbs">
+                <ul class="breadcrumb">
+                    <li>
+                        <div id="users-page">Users</div>
+                    </li>
+                    <li>
+                        <% if( typeof username == "undefined" ) { %>
+                            Add user
+                        <% } else { %>
+                            <%- username %>
+                        <% } %>
+                    </li>
+                    <li class="active">
+                        Login history
+                    </li>
+                </ul>
+                <div class="control-group">
+                    <button id="edit_user">Edit user</button>
+                    <button id="login_this_user">Login as this user</button>
+                    <button id="delete_user">Delete</button>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-3 col-md-2 sidebar">
+                    <ul class="nav nav-sidebar list-unstyled" role="tablist">
+                        <li class="general generalTab">
+                            General
+                        </li>
+                        <li class="logHistory active">
+                            Login history
+                        </li>
+                    </ul>
+                </div>
+                <div id="details_content" class="col-sm-10">
+                    <div class="row placeholders">
+                        <div class="tab-content col-xs-12 no-padding-right">
+                            <div class="tab-pane fade in active" id="userLogsTab">
+                                <div class="col-xs-12 no-padding-right">
+                                    <table id="user-profile-logs-table" class="table">
+                                        <thead>
+                                            <tr>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Login</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Duration</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>Logout</div>
+                                                </th>
+                                                <th unselectable="on" style="-webkit-user-select: none;">
+                                                    <div>IP</div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <div>
+        <div>
+    </script>
+
     <script type="text/template" id="user-profile-template">
         <div class="breadcrumbs-wrapper">
             <div class="container breadcrumbs" id="breadcrumbs">
@@ -143,12 +213,15 @@
                     <li>
                         <div id="users-page">Users</div>
                     </li>
-                    <li class="active">
+                    <li>
                         <% if( typeof username == "undefined" ) { %>
                             Add user
                         <% } else { %>
                             <%- username %>
                         <% } %>
+                    </li>
+                    <li class="active">
+                        General
                     </li>
                 </ul>
                 <div class="control-group">
@@ -163,10 +236,10 @@
                 <div class="col-sm-3 col-md-2 sidebar">
                     <ul class="nav nav-sidebar list-unstyled" role="tablist">
                         <li class="general active">
-                            <a href="#userGeneralTab" role="tab" data-toggle="tab">General</a>
+                            General
                         </li>
-                        <li class="logs">
-                            <a href="#userLogsTab" role="tab" data-toggle="tab">Login history</a>
+                        <li class="logHistory">
+                            Login history
                         </li>
                     </ul>
                 </div>
@@ -217,42 +290,6 @@
                                             <td><%- kubeType %></td>
                                             <td><%- pod.kubes %></td>
                                         </tr> <% }) %>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade" id="userLogsTab">
-                                <div class="col-xs-12 no-padding-right">
-                                    <table id="user-profile-logs-table" class="table">
-                                        <thead>
-                                            <tr>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Login</div>
-                                                </th>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Duration</div>
-                                                </th>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Logout</div>
-                                                </th>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>IP</div>
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-{#                                            <tr>#}
-{#                                                <td>12 Jan 2014 at 12:00 AM</td>#}
-{#                                                <td>5h 20min</td>#}
-{#                                                <td>12 Jan 2014 at 5:20 PM</td>#}
-{#                                                <td>192.168.0.1</td>#}
-{#                                            </tr>#}
-{#                                            <tr>#}
-{#                                                <td>13 May 2013 at 11:32 PM</td>#}
-{#                                                <td>32h 10min</td>#}
-{#                                                <td>15 May 2013 at 1:42 AM</td>#}
-{#                                                <td>122.12.32.11</td>#}
-{#                                            </tr>#}
                                         </tbody>
                                     </table>
                                 </div>

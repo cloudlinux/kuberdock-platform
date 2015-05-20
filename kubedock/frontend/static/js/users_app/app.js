@@ -127,7 +127,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             profileUser_btn: function(){
-                App.router.navigate('/profile/' + this.model.id + '/', {trigger: true});
+                App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
             }
         });
 
@@ -384,11 +384,12 @@ define(['marionette', 'paginator', 'utils'],
             }
         });
 
-        Views.UserProfileView = Backbone.Marionette.ItemView.extend({
-            template: '#user-profile-template',
+        Views.UserProfileViewLogHistory = Views.UserCreateView.extend({
+            template: '#user-profile-log-history-template',
             tagName: 'div',
 
             ui: {
+                'generalTab'          : '.generalTab',
                 'users_page'          : 'div#users-page',
                 'delete_user_btn'     : 'button#delete_user',
                 'user_cancel_btn'     : 'button#user-cancel-btn',
@@ -397,38 +398,12 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             events: {
+                'click @ui.generalTab'          : 'generalTab',
                 'click @ui.users_page'          : 'breadcrumbClick',
                 'click @ui.user_cancel_btn'     : 'cancel',
                 'click @ui.delete_user_btn'     : 'delete_user',
                 'click @ui.login_this_user_btn' : 'login_this_user',
-                'click @ui.edit_user'           : 'edit_user',
-            },
-
-            templateHelpers: function(){
-                var pods = this.model.get('pods'),
-                    kubesCount = 0,
-                    join_date = this.model.get('join_date'),
-                    last_login = this.model.get('last_login'),
-                    last_activity = this.model.get('last_activity'),
-                    first_name = this.model.get('first_name'),
-                    last_name = this.model.get('last_name');
-                _.each(pods, function(pod){
-                    var config = JSON.parse(pod.config);
-                    _.each(config.containers, function(c){
-                        kubesCount += c.kubes;
-                    });
-                });
-                return {
-                    first_name: first_name ? first_name : '',
-                    last_name: last_name ? last_name : '',
-                    join_date: join_date ? join_date : '',
-                    last_login: last_login ? last_login : '',
-                    last_activity: last_activity ? last_activity : '',
-                    pods: pods ? pods : [],
-                    'kubeTypes': kubeTypes,
-                    'kubes': kubesCount,
-                    toHHMMSS: utils.toHHMMSS
-                }
+                'click @ui.edit_user'           : 'edit_user'
             },
 
             onRender: function(){
@@ -497,12 +472,118 @@ define(['marionette', 'paginator', 'utils'],
                 App.router.navigate('/edit/' + this.model.id + '/', {trigger: true});
             },
 
+            generalTab: function(){
+                App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
+            },
+        });
+
+        Views.UserProfileView = Backbone.Marionette.ItemView.extend({
+            template: '#user-profile-template',
+            tagName: 'div',
+
+            ui: {
+                'users_page'          : 'div#users-page',
+                'delete_user_btn'     : 'button#delete_user',
+                'user_cancel_btn'     : 'button#user-cancel-btn',
+                'login_this_user_btn' : 'button#login_this_user',
+                'edit_user'           : 'button#edit_user',
+                'logHistory'          : '.logHistory',
+            },
+
+            events: {
+                'click @ui.users_page'          : 'breadcrumbClick',
+                'click @ui.user_cancel_btn'     : 'cancel',
+                'click @ui.delete_user_btn'     : 'delete_user',
+                'click @ui.login_this_user_btn' : 'login_this_user',
+                'click @ui.edit_user'           : 'edit_user',
+                'click @ui.logHistory'          : 'logHistory',
+            },
+
+            templateHelpers: function(){
+                var pods = this.model.get('pods'),
+                    kubesCount = 0,
+                    join_date = this.model.get('join_date'),
+                    last_login = this.model.get('last_login'),
+                    last_activity = this.model.get('last_activity'),
+                    first_name = this.model.get('first_name'),
+                    last_name = this.model.get('last_name');
+                _.each(pods, function(pod){
+                    var config = JSON.parse(pod.config);
+                    _.each(config.containers, function(c){
+                        kubesCount += c.kubes;
+                    });
+                });
+                return {
+                    first_name: first_name ? first_name : '',
+                    last_name: last_name ? last_name : '',
+                    join_date: join_date ? join_date : '',
+                    last_login: last_login ? last_login : '',
+                    last_activity: last_activity ? last_activity : '',
+                    pods: pods ? pods : [],
+                    'kubeTypes': kubeTypes,
+                    'kubes': kubesCount,
+                    toHHMMSS: utils.toHHMMSS
+                }
+            },
+
+            login_this_user: function(){
+                var that = this;
+                utils.modalDialog({
+                    title: "Authorize by " + this.model.get('username'),
+                    body: "Are you sure want to authorize by user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            $.ajax({
+                                url: '/api/users/loginA',
+                                type: 'POST',
+                                data: {user_id: that.model.id},
+                                dataType: 'JSON',
+                                success: function(rs){
+                                    if(rs.status == 'OK')
+                                        window.location.href = '/';
+                                }
+                            });
+                        },
+                        buttonCancel: true
+                    }
+                });
+            },
+
+            delete_user: function(){
+                var that = this;
+                utils.modalDialog({
+                    title: "Delete " + this.model.get('username') + "?",
+                    body: "Are you sure want to delete user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            that.model.destroy();
+                            App.router.navigate('/', {trigger: true});
+                        },
+                        buttonCancel: true
+                    }
+                });
+            },
+
+            edit_user: function(){
+                App.router.navigate('/edit/' + this.model.id + '/', {trigger: true});
+            },
+
             cancel: function(){
                App.router.navigate('/', {trigger: true});
             },
 
             breadcrumbClick: function(){
                App.router.navigate('/', {trigger: true});
+            },
+
+            logHistory: function(){
+               App.router.navigate('/profile/' + this.model.id + '/logHistory/', {trigger: true});
             }
 
         });
@@ -558,7 +639,7 @@ define(['marionette', 'paginator', 'utils'],
                             show: true,
                             footer: {
                                 buttonOk: function(){
-                                    App.router.navigate('/profile/' + model.id + '/', {trigger: true});
+                                    App.router.navigate('/profile/' + model.id + '/general/', {trigger: true});
                                 },
                             }
                         });
@@ -567,7 +648,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             cancel: function(){
-                App.router.navigate('/profile/' + this.model.id + '/', {trigger: true});
+                App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
             },
         });
 
@@ -673,6 +754,19 @@ define(['marionette', 'paginator', 'utils'],
                     layout_view.main.show(user_profile_view);
                 });
                 App.contents.show(layout_view);
+            },
+
+            showProfileUserLogHistory: function(user_id){
+                var layout_view = new App.Views.UsersLayout();
+                var user_model = App.Data.users.fullCollection.get(parseInt(user_id));
+                var user_profile_view_log_history = new App.Views.UserProfileViewLogHistory({
+                    model: user_model
+                });
+
+                this.listenTo(layout_view, 'show', function () {
+                    layout_view.main.show(user_profile_view_log_history);
+                });
+                App.contents.show(layout_view);
             }
         });
 
@@ -681,13 +775,14 @@ define(['marionette', 'paginator', 'utils'],
             App.router = new Marionette.AppRouter({
                 controller: controller,
                 appRoutes: {
-                    'online/'      : 'showOnlineUsers',
-                    'online/:id/'  : 'showUserActivity',
-                    ''             : 'showUsers',
-                    'create/'      : 'showCreateUser',
-                    'edit/:id/'    : 'showEditUser',
-                    'profile/:id/' : 'showProfileUser',
-                    'activity/'    : 'showAllUsersActivity'
+                    ''                        : 'showUsers',
+                    'online/'                 : 'showOnlineUsers',
+                    'create/'                 : 'showCreateUser',
+                    'edit/:id/'               : 'showEditUser',
+                    'activity/'               : 'showAllUsersActivity',
+                    'online/:id/'             : 'showUserActivity',
+                    'profile/:id/general/'    : 'showProfileUser',
+                    'profile/:id/logHistory/' : 'showProfileUserLogHistory',
                 }
             });
         });

@@ -30,12 +30,12 @@ class PodsAPI(KubeUtils, MethodView):
         #check_change_pod_data(params)
         pods = PodCollection()
         pod = pods.get_by_id(pod_id)
-        pods.update(pod, params)
+        return pods.update(pod, params)
 
     def delete(self, pod_id):
         pods = PodCollection()
         pod = pods.get_by_id(pod_id)
-        pods.delete(pod)
+        return pods.delete(pod)
 register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id')
 
 

@@ -203,7 +203,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             #current_app.logger.debug(rv)
             self._make_persistent_drives(pod, rv)
             self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
-            return rv
+            #return rv
+            return {'status': 'pending'}
 
     def _stop_pod(self, pod, data=None):
         pod.status = 'stopped'
@@ -213,10 +214,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if hasattr(pod, 'sid'):
                 rv = self._del(['pods', pod.sid])
                 self._raise_if_failure(rv, "Could not stop a pod")
-                return rv
-
-    def _unknown_command(self, pod, data=None):
-        self._raise("Unknown command")
+                #return rv
+                return {'status': 'stopped'}
 
     def _do_container_action(self, action, data, strip_part='docker://'):
         host = data.get('host')
@@ -250,14 +249,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         command = data.get('command')
         if command is None:
             return
-        return {
+        dispatcher = {
             'start': self._start_pod,
             'stop': self._stop_pod,
             'resize': self._resize_replicas,
             'container_start': self._container_start,
             'container_stop': self._container_stop,
-            'container_delete': self._container_delete,
-            'unknown': self._unknown_command}.get(command, 'unknown')(pod, data)
+            'container_delete': self._container_delete}
+        if command in dispatcher:
+            return dispatcher[command](pod, data)
+        self._raise("Unknown command")
 
     def delete(self, pod):
         if pod.owner == 'kuberdock-internal':

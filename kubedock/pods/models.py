@@ -63,6 +63,15 @@ class Pod(db.Model):
         self.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
         self.status = 'deleted'
 
+    def to_dict(self):
+        return dict(
+            id = self.id,
+            name = self.name,
+            kube = self.kube.to_dict(),
+            owner = self.owner.to_dict(),
+            config = json.loads(self.config),
+            status = self.status)
+
 
 class ContainerState(db.Model):
     __tablename__ = 'container_states'

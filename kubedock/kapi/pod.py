@@ -69,7 +69,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def save(self):
         # we should think twice what to do with that owner
         data = dict([(k, v) for k, v in vars(self).items() if k != 'owner'])
-        self._save_pod(json.dumps(data), self.owner)
+        self._save_pod(data, self.owner)
         data.update({'owner': self.owner.username})
         return data
 
@@ -145,8 +145,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         return outer
 
     def _prepare_container(self, data, kube_type=0):
-        a = []
-
         if not data.get('name'):
             data['name'] = self._make_name_from_image(data.get('image', ''))
         try:

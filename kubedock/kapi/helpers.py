@@ -8,6 +8,7 @@ import shlex
 import string
 from ..core import db
 from ..pods.models import Pod, PodIP, PersistentDrive
+from ..billing.models import Kube
 from ..nodes.models import Node
 from ..api import APIError
 from ..utils import get_api_url
@@ -34,7 +35,7 @@ class KubeQuery(object):
         Raises an error
         :param error_string: string
         """
-        if self.return_json:
+        if self._json:
             raise SystemExit(
                 json.dumps(
                     {'status': 'ERROR',
@@ -130,7 +131,12 @@ class ModelQuery(object):
             podip.delete()
 
     def _save_pod(self, data, owner):
-        pod = Pod(name=self.name, config=data, id=self.id, status='stopped')
+        kube_type = data.get('kube_type', 0)
+        pod = Pod(name=self.name, config=json.dumps(data), id=self.id, status='stopped')
+        kube = db.session.query(Kube).get(kube_type)
+        if kube is None:
+            kube = db.session.query(Kube).get(0)
+        pod.kube = kube
         pod.owner = owner
         try:
             db.session.add(pod)

@@ -870,7 +870,8 @@ define(['pods_app/app',
                     cpu_data: this.cpu_data,
                     ram_data: this.ram_data,
                     container_price: this.container_price,
-                    total_price: this.total_price
+                    total_price: this.total_price,
+                    kube_types: kubeTypes
                 };
             },
 

@@ -45,7 +45,9 @@
                 <label>Type</label>
                 <select class="kube_type" id="extra-options">
                     <option value="Available kube types" disabled selected>Available kube types</option>
-                    <option value="0">Standard</option>
+                    <% _.each(kube_types, function(kube_type){ %>
+                    <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
+                    <% }) %>
                 </select>
                 <label>Kubes per container:</label>
                 <select class="kube-quantity">

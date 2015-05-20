@@ -59,62 +59,15 @@ define(['pods_app/app',
             template: pageHeaderTitleTpl
         });
 
-        Item.InfoPanel = Backbone.Marionette.CompositeView.extend({
-            template  : pageInfoPanelTpl,
-            tagName   : 'div',
-            className : 'col-md-12',
-
-            events: {
-                'click .stop-checked'      : 'stopItems',
-                'click .start-checked'     : 'startItems',
-                'click .terminate-checked' : 'terminateItems'
-            },
-
-            command: function(cmd){
-                var preloader = $('#page-preloader');
-                    preloader.show();
-                var model;
-                var containers = [];
-                containerCollection.forEach(function(i){
-                    if (i.get('checked') === true){
-                        model = App.WorkFlow.getCollection().fullCollection.get(i.get('parentID'));
-                        _.each(model.get('dockers'), function(itm){
-                            if(itm.info.imageID == i.get('imageID'))
-                                containers.push(itm.info.containerID);
-                        });
-                    }
-                });
-                if(model)
-               /* model.set({'command': cmd, 'containers': containers});*/
-                model.save({'command': cmd, 'containers_action': containers}, {
-                    success: function(){
-                        preloader.hide();
-                    },
-                    error: function(model, response, options, data){
-                        preloader.hide();
-                        utils.modelError(response);
-                    }
-                });
-
-            },
-            startItems: function(evt){
-                this.command('start');
-            },
-
-            stopItems: function(evt){
-                this.command('stop');
-            },
-
-            terminateItems: function(evt){
-                // TODO: terminate containers
-            }
-        });
-
         // View for showing a single container item as a container in containers list
         Item.InfoPanelItem = Backbone.Marionette.ItemView.extend({
             template    : pageContainerItemTpl,
             tagName     : 'tr',
             className   : 'container-item',
+
+            initialize: function(){
+                console.log(this.template);
+            },
 
             templateHelpers: function(){
                 var modelIndex = this.model.collection.indexOf(this.model);
@@ -188,7 +141,64 @@ define(['pods_app/app',
             },
             deleteItem: function(evt){
                 this.command(evt, 'delete');
-            }
+            },
+
+        });
+
+        Item.InfoPanel = Backbone.Marionette.CompositeView.extend({
+            template  : pageInfoPanelTpl,
+            childView: Item.InfoPanelItem,
+            childViewContainer: "tbody",
+
+            initialize: function(){
+                console.log('I am collection');
+            },
+
+            events: {
+                'click .stop-checked'      : 'stopItems',
+                'click .start-checked'     : 'startItems',
+                'click .terminate-checked' : 'terminateItems'
+            },
+
+            command: function(cmd){
+                var preloader = $('#page-preloader');
+                    preloader.show();
+                var model;
+                var containers = [];
+                containerCollection.forEach(function(i){
+                    if (i.get('checked') === true){
+                        model = App.WorkFlow.getCollection().fullCollection.get(i.get('parentID'));
+                        _.each(model.get('dockers'), function(itm){
+                            if(itm.info.imageID == i.get('imageID'))
+                                containers.push(itm.info.containerID);
+                        });
+                    }
+                });
+                if(model)
+               /* model.set({'command': cmd, 'containers': containers});*/
+                model.save({'command': cmd, 'containers_action': containers}, {
+                    success: function(){
+                        preloader.hide();
+                    },
+                    error: function(model, response, options, data){
+                        preloader.hide();
+                        utils.modelError(response);
+                    }
+                });
+
+            },
+            startItems: function(evt){
+                this.command('start');
+            },
+
+            stopItems: function(evt){
+                this.command('stop');
+            },
+
+            terminateItems: function(evt){
+                // TODO: terminate containers
+            },
+
         });
 
         Item.ControlsPanel = Backbone.Marionette.ItemView.extend({
@@ -357,7 +367,14 @@ define(['pods_app/app',
                         points[i].push([record[0], record[i+1]])
                     }
                 });
-                this.ui.chart.jqplot(points, options);
+
+                try {
+                    this.ui.chart.jqplot(points, options);
+                }
+                catch(e){
+                    console.log('Cannot display graph');
+                }
+
             }
         });
 

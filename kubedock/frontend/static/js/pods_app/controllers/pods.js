@@ -97,8 +97,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     });
 
                     var infoPanel = new App.Views.Item.InfoPanel({
-                        childView: App.Views.Item.InfoPanelItem,
-                        childViewContainer: "tbody",
+                        //childView: App.Views.Item.InfoPanelItem,
+                        //childViewContainer: "tbody",
                         collection: containerCollection
                     });
 
@@ -122,13 +122,15 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         })
                     });
 
-                    that.listenTo(itemLayout, 'display:pod:list', function(){
+                    that.listenTo(itemLayout, 'display:pod:list', function(data){
+
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
                             model: new Backbone.Model({id: model.get('id'), graphs: false})
                         }));
+
                         itemLayout.info.show(new App.Views.Item.InfoPanel({
-                            childView: App.Views.InfoPanelItem,
-                            childViewContainer: "tbody",
+                            //childView: App.Views.InfoPanelItem,
+                            //childViewContainer: "tbody",
                             collection: containerCollection
                         }));
                     });
@@ -395,7 +397,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
     });
 
     Pods.on('pods:list', function(){
-        console.log('Caught pods:list');
         var controller = new Pods.WorkFlow.Controller();
         Pods.navigate('pods');
         controller.showPods();

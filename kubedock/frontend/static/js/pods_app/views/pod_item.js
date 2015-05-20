@@ -6,7 +6,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/pod_item_controls.tpl',
         'tpl!pods_app/templates/pod_item_graph.tpl',
         'moment', 'pods_app/utils',
-        'bootstrap', 'bootstrap-editable',
+        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer'
         ],
        function(Pods,
                 layoutPodItemTpl,
@@ -16,9 +16,9 @@ define(['pods_app/app',
                 podItemControlsTpl,
                 podItemGraphTpl,
                 moment, utils){
-    
+
     Pods.module('Views.Item', function(Item, App, Backbone, Marionette, $, _){
-        
+
         function localizeDatetime(dt, tz){
             try {
                 return moment(dt).tz(tz).format('YYYY-MM-DD hh:mm:ss');
@@ -27,17 +27,17 @@ define(['pods_app/app',
             }
             return dt;
         }
-        
+
         Item.PodItemLayout = Backbone.Marionette.LayoutView.extend({
             template : layoutPodItemTpl,
-    
+
             regions: {
                 masthead : '#masthead-title',
                 controls : '#item-controls',
                 info     : '#item-info',
                 contents : '#layout-contents'
             },
-    
+
             initialize: function(){
                 var that = this;
                 this.listenTo(this.controls, 'show', function(view){
@@ -45,31 +45,31 @@ define(['pods_app/app',
                     that.listenTo(view, 'display:pod:list', that.showPodList);
                 });
             },
-    
+
             showPodStats: function(data){
                 this.trigger('display:pod:stats', data);
             },
-    
+
             showPodList: function(data){
                 this.trigger('display:pod:list', data);
             }
         });
-    
+
         Item.PageHeader = Backbone.Marionette.ItemView.extend({
             template: pageHeaderTitleTpl
         });
-        
+
         Item.InfoPanel = Backbone.Marionette.CompositeView.extend({
             template  : pageInfoPanelTpl,
             tagName   : 'div',
             className : 'col-md-12',
-    
+
             events: {
                 'click .stop-checked'      : 'stopItems',
                 'click .start-checked'     : 'startItems',
                 'click .terminate-checked' : 'terminateItems'
             },
-    
+
             command: function(cmd){
                 var preloader = $('#page-preloader');
                     preloader.show();
@@ -95,27 +95,27 @@ define(['pods_app/app',
                         utils.modelError(response);
                     }
                 });
-    
+
             },
             startItems: function(evt){
                 this.command('start');
             },
-    
+
             stopItems: function(evt){
                 this.command('stop');
             },
-    
+
             terminateItems: function(evt){
                 // TODO: terminate containers
             }
         });
-    
+
         // View for showing a single container item as a container in containers list
         Item.InfoPanelItem = Backbone.Marionette.ItemView.extend({
             template    : pageContainerItemTpl,
             tagName     : 'tr',
             className   : 'container-item',
-    
+
             templateHelpers: function(){
                 var modelIndex = this.model.collection.indexOf(this.model);
                 var kubes = this.model.get('kubes');
@@ -126,20 +126,20 @@ define(['pods_app/app',
                     startedAt: localizeDatetime(startedAt, userSettings.timezone)
                 }
             },
-    
+
             ui: {
                 'start'  : '.start-btn',
                 'stop'   : '.stop-btn',
                 'delete' : '.terminate-btn'
             },
-    
+
             events: {
                 /*'change .check-item'    : 'checkItem',*/
                 'click @ui.start' : 'startItem',
                 'click @ui.stop'  : 'stopItem',
                 'click @ui.delete'  : 'deleteItem',
             },
-    
+
             command: function(evt, cmd){
                 var that = this,
                     preloader = $('#page-preloader');
@@ -190,12 +190,12 @@ define(['pods_app/app',
                 this.command(evt, 'delete');
             }
         });
-    
+
         Item.ControlsPanel = Backbone.Marionette.ItemView.extend({
             template: podItemControlsTpl,
             tagName: 'div',
             className: 'pod-controls',
-    
+
             events: {
                 'click .stats-btn'     : 'statsItem',
                 'click .list-btn'      : 'listItem',
@@ -203,7 +203,7 @@ define(['pods_app/app',
                 'click .stop-btn'      : 'stopItem',
                 'click .terminate-btn' : 'terminateItem'
             },
-    
+
             templateHelpers: function(){
                 var thisItem = App.WorkFlow.getCollection().fullCollection.get(this.model.id);
                 var portalIP = '',
@@ -235,23 +235,23 @@ define(['pods_app/app',
                     restartPolicy: restartPolicy
                 };
             },
-    
+
             getItem: function(){
                 return App.WorkFlow.getCollection().fullCollection.get(this.model.id);
             },
-    
+
             statsItem: function(evt){
                 evt.stopPropagation();
                 var item = this.getItem();
                 this.trigger('display:pod:stats', item);
             },
-    
+
             listItem: function(evt){
                 evt.stopPropagation();
                 var item = this.getItem();
                 this.trigger('display:pod:list', item);
             },
-    
+
             startItem: function(evt){
                 var item = this.getItem(),
                     that = this,
@@ -271,7 +271,7 @@ define(['pods_app/app',
                     }
                 });
             },
-    
+
             stopItem: function(evt){
                 var item = this.getItem(),
                     that = this,
@@ -290,7 +290,7 @@ define(['pods_app/app',
                     }
                 });
             },
-    
+
             terminateItem: function(evt){
                 evt.stopPropagation();
                 var item = this.getItem(),
@@ -307,7 +307,7 @@ define(['pods_app/app',
                         col.remove(item);
                         window.location.href = '/#pods';
                         preloader.hide();
-                        
+
                     },
                     error: function(model, response, options, data){
                         preloader.hide();
@@ -316,14 +316,14 @@ define(['pods_app/app',
                 });
             }
         });
-    
+
         Item.PodGraphItem = Backbone.Marionette.ItemView.extend({
             template: podItemGraphTpl,
-    
+
             ui: {
                 chart: '.graph-item'
             },
-    
+
             onShow: function(){
                 var lines = this.model.get('lines');
                 var options = {
@@ -344,14 +344,14 @@ define(['pods_app/app',
                         shadow: false
                     }
                 };
-    
+
                 var points = [];
                 for (var i=0; i<lines; i++) {
                     if (points.length < i+1) {
                         points.push([])
                     }
                 }
-    
+
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
                         points[i].push([record[0], record[i+1]])
@@ -360,13 +360,13 @@ define(['pods_app/app',
                 this.ui.chart.jqplot(points, options);
             }
         });
-    
+
         Item.PodGraph = Backbone.Marionette.CollectionView.extend({
             childView: Item.PodGraphItem
         });
-        
+
     });
-    
+
     return Pods.Views.Item;
-    
+
 });

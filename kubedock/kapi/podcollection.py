@@ -255,25 +255,25 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if hasattr(pod, 'sid'):
             rv = self._del(['pods', pod.sid])
             self._raise_if_failure(rv, "Could not remove a pod")
-            # services_data = self._get(['services'])
-            service_name = pod.get_config('service')
-            if service_name:
-                service = self._get(['services', service_name], use_v3=True)
-            # services = filter(
-            #     (lambda x: self._is_related(x.get('spec', {}).get('selector'), {'name': pod.name})),
-            #         services_data.get('items', []))
-            # for service in services:
-                state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
-                if 'assigned-to' in state:
-                    res = modify_node_ips(
-                        state['assigned-to'], 'del',
-                        state['assigned-pod-ip'],
-                        state['assigned-public-ip'],
-                        service.get('spec', {}).get('ports'))
-                    if not res:
-                        self._raise("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
-                rv = self._del(['services', service_name], use_v3=True)
-                self._raise_if_failure(rv, "Could not remove a service")
+        # services_data = self._get(['services'])
+        service_name = pod.get_config('service')
+        if service_name:
+            service = self._get(['services', service_name], use_v3=True)
+        # services = filter(
+        #     (lambda x: self._is_related(x.get('spec', {}).get('selector'), {'name': pod.name})),
+        #         services_data.get('items', []))
+        # for service in services:
+            state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
+            if 'assigned-to' in state:
+                res = modify_node_ips(
+                    state['assigned-to'], 'del',
+                    state['assigned-pod-ip'],
+                    state['assigned-public-ip'],
+                    service.get('spec', {}).get('ports'))
+                if not res:
+                    self._raise("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
+            rv = self._del(['services', service_name], use_v3=True)
+            self._raise_if_failure(rv, "Could not remove a service")
 
         if hasattr(pod, 'public_ip'):
             self._free_ip(pod.public_ip)

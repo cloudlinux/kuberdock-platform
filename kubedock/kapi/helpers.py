@@ -15,7 +15,7 @@ from ..utils import get_api_url
 from flask import current_app
 
 class KubeQuery(object):
-    _json=True
+    return_json=True
 
     @staticmethod
     def _compose_args(rest=False):
@@ -34,7 +34,7 @@ class KubeQuery(object):
         Raises an error
         :param error_string: string
         """
-        if self._json:
+        if self.return_json:
             raise SystemExit(
                 json.dumps(
                     {'status': 'ERROR',
@@ -53,16 +53,13 @@ class KubeQuery(object):
             return get_api_url(*res, **kw)
         return get_api_url(**kw)
 
-    @staticmethod
-    def _return_request(req):
-        """
-        Return a request and catch an exception if occurs
-        :param req: requests object
-        """
+    def _return_request(self, req):
         try:
-            return req.json()
-        except (ValueError, TypeError):
+            if self.return_json:
+                return req.json()
             return req.text
+        except (ValueError, TypeError), e:
+            raise APIError("Cannot process request: {0}".format(str(e)))
 
     def _get(self, res=None, params=None, use_v3=False):
         """
@@ -113,6 +110,8 @@ class ModelQuery(object):
         if live_only:
             return db.session.query(Pod).filter(Pod.status!='deleted')
         return db.session.query(Pod)
+
+
 
     def _check_pod_name(self):
         if not hasattr(self, 'name'):
@@ -205,6 +204,18 @@ class ModelQuery(object):
             return []
         return self._get_persistent_drives(kub_ip)
 
+    @staticmethod
+    def _update_pod_config(pod, **attrs):
+        db_pod = db.session.query(Pod).get(pod.id)
+        try:
+            data = json.loads(db_pod.config)
+            for k, v in attrs.items():
+                data[k] = v
+            db_pod.config = json.dumps(data)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
 
 class Utilities(object):
 
@@ -230,10 +241,10 @@ class Utilities(object):
         :param return_value: dict
         :param message: string
         """
-        if message is None:
-            message = 'An error occurred'
+        pass
+        #if message is None:
+        #    message = 'An error occurred'
         #status = return_value.get('status')
-        current_app.logger.debug(return_value)
         #if status is not None and status.lower() not in ['success', 'working']:
         #    self._raise(message)
 

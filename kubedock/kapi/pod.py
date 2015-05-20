@@ -68,6 +68,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def save(self):
         # we should think twice what to do with that owner
+        self._forge_dockers()
         data = dict([(k, v) for k, v in vars(self).items() if k != 'owner'])
         self._save_pod(data, self.owner)
         data.update({'owner': self.owner.username})

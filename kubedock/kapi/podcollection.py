@@ -144,22 +144,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         #    rv.pop('replica_ok')
         #return rv
 
-    @staticmethod
-    def _forge_dockers(pod):
-        pod.dockers = []
-        for container in pod.containers:
-            container['imageID'] = 'docker://'
-            pod.dockers.append({
-                'host': '',
-                'info': {
-                    'containerID': 'docker://',
-                    'image': container['image'],
-                    'imageID': container['imageID'],
-                    'lastState': {},
-                    'ready': False,
-                    'restartCount': 0,
-                    'state': {'stopped': {}}}})
-
     def get(self, as_json=False):
         if as_json:
             return json.dumps([pod.as_dict() for pod in self._collection.values()])

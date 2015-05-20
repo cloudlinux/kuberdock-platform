@@ -282,3 +282,20 @@ class Utilities(object):
         return "%s-%s" % (n, ''.join(
             random.sample(string.lowercase + string.digits, 10)))
 
+    def _forge_dockers(self, obj=None):
+        if obj is None:
+            obj = self
+        obj.dockers = []
+        for container in obj.containers:
+            container['imageID'] = 'docker://'
+            obj.dockers.append({
+                'host': '',
+                'info': {
+                    'containerID': 'docker://',
+                    'image': container['image'],
+                    'imageID': container['imageID'],
+                    'lastState': {},
+                    'ready': False,
+                    'restartCount': 0,
+                    'state': {'stopped': {}}}})
+

@@ -65,10 +65,6 @@ define(['pods_app/app',
             tagName     : 'tr',
             className   : 'container-item',
 
-            initialize: function(){
-                console.log(this.template);
-            },
-
             templateHelpers: function(){
                 var modelIndex = this.model.collection.indexOf(this.model);
                 var kubes = this.model.get('kubes');
@@ -149,10 +145,6 @@ define(['pods_app/app',
             template  : pageInfoPanelTpl,
             childView: Item.InfoPanelItem,
             childViewContainer: "tbody",
-
-            initialize: function(){
-                console.log('I am collection');
-            },
 
             events: {
                 'click .stop-checked'      : 'stopItems',
@@ -313,7 +305,6 @@ define(['pods_app/app',
                     wait: true,
                     success: function(){
                         var col = App.WorkFlow.getCollection();
-                        console.log(col);
                         col.remove(item);
                         window.location.href = '/#pods';
                         preloader.hide();

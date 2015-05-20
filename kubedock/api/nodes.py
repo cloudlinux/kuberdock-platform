@@ -13,6 +13,7 @@ from ..utils import login_required_or_basic, KubeUtils
 from ..validation import check_int_id, check_node_data, check_hostname
 from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR
+from ..settings import KUBERDOCK_INTERNAL_USER
 from . import APIError
 from .pods import make_config
 from .stream import send_event
@@ -291,7 +292,7 @@ def create_item():
                 float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
             ))
         temp_uuid = str(uuid4())
-        ku = User.query.filter_by(username='kuberdock-internal').first()
+        ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
         logs_id = get_kuberdock_logs_pod_name(data['hostname'])
         logs_config = get_kuberdock_logs_config(data['hostname'], logs_id,
                                                 kube.id, logs_kubes, temp_uuid,

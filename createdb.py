@@ -8,6 +8,7 @@ from kubedock.billing.models import Package, Kube, ExtraTax
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
 from kubedock.static_pages.fixtures import generate_menu
+from kubedock.settings import KUBERDOCK_INTERNAL_USER
 
 
 def get_dns_pod_config(uuid, domain='kuberdock', ip='10.254.0.10'):
@@ -129,9 +130,9 @@ if __name__ == '__main__':
                         active=True)
         db.session.add(u)
     kr = Role.filter_by(rolename='User').first()
-    ku = User.filter_by(username='kuberdock-internal').first()
+    ku = User.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
     if ku is None:
-        ku = User.create(username='kuberdock-internal', password='', role=kr,
+        ku = User.create(username=KUBERDOCK_INTERNAL_USER, password='', role=kr,
                          package=p1, first_name='KuberDock Internal',
                          active=True)
         db.session.add(ku)

@@ -5,7 +5,7 @@ from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
 
 from ..billing import kubes_to_limits
-from ..settings import KUBE_API_VERSION, PD_SEPARATOR
+from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER
 
 class Pod(KubeQuery, ModelQuery, Utilities):
 
@@ -147,15 +147,22 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def _prepare_container(self, data, kube_type=0):
         if not data.get('name'):
             data['name'] = self._make_name_from_image(data.get('image', ''))
+
         try:
             kubes = int(data.pop('kubes'))
         except (KeyError, ValueError):
             pass
         else:   # if we create pod, not start stopped
             data.update(kubes_to_limits(kubes, kube_type))
+
         wd = data.get('workingDir', '.')
         if type(wd) is list:
             data['workingDir'] = ','.join(data['workingDir'])
+
+        if self.owner != KUBERDOCK_INTERNAL_USER:
+            for c in getattr(self, 'containers', []):
+                for p in c.get('ports', []):
+                    p.pop('hostPort', None)
         return data
 
     def __repr__(self):

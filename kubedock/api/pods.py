@@ -20,6 +20,7 @@ from ..api import APIError
 from .namespaces import Namespaces, NamespacesPods
 from ..pods.models import PodIP
 from ..settings import KUBE_API_VERSION, SERVICES_VERBOSE_LOG
+from ..settings import KUBERDOCK_INTERNAL_USER
 from .stream import send_event
 
 
@@ -185,7 +186,7 @@ def delete_item(uuid):
         raise APIError('No pod with id: {0}'.format(uuid), status_code=404)
     name = item.name
     
-    ku = User.query.filter_by(username='kuberdock-internal').first()
+    ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
     if item.owner is ku:
         raise APIError('Service pod removing prohibited')
 

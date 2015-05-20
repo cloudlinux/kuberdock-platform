@@ -290,37 +290,56 @@
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
         <td><%- active ? 'Active' : 'Blocked' %></td>
-        <td><%- last_activity ? last_activity : 'none' %></td>
+        {# <td><%- last_activity ? last_activity : 'none' %></td> #}
     </script>
 
     <script type="text/template" id="online-users-list-template">
         <div class="breadcrumbs-wrapper">
             <div class="container breadcrumbs" id="breadcrumbs">
                 <ul class="breadcrumb">
-                    <li>
-                        <a href="{{ url_for('users.index') }}" tite="Back to Users page">
-                            Users
-                        </a>
+                    <li class="usersPage">
+                        <div id="users-page">Users</div>
                     </li>
-                    <li class="active">
+                    <li class="active" >
                         Online
                     </li>
                 </ul>
             </div>
         </div>
         <div class="container">
-            <table id="users-online-table" class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Last activity</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="row">
+                <div class="col-sm-3 col-md-2 sidebar">
+                    <ul class="nav nav-sidebar list-unstyled" role="tablist">
+                        <li class="usersPage general">
+                            Users
+                        </li>
+                        <li class="active">
+                            Online users
+                        </li>
+                        <li class="activityPage">
+                            Users activity
+                        </li>
+                    </ul>
+                </div>
+                <div id="details_content" class="col-sm-10">
+                    <div class="row placeholders">
+                        <div class="tab-content col-xs-12 no-padding-right">
+                            <table id="users-online-table" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        {# <th>Last activity</th> #}
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </script>
 
@@ -344,19 +363,40 @@
             </div>
         </div>
         <div class="container">
-            <table id="userslist-table" class="table">
-                <thead>
-                    <tr class="tablesorter-headerRow">
-                        <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">User<b class="caret"></b></div></th>
-                        <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pods<b class="caret"></b></div></th>
-                        <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Containers<b class="caret"></b></div></th>
-                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Email<b class="caret"></b></div></th>
-                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Role<b class="caret"></b></div></th>
-                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="row">
+                <div class="col-sm-3 col-md-2 sidebar">
+                    <ul class="nav nav-sidebar list-unstyled" role="tablist">
+                        <li class="general active">
+                            Users
+                        </li>
+                        <!-- <li class="onlinePage">
+                            Online users
+                        </li> -->
+                        <li class="activityPage">
+                            Users activity
+                        </li>
+                    </ul>
+                </div>
+                <div id="details_content" class="col-sm-10">
+                    <div class="row placeholders">
+                        <div class="tab-content col-xs-12 no-padding-right">
+                            <table id="userslist-table" class="table col-sm-12">
+                                <thead>
+                                    <tr class="tablesorter-headerRow">
+                                        <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Name</div></th>
+                                        <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pods</div></th>
+                                        <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Containers</div></th>
+                                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Email</div></th>
+                                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Role</div></th>
+                                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status</div></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </script>
 

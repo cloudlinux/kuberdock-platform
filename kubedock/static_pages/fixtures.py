@@ -33,17 +33,7 @@ MENUS = [
                 name="Administration",
                 ordering=5,
                 children=[
-                    dict(
-                        name="Users",
-                        ordering=0,
-                        children=[
-                            dict(name="Users", path="/users/", ordering=0),
-                            dict(name="Online users", path="/users/online/",
-                                 ordering=1),
-                            dict(name="Users activity", path="/users/activity/",
-                                 ordering=2)
-                        ]
-                    ),
+                    dict(name="Users", path="/users/", ordering=0),
                     dict(name="IP pool", path="/ippool/", ordering=1),
                     # dict(name="Notifications", path="/notifications/",
                     #      ordering=2),

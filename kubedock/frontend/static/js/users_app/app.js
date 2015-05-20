@@ -159,7 +159,9 @@ define(['marionette', 'paginator', 'utils'],
 
             ui: {
                 'add_user'           : 'button#add_user',
-                'edit_selected_user' : 'span#editUser'
+                'edit_selected_user' : 'span#editUser',
+                'activity_page'      : '.activityPage',
+                'online_page'        : '.onlinePage',
             },
 
             events: {
@@ -167,9 +169,10 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.remove_selected_user'   : 'removeSelectedUser',
                 'click @ui.edit_selected_user'     : 'editSelectedUser',
                 'click @ui.block_selected_user'    : 'blockSelectedUser',
-                'click @ui.activate_selected_user' : 'activateSelectedUser'
+                'click @ui.activate_selected_user' : 'activateSelectedUser',
+                'click @ui.activity_page'          : 'activity',
+                'click @ui.online_page'            : 'online'
             },
-
 
             editSelectedUser: function(e){
                 _.each(this.collection.models,function(entry){
@@ -183,13 +186,41 @@ define(['marionette', 'paginator', 'utils'],
 
             addUser: function(){
                 App.router.navigate('/create/', {trigger: true});
+            },
+
+            activity: function(){
+                App.router.navigate('/activity/', {trigger: true});
+            },
+
+            online: function(){
+                App.router.navigate('/online/', {trigger: true});
             }
         });
 
         Views.OnlineUsersListView = Marionette.CompositeView.extend({
             template: '#online-users-list-template',
             childView: Views.OnlineUserItem,
-            childViewContainer: "tbody"
+            childViewContainer: "tbody",
+
+
+            ui: {
+                'users_page'    : '.usersPage',
+                'activity_page' : '.activityPage'
+            },
+
+            events: {
+                'click @ui.activity_page' : 'activity',
+                'click @ui.users_page'    : 'usersPage'
+            },
+
+            usersPage: function(){
+                App.router.navigate('/', {trigger: true});
+            },
+
+            activity: function(){
+                console.log('activity');
+                App.router.navigate('/activity/', {trigger: true});
+            }
         });
 
         Views.UsersActivityView = Marionette.CompositeView.extend({

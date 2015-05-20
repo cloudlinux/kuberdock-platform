@@ -518,7 +518,19 @@ define(['marionette', 'paginator', 'utils'],
                     wait: true,
                     patch: true,
                     success: function(model){
-                        App.router.navigate('/profile/' + model.id + '/', {trigger: true});
+                        utils.modalDialog({
+                            title: "Success",
+                            body: "Changes to the user '" +
+                                 model.get('username') +
+                                 "' saved successfully",
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    App.router.navigate('/profile/' + model.id + '/', {trigger: true});
+                                },
+                            }
+                        });
                     }
                 });
             },

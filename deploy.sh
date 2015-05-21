@@ -393,7 +393,9 @@ do_and_log systemctl restart postgresql
 do_and_log python $KUBERDOCK_DIR/postgresql_setup.py
 do_and_log systemctl restart postgresql
 cd $KUBERDOCK_DIR
-do_and_log python createdb.py
+ADMIN_PASSWORD="CHANGE_ME"
+ADMIN_PASSWORD=$(tr -dc 'A-Za-z0-9-_*' < /dev/urandom | head -c10)
+do_and_log python createdb.py $ADMIN_PASSWORD
 
 
 
@@ -606,3 +608,5 @@ log_it echo "Will be used $TGT_PATH Please, copy it to all your nodes with comma
 log_it echo "ssh-copy-id -i $TGT_PATH.pub root@your_node"
 log_it echo "Installation completed and log saved to $DEPLOY_LOG_FILE"
 log_it echo "KuberDock is available at https://$MASTER_IP/"
+log_it echo "login: admin"
+log_it echo "password: $ADMIN_PASSWORD"

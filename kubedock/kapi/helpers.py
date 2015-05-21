@@ -1,4 +1,3 @@
-import base64
 import ipaddress
 import json
 import random
@@ -7,9 +6,8 @@ import requests
 import shlex
 import string
 from ..core import db
-from ..pods.models import Pod, PodIP, PersistentDrive
+from ..pods.models import Pod, PodIP
 from ..billing.models import Kube
-from ..nodes.models import Node
 from ..api import APIError
 from ..utils import get_api_url
 
@@ -153,63 +151,6 @@ class ModelQuery(object):
             p.status = 'deleted'
         db.session.commit()
 
-    def _make_persistent_drives(self, pod, data):
-        """
-        Get from data return from kubernetes volume-related info,
-        find scriptableDisk and eigher add decoded data to database or update
-        a db record.
-        :param pod: Pod instance
-        :param data: dict -> data returned from kubernetes after a pod creation
-        """
-        kub_id = data.get('uid') # UUID returned by kubernetes
-        volumes = data.get('desiredState', {}).get('manifest', {}).get('volumes', [])
-        for volume in volumes:
-            disk = volume.get('source', {}).get('scriptableDisk')
-            if disk:
-                args = base64.b64decode(disk['params']).split(';')
-                if len(args) > 2:  # name and size given means a new volume
-                    pd = PersistentDrive(pod_id=pod.id, kub_id=kub_id, name=args[1],
-                                    owner=pod.owner, size=int(args[2]),
-                                    status='mounted')
-                    db.session.add(pd)
-                elif len(args) == 2:    # not given size means reusing an old volume
-                    #check if an entry exists in DB
-                    db_vol = db.session.query(
-                        PersistentDrive).filter_by(name=args[1]).first()
-                    if db_vol is None:  # found none and create
-                        pd = PersistentDrive(pod_id=pod.id, kub_id=kub_id, name=args[1],
-                                        owner=pod.owner, size=1024,
-                                        status='mounted')
-                        db.session.add(pd)
-                    else:
-                        db_vol.status = 'mounted'
-                        db_vol.kub_id = kub_id
-                        db_vol.pod_id = pod.id
-                else:
-                    raise APIError("Wrong number of persistent drive arguments")
-        db.session.commit()
-
-    @staticmethod
-    def _get_persistent_drives(kub_id):
-        """
-        Returns persistent drives names according to received kubernetes pod ID
-        :param kub_id: string -> UUID
-        """
-        drives = db.session.query(PersistentDrive).filter_by(kub_id=kub_id)
-        return [d.name for d in drives]
-
-    def _get_node_persistent_drives(self, ip_address, kub_ip):
-        """
-        Returns persistent drives names according to received kubernetes pod ID.
-        But if the remote address is not amongst node addresses return
-        empty list
-        :param kub_id: string -> UUID
-        """
-        node = db.session.query(Node).filter_by(ip=ip_address).first()
-        if node is None:
-            return []
-        return self._get_persistent_drives(kub_ip)
-
     def get_config(self, param=None, default=None):
         db_pod = db.session.query(Pod).get(self.id)
         if param is None:
@@ -253,11 +194,11 @@ class Utilities(object):
         :param message: string
         """
         pass
-        #if message is None:
-        #    message = 'An error occurred'
-        #status = return_value.get('status')
-        #if status is not None and status.lower() not in ['success', 'working']:
-        #    self._raise(message)
+        if message is None:
+            message = 'An error occurred'
+        status = return_value.get('status')
+        if status is not None and status.lower() not in ['success', 'working']:
+            self._raise(message)
 
     def _make_dash(self):
         """

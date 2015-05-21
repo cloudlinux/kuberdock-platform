@@ -187,11 +187,7 @@ def add_new_node(host, kube_type, db_node):
                 cur_master_kubernetes=current_master_kubernetes)
             fo = StringIO(r)
             sftp.putfo(fo, '/kub_install.sh')
-        with open('pd.template') as f:
-            r = jinja2.Template(f.read()).render(
-                master_ip=MASTER_IP)
-            fo = StringIO(r)
-            sftp.putfo(fo, '/var/lib/kuberdock/scripts/pd.sh')
+        sftp.put('pd.sh', '/var/lib/kuberdock/scripts/pd.sh')
         sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')

@@ -91,15 +91,20 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         for volume in self.volumes:
             try:
                 pd = volume['source']['persistentDisk']
-                name = '{0}{1}{2}'.format(
+                name = volume['name']
+                device = '{0}{1}{2}'.format(
                     pd.get('pdName'), PD_SEPARATOR, self.owner.username)
                 size = pd.get('pdSize')
                 if size is None:
-                    params = base64.b64encode("{0};{1}".format('mount', name))
+                    params = base64.b64encode("{0};{1};{2}".format('mount', device, name))
                 else:
-                    params = base64.b64encode("{0};{1};{2}".format('create', name, size))
-                volume['source'] = {'scriptableDisk': {
-                    'pathToScript': path, 'params': params}}
+                    params = base64.b64encode("{0};{1};{2};{3}".format('create', device, name, size))
+                volume['source'] = {
+                    'scriptableDisk': {
+                        'pathToScript': path,
+                        'params': params
+                    }
+                }
             except KeyError:
                 continue
 

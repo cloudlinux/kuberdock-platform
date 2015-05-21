@@ -189,7 +189,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             resource = 'replicationcontrollers' if pod.cluster else 'pods'
             rv = self._post([resource], json.dumps(config), True)
             #current_app.logger.debug(rv)
-            self._make_persistent_drives(pod, rv)
             self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
             #return rv
             return {'status': 'pending'}
@@ -299,8 +298,3 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if one[k] != two[k]:
                 return False
             return True
-
-class DriveCollection(ModelQuery):
-
-    def get_drives_for_node(self, ip, kub_id):
-        return ';;'.join(self._get_node_persistent_drives(ip, kub_id))

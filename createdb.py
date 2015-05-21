@@ -12,6 +12,11 @@ from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import KUBERDOCK_INTERNAL_USER
 
 
+def usage():
+    print 'Usage: python {0} admin_password'.format(sys.argv[0])
+    print '  admin_password -- password for admin user'
+
+
 def get_dns_pod_config(uuid, domain='kuberdock', ip='10.254.0.10'):
     return {
         "node": None,
@@ -80,6 +85,10 @@ def get_dns_pod_config(uuid, domain='kuberdock', ip='10.254.0.10'):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        usage()
+        sys.exit()
+
     app = create_app()
     ac = app.app_context()
     ac.push()

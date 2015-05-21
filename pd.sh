@@ -1,14 +1,20 @@
 #!/bin/bash
-TMS=$(date +"%Y-%m-%d %H:%M:%S")
-echo "$TMS $1 $2 $3" >> /tmp/pd.log
+#TMS=$(date +"%Y-%m-%d %H:%M:%S")
+#echo "$TMS $1 $2 $3 $4" >> /tmp/pd.log
 
-ACTION=$1
-NAME=$2
-SIZE=$3
-NS=rbd
-PREFIX=/var/lib/kuberdock/mp
-MP="$PREFIX/$NAME"
-MASTER_IP={{ master_ip }}
+if [ $1 == umount ]; then
+    ACTION=$1
+    UUID=$2
+else
+    UUID=$1
+    ACTION=$2
+fi
+
+DEVICE=$3
+NAME=$4
+SIZE=$5
+
+MP="/var/lib/kubelet/pods/$UUID/volumes/kubernetes.io~scriptable-disk/$NAME"
 
 if [ $USER != root ];then
     echo "Superuser privileges required"
@@ -23,20 +29,20 @@ function mkdir_if_missing {
 
 function create_map_and_mount {
     mkdir_if_missing
-    rbd create $NAME --size=$SIZE
-    DEVICE=$(rbd map $NAME)
+    rbd create $DEVICE --size=$SIZE
+    DEVICE=$(rbd map $DEVICE)
     mkfs.ext4 $DEVICE
     mount "$DEVICE" "$MP"
 }
 
 function map_and_mount {
-    rbd showmapped|awk "NR>1{if(\$3==\"$NAME\"){exit 1}}"
+    rbd showmapped|awk "NR>1{if(\$3==\"$DEVICE\"){exit 1}}"
     if [ $? -ne 0 ];then
-        echo "Drive $NAME is already mapped"
+        echo "Drive $DEVICE is already mapped"
         exit 1
     fi
     mkdir_if_missing
-    DEVICE=$(rbd map $NAME)
+    DEVICE=$(rbd map $DEVICE)
     mount "$DEVICE" "$MP"
 }
 
@@ -46,7 +52,7 @@ function lookup {
         return 0
     else
         while read -r LINE; do
-            if [ $LINE == $NAME ];then
+            if [ $LINE == $DEVICE ];then
                 return 1
             fi
         done <<< "$LIST"
@@ -55,19 +61,15 @@ function lookup {
 }
 
 function make_unmount {
-    DRIVES=$(curl -k -s -X GET "https://$MASTER_IP/api/podapi/pd/$NAME")
+    DRIVES=$(mount | awk "/$UUID/ {print \$1}")
     if [ -z "$DRIVES" ];then
         exit 0
     fi
-    IFS=';;' read -ra ARRAY <<< "$DRIVES"
-    for i in "${ARRAY[@]}";do
-        if [ -z "$i" ];then
-            continue
-        fi
-        DPATH="/dev/rbd/$NS/$i"
-        umount $DPATH
-        rbd unmap $DPATH
-    done
+
+    while read -r DRIVE;do
+        umount $DRIVE
+        rbd unmap $DRIVE
+    done <<< "$DRIVES"
 }
 
 if [ $ACTION == "create" ];then
@@ -75,13 +77,13 @@ if [ $ACTION == "create" ];then
     if [ $? -eq 0 ];then
         create_map_and_mount
     else
-        echo "Image $NAME exists"
+        echo "Image $DEVICE exists"
         exit 1
     fi
 elif [ $ACTION == "mount" ];then
     lookup
     if [ $? -eq 0 ];then
-        echo "Image $NAME not found"
+        echo "Image $DEVICE not found"
         exit 1
     else
         map_and_mount

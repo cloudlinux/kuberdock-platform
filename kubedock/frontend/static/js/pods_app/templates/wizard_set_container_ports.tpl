@@ -169,8 +169,8 @@
                     <li role="presentation" class="configuration active">Configuration
                         <ul class="nav sub-nav">
                             <li role="presentation" class="active">General</li>
-                            <!-- <li role="presentation" class="go-to-other">Variables</li>
-                            <li role="presentation" class="go-to-resources">Limits</li> -->
+                            <li role="presentation" class="go-to-other">Variables</li>
+                            <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
                         </ul>
                     </li>
                 </ul>

@@ -183,7 +183,13 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             }
         },
 
-        deleteNode: function(){
+        deleteNode: function(evt){
+            evt.stopPropagation();
+            var item = this.model,
+                name = item.get('hostname'),
+                preloader = $('#page-preloader');
+            if(!confirm("Delete node '" + name + "'?"))
+                return;
             this.model.destroy();
         },
 

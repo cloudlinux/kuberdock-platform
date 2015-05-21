@@ -83,7 +83,6 @@ define(['pods_app/app',
             },
 
             events: {
-                /*'change .check-item'    : 'checkItem',*/
                 'click @ui.start' : 'startItem',
                 'click @ui.stop'  : 'stopItem',
                 'click @ui.delete'  : 'deleteItem',
@@ -149,7 +148,6 @@ define(['pods_app/app',
             events: {
                 'click .stop-checked'      : 'stopItems',
                 'click .start-checked'     : 'startItems',
-                'click .terminate-checked' : 'terminateItems'
             },
 
             command: function(cmd){
@@ -187,9 +185,6 @@ define(['pods_app/app',
                 this.command('stop');
             },
 
-            terminateItems: function(evt){
-                // TODO: terminate containers
-            },
 
         });
 

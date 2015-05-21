@@ -113,7 +113,6 @@ define(['pods_app/app',
                 var that = this;
                 this.ui.peditable.editable({
                     type: 'text',
-                    title: 'Change container name',
                     success: function(response, newValue) {
                         // TODO: check pod name
                         $.ajax({
@@ -859,12 +858,6 @@ define(['pods_app/app',
             template: wizardSetContainerCompleteTpl,
             tagName: 'div',
 
-            ui: {
-                ieditable: '.ieditable',
-                kubeQuantity: 'select.kube-quantity',
-                kubeTypes: 'select.kube_type'
-            },
-
             templateHelpers: function(){
                 return {
                     cpu_data: this.cpu_data,
@@ -875,14 +868,27 @@ define(['pods_app/app',
                 };
             },
 
+            ui: {
+                'ieditable'               : '.ieditable',
+                'policy'                  : 'select.restart-policy',
+                'kubeTypes'               : 'select.kube_type',
+                'kubeQuantity'            : 'select.kube-quantity',
+                'editPolicy'              : '.edit-policy',
+                'editPolycyDescription'   : '.edit-polycy-description',
+                'editKubeType'            : '.edit-kube-type',
+                'editKubeTypeDescription' : '.edit-kube-type-description',
+            },
+
             events: {
-                'click .delete-item'      : 'deleteItem',
-                'click .cluster'          : 'toggleCluster',
-                'click .node'             : 'toggleNode',
-                'change .replicas'        : 'changeReplicas',
-                'change .kube_type'       : 'changeKubeType',
-                'change .kube-quantity'   : 'changeKubeQuantity',
-                'change .restart-policy'  : 'changePolicy'
+                'click .delete-item'     : 'deleteItem',
+                'click .cluster'         : 'toggleCluster',
+                'click .node'            : 'toggleNode',
+                'change .replicas'       : 'changeReplicas',
+                'change .kube_type'      : 'changeKubeType',
+                'change .kube-quantity'  : 'changeKubeQuantity',
+                'change @ui.policy'      : 'changePolicy',
+                'click @ui.editPolicy'   : 'editPolicy',
+                'click @ui.editKubeType' : 'editKubeType',
             },
 
             triggers: {
@@ -1003,7 +1009,19 @@ define(['pods_app/app',
                         }
                     }
                 });
-            }
+            },
+
+            editPolicy: function(){
+                this.ui.editPolicy.hide();
+                this.ui.editPolycyDescription.hide()
+                this.ui.policy.attr('disabled',false);
+            },
+
+            editKubeType: function(){
+                this.ui.editKubeType.hide();
+                this.ui.editKubeTypeDescription.hide()
+                this.ui.kubeTypes.attr('disabled',false);
+            },
         });
 
     });

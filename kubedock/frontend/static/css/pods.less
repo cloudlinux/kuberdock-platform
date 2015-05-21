@@ -579,10 +579,46 @@
                         }
                     }
                 }
-                .policy{
-                    margin-top: 15px;
-                    margin-bottom: 30px;
+                .policy, .kube-type-wrapper{
+                    margin-bottom: 29px;
+                    position: relative;
                     select{
+                        margin-bottom: 0px;
+                        &:disabled{
+                            background: #f9f9f9;
+                        }
+                    }
+                    .edit-polycy-description, .edit-kube-type-description{
+                        left: 10px;
+                        bottom: -18px;
+                        color: #d3d3d3;
+                        font-size: 12px;
+                        position: absolute;
+                    }
+                    .edit-policy, .edit-kube-type{
+                        height: 51px;
+                        position: relative;
+                        display: inline-block;
+                        &:before{
+                            left: 0;
+                            top: 16px;
+                            content: '';
+                            width: 18px;
+                            height: 17px;
+                            position: absolute;
+                            display: inline-block;
+                            background: url('../img/pencil-big.png') 0 0 no-repeat;
+                        }
+                        &:hover{
+                            cursor: pointer;
+                            &:before{
+                                background-position: 0 -18px;
+                            }
+                        }
+                    }
+                }
+                .policy{
+                    .restart-policy{
                         width: 100%;
                         height: 52px;
                         color: #1d1d1d;

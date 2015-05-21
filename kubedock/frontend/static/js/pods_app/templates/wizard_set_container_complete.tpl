@@ -28,40 +28,68 @@
                     <div class="col-xs-12">
                         <label>Restart policy</label>
                     </div>
-                    <div class="col-md-6">
-                        <select class="restart-policy">
-                            <option selected="selected" value="always">Always</option>
-                            <option value="never">Never</option>
-                            <option value="onFailure">On Failure</option>
+                    <% if (containers.length > 1){ %>
+                        <div class="col-md-11">
+                            <select class="restart-policy" disabled>
+                                <option selected="selected" value="always">Always</option>
+                                <option value="never">Never</option>
+                                <option value="onFailure">On Failure</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 no-padding edit-policy"></div>
+                        <div class="col-xs-12 edit-polycy-description">Type will apply for each container</div>
+                    <% } else { %>
+                         <div class="col-md-12">
+                            <select class="restart-policy">
+                                <option selected="selected" value="always">Always</option>
+                                <option value="never">Never</option>
+                                <option value="onFailure">On Failure</option>
+                            </select>
+                        </div>
+                    <% } %>
+                </div>
+                <div class="row kube-type-wrapper">
+                    <% if (containers.length > 1){ %>
+                    <label class="col-xs-12">Type</label>
+                    <div class="col-xs-11">
+                        <select class="kube_type" id="extra-options" disabled>
+                            <option value="Available kube types" disabled selected>Available kube types</option>
+                            <% _.each(kube_types, function(kube_type){ %>
+                            <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
+                            <% }) %>
                         </select>
                     </div>
-               <!--     <div class="col-md-3">
-                        <select>
-                            <option>Replication QTU</option>
-                            <option>2</option>
+                    <div class="col-xs-1 no-padding edit-kube-type"></div>
+                    <div class="col-xs-12 edit-kube-type-description">Type will apply for each container</div>
+                    <% } else { %>
+                    <label class="col-xs-12">Type</label>
+                    <div class="col-xs-12">
+                        <select class="kube_type" id="extra-options">
+                            <option value="Available kube types" disabled selected>Available kube types</option>
+                            <% _.each(kube_types, function(kube_type){ %>
+                            <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
+                            <% }) %>
                         </select>
-                    </div> -->
+                    </div>
+                    <% } %>
                 </div>
-                <label>Type</label>
-                <select class="kube_type" id="extra-options">
-                    <option value="Available kube types" disabled selected>Available kube types</option>
-                    <% _.each(kube_types, function(kube_type){ %>
-                    <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
-                    <% }) %>
-                </select>
-                <label>Kubes per container:</label>
-                <select class="kube-quantity">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                </select>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <label>Kubes per container:</label>
+                        <select class="kube-quantity">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div class="col-md-4 col-md-offset-2 right">
                 <p class="clearfix">

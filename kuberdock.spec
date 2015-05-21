@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 44%{?dist}.cloudlinux
+Release: 45%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,17 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Thu May 21 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-45
+- Fixed host ports. Fixed pod delete
+- AC-355: Show modal dialog on user save
+- Fix services with refactored pods api
+- AC-380: Add new design to users page & change links in top menu
+- Fixed container details display; fixed pod graps dependencies; fixed updated start-stop button on changing pod state;
+- Fix jquery tabs in user profile
+- Fixed distorted containers view; added kube types to select dropdown
+- Fixed services deleting on stopped pod
+- AC-385: Decrease kubes cpu value
+
 * Wed May 20 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-44
 - Add spoiler to node install log, class Reason, AC-362,369: Rename some fields, AC-324: Fix design bug in breadcrumb (Safari)
 - AC-355: Edit user

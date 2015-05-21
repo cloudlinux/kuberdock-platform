@@ -538,7 +538,7 @@ define(['pods_app/app',
 
             templateHelpers: function(){
                 return {
-                    isPending: !this.model.has('parentID')
+                    isPending: !this.model.has('parentID'),
                 };
             },
 
@@ -674,6 +674,7 @@ define(['pods_app/app',
                 'click .go-to-logs'      : 'onLogsClick'
             },
 
+
             templateHelpers: function(){
                 var parentID = this.containerModel.get('parentID'),
                     model = App.WorkFlow.getCollection().fullCollection.get(parentID),
@@ -699,6 +700,7 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
                     kubes: this.containerModel.get('kubes'),
+                    podName: model.get('name'),
                 };
             },
 

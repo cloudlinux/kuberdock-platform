@@ -187,9 +187,16 @@
                 </div>
                 <div id="tab-content">
                     <div class="col-xs-10">
-                        <div class="info">
+                        <div class="info col-xs-6">
                             <div>Image tag: <%- image %></div>
-                            <!-- <div>Deploy tags: some tags</div> -->
+                            <div>Kube type: <%- kube_type.name %></div>
+                            <div>Restart policy: <%- restart_policy %></div>
+                            <div>Kube QTY: <%- kubes %></div>
+                        </div>
+                        <div class="col-xs-6 servers">
+                            <div>CPU: <%- kube_type.cpu * kubes %> <%- kube_type.cpu_units %></div>
+                            <div>RAM: <%- kube_type.memory * kubes %> <%- kube_type.memory_units %></div>
+                            <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %></div>
                         </div>
                     </div>
                     <div class="col-xs-12 no-padding">

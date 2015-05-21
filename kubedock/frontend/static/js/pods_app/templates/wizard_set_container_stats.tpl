@@ -8,7 +8,7 @@
                 <li>
                     <a href="/#pods/<%- parentID %>">My best Pod</a>
                 </li>
-                <li class="active">Container name</li>
+                <li class="active"><%- name %></li>
             </ul>
         </div>
     </div>
@@ -43,12 +43,14 @@
                     <div class="col-xs-10">
                         <div class="info col-xs-6">
                             <div>Image tag: <%- image %></div>
-                            <!-- <div>Deploy tags: some tags</div> -->
+                            <div>Kube type: <%- kube_type.name %></div>
+                            <div>Restart policy: <%- restart_policy %></div>
+                            <div>Kube QTY: <%- kubes %></div>
                         </div>
                         <div class="col-xs-6 servers">
-                            <div>Kube type: ssd power</div>
-                            <div>Restart police: never</div>
-                            <div>Pod IP:  102.128.9.95</div>
+                            <div>CPU: <%- kube_type.cpu * kubes %> <%- kube_type.cpu_units %></div>
+                            <div>RAM: <%- kube_type.memory * kubes %> <%- kube_type.memory_units %></div>
+                            <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %></div>
                         </div>
                     </div>
                     <div id="monitoring-page" class="col-sm-12 no-padding">

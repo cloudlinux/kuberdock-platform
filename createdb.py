@@ -1,3 +1,4 @@
+import sys
 import json
 from uuid import uuid4
 
@@ -126,7 +127,8 @@ if __name__ == '__main__':
     r = Role.filter_by(rolename='Admin').first()
     u = User.filter_by(username='admin').first()
     if u is None:
-        u = User.create(username='admin', password='admin', role=r, package=p1,
+        passwd = sys.argv[1]
+        u = User.create(username='admin', password=passwd, role=r, package=p1,
                         active=True)
         db.session.add(u)
     kr = Role.filter_by(rolename='User').first()

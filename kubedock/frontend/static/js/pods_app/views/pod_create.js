@@ -538,8 +538,28 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
+                var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
+                    kubeType,
+                    restartPolicy;
+                if (model !== undefined){
+                    kube_id = model.get('kube_type');
+                    _.each(kubeTypes, function(kube){
+                        if(parseInt(kube.id) == parseInt(kube_id))
+                            kubeType = kube;
+                    });
+                    restart_policy = model.get('restartPolicy');
+                    for(var k in restart_policy){
+                        restartPolicy = k;
+                    }
+                }
                 return {
                     isPending: !this.model.has('parentID'),
+                    hasPersistent: this.model.has('persistentDrives'),
+                    showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
+                    ip: this.model.get('ip'),
+                    kube_type: kubeType,
+                    restart_policy: restartPolicy,
+                    podName: model.get('name'),
                 };
             },
 

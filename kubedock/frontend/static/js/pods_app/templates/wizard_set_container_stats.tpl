@@ -23,7 +23,7 @@
                         <span class="go-to-ports">Configuration</span>
                         <ul class="nav sub-nav">
                             <li role="presentation" class="go-to-ports">General</li>
-                            <li role="presentation" class="go-to-other">Variables</li>
+                            <li role="presentation" class="go-to-envs">Variables</li>
                             <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
                         </ul>
                     </li>

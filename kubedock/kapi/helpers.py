@@ -194,11 +194,11 @@ class Utilities(object):
         :param message: string
         """
         pass
-        if message is None:
-            message = 'An error occurred'
-        status = return_value.get('status')
-        if status is not None and status.lower() not in ['success', 'working']:
-            self._raise(message)
+        #if message is None:
+        #    message = 'An error occurred'
+        #status = return_value.get('status')
+        #if status is not None and status.lower() not in ['success', 'working']:
+        #    self._raise(message)
 
     def _make_dash(self):
         """

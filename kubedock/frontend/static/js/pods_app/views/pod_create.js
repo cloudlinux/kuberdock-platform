@@ -328,6 +328,7 @@ define(['pods_app/app',
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
+                    podName: App.WorkFlow.getCollection().fullCollection.models[0].get('name'),
                 };
             },
 
@@ -700,7 +701,7 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
                     kubes: this.containerModel.get('kubes'),
-                    podName: model.get('name'),
+                    podName: App.WorkFlow.getCollection().fullCollection.models[0].get('name'),
                 };
             },
 

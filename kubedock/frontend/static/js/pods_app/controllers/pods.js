@@ -247,6 +247,9 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             return false;
                         };
                         if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
+                        _.each(data.get('containers'), function(c){
+                            if (c.hasOwnProperty('persistentDrives')) { delete c.persistentDrives; }
+                        });
                         if (hasPublic(data.get('containers'))) {
                             data.attributes['set_public_ip'] = true;
                         }

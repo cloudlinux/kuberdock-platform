@@ -5,216 +5,313 @@
 #user-profile-logs-table,
 #user-profile-general-table,
 #all-users-activities-table{
-	thead{
-		background-color: transparent;
-		&.min-opacity{
-			.opacity(0);
-		}
-		tr{
-			th{
-				border: none;
-				color: #b1b9c0;
-				padding-top: 0;
-				font-size: 14px;
-				text-align: left;
-				font-weight: normal;
-				vertical-align: top;
-				padding-bottom: 10px;
-				font-family: @regular;
-				border-bottom: 1px solid #e5e5e5;
-				&:focus{
-					outline: 0;
-				}
-				.tablesorter-header-inner{
-					.caret{
-						margin-left: 3px;
-					}
-				}
-			}
-		}
-	}
-	tbody{
-		tr{
-			&.checked, &:hover{
-				background-color: #f5fafe;
-				span{
-					&#deleteUser{
-						background: url('../img/recycling.png') 0 0 no-repeat;
-						&:hover{
-							background-position: 0 -18px;
-						}
-					}
-					&#blockUser{
-						background: url('../img/block-user-ico.png') 0 0 no-repeat;
-						&:hover{
-							background-position: 0 -16px;
-						}
-					}
-					&#activeteUser{
-						background: url('../img/activate-user-ico.png') 0 0 no-repeat;
-						&:hover{
-							background-position: 0 -15px;
-						}
-					}
-				}
-			}
-			&:last-child{
-				td{
-					border-bottom: 1px solid #e5e5e5;
-				}
-			}
-			td{
-				color: #1d1d1d;
-				font-size: 14px;
-				font-family: @regular;
-				padding-top: 0;
-				padding-bottom: 0;
-				vertical-align: middle;
-				height: 50px;
-				span{
-					&#deleteUser, &#blockUser, &#activeteUser{
-						top: 3px;
-						width: 28px;
-						height: 17px;
-						margin-left: 5px;
-						position: relative;
-						display: inline-block;
-						&:hover{
-							cursor: pointer;
-						}
-					}
-					&#deleteUser{
-						height: 17px;
-					}
-					&#blockUser, &#activeteUser{
-						width: 20px;
-						height: 15px;
-					}
-				}
-				.tooltip.bottom{
-					margin-top: 8px;
-					border-color: #bdc4c9;
-					background-color: #fff;
-					.box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
-					.opacity(1);
+    thead{
+        background-color: transparent;
+        &.min-opacity{
+            .opacity(0);
+        }
+        tr{
+            th{
+                border: none;
+                color: #b1b9c0;
+                padding-top: 0;
+                font-size: 14px;
+                text-align: left;
+                font-weight: normal;
+                vertical-align: top;
+                padding-bottom: 10px;
+                font-family: @regular;
+                border-bottom: 1px solid #e5e5e5;
+                &:focus{
+                    outline: 0;
+                }
+                .tablesorter-header-inner{
+                    .caret{
+                        margin-left: 3px;
+                    }
+                }
+            }
+        }
+    }
+    tbody{
+        tr{
+            &.checked, &:hover{
+                background-color: #f5fafe;
+                span{
+                    &#deleteUser{
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
+                    }
+                    &#blockUser{
+                        background: url('../img/block-user-ico.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -16px;
+                        }
+                    }
+                    &#activeteUser{
+                        background: url('../img/activate-user-ico.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -15px;
+                        }
+                    }
+                }
+            }
+            &:last-child{
+                td{
+                    border-bottom: 1px solid #e5e5e5;
+                }
+            }
+            td{
+                color: #1d1d1d;
+                font-size: 14px;
+                font-family: @regular;
+                padding-top: 0;
+                padding-bottom: 0;
+                vertical-align: middle;
+                height: 50px;
+                span{
+                    &#deleteUser, &#blockUser, &#activeteUser{
+                        top: 3px;
+                        width: 28px;
+                        height: 17px;
+                        margin-left: 5px;
+                        position: relative;
+                        display: inline-block;
+                        &:hover{
+                            cursor: pointer;
+                        }
+                    }
+                    &#deleteUser{
+                        height: 17px;
+                    }
+                    &#blockUser, &#activeteUser{
+                        width: 20px;
+                        height: 15px;
+                    }
+                }
+                .tooltip.bottom{
+                    margin-top: 8px;
+                    border-color: #bdc4c9;
+                    background-color: #fff;
+                    .box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
+                    .opacity(1);
 
-					.tooltip-arrow{
-						display: none;
-					}
-					.tooltip-inner{
-						background-color: #fff;
-						border: 1px solid #c7ced3;
-						height: 44px;
-						padding: 0 12px;
-						white-space: nowrap;
-						line-height: 44px;
-						text-align: center;
-						color: #1d1d1d;
-						position: relative;
-						&:before{
-							content:'';
-							position: absolute;
-							width: 14px;
-							height: 11px;
-							z-index: 9999;
-							top: -10px;
-							left: 46%;
-							background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat
-						}
-					}
-				}
-			}
-			button{
-				margin: 0;
-				border: 0;
-				padding: 0;
-				color: #3197ee;
-				font-size: 14px;
-				text-decoration: none;
-				font-family: @regular;
-				background-color: transparent;
-				&:hover{
-					cursor: pointer;
-					text-decoration: none;
-				}
-			}
-		}
-	}
+                    .tooltip-arrow{
+                        display: none;
+                    }
+                    .tooltip-inner{
+                        background-color: #fff;
+                        border: 1px solid #c7ced3;
+                        height: 44px;
+                        padding: 0 12px;
+                        white-space: nowrap;
+                        line-height: 44px;
+                        text-align: center;
+                        color: #1d1d1d;
+                        position: relative;
+                        &:before{
+                            content:'';
+                            position: absolute;
+                            width: 14px;
+                            height: 11px;
+                            z-index: 9999;
+                            top: -10px;
+                            left: 46%;
+                            background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat
+                        }
+                    }
+                }
+            }
+            button{
+                margin: 0;
+                border: 0;
+                padding: 0;
+                color: #3197ee;
+                font-size: 14px;
+                text-decoration: none;
+                font-family: @regular;
+                background-color: transparent;
+                &:hover{
+                    cursor: pointer;
+                    text-decoration: none;
+                }
+            }
+        }
+    }
 }
 #userGeneralTab{
-	.col-xs-2{
-		margin-bottom: 50px;
-		&.info{
-			height: 70px;
-			background: url('../img/info-ico.png') center center no-repeat;
-			.background-size(70px);
-		}
-		&.user{
-			height: 94px;
-			background: url('../img/user-and-pc-small.png') center center no-repeat;
-			.background-size(80px 94px);
-		}
-	}
+    .col-xs-2{
+        margin-bottom: 50px;
+        &.info{
+            height: 70px;
+            background: url('../img/info-ico.png') center center no-repeat;
+            .background-size(70px);
+        }
+        &.user{
+            height: 94px;
+            background: url('../img/user-and-pc-small.png') center center no-repeat;
+            .background-size(80px 94px);
+        }
+    }
 }
 #user-profile-logs-table{
-	thead{
-		tr{
-			th{
-	  			padding-bottom: 17px;
-			}
-		}
-	}
+    thead{
+        tr{
+            th{
+                padding-bottom: 17px;
+            }
+        }
+    }
 }
 /* end-user-tables */
 
 /* create edit user page */
 #user-controls{
-	.clearfix;
-	border-bottom: 1px solid #e5e5e5;
-	.form-group{
-		max-width: 50%;
-		margin-bottom: 30px;
-		font-size: 0;
-		&:first-child{
-			position: relative;
-			&:after{
-				content: '';
-				position: absolute;
-				top: -10px;
-				right: -171px;
-				background: url('../img/user-and-pc-ico.png') 0 0 no-repeat;
-				width: 97px;
-				height: 115px;
-			}
-		}
-		label, input, select{
-			font-size: 14px;
-			font-family: @regular;
-			color: #1d1d1d;
-		}
-		label{
-			font-weight: bold;
-			margin-bottom: 15px;
-			line-height: 14px;
-		}
-		input, select{
-			.placeholder( #1d1d1d );
-			.box-shadow( none );
-			.border-radius( 0 );
-			height: 50px;
-			outline: 0;
-			border: 1px solid #e5e5e5;
-			background-color: #fff;
-			padding: 0 20px;
-			line-height: 52px;
-			width: 100%;
-			&:focus{
-				.box-shadow(none);
-			}
-			&#password-again{
-				margin-top: 10px;
-			}
-		}
-	}
+    .clearfix;
+    border-bottom: 1px solid #e5e5e5;
+    .form-group{
+        max-width: 50%;
+        margin-bottom: 30px;
+        font-size: 0;
+        &:first-child{
+            position: relative;
+            &:after{
+                content: '';
+                position: absolute;
+                top: -10px;
+                right: -171px;
+                background: url('../img/user-and-pc-ico.png') 0 0 no-repeat;
+                width: 97px;
+                height: 115px;
+            }
+        }
+        label, input, select{
+            font-size: 14px;
+            font-family: @regular;
+            color: #1d1d1d;
+        }
+        label{
+            font-weight: bold;
+            margin-bottom: 15px;
+            line-height: 14px;
+        }
+        input, select{
+            .placeholder( #1d1d1d );
+            .box-shadow( none );
+            .border-radius( 0 );
+            height: 50px;
+            outline: 0;
+            border: 1px solid #e5e5e5;
+            background-color: #fff;
+            padding: 0 20px;
+            line-height: 52px;
+            width: 100%;
+            &:focus{
+                .box-shadow(none);
+            }
+            &#password-again{
+                margin-top: 10px;
+            }
+        }
+    }
 }
+#all-user-activity-tab{
+    .tab-content{
+        .serch-control{
+            padding: 20px 0 30px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #e5e5e5;
+            > div{
+                margin: 0 5px 0 0;
+                position: relative;
+            }
+            input{
+                outline: 0;
+                width: 100%;
+                height: 42px;
+                padding: 0 38px 0 17px;
+                border: 1px solid #e5e5e5;
+                &#username{
+                    padding-left: 46px;
+                    padding-right: 17px;
+                }
+            }
+            .dropdown-menu{
+                .border-radius(none);
+                .box-shadow(none);
+                width: 100%;
+                margin-top: 5px;
+            }
+            .search, .calendar{
+                position: absolute;
+                &:hover{
+                    cursor: pointer;
+                }
+            }
+            .search{
+                top: 14px;
+                left: 13px;
+                width: 15px;
+                height: 15px;
+                background: url('../img/search.png') 0 0 no-repeat;
+            }
+            .calendar{
+                top: 12px;
+                right: 11px;
+                width: 18px;
+                height: 18px;
+                position: absolute;
+                background: url('../img/calendar.png') 0 0 no-repeat;
+            }
+        }
+        #all-users-activities-table{
+            thead{
+                tr{
+                    th{
+                        padding-bottom: 25px;
+                    }
+                }
+            }
+        }
+    }
+}
+#ui-datepicker-div{
+    margin-top: 5px;
+    background: #f5fafe;
+    .ui-datepicker-header{
+        border: none;
+        background: #466EB1;
+        a{
+            &.ui-state-hover{
+                color: initial;
+                border: initial;
+                background: initial;
+                font-weight: initial;
+                .ui-icon{
+                    background-image: url("images/ui-icons_ffffff_256x240.png");
+                }
+            }
+        }
+    }
+    a{
+        &.ui-state-default{
+            color: #1d1d1d;
+            font-weight: 400;
+            background: transparent;
+        }
+        &.ui-state-hover, &.ui-state-active{
+            color: #fff;
+            background: #466EB1;
+            border-color: #466EB1;
+        }
+    }
+    .ui-state-highlight, .ui-widget-content .ui-state-highlight, .ui-widget-header .ui-state-highlight{
+        color: #fff;
+        background: #466EB1;
+        border-color: #466EB1;
+    }
+}
+/*.ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default*/
 /* end create edit user page */

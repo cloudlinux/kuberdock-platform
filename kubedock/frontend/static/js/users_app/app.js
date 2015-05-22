@@ -161,7 +161,7 @@ define(['marionette', 'paginator', 'utils'],
                 'add_user'           : 'button#add_user',
                 'edit_selected_user' : 'span#editUser',
                 'activity_page'      : '.activityPage',
-                'online_page'        : '.onlinePage',
+                'online_page'        : '.onlinePage'
             },
 
             events: {
@@ -194,7 +194,7 @@ define(['marionette', 'paginator', 'utils'],
 
             online: function(){
                 App.router.navigate('/online/', {trigger: true});
-            }
+            },
         });
 
         Views.OnlineUsersListView = Marionette.CompositeView.extend({
@@ -226,7 +226,18 @@ define(['marionette', 'paginator', 'utils'],
         Views.UsersActivityView = Marionette.CompositeView.extend({
             template: '#users-activities-template',
             childView: Views.ActivityItem,
-            childViewContainer: "tbody"
+            childViewContainer: "tbody",
+
+/*            ui: {
+            },
+
+            events: {
+            },
+
+            usersPage: function(){
+                console.log(this);
+            }*/
+
         });
 
         Views.AllUsersActivitiesView = Backbone.Marionette.ItemView.extend({
@@ -237,15 +248,15 @@ define(['marionette', 'paginator', 'utils'],
                 'dateTo'     : 'input#dateTo',
                 'usersList'  : 'ul#users-list',
                 'tbody'      : '#users-activities-table',
-                'users_page' : 'div#users-page',
-                'username'   : '#username'
+                'users_page' : '#users-page, .usersPage',
+                'username'   : '#username',
             },
 
             events: {
                 'change input.user-activity' : 'getUsersActivities',
                 'change input#dateFrom'      : 'getUsersActivities',
                 'change input#dateTo'        : 'getUsersActivities',
-                'click @ui.users_page'       : 'breadcrumbClick'
+                'click @ui.users_page'       : 'usersPage'
             },
 
             _getActivities: function(username, dateFrom, dateTo){
@@ -315,6 +326,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             getUsersActivities: function(){
+                console.log(1);
                 if(!this.ui.username.data('ready')) return;
                 var that = this;
                 that.ui.tbody.empty();
@@ -325,7 +337,7 @@ define(['marionette', 'paginator', 'utils'],
                 );
             },
 
-            breadcrumbClick: function(){
+            usersPage: function(){
                App.router.navigate('/', {trigger: true});
             }
 

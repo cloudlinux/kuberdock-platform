@@ -30,31 +30,32 @@
             </div>
         </div>
         <div class="container">
-            <div class="row">
-                <div class="col-md-2">
-                    <h3>From</h3>
-                    <div class="form-group">
-                        <div class="input-group">
-                            <div class="input-group-addon">
-                                <i class="glyphicon glyphicon-calendar"></i>
-                            </div>
-                            <input type="text" class="form-control" id="dateFrom" placeholder="">
-                        </div>
-                    </div>
-                    <h3>To</h3>
-                    <div class="form-group">
-                        <div class="input-group">
-                            <div class="input-group-addon">
-                                <i class="glyphicon glyphicon-calendar"></i>
-                            </div>
-                            <input type="text" class="form-control" id="dateTo" placeholder="">
-                        </div>
-                    </div>
-                    <h3>User:</h3>
-                    <input type="text" name="username" placeholder="Type username"
-                            id="username">
+            <div class="row" id="all-user-activity-tab">
+                <div class="col-sm-2 sidebar">
+                    <ul class="nav nav-sidebar list-unstyled" role="tablist">
+                        <li class="usersPage general">
+                            Users
+                        </li>
+                        <li class="activityPage active">
+                            Users activity
+                        </li>
+                    </ul>
                 </div>
-                <div class="col-md-10">
+                <div class="tab-content col-sm-10">
+                    <div class="col-sm-12 serch-control">
+                        <div class="col-sm-2 no-padding">
+                            <input type="text" id="dateFrom" placeholder="From">
+                            <i class="calendar"></i>
+                        </div>
+                        <div class="col-sm-2 no-padding">
+                            <input type="text" id="dateTo" placeholder="To">
+                            <i class="calendar"></i>
+                        </div>
+                        <div class="col-sm-3 no-padding">
+                            <input type="text" name="username" placeholder="Search username" id="username">
+                            <i class="search"></i>
+                        </div>
+                    </div>
                     <table class="table" id="all-users-activities-table">
                     <thead>
                     <tr>
@@ -123,7 +124,7 @@
                             <label for="status-select">Status</label>
                             <select id="status-select" name="status-select">
                                 <option selected="selected" value="1">Active</option>
-                                <option value="0">Blocked</option>
+                                <option value="0">Locked</option>
                             </select>
                         </div>
                     </div>
@@ -313,9 +314,9 @@
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename  %></td>
         <td>
-            <%- active ? 'Active' : 'Blocked' %>
+            <%- active ? 'Active' : 'Locked' %>
             <% if (active) { %>
-                <span id="blockUser" title="Block <%- username %>"></span>
+                <span id="blockUser" title="Lock user <%- username %>"></span>
             <% } else { %>
                 <span id="activeteUser" title="Activate <%- username %>"></span>
             <% } %>
@@ -326,7 +327,7 @@
         <td><button id="userActivityHistory" title="<%- username %> activety history"><%- username %></button></td>
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename %></td>
-        <td><%- active ? 'Active' : 'Blocked' %></td>
+        <td><%- active ? 'Active' : 'Locked' %></td>
         {# <td><%- last_activity ? last_activity : 'none' %></td> #}
     </script>
 

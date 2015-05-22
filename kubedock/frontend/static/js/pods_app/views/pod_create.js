@@ -333,14 +333,11 @@ define(['pods_app/app',
             },
 
             initialize: function(options){
-                try {
-                    var image = options.model.get('lastAddedImage');
-                    this.model = new App.Data.Image(options.model.getContainerByImage(image));
-                }
-                catch(e){
-                    if (e.constructor === TypeError) {
-                        this.model = options.model
-                    }
+                var image = options.model.get('lastAddedImage');
+                if (image === undefined) {
+                    this.model = options.model
+                } else {
+                    this.model = new App.Data.Image(_.last(options.model.get('containers')));
                 }
                 if (!this.model.has('volumeMounts')) {
                     this.model.set({'volumeMounts': []});
@@ -846,7 +843,7 @@ define(['pods_app/app',
                     _containers = [],
                     host = null;
                 _.each(model.get('dockers'), function(itm){
-                    if(itm.info.imageID == that.model.get('imageID'))
+                    if(itm.info.name == that.model.get('name'))
                         _containers.push(itm.info.containerID);
                         host = itm.host;
                 });

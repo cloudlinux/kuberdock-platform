@@ -98,7 +98,7 @@ define(['pods_app/app',
                     _containers = [],
                     host = null;
                 _.each(model.get('dockers'), function(itm){
-                    if(itm.info.imageID == that.model.get('imageID'))
+                    if(itm.info.name == that.model.get('name'))
                         _containers.push(itm.info.containerID);
                         host = itm.host;
                 });
@@ -159,7 +159,7 @@ define(['pods_app/app',
                     if (i.get('checked') === true){
                         model = App.WorkFlow.getCollection().fullCollection.get(i.get('parentID'));
                         _.each(model.get('dockers'), function(itm){
-                            if(itm.info.imageID == i.get('imageID'))
+                            if(itm.info.name == i.get('name'))
                                 containers.push(itm.info.containerID);
                         });
                     }

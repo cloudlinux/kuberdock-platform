@@ -54,6 +54,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             for pod_name, pod_info in info.items():
                 if pod_name == 'POD':
                     continue
+                pod_info['name'] = pod_name
                 pod.dockers.append({
                     'host': curstate.get('host'),
                     'info': pod_info,

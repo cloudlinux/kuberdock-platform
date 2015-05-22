@@ -20,7 +20,6 @@ def usage():
 def get_dns_pod_config(uuid, domain='kuberdock', ip='10.254.0.10'):
     return {
         "node": None,
-        "lastAddedImage": "gcr.io/google-containers/skydns",
         "name": "kuberdock-dns",
         "replicas": 1,
         "cluster": False,

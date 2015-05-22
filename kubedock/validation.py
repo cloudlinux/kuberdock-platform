@@ -23,10 +23,6 @@ container_image_name_scheme = {
 }
 
 
-lastadded_image_scheme = deepcopy(container_image_name_scheme)
-lastadded_image_scheme['required'] = False
-
-
 # http://stackoverflow.com/questions/1418423/the-hostname-regex
 hostname_regex = r"^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$"
 hostname_scheme = {
@@ -61,7 +57,6 @@ nullable_port_scheme['nullable'] = True
 
 new_pod_scheme = {
     'name': pod_name_scheme,
-    'lastAddedImage': lastadded_image_scheme,       # ignored
     'portalIP': {                                   # ignore, read-only
         'type': 'ipv4',
         'nullable': True

@@ -76,7 +76,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     _.each(model.get('dockers'), function(el){
                         var container = {};
                         _.each(_containerCollection, function(c){
-                            if(c.imageID == el.info.imageID && c.image == el.info.image){
+                            if(c.name == el.info.name){
                                 $.each(c, function(k, v){
                                     container[k] = v;
                                 });
@@ -160,8 +160,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         )[0],
                         container = _.filter(
                                 parent_model.get('dockers'),
-                                function(i){return i.info.imageID === this.d},
-                                {d: model_data.imageID}
+                                function(i){return i.info.name === this.n},
+                                {n: model_data.name}
                             )[0],
                         container_id = _.last(container.info.containerID.split('/'));
                     $.each(container.info.state, function(k, v){
@@ -293,6 +293,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({model: data}));
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
+                        data.unset('lastAddedImage', {silent: true});
                         data.set({'save_only': true}, {silent: true});
                         processRequest(data);
                     });
@@ -329,7 +330,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         }
 
                         // Here we populate a pod model container
-                        var container = model.getContainerByImage(model.get('lastAddedImage'));
+                        var container = _.last(model.get('containers'));
                         _.each(data.attributes, function(value, key, obj){
                             this.container[key] = value;
                         }, {container: container});
@@ -367,8 +368,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         model.set('lastAddedImage', image);
                         rqst.done(function(data){
                             if (data.hasOwnProperty('data')) { data = data['data']; }
-                            var container = model.getContainerByImage(image);
-                            model.fillContainer(container, data);
+                            model.fillContainer(contents, data);
                             wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: model}));
                         });
                         wizardLayout.steps.show(new App.Views.Loading.LoadingView());

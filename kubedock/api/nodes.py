@@ -34,7 +34,6 @@ def get_kuberdock_logs_pod_name(node):
 def get_kuberdock_logs_config(node, name, kube_type, kubes, uuid, master_ip):
     return {
         "node": node,
-        "lastAddedImage": "kuberdock/elasticsearch",
         "name": name,
         "replicas": 1,
         "cluster": False,

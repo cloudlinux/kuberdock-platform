@@ -33,13 +33,6 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
     
             parse: unwrapper,
     
-            getContainerByImage: function(image){
-                var filtered = _.filter(this.get('containers'), function(c){
-                    return c['image'] === this.image;
-                }, {image: image});
-                return (filtered.length !== 0) ? filtered[0] : null;
-            },
-    
             fillContainer: function(container, data){
                 if (data.hasOwnProperty('ports')) {
                     _.each(data['ports'], function(p){

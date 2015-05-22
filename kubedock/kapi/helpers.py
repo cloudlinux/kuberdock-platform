@@ -228,14 +228,15 @@ class Utilities(object):
             obj = self
         obj.dockers = []
         for container in obj.containers:
-            container['imageID'] = 'docker://'
+            container['imageID'] = 'docker://{0}'.format(container['image'])
             obj.dockers.append({
                 'host': '',
                 'info': {
-                    'containerID': 'docker://',
+                    'containerID': 'docker://{0}'.format(container['name']),
                     'image': container['image'],
                     'imageID': container['imageID'],
                     'lastState': {},
+                    'name': container['name'],
                     'ready': False,
                     'restartCount': 0,
                     'state': {'stopped': {}}}})

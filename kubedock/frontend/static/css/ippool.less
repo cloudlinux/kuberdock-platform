@@ -1,3 +1,111 @@
+#ip_pool_table{
+    thead{
+        background-color: transparent;
+        tr{
+            th{
+                border: none;
+                color: #b1b9c0;
+                padding-top: 0;
+                font-size: 14px;
+                text-align: left;
+                font-weight: normal;
+                vertical-align: top;
+                padding-bottom: 10px;
+                font-family: @regular;
+                border-bottom: 1px solid #e5e5e5;
+                &:focus{
+                    outline: 0;
+                }
+                .tablesorter-header-inner{
+                    .caret{
+                        margin-left: 3px;
+                    }
+                }
+            }
+        }
+    }
+    tbody{
+        tr{
+            &.checked, &:hover{
+                background-color: #f5fafe;
+                span{
+                    &#deleteNetwork{
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
+                    }
+                   &.block_ip{
+                        background: url('../img/stop.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -17px;
+                        }
+                    }
+                    &.unblock_ip{
+                        background: url('../img/start.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
+                    }
+                }
+            }
+            &:last-child{
+                td{
+                    border-bottom: 1px solid #e5e5e5;
+                }
+            }
+            td{
+                color: #1d1d1d;
+                font-size: 14px;
+                font-family: @regular;
+                padding-top: 0;
+                padding-bottom: 0;
+                vertical-align: middle;
+                height: 50px;
+                ul{
+                    &#hosts-list{
+                        margin-bottom: 0;
+                    }
+                }
+                span{
+                    &#deleteNetwork, &.block_ip, &.unblock_ip{
+                        top: 2px;
+                        left: 7px;
+                        width: 20px;
+                        height: 17px;
+                        font-size: 0;
+                        position: relative;
+                        display: inline-block;
+                        &:hover{
+                            cursor: pointer;
+                        }
+                    }
+                    &#deleteNetwork{
+                        height: 17px;
+                    }
+                    &.block_ip, &.unblock_ip{
+                        top: 4px;
+                    }
+                }
+            }
+            button{
+                margin: 0;
+                border: 0;
+                padding: 0;
+                color: #3197ee;
+                font-size: 14px;
+                text-decoration: none;
+                font-family: @regular;
+                background-color: transparent;
+                &:hover{
+                    cursor: pointer;
+                    text-decoration: none;
+                }
+            }
+        }
+    }
+}
+
 #networksList{
     #breadcrumbs{
         .control-group{

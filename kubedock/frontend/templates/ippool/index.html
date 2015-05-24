@@ -34,12 +34,12 @@
         <div class="container">
             <div class="col-sm-3 col-md-2 sidebar">
                 <ul class="nav nav-sidebar">
-                    <li class="general active"><a href="{{ url_for('ippool.index') }}">IP pool</a></li>
+                    <li class="general active">IP pool</li>
                 </ul>
             </div>
             <div id="details_content" class="col-sm-10">
                 <div id="tab-content">
-                    <table class="table table-bordered">
+                    <table class="table" id="ip_pool_table">
                     <thead><tr>
                         <th>Subnet</th>
                         <th>IP</th>
@@ -57,7 +57,7 @@
                 <div class="container breadcrumbs" id="breadcrumbs">
                     <ul class="breadcrumb">
                         <li>
-                            <a href="{{ url_for('ippool.index') }}">IP Pool</a>
+                            <div class="back">IP Pool</div>
                         </li>
                         <li class="active">Add subnet</li>
                     </ul>
@@ -76,7 +76,7 @@
                         </div>
                     </div>
                     <div class="buttons pull-right">
-                        <a class="gray" href="{{ url_for('ippool.index') }}">Cancel</a>
+                        <button class="gray back">Cancel</button>
                         <button id="network-add-btn" type="submit">Add</button>
                     </div>
                 </div>
@@ -85,31 +85,20 @@
     </script>
 
     <script type="text/template" id="network-item-template">
-        <% states = {
-            free: 'text-success',
-            busy: 'text-danger',
-            blocked: 'text-warning'
-        } %>
-
         <td>
             <%- network %>
-            <button id="deleteNetwork" class="btn btn-danger btn-xs pull-right">
-                <i class="glyphicon glyphicon-trash"></i>
-            </button>
+            <span id="deleteNetwork" class="pull-right"></span>
         </td>
         <td><ul id="hosts-list">
             <% _.each(allocation, function(itm){ %>
-            <li class="<%- states[itm[2]] %>">
+            <li>
                 <%- itm[0] %>: <%- itm[1] ? itm[1] : itm[2] %>
                 <% if(itm[2] == 'busy') { %>
-                <button class="btn btn-xs btn-link unbind_ip"
-                        data-ip="<%- itm[0] %>">unbind</button>
+                    <span class="unbind_ip" data-ip="<%- itm[0] %>">unbind</span>
                 <% } else if(itm[2] == 'blocked') { %>
-                <button class="btn btn-xs btn-link unblock_ip"
-                        data-ip="<%- itm[0] %>">unblock</button>
+                    <span class="unblock_ip" data-ip="<%- itm[0] %>"></span>
                 <% } else if(itm[2] == 'free') { %>
-                <button class="btn btn-xs btn-link block_ip"
-                        data-ip="<%- itm[0] %>">block</button>
+                    <span class="block_ip" data-ip="<%- itm[0] %>"></span>
                 <% } %>
             </li>
             <% }); %>

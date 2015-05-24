@@ -328,7 +328,7 @@ define(['pods_app/app',
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
-                    podName: App.WorkFlow.getCollection().fullCollection.models[0].get('name'),
+                    /*podName: model.get('name')*/
                 };
             },
 
@@ -556,7 +556,7 @@ define(['pods_app/app',
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
-                    podName: model.get('name'),
+                    /*podName: model.get('name'),*/
                 };
             },
 
@@ -709,17 +709,28 @@ define(['pods_app/app',
                         restartPolicy = k;
                     }
                 }
-                return {
-                    parentID: parentID,
-                    isPending: !this.containerModel.has('parentID'),
-                    image: this.containerModel.get('image'),
-                    name: this.containerModel.get('name'),
-                    state_repr: this.containerModel.get('state_repr'),
-                    kube_type: kubeType,
-                    restart_policy: restartPolicy,
-                    kubes: this.containerModel.get('kubes'),
-                    podName: App.WorkFlow.getCollection().fullCollection.models[0].get('name'),
-                };
+
+                var col = App.WorkFlow.getCollection(),
+                    containerModel = this.containerModel,
+                    obj = {
+                        parentID: parentID,
+                        isPending: !this.containerModel.has('parentID'),
+                        image: this.containerModel.get('image'),
+                        name: this.containerModel.get('name'),
+                        state_repr: this.containerModel.get('state_repr'),
+                        kube_type: kubeType,
+                        restart_policy: restartPolicy,
+                        kubes: this.containerModel.get('kubes'),
+                    }
+
+                if (col.length != 0){
+                    if ( containerModel.has('parentID') ){
+                        obj.podName = model.get('name');
+                        return obj;
+                    } else {
+                        return obj;
+                    }
+                }
             },
 
             onPortsClick: function(evt){
@@ -770,8 +781,7 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var model = App.WorkFlow.getCollection().fullCollection.get(
-                    this.model.get('parentID')),
+                var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     kubeType,
                     restartPolicy;
                 if (model !== undefined){

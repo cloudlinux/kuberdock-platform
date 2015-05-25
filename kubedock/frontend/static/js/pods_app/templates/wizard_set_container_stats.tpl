@@ -6,7 +6,7 @@
                     <a href="/#pods">Pods</a>
                 </li>
                 <li>
-                    <a href="/#pods/<%- parentID %>">podName</a>
+                    <a href="/#pods/<%- parentID %>"><%- podName %></a>
                 </li>
                 <li class="active"><%- image %> (<%- name %>)</li>
             </ul>

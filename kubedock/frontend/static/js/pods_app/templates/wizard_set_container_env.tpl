@@ -53,7 +53,7 @@
                     <a href="/#pods">Pods</a>
                 </li>
                 <li>
-                    <a href="/#pods/<%- parentID %>">podName</a>
+                    <a href="/#pods/<%- parentID %>"><%- podName %></a>
                 </li>
                 <li class="active"><%- image %> (<%- name %>)</li>
             </ul>
@@ -75,7 +75,7 @@
                     </li>
                 </ul>
             </div>
-            <div id="details_content" class="col-sm-10 no-padding configuration-general-tab">
+            <div id="details_content" class="col-sm-10 no-padding variables-tab">
                 <div class="status-line <%- state_repr %>">Status: <%- state_repr %>
                     <% if (state_repr == "running"){ %>
                         <span id="stopContainer">Stop</span>
@@ -100,18 +100,18 @@
                         </div>
                     </div>
                     <div class="col-xs-12 no-padding">
-                        <table id="data-table" class="table">
+                        <table id="data-table" class="table env-table" >
                             <thead>
                               <tr>
-                                <th class="text-center">Name</th>
-                                <th class="text-center">Value</th>
+                                <th>Name</th>
+                                <th>Value</th>
                               </tr>
                             </thead>
                             <tbody>
                             <% _.each(env, function(e){ %>
                               <tr>
-                                <td class="text-center"><span class="ieditable name"><%- e.name ? e.name : 'not set' %></span></td>
-                                <td class="text-center"><span class="ieditable value"><%- e.value ? e.value : 'not set' %></span></td>
+                                <td><span class="name"><%- e.name ? e.name : 'not set' %></span></td>
+                                <td><span class="value"><%- e.value ? e.value : 'not set' %></span></td>
                               </tr>
                             <% }) %>
                             </tbody>

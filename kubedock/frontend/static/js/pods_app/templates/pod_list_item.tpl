@@ -31,6 +31,7 @@
         <% } %>
     <% } else { %>
         <span class="stopped">stopped</span>
+        <span class="start-btn" title="Start <%- name %> pod">Start</span>
     <% } %>
 </td>
 <td>

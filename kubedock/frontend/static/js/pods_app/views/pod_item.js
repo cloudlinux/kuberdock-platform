@@ -93,8 +93,8 @@ define(['pods_app/app',
                     preloader = $('#page-preloader');
                 preloader.show();
                 evt.stopPropagation();
-                var model = App.WorkFlow.getCollection().fullCollection.get(
-                    this.model.get('parentID')),
+                console.log(App.WorkFlow.getCollection().length);
+                var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     _containers = [],
                     host = null;
                 _.each(model.get('dockers'), function(itm){
@@ -146,8 +146,8 @@ define(['pods_app/app',
             childViewContainer: "tbody",
 
             events: {
-                'click .stop-checked'      : 'stopItems',
-                'click .start-checked'     : 'startItems',
+                'click .stop-checked'  : 'stopItems',
+                'click .start-checked' : 'startItems',
             },
 
             command: function(cmd){

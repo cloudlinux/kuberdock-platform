@@ -153,7 +153,7 @@
                     <a href="/#pods">Pods</a>
                 </li>
                 <li>
-                    <a href="/#pods/<%- parentID %>">podName</a>
+                    <a href="/#pods/<%- parentID %>"><%- podName %></a>
                 </li>
                 <li class="active"><%- image %> (<%- name %>)</li>
             </ul>
@@ -200,21 +200,24 @@
                         </div>
                     </div>
                     <div class="col-xs-12 no-padding">
-                        <table id="ports-table" class="table">
-                            <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Published</th></tr></thead>
-                            <tbody>
-                            <% _.each(ports, function(p){ %>
-                                <tr>
-                                    <td class="containerPort"><%- p.containerPort ? p.containerPort : 'none'%></td>
-                                    <td class="containerProtocol"><%- p.protocol ? p.protocol : 'none' %></td>
-                                    <td class="hostPort"><%- p.hostPort ? p.hostPort : 'none'%></td>
-                                    <td>
-                                        yes
-                                    </td>
-                                </tr>
-                            <% }) %>
-                            </tbody>
-                        </table>
+                        <% if (ports.length > 0) { %>
+                            <table id="ports-table" class="table">
+                                <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Published</th></tr></thead>
+                                <tbody>
+                                <% _.each(ports, function(p){ %>
+                                    <tr>
+                                        <td class="containerPort"><%- p.containerPort ? p.containerPort : 'none'%></td>
+                                        <td class="containerProtocol"><%- p.protocol ? p.protocol : 'none' %></td>
+                                        <td class="hostPort"><%- p.hostPort ? p.hostPort : 'none'%></td>
+                                        <td>
+                                            yes
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                                </tbody>
+                            </table>
+                        <% } %>
+                        <% if (volumeMounts.length > 0) { %>
                         <div class="volumes">
                             <label>Volumes:</label>
                             <div class="row">
@@ -230,23 +233,25 @@
                                         <% _.each(volumeMounts, function(v){ %>
                                             <tr>
                                                 <td>
-                                                    <span class="ieditable mountPath">
+                                                    <span>
                                                         <%- v.mountPath %>
                                                     </span>
                                                 </td>
                                                 <% if (v.readOnly){ %>
                                                 <td>
-                                                    <label class="custom">
+                                                    no
+                                                    <!-- <label class="custom">
                                                         <input checked type="checkbox"/>
                                                         <span></span>
-                                                    </label>
+                                                    </label> -->
                                                 </td>
                                                 <% } else { %>
                                                 <td>
-                                                    <label class="custom">
+                                                    yes
+                                                    <!-- <label class="custom">
                                                         <input type="checkbox"/>
                                                         <span></span>
-                                                    </label>
+                                                    </label> -->
                                                 </td>
                                                 <% } %>
                                             </tr>
@@ -256,6 +261,7 @@
                                 </div>
                             </div>
                         </div>
+                        <% } %>
                     </div>
                 </div>
             </div>

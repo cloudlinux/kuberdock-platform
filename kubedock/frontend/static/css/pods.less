@@ -1,5 +1,5 @@
 /* pod-main */
-#podlist-table, #imagelist-table, #ports-table, #volumes-table, .variables-table, #env-table{
+#podlist-table, #imagelist-table, #ports-table, #volumes-table, .variables-table, #env-table, .env-table{
     thead{
         background-color: transparent;
         &.min-opacity{
@@ -141,7 +141,7 @@
                     }
                 }
                 span{
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.terminated{
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
                         position: relative;
                         padding-left: 22px;
                         &:before{
@@ -172,7 +172,7 @@
                             background-color: #f0d765;
                         }
                     }
-                    &.terminated{
+                    &.termination{
                         &:before{
                             border: 1px solid #7c7c7c;
                             background-color: #bbbfc3;
@@ -1073,13 +1073,18 @@
             }
         }
         &.variables-tab{
-            .variables-table{
+            .variables-table, .env-table{
                 width: 97%;
-                margin-top: 27px;
                 margin-left: 3%;
             }
+            .variables-table{
+                margin-top: 27px;
+            }
+            .env-table{
+                margin-top: 0;
+            }
         }
-        &.configuration-general-tab{
+        &.configuration-general-tab, &.variables-tab{
             #tab-content{
                 .clearfix;
                 .col-xs-10{
@@ -1090,7 +1095,7 @@
                 }
             }
         }
-        &.logs-tab,  &.monitoring-tab,  &.timelines-tab, &.configuration-general-tab{
+        &.logs-tab,  &.monitoring-tab,  &.timelines-tab, &.configuration-general-tab, &.variables-tab{
              #tab-content{
                 .servers{
                     position: relative;

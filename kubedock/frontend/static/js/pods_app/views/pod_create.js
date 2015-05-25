@@ -321,15 +321,25 @@ define(['pods_app/app',
                         restartPolicy = k;
                     }
                 }
-                return {
-                    isPending: !this.model.has('parentID'),
-                    hasPersistent: this.model.has('persistentDrives'),
-                    showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
-                    ip: this.model.get('ip'),
-                    kube_type: kubeType,
-                    restart_policy: restartPolicy,
-                    /*podName: model.get('name')*/
-                };
+
+                var col = App.WorkFlow.getCollection(),
+                    obj = {
+                        isPending: !this.model.has('parentID'),
+                        hasPersistent: this.model.has('persistentDrives'),
+                        showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
+                        ip: this.model.get('ip'),
+                        kube_type: kubeType,
+                        restart_policy: restartPolicy,
+                    };
+
+                if (col.length != 0){
+                    if ( this.model.has('parentID') ){
+                        obj.podName = model.get('name');
+                        return obj;
+                    } else {
+                        return obj;
+                    }
+                }
             },
 
             initialize: function(options){
@@ -549,15 +559,25 @@ define(['pods_app/app',
                         restartPolicy = k;
                     }
                 }
-                return {
-                    isPending: !this.model.has('parentID'),
-                    hasPersistent: this.model.has('persistentDrives'),
-                    showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
-                    ip: this.model.get('ip'),
-                    kube_type: kubeType,
-                    restart_policy: restartPolicy,
-                    /*podName: model.get('name'),*/
-                };
+
+                var col = App.WorkFlow.getCollection(),
+                    obj = {
+                        isPending: !this.model.has('parentID'),
+                        hasPersistent: this.model.has('persistentDrives'),
+                        showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
+                        ip: this.model.get('ip'),
+                        kube_type: kubeType,
+                        restart_policy: restartPolicy,
+                    };
+
+                if (col.length != 0){
+                    if ( this.model.has('parentID') ){
+                        obj.podName = model.get('name');
+                        return obj;
+                    } else {
+                        return obj;
+                    }
+                }
             },
 
             triggers: {

@@ -1,6 +1,6 @@
 import json
 from flask import Blueprint, render_template
-from flask.ext.login import login_required
+from flask.ext.login import login_required, current_user
 
 from ..api import settings as api_settings
 
@@ -17,6 +17,7 @@ def index(**kwargs):
     events_keys, notifications, events = api_settings.get_notifications()
     context = {'permissions': json.dumps(permissions),
                'roles': json.dumps(roles),
+               'this_user': json.dumps(current_user.to_dict(for_profile=True)),
                'notifications': json.dumps(notifications),
                'events_keys': json.dumps(events_keys),
                'events': events}

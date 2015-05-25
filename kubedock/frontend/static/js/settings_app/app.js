@@ -9,6 +9,10 @@ define(['marionette', 'utils'],
 
     SettingsApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
+        Data.CurrentUserModel = utils.BaseModel.extend({
+            url: function(){ return '/api/users/editself' }
+        });
+
         Data.PermissionModel = utils.BaseModel.extend({
             urlRoot: '/api/settings/permissions'
         });
@@ -94,7 +98,7 @@ define(['marionette', 'utils'],
                 'as_html'    : 'input#id_as_html',
                 'event_keys' : '#event_keys',
                 'save'       : 'button#template-add-btn',
-                'back'       : 'button#template-back-btn',
+                'back'       : 'button#template-back-btn'
             },
 
             events: {
@@ -190,6 +194,67 @@ define(['marionette', 'utils'],
             childView: Views.NotificationItemView
         });
 
+        Views.ProfileEditView = Backbone.Marionette.ItemView.extend({
+            template: '#user-edit-template',
+
+            ui: {
+                'first_name'        : 'input#firstname',
+                'last_name'         : 'input#lastname',
+                'middle_initials'   : 'input#middle_initials',
+                'password'          : 'input#password',
+                'password_again'    : 'input#password-again',
+                'email'             : 'input#email',
+                'save'              : 'button#template-save-btn',
+                'back'              : 'button#template-back-btn'
+            },
+
+            events: {
+                'click @ui.save'         : 'onSave',
+                'click @ui.back'         : 'back'
+            },
+
+            onRender: function(){
+                this.ui.first_name.val(this.model.get('first_name'));
+                this.ui.last_name.val(this.model.get('last_name'));
+                this.ui.middle_initials.val(this.model.get('middle_initials'));
+                this.ui.email.val(this.model.get('email'));
+            },
+
+            back: function(){
+                App.router.navigate('/', {trigger: true});
+            },
+
+            onSave: function(){
+                var data = {
+                    'first_name': this.ui.first_name.val(),
+                    'last_name': this.ui.last_name.val(),
+                    'middle_initials': this.ui.middle_initials.val(),
+                    'email': this.ui.email.val()
+                };
+
+                pass1 = this.ui.password.val();
+                pass2 = this.ui.password_again.val();
+                // temp validation
+                if (pass1 != '') {
+                    if (pass1 != pass2) {
+                        alert("Passwords are not equal");
+                        return
+                    }
+                    data.password = pass1
+                }
+
+                this.model.set(data);
+
+                this.model.save(undefined, {
+                    wait: true,
+                    success: function(){
+                        App.router.navigate('', {trigger: true})
+                    }
+                });
+            }
+
+        });
+
         Views.PermissionItemView = Marionette.ItemView.extend({
             template: '#permission-item-template',
             tagName: 'tr',
@@ -254,11 +319,16 @@ define(['marionette', 'utils'],
             },
             events: {
                 'click #general-btn': 'redirectToGeneral',
+                'click #profile-btn': 'redirectToProfile',
                 'click #permissions-btn': 'redirectToPermissions',
                 'click #notifications-btn': 'redirectToNotifications'
             },
             redirectToGeneral: function(evt){
                 App.router.navigate('/', {trigger: true});
+                return false;
+            },
+            redirectToProfile: function(evt){
+                App.router.navigate('/profile/', {trigger: true});
                 return false;
             },
             redirectToPermissions: function(evt){
@@ -327,6 +397,17 @@ define(['marionette', 'utils'],
                 App.contents.show(layout_view);
             },
 
+            editProfile: function(){
+                var layout_view = new App.Views.SettingsLayout();
+                var profile_edit_view = new App.Views.ProfileEditView({
+                    model: SettingsApp.Data.this_user
+                });
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(profile_edit_view);
+                });
+                App.contents.show(layout_view);
+            },
+
             showGeneral: function(){
                 var layout_view = new App.Views.SettingsLayout();
                 var general_view = new App.Views.GeneralView();
@@ -347,7 +428,8 @@ define(['marionette', 'utils'],
                     'notifications/': 'showNotifications',
                     'notifications/add/': 'addNotifications',
                     'notifications/edit/:id/': 'editNotifications',
-                    'general/': 'showGeneral'
+                    'general/': 'showGeneral',
+                    'profile/': 'editProfile'
                 }
             });
         });
@@ -356,7 +438,7 @@ define(['marionette', 'utils'],
 
     SettingsApp.on('start', function(){
         if (Backbone.history) {
-            Backbone.history.start({root: '/settings', pushState: true});
+            Backbone.history.start({root: '/settings/', pushState: true});
         }
     });
 

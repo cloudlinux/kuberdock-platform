@@ -39,6 +39,10 @@ class User(BaseModelMixin, UserMixin, db.Model):
     activities = db.relationship('UserActivity', back_populates="user")
     settings = db.Column(db.Text)
 
+    # This fields(+password) can be seen and edited by user himself
+    # Admins can edit them too
+    profile_fields = ['email', 'first_name', 'last_name', 'middle_initials']
+
     @classmethod
     def get_online_collection(cls, to_json=None):
         user_ids = get_online_users()
@@ -104,43 +108,71 @@ class User(BaseModelMixin, UserMixin, db.Model):
         self.settings = json.dumps(data)
         self.save()
 
-    def to_dict(self):
-        valid = ['id', 'username', 'email', 'first_name', 'last_name',
-                 'middle_initials', 'active', 'suspended']
+    def to_dict(self, for_profile=False, full=False):
+        if for_profile and full:
+            raise RuntimeWarning('Serialize user for profile or full, not both')
+        if for_profile:
+            valid = self.profile_fields + ['id']
+            data = dict([(k, v) for k, v in vars(self).items() if k in valid])
+            return data
+        valid = self.profile_fields + ['id', 'username', 'active', 'suspended']
         data = dict([(k, v) for k, v in vars(self).items() if k in valid])
         data['rolename'] = self.role.rolename
         data['package'] = self.package.name if self.package else None
+        if full:
+            # add all extra fields
+            last_activity = self.last_activity
+            last_login = self.last_login
+            pods = self.pods_to_dict()
+            containers_count = sum([p['containers_count'] for p in pods])
+            data['pods'] = pods
+            data['pods_count'] = len(pods)
+            data['containers_count'] = containers_count
+            data['package_info'] = self.package_info()
+            data['join_date'] = self.join_date.isoformat(sep=' ')[:19]
+            data['last_activity'] = last_activity.isoformat(sep=' ')[:19] \
+                                    if last_activity else ''
+            data['last_login'] = last_login.isoformat(sep=' ')[:19] \
+                                    if last_login else None
         return data
 
-    def to_full_dict(self, include=None, exclude=None):
-        last_activity = self.last_activity
-        package = self.package.name if self.package else None
-        last_login = self.last_login
-        pods = self.pods_to_dict()
-        containers_count = sum([p['containers_count'] for p in pods])
-        data = dict(
-            id=self.id,
-            username=self.username,
-            email=self.email,
-            active=self.active,
-            first_name=self.first_name,
-            last_name=self.last_name,
-            middle_initials=self.middle_initials,
-            suspended=self.suspended,
-            rolename=self.role.rolename,
-            join_date=self.join_date.isoformat(sep=' ')[:19],
-            package=package,
-            pods=pods,
-            containers_count=containers_count,
-            pods_count=len(pods),
-            package_info=self.package_info(),
-            last_activity=last_activity.isoformat(sep=' ')[:19] \
-                if last_activity else '',
-            last_login=last_login.isoformat(sep=' ')[:19] \
-                if last_login else None
-        )
+    # def to_dict(self):
+    #     valid = ['id', 'username', 'email', 'first_name', 'last_name',
+    #              'middle_initials', 'active', 'suspended']
+    #     data = dict([(k, v) for k, v in vars(self).items() if k in valid])
+    #     data['rolename'] = self.role.rolename
+    #     data['package'] = self.package.name if self.package else None
+    #     return data
 
-        return data
+    # def to_full_dict(self, include=None, exclude=None):
+    #     last_activity = self.last_activity
+    #     package = self.package.name if self.package else None
+    #     last_login = self.last_login
+    #     pods = self.pods_to_dict()
+    #     containers_count = sum([p['containers_count'] for p in pods])
+    #     data = dict(
+    #         id=self.id,
+    #         username=self.username,
+    #         email=self.email,
+    #         active=self.active,
+    #         first_name=self.first_name,
+    #         last_name=self.last_name,
+    #         middle_initials=self.middle_initials,
+    #         suspended=self.suspended,
+    #         rolename=self.role.rolename,
+    #         join_date=self.join_date.isoformat(sep=' ')[:19],
+    #         package=package,
+    #         pods=pods,
+    #         containers_count=containers_count,
+    #         pods_count=len(pods),
+    #         package_info=self.package_info(),
+    #         last_activity=last_activity.isoformat(sep=' ')[:19] \
+    #             if last_activity else '',
+    #         last_login=last_login.isoformat(sep=' ')[:19] \
+    #             if last_login else None
+    #     )
+    #
+    #     return data
 
     def history_logged_in(self):
         ua = UserActivity.create(action=UserActivity.LOGIN, user_id=self.id)
@@ -177,12 +209,13 @@ class User(BaseModelMixin, UserMixin, db.Model):
             period=pkg.period
         )
 
-    def update(self, data):
+    def update(self, data, for_profile=False):
+        valid = self.profile_fields + ['password']
+        if not for_profile:
+            valid = valid + ['active', 'suspended', 'role', 'permission',
+                             'package', 'join_date', 'settings']
         for key, value in data.items():
-            if key in ('username', 'email', 'password', 'first_name',
-                       'last_name', 'middle_initials', 'active', 'suspended',
-                       'role', 'permission', 'package', 'join_date',
-                       'settings'):
+            if key in valid:
                 setattr(self, key, value)
 
     def __repr__(self):

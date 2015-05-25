@@ -1,6 +1,7 @@
 requirejs.config({
     waitSeconds: 200,
     baseUrl: '/static/js',
+    urlArgs: "bust=" + (new Date()).getTime(),
     paths: {
         backbone: 'lib/backbone',
         jquery: 'lib/jquery',
@@ -68,5 +69,6 @@ require(['jquery', 'settings_app/app', 'moment', 'notify', 'jquery-ui', 'bootstr
 function(jQuery, SettingsApp, moment){
     SettingsApp.Data.permissions = new SettingsApp.Data.PermissionsCollection(permissions);
     SettingsApp.Data.notifications = new SettingsApp.Data.NotificationsCollection(notifications);
+    SettingsApp.Data.this_user = new SettingsApp.Data.CurrentUserModel(this_user);
     SettingsApp.start();
 });

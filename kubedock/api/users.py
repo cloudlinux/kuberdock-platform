@@ -8,7 +8,7 @@ from ..billing import Package
 from ..core import db
 from ..rbac import check_permission
 from ..rbac.models import Role
-from ..utils import login_required_or_basic
+from ..utils import login_required_or_basic, KubeUtils
 from ..users.models import User, UserActivity
 from ..users.signals import (
     user_logged_in_by_another, user_logged_out_by_another)
@@ -45,7 +45,7 @@ def get_users_collection(username=None):
 
 @check_permission('get', 'users')
 def get_full_users_collection():
-    return [u.to_full_dict() for u in User.all()]
+    return [u.to_dict(full=True) for u in User.all()]
 
 
 @check_permission('get', 'users')
@@ -249,6 +249,20 @@ def put_item(user_id):
     u.save()
     return jsonify({'status': 'OK'})
 
+
+@users.route('/editself', methods=['PUT', 'PATCH'])
+@login_required_or_basic
+def edit_self():
+    user = KubeUtils._get_current_user()
+    db_user = db.session.query(User).get(user.id)
+    if db_user is None:
+        raise APIError("User {0} doesn't exist".format(user.id))
+    data = request.json
+    if data is None:
+        data = request.form.to_dict()
+    db_user.update(data, for_profile=True)
+    db_user.save()
+    return jsonify({'status': 'OK'})
 
 
 @users.route('/<user_id>', methods=['DELETE'])

@@ -909,12 +909,20 @@ define(['pods_app/app',
             tagName: 'div',
 
             templateHelpers: function(){
+                var restart_policy = this.model.get('restartPolicy'),
+                    restartPolicies = {'always': 'Always', 'never': 'Never', 'onFailure': 'On Failure'},
+                    restartPolicy;
+                for(var k in restart_policy){
+                    restartPolicy = k;
+                }
                 return {
                     cpu_data: this.cpu_data,
                     ram_data: this.ram_data,
                     container_price: this.container_price,
                     total_price: this.total_price,
-                    kube_types: kubeTypes
+                    kube_types: kubeTypes,
+                    restart_policies: restartPolicies,
+                    restart_policy: restartPolicy,
                 };
             },
 

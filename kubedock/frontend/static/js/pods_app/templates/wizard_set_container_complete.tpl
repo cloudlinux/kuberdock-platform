@@ -31,9 +31,9 @@
                     <% if (containers.length > 1){ %>
                         <div class="col-md-11">
                             <select class="restart-policy" disabled>
-                                <option selected="selected" value="always">Always</option>
-                                <option value="never">Never</option>
-                                <option value="onFailure">On Failure</option>
+                                <% _.each(restart_policies, function(value, key) {%>
+                                <option value="<%- key %>"<% key === restart_policy ? ' selected' : '' %>><%- value %></option>
+                                <% }) %>
                             </select>
                         </div>
                         <div class="col-md-1 no-padding edit-policy"></div>
@@ -41,9 +41,9 @@
                     <% } else { %>
                          <div class="col-md-12">
                             <select class="restart-policy">
-                                <option selected="selected" value="always">Always</option>
-                                <option value="never">Never</option>
-                                <option value="onFailure">On Failure</option>
+                                <% _.each(restart_policies, function(value, key) {%>
+                                <option value="<%- key %>"><%- value %></option>
+                                <% }) %>
                             </select>
                         </div>
                     <% } %>
@@ -53,9 +53,9 @@
                     <label class="col-xs-12">Type</label>
                     <div class="col-xs-11">
                         <select class="kube_type" id="extra-options" disabled>
-                            <option value="Available kube types" disabled selected>Available kube types</option>
-                            <% _.each(kube_types, function(kube_type){ %>
-                            <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
+                            <option value="Available kube types" disabled>Available kube types</option>
+                            <% _.each(kube_types, function(k_type){ %>
+                            <option value="<%- k_type.id %>"<% k_type.id === kube_type ? ' selected' : '' %>><%- k_type.name %></option>
                             <% }) %>
                         </select>
                     </div>

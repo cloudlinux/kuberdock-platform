@@ -28,24 +28,16 @@
                     <div class="col-xs-12">
                         <label>Restart policy</label>
                     </div>
+                    <div class="col-md-11">
+                        <select class="restart-policy"<%= containers.length > 1 ? ' disabled' : '' %>>
+                            <% _.each(restart_policies, function(value, key) {%>
+                            <option value="<%- key %>"<%= key === restart_policy ? ' selected' : '' %>><%- value %></option>
+                            <% }) %>
+                        </select>
+                    </div>
                     <% if (containers.length > 1){ %>
-                        <div class="col-md-11">
-                            <select class="restart-policy" disabled>
-                                <% _.each(restart_policies, function(value, key) {%>
-                                <option value="<%- key %>"<% key === restart_policy ? ' selected' : '' %>><%- value %></option>
-                                <% }) %>
-                            </select>
-                        </div>
-                        <div class="col-md-1 no-padding edit-policy"></div>
-                        <div class="col-xs-12 edit-polycy-description">Type will apply for each container</div>
-                    <% } else { %>
-                         <div class="col-md-12">
-                            <select class="restart-policy">
-                                <% _.each(restart_policies, function(value, key) {%>
-                                <option value="<%- key %>"><%- value %></option>
-                                <% }) %>
-                            </select>
-                        </div>
+                    <div class="col-md-1 no-padding edit-policy"></div>
+                    <div class="col-xs-12 edit-polycy-description">Type will apply for each container</div>
                     <% } %>
                 </div>
                 <div class="row kube-type-wrapper">
@@ -55,7 +47,7 @@
                         <select class="kube_type" id="extra-options" disabled>
                             <option value="Available kube types" disabled>Available kube types</option>
                             <% _.each(kube_types, function(k_type){ %>
-                            <option value="<%- k_type.id %>"<% k_type.id === kube_type ? ' selected' : '' %>><%- k_type.name %></option>
+                            <option value="<%- k_type.id %>"<%= k_type.id === kube_type ? ' selected' : '' %>><%- k_type.name %></option>
                             <% }) %>
                         </select>
                     </div>

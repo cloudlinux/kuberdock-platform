@@ -309,7 +309,8 @@ define(['pods_app/app',
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     kubeType,
-                    restartPolicy;
+                    restartPolicy,
+                    pod_name;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -320,6 +321,7 @@ define(['pods_app/app',
                     for(var k in restart_policy){
                         restartPolicy = k;
                     }
+                    pod_name = model.get('name');
                 }
 
                 return{
@@ -329,7 +331,7 @@ define(['pods_app/app',
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
-/*                    podName: model.get('name')*/
+                    podName: pod_name,
                 }
             },
 
@@ -538,7 +540,8 @@ define(['pods_app/app',
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     kubeType,
-                    restartPolicy;
+                    restartPolicy,
+                    pod_name;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -549,6 +552,7 @@ define(['pods_app/app',
                     for(var k in restart_policy){
                         restartPolicy = k;
                     }
+                    pod_name = model.get('name');
                 }
 
                 return{
@@ -558,7 +562,7 @@ define(['pods_app/app',
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
-                    /*podName: model.get('name')*/
+                    podName: pod_name,
                 }
             },
 
@@ -699,7 +703,8 @@ define(['pods_app/app',
                 var parentID = this.containerModel.get('parentID'),
                     model = App.WorkFlow.getCollection().fullCollection.get(parentID),
                     kubeType,
-                    restartPolicy;
+                    restartPolicy,
+                    pod_name;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -710,6 +715,7 @@ define(['pods_app/app',
                     for(var k in restart_policy){
                         restartPolicy = k;
                     }
+                    pod_name = model.get('name');
                 }
 
                 return{
@@ -721,7 +727,7 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
                     kubes: this.containerModel.get('kubes'),
-                    /*podName: model.get('name')*/
+                    podName: pod_name,
                 }
             },
 

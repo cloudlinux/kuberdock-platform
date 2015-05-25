@@ -322,23 +322,14 @@ define(['pods_app/app',
                     }
                 }
 
-                var col = App.WorkFlow.getCollection(),
-                    obj = {
-                        isPending: !this.model.has('parentID'),
-                        hasPersistent: this.model.has('persistentDrives'),
-                        showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
-                        ip: this.model.get('ip'),
-                        kube_type: kubeType,
-                        restart_policy: restartPolicy,
-                    };
-
-                if (col.length != 0){
-                    if ( this.model.has('parentID') ){
-                        obj.podName = model.get('name');
-                        return obj;
-                    } else {
-                        return obj;
-                    }
+                return{
+                    isPending: !this.model.has('parentID'),
+                    hasPersistent: this.model.has('persistentDrives'),
+                    showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
+                    ip: this.model.get('ip'),
+                    kube_type: kubeType,
+                    restart_policy: restartPolicy,
+/*                    podName: model.get('name')*/
                 }
             },
 
@@ -560,23 +551,14 @@ define(['pods_app/app',
                     }
                 }
 
-                var col = App.WorkFlow.getCollection(),
-                    obj = {
-                        isPending: !this.model.has('parentID'),
-                        hasPersistent: this.model.has('persistentDrives'),
-                        showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
-                        ip: this.model.get('ip'),
-                        kube_type: kubeType,
-                        restart_policy: restartPolicy,
-                    };
-
-                if (col.length != 0){
-                    if ( this.model.has('parentID') ){
-                        obj.podName = model.get('name');
-                        return obj;
-                    } else {
-                        return obj;
-                    }
+                return{
+                    isPending: !this.model.has('parentID'),
+                    hasPersistent: this.model.has('persistentDrives'),
+                    showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
+                    ip: this.model.get('ip'),
+                    kube_type: kubeType,
+                    restart_policy: restartPolicy,
+                    /*podName: model.get('name')*/
                 }
             },
 
@@ -730,26 +712,16 @@ define(['pods_app/app',
                     }
                 }
 
-                var col = App.WorkFlow.getCollection(),
-                    containerModel = this.containerModel,
-                    obj = {
-                        parentID: parentID,
-                        isPending: !this.containerModel.has('parentID'),
-                        image: this.containerModel.get('image'),
-                        name: this.containerModel.get('name'),
-                        state_repr: this.containerModel.get('state_repr'),
-                        kube_type: kubeType,
-                        restart_policy: restartPolicy,
-                        kubes: this.containerModel.get('kubes'),
-                    }
-
-                if (col.length != 0){
-                    if ( containerModel.has('parentID') ){
-                        obj.podName = model.get('name');
-                        return obj;
-                    } else {
-                        return obj;
-                    }
+                return{
+                    parentID: parentID,
+                    isPending: !this.containerModel.has('parentID'),
+                    image: this.containerModel.get('image'),
+                    name: this.containerModel.get('name'),
+                    state_repr: this.containerModel.get('state_repr'),
+                    kube_type: kubeType,
+                    restart_policy: restartPolicy,
+                    kubes: this.containerModel.get('kubes'),
+                    /*podName: model.get('name')*/
                 }
             },
 

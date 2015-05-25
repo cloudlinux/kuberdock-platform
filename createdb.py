@@ -29,6 +29,7 @@ def get_dns_pod_config(uuid, domain='kuberdock', ip='10.254.0.10'):
         "volumes": [],
         "kube_type": 0,
         "id": uuid,
+        "service": 'kuberdock-dns',
         "containers": [
             {
                 "terminationMessagePath": None,

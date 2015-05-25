@@ -109,6 +109,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 'sessionAffinity': 'None'   # may be ClientIP is better
             }
         }
+        portal_ip = getattr(pod, 'portalIP', None)
+        if portal_ip:
+            conf['spec']['portalIP'] = portal_ip
         return self._post(['services'], json.dumps(conf), rest=True, use_v3=True)
 
     def _start_cluster(self):

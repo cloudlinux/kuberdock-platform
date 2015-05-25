@@ -25,11 +25,18 @@ define(['marionette', 'utils'],
             template: '#network-item-template',
             tagName: 'tr',
 
+            ui: {
+                deleteNetwork : '#deleteNetwork',
+                block_ip      : '.block_ip',
+                unblock_ip    : '.unblock_ip',
+                unbind_ip     : '.unbind_ip'
+            },
+
             events: {
-                'click button#deleteNetwork': 'deleteNetwork_btn',
-                'click button.block_ip': 'blockIP',
-                'click button.unblock_ip': 'unblockIP',
-                'click button.unbind_ip': 'unbindIP'
+                'click @ui.deleteNetwork' : 'deleteNetwork_btn',
+                'click @ui.block_ip'      : 'blockIP',
+                'click @ui.unblock_ip'    : 'unblockIP',
+                'click @ui.unbind_ip'     : 'unbindIP'
             },
 
             deleteNetwork_btn: function(){
@@ -125,12 +132,15 @@ define(['marionette', 'utils'],
             tagName: 'div',
 
             ui: {
-                'network': 'input#network',
-                'autoblock': '[name="autoblock"]'
+                'network'    : 'input#network',
+                'autoblock'  : '[name="autoblock"]',
+                'add_button' : '#network-add-btn',
+                'back'       : '.back',
             },
 
             events: {
-                'click button#network-add-btn': 'onSave'
+                'click @ui.add_button' : 'onSave',
+                'click @ui.back'       : 'back'
             },
 
             onRender: function(){
@@ -182,6 +192,10 @@ define(['marionette', 'utils'],
                         App.router.navigate('/', {trigger: true})
                     }
                 });
+            },
+
+            back: function(){
+                App.router.navigate('/', {trigger: true});
             }
 
         });

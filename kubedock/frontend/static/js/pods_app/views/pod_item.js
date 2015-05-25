@@ -21,11 +21,11 @@ define(['pods_app/app',
 
         function localizeDatetime(dt, tz){
             try {
-                return moment(dt).tz(tz).format('YYYY-MM-DD hh:mm:ss');
+                return moment(dt).tz(tz).format('hh:mm:ss YYYY-MM-DD');
             } catch (e){
                 console.log(e);
             }
-            return dt;
+            return moment(dt).format('hh:mm:ss YYYY-MM-DD');
         }
 
         Item.PodItemLayout = Backbone.Marionette.LayoutView.extend({
@@ -93,7 +93,6 @@ define(['pods_app/app',
                     preloader = $('#page-preloader');
                 preloader.show();
                 evt.stopPropagation();
-                console.log(App.WorkFlow.getCollection().length);
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     _containers = [],
                     host = null;

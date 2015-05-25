@@ -11,12 +11,9 @@
         -->
         <th data-column="4" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
         <th data-column="5" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube quantity<b class="caret"></b></div></th>
-        <!--
         <th data-column="6" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;">
             <div class="tablesorter-header-inner">Deployed<b class="caret"></b></div>
         </th>
-        -->
-
     </tr>
 </thead>
 <tbody></tbody>

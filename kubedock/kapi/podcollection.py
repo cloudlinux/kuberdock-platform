@@ -19,7 +19,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def add(self, params):
         namespace = '{0}-{1}-pods'.format(
             self.owner.username, params['name']).lower()
-        self._make_namespace(namespace)
         params['namespace'] = namespace
         pod = Pod.create(params)
         pod.compose_persistent(self.owner.username)
@@ -88,22 +87,19 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             self._raise_if_failure(rv, "Could not remove a service")
         if hasattr(pod, 'public_ip'):
             pod._free_ip()
+        rv = self._drop_namespace(pod.namespace)
+        current_app.logger.debug(rv)
         self._mark_pod_as_deleted(pod_id)
 
     def _make_namespace(self, namespace):
         config = {
             "kind": "Namespace",
             "apiVersion": 'v1beta3',
-            "id": namespace,
-            "metadata": {"name": namespace},
-            "spec": {},
-            "status": {},
-            "labels": {"name": namespace}
-        }
+            "metadata": {"name": namespace}}
         data = self._get_namespace(namespace)
         if data is None:
             rv = self._post(['namespaces'], json.dumps(config), rest=True, use_v3=True, ns=False)
-            print rv
+            current_app.logger.debug(rv)
 
     def _get_namespace(self, namespace):
         data = self._get(use_v3=True, ns=namespace)
@@ -122,6 +118,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if name.startswith(self.owner.username + '-') and name.endswith('-pods'):
                 namespaces.append(name)
         return namespaces
+
+    def _drop_namespace(self, namespace):
+        rv = self._del(['namespaces', namespace], use_v3=True, ns=False)
+        self._raise_if_failure(rv, "Cannot delete namespace '{}'".format(namespace))
+        return rv
 
     def _get_replicas(self, name=None):
         replicas = []
@@ -241,12 +242,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _start_pod(self, pod, data=None):
         if pod.cluster:
             return  # we do not support replicas now
+        self._make_namespace(pod.namespace)
         if not pod.get_config('service'):
             service_rv = self._run_service(pod)
             self._raise_if_failure(service_rv, "Could not start a service")
             self._update_pod_config(pod, **{'service': service_rv['metadata']['name']})
         config = pod.prepare()
-        current_app.logger.debug(pod.namespace)
         rv = self._post(['pods'], json.dumps(config), rest=True, use_v3=True, ns=pod.namespace)
         current_app.logger.debug(rv)
         self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))

@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 46%{?dist}.cloudlinux
+Release: 47%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,24 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Tue May 26 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-47
+- Fix breadcrumb information in containers tabs page; AC-398: Rename users statuses; AC-254: Add style to user activity page
+- Fix container variables page
+- removed temporary persistendDrives data from pod model on submit
+- AC-394: Fix adding the same container to the pod
+- AC-249: Add design to IPPol page 1 part; Fix return podeName in container monitoring tab
+- Fix design in  variables tab in container page, Add podname to all tabs, hide empty tables from container page
+- AC-394 part 2: Set kube type and restart policy based on the first selection
+- Fix action on ippool page; AC-401
+- Remove bug (not found parentID) with create container steps
+- AC-414: Show pod name in all container tabs
+- AC-402 Page for user to edit his profile
+- AC-394 fix: Set propertly kube type and restart policy based on the first selection
+- AC-404 Fix portal ips for kuberdock pods
+- Fix design bugs AC-403, Ac-409, AC-4010, AC-411
+- AWS deploy fixes
+- Moved pods API to namespaces and v1beta3
+
 * Thu May 21 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-46
 - AC-205: Create numbers of containers in one pod
 - AC-260: Add action on delete node

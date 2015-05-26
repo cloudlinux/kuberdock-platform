@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 48%{?dist}.cloudlinux
+Release: 49%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,9 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Tue May 26 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-49
+- Changed image attribute 'command' to 'args'
+
 * Tue May 26 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-48
 - Moved '_parse_cmd_string' method to Pod class
 

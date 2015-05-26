@@ -176,7 +176,6 @@ body{
             .clearfix;
             .breadcrumb{
                 float: left;
-                line-height: 26px;
                 margin-left: 10px;
                 .border-radius(0);
                 padding: 0;
@@ -185,7 +184,7 @@ body{
                 li{
                     font-size: 16px;
                     font-family: @regular;
-                    line-height: 32px;
+                    line-height: 34px;
                     color: #ffffff;
                     .editable{
                         color: #ffffff;
@@ -260,9 +259,6 @@ body{
                 float: right;
                 height: 34px;
                 position: relative;
-                #add_node, #nav-search, #add_user, #add_pod, #create_network{
-                    float: left;
-                }
                 a{
                     &:focus{
                         text-decoration: none;
@@ -278,6 +274,7 @@ body{
                         font-family: @regular;
                         margin-right: 25px;
                         padding: 0 0 0 38px;
+                        display: inline-block;
                         &:before{
                             position: absolute;
                             top: 8px;
@@ -368,6 +365,12 @@ body{
                             background: url('../img/delete-node.png') 0 0 no-repeat;
                         }
                     }
+                    &#redeploy_node{
+                        padding: 0 0 0 33px;
+                        &:before{
+                            background: url('../img/redeploy.png') 0 0 no-repeat;
+                        }
+                    }
                 }
                 #nav-search{
                     float: right;
@@ -441,6 +444,7 @@ body{
                 }
                 &.general{
                     &:before{
+                        top: 2px;
                         background: url('../img/general-ico.png') 0 0 no-repeat;
                         width: 13px;
                         height: 16px;

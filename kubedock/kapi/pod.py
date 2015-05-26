@@ -15,50 +15,54 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 setattr(self, k, v)
 
     @staticmethod
-    def create(data, owner):
+    def create(data):
         set_public_ip = data.pop('set_public_ip', None)
         public_ip = data.pop('freeHost', None)
         pod = Pod(data)
         pod._check_pod_name()
-        pod.owner = owner
         if set_public_ip and public_ip:
             pod.public_ip = public_ip
         pod._make_uuid_if_missing()
+        pod.sid = pod._make_sid()
         pod._check_container_commands()
-        pod._compose_persistent()
         return pod
 
     @staticmethod
     def populate(data):
         pod = Pod()
-        manifest = data.get('desiredState', {}).get('manifest', {})
-        curstate = data.get('currentState', {})
-        info = curstate.get('info', {})
-
-        pod.id         = data.get('uid')
-        pod.name       = data.get('labels', {}).get('name')
-        pod.namespace  = data.get('namespace', 'default')
-        pod.sid        = data.get('id')
+        metadata = data.get('metadata', {})
+        status = data.get('status', {})
+        spec = data.get('spec', {})
+        pod.sid        = metadata.get('name')
+        pod.id         = metadata.get('uid')
+        pod.name       = metadata.get('labels', {}).get('name')
+        pod.namespace  = metadata.get('namespace')
         pod.cluster    = False
         pod.replicas   = 1
-        pod.status     = curstate.get('status', 'unknown').lower()
-        pod.volumes    = manifest.get('volumes', [])
-        pod.labels     = data.get('labels')
-        pod.containers = manifest.get('containers', [])
+        pod.status     = status.get('phase', 'pending').lower()
+        pod.podIP      = status.get('podIP', '')
+        pod.host       = spec.get('host')
+        pod.kube_type  = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
+        pod.volumes    = spec.get('volumes', [])
+        pod.labels     = metadata.get('labels')
+        pod.containers = spec.get('containers', [])
         pod.dockers    = []
 
         for c in pod.containers:
-            c['imageID'] = info.get(c['name'], {}).get('imageID')
-
+            try:
+                c['imageID'] = [
+                    i for i in status.get('containerStatuses', [])
+                        if c['name'] == i['name']][0]['imageID']
+            except (IndexError, KeyError):
+                c['imageID'] = 'docker://'
         if pod.status == 'running':
-            for pod_name, pod_info in info.items():
-                if pod_name == 'POD':
+            for pod_item in status.get('containerStatuses', []):
+                if pod_item['name'] == 'POD':
                     continue
-                pod_info['name'] = pod_name
                 pod.dockers.append({
-                    'host': curstate.get('host'),
-                    'info': pod_info,
-                    'podIP': curstate.get('podIP', '')})
+                    'host': pod.host,
+                    'info': pod_item,
+                    'podIP': pod.podIP})
         return pod
 
     def as_dict(self):
@@ -66,14 +70,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def as_json(self):
         return json.dumps(self.as_dict())
-
-    def save(self):
-        # we should think twice what to do with that owner
-        self._forge_dockers()
-        data = dict([(k, v) for k, v in vars(self).items() if k != 'owner'])
-        self._save_pod(data, self.owner)
-        data.update({'owner': self.owner.username})
-        return data
 
     def _make_uuid_if_missing(self):
         if hasattr(self, 'id'):
@@ -85,71 +81,99 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             if c.get('command'):
                 c['command'] = self._parse_cmd_string(c['command'][0])
 
-    def _compose_persistent(self):
+    def compose_persistent(self, username):
         if not getattr(self, 'volumes', False):
             return
         path = 'pd.sh'
         for volume in self.volumes:
             try:
-                pd = volume['source']['persistentDisk']
+                pd = volume.pop('persistentDisk')
                 name = volume['name']
                 device = '{0}{1}{2}'.format(
-                    pd.get('pdName'), PD_SEPARATOR, self.owner.username)
+                    pd.get('pdName'), PD_SEPARATOR, username)
                 size = pd.get('pdSize')
                 if size is None:
                     params = base64.b64encode("{0};{1};{2}".format('mount', device, name))
                 else:
                     params = base64.b64encode("{0};{1};{2};{3}".format('create', device, name, size))
-                volume['source'] = {
-                    'scriptableDisk': {
-                        'pathToScript': path,
-                        'params': params
-                    }
+
+                volume['scriptableDisk'] = {
+                    'pathToScript': path,
+                    'params': params
                 }
             except KeyError:
                 continue
 
-    def prepare(self, sid=None):
-        if not self.cluster:
-            return self._prepare_pod()
-        sid = self._make_sid()
-        return {
-            'kind': 'ReplicationController',
-            'apiVersion': KUBE_API_VERSION,
-            'id': sid,
-            'desiredState': {
-                'replicas': self.replicas,
-                'replicaSelector': {'name': self.name},
-                'podTemplate': self._prepare_pod(sid=sid, separate=False),
-            },
-            'labels': {'name': self._make_dash() + '-cluster'}}
-
-    def _prepare_pod(self, sid=None, separate=True):
-        # separate=True means that this is just a pod, not replica
-        # to insert config into replicas config set separate to False
-        if sid is None:
-            sid = self._make_sid()
-        inner = {'version': KUBE_API_VERSION}
-        if separate:
-            inner['id'] = sid
-            inner['restartPolicy'] = getattr(self, 'restartPolicy', {'always': {}})
-        inner['volumes'] = getattr(self, 'volumes', [])
+    def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)
-        inner['containers'] = [self._prepare_container(c, kube_type) for c in self.containers]
-        outer = {}
-        if separate:
-            outer['kind'] = 'Pod'
-            outer['apiVersion'] = KUBE_API_VERSION
-            outer['id'] = sid
-            outer['nodeSelector'] = {'kuberdock-kube-type': 'type_' + str(kube_type)}
-        outer['desiredState'] = {'manifest': inner}
-        if not hasattr(self, 'labels'):
-            outer['labels'] = {'name': self.name}
-            if hasattr(self, 'public_ip'):
-                outer['labels']['kuberdock-public-ip'] = self.public_ip
-        else:
-            outer['labels'] = self.labels
-        return outer
+        config = {
+            "kind": "Pod",
+            "apiVersion": "v1beta3",
+            "metadata": {
+                "name": self.sid,
+                "namespace": self.namespace,
+                "uid": self.id,
+                "labels": {
+                    "name": self.name
+                }
+            },
+            "spec": {
+                "volumes": getattr(self, 'volumes', []),
+                "containers": [
+                    self._prepare_container(c, kube_type)
+                        for c in self.containers],
+                "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
+                "nodeSelector": {
+                    "kuberdock-kube-type": "type_{0}".format(kube_type)
+                },
+            }
+        }
+        if hasattr(self, 'public_ip'):
+            config['metadata']['labels']['kuberdock-public-ip'] = self.public_ip
+        return config
+
+
+    #def prepare(self, sid=None):
+    #    if not self.cluster:
+    #        return self._prepare_pod()
+    #    sid = self._make_sid()
+    #    return {
+    #        'kind': 'ReplicationController',
+    #        'apiVersion': KUBE_API_VERSION,
+    #        'id': sid,
+    #        'desiredState': {
+    #            'replicas': self.replicas,
+    #            'replicaSelector': {'name': self.name},
+    #            'podTemplate': self._prepare_pod(sid=sid, separate=False),
+    #        },
+    #        'labels': {'name': self._make_dash() + '-cluster'}}
+    #
+    #def _prepare_pod(self, sid=None, separate=True):
+    #    # separate=True means that this is just a pod, not replica
+    #    # to insert config into replicas config set separate to False
+    #    if sid is None:
+    #        sid = self._make_sid()
+    #    inner = {'version': 'v1beta3'}
+    #    if separate:
+    #        inner['id'] = sid
+    #        inner['restartPolicy'] = getattr(self, 'restartPolicy', {'always': {}})
+    #    inner['volumes'] = getattr(self, 'volumes', [])
+    #    kube_type = getattr(self, 'kube_type', 0)
+    #    inner['containers'] = [self._prepare_container(c, kube_type) for c in self.containers]
+    #    outer = {}
+    #    if separate:
+    #        outer['kind'] = 'Pod'
+    #        outer['apiVersion'] = KUBE_API_VERSION
+    #        outer['id'] = sid
+    #        outer['nodeSelector'] = {'kuberdock-kube-type': 'type_' + str(kube_type)}
+    #    outer['desiredState'] = {'manifest': inner}
+    #    if not hasattr(self, 'labels'):
+    #        outer['labels'] = {'name': self.name}
+    #        if hasattr(self, 'public_ip'):
+    #            outer['labels']['kuberdock-public-ip'] = self.public_ip
+    #    else:
+    #        outer['labels'] = self.labels
+    #    return outer
 
     def _prepare_container(self, data, kube_type=0):
         if not data.get('name'):

@@ -70,8 +70,9 @@ new_pod_scheme = {
     'set_public_ip': {'type': 'boolean', 'required': False},
     'public_ip': {'type': 'ipv4', 'required': False},
     'restartPolicy': {
-        'type': 'dict',
-        'restart_polices': ['always', 'onFailure', 'never']
+        'type': 'string', 'required': True,
+#        'restart_polices': ['always', 'onFailure', 'never']
+        'restart_polices': ['Always', 'OnFailure', 'Never']
     },
 #    'namespace': {'type': 'string', 'required': True},
     'volumes': {
@@ -85,74 +86,69 @@ new_pod_scheme = {
                     'empty': False,
                     'maxlength': 255,
                 },
-                'source': {
+                'hostDir': {
                     'type': 'dict',
+                    'nullable': True,
                     'schema': {
-                        'hostDir': {
-                            'type': 'dict',
+                        'path': {
+                            'type': 'string',
+                            'required': False,
                             'nullable': True,
-                            'schema': {
-                                'path': {
-                                    'type': 'string',
-                                    'required': False,
-                                    'nullable': True,
-                                    'empty': False,
-                                    'maxlength': PATH_LENGTH,
-                                    # TODO validate that dir exists on node
-                                    # 'dirExist': True
-                                }
-                            }
-                        },
-                        'persistentDisk': {
-                            'type': 'dict',
-                            'nullable': True,
-                            'schema': {
-                                'pdName': {
-                                    'type': 'string'
-                                },
-                                'pdSize': {
-                                    'type': 'integer',
-                                    'nullable': True,
-                                },
-                                'used': {
-                                    'type': 'boolean',
-                                    'required': False,
-                                }
-                            }
-                        },
-                        'emptyDir': {
-                            'type': 'dict',
-                            'nullable': True
-                        },
-                        'scriptableDisk': {
-                            'type': 'dict',
-                            'nullable': True
-                        },
-                        'awsElasticBlockStore': {
-                            'type': 'dict',
-                            'nullable': True
-                        },
-                        'gitRepo': {
-                            'type': 'dict',
-                            'nullable': True
-                        },
-                        'glusterfs': {
-                            'type': 'dict',
-                            'nullable': True
-                        },
-                        'iscsi': {
-                            'type': 'dict',
-                            'nullable': True
-                        },
-                        'nfs': {
-                            'type': 'dict',
-                            'nullable': True
-                        },
-                        'secret': {
-                            'type': 'dict',
-                            'nullable': True
+                            'empty': False,
+                            'maxlength': PATH_LENGTH,
+                            # TODO validate that dir exists on node
+                            # 'dirExist': True
                         }
                     }
+                },
+                'persistentDisk': {
+                    'type': 'dict',
+                    'nullable': True,
+                    'schema': {
+                        'pdName': {
+                            'type': 'string'
+                        },
+                        'pdSize': {
+                            'type': 'integer',
+                            'nullable': True,
+                        },
+                        'used': {
+                            'type': 'boolean',
+                            'required': False,
+                        }
+                    }
+                },
+                'emptyDir': {
+                    'type': 'dict',
+                    'nullable': True
+                },
+                'scriptableDisk': {
+                    'type': 'dict',
+                    'nullable': True
+                },
+                'awsElasticBlockStore': {
+                    'type': 'dict',
+                    'nullable': True
+                },
+                'gitRepo': {
+                    'type': 'dict',
+                    'nullable': True
+                },
+                'glusterfs': {
+                    'type': 'dict',
+                    'nullable': True
+                },
+                'iscsi': {
+                    'type': 'dict',
+                    'nullable': True
+                },
+                'nfs': {
+                    'type': 'dict',
+                    'nullable': True
+                },
+                'secret': {
+                    'type': 'dict',
+                    'nullable': True
                 }
             },
         }
@@ -176,7 +172,7 @@ new_pod_scheme = {
                     'type': 'dict',
                     'required': False
                 },
-                'command': {
+                'args': {
                     'type': 'list',
                     # 'minlength': 1,
                     'schema': {
@@ -342,7 +338,8 @@ class V(cerberus.Validator):
                             "Check /etc/hosts file for correct Node records")
 
     def _validate_restart_polices(self, polices, field, value):
-        if (len(value.keys()) != 1) or (value.keys()[0] not in polices):
+        #if (len(value.keys()) != 1) or (value.keys()[0] not in polices):
+        if value not in polices:
             self._error(field,
                         'Restart Policy should be only one of %s' % polices)
 

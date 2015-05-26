@@ -2,7 +2,6 @@ from flask import Blueprint
 from flask.views import MethodView
 from ..utils import login_required_or_basic, KubeUtils, register_api
 from ..kapi.podcollection import PodCollection
-from ..kapi.pod import Pod
 from ..validation import check_new_pod_data
 
 
@@ -15,25 +14,23 @@ class PodsAPI(KubeUtils, MethodView):
     def get(self, pod_id):
         #params = self._get_params()
         user = self._get_current_user()
-        data = [p.as_dict() for p in PodCollection().get_by_username(user.username)]
-        return data
+        return PodCollection(user).get(as_json=False)
 
     def post(self):
         user = self._get_current_user()
         params = self._get_params()
         check_new_pod_data(params)
-        pod = Pod.create(params, user)
-        return pod.save()
+        return PodCollection(user).add(params)
 
     def put(self, pod_id):
+        user = self._get_current_user()
         params = self._get_params()
         #check_change_pod_data(params)
-        pods = PodCollection()
-        pod = pods.get_by_id(pod_id)
-        return pods.update(pod, params)
+        pods = PodCollection(user)
+        return pods.update(pod_id, params)
 
     def delete(self, pod_id):
-        pods = PodCollection()
-        pod = pods.get_by_id(pod_id)
-        return pods.delete(pod)
+        user = self._get_current_user()
+        pods = PodCollection(user)
+        return pods.delete(pod_id)
 register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id')

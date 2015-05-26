@@ -3,10 +3,11 @@ import json
 import random
 import re
 import requests
-import shlex
 import string
 from ..core import db
 from ..pods.models import Pod, PodIP
+#from ..users.models import User
+#from ..users.signals import user_get_setting, user_set_setting
 from ..billing.models import Kube
 from ..api import APIError
 from ..utils import get_api_url
@@ -42,12 +43,12 @@ class KubeQuery(object):
             raise SystemExit(error_string)
 
     @staticmethod
-    def _make_url(res, use_v3=False):
+    def _make_url(res, use_v3=False, ns=None):
         """
         Composes a full URL
         :param res: list -> list of URL path items
         """
-        kw = {'use_v3': use_v3}
+        kw = {'use_v3': use_v3, 'namespace': ns}
         if res is not None:
             return get_api_url(*res, **kw)
         return get_api_url(**kw)
@@ -60,7 +61,7 @@ class KubeQuery(object):
         except (ValueError, TypeError), e:
             raise APIError("Cannot process request: {0}".format(str(e)))
 
-    def _get(self, res=None, params=None, use_v3=False):
+    def _get(self, res=None, params=None, use_v3=False, ns=None):
         """
         GET request wrapper.
         :param res: list of URL path items
@@ -69,23 +70,23 @@ class KubeQuery(object):
         args = self._compose_args()
         if params:
             args['params'] = params
-        return self._run('get', res, args, use_v3)
+        return self._run('get', res, args, use_v3, ns)
 
-    def _post(self, res, data, rest=False, use_v3=False):
+    def _post(self, res, data, rest=False, use_v3=False, ns=None):
         args = self._compose_args(rest)
         args['data'] = data
-        return self._run('post', res, args, use_v3)
+        return self._run('post', res, args, use_v3, ns)
 
-    def _put(self, res, data, rest=False, use_v3=False):
+    def _put(self, res, data, rest=False, use_v3=False, ns=None):
         args = self._compose_args(rest)
         args['data'] = data
-        return self._run('put', res, args, use_v3)
+        return self._run('put', res, args, use_v3, ns)
 
-    def _del(self, res, use_v3=False):
+    def _del(self, res, use_v3=False, ns=None):
         args = self._compose_args()
-        return self._run('del', res, args, use_v3)
+        return self._run('del', res, args, use_v3, ns)
 
-    def _run(self, act, res, args, use_v3):
+    def _run(self, act, res, args, use_v3, ns):
         dispatcher = {
             'get': requests.get,
             'post': requests.post,
@@ -93,7 +94,7 @@ class KubeQuery(object):
             'del': requests.delete
         }
         try:
-            req = dispatcher.get(act, requests.get)(self._make_url(res, use_v3), **args)
+            req = dispatcher.get(act, requests.get)(self._make_url(res, use_v3, ns), **args)
             return self._return_request(req)
         except requests.exceptions.ConnectionError, e:
             return self._raise_error(str(e))
@@ -128,14 +129,14 @@ class ModelQuery(object):
                 ip_address=int(ipaddress.ip_address(self.public_ip)))
             podip.delete()
 
-    def _save_pod(self, data, owner):
-        kube_type = data.get('kube_type', 0)
-        pod = Pod(name=self.name, config=json.dumps(data), id=self.id, status='stopped')
+    def _save_pod(self, obj):
+        kube_type = getattr(obj, 'kube_type', 0)
+        pod = Pod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id, status='stopped')
         kube = db.session.query(Kube).get(kube_type)
         if kube is None:
             kube = db.session.query(Kube).get(0)
         pod.kube = kube
-        pod.owner = owner
+        pod.owner = self.owner
         try:
             db.session.add(pod)
             db.session.commit()
@@ -144,8 +145,8 @@ class ModelQuery(object):
             current_app.logger.debug(e)
             db.session.rollback()
 
-    def _mark_pod_as_deleted(self, pod):
-        p = db.session.query(Pod).get(pod.id)
+    def _mark_pod_as_deleted(self, pod_id):
+        p = db.session.query(Pod).get(pod_id)
         if p is not None:
             p.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
             p.status = 'deleted'
@@ -170,17 +171,6 @@ class ModelQuery(object):
 
 
 class Utilities(object):
-
-    @staticmethod
-    def _parse_cmd_string(cmd_string):
-        lex = shlex.shlex(cmd_string, posix=True)
-        lex.whitespace_split = True
-        lex.commenters = ''
-        lex.wordchars += '.'
-        try:
-            return list(lex)
-        except ValueError:
-            raise APIError('Incorrect cmd string')
 
     @staticmethod
     def _raise(message, code=409):
@@ -222,22 +212,4 @@ class Utilities(object):
         n = '-'.join(map((lambda x: x.lower()), image.split('/')))
         return "%s-%s" % (n, ''.join(
             random.sample(string.lowercase + string.digits, 10)))
-
-    def _forge_dockers(self, obj=None):
-        if obj is None:
-            obj = self
-        obj.dockers = []
-        for container in obj.containers:
-            container['imageID'] = 'docker://{0}'.format(container['image'])
-            obj.dockers.append({
-                'host': '',
-                'info': {
-                    'containerID': 'docker://{0}'.format(container['name']),
-                    'image': container['image'],
-                    'imageID': container['imageID'],
-                    'lastState': {},
-                    'name': container['name'],
-                    'ready': False,
-                    'restartCount': 0,
-                    'state': {'stopped': {}}}})
 

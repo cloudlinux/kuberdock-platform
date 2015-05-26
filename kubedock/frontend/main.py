@@ -19,7 +19,7 @@ def index():
         return redirect(url_for('nodes.index'))
 
     #coll = get_pods_collection()
-    coll = PodCollection().get_by_username(current_user.username, as_json=True)
+    coll = PodCollection(current_user).get()
     packages = [package.to_dict() for package in Package.query.all()]
     kube_types = [kube.to_dict() for kube in Kube.query.all()]
     extra_taxes_list = [e.to_dict() for e in ExtraTax.query.all()]

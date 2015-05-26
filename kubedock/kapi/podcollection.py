@@ -1,5 +1,4 @@
 import json
-import shlex
 from flask import current_app
 
 from ..utils import modify_node_ips, run_ssh_command
@@ -317,13 +316,3 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     'ready': False,
                     'restartCount': 0,
                     'state': {'stopped': {}}}})
-
-    def _parse_cmd_string(self, cmd_string):
-        lex = shlex.shlex(cmd_string, posix=True)
-        lex.whitespace_split = True
-        lex.commenters = ''
-        lex.wordchars += '.'
-        try:
-            return list(lex)
-        except ValueError:
-            self._raise('Incorrect cmd string')

@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 49%{?dist}.cloudlinux
+Release: 50%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,11 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Tue May 26 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-50
+- AC-258: Add style to entrypoint field
+- AC-147: Fix public ip allocation
+- namespaces now are created while a pod is being created and deleted after a pod had been deleted
+
 * Tue May 26 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-49
 - Changed image attribute 'command' to 'args'
 

@@ -213,6 +213,7 @@ fi
 
 #2 Install ntp, we need correct time for node logs
 log_errors yum install -y ntp
+do_and_log systemctl daemon-reload
 log_it ntpd -gq
 do_and_log systemctl restart ntpd
 do_and_log systemctl enable ntpd

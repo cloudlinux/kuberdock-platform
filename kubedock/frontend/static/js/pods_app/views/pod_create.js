@@ -309,8 +309,7 @@ define(['pods_app/app',
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     kubeType,
-                    restartPolicy,
-                    pod_name;
+                    restartPolicy;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -321,18 +320,17 @@ define(['pods_app/app',
                     for(var k in restart_policy){
                         restartPolicy = k;
                     }
-                    pod_name = model.get('name');
                 }
 
-                return{
+                return {
                     isPending: !this.model.has('parentID'),
                     hasPersistent: this.model.has('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
-                    podName: pod_name,
-                }
+                    podName: model !== undefined ? model.get('name') : '',
+                };
             },
 
             initialize: function(options){
@@ -540,8 +538,7 @@ define(['pods_app/app',
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     kubeType,
-                    restartPolicy,
-                    pod_name;
+                    restartPolicy;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -552,18 +549,17 @@ define(['pods_app/app',
                     for(var k in restart_policy){
                         restartPolicy = k;
                     }
-                    pod_name = model.get('name');
                 }
 
-                return{
+                return {
                     isPending: !this.model.has('parentID'),
                     hasPersistent: this.model.has('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
-                    podName: pod_name,
-                }
+                    podName: model !== undefined ? model.get('name') : '',
+                    };
             },
 
             triggers: {
@@ -703,8 +699,7 @@ define(['pods_app/app',
                 var parentID = this.containerModel.get('parentID'),
                     model = App.WorkFlow.getCollection().fullCollection.get(parentID),
                     kubeType,
-                    restartPolicy,
-                    pod_name;
+                    restartPolicy;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -715,10 +710,9 @@ define(['pods_app/app',
                     for(var k in restart_policy){
                         restartPolicy = k;
                     }
-                    pod_name = model.get('name');
                 }
 
-                return{
+                return obj = {
                     parentID: parentID,
                     isPending: !this.containerModel.has('parentID'),
                     image: this.containerModel.get('image'),
@@ -727,8 +721,9 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
                     kubes: this.containerModel.get('kubes'),
-                    podName: pod_name,
-                }
+                    podName: model !== undefined ? model.get('name') : '',
+                    };
+
             },
 
             onPortsClick: function(evt){
@@ -795,7 +790,7 @@ define(['pods_app/app',
                 }
                 return {
                     isPending: !this.model.has('parentID'),
-                    podName: model.get('name'),
+                    podName: model !== undefined ? model.get('name') : '',
                     kube_type: kubeType,
                     restart_policy: restartPolicy,
                 };
@@ -888,7 +883,7 @@ define(['pods_app/app',
 
             templateHelpers: function(){
                 var restart_policy = this.model.get('restartPolicy'),
-                    restartPolicies = {'always': 'Always', 'never': 'Never', 'onFailure': 'On Failure'},
+                    restartPolicies = {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                     restartPolicy;
                 for(var k in restart_policy){
                     restartPolicy = k;
@@ -1019,10 +1014,11 @@ define(['pods_app/app',
 
             changePolicy: function(evt){
                 evt.stopPropagation();
-                var policy = $(evt.target).val(),
-                    struct = {};
-                struct[policy] = {};
-                this.model.set('restartPolicy', struct)
+                var policy = $(evt.target).val();
+                //    struct = {};
+                //struct[policy] = {};
+                //this.model.set('restartPolicy', struct)
+                this.model.set('restartPolicy', policy);
             },
 
             onRender: function(){

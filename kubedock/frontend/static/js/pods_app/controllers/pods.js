@@ -1,14 +1,14 @@
 define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
 
-    function modalDialog(options){
-        var modal = $('.modal');
-        if(options.title) modal.find('.modal-title').html(options.title);
-        if(options.body) modal.find('.modal-body').html(options.body);
-        if(options.large) modal.addClass('bs-example-modal-lg');
-        if(options.small) modal.addClass('bs-example-modal-sm');
-        if(options.show) modal.modal('show');
-        return modal;
-    }
+    //function modalDialog(options){
+    //    var modal = $('.modal');
+    //    if(options.title) modal.find('.modal-title').html(options.title);
+    //    if(options.body) modal.find('.modal-body').html(options.body);
+    //    if(options.large) modal.addClass('bs-example-modal-lg');
+    //    if(options.small) modal.addClass('bs-example-modal-sm');
+    //    if(options.show) modal.modal('show');
+    //    return modal;
+    //}
 
     Pods.module("WorkFlow", function(WorkFlow, App, Backbone, Marionette, $, _){
 
@@ -172,7 +172,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     model_data.node = parent_model.get('dockers')[0].host;
                     if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
                     if (!model_data.hasOwnProperty('workingDir')) model_data['workingDir'] = undefined;
-                    if (!model_data.hasOwnProperty('command')) model_data['command'] = [];
+                    if (!model_data.hasOwnProperty('args')) model_data['args'] = [];
                     if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
                     if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
                     if (!model_data.hasOwnProperty('state_repr')) model_data['state_repr'] = container['state_repr'];
@@ -228,9 +228,10 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
 
             createPod: function(){
                 var that = this;
-                require(['pods_app/views/pod_create',
+                require(['pods_app/utils',
+                         'pods_app/views/pod_create',
                          'pods_app/views/paginator',
-                         'pods_app/views/loading'], function(){
+                         'pods_app/views/loading'], function(utils){
                     var model = new App.Data.Pod({name: "Unnamed-1", containers: [], volumes: []}),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout();
 
@@ -263,8 +264,9 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 that.showPods();
                             },
                             error: function(model, response, options, data){
+                                console.log('error applying data');
                                 var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
-                                modalDialog({
+                                utils.modalDialog({
                                     title: 'Error',
                                     body: body,
                                     show: true
@@ -306,7 +308,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             var row = model.get('volumes'),
                                 entry;
                             if (mp.isPersistent) {
-                                entry = {name: mp.name, source: {persistentDisk: mp.persistentDisk}};
+                                entry = {name: mp.name, persistentDisk: mp.persistentDisk};
                                 var used = _.filter(data.attributes.persistentDrives,
                                     function(i){return i.pdName === mp.persistentDisk.pdName});
                                 if (used.length) {
@@ -314,7 +316,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 }
                             }
                             else {
-                                entry = {name: mp.name, source: {emptyDir: {}}};
+                                entry = {name: mp.name, emptyDir: {}};
                             }
                             row.push(entry);
                             delete mp['isPersistent'];
@@ -358,7 +360,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         name += _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
                         var contents = {
                             image: image, name: name, workingDir: null,
-                            ports: [], volumeMounts: [], env: [], command: [], kubes: 1,
+                            ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
                             terminationMessagePath: null
                         };
                         if (model.has('persistentDrives')) {

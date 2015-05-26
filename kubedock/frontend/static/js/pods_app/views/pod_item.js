@@ -306,7 +306,7 @@ define(['pods_app/app',
                     },
                     error: function(model, response, options, data){
                         preloader.hide();
-                        modelError('Could not remove ' + name);
+                        utils.modelError('Could not remove ' + name);
                     }
                 });
             }

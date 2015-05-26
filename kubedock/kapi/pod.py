@@ -1,5 +1,6 @@
 import base64
 import json
+import shlex
 from uuid import uuid4
 from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
@@ -195,6 +196,16 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 for p in c.get('ports', []):
                     p.pop('hostPort', None)
         return data
+
+    def _parse_cmd_string(self, cmd_string):
+        lex = shlex.shlex(cmd_string, posix=True)
+        lex.whitespace_split = True
+        lex.commenters = ''
+        lex.wordchars += '.'
+        try:
+            return list(lex)
+        except ValueError:
+            self._raise('Incorrect cmd string')
 
     def __repr__(self):
         return "<Pod ('name':{0})>".format(self.name)

@@ -22,10 +22,10 @@ def process(data):
 
 
 def parse(data):
-    ready = {'command': [], 'workingDir': '', 'ports': [], 'volumeMounts': []}
+    ready = {'args': [], 'workingDir': '', 'ports': [], 'volumeMounts': []}
     for line in data.splitlines():
         if line.startswith('CMD'):
-            ready['command'].extend(process(line))
+            ready['args'].extend(process(line))
         elif line.startswith('WORKDIR'):
             res = process(line)
             ready['workingDir'] = '' if not res else res[0]

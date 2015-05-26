@@ -25,6 +25,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod.compose_persistent(self.owner.username)
         self._forge_dockers(pod)
         saved = self._save_pod(pod)
+        if hasattr(pod, 'public_ip'):
+            pod._allocate_ip()
         return saved.to_dict()
 
     def get_all(self, as_json=False):
@@ -85,7 +87,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             rv = self._del(['services', service_name], use_v3=True, ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a service")
         if hasattr(pod, 'public_ip'):
-            self._free_ip(pod.public_ip)
+            pod._free_ip()
         self._mark_pod_as_deleted(pod_id)
 
     def _make_namespace(self, namespace):

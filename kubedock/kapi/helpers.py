@@ -4,6 +4,7 @@ import random
 import re
 import requests
 import string
+from .. import signals
 from ..core import db
 from ..pods.models import Pod, PodIP
 #from ..users.models import User
@@ -123,10 +124,22 @@ class ModelQuery(object):
                        "Try another name.".format(self.name),
                        status_code=409)
 
+    def _allocate_ip(self, pod_id=None, ip=None):
+        if pod_id is None:
+            if hasattr(self, 'id'):
+                pod_id = self.id
+            else:
+                raise TypeError('pod_id should be specified')
+        if hasattr(self, 'public_ip'):
+            ip = self.public_ip
+        signals.allocate_ip_address.send([pod_id, ip])
+
     def _free_ip(self, ip=None):
         if hasattr(self, 'public_ip'):
+            ip = self.public_ip
+        if ip is not None:
             podip = PodIP.filter_by(
-                ip_address=int(ipaddress.ip_address(self.public_ip)))
+                ip_address=int(ipaddress.ip_address(ip)))
             podip.delete()
 
     def _save_pod(self, obj):

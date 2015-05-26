@@ -316,5 +316,5 @@ class PodIP(BaseModelMixin, db.Model):
 def allocate_ip_address_signal(args):
     if len(args) == 1:
         args = (args[0], None)
-    pid, network = args
-    return PodIP.allocate_ip_address(pid, network)
+    pid, ip = args
+    return PodIP.allocate_ip_address(pid, ip)

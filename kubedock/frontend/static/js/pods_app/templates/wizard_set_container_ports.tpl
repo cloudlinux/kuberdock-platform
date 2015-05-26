@@ -16,6 +16,17 @@
                 <span></span>
                 On autoterminate
             </label> -->
+            <div class="entrypoint">
+                <label>Entrypoint:</label>
+                <div class="row fields">
+                    <div class="col-xs-6">
+                        <input class="command" type="text" value="" placeholder="command to start">
+                    </div>
+                    <div class="col-sm-4 entrypoint-info">
+                        Use "/" to split
+                    </div>
+                </div>
+            </div>
             <div class="ports">
                 <label>Ports:</label>
                 <div class="row">

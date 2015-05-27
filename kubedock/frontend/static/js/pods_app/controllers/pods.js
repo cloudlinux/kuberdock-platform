@@ -292,7 +292,14 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data}));
                     });
                     that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({model: data}));
+                        if (data.has('containers')) { // the pod model, not a container one
+                            wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({
+                                model: new App.Data.Image(_.last(model.get('containers')))
+                            }));
+                        }
+                        else {
+                            wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({model: data}));
+                        }
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
                         data.unset('lastAddedImage', {silent: true});

@@ -75,7 +75,8 @@ def process_endpoints_event(data):
     if SERVICES_VERBOSE_LOG >= 2:
         print 'ENDPOINT EVENT', data
     service_name = data['object']['metadata']['name']
-    r = requests.get(get_api_url('services', service_name, use_v3=True))
+    current_namespace = data['object']['metadata']['namespace']
+    r = requests.get(get_api_url('services', service_name, use_v3=True, namespace=current_namespace))
     if r.status_code == 404:
         return
     service = r.json()
@@ -101,7 +102,7 @@ def process_endpoints_event(data):
                     service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
                     # TODO what if resourceVersion has changed?
                     r = requests.put(
-                        get_api_url('services', service_name, use_v3=True),
+                        get_api_url('services', service_name, use_v3=True, namespace=current_namespace),
                         json.dumps(service))
         elif event_type == 'DELETED':
             pass
@@ -117,11 +118,11 @@ def process_endpoints_event(data):
         assigned_to = state.get('assigned-to')
         podname = pods[0]['addresses'][0]['targetRef']['name']
         # Can't use task.get_pods_nodelay due cyclic imports
-        kub_pod = requests.get(get_api_url('pods', podname)).json()
+        kub_pod = requests.get(get_api_url('pods', podname, use_v3=True, namespace=current_namespace)).json()
         ports = service['spec']['ports']
         # TODO what to do here when pod yet not assigned to node at this moment?
         # skip only this event or reconnect(like now)?
-        current_host = kub_pod['currentState']['host']
+        current_host = kub_pod['spec']['host']
         pod_ip = pods[0]['addresses'][0]['IP']
         if not assigned_to:
             res = modify_node_ips(current_host, 'add', pod_ip, public_ip, ports)
@@ -130,7 +131,7 @@ def process_endpoints_event(data):
                 state['assigned-pod-ip'] = pod_ip
                 service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
                 r = requests.put(
-                    get_api_url('services', service_name, use_v3=True),
+                    get_api_url('services', service_name, use_v3=True, namespace=current_namespace),
                     json.dumps(service))
         else:
             if current_host != assigned_to:     # migrate pod
@@ -147,7 +148,7 @@ def process_endpoints_event(data):
                         state['assigned-pod-ip'] = pod_ip
                         service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
                         r = requests.put(
-                            get_api_url('services', service_name, use_v3=True),
+                            get_api_url('services', service_name, use_v3=True, namespace=current_namespace),
                             service)
     else:   # more? replica case
         pass

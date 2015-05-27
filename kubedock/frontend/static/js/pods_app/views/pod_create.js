@@ -526,6 +526,7 @@ define(['pods_app/app',
                 input      : '.change-input',
                 addItem    : '.add-env',
                 removeItem : '.remove-env',
+                nameField  : '.name',
             },
 
             events: {
@@ -533,7 +534,9 @@ define(['pods_app/app',
                 'click @ui.removeItem' : 'removeItem',
                 'click @ui.reset'      : 'resetFielsdsValue',
                 'change @ui.input'     : 'onChangeInput',
+                'change @ui.nameField' : 'validation',
             },
+
 
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
@@ -580,6 +583,16 @@ define(['pods_app/app',
                 this.render();
             },
 
+            validation: function(){
+                var valName = this.ui.nameField.val();
+
+                if (!/^[a-zA-Z][a-zA-Z0-9-_\.]/.test(valName)){
+                    alert('First symbol must be letter');
+                    this.ui.nameField.val('');
+                    return false;
+                };
+            },
+
             removeItem: function(e){
                 var env = this.model.get('env'),
                     item = $(e.currentTarget),
@@ -612,23 +625,23 @@ define(['pods_app/app',
                  }
             },
 
-            onRender: function(){
-                //var that = this;
-                //this.ui.ieditable.editable({
-                //    type: 'text',
-                //    mode: 'inline',
-                //    success: function(response, newValue) {
-                //        var item = $(this);
-                //        index = item.closest('tr').index();
-                //        if (item.hasClass('name')) {
-                //            that.model.get('env')[index]['name'] = newValue;
-                //        }
-                //        else if (item.hasClass('value')) {
-                //            that.model.get('env')[index]['value'] = newValue;
-                //        }
-                //    }
-                //});
-            }
+/*            onRender: function(){
+                var that = this;
+                this.ui.ieditable.editable({
+                   type: 'text',
+                   mode: 'inline',
+                   success: function(response, newValue) {
+                       var item = $(this);
+                       index = item.closest('tr').index();
+                       if (item.hasClass('name')) {
+                           that.model.get('env')[index]['name'] = newValue;
+                       }
+                       else if (item.hasClass('value')) {
+                           that.model.get('env')[index]['value'] = newValue;
+                       }
+                   }
+                });
+            }*/
         });
 
         NewItem.WizardStatsSubItemView = Backbone.Marionette.ItemView.extend({

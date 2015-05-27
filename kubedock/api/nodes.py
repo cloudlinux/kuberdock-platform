@@ -1,21 +1,19 @@
 from flask import Blueprint, request, jsonify
-import json
 import math
 import operator
 import socket
 import os
-from uuid import uuid4
 from .. import tasks
 from ..models import Node, User, Pod
 from ..core import db
 from ..rbac import check_permission
 from ..utils import login_required_or_basic, KubeUtils
-from ..validation import check_int_id, check_node_data, check_hostname
+from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR
 from ..settings import KUBERDOCK_INTERNAL_USER
+from ..kapi.podcollection import PodCollection
 from . import APIError
-from .pods import make_config
 from .stream import send_event
 from fabric.api import run, settings, env
 from fabric.tasks import execute
@@ -31,49 +29,103 @@ def get_kuberdock_logs_pod_name(node):
     return 'kuberdock-logs-{0}'.format(node)
 
 
-def get_kuberdock_logs_config(node, name, kube_type, kubes, uuid, master_ip):
+def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     return {
-        "node": node,
-        "name": name,
+        "name": "kuberdock-dns",
+        "portalIP": ip,
         "replicas": 1,
+        "kube_type": 0,
         "cluster": False,
-        "restartPolicy": {
-            "always": {}
-        },
+        "node": None,
+        "save_only": True,
+        "restartPolicy": "Always",
+        "volumes": [],
+        "containers": [
+            {
+                "command": [
+                    "/etcd",
+                    "-listen-client-urls=http://0.0.0.0:2379,http://0.0.0.0:4001",
+                    "-initial-cluster-token=skydns-etcd",
+                    "-advertise-client-urls=http://127.0.0.1:4001"
+                ],
+                "kubes": 1,
+                "image": "quay.io/coreos/etcd:v2.0.3",
+                "name": "etcd",
+                "env": [],
+                "ports": [],
+                "volumeMounts": [],
+                "workingDir": "",
+                "terminationMessagePath": None
+            },
+            {
+                "command": [
+                    "/kube2sky",
+                    "-domain={0}".format(domain),
+                ],
+                "kubes": 1,
+                "image": "gcr.io/google-containers/kube2sky:1.1",
+                "name": "kube2sky",
+                "env": [],
+                "ports": [],
+                "volumeMounts": [],
+                "workingDir": "",
+                "terminationMessagePath": None
+            },
+            {
+                "command": [
+                    "/skydns",
+                    "-machines=http://127.0.0.1:4001", "-addr=0.0.0.0:53",
+                    "-domain={0}.".format(domain)
+                ],
+                "kubes": 1,
+                "image": "gcr.io/google-containers/skydns:2015-03-11-001",
+                "name": "skydns",
+                "env": [],
+                "ports": [
+                    {
+                        "isPublic": False,
+                        "protocol": "udp",
+                        "containerPort": 53
+                    }
+                ],
+                "volumeMounts": [],
+                "workingDir": "",
+                "terminationMessagePath": None
+            }
+        ]
+    }
+
+
+def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
+    return {
+        "name": name,
+        "portalIP": None,
+        "replicas": 1,
+        "kube_type": kube_type,
+        "cluster": False,
+        "node": node,
+        "save_only": True,
+        "restartPolicy": "Always",
         "volumes": [
             {
                 "name": "docker-containers",
-                "source": {
-                    "hostDir": {
-                        "path": "/var/lib/docker/containers"
-                    }
+                "hostPath": {
+                    "path": "/var/lib/docker/containers"
                 }
             },
             {
                 "name": "es-persistent-storage",
-                "source": {
-                    "hostDir": {
-                        "path": "/var/lib/elasticsearch"
-                    }
+                "hostPath": {
+                    "path": "/var/lib/elasticsearch"
                 }
             }
         ],
-        "kube_type": kube_type,
-        "id": uuid,
         "containers": [
             {
-                "terminationMessagePath": None,
-                "name": "fluentd",
-                "workingDir": "/root",
-                "image": "kuberdock/fluentd:1.0",
-                "volumeMounts": [
-                    {
-                        "readOnly": False,
-                        "name": "docker-containers",
-                        "mountPath": "/var/lib/docker/containers"
-                    }
-                ],
                 "command": ["./run.sh"],
+                "kubes": kubes,
+                "image": "kuberdock/fluentd:1.0",
+                "name": "fluentd",
                 "env": [
                     {
                         "name": "NODENAME",
@@ -92,21 +144,21 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, uuid, master_ip):
                         "hostPort": 5140
                     }
                 ],
-                "kubes": kubes
-            },
-            {
-                "terminationMessagePath": None,
-                "name": "elasticsearch",
-                "workingDir": "",
-                "image": "kuberdock/elasticsearch:1.0",
                 "volumeMounts": [
                     {
                         "readOnly": False,
-                        "name": "es-persistent-storage",
-                        "mountPath": "/elasticsearch/data"
+                        "name": "docker-containers",
+                        "mountPath": "/var/lib/docker/containers"
                     }
                 ],
+                "workingDir": "/root",
+                "terminationMessagePath": None
+            },
+            {
                 "command": ["/elasticsearch/run.sh"],
+                "kubes": kubes,
+                "image": "kuberdock/elasticsearch:1.0",
+                "name": "elasticsearch",
                 "env": [
                     {
                         "name": "MASTER",
@@ -127,10 +179,17 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, uuid, master_ip):
                         "hostPort": 9300
                     }
                 ],
-                "kubes": kubes
+                "volumeMounts": [
+                    {
+                        "readOnly": False,
+                        "name": "es-persistent-storage",
+                        "mountPath": "/elasticsearch/data"
+                    }
+                ],
+                "workingDir": "",
+                "terminationMessagePath": None
             }
-        ],
-        "portalIP": None
+        ]
     }
 
 
@@ -290,24 +349,20 @@ def create_item():
             logs_kubes = int(math.ceil(
                 float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
             ))
-        temp_uuid = str(uuid4())
         ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
-        logs_id = get_kuberdock_logs_pod_name(data['hostname'])
-        logs_config = get_kuberdock_logs_config(data['hostname'], logs_id,
-                                                kube.id, logs_kubes, temp_uuid,
-                                                MASTER_IP)
-        config = make_config(logs_config, logs_id)
+        logs_podname = get_kuberdock_logs_pod_name(data['hostname'])
+        logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
+                                                kube.id, logs_kubes, MASTER_IP)
+        check_new_pod_data(logs_config)
+        logs_pod = PodCollection(ku).add(logs_config)
+        PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
 
-        logs_pod = Pod(
-            name=logs_id,
-            config=json.dumps(logs_config),
-            id=temp_uuid,
-            status='pending',
-            owner=ku,
-        )
-        db.session.add(m)
-        db.session.add(logs_pod)
-        db.session.commit()
+        dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns', owner=ku).first()
+        if not dns_pod:
+            dns_config = get_dns_pod_config()
+            check_new_pod_data(dns_config)
+            dns_pod = PodCollection(ku).add(dns_config)
+            PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 
         try:
             # clear old log before it pulled by SSE event
@@ -316,7 +371,6 @@ def create_item():
             pass
 
         r = tasks.add_new_node.delay(m.hostname, kube.id, m)
-        tasks.create_containers_nodelay(config)
         data.update({'id': m.id})
         send_event('pull_nodes_state', 'ping')
         return jsonify({'status': 'OK', 'data': data})
@@ -355,12 +409,11 @@ def put_item(node_id):
 def delete_item(node_id):
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)
+    ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
     logs_pod_name = get_kuberdock_logs_pod_name(m.hostname)
-    logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name).first()
+    logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name, owner=ku).first()
     if logs_pod:
-        logs_pod.delete()
-        db.session.commit()
-    tasks.delete_pod_nodelay(logs_pod_name)
+        PodCollection(ku).delete(logs_pod.id, force=True)
     if m:
         db.session.delete(m)
         db.session.commit()

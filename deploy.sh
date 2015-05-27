@@ -510,70 +510,7 @@ do_and_log systemctl enable nginx
 do_and_log systemctl restart nginx
 
 
-
-#17. Setup cluster DNS
-log_it echo "Setupping cluster DNS"
-
-cat << EOF | kubectl create -f -
-apiVersion: v1beta3
-kind: Pod
-metadata:
-  labels:
-    name: kuberdock-dns
-  name: kuberdock-dns
-spec:
-  containers:
-  - args:
-    - -listen-client-urls=http://0.0.0.0:2379,http://0.0.0.0:4001
-    - -initial-cluster-token=skydns-etcd
-    - -advertise-client-urls=http://127.0.0.1:4001
-    image: quay.io/coreos/etcd:v2.0.3
-    name: etcd
-    resources:
-      limits:
-        memory: 64Mi
-  - args:
-    - -domain=kuberdock
-    image: gcr.io/google-containers/kube2sky:1.1
-    name: kube2sky
-    resources:
-      limits:
-        memory: 64Mi
-  - args:
-    - -machines=http://127.0.0.1:4001
-    - -addr=0.0.0.0:53
-    - -domain=kuberdock.
-    image: gcr.io/google-containers/skydns:2015-03-11-001
-    name: skydns
-    ports:
-    - containerPort: 53
-      protocol: udp
-    resources:
-      limits:
-        memory: 64Mi
-EOF
-
-cat << EOF | kubectl create -f -
-apiVersion: v1beta3
-kind: Service
-metadata:
-  annotations:
-    public-ip-state: '{"assigned-public-ip": null}'
-  labels:
-    name: kuberdock-dns
-  name: kuberdock-dns
-spec:
-  portalIP: 10.254.0.10
-  ports:
-  - name: ""
-    port: 53
-    protocol: UDP
-    targetPort: 53
-  selector:
-    name: kuberdock-dns
-EOF
-
-# 19. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir
+# 17. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir
 ENT=$(getent passwd $WEBAPP_USER)
 if [ -z "$ENT" ]; then
     log_it echo "User $WEBAPP_USER does not exist"

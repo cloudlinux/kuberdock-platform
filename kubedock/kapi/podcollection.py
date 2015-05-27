@@ -64,9 +64,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return dispatcher[command](pod, data)
         self._raise("Unknown command")
 
-    def delete(self, pod_id):
+    def delete(self, pod_id, force=False):
         pod = self.get_by_id(pod_id)
-        if pod.owner == KUBERDOCK_INTERNAL_USER:
+        if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
         if hasattr(pod, 'sid'):
             rv = self._del(['pods', pod.sid], use_v3=True, ns=pod.namespace)
@@ -222,6 +222,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 'sessionAffinity': 'None'   # may be ClientIP is better
             }
         }
+        if hasattr(pod, 'portalIP') and pod.portalIP:
+            conf['spec']['portalIP'] = pod.portalIP
         return self._post(['services'], json.dumps(conf), rest=True, use_v3=True, ns=pod.namespace)
 
     def _start_cluster(self):

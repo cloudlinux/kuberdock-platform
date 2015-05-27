@@ -86,7 +86,7 @@ new_pod_scheme = {
                     'empty': False,
                     'maxlength': 255,
                 },
-                'hostDir': {
+                'hostPath': {
                     'type': 'dict',
                     'nullable': True,
                     'schema': {

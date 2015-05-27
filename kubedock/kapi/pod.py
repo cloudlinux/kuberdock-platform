@@ -43,6 +43,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.podIP      = status.get('podIP', '')
         pod.host       = spec.get('host')
         pod.kube_type  = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
+        pod.node       = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
         pod.volumes    = spec.get('volumes', [])
         pod.labels     = metadata.get('labels')
         pod.containers = spec.get('containers', [])
@@ -123,6 +124,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 },
             }
         }
+        if hasattr(self, 'node') and self.node:
+            config['spec']['nodeSelector']['kuberdock-node-hostname'] = self.node
         if hasattr(self, 'public_ip'):
             config['metadata']['labels']['kuberdock-public-ip'] = self.public_ip
         return config

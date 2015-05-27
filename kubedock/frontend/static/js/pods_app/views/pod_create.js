@@ -407,6 +407,13 @@ define(['pods_app/app',
                     that = this;
                 if (row.isPersistent) {
                     row.isPersistent = false;
+                    to_be_released = _.filter(this.model.get('persistentDrives'), function(d){
+                    if (row.hasOwnProperty('persistentDisk')) {
+                        return row.persistentDisk.pdName === d.pdName;
+                    }
+                    return false;
+                });
+                _.each(to_be_released, function(d){ delete d.used; });
                     this.render();
                 }
                 else {
@@ -418,13 +425,13 @@ define(['pods_app/app',
                         rqst.done(function(rs){
                             that.model.set({persistentDrives: _.map(rs['data'], function(i){return {pdName: i, pdSize: null}})});
                             row.isPersistent = true;
-                            row.persistentDisk = that.model.get('persistentDrives')[0];
+                            row.persistentDisk = {pdName: null};
                             that.render();
                         });
                     }
                     else {
                         row.isPersistent = true;
-                        row.persistentDisk = that.model.get('persistentDrives')[0];
+                        row.persistentDisk = {pdName: null};
                         that.render();
                     }
                 }
@@ -444,6 +451,13 @@ define(['pods_app/app',
                 var tgt = $(evt.target),
                     index = tgt.closest('tr').index(),
                     volumes = this.model.get('volumeMounts');
+                to_be_released = _.filter(this.model.get('persistentDrives'), function(d){
+                    if (volumes[index].hasOwnProperty('persistentDisk')) {
+                        return volumes[index].persistentDisk.pdName === d.pdName;
+                    }
+                    return false;
+                });
+                _.each(to_be_released, function(d){ delete d.used; });
                 volumes.splice(index, 1);
                 this.render();
             },
@@ -501,7 +515,7 @@ define(['pods_app/app',
                 });
                 this.ui.iveditable.editable({
                     type: 'select',
-                    value: this.hasOwnProperty('persistentDefault') ? this.persistentDefault : disks.length ? disks[0].text : null,
+                    value: null,
                     source: disks,
                     mode: 'inline',
                     success: function(response, newValue) {
@@ -509,6 +523,7 @@ define(['pods_app/app',
                             entry = that.model.get('volumeMounts')[index],
                             pEntry = _.filter(that.model.get('persistentDrives'), function(i){ return i.pdName === newValue; })[0];
                         entry['persistentDisk'] = pEntry;
+                        pEntry['used'] = true;
                     }
                 });
             }

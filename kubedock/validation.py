@@ -172,7 +172,7 @@ new_pod_scheme = {
                     'type': 'dict',
                     'required': False
                 },
-                'args': {
+                'command': {
                     'type': 'list',
                     # 'minlength': 1,
                     'schema': {

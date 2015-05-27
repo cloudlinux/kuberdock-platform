@@ -90,7 +90,7 @@
                                         <% if (v.isPersistent){ %>
                                         <td>
                                             <% if (hasPersistent){ %>
-                                            <span class="iveditable mountPath">
+                                            <span class="iveditable mountPath"><%- v.persistentDisk.pdName %></span>
                                             <% } else { %>
                                             <span>No drives found</span>
                                             <% } %>

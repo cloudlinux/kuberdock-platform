@@ -247,9 +247,26 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                             return false;
                         };
+                        
                         if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
                         _.each(data.get('containers'), function(c){
                             if (c.hasOwnProperty('persistentDrives')) { delete c.persistentDrives; }
+                            _.each(c.volumeMounts, function(v){
+                                if (v.isPersistent) {
+                                    var entry = {name: v.name, persistentDisk: v.persistentDisk};
+                                    var used = _.filter(data.attributes.persistentDrives,
+                                        function(i){return i.pdName === v.persistentDisk.pdName});
+                                    if (used.length) {
+                                        used[0].used = true;
+                                    }
+                                    delete v.persistentDisk;
+                                }
+                                else {
+                                    var entry = {name: v.name, emptyDir: {}};
+                                }
+                                data.get('volumes').push(entry);
+                                delete v.isPersistent;
+                            });
                         });
                         if (hasPublic(data.get('containers'))) {
                             data.attributes['set_public_ip'] = true;
@@ -293,6 +310,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     });
                     that.listenTo(wizardLayout, 'step:envconf', function(data){
                         if (data.has('containers')) { // the pod model, not a container one
+                            //console.log(_.last(model.get('containers')));
                             wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({
                                 model: new App.Data.Image(_.last(model.get('containers')))
                             }));
@@ -311,31 +329,12 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         processRequest(data);
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(data){
-                        _.each(data.get('volumeMounts'), function(mp){
-                            var row = model.get('volumes'),
-                                entry;
-                            if (mp.isPersistent) {
-                                entry = {name: mp.name, persistentDisk: mp.persistentDisk};
-                                var used = _.filter(data.attributes.persistentDrives,
-                                    function(i){return i.pdName === mp.persistentDisk.pdName});
-                                if (used.length) {
-                                    used[0].used = true;
-                                }
-                            }
-                            else {
-                                entry = {name: mp.name, emptyDir: {}};
-                            }
-                            row.push(entry);
-                            delete mp['isPersistent'];
-                            delete mp['persistentDisk'];
-                        });
 
                         // strip persistentDrives from a container if any
                         if (data.attributes.hasOwnProperty('persistentDrives')) {
                             if (!model.has('persistentDrives')) {
                                 model.attributes['persistentDrives'] = data.attributes.persistentDrives;
                             }
-                            delete data.attributes.persistentDrives;
                         }
 
                         // Here we populate a pod model container

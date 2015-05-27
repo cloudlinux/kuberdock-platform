@@ -270,7 +270,8 @@ define(['pods_app/app',
                 ieditable: '.ieditable',
                 iseditable: '.iseditable',
                 iveditable: '.iveditable',
-                removeItem: 'span.remove'
+                removeItem: 'span.remove',
+                'input_command': 'input.command'
             },
 
             events: {
@@ -284,7 +285,8 @@ define(['pods_app/app',
                 'click .persistent'      : 'togglePersistent',
                 'click .add-drive'       : 'addDrive',
                 'click .add-drive-cancel': 'cancelAddDrive',
-                'click .next-step'       : 'goNext'
+                'click .next-step'       : 'goNext',
+                'change @ui.input_command' : 'changeCommand'
             },
 
             triggers: {
@@ -304,6 +306,14 @@ define(['pods_app/app',
                     struct = {};
                 struct[policy] = {};
                 this.model.set('restartPolicy', struct)
+            },
+
+            changeCommand: function(evt){
+                evt.stopPropagation();
+                var cmd = $(evt.target).val();
+                if (cmd != '') {
+                    this.model.set('command', [cmd])
+                }
             },
 
             templateHelpers: function(){
@@ -478,6 +488,8 @@ define(['pods_app/app',
             onRender: function(){
                 var that = this,
                     disks = [];
+
+                this.ui.input_command.val(this.model.get('command'));
 
                 if (this.model.has('persistentDrives')) {
                     disks = _.map(this.model.get('persistentDrives'), function(i){

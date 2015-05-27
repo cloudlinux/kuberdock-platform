@@ -159,9 +159,6 @@ new_pod_scheme = {
         'schema': {
             'type': 'dict',
             'schema': {
-                # TODO delete when swich from v1beta1 to 3
-                'cpu': {'type': 'integer', 'required': False},
-                'memory': {'type': 'integer', 'required': False},
                 'capabilities': {'type': 'dict', 'required': False},
                 'imagePullPolicy': {
                     'type': 'string',

@@ -25,7 +25,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             pod.public_ip = public_ip
         pod._make_uuid_if_missing()
         pod.sid = pod._make_sid()
-        pod._check_container_commands()
         return pod
 
     @staticmethod
@@ -76,11 +75,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if hasattr(self, 'id'):
             return
         self.id = str(uuid4())
-
-    def _check_container_commands(self):
-        for c in getattr(self, 'containers', []):
-            if c.get('command'):
-                c['command'] = self._parse_cmd_string(c['command'][0])
 
     def compose_persistent(self, username):
         if not getattr(self, 'volumes', False):
@@ -191,10 +185,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if type(wd) is list:
             data['workingDir'] = ','.join(data['workingDir'])
 
+        if data['command']:
+            data['command'] = self._parse_cmd_string(data['command'][0])
         if self.owner != KUBERDOCK_INTERNAL_USER:
-            for c in getattr(self, 'containers', []):
-                for p in c.get('ports', []):
-                    p.pop('hostPort', None)
+            for p in data.get('ports', []):
+                p.pop('hostPort', None)
         return data
 
     def _parse_cmd_string(self, cmd_string):

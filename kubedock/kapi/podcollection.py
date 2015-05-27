@@ -244,9 +244,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return  # we do not support replicas now
         self._make_namespace(pod.namespace)
         if not pod.get_config('service'):
-            service_rv = self._run_service(pod)
-            self._raise_if_failure(service_rv, "Could not start a service")
-            self._update_pod_config(pod, **{'service': service_rv['metadata']['name']})
+            for c in pod.containers:
+                if len(c.get('ports', [])) > 0:
+                    service_rv = self._run_service(pod)
+                    self._raise_if_failure(service_rv, "Could not start a service")
+                    self._update_pod_config(pod, **{'service': service_rv['metadata']['name']})
+                    break
         config = pod.prepare()
         rv = self._post(['pods'], json.dumps(config), rest=True, use_v3=True, ns=pod.namespace)
         current_app.logger.debug(rv)

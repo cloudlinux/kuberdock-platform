@@ -37,15 +37,22 @@
                     <li class="general active">IP pool</li>
                 </ul>
             </div>
+
             <div id="details_content" class="col-sm-10">
-                <div id="tab-content">
-                    <table class="table" id="ip_pool_table">
-                    <thead><tr>
-                        <th>Subnet</th>
-                        <th>IP</th>
-                    </tr></thead>
-                    <tbody></tbody>
-                    </table>
+                <div id="tab-content" class="row">
+                    <div class="col-xs-12">
+                        <table class="table ip_pool_table">
+                        <thead>
+                            <tr>
+                                <th>Subnet</th>
+                                <th>IP</th>
+                                <th>Status</th>
+                                <th>Assigned</th>
+                            </tr>
+                        </thead>
+                            <tbody class="networks-list"></tbody>
+                        </table>
+                    </div>
                 <div>
             </div>
         </div>
@@ -89,10 +96,20 @@
             <%- network %>
             <span id="deleteNetwork" class="pull-right"></span>
         </td>
-        <td><ul id="hosts-list">
+        <td>
+            <ul id="hosts-list">
+            <% _.each(allocation, function(itm){ %>
+                <li>
+                    <%- itm[0] %>
+                </li>
+            <% }); %>
+            </ul>
+        </td>
+        <td>
+            <ul id="hosts-list">
             <% _.each(allocation, function(itm){ %>
             <li>
-                <%- itm[0] %>: <%- itm[1] ? itm[1] : itm[2] %>
+                <span class="<%- itm[1] ? itm[1] : itm[2] %>"><%- itm[1] ? itm[1] : itm[2] %></span>
                 <% if(itm[2] == 'busy') { %>
                     <span class="unbind_ip" data-ip="<%- itm[0] %>">unbind</span>
                 <% } else if(itm[2] == 'blocked') { %>
@@ -102,11 +119,22 @@
                 <% } %>
             </li>
             <% }); %>
-        </ul></td>
+            </ul>
+        </td>
+        <td>
+            <ul id="hosts-list">
+            <% _.each(allocation, function(itm){ %>
+                <li>
+                    yes/no (static data)
+                </li>
+            <% }); %>
+            </ul>
+
+        </td>
     </script>
 
     <script type="text/template" id="networks-layout-template">
-        <div id="main">main div text</div>
+        <div id="main"></div>
     </script>
 
     <script data-main="/static/js/ippool_app/require_main.js" src="/static/js/lib/require.js"></script>

@@ -1,5 +1,6 @@
 import json
 import datetime
+import re
 from flask import Blueprint, request, current_app, jsonify
 
 from .. import tasks
@@ -13,19 +14,37 @@ images = Blueprint('images', __name__, url_prefix='/images')
 DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 
 
+def is_array(data):
+    line = data.lstrip()
+    try:
+        p=line.index(' ')
+        try:
+            line.index('[', p)
+        except ValueError:
+            return False
+    except ValueError:
+        return False
+    return True
+
+
 def process(data):
+    patt=re.compile(r'(?:\s,\s|\s,|,\s|,|\s)')
     data = data.strip()
     pos = data.find(' ')
     if pos <= 0:
         return []
-    return map((lambda x: x.strip('\'"[] ')), data[pos:].split(','))
+    return [i.strip('\'"[] ') for i in patt.split(data[pos:])]
 
 
 def parse(data):
-    ready = {'args': [], 'workingDir': '', 'ports': [], 'volumeMounts': []}
+    entrypoint_is_array = False
+    ready = {'command': [], 'workingDir': '', 'ports': [], 'volumeMounts': [], 'EntryPoint': []}
     for line in data.splitlines():
         if line.startswith('CMD'):
-            ready['args'].extend(process(line))
+            ready['command'].extend(process(line))
+        elif line.startswith('ENTRYPOINT'):
+            entrypoint_is_array = is_array(line)
+            ready['EntryPoint'].extend(process(line))
         elif line.startswith('WORKDIR'):
             res = process(line)
             ready['workingDir'] = '' if not res else res[0]
@@ -33,6 +52,12 @@ def parse(data):
             ready['volumeMounts'].extend(process(line))
         elif line.startswith('EXPOSE'):
             ready['ports'].extend(process(line))
+    entry_point = ready.pop('EntryPoint', [])
+    command = ready.get('command', [])
+    if entry_point:
+        if entrypoint_is_array:
+            entry_point.extend(command)
+        ready['command'] = entry_point
     return ready
 
 

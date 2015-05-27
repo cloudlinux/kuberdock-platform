@@ -23,7 +23,7 @@
                         <input class="command" type="text" value="" placeholder="command to start">
                     </div>
                     <div class="col-sm-4 entrypoint-info">
-                        Use "/" to split
+                        Use "spase" to split
                     </div>
                 </div>
             </div>

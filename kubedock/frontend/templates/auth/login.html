@@ -25,6 +25,7 @@
         <form id="loginForm" method="post" action="/login?next={{ request.args.next|safe }}">
             <div class="form-group logo"></div>
             <ul class="form-group">
+              <span class="error-message">Invalid email or password</span>
               <li class="group">
                 <input type="text" id="login-form-username-field" name="login-form-username-field" placeholder="login"/>
                 <input input type="password" id="login-form-password-field" name="login-form-password-field" placeholder="password">

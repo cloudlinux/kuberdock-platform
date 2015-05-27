@@ -563,13 +563,17 @@ body{
                 display: block;
                 position: absolute;
                 .form-group{
+                    position: relative;
+                    .error-message{
+                        top: -25px;
+                        color: #f1485c;
+                        font-size: 14px;
+                        position: absolute;
+                    }
                     .group{
                         outline: 0;
                         display: block;
                         margin-bottom: 0;
-                        &:last-child{
-                            margin-top: 10px;
-                        }
                         input[type="text"], input[type="email"], input[type="password"] {
                             .box-sizing (border-box);
                             .transition (all 300ms);
@@ -610,6 +614,7 @@ body{
                                 top: -2px;
                                 position: relative;
                                 display: inline-block;
+                                color: #1d1d1d;
                             }
                         }
                         .lost{

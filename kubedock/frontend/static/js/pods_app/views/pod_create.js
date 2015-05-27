@@ -600,6 +600,7 @@ define(['pods_app/app',
 
                     env.splice(index, 1);
                     item.parents('.fields').remove();
+                    this.render();
             },
 
             resetFielsdsValue: function(){

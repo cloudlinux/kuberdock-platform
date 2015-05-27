@@ -10,33 +10,37 @@
         </div>
         <div id="details_content" class="col-sm-9 set-up-image clearfix no-padding">
             <div id="tab-content" class="environment clearfix">
-                <div class="col-sm-12 no-padding fields">
-                    <div class="col-sm-4 no-padding">
-                        <label>Name</label>
+                <% if (env.length != 0){ %>
+                    <div class="col-sm-12 no-padding fields">
+                        <div class="col-sm-4 no-padding">
+                            <label>Name</label>
+                        </div>
+                        <div class="col-sm-4 no-padding">
+                            <label>Value</label>
+                        </div>
                     </div>
-                    <div class="col-sm-4 no-padding">
-                        <label>Value</label>
+                    <% _.each(env, function(e){ %>
+                    <div class="col-sm-12 no-padding fields">
+                        <div class="col-sm-4 no-padding">
+                            <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="eg. Variable_name">
+                        </div>
+                        <div class="col-sm-4 no-padding">
+                            <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="eg. Some_value_0-9">
+                        </div>
+                        <div class="col-xs-1 no-padding">
+                            <div class="remove-env"></div>
+                        </div>
                     </div>
-                </div>
-                <% _.each(env, function(e){ %>
-                <div class="col-sm-12 no-padding fields">
-                    <div class="col-sm-4 no-padding">
-                        <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="eg. Variable_name">
-                    </div>
-                    <div class="col-sm-4 no-padding">
-                        <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="eg. Some_value_0-9">
-                    </div>
-                    <div class="col-xs-1 no-padding">
-                        <div class="remove-env"></div>
-                    </div>
-                </div>
-                 <% }) %>
+                    <% }) %>
+                <% } %>
                 <div class="col-sm-12 no-padding">
                     <button type="button" class="add-env">Add field</button>
                 </div>
+                <% if (env.length != 0){ %>
                 <div class="col-sm-12 no-padding reset">
                     <button type="button" class="reset-button">Reset values</button>
                 </div>
+                <% } %>
             <div>
         </div>
     </div>
@@ -108,12 +112,18 @@
                               </tr>
                             </thead>
                             <tbody>
-                            <% _.each(env, function(e){ %>
-                              <tr>
-                                <td><span class="name"><%- e.name ? e.name : 'not set' %></span></td>
-                                <td><span class="value"><%- e.value ? e.value : 'not set' %></span></td>
-                              </tr>
-                            <% }) %>
+                            <% if (env.length != 0) { %>
+                                <% _.each(env, function(e){ %>
+                                  <tr>
+                                    <td><span class="name"><%- e.name ? e.name : 'not set' %></span></td>
+                                    <td><span class="value"><%- e.value ? e.value : 'not set' %></span></td>
+                                  </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="2" class="text-center">Variables not specified</td>
+                                </tr>
+                            <% } %>
                             </tbody>
                         </table>
                     </div>

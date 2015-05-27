@@ -31,6 +31,7 @@
                 <label>Ports:</label>
                 <div class="row">
                     <div class="col-xs-10">
+                        <% if (ports.length != 0){ %>
                         <table id="ports-table" class="table">
                             <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Public</th></tr></thead>
                             <tbody>
@@ -56,6 +57,7 @@
                             <% }) %>
                             </tbody>
                         </table>
+                        <% } %>
                         <div>
                             <button type="button" class="add-port">Add port</button>
                         </div>
@@ -67,6 +69,7 @@
                 <label>Volumes:</label>
                 <div class="row">
                     <div class="col-xs-10">
+                        <% if (volumeMounts.length != 0){ %>
                         <table class="table" id="volumes-table">
                             <thead>
                                 <tr>
@@ -137,6 +140,7 @@
                                 <% } %>
                             </tbody>
                         </table>
+                        <% } %>
                         <div>
                             <button type="button" class="add-volume">Add volume</button>
                         </div>
@@ -211,10 +215,10 @@
                         </div>
                     </div>
                     <div class="col-xs-12 no-padding">
-                        <% if (ports.length > 0) { %>
-                            <table id="ports-table" class="table">
-                                <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Published</th></tr></thead>
-                                <tbody>
+                        <table id="ports-table" class="table">
+                            <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Published</th></tr></thead>
+                            <tbody>
+                            <% if (ports.length != 0) { %>
                                 <% _.each(ports, function(p){ %>
                                     <tr>
                                         <td class="containerPort"><%- p.containerPort ? p.containerPort : 'none'%></td>
@@ -225,10 +229,13 @@
                                         </td>
                                     </tr>
                                 <% }) %>
-                                </tbody>
-                            </table>
-                        <% } %>
-                        <% if (volumeMounts.length > 0) { %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="2" class="text-center">Ports not specified</td>
+                                </tr>
+                            <% } %>
+                            </tbody>
+                        </table>
                         <div class="volumes">
                             <label>Volumes:</label>
                             <div class="row">
@@ -241,38 +248,43 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                        <% _.each(volumeMounts, function(v){ %>
-                                            <tr>
-                                                <td>
-                                                    <span>
-                                                        <%- v.mountPath %>
-                                                    </span>
-                                                </td>
-                                                <% if (v.readOnly){ %>
-                                                <td>
-                                                    no
-                                                    <!-- <label class="custom">
-                                                        <input checked type="checkbox"/>
-                                                        <span></span>
-                                                    </label> -->
-                                                </td>
-                                                <% } else { %>
-                                                <td>
-                                                    yes
-                                                    <!-- <label class="custom">
-                                                        <input type="checkbox"/>
-                                                        <span></span>
-                                                    </label> -->
-                                                </td>
-                                                <% } %>
-                                            </tr>
-                                        <% }) %>
+                                        <% if (volumeMounts.length != 0) { %>
+                                            <% _.each(volumeMounts, function(v){ %>
+                                                <tr>
+                                                    <td>
+                                                        <span>
+                                                            <%- v.mountPath %>
+                                                        </span>
+                                                    </td>
+                                                    <% if (v.readOnly){ %>
+                                                    <td>
+                                                        no
+                                                        <!-- <label class="custom">
+                                                            <input checked type="checkbox"/>
+                                                            <span></span>
+                                                        </label> -->
+                                                    </td>
+                                                    <% } else { %>
+                                                    <td>
+                                                        yes
+                                                        <!-- <label class="custom">
+                                                            <input type="checkbox"/>
+                                                            <span></span>
+                                                        </label> -->
+                                                    </td>
+                                                    <% } %>
+                                                </tr>
+                                            <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="2" class="text-center">Volumes not specified</td>
+                                                </tr>
+                                            <% } %>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
-                        <% } %>
                     </div>
                 </div>
             </div>

@@ -5,7 +5,6 @@ import time
 from ..core import db
 from ..pods import Pod
 from ..users import User
-from ..nodes.models import Node
 import socket
 import re
 import requests
@@ -92,6 +91,7 @@ class KubeStat(object):
         self._unfolded = []
         self._wanted_map = {}
         self._resolution = resolution
+        self._nodes = self._get_nodes_info()
 
         start_point = int(time.time() - 3600) if start is None else self.timestamp(start)
         self._startcond = "time > %ds" % (start_point,)
@@ -124,6 +124,26 @@ class KubeStat(object):
         #    self.query_str = 'select %s from %s%s;' % (colstr, settings.INFLUXDB_TABLE, condstr)
         #    self._make_query()
 
+
+    @staticmethod
+    def _get_nodes_info():
+        data = {}
+        url = get_api_url('nodes', use_v3=True, namespace=False)
+        r=requests.get(url)
+
+        try:
+            rv = r.json()
+        except (TypeError, ValueError):
+            return {}
+
+        for node in rv.get('items', []):
+            name = node.get('metadata', {}).get('name')
+            if name is None:
+                continue
+            cpu = node.get('status', {}).get('capacity', {}).get('cpu', '1')
+            mem = node.get('status', {}).get('capacity', {}).get('memory', '1048576Ki')
+            data[name] = {'cores': int(cpu), 'memory': mem}
+        return data
 
     def _make_windows(self, start_point, end_point):
         if end_point is None:

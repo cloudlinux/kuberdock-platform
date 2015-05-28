@@ -369,8 +369,7 @@
         </div>
     </script>
 
-    <script type="text/template" id="node-find-step-template">
-    </script>
+    <script type="text/template" id="node-find-step-template"></script>
 
     <script type="text/template" id="node-final-step-template">
         <div id="address-spinner"></div>
@@ -426,17 +425,8 @@
             <%- kubeType %>
 {#            <span class="more-ico"  data-toggle="tooltip" data-placement="bottom" title="<%- hostname ? hostname : 'Not specified' %>"></span>#}
         </td>
-        <% var st_type = 'text-danger';
-           switch (status) {
-                case 'running': st_type = 'text-success'; break;
-                case 'removing...': st_type = 'text-info'; break;
-           }
-        %>
-{#        <td>50/100</td>#}
-{#        <td>51%</td>#}
-{#        <td>20 (100)</td>#}
         <td>
-            <%- status %>
+            <span class="<%- status %>"><%- status %></span>
             <span id="deleteNode" class="pull-right" title="Remove <%- hostname %> node">&nbsp;</span>
         </td>
     </script>

@@ -188,7 +188,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         ports = []
         for ci, c in enumerate(getattr(pod, 'containers', [])):
             for pi, p in enumerate(c.get('ports', [])):
-                host_port = p.pop('hostPort', None) or p.get('containerPort')
+                host_port = p.get('hostPort', None) or p.get('containerPort')
                 port_name = 'c{0}-p{1}'.format(ci, pi)
                 if p.get('isPublic'):
                     port_name += '-public'

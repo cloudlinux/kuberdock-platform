@@ -27,7 +27,6 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                 cluster: false,
                 replicas: 1,
                 restartPolicy: "Always",
-                portalIP: null,
                 node: null
             },
     

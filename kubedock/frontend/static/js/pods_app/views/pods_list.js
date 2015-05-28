@@ -28,20 +28,29 @@ define(['pods_app/app',
             },
 
             ui: {
-                'checkAll' : 'thead label.custom span',
+                'checkAll' : 'thead label.custom span'
             },
 
             events: {
                 'click @ui.checkAll' : 'checkAll',
             },
 
-            checkAll: function(){
-                var items = App.WorkFlow.getCollection().fullCollection.models
+            checkAll: function(e){
+                var items = App.WorkFlow.getCollection().fullCollection.models,
+                    that = this,
+                    input = this.$el.find('thead input');
+
                 _.each(items, function(model){
-                    console.log(model);
+                    var status = model.get('checked');
+                    if (!input.is(':checked')){
+                        model.set('checked',true);
+                        that.$el.find('tbody tr').addClass('checked');
+                    } else {
+                        model.set('checked',false);
+                        that.$el.find('tbody tr').removeClass('checked');
+                    }
                 })
             }
-
         });
 
         // View for showing a single pod item as a container in pods list
@@ -92,6 +101,7 @@ define(['pods_app/app',
                     }
                 });
             },
+
             startItem: function(evt){
                 var that = this,
                     preloader = $('#page-preloader');
@@ -152,12 +162,11 @@ define(['pods_app/app',
                 evt.stopPropagation();
             },
 
-            checkItem: function(){
+            checkItem: function(evt){
                 this.model.set('checked', !this.model.get('checked'));
                 this.$el.toggleClass('checked');
                 this.render();
             }
-
         });
 
         List.PodCollection = Backbone.Marionette.CompositeView.extend({

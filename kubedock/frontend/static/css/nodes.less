@@ -78,6 +78,43 @@
                         position: relative;
                         display: inline-block;
                     }
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
+                        position: relative;
+                        padding-left: 22px;
+                        &:before{
+                            .border-radius(50%);
+                            left: 2px;
+                            width: 12px;
+                            content: '';
+                            height: 12px;
+                            bottom: 3px;
+                            position: absolute;
+                        }
+                    }
+                    &.running, &.OK{
+                        &:before{
+                            background-color: #97cd75;
+                            border: 1px solid #589630;
+                        }
+                    }
+                    &.stopped{
+                        &:before{
+                            border: 1px solid #bc1b14;
+                            background-color: #f5544d;
+                        }
+                    }
+                    &.troubles, &.pending, &.waiting{
+                        &:before{
+                            border: 1px solid #c0a630;
+                            background-color: #f0d765;
+                        }
+                    }
+                    &.termination{
+                        &:before{
+                            border: 1px solid #7c7c7c;
+                            background-color: #bbbfc3;
+                        }
+                    }
                 }
                 .tooltip.bottom{
                     margin-top: 8px;

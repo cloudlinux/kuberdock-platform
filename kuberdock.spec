@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 51%{?dist}.cloudlinux
+Release: 52%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,11 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Thu May 28 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-52
+- AC-417: Move service pods creation to kapi
+- Added posibility to edit command on container.
+- Fix Don't create service pods without ports at all.
+
 * Thu May 28 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-51
 - AC-257: fixed return button on result page
 - AC-405: Add validation to name field in env step

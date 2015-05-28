@@ -20,12 +20,26 @@
 
 </head>
 <body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' -%}
+            <div class="alert alert-danger">
+                {% else %}
+            <div class="alert alert-info">
+                {%- endif %}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <div class="login-page clearfix">
         <div class="container login-form">
         <form id="loginForm" method="post" action="/login?next={{ request.args.next|safe }}">
             <div class="form-group logo"></div>
             <ul class="form-group">
-              <span class="error-message">Invalid email or password</span>
               <li class="group">
                 <input type="text" id="login-form-username-field" name="login-form-username-field" placeholder="login"/>
                 <input input type="password" id="login-form-password-field" name="login-form-password-field" placeholder="password">

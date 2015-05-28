@@ -21,7 +21,7 @@ def login():
         if user is None:
             pass
         elif not user.active:
-            return render_template('errors/user_inactive.html'), 403
+            error = 'User "{0}" is blocked'.format(username)
         elif user.verify_password(passwd):
             login_user(user)
             user_logged_in.send((user.id, request.remote_addr))

@@ -33,7 +33,8 @@ def process(data):
     pos = data.find(' ')
     if pos <= 0:
         return []
-    return [i.strip('\'"[] ') for i in patt.split(data[pos:])]
+    return filter((lambda x: x != ''),
+        [i.strip('\'"[] ') for i in patt.split(data[pos:])])
 
 
 def parse(data):

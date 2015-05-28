@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 50%{?dist}.cloudlinux
+Release: 51%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,18 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Thu May 28 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-51
+- AC-257: fixed return button on result page
+- AC-405: Add validation to name field in env step
+- AC-295: Add style to error text at login page
+- AC-249: Prepared style IPPool to new scructure
+- renamed back 'args' to 'command'
+- added dockerfile instructions parsing by comma
+- added ENTRYPOINT instruction
+- added decision logic if entrypoint is string or a list
+- Fix empty tables in container tabs
+- front-end persistent storage functionality refactored
+
 * Tue May 26 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-50
 - AC-258: Add style to entrypoint field
 - AC-147: Fix public ip allocation

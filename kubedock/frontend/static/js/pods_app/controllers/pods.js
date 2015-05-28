@@ -110,6 +110,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             reset: true,
                             success: function(){
                                 itemLayout.controls.show(new App.Views.Item.ControlsPanel({
+                                    // TODO pass model, not id, and simplify view!
                                     model: new Backbone.Model({id: model.get('id'), graphs: true})
                                 }));
                                 itemLayout.info.show(new App.Views.Item.PodGraph({
@@ -125,6 +126,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     that.listenTo(itemLayout, 'display:pod:list', function(data){
 
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
+                            // TODO pass model, not id, and simplify view!
                             model: new Backbone.Model({id: model.get('id'), graphs: false})
                         }));
 
@@ -138,6 +140,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.masthead.show(masthead);
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
+                            // TODO pass model, not id, and simplify view!
                             model: new Backbone.Model({id: model.get('id'), graphs: false})
                         }));
                         itemLayout.info.show(infoPanel);

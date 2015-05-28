@@ -28,11 +28,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             pod._allocate_ip()
         return saved.to_dict()
 
-    def get_all(self, as_json=False):
-        if as_json:
-            return json.dumps([pod.to_dict() for pod in self._collection.values()])
-        return self._collection.values()
-
     def get(self, as_json=True):
         pods = [p.as_dict() for p in self._collection.values() if getattr(p, 'owner', '') == self.owner.username]
         if as_json:
@@ -165,9 +160,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             pod = Pod.populate(item)
 
             for s in services_data:
-                if self._is_related(item.get('labels'), s.get('selector')):
-                    pod.portalIP = s.get('portalIP')
-                    pod.servicename = s.get('labels', {}).get('name')
+                if self._is_related(item['metadata']['labels'], s['spec']['selector']):
+                    pod.serviceIP = s['spec'].get('portalIP')
                     break
 
             if pod.sid not in pod_index:
@@ -184,7 +178,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._collection[pod.name] = pod
             else:
                 self._collection[db_pod.name].id = db_pod.id
-                self._collection[db_pod.name].service = getattr(db_pod, 'service', None)
+                # TODO if remove _is_related then add serviceIP attribute here
+                # self._collection[db_pod.name].service = json.loads(db_pod.config).get('service')
                 self._collection[db_pod.name].kube_type = json.loads(db_pod.config).get('kube_type')
             if not hasattr(self._collection[db_pod.name], 'owner'):
                 self._collection[db_pod.name].owner = db_pod.owner.username
@@ -205,7 +200,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         conf = {
             'kind': 'Service',
-            'apiVersion': 'v1beta3',
             'metadata': {
                 # 'generateName': pod.name.lower() + '-service-',
                 'generateName': 'service-',
@@ -309,6 +303,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 return False
             return True
 
+    # TODO refactor this according to v1beta3
     def _forge_dockers(self, pod):
         pod.dockers = []
         for container in pod.containers:

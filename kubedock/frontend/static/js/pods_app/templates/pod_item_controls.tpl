@@ -16,8 +16,8 @@
     <div class="col-xs-10 col-xs-offset-2">
         <div class="col-xs-6 info">
             <div>Status: <%- status %></div>
-            <div>Public IP: <%- podIP ? podIP : 'none' %></div>
-            <div>Pod IP: <%- portalIP ? portalIP : 'none'%></div>
+            <div>Public IP: <%- publicIP ? publicIP : 'none' %></div>
+            <div>Pod IP: <%- serviceIP ? serviceIP : 'Internal ip is not assigned yet'%></div>
         </div>
         <div class="col-xs-6 servers">
             <div><b><%- name %></b></div>

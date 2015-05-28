@@ -201,17 +201,11 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var thisItem = App.WorkFlow.getCollection().fullCollection.get(this.model.id);
-                var portalIP = '',
-                    kubeType = '',
+                var thisItem = this.getItem();
+                var kubeType = '',
                     restartPolicy = '',
                     labels = thisItem.get('labels'),
                     publicIP = labels !== undefined ? labels['kuberdock-public-ip'] : '';
-                _.each(thisItem.get('dockers'), function(d){
-                    if(d.podIP && d.podIP.length >= 7){
-                        portalIP = d.podIP;
-                    }
-                });
                 _.each(kubeTypes, function(kube){
                     if(parseInt(kube.id) == parseInt(thisItem.get('kube_type')))
                         kubeType = kube.name;
@@ -226,8 +220,8 @@ define(['pods_app/app',
                     kubes:         thisItem.get('kubes'),
                     price:         thisItem.get('price'),
                     kubeType:      kubeType,
-                    podIP:         publicIP,
-                    portalIP:      portalIP,
+                    publicIP:      publicIP,
+                    serviceIP:     thisItem.get('serviceIP'),
                     restartPolicy: restartPolicy
                 };
             },

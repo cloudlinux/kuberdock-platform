@@ -49,6 +49,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.containers = spec.get('containers', [])
         pod.dockers    = []
 
+        # TODO refactor this ugly part
         for c in pod.containers:
             try:
                 c['imageID'] = [
@@ -63,7 +64,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 pod.dockers.append({
                     'host': pod.host,
                     'info': pod_item,
-                    'podIP': pod.podIP})
+                    # 'podIP': pod.podIP
+                })
         return pod
 
     def as_dict(self):

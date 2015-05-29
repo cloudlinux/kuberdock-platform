@@ -114,10 +114,13 @@ class ModelQuery(object):
 
 
 
-    def _check_pod_name(self):
+    def _check_pod_name(self, owner=None):
         if not hasattr(self, 'name'):
             return
-        pod = Pod.query.filter_by(name=self.name).first()
+        if owner is None:
+            pod = Pod.query.filter_by(name=self.name).first()
+        else:
+            pod = Pod.query.filter_by(name=self.name, owner=owner).first()
         if pod:
             raise APIError(
                 "Conflict. Pod with name = '{0}' already exists. "

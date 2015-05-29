@@ -29,19 +29,6 @@ ALLOWED_ACTIONS = ('start', 'stop', 'inspect',)
 pods = Blueprint('pods', __name__, url_prefix='/pods')
 
 
-@pods.route('/checkName', methods=['GET', 'POST'])
-@login_required_or_basic
-@check_permission('get', 'pods')
-def check_pod_name():
-    data = request.args
-    pod = Pod.query.filter_by(name=data['name']).first()
-    if pod:
-        raise APIError("Conflict. Pod with name = '{0}' already exists. "
-                       "Try another name.".format(data['name']),
-                       status_code=409)
-    return jsonify({'status': 'OK'})
-
-
 @check_permission('get', 'pods')
 def get_pods_collection():
     units = KubeResolver().resolve_all(use_v3=True)

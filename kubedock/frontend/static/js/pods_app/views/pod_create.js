@@ -114,20 +114,18 @@ define(['pods_app/app',
                 this.ui.peditable.editable({
                     type: 'text',
                     success: function(response, newValue) {
-                        // TODO: check pod name
-                        $.ajax({
-                            url: '/api/pods/checkName',
-                            data: {'name': newValue},
-                            dataType: 'JSON',
-                            success: function(rs){
-                                if(rs.status == 'OK')
-                                    that.model.set({name: newValue});
-                            },
-                            error: function(xhr, status, erorr){
-                                utils.modelError(xhr);
-                                that.ui.peditable.editable('option', 'value', 'Unnamed');
+                        that.model.set({name: newValue});
+                    },
+                    validate: function(newValue) {
+                        var model = App.WorkFlow.getCollection().find(
+                            function(item) {
+                                return item.get('name') == newValue;
                             }
-                        })
+                        );
+                        if (model) {
+                            return 'Pod with name "' + newValue +
+                                '" already exists. Try another name.'
+                        }
                     }
                 });
             }

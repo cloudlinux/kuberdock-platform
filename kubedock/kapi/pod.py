@@ -19,8 +19,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def create(data):
         set_public_ip = data.pop('set_public_ip', None)
         public_ip = data.pop('freeHost', None)
+        owner = data.pop('owner', None)
         pod = Pod(data)
-        pod._check_pod_name()
+        pod._check_pod_name(owner)
         if set_public_ip and public_ip:
             pod.public_ip = public_ip
         pod._make_uuid_if_missing()

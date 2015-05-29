@@ -12,9 +12,10 @@ from ..billing.models import Package
 
 class Pod(db.Model):
     __tablename__ = 'pods'
+    __table_args__ = (db.UniqueConstraint('name', 'owner_id'),)
 
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
-    name = db.Column(db.String(length=255), unique=True)
+    name = db.Column(db.String(length=255))
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
     config = db.Column(db.Text)

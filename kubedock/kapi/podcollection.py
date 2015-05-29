@@ -20,6 +20,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         namespace = '{0}-{1}-pods'.format(
             self.owner.username, params['name']).lower()
         params['namespace'] = namespace
+        params['owner'] = self.owner
         pod = Pod.create(params)
         pod.compose_persistent(self.owner.username)
         self._forge_dockers(pod)
@@ -165,24 +166,25 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     break
 
             if pod.sid not in pod_index:
-                self._collection[pod.name] = pod
+                self._collection[pod.name, pod.namespace] = pod
                 pod_index.add(pod.sid)
 
     def _merge(self):
         db_pods = self._fetch_pods(users=True)
         for db_pod in db_pods:
-            if db_pod.name not in self._collection:
+            namespace = db_pod.namespace
+            if (db_pod.name, namespace) not in self._collection:
                 pod = Pod(json.loads(db_pod.config))
                 if not hasattr(pod, 'dockers'):
                     self._forge_dockers(pod)
-                self._collection[pod.name] = pod
+                self._collection[pod.name, namespace] = pod
             else:
-                self._collection[db_pod.name].id = db_pod.id
+                self._collection[db_pod.name, namespace].id = db_pod.id
                 # TODO if remove _is_related then add serviceIP attribute here
-                # self._collection[db_pod.name].service = json.loads(db_pod.config).get('service')
-                self._collection[db_pod.name].kube_type = json.loads(db_pod.config).get('kube_type')
-            if not hasattr(self._collection[db_pod.name], 'owner'):
-                self._collection[db_pod.name].owner = db_pod.owner.username
+                # self._collection[db_pod.name, namespace].service = json.loads(db_pod.config).get('service')
+                self._collection[db_pod.name, namespace].kube_type = json.loads(db_pod.config).get('kube_type')
+            if not hasattr(self._collection[db_pod.name, namespace], 'owner'):
+                self._collection[db_pod.name, namespace].owner = db_pod.owner.username
 
     def _run_service(self, pod):
         ports = []

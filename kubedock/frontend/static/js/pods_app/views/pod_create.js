@@ -1024,6 +1024,7 @@ define(['pods_app/app',
             },
 
             changeKubeType: function(evt){
+                this.model.set('kube_type', parseInt(evt.target.value));
                 evt.stopPropagation();
                 var kube_id = parseInt(evt.target.value),
                     num = parseInt(this.ui.kubeQuantity.find(':selected').text()),
@@ -1061,6 +1062,8 @@ define(['pods_app/app',
             },
 
             onRender: function(){
+                if (!this.model.get('kube_type'))
+                    this.model.set('kube_type',this.ui.kubeTypes.find(':selected').val());
                 var that = this;
                 this.ui.ieditable.editable({
                     type: 'text',

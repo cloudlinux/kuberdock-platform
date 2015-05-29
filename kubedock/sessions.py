@@ -74,7 +74,7 @@ class ManagedSessionInterface(SessionInterface):
                 if request.path.startswith(sp):
                     return None
             # cookie missing
-            current_app.logger.debug('missing cookie')
+            # current_app.logger.debug('missing cookie')
             return self.manager.new_session()
         sid, digest = cookie_val.split('!', 1)
         if self.manager.exists(sid):
@@ -114,7 +114,7 @@ class DataBaseSessionManager(SessionManager):
             return False
 
     def remove(self, sid):
-        current_app.logger.debug('removing session %s' % sid)
+        # current_app.logger.debug('removing session %s' % sid)
         session = db.session.query(SessionData).get(sid)
         if session is not None:
             db.session.delete(session)

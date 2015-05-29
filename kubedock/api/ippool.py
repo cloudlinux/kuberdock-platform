@@ -68,13 +68,13 @@ def create_item():
         blocked_list = []
         autoblock_list = list(set(autoblock_list))
         autoblock_list.sort()
-        current_app.logger.debug(autoblock_list)
+        # current_app.logger.debug(autoblock_list)
         ip_prefix = '.'.join(network.split('/')[0].split('.')[:-1])
         for i in autoblock_list:
             _ip = int(ipaddress.ip_address(u'{0}.{1}'.format(ip_prefix, i)))
             if _ip not in blocked_list:
                 blocked_list.append(_ip)
-        current_app.logger.debug(blocked_list)
+        # current_app.logger.debug(blocked_list)
         if IPPool.filter_by(network=network).first():
             raise Exception("Network '{0}' already exist".format(network))
         pool = IPPool.create(network=network)

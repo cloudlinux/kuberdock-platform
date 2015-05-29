@@ -103,7 +103,7 @@ def search_image():
     search_key = request.args.get('searchkey', 'none')
     page = int(request.args.get('page', 0)) + 1
 
-    current_app.logger.debug((search_key, repo_url))
+    # current_app.logger.debug((search_key, repo_url))
     check_container_image_name(search_key)
     query_key = '{0}?{1}:{2}'.format(repo_url.rstrip('/'), search_key, page)
     query = db.session.query(ImageCache).get(query_key)
@@ -133,7 +133,7 @@ def search_image():
 def get_dockerfile_data():
     image = request.form.get('image', 'none')
     query = db.session.query(DockerfileCache).get(image)
-    current_app.logger.debug(query)
+    # current_app.logger.debug(query)
     if query is not None:
         if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
             return jsonify({'status': 'OK', 'data': query.data})
@@ -142,7 +142,7 @@ def get_dockerfile_data():
 
     out = parse(rv)
     out['image'] = image
-    current_app.logger.debug(out)
+    # current_app.logger.debug(out)
     if query is None:
         db.session.add(DockerfileCache(image=image, data=out,
                                        time_stamp=datetime.datetime.now()))

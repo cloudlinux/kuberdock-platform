@@ -23,14 +23,14 @@ users = Blueprint('users', __name__, url_prefix='/users')
 def auth_another():
     data = request.form
     user_id = data['user_id']
-    current_app.logger.debug('auth_another({0})'.format(user_id))
+    # current_app.logger.debug('auth_another({0})'.format(user_id))
     user = User.query.get(user_id)
     if user is None:
         raise APIError('User with Id {0} does not exist'.format(user_id))
     session['auth_by_another'] = session.get('auth_by_another', current_user.id)
     user_logged_in_by_another.send((current_user.id, user_id))
     login_user(user)
-    current_app.logger.debug('auth_another({0}) after'.format(current_user.id))
+    # current_app.logger.debug('auth_another({0}) after'.format(current_user.id))
     return jsonify({'status': 'OK'})
 
 

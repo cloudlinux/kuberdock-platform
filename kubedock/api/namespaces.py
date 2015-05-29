@@ -284,10 +284,10 @@ class Namespaces(object):
                 'Namespaces.delete({0}) does not exist'.format(namespace))
             return
         url = get_api_url(namespace=namespace, use_v3=True)
-        current_app.logger.debug(url)
+        # current_app.logger.debug(url)
         r = requests.delete(url=url)
         res = r.json()
-        current_app.logger.debug(res)
+        # current_app.logger.debug(res)
         if res['metadata']['name'] == namespace:
             cls._delete_user_namespace(namespace, user_id=user_id)
         return res

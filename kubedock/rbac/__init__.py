@@ -65,9 +65,9 @@ class check_permission(object):
         @wraps(m)
         def _call_(*args, **kwargs):
             if self.resource not in acl._resources:
-                current_app.logger.error(
-                    "RBAC failed: undefined resource '{0}'".format(
-                        self.resource))
+                # current_app.logger.error(
+                #     "RBAC failed: undefined resource '{0}'".format(
+                #         self.resource))
                 return m(*args, **kwargs)
             return rbac_context.check_permission(
                 self.operation, self.resource, **self.exception_kwargs)(m)(

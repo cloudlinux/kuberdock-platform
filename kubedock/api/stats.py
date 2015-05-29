@@ -19,10 +19,10 @@ def unit_stat():
     #start = request.args.get('start', None)
     #end = request.args.get('end', None)
     items = KubeUnitResolver().by_unit(uuid)
-    current_app.logger.debug(items)
+    # current_app.logger.debug(items)
 
     items_list= map(operator.itemgetter(2), itertools.chain(*items.values()))
-    current_app.logger.debug(items_list)
+    # current_app.logger.debug(items_list)
     start = time.time() - 3600  # An hour distance
 
     if container is None:

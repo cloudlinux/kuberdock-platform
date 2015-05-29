@@ -46,7 +46,7 @@ def online_users(**kwargs):
 # @check_permission('auth_by_another', 'users')
 def logout_another():
     admin_user_id = session.pop('auth_by_another', None)
-    current_app.logger.debug('logout_another({0})'.format(admin_user_id))
+    # current_app.logger.debug('logout_another({0})'.format(admin_user_id))
     user_id = current_user.id
     logout_user()
     flash('You have been logged out')
@@ -58,8 +58,8 @@ def logout_another():
         current_app.logger.warning(
             'User with Id {0} does not exist'.format(admin_user_id))
     login_user(user)
-    current_app.logger.debug(
-        'logout_another({0}) after'.format(current_user.id))
+    # current_app.logger.debug(
+    #     'logout_another({0}) after'.format(current_user.id))
     user_logged_out_by_another.send((user_id, admin_user_id))
     return redirect('/users/')
 

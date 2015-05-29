@@ -325,7 +325,7 @@ class SessionData(db.Model):
 @user_logged_in.connect
 def user_logged_in_signal(args):
     user_id, remote_ip = args
-    current_app.logger.debug('user_logged_in_signal {0}'.format(user_id))
+    # current_app.logger.debug('user_logged_in_signal {0}'.format(user_id))
     ua = UserActivity.create(
         action=UserActivity.LOGIN, user_id=user_id, remote_ip=remote_ip)
     ua.save()
@@ -333,7 +333,7 @@ def user_logged_in_signal(args):
 
 @user_logged_out.connect
 def user_logged_out_signal(user_id):
-    current_app.logger.debug('user_logged_out_signal {0}'.format(user_id))
+    # current_app.logger.debug('user_logged_out_signal {0}'.format(user_id))
     ua = UserActivity.create(action=UserActivity.LOGOUT, user_id=user_id)
     ua.save()
 
@@ -341,8 +341,8 @@ def user_logged_out_signal(user_id):
 @user_logged_in_by_another.connect
 def user_logged_in_by_another_signal(args):
     user_id, target_user_id = args
-    current_app.logger.debug('user_logged_in_by_another {0} -> {1}'.format(
-        user_id, target_user_id))
+    # current_app.logger.debug('user_logged_in_by_another {0} -> {1}'.format(
+    #     user_id, target_user_id))
     ua = UserActivity.create(action=UserActivity.LOGIN_A, user_id=user_id)
     ua.save()
 
@@ -350,8 +350,8 @@ def user_logged_in_by_another_signal(args):
 @user_logged_out_by_another.connect
 def user_logged_out_by_another_signal(args):
     user_id, target_user_id = args
-    current_app.logger.debug('user_logged_out_by_another {0} -> {1}'.format(
-        user_id, target_user_id))
+    # current_app.logger.debug('user_logged_out_by_another {0} -> {1}'.format(
+    #     user_id, target_user_id))
     ua = UserActivity.create(action=UserActivity.LOGOUT_A,
                              user_id=target_user_id)
     ua.save()

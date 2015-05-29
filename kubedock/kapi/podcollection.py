@@ -84,7 +84,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if hasattr(pod, 'public_ip'):
             pod._free_ip()
         rv = self._drop_namespace(pod.namespace)
-        current_app.logger.debug(rv)
+        # current_app.logger.debug(rv)
         self._mark_pod_as_deleted(pod_id)
 
     def _make_namespace(self, namespace):
@@ -95,7 +95,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         data = self._get_namespace(namespace)
         if data is None:
             rv = self._post(['namespaces'], json.dumps(config), rest=True, use_v3=True, ns=False)
-            current_app.logger.debug(rv)
+            # current_app.logger.debug(rv)
 
     def _get_namespace(self, namespace):
         data = self._get(use_v3=True, ns=namespace)
@@ -141,7 +141,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return replicas
 
     def _get_pods(self, namespaces=None):
-        current_app.logger.debug(namespaces)
+        # current_app.logger.debug(namespaces)
         if not hasattr(self, '_collection'):
             self._collection = {}
         pod_index = set()
@@ -252,7 +252,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     break
         config = pod.prepare()
         rv = self._post(['pods'], json.dumps(config), rest=True, use_v3=True, ns=pod.namespace)
-        current_app.logger.debug(rv)
+        # current_app.logger.debug(rv)
         self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
         #return rv
         return {'status': 'pending'}

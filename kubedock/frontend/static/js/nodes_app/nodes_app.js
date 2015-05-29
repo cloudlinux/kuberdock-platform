@@ -489,7 +489,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 var hostname = this.model.get('hostname');
                 var host = hostname.split('.')[0];
                 var size = 100;
-                var url = '/es-proxy/' + ip + '/' + index +
+                var url = '/logs/' + ip + '/' + index +
                     '/_search?q=host:("' + hostname + '" OR "' + host + '")' +
                     '&size=' + size + '&sort=@timestamp:desc';
                 $.ajax({

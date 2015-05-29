@@ -851,7 +851,7 @@ define(['pods_app/app',
                     var index = 'docker-*';
                     var container_id = this.model.get('container_id');
                     var size = 100;
-                    var url = '/es-proxy/' + node + '/' + index +
+                    var url = '/logs/' + node + '/' + index +
                         '/_search?q=container_id:"' + container_id + '"' +
                         '&size=' + size + '&sort=@timestamp:desc';
                     $.ajax({

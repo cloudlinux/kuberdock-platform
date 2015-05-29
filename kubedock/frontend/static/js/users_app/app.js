@@ -407,6 +407,7 @@ define(['marionette', 'paginator', 'utils'],
                 'user_cancel_btn'     : 'button#user-cancel-btn',
                 'login_this_user_btn' : 'button#login_this_user',
                 'edit_user'           : 'button#edit_user',
+                'tb'                  : '#user-profile-logs-table tbody'
             },
 
             events: {
@@ -418,20 +419,27 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.edit_user'           : 'edit_user'
             },
 
-            onRender: function(){
+            onRender: function(e){
+                var that = this;
+                $('#page-preloader').show();
                 $.ajax({
                     url: '/api/users/logHistory',
                     data: {'uid': this.model.get('id')},
                     success: function(rs){
-                        var tb = $('#user-profile-logs-table tbody');
-                        _.each(rs.data, function(itm){
-                            tb.append($('<tr>').append(
-                                '<td>' + itm[0] + '</td>' +
-                                '<td>' + utils.toHHMMSS(itm[1]) + '</td>' +
-                                '<td>' + itm[2] + '</td>' +
-                                '<td>' + itm[3] + '</td>'
-                            ))
-                        });
+                        if (rs.data.length != 0){
+                            _.each(rs.data, function(itm){
+                                that.ui.tb.append($('<tr>').append(
+                                    '<td>' + itm[0] + '</td>' +
+                                    '<td>' + utils.toHHMMSS(itm[1]) + '</td>' +
+                                    '<td>' + itm[2] + '</td>' +
+                                    '<td>' + itm[3] + '</td>'
+                                ))
+                            });
+                            $('#page-preloader').hide();
+                        } else {
+                            that.ui.tb.append($('<tr>').append('<td colspan="4" class="text-center">There is no login history for this user</td>'));
+                            $('#page-preloader').hide();
+                        }
                     }
                 });
             },

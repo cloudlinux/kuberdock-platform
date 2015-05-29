@@ -31,11 +31,11 @@ if __name__ == '__main__':
     # Create default packages and kubes
     # Package and Kube with id=0 are default
     # end must be undeletable (always present with id=0) for fallback
-    k1 = Kube(id=0, name='Standard kube', cpu=.1, cpu_units='Cores',
+    k1 = Kube(id=0, name='Standard kube', cpu=.01, cpu_units='Cores',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0, price=0)
-    k2 = Kube(name='High CPU', cpu=.2, cpu_units='Cores',
+    k2 = Kube(name='High CPU', cpu=.02, cpu_units='Cores',
               memory=64, memory_units='MB', disk_space='0', total_traffic=0, price=1)
-    k3 = Kube(name='High memory', cpu=.1, cpu_units='Cores',
+    k3 = Kube(name='High memory', cpu=.01, cpu_units='Cores',
               memory=256, memory_units='MB', disk_space='0', total_traffic=0, price=2)
 
     p1 = Package(id=0, name='basic', setup_fee=0, currency='USD', period='hour')

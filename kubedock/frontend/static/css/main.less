@@ -690,6 +690,7 @@ body{
         }
     }
     /* end modal */
+
     #page-preloader {
         top: 0;
         left: 0;
@@ -711,6 +712,35 @@ body{
         position: absolute;
         background: url('../img/preloader.gif') 0 0 no-repeat;
     }
+
+    /* alert messages */
+    .alert{
+        .border-radius(0);
+        border: none;
+        margin-bottom: 10px;
+        &.alert-danger, &.alert-success{
+            .opacity(0.9);
+            color: #fff;
+            border-color: transparent;
+            .close{
+                .opacity(1);
+                color: #fff;
+                font-size: 25px;
+                font-weight: 100;
+                line-height: 22px;
+                &:hover{
+                    .opacity(1);
+                }
+            }
+        }
+        &.alert-danger{
+            background-color: #E85546;
+        }
+        &.alert-success {
+            background-color: #5CA959;
+        }
+    }
+    /*end alert messages */
 
     @import "pods.less";
     @import "nodes.less";

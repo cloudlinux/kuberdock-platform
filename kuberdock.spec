@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 52%{?dist}.cloudlinux
+Release: 53%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,16 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Thu May 29 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-53
+- Added lights to field status in nodelist table
+- AC-421: Show error message if login failed
+- Add bulk operation to podlist, fix checkbox position
+- Filter out empty strings when parsing dockerfile commands
+- Added service ip to frontend instead of pod ip
+- Add autohide message in login page
+- Fixed nodes cpu cores retrieval for graphs
+- Fixed hostports
+
 * Thu May 28 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-52
 - AC-417: Move service pods creation to kapi
 - Added posibility to edit command on container.

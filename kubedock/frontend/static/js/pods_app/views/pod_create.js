@@ -970,9 +970,9 @@ define(['pods_app/app',
 
             deleteItem: function(evt){
                 evt.stopPropagation();
-                var image = $(evt.target).closest('div').children('span:first').text().trim();
+                var name = $(evt.target).closest('div').children('span:first').attr('id');
                 this.model.attributes.containers = _.filter(this.model.get('containers'),
-                function(i){ return i.image !== this.image }, {image: image});
+                function(i){ return i.name !== this.name }, {name: name});
                 this.render();
             },
 

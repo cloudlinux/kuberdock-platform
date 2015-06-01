@@ -123,12 +123,14 @@ class KuberDock(KubeCtl):
         Lists all pending containers
         """
         names = []
-        for f in os.listdir(self._kube_path):
-            if not f.endswith(self.EXT):
-                continue
-            names.append(f[:f.index(self.EXT)])
-        self._list([{'name': base64.b64decode(i)} for i in names])
-
+        try:
+            for f in os.listdir(self._kube_path):
+                if not f.endswith(self.EXT):
+                    continue
+                names.append(f[:f.index(self.EXT)])
+            self._list([{'name': base64.b64decode(i)} for i in names])
+        except OSError:
+            pass
 
     def kubes(self):
         """
@@ -195,6 +197,7 @@ class KuberDock(KubeCtl):
         valid = set(['name', 'containers', 'volumes', 'service', 'cluster',
                      'replicas', 'set_public_ip', 'kube_type', 'restartPolicy'])
         self._prepare_volumes()
+        self._prepare_ports()
         data = dict(filter((lambda x: x[0] in valid), vars(self).items()))
         return data
 
@@ -216,6 +219,15 @@ class KuberDock(KubeCtl):
                     vol = [v for v in self.volumes if v['name'] == vm['name']]
                     if not vol:
                         self.volumes.append({'name': vm['name'], 'emptyDir': {}})
+
+    def _prepare_ports(self):
+        """Checks if all necessary port entry data are set"""
+        for c in self.containers:
+            if not c.get('ports'):
+                raise SystemExit("At least one port entry is expected for '{0}' container".format(c['image']))
+            for p in c['ports']:
+                if not p.get('protocol'):
+                    p['protocol'] = 'tcp'
 
     def _resolve_containers_directory(self):
         """

@@ -185,8 +185,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._collection[db_pod.name, namespace].kube_type = json.loads(db_pod.config).get('kube_type')
             if not hasattr(self._collection[db_pod.name, namespace], 'owner'):
                 self._collection[db_pod.name, namespace].owner = db_pod.owner.username
-            if not hasattr(self._collection[db_pod.name], 'status'):
-                self._collection[db_pod.name].status = 'stopped'
+            if not hasattr(self._collection[db_pod.name, namespace], 'status'):
+                self._collection[db_pod.name, namespace].status = 'stopped'
 
     def _run_service(self, pod):
         ports = []

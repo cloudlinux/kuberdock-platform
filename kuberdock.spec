@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 53%{?dist}.cloudlinux
+Release: 54%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,12 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Thu May 29 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-54
+- Add new style to alert messages to login page
+- AC-384: Fix pods with the same name but different users
+- AC-385: Reduce CPU value in 10 times for default kubes
+- Change logs url from 'es-proxy' to 'logs'
+
 * Thu May 29 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-53
 - Added lights to field status in nodelist table
 - AC-421: Show error message if login failed

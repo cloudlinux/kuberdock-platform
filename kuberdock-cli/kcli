@@ -3,7 +3,7 @@
 import argparse
 
 from kubecli.container.kubectl import parser as kubectl
-from kubecli.container.main import parser as container
+from kubecli.container.kuberdock import parser as kuberdock
 from kubecli.image.docker import parser as docker
 from kubecli.image.main import parser as image
 
@@ -24,7 +24,7 @@ def process_args():
         dest="target")
     
     kubectl(subs)
-    container(subs)
+    kuberdock(subs)
     docker(subs)
     image(subs)
     return parser.parse_args()

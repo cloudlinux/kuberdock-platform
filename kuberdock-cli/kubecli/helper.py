@@ -7,6 +7,7 @@ import collections
 
 from requests.auth import HTTPBasicAuth
 
+
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
@@ -15,7 +16,7 @@ class NullHandler(logging.Handler):
 class KubeQuery(object):
     CONNECT_TIMEOUT = 3
     READ_TIMEOUT = 15
-    
+
     def _compose_args(self):
         args =  {
             'auth': HTTPBasicAuth(
@@ -25,24 +26,24 @@ class KubeQuery(object):
         if self.url.startswith('https'):
             args['verify'] = False
         return args
-    
+
     def _raise_error(self, error_string):
         if self.json:
             raise SystemExit(json.dumps({'status': 'ERROR', 'message': error_string}))
         else:
             raise SystemExit(error_string)
-    
+
     def _make_url(self, res):
         if res is not None:
             return self.url + res
         return self.url
-    
+
     def _return_request(self, req):
         try:
             return req.json()
         except (ValueError, TypeError):
             return req.text
-    
+
     def _get(self, res=None, params=None):
         args = self._compose_args()
         if params:
@@ -56,18 +57,18 @@ class KubeQuery(object):
             args['headers'] = {'Content-type': 'application/json',
                                'Accept': 'text/plain'}
         return self._run('post', res, args)
-    
+
     def _put(self, res, data):
         args = self._compose_args()
         args['data'] = data
         args['headers'] = {'Content-type': 'application/json',
                            'Accept': 'text/plain'}
         return self._run('put', res, args)
-    
+
     def _del(self, res):
         args = self._compose_args()
         return self._run('del', res, args)
-        
+
     def _run(self, act, res, args):
         dispatcher = {
             'get': requests.get,
@@ -83,7 +84,7 @@ class KubeQuery(object):
 
 
 class PrintOut(object):
-    
+
     def _check_defaults(self):
         if getattr(self, '_WANTS_HEADER', None) is None:
             self._WANTS_HEADER = False
@@ -91,28 +92,28 @@ class PrintOut(object):
             self._FIELDS = (('name', 32),)
         if getattr(self, '_INDENT', None) is None:
             self._INDENT = 4
-    
+
     def _list(self, data):
         self._check_defaults()
         if self.json:
             self._print_json(data)
         else:
             self._print(data)
-    
+
     def _show(self, data):
         self._check_defaults()
         if self.json:
             self._print_json(data)
         else:
             self._r_print(data)
-    
+
     @staticmethod
     def _print_json(data):
         try:
             print json.dumps(data)
         except (ValueError, TypeError):
             print json.dumps({'status': 'ERROR', 'message': 'Unparseable format'})
-    
+
     def _print(self, data):
         if isinstance(data, collections.Mapping):
             self._list_data(data)
@@ -123,7 +124,7 @@ class PrintOut(object):
                 self._list_data(item)
         else:
             raise SystemExit("Unknown format")
-        
+
     def _r_print(self, data, offset=0):
         if isinstance(data, dict):
             for k, v in sorted(data.items(), key=operator.itemgetter(0)):
@@ -138,16 +139,16 @@ class PrintOut(object):
                 self._r_print(item, offset)
         else:
             raise SystemExit("Unknown format")
-    
+
     def _print_header(self):
         fmt = ''.join( ['{{{0}:<{1[1]}}}'.format(i, v)
                 for i, v in enumerate(self._FIELDS)])
         print fmt.format(*[i[0].upper() for i in self._FIELDS])
-    
+
     def _list_data(self, data):
         fmt = ''.join(['{{{0[0]}:<{0[1]}}}'.format(i) for i in self._FIELDS])
         print fmt.format(**data)
-    
+
     @staticmethod
     def _unwrap(data):
         try:
@@ -172,7 +173,8 @@ def parse_config(path):
     conf.optionxform = str
     configs = conf.read(path)
     if len(configs) == 0:   # no configs found
-        return data
+        raise SystemExit(
+            "Config '{0}' not found. Try to specify a custom one with option '--config'".format(path))
     for section in conf.sections():
         data.update(dict(conf.items(section)))
     return data

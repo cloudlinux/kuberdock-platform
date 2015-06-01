@@ -185,6 +185,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._collection[db_pod.name, namespace].kube_type = json.loads(db_pod.config).get('kube_type')
             if not hasattr(self._collection[db_pod.name, namespace], 'owner'):
                 self._collection[db_pod.name, namespace].owner = db_pod.owner.username
+            if not hasattr(self._collection[db_pod.name], 'status'):
+                self._collection[db_pod.name].status = 'stopped'
 
     def _run_service(self, pod):
         ports = []
@@ -238,7 +240,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
-        if pod.cluster:
+        if getattr(pod, 'cluster', False):
             return  # we do not support replicas now
         self._make_namespace(pod.namespace)
         if not pod.get_config('service'):
@@ -257,7 +259,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _stop_pod(self, pod, data=None):
         pod.status = 'stopped'
-        if pod.cluster:
+        if getattr(pod, 'cluster', False):
             #self._resize_replicas(pod, 0)
             return # currently we do not handle replicas
         if hasattr(pod, 'sid'):

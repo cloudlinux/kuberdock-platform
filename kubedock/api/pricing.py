@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from ..billing import Package
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic
+from ..utils import login_required_or_basic, KubeUtils
 from ..users import User
 from ..pods import Pod
 from ..billing.models import Package, Kube
@@ -32,6 +32,20 @@ def get_package(package_id=None):
     if data is None:
         raise APIError('Package not found', 404)
     return jsonify({'status': 'OK', 'data': data.to_dict()})
+
+
+@pricing.route('/userpackage', methods=['GET'], strict_slashes=False)
+@login_required_or_basic
+@check_permission('get', 'pods')
+def get_user_package():
+    user=KubeUtils._get_current_user()
+    user = db.session.query(User).filter_by(username=user.username).first()
+    if user is None:
+        raise APIError('No such user', 404)
+    current_app.logger.debug(user.package.kubes)
+    return jsonify({
+        'status': 'OK',
+        'data': dict([(k.name, k.id) for k in user.package.kubes])})
 
 
 @pricing.route('/packages/<package_id>', methods=['PUT'])

@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 1%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -32,9 +32,9 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/kuberdock-cli
 
 %{__install} -D -d -m 755 %{buildroot}%{python_sitelib}/kubecli
-%{__install} -D -m 755 bin/kcli %{buildroot}%{_bindir}/kcli
-%{__install} -D -m 644 conf/kubecli.conf %{buildroot}%{_sysconfdir}/kubecli.conf
-cp -r lib/kubecli/* %{buildroot}%{python_sitelib}/kubecli
+%{__install} -D -m 755 kcli %{buildroot}%{_bindir}/kcli
+%{__install} -D -m 644 kubecli.conf %{buildroot}%{_sysconfdir}/kubecli.conf
+cp -r kubecli/* %{buildroot}%{python_sitelib}/kubecli
 
 %clean
 rm -rf %{buildroot}
@@ -47,6 +47,8 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Mon Jun 01 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-2
+- Refactored to reflect current kuberdock functinality
 
 * Wed Apr 15 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-1
 - First release

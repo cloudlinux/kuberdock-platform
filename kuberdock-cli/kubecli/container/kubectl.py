@@ -1,5 +1,5 @@
 from ..helper import make_config
-from .container import Container
+from .container import KubeCtl
 
 def parser(subs):
     resource_help = "A resource name to take action upon"
@@ -47,5 +47,5 @@ def parser(subs):
 
 def wrapper(data):
     args = make_config(data)
-    container = Container(**args)
+    container = KubeCtl(**args)
     getattr(container, args.get('action', 'get'), 'get')()

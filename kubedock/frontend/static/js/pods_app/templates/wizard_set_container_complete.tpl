@@ -11,7 +11,7 @@
             <label>Added containers</label>
                 <% _.each(containers, function(c){ %>
                     <div>
-                        <span><%- c.image %></span>
+                        <span id="<%- c.name %>"><%- c.image %></span>
                         <span>
                             <!-- <button class="edit-item">&nbsp;</button> -->
                             <button class="delete-item">&nbsp;</button>

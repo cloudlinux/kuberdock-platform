@@ -16,7 +16,7 @@ def parse_args():
     args.add_argument('-p', '--password', help="Password")
     args.add_argument('-d', '--deploy-dir', default='/var/opt/deploy', help="Directory to put deploy script to")
     args.add_argument('-D', '--deploy-script', default='ceph_install.sh', help="Deploy script")
-    args.add_argument('-w', '--app-dir', default='/var/opt/web', help="Directory of web-application")
+    args.add_argument('-w', '--app-dir', default='/var/opt/kuberdock', help="Directory of web-application")
     args.add_argument('-c', '--conf-dir', default='/etc/ceph', help="Directory of ceph-configs")
     args.add_argument('-T', '--temp-dir', default=TMPDIR, help="Temp directory")
     return args.parse_args()

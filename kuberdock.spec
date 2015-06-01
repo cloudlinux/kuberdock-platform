@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 55%{?dist}.cloudlinux
+Release: 56%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -129,11 +129,11 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %config %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
-* Mon Jun 01 2015 Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-55
+%changelog
+* Mon Jun 01 2015 Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-56
 - podcollection bugfixes
 - AC-434: Remove exactly one proper container if pod contains multiple containers with the same image
 
-%changelog
 * Mon Jun 01 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-54
 - Add new style to alert messages to login page
 - AC-384: Fix pods with the same name but different users

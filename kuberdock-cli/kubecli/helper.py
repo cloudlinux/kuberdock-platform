@@ -4,6 +4,7 @@ import operator
 import requests
 import ConfigParser
 import collections
+import warnings
 
 from requests.auth import HTTPBasicAuth
 
@@ -77,8 +78,10 @@ class KubeQuery(object):
             'del': requests.delete
         }
         try:
-            req = dispatcher.get(act, 'get')(self._make_url(res), **args)
-            return self._return_request(req)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                req = dispatcher.get(act, 'get')(self._make_url(res), **args)
+                return self._return_request(req)
         except requests.exceptions.ConnectionError, e:
             return self._raise_error(str(e))
 

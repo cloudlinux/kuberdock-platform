@@ -67,13 +67,14 @@
             </div>
         </div>
 
+        <div id="page-preloader"></div>
+
         <script type="text/javascript">
             var current_username = "{{current_user.username }}",
                 administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
         </script>
         {% endblock %}
 
-        <div id="page-preloader"></div>
         {% block app_js_asset %}
         <script data-main="{{ url_for('static', filename='js/pods_app/require_pods.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
         <script type="text/javascript">
@@ -87,6 +88,6 @@
         {% endblock %}
         {% block users_app_js_asset %}{% endblock %}
         {% block nodes_app_js_asset %}{% endblock %}
-        
+
     </body>
 </html>

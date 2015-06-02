@@ -19,7 +19,7 @@ SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
 
 KUBERDOCK_INTERNAL_USER = 'kuberdock-internal'
-TRIAL_KUBES = 3
+TRIAL_KUBES = 10
 
 # redis configs
 REDIS_HOST = 'localhost'

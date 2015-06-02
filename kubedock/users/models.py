@@ -236,6 +236,10 @@ class User(BaseModelMixin, UserMixin, db.Model):
             self.token = '{0}|{1}|{2}'.format(self.username, seconds, sha1_hex)
         return self.token
 
+    @property
+    def kubes(self):
+        return sum([pod.kubes for pod in self.pods if not pod.is_deleted])
+
     def __repr__(self):
         return "<User(username='{0}', email='{1}')>".format(self.username, self.email)
 

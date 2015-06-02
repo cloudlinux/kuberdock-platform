@@ -327,9 +327,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _check_trial(self, params):
         if self.owner.is_trial():
-            overlimit = filter(lambda x: x['kubes'] > TRIAL_KUBES,
-                               params['containers'])
-            if overlimit:
+            user_kubes = self.owner.kubes
+            kubes_left = TRIAL_KUBES - user_kubes
+            pod_kubes = sum([c['kubes'] for c in params['containers']])
+            if pod_kubes > kubes_left:
                 self._raise('Trial User limit is exceeded. '
-                            'No more than {0} kubes per container '
-                            'allowed'.format(TRIAL_KUBES))
+                            'Kubes available for you: {0}'.format(kubes_left))

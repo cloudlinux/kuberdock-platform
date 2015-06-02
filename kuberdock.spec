@@ -130,9 +130,12 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
-* Tue Jun 02 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>  0.1-57
+* Tue Jun 02 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>  0.1-57
 - AC-441: Fix bug with empty kube tupe when add 2-th container
 - AC-432: Add help text if tables in user page is empty
+- Remove border in graph-item on container monitoring page
+- AC-397: Add TrialUser limit -- 3 kubes per container in pod
+- Clean up in logging. Error logs not commented
 
 * Mon Jun 01 2015 Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-56
 - podcollection bugfixes

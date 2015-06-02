@@ -45,7 +45,6 @@
                     <label class="col-xs-12">Type</label>
                     <div class="col-xs-11">
                         <select class="kube_type" id="extra-options" disabled>
-                            <option value="Available kube types" disabled>Available kube types</option>
                             <% _.each(kube_types, function(k_type){ %>
                             <option value="<%- k_type.id %>"<%= k_type.id === kube_type ? ' selected' : '' %>><%- k_type.name %></option>
                             <% }) %>

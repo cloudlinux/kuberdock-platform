@@ -5,7 +5,6 @@ import operator
 import re
 import requests
 import subprocess
-import sys
 import time
 
 from collections import OrderedDict
@@ -37,10 +36,6 @@ def search_image(term, url=None, page=None):
         if not url.rstrip('/').endswith('v1/search'):
             url = '{0}/v1/search'.format(url.rstrip('/'))
     data = {'q': term, 'n': 10, 'page': page}
-    # Gevent ssl incompatible with python 2.7.9
-    # https://github.com/gevent/gevent/issues/477
-    if sys.version_info[2] > 8:
-        url = url.replace('https', 'http')
     r = requests.get(url, params=data)
     return r.text
 

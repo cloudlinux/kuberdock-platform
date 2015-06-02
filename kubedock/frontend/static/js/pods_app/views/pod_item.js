@@ -203,16 +203,12 @@ define(['pods_app/app',
             templateHelpers: function(){
                 var thisItem = this.getItem();
                 var kubeType = '',
-                    restartPolicy = '',
                     labels = thisItem.get('labels'),
                     publicIP = labels !== undefined ? labels['kuberdock-public-ip'] : '';
                 _.each(kubeTypes, function(kube){
                     if(parseInt(kube.id) == parseInt(thisItem.get('kube_type')))
                         kubeType = kube.name;
                 });
-                for(var k in thisItem.get('restartPolicy')){
-                    restartPolicy = k;
-                }
                 return {
                     name:          thisItem.get('name'),
                     status:        thisItem.get('status'),
@@ -222,7 +218,7 @@ define(['pods_app/app',
                     kubeType:      kubeType,
                     publicIP:      publicIP,
                     serviceIP:     thisItem.get('serviceIP'),
-                    restartPolicy: restartPolicy
+                    restartPolicy: thisItem.get('restartPolicy')
                 };
             },
 

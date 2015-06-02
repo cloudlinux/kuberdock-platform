@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 56%{?dist}.cloudlinux
+Release: 57%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -130,6 +130,10 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Tue Jun 02 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>  0.1-57
+- AC-441: Fix bug with empty kube tupe when add 2-th container
+- AC-432: Add help text if tables in user page is empty
+
 * Mon Jun 01 2015 Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.1-56
 - podcollection bugfixes
 - AC-434: Remove exactly one proper container if pod contains multiple containers with the same image

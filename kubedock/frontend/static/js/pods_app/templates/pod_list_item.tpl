@@ -8,7 +8,6 @@
     <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>
 </td>
 <td>
-    <span class=" glyphicon"></span>
     <% if (cluster){ %>
         <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span>
     <% }  else { %>

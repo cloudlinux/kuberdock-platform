@@ -117,11 +117,7 @@ define(function () {
     this.modalDialog = function(options){
         var modal = $('.modal'),
         modalDialog = modal.find('.modal-dialog');
-
-        console.log($(window).height());
-        console.log(modalDialog.height() );
         modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
-
         if(options.title) modal.find('.modal-title').html(options.title);
         if(options.body) modal.find('.modal-body').html(options.body);
         if(options.large) modal.addClass('bs-example-modal-lg');

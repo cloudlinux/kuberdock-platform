@@ -2,7 +2,6 @@
 <td class="index"><%- index %></td>
 <td>
     <a href="#poditem/<%- parentID %>/<%- name %>"><%- image %></a>
-    <span class="terminate-btn" title="Delete <%- image %> container">Delete</span>
 </td>
 <!--
 <td><span>10.10.10.10</span></td>
@@ -21,4 +20,5 @@
 </td>
 <td>
     <span><%- startedAt ? startedAt : '' %></span>
+    <span class="terminate-btn pull-right" title="Delete <%- image %> container">Delete</span>
 </td>

@@ -22,9 +22,9 @@
                     <div class="col-xs-6">
                         <input class="command" type="text" value="" placeholder="command to start">
                     </div>
-                    <div class="col-sm-4 entrypoint-info">
+                    <!-- <div class="col-sm-4 entrypoint-info">
                         Use "space" to split
-                    </div>
+                    </div> -->
                 </div>
             </div>
             <div class="ports">
@@ -231,7 +231,7 @@
                                 <% }) %>
                             <% } else { %>
                                 <tr>
-                                    <td colspan="2" class="text-center">Ports not specified</td>
+                                    <td colspan="4" class="text-center">Ports not specified</td>
                                 </tr>
                             <% } %>
                             </tbody>

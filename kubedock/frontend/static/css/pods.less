@@ -248,7 +248,7 @@
         }
     }
 }
-.variables-table{
+.variables-table, #imagelist-table{
     margin-top: 10px;
 }
 #item-controls{
@@ -267,6 +267,18 @@
             margin-bottom: 25px;
             padding-right: 0;
         }
+        .info, .servers{
+            > div{
+                color: #1d1d1d;
+                font-size: 14px;
+                line-height: 19px;
+                font-weight: normal;
+                font-family: @regular;
+                &:last-child{
+                    margin-bottom: 0;
+                }
+            }
+        }
         .info{
             padding-left: 94px;
             position: relative;
@@ -278,16 +290,6 @@
                 height: 70px;
                 position: absolute;
                 background: url('../img/info-ico.png') 0 0 no-repeat;
-            }
-            > div{
-                color: #1d1d1d;
-                font-size: 14px;
-                margin-bottom: 2px;
-                font-weight: normal;
-                font-family: @regular;
-                &:last-child{
-                    margin-bottom: 0;
-                }
             }
         }
         .servers{
@@ -567,26 +569,6 @@
                         }
                     }
                 }
-                label{
-                    &.custom{
-                        display: block;
-                        font-weight: normal;
-                        span{
-                            width: 20px;
-                            height: 21px;
-                            margin-right: 10px;
-                            display: inline-block;
-                            vertical-align: middle;
-                            &:before{
-                                top: 0px;
-                                left: 0px;
-                                width: 18px;
-                                height: 19px;
-                                background-position: center;
-                            }
-                        }
-                    }
-                }
                 .policy, .kube-type-wrapper{
                     margin-bottom: 29px;
                     position: relative;
@@ -763,6 +745,8 @@
                 }
                 .volumes{
                     margin-bottom: 30px;
+                }
+                .volumes, .ports{
                     table{
                         label{
                             margin-bottom: 0;

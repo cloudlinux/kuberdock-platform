@@ -115,7 +115,13 @@ define(function () {
     });
 
     this.modalDialog = function(options){
-        var modal = $('.modal');
+        var modal = $('.modal'),
+        modalDialog = modal.find('.modal-dialog');
+
+        console.log($(window).height());
+        console.log(modalDialog.height() );
+        modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
+
         if(options.title) modal.find('.modal-title').html(options.title);
         if(options.body) modal.find('.modal-body').html(options.body);
         if(options.large) modal.addClass('bs-example-modal-lg');
@@ -124,8 +130,8 @@ define(function () {
         if(options.footer){
             modal.find('.modal-footer').empty();
             if(options.footer.buttonOk){
-                modal.find('.modal-footer').prepend(
-                    $('<button type="button" class="btn btn-success" ' +
+                modal.find('.modal-footer').append(
+                    $('<button type="button" class="btn blue" ' +
                           'data-dismiss="modal">').unbind('click')
                         .bind('click', options.footer.buttonOk)
                         .text('OK')
@@ -133,8 +139,8 @@ define(function () {
             }
             if(options.footer.buttonCancel){
                 if(options.footer.buttonCancel === true){
-                    modal.find('.modal-footer').append(
-                        $('<button type="button" class="btn btn-default" ' +
+                    modal.find('.modal-footer').prepend(
+                        $('<button type="button" class="btn"' +
                               'data-dismiss="modal">Cancel</button>')
                     )
                 }

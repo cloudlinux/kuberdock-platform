@@ -685,6 +685,40 @@ body{
                     border: none;
                     padding: 15px 20px;
                     background-color: #f5fafe;
+                    button{
+                        .border-radius(0);
+                        outline: 0;
+                        height: 37px;
+                        padding: 0 31px;
+                        font-size: 16px;
+                        border: 1px solid;
+                        text-align: center;
+                        margin-right: 10px;
+                        font-family: @regular;
+                        &:hover{
+                            cursor: pointer;
+                        }
+                        &:active, &:focus{
+                            .box-shadow(none);
+                            cursor: default;
+                        }
+                        &:first-child{
+                            color: #1d1d1d;
+                            border-color: #ebebeb;
+                            background-color: #fcfcfc;
+                        }
+                        &:last-child, &.blue{
+                            color: #fff;
+                            margin-right: 0;
+                            border-color: #466eb1;
+                            background-color: #466eb1;
+                        }
+                        &.gray{
+                            color: #1d1d1d;
+                            border-color: #ebebeb;
+                            background-color: #fcfcfc;
+                        }
+                    }
                 }
             }
         }

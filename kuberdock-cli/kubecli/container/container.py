@@ -86,12 +86,15 @@ class KuberDock(KubeCtl):
     def set(self):
         if hasattr(self, 'image'):
             i = self._get_image()
-            for attr in 'container_port', 'host_port', 'protocol':
+            for attr in 'container_port', 'host_port', 'protocol', 'mount_path':
                 try:
                     operator.methodcaller(
-                        'set_' + attr, getattr(self, attr), self.port_index)(i)
+                        'set_' + attr, getattr(self, attr), self.index)(i)
                 except AttributeError:
                     continue
+
+            operator.methodcaller(
+                'set_public', self.set_public_ip, self.index)(i)
         self._save()
 
     def save(self):

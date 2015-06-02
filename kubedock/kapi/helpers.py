@@ -229,3 +229,14 @@ class Utilities(object):
         return "%s-%s" % (n, ''.join(
             random.sample(string.lowercase + string.digits, 10)))
 
+    def merge_lists(self, l1, l2, key, replace=False):
+        merged = {}
+        for item in l1+l2:
+            if item[key] in merged:
+                if replace is False:
+                    merged[item[key]].update(dict(item.items() + merged[item[key]].items()))
+                else:
+                    merged[item[key]].update(item)
+            else:
+                merged[item[key]] = item
+        return [val for (_, val) in merged.items()]

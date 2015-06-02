@@ -184,6 +184,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 # TODO if remove _is_related then add serviceIP attribute here
                 # self._collection[db_pod.name, namespace].service = json.loads(db_pod.config).get('service')
                 self._collection[db_pod.name, namespace].kube_type = json.loads(db_pod.config).get('kube_type')
+                a = self._collection[db_pod.name, namespace].containers
+                b = json.loads(db_pod.config).get('containers')
+                self._collection[db_pod.name, namespace].containers = self.merge_lists(a, b, 'name')
             if not hasattr(self._collection[db_pod.name, namespace], 'owner'):
                 self._collection[db_pod.name, namespace].owner = db_pod.owner.username
             if not hasattr(self._collection[db_pod.name, namespace], 'status'):

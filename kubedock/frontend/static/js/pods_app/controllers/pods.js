@@ -324,6 +324,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
                         data.unset('lastAddedImage', {silent: true});
+                        data.unset('lastAddedImageNameId', {silent: true});
                         data.set({'save_only': true}, {silent: true});
                         processRequest(data);
                     });
@@ -377,6 +378,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         }
                         model.get('containers').push(contents);
                         model.set('lastAddedImage', image);
+                        model.set('lastAddedImageNameId', contents.name);
                         rqst.done(function(data){
                             if (data.hasOwnProperty('data')) { data = data['data']; }
                             model.fillContainer(contents, data);

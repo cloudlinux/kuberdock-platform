@@ -68,6 +68,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
         else:
             return False
 
+    def is_trial(self):
+        return self.role.rolename == 'TrialUser'
+
     @property
     def last_activity(self):
         return get_user_last_activity(self.id)

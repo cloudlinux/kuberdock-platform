@@ -5,7 +5,7 @@ from ..utils import modify_node_ips, run_ssh_command
 from .pod import Pod
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..api.stream import send_event
-from ..settings import KUBERDOCK_INTERNAL_USER
+from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES
 
 
 class PodCollection(KubeQuery, ModelQuery, Utilities):
@@ -17,6 +17,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._merge()
 
     def add(self, params):
+        self._check_trial(params)
         namespace = '{0}-{1}-pods'.format(
             self.owner.username, params['name']).lower()
         params['namespace'] = namespace
@@ -323,3 +324,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     'ready': False,
                     'restartCount': 0,
                     'state': {'stopped': {}}}})
+
+    def _check_trial(self, params):
+        if self.owner.is_trial():
+            overlimit = filter(lambda x: x['kubes'] > TRIAL_KUBES,
+                               params['containers'])
+            if overlimit:
+                self._raise('Trial User limit is exceeded. '
+                            'No more than {0} kubes per container '
+                            'allowed'.format(TRIAL_KUBES))

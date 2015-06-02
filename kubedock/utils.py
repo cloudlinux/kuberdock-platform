@@ -97,7 +97,7 @@ class APIError(Exception):
         self.status_code = status_code
 
 
-def modify_node_ips(host, cmd, pod_ip, public_ip, ports):
+def modify_node_ips_old(host, cmd, pod_ip, public_ip, ports):
     ARPING = 'arping -I {0} -A {1} -c 10 -w 1'
     IP_ADDR = 'ip addr {0} {1}/32 dev {2}'
     IPTABLES = 'iptables -t nat -{0} PREROUTING ' \
@@ -112,6 +112,65 @@ def modify_node_ips(host, cmd, pod_ip, public_ip, ports):
     ssh.exec_command(IP_ADDR.format(cmd, public_ip, NODE_TOBIND_EXTERNAL_IPS))
     if cmd == 'add':
         ssh.exec_command(ARPING.format(NODE_TOBIND_EXTERNAL_IPS, public_ip))
+    for port_spec in ports:
+        if not port_spec['name'].endswith('-public'):
+            continue
+        containerPort = port_spec['targetPort']
+        publicPort = port_spec.get('port', containerPort)
+        protocol = port_spec.get('protocol', 'tcp')
+        if cmd == 'add':
+            if SERVICES_VERBOSE_LOG >= 1:
+                print '==ADDED PORTS==', publicPort, containerPort, protocol
+            i, o, e = ssh.exec_command(
+                IPTABLES.format('C', NODE_TOBIND_EXTERNAL_IPS, protocol,
+                                public_ip,
+                                publicPort,
+                                pod_ip,
+                                containerPort))
+            exit_status = o.channel.recv_exit_status()
+            if exit_status != 0:
+                ssh.exec_command(
+                    IPTABLES.format('I', NODE_TOBIND_EXTERNAL_IPS, protocol,
+                                    public_ip,
+                                    publicPort,
+                                    pod_ip,
+                                    containerPort))
+        else:
+            if SERVICES_VERBOSE_LOG >= 1:
+                print '==DELETED PORTS==', publicPort, containerPort, protocol
+            ssh.exec_command(
+                IPTABLES.format('D', NODE_TOBIND_EXTERNAL_IPS, protocol,
+                                public_ip,
+                                publicPort,
+                                pod_ip,
+                                containerPort))
+    ssh.close()
+    return True
+
+
+def modify_node_ips(host, cmd, pod_ip, public_ip, ports):
+    IPTABLES = 'iptables -t nat -{0} PREROUTING ' \
+               '-i {1} ' \
+               '-p {2} -d {3} ' \
+               '--dport {4} -j DNAT ' \
+               '--to-destination {5}:{6}'
+    ssh, errors = ssh_connect(host)
+    if errors:
+        print errors
+        return False
+    i, o, e = ssh.exec_command(
+        'bash /var/lib/kuberdock/scripts/modify_ip.sh {0} {1} {2}'
+        .format(cmd, public_ip, NODE_TOBIND_EXTERNAL_IPS)
+    )
+    exit_status = o.channel.recv_exit_status()
+    if exit_status > 0:
+        if SERVICES_VERBOSE_LOG >= 2:
+            print 'O', o.read()
+            print 'E', e.read()
+        print 'Error modify_ip.sh with exit status {0} public_ip={1} IFACE={2}'\
+            .format(exit_status, public_ip, NODE_TOBIND_EXTERNAL_IPS)
+        ssh.close()
+        return False
     for port_spec in ports:
         if not port_spec['name'].endswith('-public'):
             continue

@@ -1063,7 +1063,7 @@ define(['pods_app/app',
 
             onRender: function(){
                 if (!this.model.get('kube_type'))
-                    this.model.set('kube_type',this.ui.kubeTypes.find(':selected').val());
+                    this.model.set('kube_type', parseInt(kubeTypes[0].id));
                 var that = this;
                 this.ui.ieditable.editable({
                     type: 'text',

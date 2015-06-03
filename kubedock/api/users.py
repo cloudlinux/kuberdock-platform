@@ -8,7 +8,7 @@ from ..billing import Package
 from ..core import db
 from ..rbac import check_permission
 from ..rbac.models import Role
-from ..utils import login_required_or_basic, KubeUtils
+from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..users.models import User, UserActivity
 from ..users.signals import (
     user_logged_in_by_another, user_logged_out_by_another)
@@ -18,7 +18,7 @@ users = Blueprint('users', __name__, url_prefix='/users')
 
 
 @users.route('/loginA', methods=['POST'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('auth_by_another', 'users')
 def auth_another():
     data = request.form
@@ -58,28 +58,28 @@ def get_users_usernames(s):
 @users.route('/', methods=['GET'])
 @users.route('/all', methods=['GET'])
 @users.route('/<username>', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 def get_list(username=None):
     data = get_users_collection(username)
     return jsonify({'status': 'OK', 'data': data})
 
 
 @users.route('/full', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 def get_full_list():
     data = get_full_users_collection()
     return jsonify({'status': 'OK', 'data': data})
 
 
 @users.route('/q', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 def get_usernames():
     data = get_users_usernames(request.args.get('s'))
     return jsonify({'status': 'OK', 'data': data})
 
 
 @users.route('/roles', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_roles():
     return jsonify({
@@ -89,7 +89,7 @@ def get_roles():
 
 
 @users.route('/<user_id>', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_one_user(user_id):
     if user_id == 'all':
@@ -146,7 +146,7 @@ def user_activities(user, date_from=None, date_to=None, to_dict=None,
 
 
 @users.route('/a/<user>', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_user_activities(user):
     data = request.args
@@ -157,7 +157,7 @@ def get_user_activities(user):
 
 
 @users.route('/activities', methods=['POST'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_users_activities():
     data = request.form
@@ -172,7 +172,7 @@ def get_users_activities():
 
 
 @users.route('/logHistory', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_user_log_history():
     data = request.args
@@ -186,7 +186,7 @@ def get_user_log_history():
 
 
 @users.route('/online/', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_online_users():
     return jsonify({'data': User.get_online_collection()})
@@ -194,7 +194,7 @@ def get_online_users():
 
 @users.route('/', methods=['POST'], strict_slashes=False)
 @users.route('/full', methods=['POST'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('create', 'users')
 def create_item():
     data = request.json
@@ -219,7 +219,7 @@ def create_item():
 
 @users.route('/<user_id>', methods=['PUT', 'PATCH'])
 @users.route('/full/<user_id>', methods=['PUT', 'PATCH'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'users')
 def put_item(user_id):
     if user_id.isdigit():
@@ -251,7 +251,7 @@ def put_item(user_id):
 
 
 @users.route('/editself', methods=['PUT', 'PATCH'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 def edit_self():
     user = KubeUtils._get_current_user()
     db_user = db.session.query(User).get(user.id)
@@ -267,7 +267,7 @@ def edit_self():
 
 @users.route('/<user_id>', methods=['DELETE'])
 @users.route('/full/<user_id>', methods=['DELETE'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('delete', 'users')
 def delete_item(user_id):
     if user_id.isdigit():

@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from ..billing import Package
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic
+from ..utils import login_required_or_basic_or_token
 from ..users import User
 from ..pods import Pod
 from ..stats import StatWrap5Min
@@ -16,7 +16,7 @@ usage = Blueprint('usage', __name__, url_prefix='/usage')
 
 
 @usage.route('/', methods=['GET'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_total_usage():
     data = {}
@@ -32,7 +32,7 @@ def get_total_usage():
     return jsonify({'status': 'OK', 'data': data})
 
 @usage.route('/<login>', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_usage(login):
     #start = request.args.get('start', None)

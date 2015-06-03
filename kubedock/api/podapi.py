@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask.views import MethodView
-from ..utils import login_required_or_basic, KubeUtils, register_api
+from ..utils import login_required_or_basic_or_token, KubeUtils, register_api
 from ..kapi.podcollection import PodCollection
 from ..validation import check_new_pod_data
 
@@ -9,7 +9,7 @@ podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
 
 class PodsAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, KubeUtils.pod_permissions, login_required_or_basic]
+    decorators = [KubeUtils.jsonwrap, KubeUtils.pod_permissions, login_required_or_basic_or_token]
 
 
     def get(self, pod_id):

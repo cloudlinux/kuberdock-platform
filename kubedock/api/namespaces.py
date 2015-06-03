@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask.ext.login import current_user
 
 from ..rbac import check_permission
-from ..utils import login_required_or_basic, get_api_url
+from ..utils import login_required_or_basic_or_token, get_api_url
 from ..settings import KUBE_API_VERSION, DEBUG
 from ..api import APIError
 from ..api.entities.pod import PodEntity
@@ -16,7 +16,7 @@ pods = Blueprint('namespaces', __name__, url_prefix='/namespaces')
 
 
 @pods.route('/', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'namespaces')
 def get_namespaces():
     namespaces = Namespaces.get()
@@ -24,7 +24,7 @@ def get_namespaces():
 
 
 @pods.route('/', methods=['POST'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('create', 'namespaces')
 def create_namespaces():
     """
@@ -37,7 +37,7 @@ def create_namespaces():
 
 
 @pods.route('/', methods=['POST'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('create', 'namespaces')
 def get_user_namespaces():
     """

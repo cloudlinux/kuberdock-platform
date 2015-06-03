@@ -42,7 +42,7 @@ def online_users(**kwargs):
 
 
 @users.route('/users/logoutA/', methods=['GET'])
-# @login_required_or_basic
+# @login_required_or_basic_or_token
 # @check_permission('auth_by_another', 'users')
 def logout_another():
     admin_user_id = session.pop('auth_by_another', None)

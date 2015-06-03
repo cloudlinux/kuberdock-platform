@@ -7,7 +7,7 @@ from flask.ext.login import current_user
 from ..core import db
 from ..rbac import check_permission, acl
 from ..rbac.models import Role, Resource, Permission
-from ..utils import login_required_or_basic, APIError
+from ..utils import login_required_or_basic_or_token, APIError
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
 
@@ -36,7 +36,7 @@ def get_permissions():
 
 
 @settings.route('/permissions/<pid>', methods=['PUT'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission("set_permissions", "settings")
 def permissions(pid):
     data = request.json or request.form.to_dict()

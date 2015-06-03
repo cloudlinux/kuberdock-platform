@@ -12,7 +12,7 @@ from .rbac import check_permission
 from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG
 
 
-def login_required_or_basic(func):
+def login_required_or_basic_or_token(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         if current_app.login_manager._login_disabled:
@@ -26,6 +26,12 @@ def login_required_or_basic(func):
                     if user is not None and user.verify_password(passwd):
                         g.user = user
                         return func(*args, **kwargs)
+            token = request.args.get('token')
+            if token:
+                user = User.query.filter_by(token=token).first()
+                if user is not None:
+                    g.user = user
+                    return func(*args, **kwargs)
             raise APIError('Not Authorized', status_code=401)
             #return current_app.login_manager.unauthorized()
         return func(*args, **kwargs)
@@ -261,6 +267,7 @@ class KubeUtils(object):
         data = request.form.to_dict()
         if data is not None:
             params.update(data)
+        params.pop('token', None)  # remove auth token from params if exists
         return params
 
 

@@ -1,5 +1,6 @@
 import json
 import datetime
+import hashlib
 from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import current_app
@@ -38,6 +39,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     activities = db.relationship('UserActivity', back_populates="user")
     settings = db.Column(db.Text)
+    token = db.Column(db.String(96), nullable=True)
 
     # This fields(+password) can be seen and edited by user himself
     # Admins can edit them too
@@ -220,6 +222,19 @@ class User(BaseModelMixin, UserMixin, db.Model):
         for key, value in data.items():
             if key in valid:
                 setattr(self, key, value)
+
+    def get_token(self, regen=False):
+        if not self.token or regen:
+            now = datetime.datetime.now()
+            epoch = datetime.datetime(1970, 1, 1)
+            delta = now - epoch
+            seconds = int(delta.total_seconds())
+            sha1 = hashlib.sha1()
+            sha1.update(self.password_hash)
+            sha1.update(str(seconds))
+            sha1_hex = sha1.hexdigest()
+            self.token = '{0}|{1}|{2}'.format(self.username, seconds, sha1_hex)
+        return self.token
 
     def __repr__(self):
         return "<User(username='{0}', email='{1}')>".format(self.username, self.email)

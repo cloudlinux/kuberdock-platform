@@ -6,12 +6,12 @@ import operator
 import itertools
 import time
 import datetime
-from ..utils import login_required_or_basic
+from ..utils import login_required_or_basic_or_token
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 
 @stats.route('/', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 def unit_stat():
     uuid = request.args.get('unit', None)
     container = request.args.get('container', None)

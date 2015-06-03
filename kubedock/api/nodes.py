@@ -7,7 +7,7 @@ from .. import tasks
 from ..models import Node, User, Pod
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic, KubeUtils
+from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR
@@ -450,7 +450,7 @@ def poll():
 
 
 @nodes.route('/lookup', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'pods')
 def pd_lookup():
     drives = []

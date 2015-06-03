@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from ..billing import Package
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic, KubeUtils
+from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..users import User
 from ..pods import Pod
 from ..billing.models import Package, Kube
@@ -21,7 +21,7 @@ pricing = Blueprint('pricing', __name__, url_prefix='/pricing')
 # === PACKAGE ROUTINES ===
 @pricing.route('/packages', methods=['GET'], strict_slashes=False)
 @pricing.route('/packages/<package_id>', methods=['GET'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_package(package_id=None):
     if package_id is None:
@@ -35,7 +35,7 @@ def get_package(package_id=None):
 
 
 @pricing.route('/userpackage', methods=['GET'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'pods')
 def get_user_package():
     user=KubeUtils._get_current_user()
@@ -49,7 +49,7 @@ def get_user_package():
 
 
 @pricing.route('/packages/<package_id>', methods=['PUT'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'users')
 def update_package(package_id):
     package = db.session.query(Package).get(package_id)
@@ -66,7 +66,7 @@ def update_package(package_id):
 
 
 @pricing.route('/packages', methods=['POST'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('create', 'users')
 def create_package():
     data = {}
@@ -96,7 +96,7 @@ def create_package():
 
 
 @pricing.route('/packages/<package_id>', methods=['DELETE'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('delete', 'users')
 def delete_package(package_id):
     package = db.session.query(Package).get(package_id)
@@ -110,7 +110,7 @@ def delete_package(package_id):
 # === KUBE ROUTINES ===
 @pricing.route('/kubes', methods=['GET'], strict_slashes=False)
 @pricing.route('/kubes/<int:kube_id>', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_kube(kube_id=None):
     if kube_id is None:
@@ -124,7 +124,7 @@ def get_kube(kube_id=None):
 
 
 @pricing.route('/kubes', methods=['POST'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('create', 'users')
 def create_kube():
     params = request.json
@@ -160,7 +160,7 @@ def add_kube(data):
 
 
 @pricing.route('/kubes/<int:kube_id>', methods=['PUT'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'users')
 def update_kube(kube_id):
     conv = {'cpu': float, 'memory': int}
@@ -179,7 +179,7 @@ def update_kube(kube_id):
 
 
 @pricing.route('/kubes/<int:kube_id>', methods=['DELETE'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('delete', 'users')
 def delete_kube(kube_id):
     item = db.session.query(Kube).get(kube_id)
@@ -192,7 +192,7 @@ def delete_kube(kube_id):
 
 # === PACKAGE KUBE ROUTINES ===
 @pricing.route('/packages/<int:package_id>/kubes-by-id', methods=['GET'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_package_kube_ids(package_id):
     package = db.session.query(Package).get(package_id)
@@ -205,7 +205,7 @@ def get_package_kube_ids(package_id):
 
 
 @pricing.route('/packages/<int:package_id>/kubes-by-name', methods=['GET'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_package_kube_names(package_id):
     package = db.session.query(Package).get(package_id)
@@ -218,7 +218,7 @@ def get_package_kube_names(package_id):
 
 
 @pricing.route('/packages/<int:package_id>/kubes', methods=['GET'], strict_slashes=False)
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_package_kubes(package_id):
     package = db.session.query(Package).get(package_id)
@@ -232,7 +232,7 @@ def get_package_kubes(package_id):
 
 @pricing.route('/packages/<int:package_id>/kubes', methods=['POST'], strict_slashes=False)
 @pricing.route('/packages/<int:package_id>/kubes/<int:kube_id>', methods=['PUT'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'users')
 def add_kube_to_package(package_id, kube_id=None):
     package = db.session.query(Package).get(package_id)
@@ -258,7 +258,7 @@ def add_kube_to_package(package_id, kube_id=None):
 
 
 @pricing.route('/packages/<int:package_id>/kubes/<int:kube_id>', methods=['DELETE'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'users')
 def delete_kube_from_package(package_id, kube_id):
     package = db.session.query(Package).get(package_id)

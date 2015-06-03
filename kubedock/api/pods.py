@@ -12,7 +12,7 @@ from .. import tasks, signals
 from ..models import User, Pod
 from ..core import db, ssh_connect
 from ..rbac import check_permission
-from ..utils import login_required_or_basic, modify_node_ips
+from ..utils import login_required_or_basic_or_token, modify_node_ips
 from ..kubedata.kuberesolver import KubeResolver, add_fake_dockers
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..billing import kubes_to_limits
@@ -54,7 +54,7 @@ def get_pods_collection():
 
 
 @pods.route('/', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'pods')
 def get_pods():
     coll = get_pods_collection()
@@ -62,7 +62,7 @@ def get_pods():
 
 
 @pods.route('/', methods=['POST'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('create', 'pods')
 def create_item():
     data = request.json
@@ -164,7 +164,7 @@ def create_item():
 
 
 @pods.route('/<string:uuid>', methods=['DELETE'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('delete', 'pods')
 def delete_item(uuid):
     # TODO refactor to item => pod
@@ -257,7 +257,7 @@ def delete_item(uuid):
 
 
 @pods.route('/<string:uuid>', methods=['PUT', 'POST'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'pods')
 def update_item(uuid):
     response = {}
@@ -345,7 +345,7 @@ def do_action(host, action, container_id):
 
 
 @pods.route('/containers', methods=['PUT'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'pods')
 def docker_action():
     data = request.json or request.args or request.form

@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from . import APIError
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic
+from ..utils import login_required_or_basic_or_token
 from ..pods.models import IPPool, PodIP
 
 
@@ -17,20 +17,20 @@ def get_networks_collection():
 
 
 @ippool.route('/', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 def get_list():
     return jsonify({'status': 'OK', 'data': get_networks_collection()})
 
 
 @ippool.route('/getFreeHost', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 def get_free_host():
     free_host = IPPool.get_free_host()
     return jsonify({'status': 'OK', 'data': free_host})
 
 
 @ippool.route('/<network>', methods=['GET'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('get', 'ippool')
 def get_one_network(network):
     if network == 'all':
@@ -43,7 +43,7 @@ def get_one_network(network):
 
 
 @ippool.route('/', methods=['POST'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('create', 'ippool')
 def create_item():
     data = request.json
@@ -90,7 +90,7 @@ def create_item():
 
 
 @ippool.route('/<path:network>', methods=['PUT'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('edit', 'ippool')
 def change_item(network):
     data = request.json
@@ -113,7 +113,7 @@ def change_item(network):
 
 
 @ippool.route('/<path:network>', methods=['DELETE'])
-@login_required_or_basic
+@login_required_or_basic_or_token
 @check_permission('delete', 'ippool')
 def delete_item(network):
     try:

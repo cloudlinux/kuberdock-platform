@@ -39,7 +39,7 @@ def process(data):
 
 def parse(data):
     entrypoint_is_array = False
-    ready = {'command': [], 'workingDir': '', 'ports': [], 'volumeMounts': [], 'EntryPoint': []}
+    ready = {'command': [], 'workingDir': '', 'ports': [], 'volumeMounts': [], 'EntryPoint': [], 'env': []}
     for line in data.splitlines():
         if line.startswith('CMD'):
             ready['command'].extend(process(line))
@@ -53,6 +53,9 @@ def parse(data):
             ready['volumeMounts'].extend(process(line))
         elif line.startswith('EXPOSE'):
             ready['ports'].extend(process(line))
+        elif line.startswith('ENV'):
+            env, val = process(line)
+            ready['env'].extend([dict({'name': env, 'value': val})])
     entry_point = ready.pop('EntryPoint', [])
     command = ready.get('command', [])
     if entry_point:
@@ -139,7 +142,6 @@ def get_dockerfile_data():
             return jsonify({'status': 'OK', 'data': query.data})
     result = tasks.get_dockerfile.delay(image)
     rv = result.wait()
-
     out = parse(rv)
     out['image'] = image
     # current_app.logger.debug(out)

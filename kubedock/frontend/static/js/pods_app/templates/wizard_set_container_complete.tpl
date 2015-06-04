@@ -1,4 +1,4 @@
-<div class="container" id="add-image">
+<div class="container" id="add-image" image_name_id="<%- image_name_id %>">
     <div class="col-md-3 sidebar no-padding">
         <ul class="nav nav-sidebar">
             <li role="presentation" class="success">Choose image</li>

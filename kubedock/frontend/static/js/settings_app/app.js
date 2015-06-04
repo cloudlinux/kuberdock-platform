@@ -56,8 +56,8 @@ define(['marionette', 'utils'],
                             url: '/api/settings/timezone',
                             data: {'s': that.ui.timezone.val()},
                             cache: false,
-                            success: function(rs){
-                                process(rs.data);
+                            success: function(responce){
+                                process(responce.data);
                             }
                         })
                     }

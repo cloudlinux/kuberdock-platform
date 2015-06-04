@@ -20,7 +20,7 @@ requirejs.config({
         "scroll-view"          : "lib/scroll-view",
         "notify"               : "lib/notify.min",
         moment                 : "lib/moment.min",
-        "moment-tz"            : "lib/moment-timezone-with-data.min"
+        "moment-timezone"      : "lib/moment-timezone-with-data.min"
     },
     shim: {
         underscore: {

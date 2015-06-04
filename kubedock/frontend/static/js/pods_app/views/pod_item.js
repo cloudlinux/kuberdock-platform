@@ -5,7 +5,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/page_container_item.tpl',
         'tpl!pods_app/templates/pod_item_controls.tpl',
         'tpl!pods_app/templates/pod_item_graph.tpl',
-        'moment', 'pods_app/utils',
+        'moment-timezone', 'pods_app/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer'
         ],
        function(Pods,
@@ -21,11 +21,11 @@ define(['pods_app/app',
 
         function localizeDatetime(dt, tz){
             try {
-                return moment(dt).tz(tz).format('hh:mm:ss YYYY-MM-DD');
+                return moment(dt).tz(tz).format('HH:mm:ss YYYY-MM-DD');
             } catch (e){
                 console.log(e);
             }
-            return moment(dt).format('hh:mm:ss YYYY-MM-DD');
+            return moment(dt).format('HH:mm:ss YYYY-MM-DD');
         }
 
         Item.PodItemLayout = Backbone.Marionette.LayoutView.extend({
@@ -72,7 +72,7 @@ define(['pods_app/app',
                 return {
                     index: modelIndex + 1,
                     kubes: kubes ? kubes : 0,
-                    startedAt: localizeDatetime(startedAt, userSettings.timezone)
+                    startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' : localizeDatetime(startedAt, userSettings.timezone)
                 }
             },
 

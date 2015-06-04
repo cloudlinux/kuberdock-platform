@@ -13,7 +13,7 @@ Requires: influxdb
 Requires: redis
 Requires: postgresql-server
 Requires: fabric
-Requires: etcd == 2.0.9-1.el7.centos
+Requires: etcd >= 2.0.9-1.el7.centos
 Requires: kubernetes >= 0.15.0-4.el7.centos.1
 Requires: flannel >= 0.3.0
 Requires: dnsmasq >= 2.66
@@ -40,7 +40,7 @@ Requires: python-billiard >= 3.3.0.18
 Requires: python-blinker >= 1.3
 Requires: python-celery >= 3.1.15
 Requires: python-ecdsa >= 0.11
-Requires: python-gevent >= 1.0
+Requires: python-gevent >= 1.0.2
 Requires: python-greenlet >= 0.4.2
 Requires: python-influxdb >= 0.1.13
 Requires: python-itsdangerous >= 0.24

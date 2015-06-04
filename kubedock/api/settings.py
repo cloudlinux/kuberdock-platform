@@ -1,5 +1,6 @@
 import json
-from pytz import common_timezones
+from pytz import common_timezones, timezone
+from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from flask.ext.login import current_user
 
@@ -144,8 +145,15 @@ def delete_template(tid):
 @check_permission('get_timezone', 'settings')
 def get_timezone():
     s = request.args.get('s')
-    timezones_list = [tz for tz in common_timezones
-                      if tz.find(s) >= 0 or tz.find(s.title()) >= 0][:5]
+    timezones_list = []
+    c = 0
+    for tz in common_timezones:
+        if tz.find(s) >= 0 or tz.find(s.title()) >= 0:
+            offset = datetime.now(timezone(tz)).strftime('%z')
+            timezones_list.append('{0} ({1})'.format(tz, offset))
+            c += 1
+            if c == 5:
+                break
     return jsonify({'status': 'OK', 'data': timezones_list})
 
 
@@ -153,5 +161,8 @@ def get_timezone():
 @check_permission('set_timezone', 'settings')
 def set_timezone():
     tz = request.form.get('timezone')
+    tz = tz.split(' (')[0]
+    if tz.strip() not in common_timezones:
+        raise APIError('Unknown timezone')
     current_user.set_settings('timezone', tz)
     return jsonify({'status': 'OK', 'data': tz})

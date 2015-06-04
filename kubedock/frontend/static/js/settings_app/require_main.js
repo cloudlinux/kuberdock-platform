@@ -64,8 +64,7 @@ requirejs.config({
         }
     }
 });
-require(['jquery', 'settings_app/app', 'moment', 'notify', 'jquery-ui', 'bootstrap3-typeahead',
-        'moment', 'moment-timezone'],
+require(['jquery', 'settings_app/app', 'moment', 'notify', 'jquery-ui', 'bootstrap3-typeahead', 'moment-timezone'],
 function(jQuery, SettingsApp, moment){
     SettingsApp.Data.permissions = new SettingsApp.Data.PermissionsCollection(permissions);
     SettingsApp.Data.notifications = new SettingsApp.Data.NotificationsCollection(notifications);

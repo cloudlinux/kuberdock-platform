@@ -6,7 +6,7 @@ from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
 
 from ..billing import kubes_to_limits
-from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER
+from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, AWS, CEPH
 
 class Pod(KubeQuery, ModelQuery, Utilities):
 
@@ -92,9 +92,17 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     pd.get('pdName'), PD_SEPARATOR, username)
                 size = pd.get('pdSize')
                 if size is None:
-                    params = base64.b64encode("{0};{1};{2}".format('mount', device, name))
+                    array = ['mount', device, name]
                 else:
-                    params = base64.b64encode("{0};{1};{2};{3}".format('create', device, name, size))
+                    array = ['create', device, name, size]
+                    if AWS:
+                        try:
+                            from ..settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+                            array.extend([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY])
+                        except ImportError:
+                            pass
+                fmt = ';'.join(['{{{0}}}'.format(i) for i in range(len(array))])
+                params = base64.b64encode(fmt.format(*array))
 
                 volume['scriptableDisk'] = {
                     'pathToScript': path,

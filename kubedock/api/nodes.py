@@ -10,13 +10,14 @@ from ..rbac import check_permission
 from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
-from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR
+from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, CEPH
 from ..settings import KUBERDOCK_INTERNAL_USER
 from ..kapi.podcollection import PodCollection
 from . import APIError
 from .stream import send_event
 from fabric.api import run, settings, env
 from fabric.tasks import execute
+import boto.ec2
 
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
@@ -448,15 +449,10 @@ def poll():
             i.items()))
     return devices
 
-
-@nodes.route('/lookup', methods=['GET'])
-@login_required_or_basic_or_token
-@check_permission('get', 'pods')
-def pd_lookup():
+def get_ceph_volumes():
     drives = []
     env.user = 'root'
     env.skip_bad_hosts = True
-    env.key_file = '/usr/home/bliss/.ssh/id_pub'
     nodes = dict([(k, v)
         for k, v in db.session.query(Node).values(Node.ip, Node.hostname)])
     with settings(warn_only=True):
@@ -471,7 +467,38 @@ def pd_lookup():
             continue
         if user == username:
             drives.append(drive)
-    return jsonify({'status': 'OK', 'data': drives})
+    return drives
+
+def get_aws_volumes():
+    drives = []
+    try:
+        from ..settings import REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+    except ImportError:
+        return drives
+    username = KubeUtils._get_current_user().username
+    conn = boto.ec2.connect_to_region(
+        REGION,
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    for vol in conn.get_all_volumes():
+        try:
+            item = vol.tags.get('Name', 'Nameless')
+            drive, user = item.rsplit(PD_SEPARATOR, 1)
+        except ValueError:
+            continue
+        if user == username:
+            drives.append(drive)
+    return drives
+
+@nodes.route('/lookup', methods=['GET'])
+@login_required_or_basic_or_token
+@check_permission('get', 'pods')
+def pd_lookup():
+    if AWS:
+        return jsonify({'status': 'OK', 'data': get_aws_volumes()})
+    if CEPH:
+        return jsonify({'status': 'OK', 'data': get_ceph_volumes()})
+    return jsonify({'status': 'OK', 'data': []})
 
 
 @nodes.route('/redeploy/<node_id>', methods=['GET'])

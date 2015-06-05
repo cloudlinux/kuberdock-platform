@@ -256,6 +256,7 @@ class PodIP(BaseModelMixin, db.Model):
 
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
                        primary_key=True, nullable=False)
+    pod = db.relationship(Pod)
     network = db.Column(db.ForeignKey('ippool.network'))
     ip_address = db.Column(db.BigInteger, nullable=False)
 

@@ -18,8 +18,9 @@ from .factory import make_celery
 from .utils import update_dict, get_api_url
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
-from .models import Pod, ContainerState
+from .models import Pod, ContainerState, User
 from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP
+from .kapi.podcollection import PodCollection
 
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -407,3 +408,22 @@ def get_node_interface(data):
         iface = ipaddress.ip_interface(unicode(m.group('ip')))
         if ip in iface.network:
             return m.group('iface')
+
+
+@celery.task(ignore_result=True)
+def user_lock_task(user):
+    pod_collection = PodCollection(user)
+    for pod in pod_collection.get(as_json=False):
+        pod_collection.update(pod['id'], {'command': 'stop'})
+        public_ip = (
+            pod.get('public_ip') or                           # stopped pod
+            pod.get('labels', {}).get('kuberdock-public-ip')  # running pod
+        )
+        if public_ip is not None:
+            pod_collection._free_ip(public_ip)
+
+
+@db.event.listens_for(User.active, 'set')
+def user_lock_event(target, value, oldvalue, initiator):
+    if value != oldvalue and not value:
+        user_lock_task.delay(target)

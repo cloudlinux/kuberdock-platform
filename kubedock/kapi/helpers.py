@@ -143,6 +143,13 @@ class ModelQuery(object):
         if ip is not None:
             podip = PodIP.filter_by(
                 ip_address=int(ipaddress.ip_address(ip)))
+            pod = podip.first().pod
+            pod_config = json.loads(pod.config)
+            pod_config.pop('public_ip', None)
+            for container in pod_config['containers']:
+                for port in container['ports']:
+                    port.pop('isPublic', None)
+            pod.config = json.dumps(pod_config)
             podip.delete()
 
     def _save_pod(self, obj):

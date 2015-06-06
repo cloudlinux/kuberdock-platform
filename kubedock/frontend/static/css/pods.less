@@ -117,6 +117,64 @@
                         vertical-align: middle;
                     }
                 }
+
+                .tooltip-wrapper{
+                    .border-radius(5px);
+                    .box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
+                    z-index: 1;
+                    left: 15px;
+                    bottom: -12px;
+                    font-size: 0;
+                    position: absolute;
+                    padding: 20px 26px;
+                    display: inline-block;
+                    background-color: #fff;
+                    border: 1px solid #bdc4c9;
+                    &:before{
+                        left: 41%;
+                        top: -10px;
+                        content:'';
+                        width: 14px;
+                        z-index: 9999;
+                        height: 11px;
+                        position: absolute;
+                        background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat;
+                    }
+                    select{
+                        height: 49px;
+                        padding: 0 20px;
+                        font-size: 14px;
+                        margin-right: 10px;
+                        border-color: #e5e5e5;
+                        background-color: #fff;
+                    }
+                    button{
+                        margin-right: 10px;
+                        height: 49px;
+                        padding: 0 31px;
+                        font-size: 16px;
+                        border: 1px solid;
+                        text-align: center;
+                        font-family: "ProximaNovaReg";
+                        margin-bottom: 0 !important;
+                        &.add-drive{
+                            color: #fff;
+                            border-color: #466eb1;
+                            background-color: #466eb1 !important;
+                        }
+                    }
+                    .add-drive-cancel{
+                        border: none;
+                        width: 16px;
+                        height: 49px;
+                        margin: auto;
+                        display: inline-block;
+                        background: url('../img/remove-line.png') center no-repeat;
+                        &:hover{
+                            cursor: pointer;
+                        }
+                    }
+                }
                 span{
                     &.more-ico{
                         width: 20px;
@@ -133,21 +191,18 @@
                         }
                     }
                     &.add-drive{
+                        width: 20px;
+                        height: 17px;
+                        font-size: 0;
                         color: #3297ed;
-                        cursor: pointer;
+                        margin-top: 1px;
+                        margin-right: 8px;
+                        display: inline-block;
+                        background: url('../img/pencil-big.png') 0 0 no-repeat;
                         &:hover{
-                            text-decoration: underline;
+                            cursor: pointer;
+                            background-position: 0 -18px;
                         }
-                    }
-                    &.add-drive-cancel{
-                        color: #D1001F;
-                        cursor: pointer;
-                        &:hover{
-                            text-decoration: underline;
-                        }
-                    }
-                    &.add-drive-disabled{
-                        color: #ADADAD;
                     }
                     &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
                         position: relative;
@@ -655,21 +710,18 @@
                     #ports-table, #volumes-table{
                         tr{
                             td{
-                                &:last-child{
-                                    position: relative;
-                                    span{
-                                        &.remove-port, &.remove-volume{
-                                            top: 0;
-                                            bottom: 0;
-                                            width: 15px;
-                                            margin: auto;
-                                            height: 15px;
-                                            right: -30px;
-                                            position: absolute;
-                                            background: url('../img/remove-line.png') 0 0 no-repeat;
-                                            &:hover{
-                                                cursor: pointer;
-                                            }
+                                span{
+                                    &.remove-port, &.remove-volume{
+                                        top: 2px;
+                                        left: 7px;
+                                        width: 20px;
+                                        height: 17px;
+                                        font-size: 0;
+                                        display: inline-block;
+                                        background: url('../img/recycling.png') 0 0 no-repeat;
+                                        &:hover{
+                                            cursor: pointer;
+                                            background-position: 0 -18px;
                                         }
                                     }
                                 }
@@ -749,6 +801,7 @@
                 .volumes, .ports{
                     table{
                         label{
+                            display: inline-block;
                             margin-bottom: 0;
                             span{
                                 width: 15px;

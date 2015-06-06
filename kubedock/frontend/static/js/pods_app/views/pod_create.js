@@ -265,26 +265,34 @@ define(['pods_app/app',
 
 
             ui: {
-                ieditable: '.ieditable',
-                iseditable: '.iseditable',
-                iveditable: '.iveditable',
-                removeItem: 'span.remove',
-                'input_command': 'input.command'
+                'ieditable'      : '.ieditable',
+                'iseditable'     : '.iseditable',
+                'iveditable'     : '.iveditable',
+                'addPort'        : '.add-port',
+                'addDrive'       : '.add-drive',
+                'nextStep'       : '.next-step',
+                'persistent'     : '.persistent',
+                'addVolume'      : '.add-volume',
+                'removePort'     : '.remove-port',
+                'public'         : 'input.public',
+                'input_command'  : 'input.command',
+                'removeVolume'   : '.remove-volume',
+                'restartPolicy'  : '.restart-policy',
+                'addDriveCancel' : '.add-drive-cancel',
             },
 
             events: {
-                'click .add-port'        : 'addItem',
-    //            'click .readonly'        : 'toggleReadOnly',
-                'click .add-volume'      : 'addVolume',
-                'change .restart-policy' : 'changePolicy',
-                'click input.public'     : 'togglePublic',
-                'click .remove-port'     : 'removePortEntry',
-                'click .remove-volume'   : 'removeVolumeEntry',
-                'click .persistent'      : 'togglePersistent',
-                'click .add-drive'       : 'addDrive',
-                'click .add-drive-cancel': 'cancelAddDrive',
-                'click .next-step'       : 'goNext',
-                'change @ui.input_command' : 'changeCommand'
+                'click @ui.nextStep'       : 'goNext',
+                'click @ui.addPort'        : 'addItem',
+                'click @ui.addDrive'       : 'addDrive',
+                'click @ui.addVolume'      : 'addVolume',
+                'click @ui.public'         : 'togglePublic',
+                'click @ui.addDriveCancel' : 'cancelAddDrive',
+                'click @ui.removePort'     : 'removePortEntry',
+                'click @ui.persistent'     : 'togglePersistent',
+                'click @ui.removeVolume'   : 'removeVolumeEntry',
+                'change @ui.restartPolicy' : 'changePolicy',
+                'change @ui.input_command' : 'changeCommand',
             },
 
             triggers: {
@@ -293,7 +301,6 @@ define(['pods_app/app',
                 'click .go-to-envs'      : 'step:envconf',
                 'click .go-to-resources' : 'step:resconf',
                 'click .go-to-other'     : 'step:otherconf',
-    //            'click .next-step'       : 'step:envconf',
                 'click .go-to-stats'     : 'step:statsconf',
                 'click .go-to-logs'      : 'step:logsconf',
             },
@@ -361,7 +368,7 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var tgt = $(evt.target);
                 if (this.hasOwnProperty('showPersistentAdd')) {
-                    var cells = tgt.closest('tr').children('td'),
+                    var cells = tgt.closest('div').children('span'),
                         pdName = cells.eq(0).children('input').first().val().trim(),
                         pdSize = parseInt(cells.eq(1).children('input').first().val().trim());
                     this.model.get('persistentDrives').push({pdName: pdName, pdSize: pdSize});
@@ -373,7 +380,7 @@ define(['pods_app/app',
                 }
                 else {
                     this.showPersistentAdd = true;
-                    this.currentIndex = tgt.closest('tr').index();
+                    this.currentIndex = tgt.closest('div').index();
                 }
                 this.render();
             },
@@ -405,6 +412,7 @@ define(['pods_app/app',
                     index = tgt.closest('tr').index(),
                     row = this.model.get('volumeMounts')[index],
                     that = this;
+                !this.hasOwnProperty('showPersistentAdd') ? this.showPersistentAdd = true : delete this.showPersistentAdd;
                 if (row.isPersistent) {
                     row.isPersistent = false;
                     to_be_released = _.filter(this.model.get('persistentDrives'), function(d){

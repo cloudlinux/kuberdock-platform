@@ -67,7 +67,7 @@ ISAMAZON=false
 check_amazon()
 {
     log_it echo "Checking AWS..."
-    if [[ ! -z $(curl --connect-timeout 1 -s http://169.254.169.254/1.0/) ]];then
+    if [[ ! -z $(curl --connect-timeout 1 -s http://169.254.169.254/latest/) ]];then
       ISAMAZON=true
       log_it echo "Looks like we are on AWS."
     else
@@ -148,6 +148,32 @@ fi
 # Just a workaround for compatibility
 NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
+REGION=""
+AVAILABILITY_ZONE=""
+AWS_ACCESS_KEY_ID=""
+AWS_SECRET_ACCESS_KEY=""
+
+if [ "$ISAMAZON" = true ];then
+    AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)
+    REGION=$(echo $AVAILABILITY_ZONE|sed 's/\([0-9][0-9]*\)[a-z]*$/\1/')
+    read -p "Enter your AWS ACCESS KEY ID: " AWS_ACCESS_KEY_ID
+    read -p "Enter your AWS SECRET ACCESS KEY: " AWS_SECRET_ACCESS_KEY
+    if [ -z "$AWS_ACCESS_KEY_ID"] || [ -z "$AWS_SECRET_ACCESS_KEY" ];then
+        log_it echo "Either AWS ACCESS KEY ID or AWS SECRET ACCESS KEY missing. Exit"
+        exit 1
+    fi
+fi
+
+HAS_CEPH=no
+while [ "$HAS_CEPH" != yes ] && [ -n "HAS_CEPH" ];do
+    read -p "Do you have ceph (yes/no)? [no]: " HAS_CEPH
+    if [ "$HAS_CEPH" = no ];then
+        break
+    fi
+done
+if [ -z "$HAS_CEPH" ];then
+    HAS_CEPH=no
+fi
 
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
@@ -510,7 +536,24 @@ do_and_log systemctl enable nginx
 do_and_log systemctl restart nginx
 
 
-# 17. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir
+# 17. Adding amazon and ceph config data
+if [ "$ISAMAZON" = true ];then
+cat > $KUBERDOCK_DIR/kubedock/amazon_settings.py << EOF
+AWS=True
+REGION=$REGION
+AVAILABILITY_ZONE=$AVAILABILITY_ZONE
+AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+EOF
+fi
+
+if [ "$HAS_CEPH" = yes ];then
+cat > $KUBERDOCK_DIR/kubedock/ceph_settings.py << EOF
+CEPH=True
+EOF
+fi
+
+# 18. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir
 ENT=$(getent passwd $WEBAPP_USER)
 if [ -z "$ENT" ]; then
     log_it echo "User $WEBAPP_USER does not exist"

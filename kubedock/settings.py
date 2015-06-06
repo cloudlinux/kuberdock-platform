@@ -95,3 +95,15 @@ except ImportError:
 # Only after local settings
 DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
 SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
+
+AWS = False
+try:
+    from amazon_settings import *
+except ImportError:
+    pass
+
+CEPH=False
+try:
+    from ceph_settings import *
+except ImportError:
+    pass

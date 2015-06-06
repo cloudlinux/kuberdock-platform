@@ -19,7 +19,7 @@ from .utils import update_dict, get_api_url
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User
-from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP
+from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS
 from .kapi.podcollection import PodCollection
 
 
@@ -180,7 +180,8 @@ def add_new_node(host, kube_type, db_node):
             r = jinja2.Template(f.read()).render(
                 master_ip=MASTER_IP,
                 flannel_iface=node_interface,
-                cur_master_kubernetes=current_master_kubernetes)
+                cur_master_kubernetes=current_master_kubernetes,
+                aws=AWS)
             fo = StringIO(r)
             sftp.putfo(fo, '/kub_install.sh')
         sftp.put('pd.sh', '/var/lib/kuberdock/scripts/pd.sh')

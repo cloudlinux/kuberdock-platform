@@ -84,8 +84,15 @@ yum -y install flannel cadvisor
 check_status
 
 
+# 3. If amazon instance install aws-cli
+AWS={{ aws }}
+if [ "$AWS" = True ];then
+    yum -y install aws-cli
+    check_status
+fi
 
-# 3 copy kubelet auth token and etcd certs
+
+# 4 copy kubelet auth token and etcd certs
 echo "Copy certificates and tokens..."
 mv /kubelet_token.dat /var/lib/kubelet/kubernetes_auth
 mkdir -p /etc/pki/etcd
@@ -97,7 +104,7 @@ check_status
 
 
 
-# 4. configure Node config
+# 5. configure Node config
 echo "Configuring kubernetes..."
 sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|http://{{ master_ip }}:7080|}" $KUBERNETES_CONF_DIR/config
 sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
@@ -108,7 +115,7 @@ check_status
 
 
 
-# 5. configure Flannel
+# 6. configure Flannel
 cat > /etc/sysconfig/flanneld << EOF
 # Flanneld configuration options
 
@@ -158,7 +165,7 @@ check_status
 
 
 
-# 6. Setting kernel parameters
+# 7. Setting kernel parameters
 sysctl -w net.ipv4.ip_nonlocal_bind=1
 check_status
 cat > /etc/sysctl.d/75-kuberdock.conf << EOF
@@ -167,7 +174,7 @@ EOF
 
 
 
-# 7. setup rsyslog forwarding
+# 8. setup rsyslog forwarding
 echo "Reconfiguring rsyslog..."
 cat > /etc/rsyslog.d/kuberdock.conf << EOF
 *.* @127.0.0.1:5140
@@ -178,7 +185,7 @@ check_status
 
 
 
-# 8. prepare things for logging pod
+# 9. prepare things for logging pod
 echo 'Preparing logs collection...'
 
 # pull images (update if already exists)
@@ -240,7 +247,7 @@ exit 0
 EOF
 
 
-# 9. enable services
+# 10. enable services
 echo "Starting services..."
 systemctl enable kubelet
 check_status

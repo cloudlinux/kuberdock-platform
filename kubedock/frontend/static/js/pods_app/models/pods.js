@@ -48,7 +48,7 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                         container['volumeMounts'].push({name: null, mountPath: m, readOnly: false, isPersistent: false})
                     });
                 }
-                _.each(['workingDir', 'command'], function(i){
+                _.each(['workingDir', 'command', 'env'], function(i){
                     if (data.hasOwnProperty(i)) {
                         container[i] = data[i];
                     }

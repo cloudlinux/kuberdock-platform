@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 57%{?dist}.cloudlinux
+Release: 58%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -56,7 +56,7 @@ Requires: python-sse >= 1.2
 Requires: python-webassets >= 0.10.1
 Requires: python-wsgiref >= 0.1.2
 Requires: python-psycogreen >= 1.0
-
+Requires: python-boto
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -130,6 +130,24 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Sat Jun 06 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>  0.1-58
+- Added installing aws-cli to a node if amazon instance
+- AC-471: Added support for AWS-based persistent volumes
+- AC-482: Stop pods and unbind public IPs if user is locked
+- AC-437: fixed 'unknown' kube numbers on pods page
+- AC-344: Add new style to second step in add container
+- AC-397: New Trial User limit policy (10 kubes per user)
+- AC-472 Show env vars from dockerfile
+- AC-349: Token authorization for WHMCS
+- Fix timezone settings, fix moment js. Apply timezone to container start time
+- Little update spec to new etcd and gevent
+- AC-426, AC-273, AC-435 Fix calculator. AC-359 Separate kube count for containers
+- AC-450, AC-456, AC-457, AC-458, AC-463, AC-465, AC-466 - design fixes
+- AC-446, AC-447, AC-448, AC-451, AC-453 - design fixes
+- Fixed public ip with NetworkManager enabled.
+- Fixed restartPolicy rendering. Removed gevent ssl workaround
+- Remove style from graph on monitoring page & set default kube_type value
+
 * Tue Jun 02 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>  0.1-57
 - AC-441: Fix bug with empty kube tupe when add 2-th container
 - AC-432: Add help text if tables in user page is empty

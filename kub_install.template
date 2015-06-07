@@ -69,11 +69,9 @@ gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
 
 
-
 # 1.1 import CloudLinux key
 rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 check_status
-
 
 
 # 2. install components
@@ -83,11 +81,17 @@ check_status
 yum -y install flannel cadvisor
 check_status
 
-
-# 3. If amazon instance install aws-cli
+# 3. If amazon instance install aws-cli, epel and jq
 AWS={{ aws }}
 if [ "$AWS" = True ];then
     yum -y install aws-cli
+    check_status
+    # we need to install command-line json parser from epel
+    rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+    check_status
+    yum -y install epel-release
+    check_status
+    yum -y install jq
     check_status
 fi
 

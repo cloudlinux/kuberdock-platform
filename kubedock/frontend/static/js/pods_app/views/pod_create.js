@@ -265,20 +265,20 @@ define(['pods_app/app',
 
 
             ui: {
-                'ieditable'      : '.ieditable',
-                'iseditable'     : '.iseditable',
-                'iveditable'     : '.iveditable',
-                'addPort'        : '.add-port',
-                'addDrive'       : '.add-drive',
-                'nextStep'       : '.next-step',
-                'persistent'     : '.persistent',
-                'addVolume'      : '.add-volume',
-                'removePort'     : '.remove-port',
+                ieditable      : '.ieditable',
+                iseditable     : '.iseditable',
+                iveditable     : '.iveditable',
+                addPort        : '.add-port',
+                addDrive       : '.add-drive',
+                nextStep       : '.next-step',
+                persistent     : '.persistent',
+                addVolume      : '.add-volume',
+                removePort     : '.remove-port',
                 'public'         : 'input.public',
-                'input_command'  : 'input.command',
-                'removeVolume'   : '.remove-volume',
-                'restartPolicy'  : '.restart-policy',
-                'addDriveCancel' : '.add-drive-cancel',
+                input_command  : 'input.command',
+                removeVolume   : '.remove-volume',
+                restartPolicy  : '.restart-policy',
+                addDriveCancel : '.add-drive-cancel',
             },
 
             events: {
@@ -368,7 +368,7 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var tgt = $(evt.target);
                 if (this.hasOwnProperty('showPersistentAdd')) {
-                    var cells = tgt.closest('div').children('span'),
+                    var cells = tgt.closest('tr').children('td'),
                         pdName = cells.eq(0).children('input').first().val().trim(),
                         pdSize = parseInt(cells.eq(1).children('input').first().val().trim());
                     this.model.get('persistentDrives').push({pdName: pdName, pdSize: pdSize});
@@ -380,7 +380,7 @@ define(['pods_app/app',
                 }
                 else {
                     this.showPersistentAdd = true;
-                    this.currentIndex = tgt.closest('div').index();
+                    this.currentIndex = tgt.closest('tr').index();
                 }
                 this.render();
             },
@@ -412,7 +412,6 @@ define(['pods_app/app',
                     index = tgt.closest('tr').index(),
                     row = this.model.get('volumeMounts')[index],
                     that = this;
-                !this.hasOwnProperty('showPersistentAdd') ? this.showPersistentAdd = true : delete this.showPersistentAdd;
                 if (row.isPersistent) {
                     row.isPersistent = false;
                     to_be_released = _.filter(this.model.get('persistentDrives'), function(d){

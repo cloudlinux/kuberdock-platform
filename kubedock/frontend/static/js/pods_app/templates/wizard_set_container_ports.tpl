@@ -83,77 +83,63 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <% if (volumeMounts.length != 0){ %>
-                                    <% _.each(volumeMounts, function(v){ %>
-                                        <tr>
-                                            <td>
-                                                <span class="ieditable mountPath">
-                                                    <%- v.mountPath %>
-                                                </span>
-                                            </td>
-                                            <% if (v.isPersistent){ %>
-                                            <td>
-                                                <label class="custom">
-                                                    <input class="persistent" checked type="checkbox"/>
-                                                    <span></span>
-                                                </label>
-                                                <% if (showPersistentAdd){ %>
-                                                    <div class="tooltip-wrapper">
-                                                        <span>
-                                                            <select class="pd-name">
-                                                                <option selected disabled>Choose the name</option>
-                                                                <option value="a">a</option>
-                                                                <option value="b">b</option>
-                                                                <option value="c">c</option>
-                                                                <option value="d">d</option>
-                                                            </select>
-                                                        </span>
-                                                        <span>
-                                                            <select class="pd-size">
-                                                            <option selected disabled>size</option>
-                                                                <option value="1">1</option>
-                                                                <option value="2">2</option>
-                                                                <option value="3">3</option>
-                                                                <option value="4">4</option>
-                                                            </select>
-                                                        </span>
-                                                        <button class="add-drive">add</button>
-                                                        <span class="add-drive-cancel"></span>
-                                                    </div>
-                                                <% } %>
-                                            </td>
-                                            <td>
-                                                <% if (hasPersistent){ %>
-                                                <span class="iveditable mountPath"><%- v.persistentDisk.pdName %></span>
-                                                <% } else { %>
-                                                <span>No drives found</span>
-                                                <% } %>
-                                            </td>
-                                            <td>
-                                                GB not set
-                                                <span class="remove-volume pull-right"></span>
-                                                <% if (!showPersistentAdd){ %>
-                                                    <span class="add-drive pull-right">Add drive</span>
-                                                <% } %>
-                                            </td>
+                                <% _.each(volumeMounts, function(v){ %>
+                                    <tr>
+                                        <td>
+                                            <span class="ieditable mountPath">
+                                                <%- v.mountPath %>
+                                            </span>
+                                        </td>
+                                        <% if (v.isPersistent){ %>
+                                        <td>
+                                            <% if (hasPersistent){ %>
+                                            <span class="iveditable mountPath"><%- v.persistentDisk.pdName %></span>
                                             <% } else { %>
-                                            <td>
-                                                <label class="custom">
-                                                    <input class="persistent" type="checkbox"/>
-                                                    <span></span>
-                                                </label>
-                                            </td>
-                                            <td></td>
-                                            <td>
-                                                <span class="remove-volume pull-right"></span>
-                                            </td>
+                                            <span>No drives found</span>
                                             <% } %>
-                                        </tr>
-                                    <% }) %>
-                                <% } else { %>
-                                     <tr>
-                                        <td colspan="4" class="text-center">To add volume click on a button below</td>
-                                    </td>
+                                        </td>
+                                        <td>
+                                            <% if (showPersistentAdd){ %>
+                                            <span class="add-drive-disabled">Add drive</span>
+                                            <% } else { %>
+                                            <span class="add-drive">Add drive</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <label class="custom">
+                                                <input class="persistent" checked type="checkbox"/>
+                                                <span></span>
+                                            </label>
+                                            <span class="remove-volume"></span>
+                                        </td>
+                                        <% } else { %>
+                                        <td></td>
+                                        <td></td>
+                                        <td>
+                                            <label class="custom">
+                                                <input class="persistent" type="checkbox"/>
+                                                <span></span>
+                                            </label>
+                                            <span class="remove-volume"></span>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                <% }) %>
+                                <% if (showPersistentAdd){ %>
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="pd-name" placeholder="persistent-drive-name">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="pd-size" placeholder="persistent-drive-size">
+                                        </td>
+                                        <td>
+                                            <span class="add-drive">Add drive</span>
+                                        </td>
+                                        <td>
+                                            <span class="add-drive-cancel">Cancel</span>
+                                        </td>
+                                    </tr>
                                 <% } %>
                             </tbody>
                         </table>

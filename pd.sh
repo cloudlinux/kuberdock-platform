@@ -59,7 +59,7 @@ function remove_volume {
 function create_map_and_mount {
     mkdir_if_missing
     if [ -z "$IID" ];then    # not aws
-        SIZE_MB=$(1024*$SIZE)
+        SIZE_MB=$((1024*$SIZE))
         rbd create $DEVICE --size=$SIZE_MB
         DEVICE=$(rbd map $DEVICE)
         mkfs.ext4 $DEVICE

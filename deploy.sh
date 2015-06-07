@@ -158,22 +158,26 @@ if [ "$ISAMAZON" = true ];then
     REGION=$(echo $AVAILABILITY_ZONE|sed 's/\([0-9][0-9]*\)[a-z]*$/\1/')
     read -p "Enter your AWS ACCESS KEY ID: " AWS_ACCESS_KEY_ID
     read -p "Enter your AWS SECRET ACCESS KEY: " AWS_SECRET_ACCESS_KEY
-    if [ -z "$AWS_ACCESS_KEY_ID"] || [ -z "$AWS_SECRET_ACCESS_KEY" ];then
+    if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ];then
         log_it echo "Either AWS ACCESS KEY ID or AWS SECRET ACCESS KEY missing. Exit"
         exit 1
     fi
 fi
 
 HAS_CEPH=no
-while [ "$HAS_CEPH" != yes ] && [ -n "HAS_CEPH" ];do
+while true;do
     read -p "Do you have ceph (yes/no)? [no]: " HAS_CEPH
+    if [ -z "$HAS_CEPH" ];then
+        HAS_CEPH=no
+        break
+    fi
+    if [ "$HAS_CEPH" = yes ];then
+        break
+    fi
     if [ "$HAS_CEPH" = no ];then
         break
     fi
 done
-if [ -z "$HAS_CEPH" ];then
-    HAS_CEPH=no
-fi
 
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787

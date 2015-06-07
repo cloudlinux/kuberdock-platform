@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 58%{?dist}.cloudlinux
+Release: 59%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -57,6 +57,7 @@ Requires: python-webassets >= 0.10.1
 Requires: python-wsgiref >= 0.1.2
 Requires: python-psycogreen >= 1.0
 Requires: python-boto
+
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -130,6 +131,13 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Mon Jun 08 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-59
+- added installation of epel and jq to an aws node
+- minor bugfix in pd.sh
+- reverted persistent storage settings interface look'n'feel
+- added possibility to limit line size (_make_dash subroutine, kapi/helpers.py)
+- added quotes for amazon_settings.py file
+
 * Sat Jun 06 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>  0.1-58
 - Added installing aws-cli to a node if amazon instance
 - AC-471: Added support for AWS-based persistent volumes

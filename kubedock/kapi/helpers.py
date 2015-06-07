@@ -213,11 +213,14 @@ class Utilities(object):
         #if status is not None and status.lower() not in ['success', 'working']:
         #    self._raise(message)
 
-    def _make_dash(self):
+    def _make_dash(self, limit=None):
         """
         Substitutes certain symbols for dashes to make DNS-compatible string
         """
-        return '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', self.name))
+        data = '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', self.name))
+        if limit is None:
+            return data
+        return data[:limit]
 
     def _make_sid(self):
         sid = ''.join(

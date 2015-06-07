@@ -211,7 +211,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'metadata': {
                 # 'generateName': pod.name.lower() + '-service-',
                 'generateName': 'service-',
-                'labels': {'name': pod._make_dash() + '-service'},
+                'labels': {'name': pod._make_dash(limit=54) + '-service'},
                 'annotations': {
                     'public-ip-state': json.dumps({
                         'assigned-public-ip': getattr(pod, 'public_ip', None)

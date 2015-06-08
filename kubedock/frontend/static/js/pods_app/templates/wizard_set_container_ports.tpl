@@ -22,9 +22,6 @@
                     <div class="col-xs-6">
                         <input class="command" type="text" value="" placeholder="command to start">
                     </div>
-                    <!-- <div class="col-sm-4 entrypoint-info">
-                        Use "space" to split
-                    </div> -->
                 </div>
             </div>
             <div class="ports">
@@ -83,6 +80,7 @@
                                 </tr>
                             </thead>
                             <tbody>
+                            <% if (volumeMounts.length != 0){ %>
                                 <% _.each(volumeMounts, function(v){ %>
                                     <tr>
                                         <td>
@@ -92,60 +90,64 @@
                                         </td>
                                         <% if (v.isPersistent){ %>
                                         <td>
-                                            <% if (hasPersistent){ %>
-                                            <span class="iveditable mountPath"><%- v.persistentDisk.pdName %></span>
-                                            <% } else { %>
-                                            <span>No drives found</span>
-                                            <% } %>
-                                        </td>
-                                        <td>
-                                            <% if (showPersistentAdd){ %>
-                                            <span class="add-drive-disabled">Add drive</span>
-                                            <% } else { %>
-                                            <span class="add-drive">Add drive</span>
-                                            <% } %>
-                                        </td>
-                                        <td>
                                             <label class="custom">
                                                 <input class="persistent" checked type="checkbox"/>
                                                 <span></span>
                                             </label>
-                                            <span class="remove-volume"></span>
+                                            <% if (showPersistentAdd){ %>
+                                                <div class="tooltip-wrapper">
+                                                    <span>
+                                                        <input type="text" class="pd-name" placeholder="persistent-drive-name">
+                                                    </span>
+                                                    <span>
+                                                        <input type="text" class="pd-size" placeholder="persistent-drive-size">
+                                                    </span>
+                                                    <span>
+                                                        <button class="add-drive" title="Add new drive">add</button>
+                                                        <span class="add-drive-cancel"></span>
+                                                   </span>
+                                                </div>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% if (hasPersistent){ %>
+                                                <span class="iveditable mountPath"><%- v.persistentDisk.pdName %></span>
+                                                <% if (!showPersistentAdd){ %>
+                                                    <span class="add-drive" title="Add new drive"></span>
+                                                <% } %>
+                                            <% } else { %>
+                                                <span>No drives found</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <span class="remove-volume pull-right"></span>
                                         </td>
                                         <% } else { %>
-                                        <td></td>
-                                        <td></td>
                                         <td>
                                             <label class="custom">
                                                 <input class="persistent" type="checkbox"/>
                                                 <span></span>
                                             </label>
-                                            <span class="remove-volume"></span>
+                                        </td>
+                                        <td></td>
+                                        <td>
+                                            <span class="remove-volume pull-right"></span>
                                         </td>
                                         <% } %>
                                     </tr>
                                 <% }) %>
-                                <% if (showPersistentAdd){ %>
-                                    <tr>
-                                        <td>
-                                            <input type="text" class="pd-name" placeholder="persistent-drive-name">
-                                        </td>
-                                        <td>
-                                            <input type="text" class="pd-size" placeholder="persistent-drive-size">
-                                        </td>
-                                        <td>
-                                            <span class="add-drive">Add drive</span>
-                                        </td>
-                                        <td>
-                                            <span class="add-drive-cancel">Cancel</span>
-                                        </td>
-                                    </tr>
-                                <% } %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="4" class="text-center">To add volume click on a button below</td>
+                                </tr>
+                            <% } %>
                             </tbody>
                         </table>
-                        <div>
-                            <button type="button" class="add-volume">Add volume</button>
-                        </div>
+                        <% if (volumeMounts.length == 0){ %>
+                            <div>
+                                <button type="button" class="add-volume">Add volume</button>
+                            </div>
+                        <% }%>
                     </div>
                 </div>
             </div>

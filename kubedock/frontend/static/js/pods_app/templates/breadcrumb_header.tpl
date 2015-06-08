@@ -8,7 +8,7 @@
                 <a href="/#newpod">Add container</a>
             </li>
             <li class="active">
-                <span class="peditable"><%- name %><span>
+                <span class="peditable"><%-name %></span>
             </li>
         </ul>
     </div>

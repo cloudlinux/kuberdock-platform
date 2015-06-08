@@ -14,6 +14,8 @@ class Package(db.Model):
     setup_fee = db.Column(db.Float, default=0.0, nullable=False)
     currency = db.Column(db.String(16), default="USD", nullable=False)
     period = db.Column(db.String(16), default="hour", nullable=False)
+    prefix = db.Column(db.String, nullable=True)
+    suffix = db.Column(db.String, nullable=True)
     kubes = db.relationship('Kube', secondary=tags, backref=db.backref('packages', lazy='dynamic'))
     users = db.relationship("User", backref="package")
 

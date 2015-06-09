@@ -791,6 +791,32 @@ body{
             float: initial !important;
             height: initial !important;
             position: initial !important;
+            &.has-error{
+                .form-control{
+                    .box-shadow(none);
+                    border-color: #466EB1;
+                    &.focus{
+                        .box-shadow(none);
+                        border-color: #466EB1;
+                    }
+                }
+                .editable-error-block{
+                    .border-radius(5px);
+                    .box-shadow(0 5px 10px rgba(0, 0, 0, .2));
+                    left: 0;
+                    top: 71px;
+                    width: 100%;
+                    margin-top: 0;
+                    color: #1d1d1d !important;
+                    font-size: 12px;
+                    line-height: 14px;
+                    position: absolute;
+                    text-align: justify;
+                    background-color: #fefef6;
+                    padding: 10px 14px 11px 14px;
+                    border: 1px solid rgba(0, 0, 0, 0.2);
+                }
+            }
             .editable-input{
                 select{
                     .box-shadow(none);

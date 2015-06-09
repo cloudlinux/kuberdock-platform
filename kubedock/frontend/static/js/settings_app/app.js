@@ -183,8 +183,7 @@ define(['marionette', 'utils'],
             },
 
             editTemplate: function(){
-                App.router.navigate('/notifications/edit/' + this.model.id + '/',
-                                    {trigger: true});
+                App.router.navigate('/notifications/edit/' + this.model.id + '/', {trigger: true});
             }
         });
 
@@ -193,24 +192,35 @@ define(['marionette', 'utils'],
             childViewContainer: '#notification-templates',
             childView: Views.NotificationItemView
         });
+        /* Public IPs Views */
+        Views.PublicIPsView = Marionette.CompositeView.extend({
+            template: '#publicIPs-template',
+        });
 
+        /* Persistent volumes Views */
+        Views.PersistentVolumesView = Marionette.CompositeView.extend({
+            template: '#persistent-volumes-template',
+        });
+        /* Profile edit volumes Views */
         Views.ProfileEditView = Backbone.Marionette.ItemView.extend({
             template: '#user-edit-template',
 
             ui: {
-                'first_name'        : 'input#firstname',
-                'last_name'         : 'input#lastname',
-                'middle_initials'   : 'input#middle_initials',
-                'password'          : 'input#password',
-                'password_again'    : 'input#password-again',
-                'email'             : 'input#email',
-                'save'              : 'button#template-save-btn',
-                'back'              : 'button#template-back-btn'
+                'first_name'      : 'input#firstname',
+                'last_name'       : 'input#lastname',
+                'middle_initials' : 'input#middle_initials',
+                'password'        : 'input#password',
+                'password_again'  : 'input#password-again',
+                'email'           : 'input#email',
+                'save'            : 'button#template-save-btn',
+                'back'            : 'button#template-back-btn',
+                'generalBtn'      : '#general-btn',
             },
 
             events: {
-                'click @ui.save'         : 'onSave',
-                'click @ui.back'         : 'back'
+                'click @ui.back'       : 'back',
+                'click @ui.save'       : 'onSave',
+                'click @ui.generalBtn' : 'back',
             },
 
             onRender: function(){
@@ -252,7 +262,6 @@ define(['marionette', 'utils'],
                     }
                 });
             }
-
         });
 
         Views.PermissionItemView = Marionette.ItemView.extend({
@@ -313,34 +322,40 @@ define(['marionette', 'utils'],
                 main: 'div#details_content'
             },
             ui: {
-                generalBtn: '#general-btn',
-                permissionsBtn: '#permissions-btn',
-                notificationsBtn: '#notifications-btn'
+                profileBtn           : '#profile-btn',
+                generalBtn           : '#general-btn',
+                publicIPsBtn         : '#publicIPs-btn',
+                permissionsBtn       : '#permissions-btn',
+                notificationsBtn     : '#notifications-btn',
+                persistentVolumesBtn : '#persistent-volumes-btn',
             },
             events: {
-                'click #general-btn': 'redirectToGeneral',
-                'click #profile-btn': 'redirectToProfile',
-                'click #permissions-btn': 'redirectToPermissions',
-                'click #notifications-btn': 'redirectToNotifications'
+                'click @ui.generalBtn'           : 'redirectToGeneral',
+                'click @ui.profileBtn'           : 'redirectToProfile',
+                'click @ui.permissionsBtn'       : 'redirectToPermissions',
+                'click @ui.publicIPsBtn'         : 'redirectToPublicIPs',
+                'click @ui.notificationsBtn'     : 'redirectToNotifications',
+                'click @ui.persistentVolumesBtn' : 'redirectToPersistentVolumes',
             },
             redirectToGeneral: function(evt){
                 App.router.navigate('/', {trigger: true});
-                return false;
             },
             redirectToProfile: function(evt){
                 App.router.navigate('/profile/', {trigger: true});
-                return false;
             },
             redirectToPermissions: function(evt){
                 App.router.navigate('/permissions/', {trigger: true});
-                return false;
             },
             redirectToNotifications: function(evt){
                 App.router.navigate('/notifications/', {trigger: true});
-                return false;
+            },
+            redirectToPublicIPs: function(evt){
+                App.router.navigate('/publicIPs/', {trigger: true});
+            },
+            redirectToPersistentVolumes: function(){
+                App.router.navigate('/persistent-volumes/', {trigger: true});
             }
         });
-
     });
 
     SettingsApp.module('SettingsCRUD', function(
@@ -415,7 +430,25 @@ define(['marionette', 'utils'],
                     layout_view.main.show(general_view);
                 });
                 App.contents.show(layout_view);
-            }
+            },
+
+            showIPs: function(){
+                var layout_view = new App.Views.SettingsLayout();
+                var public_ips_view = new App.Views.PublicIPsView();
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(public_ips_view);
+                });
+                App.contents.show(layout_view);
+            },
+
+            showPersistentVolumes: function(){
+                var layout_view = new App.Views.SettingsLayout();
+                var persistent_volumes_view = new App.Views.PersistentVolumesView();
+                this.listenTo(layout_view, 'show', function(){
+                    layout_view.main.show(persistent_volumes_view);
+                });
+                App.contents.show(layout_view);
+            },
         });
 
         SettingsCRUD.addInitializer(function(){
@@ -423,13 +456,15 @@ define(['marionette', 'utils'],
             App.router = new Marionette.AppRouter({
                 controller: controller,
                 appRoutes: {
-                    '': 'showGeneral',
-                    'permissions/': 'showPermissions',
-                    'notifications/': 'showNotifications',
-                    'notifications/add/': 'addNotifications',
-                    'notifications/edit/:id/': 'editNotifications',
-                    'general/': 'showGeneral',
-                    'profile/': 'editProfile'
+                    ''                        : 'showGeneral',
+                    'general/'                : 'showGeneral',
+                    'profile/'                : 'editProfile',
+                    'publicIPs/'              : 'showIPs',
+                    'permissions/'            : 'showPermissions',
+                    'notifications/'          : 'showNotifications',
+                    'notifications/add/'      : 'addNotifications',
+                    'persistent-volumes/'     : 'showPersistentVolumes',
+                    'notifications/edit/:id/' : 'editNotifications',
                 }
             });
         });

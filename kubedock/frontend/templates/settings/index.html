@@ -175,15 +175,13 @@
         <!--  end settingsGeneralTab template -->
     </script>
 
-    <!-- main template -->
     <script type="text/template" id="permission-item-template">
-        <td class="resource-name"><%- name %></td>
+    <td class="resource-name"><%- name %></td>
     <% $.each(all_roles, function(id, role){ %>
         <td>
             <% _.each(roles[role.rolename], function(perm){ %>
             <label class="custom">
-                <input type="checkbox" name="perm" data-pid="<%- perm.id %>"
-                       class="perm-toggle"
+                <input type="checkbox" name="perm" data-pid="<%- perm.id %>" class="perm-toggle"
                        <% if(perm.allow) { %> checked<% } %> /><span></span>
                 <%- perm.name %>
             </label><br/>
@@ -205,7 +203,95 @@
         </div>
     </script>
 
+     <!-- settingsPublicIPsTab template -->
+    <script type="text/template" id="publicIPs-template">
+        <div class="content-body clearfix" id="publicIPs-tab">
+            <div class="col-xs-12 no-padding">
+                <div class="row">
+                    <div class="col-xs-11 col-xs-offset-1">
+                        <table class="table" id="publicIPs-table">
+                            <thead>
+                                <tr>
+                                    <th>Public IP</th>
+                                    <th>Pod Name</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="col-md-2">
+                                        192.168.0.1
+                                    </td>
+                                    <td>
+                                        <span class="stopped">My best Pod</span>
+                                        <span class="terminate-btn pull-right"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="col-md-2">
+                                        192.168.0.2
+                                    </td>
+                                    <td>
+                                        <span class="running">My best Pod 2</span>
+                                        <span class="terminate-btn pull-right"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="col-md-2">
+                                        192.168.0.3
+                                    </td>
+                                    <td>
+                                        <span class="stopped">My best Pod 3</span>
+                                        <span class="terminate-btn pull-right"></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="buttons clearfix">
+                    <div class="description pull-left col-md-offset-1">* Unused Public IP billed as usual</div>
+                    <button class="pull-right" type="submit">Terminate account</button>
+                </div>
+            </div>
+        </div>
+    </script>
 
+    <script type="text/template" id="persistent-volumes-template">
+        <div class="content-body clearfix" id="persistentVolumes-tab">
+            <div class="col-xs-12 no-padding">
+                <div class="row">
+                    <div class="col-xs-11 col-xs-offset-1">
+                        <table class="table" id="persistent-volumes-table">
+                            <thead>
+                                <tr>
+                                    <th>Volume Name</th>
+                                    <th>Size/used GB</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="col-md-2">name 1</td>
+                                    <td class="col-md-2">2 (1.4) GB</td>
+                                    <td>
+                                        <span class="stopped">My best Pod 1</span>
+                                        <span class="terminate-btn pull-right"></span>
+                                        <span class="unmount pull-right"></span>
+                                        <span class="onsearsh pull-right"></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="buttons clearfix">
+                    <button class="pull-right" type="submit">Terminate account</button>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <!-- main template -->
     <script type="text/template" id="settings-layout-template">
         <div>
             <div class="breadcrumbs-wrapper">
@@ -222,19 +308,23 @@
                     <div class="col-sm-3 col-md-2 sidebar">
                         <ul class="nav nav-sidebar list-unstyled" >
                             <li class="general active">
-                                <a href="/settings/" id="general-btn" role="tab" >General</a>
+                                <span id="general-btn">General</span>
                             </li>
                             <li>
-                                <a href="/settings/profile/" id="profile-btn" role="tab" >Profile</a>
+                                <span id="profile-btn" >Profile</span>
                             </li>
-{#                            <li class="notification">#}
-{#                                <a href="/settings/notifications/" id="notifications-btn"#}
-{#                                   role="tab" >Notification</a>#}
-{#                            </li>#}
-{#                            <li class="permision">#}
-{#                                <a href="/settings/permissions/" id="permissions-btn"#}
-{#                                   role="tab" >Permision</a>#}
-{#                            </li>#}
+                            <li>
+                                <span id="publicIPs-btn">Public IPs</span>
+                            </li>
+                            <li>
+                                <span id="persistent-volumes-btn">Persistent volumes</span>
+                            </li>
+                            <!-- <li class="notification">
+                                <span id="notifications-btn" >Notification</span>
+                            </li>
+                            <li class="permision">
+                                <span id="permissions-btn" >Permision</span>
+                            </li> -->
                         </ul>
                     </div>
                     <div id="details_content" class="col-sm-10">
@@ -245,7 +335,6 @@
             </div>
         </div>
     </script>
-
     <!-- main template -->
 
     <script data-main="/static/js/settings_app/require_main.js" src="/static/js/lib/require.js"></script>

@@ -1,3 +1,148 @@
+#publicIPs-table, #persistent-volumes-table{
+    margin-bottom: 0;
+    thead{
+        background-color: transparent;
+        tr{
+            th{
+                border: none;
+                color: #b1b9c0;
+                padding-top: 0;
+                font-size: 14px;
+                text-align: left;
+                font-weight: normal;
+                vertical-align: top;
+                padding-bottom: 10px;
+                font-family: @regular;
+                border-bottom: 1px solid #e5e5e5;
+                &:focus{
+                    outline: 0;
+                }
+                &:nth-child(2){
+                    .tablesorter-header-inner{
+                        .caret{
+                            margin-left: -3px;
+                        }
+                    }
+                }
+                .tablesorter-header-inner{
+                    .caret{
+                        margin-left: 3px;
+                    }
+                }
+                .custom{
+                    span{
+                        vertical-align: middle;
+                    }
+                }
+            }
+        }
+    }
+    tbody{
+        tr{
+            &:hover{
+                background-color: #f5fafe;
+                td{
+                    .terminate-btn, .onsearsh, .unmount{
+                        &:hover{
+                            background-position: 0 -17px;
+                        }
+                    }
+                    .terminate-btn{
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
+                    }
+                    .onsearsh{
+                        background: url('../img/onsearsh.png') 0 0 no-repeat;
+                    }
+                    .unmount{
+                        background: url('../img/unmount.png') 0 0 no-repeat;
+                    }
+                }
+            }
+            td{
+                height: 50px;
+                color: #1d1d1d;
+                padding-top: 0;
+                font-size: 14px;
+                padding-bottom: 0;
+                vertical-align: middle;
+                font-family: @regular;
+                a, span, button{
+                    min-height: 12px;
+                    vertical-align: top;
+                    display: inline-block;
+                }
+                span{
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
+                        position: relative;
+                        padding-left: 22px;
+                        &:before{
+                            .border-radius(50%);
+                            left: 2px;
+                            width: 12px;
+                            content: '';
+                            height: 12px;
+                            bottom: 3px;
+                            position: absolute;
+                        }
+                    }
+                    &.running, &.OK{
+                        &:before{
+                            background-color: #97cd75;
+                            border: 1px solid #589630;
+                        }
+                    }
+                    &.stopped{
+                        &:before{
+                            border: 1px solid #bc1b14;
+                            background-color: #f5544d;
+                        }
+                    }
+                    &.troubles, &.pending, &.waiting{
+                        &:before{
+                            border: 1px solid #c0a630;
+                            background-color: #f0d765;
+                        }
+                    }
+                    &.termination{
+                        &:before{
+                            border: 1px solid #7c7c7c;
+                            background-color: #bbbfc3;
+                        }
+                    }
+                }
+                .terminate-btn, .onsearsh, .unmount{
+                    top: 2px;
+                    left: 7px;
+                    width: 20px;
+                    height: 17px;
+                    font-size: 0;
+                    margin-right: 9px;
+                    position: relative;
+                    display: inline-block;
+                    &:hover{
+                        cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
+}
+#publicIPs-tab, #persistentVolumes-tab{
+    overflow: hidden;
+    .buttons{
+        padding-top: 20px;
+        margin-top: 0;
+        border-top: 1px solid #e5e5e5;
+        .description{
+            height: 37px;
+            font-size: 13px;
+            line-height: 37px;
+        }
+    }
+}
 #settingsGeneralTab, #settingsNotificationTab, #settingsPermisionTab{
 	.content-body{
 		.clearfix;

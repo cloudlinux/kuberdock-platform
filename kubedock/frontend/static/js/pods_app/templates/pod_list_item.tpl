@@ -9,7 +9,8 @@
 </td>
 <td>
     <% if (cluster){ %>
-        <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span>
+        <!-- <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span> -->
+        <span><%- replicas %></span>
     <% }  else { %>
         none
     <% } %>

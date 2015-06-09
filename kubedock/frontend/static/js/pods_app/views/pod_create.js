@@ -1043,7 +1043,13 @@ define(['pods_app/app',
 
             changePolicy: function(evt){
                 evt.stopPropagation();
-                this.model.set('restartPolicy', $(evt.target).val());
+                var restart_policy = $(evt.target).val();
+                this.model.set('restartPolicy', restart_policy)
+                if (restart_policy == 'Always') {
+                    this.model.set('cluster', true);
+                } else {
+                    this.model.set('cluster', false);
+                }
             },
 
             onRender: function(){

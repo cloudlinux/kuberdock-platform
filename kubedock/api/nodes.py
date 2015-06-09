@@ -36,7 +36,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
         "portalIP": ip,
         "replicas": 1,
         "kube_type": 0,
-        "cluster": False,
+        "cluster": True,
         "node": None,
         "save_only": True,
         "restartPolicy": "Always",

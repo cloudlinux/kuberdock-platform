@@ -486,7 +486,7 @@ def get_aws_volumes():
             drive, user = item.rsplit(PD_SEPARATOR, 1)
         except ValueError:
             continue
-        if user == username:
+        if user == username and vol.status == 'available':
             drives.append(drive)
     return drives
 

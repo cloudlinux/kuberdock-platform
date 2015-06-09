@@ -159,10 +159,14 @@ function make_unmount {
         if [ -z "$IID" ];then
             rbd unmap $DRIVE
         else
-           STRIPPED_DRIVE=$(echo $DRIVE | sed 's/\/dev\/\(.*\)$/\1/')
-           RV=$(aws ec2 describe-volumes --region=$REGION --filters "Name=attachment.device,Values=$STRIPPED_DRIVE")
-           VOL=$(echo $RV | jq -r ".Volumes[0].VolumeId")
-           aws ec2 detach-volume --region=$REGION --volume-id=$VOL
+            STRIPPED_DRIVE=$(echo $DRIVE | sed 's/\/dev\/\(.*\)$/\1/')
+            RV=$(aws ec2 describe-volumes --region=$REGION --filters "Name=attachment.device,Values=$STRIPPED_DRIVE")
+            VOL=$(echo $RV | jq -r ".Volumes[0].VolumeId")
+            aws ec2 detach-volume --region=$REGION --volume-id=$VOL
+            while [ $? -ne 0 ];do
+                sleep 1
+                aws ec2 detach-volume --region=$REGION --volume-id=$VOL
+            done
         fi
     done <<< "$DRIVES"
 }

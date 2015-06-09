@@ -5,12 +5,15 @@ Flask-HTTPAuth==2.3.0
 Flask-InfluxDB==0.1
 Flask-Login==0.2.11
 Flask-Mail==0.9.1
+Flask-Migrate==1.4.0
+Flask-Script==2.0.5
 Flask-SQLAlchemy==2.0
 Jinja2==2.7.3
 MarkupSafe==0.23
 SQLAlchemy==0.9.7
 Unidecode==0.04.17
 Werkzeug==0.9.6
+alembic==0.7.6
 amqp==1.4.6
 anyjson==0.3.3
 argparse==1.2.1

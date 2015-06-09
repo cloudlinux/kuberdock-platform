@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 59%{?dist}.cloudlinux
+Release: 60%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -57,6 +57,9 @@ Requires: python-webassets >= 0.10.1
 Requires: python-wsgiref >= 0.1.2
 Requires: python-psycogreen >= 1.0
 Requires: python-boto
+Requires: python-alembic
+Requires: python-flask-migrate
+Requires: python-flask-script
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -131,6 +134,12 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Tue Jun 09 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.1-60
+- AC-344: Add new style to second step in add container
+- AC-331: Added 2 additional fields to package: prefix & suffix
+- Fix bug with extra spaces in podname
+- AC-500: transformed createdb.py to manage.py (to create and upgrade db)
+
 * Mon Jun 08 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-59
 - added installation of epel and jq to an aws node
 - minor bugfix in pd.sh

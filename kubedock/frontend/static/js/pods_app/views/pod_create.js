@@ -368,7 +368,7 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var tgt = $(evt.target);
                 if (this.hasOwnProperty('showPersistentAdd')) {
-                    var cells = tgt.closest('tr').children('td'),
+                    var cells = tgt.closest('div').children('span'),
                         pdName = cells.eq(0).children('input').first().val().trim(),
                         pdSize = parseInt(cells.eq(1).children('input').first().val().trim());
                     this.model.get('persistentDrives').push({pdName: pdName, pdSize: pdSize});

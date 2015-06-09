@@ -113,25 +113,29 @@
                     display: inline-block;
                 }
                 .custom{
+                    input{
+                        &:checked{
+                            position: relative;
+                        }
+                    }
                     span{
                         vertical-align: middle;
                     }
                 }
-
                 .tooltip-wrapper{
                     .border-radius(5px);
                     .box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
                     z-index: 1;
-                    left: 15px;
-                    bottom: -12px;
+                    left: 25px;
                     font-size: 0;
+                    padding: 16px;
+                    display: block;
+                    margin-top: 12px;
                     position: absolute;
-                    padding: 20px 26px;
-                    display: inline-block;
                     background-color: #fff;
                     border: 1px solid #bdc4c9;
                     &:before{
-                        left: 41%;
+                        left: 49.8%;
                         top: -10px;
                         content:'';
                         width: 14px;
@@ -140,13 +144,15 @@
                         position: absolute;
                         background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat;
                     }
-                    select{
+                    input{
                         height: 49px;
+                        outline: none;
                         padding: 0 20px;
                         font-size: 14px;
                         margin-right: 10px;
-                        border-color: #e5e5e5;
                         background-color: #fff;
+                        border: 1px solid #e5e5e5;
+
                     }
                     button{
                         margin-right: 10px;
@@ -189,19 +195,21 @@
                         button{
                            margin-bottom: 0 !important;
                         }
+                        + .add-drive{
+                            margin-top: 8px;
+                        }
                     }
                     &.add-drive{
-                        width: 20px;
-                        height: 17px;
+                        width: 15px;
+                        height: 15px;
                         font-size: 0;
                         color: #3297ed;
-                        margin-top: 1px;
-                        margin-right: 8px;
+                        margin-top: 3px;
+                        margin-left: 15px;
                         display: inline-block;
-                        background: url('../img/pencil-big.png') 0 0 no-repeat;
+                        background: url('../img/add-port-plus.png') 0 0 no-repeat;
                         &:hover{
                             cursor: pointer;
-                            background-position: 0 -18px;
                         }
                     }
                     &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
@@ -771,10 +779,10 @@
                     button{
                         .box-shadow(none);
                         outline: 0;
-                        position: relative;
-                        margin-bottom: 35px;
-                        background: transparent;
                         &.add-port, &.add-volume{
+                            position: relative;
+                            margin-bottom: 35px;
+                            background: transparent;
                             border: none;
                             color: #3297ed;
                             padding-left: 35px;
@@ -784,14 +792,9 @@
                                 content: '';
                                 width: 15px;
                                 height: 15px;
-                                background: url('../img/add-port-plus.png') 0 0 no-repeat;
                                 position: absolute;
+                                background: url('../img/add-port-plus.png') 0 0 no-repeat;
                             }
-                        }
-                        &.btn-primary{
-                            color: #fff;
-                            border-color: #357ebd;
-                            background-color: #428bca;
                         }
                     }
                 }

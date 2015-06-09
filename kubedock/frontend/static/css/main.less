@@ -191,15 +191,6 @@ body{
                         display: inline;
                         font-weight: normal;
                         border-color: #ffffff;
-                        + .editable-popup{
-                            color: black;
-                            button{
-                                line-height: 0;
-                                font-size: initial;
-                                line-height: initial;
-                                background-color: #CACACA;
-                            }
-                        }
                     }
                     a{
                         color: #ffffff;
@@ -235,21 +226,21 @@ body{
                     }
                 }
                 li + li{
-                	padding-left: 26px;
-                	position: relative;
-                	&:before{
-	                	background: url('../img/menu-arrow.png') 0 0 no-repeat;
-	                    width: 6px;
-	                    color: #FFF;
-	                    height: 9px;
-	                    content: '';
-	                    padding: 0;
-	                    font-size: 0px;
-	                    position: absolute;
-	                    left: 11px;
-	                    top: 0;
-	                    bottom: 0;
-	                    margin: auto;
+                    position: relative;
+                    padding-left: 26px;
+                    &:before{
+                        top: 0;
+                        bottom: 0;
+                        left: 11px;
+                        width: 6px;
+                        padding: 0;
+                        color: #fff;
+                        height: 9px;
+                        content: '';
+                        margin: auto;
+                        font-size: 0px;
+                        position: absolute;
+                        background: url('../img/menu-arrow.png') 0 0 no-repeat;
                     }
                 }
             }
@@ -289,16 +280,28 @@ body{
                     }
                 }
                 button, a{
-                    outline: 0;
-                    border: none;
-                    color: #ffffff;
-                    font-size: 16px;
-                    background: none;
-                    line-height: 34px;
-                    position: relative;
-                    font-family: @regular;
-                    &:before{
-                        position: absolute;
+                    &#add_pod,
+                    &#add_node,
+                    &#add_user,
+                    &#edit_user,
+                    &#stop_node,
+                    &#rename_node,
+                    &#delete_node,
+                    &#delete_user,
+                    &#redeploy_node
+                    &#create_network,
+                    &#login_this_user{
+                        outline: 0;
+                        border: none;
+                        color: #ffffff;
+                        font-size: 16px;
+                        background: none;
+                        line-height: 34px;
+                        position: relative;
+                        font-family: @regular;
+                        &:before{
+                            position: absolute;
+                        }
                     }
                     &#add_node, &#add_user, &#login_this_user, &#add_pod, &#create_network, &#redeploy_node, &#edit_user{
                         margin-right: 25px;
@@ -775,9 +778,52 @@ body{
     }
     /*end alert messages */
 
+
     @import "pods.less";
     @import "nodes.less";
     @import "users.less";
     @import "ippool.less";
     @import "settings.less";
+
+    /* edit form */
+    .popover{
+        .form-group{
+            float: initial !important;
+            height: initial !important;
+            position: initial !important;
+            .editable-input{
+                select{
+                    .box-shadow(none);
+                    .border-radius(none);
+                    &:focus{
+                        border: 1px solid #ccc;
+                    }
+                }
+            }
+            .editable-buttons{
+                margin-left: 5px;
+                .editable-submit{
+                    color: #fff;
+                    border-color: #466eb1;
+                    background-color: #466eb1;
+                }
+                .editable-cancel{
+                    color: #1d1d1d;
+                    margin-left: 5px;
+                    border-color: #ebebeb;
+                    background-color: #fcfcfc !important;
+                    &:hover{
+                        border-color: #ebebeb;
+                        background-color: #fcfcfc !important;
+                    }
+                }
+                .editable-submit, .editable-cancel{
+                    &:hover{
+                        .box-shadow(none);
+                    }
+                }
+            }
+        }
+    }
+    /* end edit form */
 }

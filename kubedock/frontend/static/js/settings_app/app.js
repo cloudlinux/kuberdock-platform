@@ -231,7 +231,7 @@ define(['marionette', 'utils'],
             },
 
             back: function(){
-                App.router.navigate('/', {trigger: true});
+                App.router.navigate('/general/ ', {trigger: true});
             },
 
             onSave: function(){
@@ -268,9 +268,6 @@ define(['marionette', 'utils'],
             template: '#permission-item-template',
             tagName: 'tr',
 
-            onRender: function(){
-                console.log(this.model)
-            }
         });
 
         Views.PermissionsListView = Marionette.CompositeView.extend({
@@ -321,39 +318,44 @@ define(['marionette', 'utils'],
             regions: {
                 main: 'div#details_content'
             },
+
             ui: {
-                profileBtn           : '#profile-btn',
-                generalBtn           : '#general-btn',
-                publicIPsBtn         : '#publicIPs-btn',
-                permissionsBtn       : '#permissions-btn',
-                notificationsBtn     : '#notifications-btn',
-                persistentVolumesBtn : '#persistent-volumes-btn',
+                tabButton : 'ul.nav li',
+                general   : 'li.general'
             },
+
             events: {
-                'click @ui.generalBtn'           : 'redirectToGeneral',
-                'click @ui.profileBtn'           : 'redirectToProfile',
-                'click @ui.permissionsBtn'       : 'redirectToPermissions',
-                'click @ui.publicIPsBtn'         : 'redirectToPublicIPs',
-                'click @ui.notificationsBtn'     : 'redirectToNotifications',
-                'click @ui.persistentVolumesBtn' : 'redirectToPersistentVolumes',
+                'click @ui.tabButton' : 'changeTab'
             },
-            redirectToGeneral: function(evt){
-                App.router.navigate('/', {trigger: true});
+
+            changeTab: function (evt) {
+                evt.preventDefault();
+                var tgt = $(evt.target);
+                if (tgt.hasClass('general')) App.router.navigate('/general/', {trigger: true});
+                else if (tgt.hasClass('profile')) App.router.navigate('/profile/', {trigger: true});
+                else if (tgt.hasClass('publicIPs')) App.router.navigate('/publicIPs/', {trigger: true});
+                else if (tgt.hasClass('permissions')) App.router.navigate('/permissions/', {trigger: true});
+                else if (tgt.hasClass('notifications')) App.router.navigate('/notifications/', {trigger: true});
+                else if (tgt.hasClass('persistent-volumes')) App.router.navigate('/persistent-volumes/', {trigger: true});
             },
-            redirectToProfile: function(evt){
-                App.router.navigate('/profile/', {trigger: true});
-            },
-            redirectToPermissions: function(evt){
-                App.router.navigate('/permissions/', {trigger: true});
-            },
-            redirectToNotifications: function(evt){
-                App.router.navigate('/notifications/', {trigger: true});
-            },
-            redirectToPublicIPs: function(evt){
-                App.router.navigate('/publicIPs/', {trigger: true});
-            },
-            redirectToPersistentVolumes: function(){
-                App.router.navigate('/persistent-volumes/', {trigger: true});
+
+            onRender: function(){
+                var href = window.location.pathname.split('/'),
+                    tabs = this.ui.tabButton,
+                    that = this;
+
+                href = href[href.length - 2];
+
+                _.each(tabs, function(item){
+                    if (item.className == href) {
+                        $(item).addClass('active');
+                    } else if (href == 'settings') {
+                        that.ui.general.addClass('active');
+                    }
+                    else {
+                        $(item).removeClass('active')
+                    }
+                });
             }
         });
     });
@@ -366,6 +368,7 @@ define(['marionette', 'utils'],
                 var layout_view = new App.Views.SettingsLayout();
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show();
+
                 });
                 App.contents.show(layout_view);
             },

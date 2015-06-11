@@ -113,32 +113,70 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)
-        config = {
-            "kind": "Pod",
-            "apiVersion": "v1beta3",
-            "metadata": {
-                "name": self.sid,
-                "namespace": self.namespace,
-                "uid": self.id,
-                "labels": {
-                    "name": self.name
-                }
-            },
-            "spec": {
-                "volumes": getattr(self, 'volumes', []),
-                "containers": [
-                    self._prepare_container(c, kube_type)
-                        for c in self.containers],
-                "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
-                "nodeSelector": {
-                    "kuberdock-kube-type": "type_{0}".format(kube_type)
+        if self.cluster:
+            config = {
+                "kind": "ReplicationController",
+                "apiVersion": "v1beta3",
+                "metadata": {
+                    "name": self.sid,
+                    "namespace": self.namespace,
+                    "uid": self.id,
+                    "labels": {
+                        "name": self.name
+                    }
                 },
+                "spec": {
+                    "replicas": 1,
+                    "selector": {
+                        "name": self.name
+                    },
+                    "template": {
+                        "metadata": {
+                            "labels": {
+                                "name": self.name
+                            }
+                        },
+                        "spec": {
+                            "volumes": getattr(self, 'volumes', []),
+                            "containers": [
+                                self._prepare_container(c, kube_type)
+                                    for c in self.containers],
+                            "nodeSelector": {
+                                "kuberdock-kube-type": "type_{0}".format(kube_type)
+                            },
+                        }
+                    }
+                }
             }
-        }
+            pod_config = config['spec']['template']
+        else:
+            config = {
+                "kind": "Pod",
+                "apiVersion": "v1beta3",
+                "metadata": {
+                    "name": self.sid,
+                    "namespace": self.namespace,
+                    "uid": self.id,
+                    "labels": {
+                        "name": self.name
+                    }
+                },
+                "spec": {
+                    "volumes": getattr(self, 'volumes', []),
+                    "containers": [
+                        self._prepare_container(c, kube_type)
+                            for c in self.containers],
+                    "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
+                    "nodeSelector": {
+                        "kuberdock-kube-type": "type_{0}".format(kube_type)
+                    },
+                }
+            }
+            pod_config = config
         if hasattr(self, 'node') and self.node:
-            config['spec']['nodeSelector']['kuberdock-node-hostname'] = self.node
+            pod_config['spec']['nodeSelector']['kuberdock-node-hostname'] = self.node
         if hasattr(self, 'public_ip'):
-            config['metadata']['labels']['kuberdock-public-ip'] = self.public_ip
+            pod_config['metadata']['labels']['kuberdock-public-ip'] = self.public_ip
         return config
 
 
@@ -215,6 +253,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             return list(lex)
         except ValueError:
             self._raise('Incorrect cmd string')
+
+    @property
+    def kind(self):
+        if getattr(self, 'cluster', False):
+            return 'replicationcontrollers'
+        else:
+            return 'pods'
 
     def __repr__(self):
         return "<Pod ('name':{0})>".format(self.name)

@@ -66,8 +66,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
         if hasattr(pod, 'sid'):
-            rv = self._del(['pods', pod.sid], use_v3=True, ns=pod.namespace)
+            rv = self._del([pod.kind, pod.sid], use_v3=True, ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a pod")
+            if pod.cluster:
+                self._stop_cluster(pod)
         service_name = pod.get_config('service')
         if service_name:
             service = self._get(['services', service_name], use_v3=True, ns=pod.namespace)
@@ -122,6 +124,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return rv
 
     def _get_replicas(self, name=None):
+        # TODO: apply namespaces here
         replicas = []
         data = self._get(['replicationControllers'])
 
@@ -149,14 +152,17 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         data = []
         services_data = []
+        replicas_data = []
 
         if namespaces:
             for namespace in namespaces:
                 data.extend(self._get(['pods'], use_v3=True, ns=namespace)['items'])
                 services_data.extend(self._get(['services'], use_v3=True, ns=namespace)['items'])
+                replicas_data.extend(self._get(['replicationcontrollers'], use_v3=True, ns=namespace)['items'])
         else:
             data.extend(self._get(['pods'], use_v3=True)['items'])
             services_data.extend(self._get(['services'], use_v3=True)['items'])
+            replicas_data.extend(self._get(['replicationcontrollers'], use_v3=True)['items'])
 
         for item in data:
             pod = Pod.populate(item)
@@ -164,6 +170,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             for s in services_data:
                 if self._is_related(item['metadata']['labels'], s['spec']['selector']):
                     pod.serviceIP = s['spec'].get('portalIP')
+                    break
+
+            for r in replicas_data:
+                if self._is_related(item['metadata']['labels'], r['spec']['selector']):
+                    pod.sid = r['metadata']['name']
+                    pod.cluster = True
                     break
 
             if pod.sid not in pod_index:
@@ -228,11 +240,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             conf['spec']['portalIP'] = pod.portalIP
         return self._post(['services'], json.dumps(conf), rest=True, use_v3=True, ns=pod.namespace)
 
-    def _start_cluster(self):
-        # Simply stub 'cause we've got now no replicas
-        pass
-
     def _resize_replicas(self, pod, data):
+        # FIXME: not working for now
         number = int(data.get('replicas', getattr(pod, 'replicas', 0)))
         replicas = self._get_replicas(pod.name)
         # TODO check replica numbers and compare to ones set in config
@@ -244,8 +253,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
-        if getattr(pod, 'cluster', False):
-            return  # we do not support replicas now
         self._make_namespace(pod.namespace)
         if not pod.get_config('service'):
             for c in pod.containers:
@@ -255,7 +262,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     self._update_pod_config(pod, **{'service': service_rv['metadata']['name']})
                     break
         config = pod.prepare()
-        rv = self._post(['pods'], json.dumps(config), rest=True, use_v3=True, ns=pod.namespace)
+        rv = self._post([pod.kind], json.dumps(config), rest=True, use_v3=True, ns=pod.namespace)
         # current_app.logger.debug(rv)
         self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
         #return rv
@@ -263,14 +270,18 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _stop_pod(self, pod, data=None):
         pod.status = 'stopped'
-        if getattr(pod, 'cluster', False):
-            #self._resize_replicas(pod, 0)
-            return # currently we do not handle replicas
         if hasattr(pod, 'sid'):
-            rv = self._del(['pods', pod.sid], use_v3=True, ns=pod.namespace)
+            rv = self._del([pod.kind, pod.sid], use_v3=True, ns=pod.namespace)
+            if pod.cluster:
+                self._stop_cluster(pod)
             self._raise_if_failure(rv, "Could not stop a pod")
             #return rv
             return {'status': 'stopped'}
+
+    def _stop_cluster(self, pod):
+        for p in self._get(['pods'], use_v3=True, ns=pod.namespace)['items']:
+            if self._is_related(p['metadata']['labels'], {'name': pod.name}):
+                self._del(['pods', p['metadata']['name']], use_v3=True, ns=pod.namespace)
 
     def _do_container_action(self, action, data, strip_part='docker://'):
         host = data.get('host')

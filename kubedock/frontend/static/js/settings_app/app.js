@@ -214,13 +214,23 @@ define(['marionette', 'utils'],
                 'email'           : 'input#email',
                 'save'            : 'button#template-save-btn',
                 'back'            : 'button#template-back-btn',
-                'generalBtn'      : '#general-btn',
+                'editBtn'          : '#template-edit-btn',
             },
 
             events: {
                 'click @ui.back'       : 'back',
                 'click @ui.save'       : 'onSave',
-                'click @ui.generalBtn' : 'back',
+                'click @ui.editBtn'    : 'editTemplate',
+            },
+
+            templateHelpers: function(){
+                return {
+                    edit: this.model.in_edit,
+                    first_name: this.model.get('first_name'),
+                    last_name: this.model.get('last_name'),
+                    middle_initials: this.model.get('middle_initials'),
+                    email: this.model.get('email')
+                }
             },
 
             onRender: function(){
@@ -231,16 +241,23 @@ define(['marionette', 'utils'],
             },
 
             back: function(){
-                App.router.navigate('/general/ ', {trigger: true});
+                this.model.in_edit = false;
+                this.render();
+            },
+
+            editTemplate: function(){
+                this.model.in_edit = true;
+                this.render();
             },
 
             onSave: function(){
-                var data = {
-                    'first_name': this.ui.first_name.val(),
-                    'last_name': this.ui.last_name.val(),
-                    'middle_initials': this.ui.middle_initials.val(),
-                    'email': this.ui.email.val()
-                };
+                var that = this,
+                    data = {
+                        'first_name': this.ui.first_name.val(),
+                        'last_name': this.ui.last_name.val(),
+                        'middle_initials': this.ui.middle_initials.val(),
+                        'email': this.ui.email.val()
+                    };
 
                 pass1 = this.ui.password.val();
                 pass2 = this.ui.password_again.val();
@@ -258,7 +275,8 @@ define(['marionette', 'utils'],
                 this.model.save(undefined, {
                     wait: true,
                     success: function(){
-                        App.router.navigate('', {trigger: true})
+                        that.model.in_edit = false;
+                        that.render();
                     }
                 });
             }
@@ -267,7 +285,6 @@ define(['marionette', 'utils'],
         Views.PermissionItemView = Marionette.ItemView.extend({
             template: '#permission-item-template',
             tagName: 'tr',
-
         });
 
         Views.PermissionsListView = Marionette.CompositeView.extend({

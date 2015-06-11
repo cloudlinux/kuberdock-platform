@@ -49,6 +49,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.labels     = metadata.get('labels')
         pod.containers = spec.get('containers', [])
         pod.dockers    = []
+        pod.restartPolicy = spec.get('restartPolicy')
 
         # TODO refactor this ugly part
         for c in pod.containers:

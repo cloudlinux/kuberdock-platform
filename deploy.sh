@@ -121,12 +121,17 @@ else
     FIRST_IP=$(ip -o -4 address show $FIRST_IFACE|awk '/inet/ {sub(/\/.*$/, "", $4); print $4;exit;}')
 
     # read user confirmation
-    read -p "Enter inner network interface IP address [$FIRST_IP]: " MASTER_IP
-    if [ -z "$MASTER_IP" ]; then
+    if [ "$ISAMAZON" = true ];then
         MASTER_IP=$FIRST_IP
         MASTER_TOBIND_FLANNEL=$FIRST_IFACE
     else
-        MASTER_TOBIND_FLANNEL=$(ip -o -4 address show| awk "{sub(/\/.*\$/, \"\", \$4); if(\$4==\"$MASTER_IP\"){print \$2;exit}}")
+        read -p "Enter inner network interface IP address [$FIRST_IP]: " MASTER_IP
+        if [ -z "$MASTER_IP" ]; then
+            MASTER_IP=$FIRST_IP
+            MASTER_TOBIND_FLANNEL=$FIRST_IFACE
+        else
+            MASTER_TOBIND_FLANNEL=$(ip -o -4 address show| awk "{sub(/\/.*\$/, \"\", \$4); if(\$4==\"$MASTER_IP\"){print \$2;exit}}")
+        fi
     fi
 fi
 
@@ -140,44 +145,49 @@ echo "MASTER_IP has been set to $MASTER_IP" >> $DEPLOY_LOG_FILE
 echo "MASTER_TOBIND_FLANNEL was set to $MASTER_TOBIND_FLANNEL" >> $DEPLOY_LOG_FILE
 
 # We question here for a node interface to bind external IPs to
-read -p "Enter interface to bind public IP addresses on nodes [$MASTER_TOBIND_FLANNEL]: " NODE_TOBIND_EXTERNAL_IPS
-if [ -z "$NODE_TOBIND_EXTERNAL_IPS" ]; then
+if [ "$ISAMAZON" = true ];then
     NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
+else
+    read -p "Enter interface to bind public IP addresses on nodes [$MASTER_TOBIND_FLANNEL]: " NODE_TOBIND_EXTERNAL_IPS
+    if [ -z "$NODE_TOBIND_EXTERNAL_IPS" ]; then
+        NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
+    fi
 fi
 
 # Just a workaround for compatibility
 NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
-REGION=""
-AVAILABILITY_ZONE=""
-AWS_ACCESS_KEY_ID=""
-AWS_SECRET_ACCESS_KEY=""
+HAS_CEPH=no
 
 if [ "$ISAMAZON" = true ];then
     AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)
     REGION=$(echo $AVAILABILITY_ZONE|sed 's/\([0-9][0-9]*\)[a-z]*$/\1/')
-    read -p "Enter your AWS ACCESS KEY ID: " AWS_ACCESS_KEY_ID
-    read -p "Enter your AWS SECRET ACCESS KEY: " AWS_SECRET_ACCESS_KEY
+    if [ -z "$AWS_ACCESS_KEY_ID" ];then
+        read -p "Enter your AWS ACCESS KEY ID: " AWS_ACCESS_KEY_ID
+    fi
+    if [ -z "$AWS_SECRET_ACCESS_KEY" ];then
+        read -p "Enter your AWS SECRET ACCESS KEY: " AWS_SECRET_ACCESS_KEY
+    fi
     if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ];then
         log_it echo "Either AWS ACCESS KEY ID or AWS SECRET ACCESS KEY missing. Exit"
         exit 1
     fi
+else
+    while true;do
+        read -p "Do you have ceph (yes/no)? [no]: " HAS_CEPH
+        if [ -z "$HAS_CEPH" ];then
+            HAS_CEPH=no
+            break
+        fi
+        if [ "$HAS_CEPH" = yes ];then
+            break
+        fi
+        if [ "$HAS_CEPH" = no ];then
+            break
+        fi
+    done
 fi
 
-HAS_CEPH=no
-while true;do
-    read -p "Do you have ceph (yes/no)? [no]: " HAS_CEPH
-    if [ -z "$HAS_CEPH" ];then
-        HAS_CEPH=no
-        break
-    fi
-    if [ "$HAS_CEPH" = yes ];then
-        break
-    fi
-    if [ "$HAS_CEPH" = no ];then
-        break
-    fi
-done
 
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787

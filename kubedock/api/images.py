@@ -28,7 +28,7 @@ def is_array(data):
 
 
 def process(data):
-    patt=re.compile(r'(?:\s,\s|\s,|,\s|,|\s)')
+    patt=re.compile(r'(?:\s,\s|\s,|,\s|,|\s|=)')
     data = data.strip()
     pos = data.find(' ')
     if pos <= 0:
@@ -39,6 +39,7 @@ def process(data):
 
 def parse(data):
     entrypoint_is_array = False
+    parent_image = None
     ready = {'command': [], 'workingDir': '', 'ports': [], 'volumeMounts': [], 'EntryPoint': [], 'env': []}
     for line in data.splitlines():
         if line.startswith('CMD'):
@@ -56,13 +57,51 @@ def parse(data):
         elif line.startswith('ENV'):
             env, val = process(line)
             ready['env'].extend([dict({'name': env, 'value': val})])
+        elif line.startswith('FROM'):
+            patt = re.compile('^(?:(.+)):')
+            m = patt.findall(process(line)[0])
+            if m:
+                parent_image = m[0]
     entry_point = ready.pop('EntryPoint', [])
     command = ready.get('command', [])
     if entry_point:
         if entrypoint_is_array:
             entry_point.extend(command)
         ready['command'] = entry_point
+    if parent_image:
+        ready = _get_docker_file(parent_image, ready)
     return ready
+
+
+def _get_docker_file(image, parent_data=None):
+    query = db.session.query(DockerfileCache).get(image)
+    #current_app.logger.debug(query)
+    if query is not None:
+        if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
+            if parent_data:
+                return _merge_parent(parent_data, query.data)
+    result = tasks.get_dockerfile.delay(image)
+    rv = result.wait()
+    out = parse(rv)
+    out['image'] = image
+    # current_app.logger.debug(out)
+    if query is None:
+        db.session.add(DockerfileCache(image=image, data=out,
+                                       time_stamp=datetime.datetime.now()))
+    else:
+        query.data = out
+        query.time_stamp = datetime.datetime.now()
+    db.session.commit()
+    if parent_data:
+        return _merge_parent(parent_data, out)
+
+    return out
+
+
+def _merge_parent(parent, current):
+    for attr in 'ports', 'env', 'volumeMounts':
+        parent[attr].extend(current[attr])
+    return parent
 
 
 @images.route('/', methods=['GET'])
@@ -135,21 +174,5 @@ def search_image():
 @images.route('/new', methods=['POST'])
 def get_dockerfile_data():
     image = request.form.get('image', 'none')
-    query = db.session.query(DockerfileCache).get(image)
-    # current_app.logger.debug(query)
-    if query is not None:
-        if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
-            return jsonify({'status': 'OK', 'data': query.data})
-    result = tasks.get_dockerfile.delay(image)
-    rv = result.wait()
-    out = parse(rv)
-    out['image'] = image
-    # current_app.logger.debug(out)
-    if query is None:
-        db.session.add(DockerfileCache(image=image, data=out,
-                                       time_stamp=datetime.datetime.now()))
-    else:
-        query.data = out
-        query.time_stamp = datetime.datetime.now()
-    db.session.commit()
+    out = _get_docker_file(image)
     return jsonify({'status': 'OK', 'data': out})

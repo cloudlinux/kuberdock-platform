@@ -50,6 +50,16 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     that.listenTo(listLayout, 'clear:pager', function(){
                         listLayout.pager.empty();
                     });
+
+                    that.listenTo(listLayout, 'pods:check', function(){
+                        var models = podCollection.collection.models;
+
+                        _.each(models, function(item){
+                            item.is_checked = item.is_checked ? false : true;
+                        })
+                        podCollection.render();
+                    });
+
                     App.contents.show(listLayout);
                 });
             },

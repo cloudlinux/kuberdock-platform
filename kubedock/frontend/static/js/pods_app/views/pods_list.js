@@ -16,6 +16,7 @@ define(['pods_app/app',
                 this.listenTo(this.list, 'show', function(view){
                     that.listenTo(view, 'pager:clear', that.clearPager);
                 });
+                this.countChecked = 0;
             },
 
             clearPager: function(){
@@ -35,21 +36,31 @@ define(['pods_app/app',
                 'click @ui.checkAll' : 'checkAll',
             },
 
-            checkAll: function(e){
-                var items = App.WorkFlow.getCollection().fullCollection.models,
-                    that = this,
-                    input = this.$el.find('thead input');
+            childEvents: {
+                render: function(childView) {
+                    var items = App.WorkFlow.getCollection().fullCollection.models,
+                        countChecked = 0,
+                        thead = this.$el.find('thead'),
+                        podsControl = this.$el.find('.podsControl'),
+                        count = podsControl.find('.count');
 
-                _.each(items, function(model){
-                    var status = model.get('checked');
-                    if (!input.is(':checked')){
-                        model.set('checked',true);
-                        that.$el.find('tbody tr').addClass('checked');
+                    _.each(items, function(obj, index){
+                        obj.is_checked ? countChecked++ : false
+                    });
+
+                    if (countChecked > 0){
+                        thead.addClass('min-opacity');
+                        podsControl.show();
                     } else {
-                        model.set('checked',false);
-                        that.$el.find('tbody tr').removeClass('checked');
+                        thead.removeClass('min-opacity');
+                        podsControl.hide();
                     }
-                })
+                    count.text(countChecked);
+                }
+            },
+
+            checkAll: function(){
+                this.trigger('pods:check');
             }
         });
 
@@ -58,7 +69,7 @@ define(['pods_app/app',
             template    : podListItemTpl,
             tagName     : 'tr',
             className   : function(){
-                return this.model.get('checked') ? 'pod-item checked' : 'pod-item';
+                return this.model.is_checked ? 'pod-item checked' : 'pod-item';
             },
 
             templateHelpers: function(){
@@ -72,18 +83,18 @@ define(['pods_app/app',
             },
 
             ui: {
-                reditable   : '.reditable',
-                start       : '.start-btn',
-                stop        : '.stop-btn',
-                terminate   : '.terminate-btn',
-                checkbox    : 'label.custom span',
+                reditable : '.reditable',
+                start     : '.start-btn',
+                stop      : '.stop-btn',
+                terminate : '.terminate-btn',
+                checkbox  : 'label.custom span'
             },
 
             events: {
                 'click @ui.start'      : 'startItem',
                 'click @ui.stop'       : 'stopItem',
                 'click @ui.terminate'  : 'terminateItem',
-                'click @ui.checkbox'   : 'checkItem'
+                'click @ui.checkbox'   : 'checkItem',
             },
 
             onRender: function(){
@@ -163,8 +174,13 @@ define(['pods_app/app',
             },
 
             checkItem: function(evt){
-                this.model.set('checked', !this.model.get('checked'));
-                this.$el.toggleClass('checked');
+                if (this.model.is_checked){
+                    this.$el.removeClass('checked');
+                    this.model.is_checked = false;
+                } else {
+                    this.model.is_checked = true;
+                    this.$el.addClass('checked');
+                }
                 this.render();
             }
         });
@@ -179,9 +195,7 @@ define(['pods_app/app',
                 this.trigger('pager:clear');
             }
         });
-
     });
 
     return Pods.Views.List;
-
 });

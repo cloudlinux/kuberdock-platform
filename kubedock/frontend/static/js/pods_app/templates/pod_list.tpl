@@ -18,6 +18,9 @@
 </div>
 <div class="container">
     <div class="col-md-12">
+        <div class="podsControl">
+            <span class="count"></span> Pods selected
+        </div>
         <table id="podlist-table" class="table tablesorter tablesorter-default">
             <thead>
                 <tr class="tablesorter-headerRow">

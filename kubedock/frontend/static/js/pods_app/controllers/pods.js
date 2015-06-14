@@ -76,31 +76,12 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         that.showPods();
                         return;
                     }
-                    _.each(model.get('containers'), function(i){
+                    var _containerCollection = model.get('containers');
+                    _.each(_containerCollection, function(i){
                             i.parentID = this.parentID;
                             //i.kubes = this.kubes;
                         }, {parentID: id, kubes: model.get('kubes')});
-
-                    var _containerCollection = model.get('containers');
-                    var newContainerCollection = [];
-                    _.each(model.get('dockers'), function(el){
-                        var container = {};
-                        _.each(_containerCollection, function(c){
-                            if(c.name == el.info.name){
-                                $.each(c, function(k, v){
-                                    container[k] = v;
-                                });
-
-                                container['info'] = el.info;
-                                $.each(container.info.state, function(k, v){
-                                    container['state_repr'] = k;
-                                    container['startedAt'] = v.startedAt;
-                                });
-                            }
-                        });
-                        newContainerCollection.push(container);
-                    });
-                    containerCollection = new Backbone.Collection(newContainerCollection);
+                    containerCollection = new Backbone.Collection(_containerCollection);
 
                     var masthead = new App.Views.Item.PageHeader({
                         model: new Backbone.Model({name: model.get('name')})
@@ -166,29 +147,14 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                          'pods_app/views/loading'], function(){
                     var wizardLayout = new App.Views.NewItem.PodWizardLayout(),
                         parent_model = WorkFlow.getCollection().fullCollection.get(id),
-                        model_data = _.filter(
-                            parent_model.get('containers'),
-                            function(i){return i.name === this.n},
-                            {n: name}
-                        )[0],
-                        container = _.filter(
-                                parent_model.get('dockers'),
-                                function(i){return i.info.name === this.n},
-                                {n: model_data.name}
-                            )[0],
-                        container_id = _.last(container.info.containerID.split('/'));
-                    $.each(container.info.state, function(k, v){
-                        container['state_repr'] = k;
-                        container['startedAt'] = v.startedAt;
-                    });
-                    model_data.container_id = container_id;
-                    model_data.node = parent_model.get('dockers')[0].host;
+                        model_data = _.find(parent_model.get('containers'),
+                            function(i){return i.name === name}
+                        );
                     if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
                     if (!model_data.hasOwnProperty('workingDir')) model_data['workingDir'] = undefined;
                     if (!model_data.hasOwnProperty('command')) model_data['command'] = [];
                     if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
                     if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
-                    if (!model_data.hasOwnProperty('state_repr')) model_data['state_repr'] = container['state_repr'];
 
                     //this.listenTo(wizardLayout, 'show', function(){
                     //    wizardLayout.steps.show(new App.Views.WizardPortsSubView({

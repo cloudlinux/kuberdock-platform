@@ -745,7 +745,7 @@ define(['pods_app/app',
                     isPending: !this.containerModel.has('parentID'),
                     image: this.containerModel.get('image'),
                     name: this.containerModel.get('name'),
-                    state_repr: this.containerModel.get('state_repr'),
+                    state: this.containerModel.get('state'),
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     kubes: this.containerModel.get('kubes'),
@@ -831,13 +831,15 @@ define(['pods_app/app',
             initialize: function() {
                 this.model.set('logs', []);
                 function get_logs() {
-                    var node = this.model.get('node');
-                    var index = 'docker-*';
-                    var container_id = this.model.get('container_id');
-                    var size = 100;
-                    var url = '/logs/' + node + '/' + index +
-                        '/_search?q=container_id:"' + container_id + '"' +
-                        '&size=' + size + '&sort=@timestamp:desc';
+                    var parent_id = this.model.get('parentID'),
+                        parent_model = App.WorkFlow.getCollection().fullCollection.get(parent_id),
+                        node = parent_model.get('host'),
+                        index = 'docker-*',
+                        container_id = this.model.get('containerID'),
+                        size = 100,
+                        url = '/logs/' + node + '/' + index +
+                            '/_search?q=container_id:"' + container_id + '"' +
+                            '&size=' + size + '&sort=@timestamp:desc';
                     $.ajax({
                         url: url,
                         dataType : 'json',
@@ -868,10 +870,10 @@ define(['pods_app/app',
                     this.model.get('parentID')),
                     _containers = [],
                     host = null;
-                _.each(model.get('dockers'), function(itm){
-                    if(itm.info.name == that.model.get('name'))
-                        _containers.push(itm.info.containerID);
-                        host = itm.host;
+                _.each(model.get('containers'), function(itm){
+                    if(itm.name == that.model.get('name'))
+                        _containers.push(itm.containerID);
+                        host = model.get('host');
                 });
 
                 $.ajax({

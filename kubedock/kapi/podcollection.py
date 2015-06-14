@@ -24,11 +24,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         params['owner'] = self.owner
         pod = Pod.create(params)
         pod.compose_persistent(self.owner.username)
-        self._forge_dockers(pod)
-        saved = self._save_pod(pod)
+        self._save_pod(pod)
+        pod._forge_dockers()
         if hasattr(pod, 'public_ip'):
             pod._allocate_ip()
-        return saved.to_dict()
+        return pod.as_dict()
 
     def get(self, as_json=True):
         pods = [p.as_dict() for p in self._collection.values() if getattr(p, 'owner', '') == self.owner.username]
@@ -188,8 +188,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             namespace = db_pod.namespace
             if (db_pod.name, namespace) not in self._collection:
                 pod = Pod(json.loads(db_pod.config))
-                if not hasattr(pod, 'dockers'):
-                    self._forge_dockers(pod)
+                pod._forge_dockers()
                 self._collection[pod.name, namespace] = pod
             else:
                 self._collection[db_pod.name, namespace].id = db_pod.id
@@ -283,17 +282,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if self._is_related(p['metadata']['labels'], {'name': pod.name}):
                 self._del(['pods', p['metadata']['name']], use_v3=True, ns=pod.namespace)
 
-    def _do_container_action(self, action, data, strip_part='docker://'):
+    def _do_container_action(self, action, data):
         host = data.get('host')
         if not host:
             return
         rv = {}
         containers = data.get('containers', '').split(',')
         for container in containers:
-            id_ = container
-            if container.startswith(strip_part):
-                id_ = container[len(strip_part):]
-            command = 'docker {0} {1}'.format(action, id_)
+            command = 'docker {0} {1}'.format(action, container)
             status, message = run_ssh_command(host, command)
             if status != 0:
                 self._raise('Docker error: {0} ({1}).'.format(message, status))
@@ -321,23 +317,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if one[k] != two[k]:
                 return False
             return True
-
-    # TODO refactor this according to v1beta3
-    def _forge_dockers(self, pod):
-        pod.dockers = []
-        for container in pod.containers:
-            container['imageID'] = 'docker://{0}'.format(container['image'])
-            pod.dockers.append({
-                'host': '',
-                'info': {
-                    'containerID': 'docker://{0}'.format(container['name']),
-                    'image': container['image'],
-                    'imageID': container['imageID'],
-                    'lastState': {},
-                    'name': container['name'],
-                    'ready': False,
-                    'restartCount': 0,
-                    'state': {'stopped': {}}}})
 
     def _check_trial(self, params):
         if self.owner.is_trial():

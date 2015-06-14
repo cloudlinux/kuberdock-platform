@@ -48,26 +48,24 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.volumes    = spec.get('volumes', [])
         pod.labels     = metadata.get('labels')
         pod.containers = spec.get('containers', [])
-        pod.dockers    = []
         pod.restartPolicy = spec.get('restartPolicy')
 
-        # TODO refactor this ugly part
-        for c in pod.containers:
-            try:
-                c['imageID'] = [
-                    i for i in status.get('containerStatuses', [])
-                        if c['name'] == i['name']][0]['imageID']
-            except (IndexError, KeyError):
-                c['imageID'] = 'docker://'
         if pod.status == 'running':
             for pod_item in status.get('containerStatuses', []):
                 if pod_item['name'] == 'POD':
                     continue
-                pod.dockers.append({
-                    'host': pod.host,
-                    'info': pod_item,
-                    # 'podIP': pod.podIP
-                })
+                for container in pod.containers:
+                    if container['name'] == pod_item['name']:
+                        state, startedAt = pod_item.pop('state').items()[0]
+                        pod_item['state'] = state
+                        pod_item['startedAt'] = startedAt.get('startedAt')
+                        container_id = pod_item.get('containerID', container['name'])
+                        image_id = pod_item.get('imageID', container['image'])
+                        pod_item['containerID'] = container_id.strip('docker://')
+                        pod_item['imageID'] = image_id.strip('docker://')
+                        container.update(pod_item)
+        else:
+            pod._forge_dockers(status=pod.status)
         return pod
 
     def as_dict(self):
@@ -261,6 +259,18 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             return 'replicationcontrollers'
         else:
             return 'pods'
+
+    def _forge_dockers(self, status='stopped'):
+        for container in self.containers:
+            container.update({
+                'containerID': container['name'],
+                'imageID': container['image'],
+                'lastState': {},
+                'ready': False,
+                'restartCount': 0,
+                'state': status,
+                'startedAt': None,
+            })
 
     def __repr__(self):
         return "<Pod ('name':{0})>".format(self.name)

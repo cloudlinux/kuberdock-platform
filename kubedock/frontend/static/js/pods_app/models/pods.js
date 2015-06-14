@@ -54,14 +54,6 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                     }
                 });
             },
-    
-            clearModel: function(){
-                _.each(this.get('containers'), function(container){
-                    delete container['container_id'];
-                    delete container['node'];
-                    delete container['state_repr'];
-                });
-            }
         });
     
         Data.Image = Backbone.Model.extend({

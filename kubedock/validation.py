@@ -179,10 +179,6 @@ new_pod_scheme = {
                 },
                 'kubes': {'type': 'integer', 'min': 1},
                 'image': container_image_name_scheme,
-                'imageID': {
-                    'type': 'string',
-                    'required': False
-                },
                 'parentID': {
                     'type': 'string',
                     'required': False
@@ -284,7 +280,6 @@ change_pod_scheme.update({
         'empty': False,
         'regex': pod_name
     },
-    'dockers': {'type': 'list'},                    # retrieved from kubernetes
     'labels': {                                     # TODO when implement
         'type': 'dict',
         'required': False

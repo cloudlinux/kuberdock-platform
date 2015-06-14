@@ -7,11 +7,11 @@
 <td><span>10.10.10.10</span></td>
 -->
 <td>
-    <% if (state_repr == 'running' )  { %>
-        <span class="<%- state_repr %>"><%- state_repr %></span>
+    <% if (state == 'running' )  { %>
+        <span class="<%- state %>"><%- state %></span>
         <span class="stop-btn" title="Stop <%- image %> container">Stop</span>
     <% } else { %>
-        <span class="<%- state_repr %>"><%- state_repr %></span>
+        <span class="<%- state %>"><%- state %></span>
         <span class="start-btn" title="Stop <%- image %> container">Start</span>
     <% } %>
 </td>

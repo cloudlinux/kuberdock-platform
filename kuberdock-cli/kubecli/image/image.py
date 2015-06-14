@@ -71,5 +71,5 @@ class Image(KubeQuery, PrintOut, object):
     def ps(self):
         super(Image, self).__setattr__('_FIELDS', (('image', 32),))
         data = self._unwrap(self._get('/api/podapi'))[0]
-        dockers = data.get('dockers', [])
-        self._list([i['info'] for i in dockers])
+        containers = data.get('containers', [])
+        self._list(containers)

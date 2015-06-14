@@ -80,10 +80,10 @@
                 </ul>
             </div>
             <div id="details_content" class="col-sm-10 no-padding variables-tab">
-                <div class="status-line <%- state_repr %>">Status: <%- state_repr %>
-                    <% if (state_repr == "running"){ %>
+                <div class="status-line <%- state %>">Status: <%- state %>
+                    <% if (state == "running"){ %>
                         <span id="stopContainer">Stop</span>
-                    <% } else  if (state_repr == "stopped"){ %>
+                    <% } else  if (state == "stopped"){ %>
                         <span id="startContainer">Start</span>
                     <% } %>
                     <!-- <span>Terminate</span> -->

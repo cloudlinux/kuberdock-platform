@@ -96,10 +96,10 @@ define(['pods_app/app',
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     _containers = [],
                     host = null;
-                _.each(model.get('dockers'), function(itm){
-                    if(itm.info.name == that.model.get('name'))
-                        _containers.push(itm.info.containerID);
-                        host = itm.host;
+                _.each(model.get('containers'), function(itm){
+                    if(itm.name == that.model.get('name'))
+                        _containers.push(itm.containerID);
+                        host = model.get('host');
                 });
                 $.ajax({
                     url: '/api/podapi/' + model.get('id'),
@@ -157,9 +157,9 @@ define(['pods_app/app',
                 containerCollection.forEach(function(i){
                     if (i.get('checked') === true){
                         model = App.WorkFlow.getCollection().fullCollection.get(i.get('parentID'));
-                        _.each(model.get('dockers'), function(itm){
-                            if(itm.info.name == i.get('name'))
-                                containers.push(itm.info.containerID);
+                        _.each(model.get('containers'), function(itm){
+                            if(itm.name == i.get('name'))
+                                containers.push(itm.containerID);
                         });
                     }
                 });

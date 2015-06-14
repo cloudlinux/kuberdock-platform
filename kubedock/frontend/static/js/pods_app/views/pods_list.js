@@ -118,7 +118,6 @@ define(['pods_app/app',
                     preloader = $('#page-preloader');
                 preloader.show();
                 evt.stopPropagation();
-                this.model.clearModel();
                 this.model.save({command: 'start'}, {
                     wait: true,
                     success: function(model, response, options){
@@ -138,7 +137,6 @@ define(['pods_app/app',
                     preloader = $('#page-preloader');
                 preloader.show();
                 evt.stopPropagation();
-                this.model.clearModel();
                 this.model.save({command: 'stop'}, {
                     wait: true,
                     success: function(model, response, options){

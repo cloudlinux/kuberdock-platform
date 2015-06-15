@@ -130,7 +130,7 @@ define(function () {
                     $('<button type="button" class="btn blue" ' +
                           'data-dismiss="modal">').unbind('click')
                         .bind('click', options.footer.buttonOk)
-                        .text('OK')
+                        .text('Delete')
                 )
             }
             if(options.footer.buttonCancel){
@@ -144,11 +144,13 @@ define(function () {
         }
         return modal;
     };
+
     this.modelError = function(b, t){
         this.modalDialog({
             title: t ? t : 'Error',
             body: typeof b == "string" ? b : b.responseJSON ? JSON.stringify(b.responseJSON): b.responseText,
-            show: true
+            show: true,
+            buttonCancel: false
         });
     };
 

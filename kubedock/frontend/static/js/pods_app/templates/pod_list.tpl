@@ -19,7 +19,7 @@
 <div class="container">
     <div class="col-md-12">
         <div class="podsControl">
-            <span class="count"></span> Pods selected
+            <span class="count"></span><span class="removePods">Delete</span>
         </div>
         <table id="podlist-table" class="table tablesorter tablesorter-default">
             <thead>

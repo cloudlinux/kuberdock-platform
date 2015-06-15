@@ -1,6 +1,6 @@
 "use strict";
 
-function modalDialog(options){
+/*function modalDialog(options){
     var modal = $('.modal');
     if(options.title) modal.find('.modal-title').html(options.title);
     if(options.body) modal.find('.modal-body').html(options.body);
@@ -8,7 +8,38 @@ function modalDialog(options){
     if(options.small) modal.addClass('bs-example-modal-sm');
     if(options.show) modal.modal('show');
     return modal;
-}
+}*/
+
+function modalDialog(options){
+    var modal = $('.modal'),
+        modalDialog = modal.find('.modal-dialog');
+    modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
+    if(options.title) modal.find('.modal-title').html(options.title);
+    if(options.body) modal.find('.modal-body').html(options.body);
+    if(options.large) modal.addClass('bs-example-modal-lg');
+    if(options.small) modal.addClass('bs-example-modal-sm');
+    if(options.show) modal.modal('show');
+    if(options.footer){
+        modal.find('.modal-footer').empty();
+        if(options.footer.buttonOk){
+            modal.find('.modal-footer').append(
+                $('<button type="button" class="btn blue" ' +
+                      'data-dismiss="modal">').unbind('click')
+                    .bind('click', options.footer.buttonOk)
+                    .text('OK')
+            )
+        }
+        if(options.footer.buttonCancel){
+            if(options.footer.buttonCancel === true){
+                modal.find('.modal-footer').prepend(
+                    $('<button type="button" class="btn"' +
+                          'data-dismiss="modal">Cancel</button>')
+                )
+            }
+        }
+    }
+    return modal;
+};
 
 function modelError(b, t){
     modalDialog({
@@ -179,18 +210,25 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     kubeType = itm.name;
             });
             return {
-                'kubeType': kubeType
+                'kubeType' : kubeType
             }
         },
 
-        deleteNode: function(evt){
-            evt.stopPropagation();
-            var item = this.model,
-                name = item.get('hostname'),
-                preloader = $('#page-preloader');
-            if(!confirm("Delete node '" + name + "'?"))
-                return;
-            this.model.destroy();
+        deleteNode: function(){
+            var that = this,
+                name = that.model.get('hostname');
+            modalDialog({
+                title: "Delete " + name + "?",
+                body: "Are you sure want to delete node '" + name + "'?",
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        that.model.destroy();
+                    },
+                    buttonCancel: true
+                }
+            });
         },
 
         detailedNode: function(){
@@ -415,14 +453,22 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             });
         },
 
-        deleteNode: function(evt) {
-            evt.stopPropagation();
-            var item = this.model,
-                name = item.get('hostname');
-            if(!confirm("Delete node '" + name + "'?"))
-                return;
-            this.model.destroy();
-            App.router.navigate('/', {trigger: true})
+        deleteNode: function() {
+            var that = this,
+                name = that.model.get('hostname');
+            modalDialog({
+                title: "Delete " + name + "?",
+                body: "Are you sure want to delete node '" + name + "'?",
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        that.model.destroy();
+                        App.router.navigate('/', {trigger: true})
+                    },
+                    buttonCancel: true
+                }
+            });
         },
 
         breadcrumbClick: function(){

@@ -134,9 +134,21 @@ define(['pods_app/app',
                 this.command(evt, 'stop');
             },
             deleteItem: function(evt){
-                this.command(evt, 'delete');
+                var that = this,
+                    name = that.model.get('name');
+                utils.modalDialog({
+                    title: "Delete container?",
+                    body: "Are you sure want to delete container '" + name + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            this.command(evt, 'delete');
+                        },
+                        buttonCancel: true
+                    }
+                });
             },
-
         });
 
         Item.InfoPanel = Backbone.Marionette.CompositeView.extend({
@@ -278,25 +290,33 @@ define(['pods_app/app',
             },
 
             terminateItem: function(evt){
-                evt.stopPropagation();
-                var item = this.getItem(),
+                var that = this,
+                    item = that.getItem(),
                     name = item.get('name'),
                     preloader = $('#page-preloader');
-                if(!confirm("Delete pod '" + name + "'?"))
-                    return;
-                preloader.show();
-                item.destroy({
-                    wait: true,
-                    success: function(){
-                        var col = App.WorkFlow.getCollection();
-                        col.remove(item);
-                        window.location.href = '/#pods';
-                        preloader.hide();
-
-                    },
-                    error: function(model, response, options, data){
-                        preloader.hide();
-                        utils.modelError('Could not remove ' + name);
+                utils.modalDialog({
+                    title: "Delete " + name + "?",
+                    body: "Are you sure want to delete pod '" + name + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            preloader.show();
+                            item.destroy({
+                                wait: true,
+                                success: function(){
+                                    var col = App.WorkFlow.getCollection();
+                                    col.remove(item);
+                                    preloader.hide();
+                                    window.location.href = '/#pods';
+                                },
+                                error: function(model, response, options, data){
+                                    preloader.hide();
+                                    utils.modelError('Could not remove ' + name);
+                                }
+                            });
+                        },
+                        buttonCancel: true
                     }
                 });
             }

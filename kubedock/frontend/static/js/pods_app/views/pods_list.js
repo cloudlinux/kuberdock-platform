@@ -29,20 +29,22 @@ define(['pods_app/app',
             },
 
             ui: {
-                'checkAll' : 'thead label.custom span'
+                'checkAll'   : 'thead label.custom span',
+                'removePods' : '.removePods'
             },
 
             events: {
-                'click @ui.checkAll' : 'checkAll',
+                'click @ui.checkAll'   : 'checkAll',
+                'click @ui.removePods' : 'removePods'
             },
 
             childEvents: {
                 render: function(childView) {
                     var items = App.WorkFlow.getCollection().fullCollection.models,
                         countChecked = 0,
-                        thead = this.$el.find('thead'),
-                        podsControl = this.$el.find('.podsControl'),
-                        count = podsControl.find('.count');
+                        thead = this.$('thead'),
+                        count = this.$('.count'),
+                        podsControl = this.$('.podsControl');
 
                     _.each(items, function(obj, index){
                         obj.is_checked ? countChecked++ : false
@@ -55,13 +57,35 @@ define(['pods_app/app',
                         thead.removeClass('min-opacity');
                         podsControl.hide();
                     }
-                    count.text(countChecked);
+
+                    countChecked < 2 ? count.text(countChecked +' Item') : count.text(countChecked + ' Items');
                 }
             },
 
             checkAll: function(){
                 this.trigger('pods:check');
-            }
+            },
+
+            removePods: function(){
+               var items = App.WorkFlow.getCollection().fullCollection.models;
+
+               utils.modalDialog({
+                    title: "Delete",
+                    body: "Are you sure want to delete selected pods?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            _.each(items, function(item){
+                                if (item.is_checked){
+                                    item.destroy();
+                                }
+                            });
+                        },
+                        buttonCancel: true
+                   }
+                });
+            },
         });
 
         // View for showing a single pod item as a container in pods list

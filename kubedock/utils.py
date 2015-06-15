@@ -4,6 +4,7 @@ from json import JSONEncoder
 from flask import current_app, request, jsonify, g
 from flask.ext.login import current_user, logout_user
 from functools import wraps
+import bitmath
 
 from .settings import KUBE_MASTER_URL
 from .users import User
@@ -279,3 +280,58 @@ def register_api(bp, view, endpoint, url, pk='id', pk_type='string', **kwargs):
     bp.add_url_rule('{0}<{1}:{2}>'.format(url, pk_type, pk),
                       view_func=view_func,
                       methods=['GET', 'PUT', 'DELETE'], **kwargs)
+
+
+def from_binunit(value, unit='Byte', precision=None, rtype=None):
+    """Convert binary unit value to numeric value
+
+    :param value: value to convert
+    :type value: str
+    :param unit: destination unit ('GiB', 'MiB', 'KiB' or any bitmath unit)
+    :type unit: str
+    :param precision: round precision
+    :type precision: int
+    :param rtype: return type (default: int if unit is 'Byte' or precision <= 0, float otherwize)
+    :type rtype: float, int or any type that can handle float as argument
+    :returns: converted value
+    :rtype: float, int or rtype defined
+    :raises: ValueError, TypeError
+
+    :Examples:
+    >>> from_binunit('1017368Ki')
+    1041784832
+    >>> from_binunit('1017368Ki', 'GiB', 2)
+    0.97
+    >>> from_binunit('1017368Ki', 'GiB', 0)
+    1
+    >>> from_binunit('1017368Ki', 'MiB')
+    993.5234375
+    >>> from_binunit('1017368Ki', 'MiB', 0)
+    994
+    >>> from_binunit('1017368Ki', 'MiB', rtype=int)
+    993
+    >>> from_binunit('1017368Ki', 'MiB', 0, float)
+    994.0
+    >>> from_binunit('1017368Ki', 'MiB', rtype=lambda x: float(int(x)))
+    993.0
+    """
+
+    if unit.endswith('i'):
+        unit += 'B'
+    if isinstance(value, basestring):
+        if isinstance(value, unicode):
+            value = str(value)
+        if value.endswith('i'):
+            value += 'B'
+        result = bitmath.parse_string(value)
+        result = getattr(result, unit).value
+    else:
+        result = float(value) / getattr(bitmath, unit)(1).bytes
+    if precision is not None:
+        result = round(result, precision)
+    if rtype is None:
+        if unit == 'Byte' or (precision is not None and precision <= 0):
+            rtype = int
+        else:
+            rtype = float
+    return rtype(result)

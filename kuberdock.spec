@@ -60,6 +60,7 @@ Requires: python-boto
 Requires: python-alembic
 Requires: python-flask-migrate
 Requires: python-flask-script
+Requires: python-bitmath
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

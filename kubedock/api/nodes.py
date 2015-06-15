@@ -7,7 +7,7 @@ from .. import tasks
 from ..models import Node, User, Pod
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token, KubeUtils
+from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, CEPH
@@ -290,6 +290,11 @@ def get_nodes_collection():
         except KeyError:
             resources = {}
 
+        try:
+            resources['memory'] = from_binunit(resources['memory'])
+        except (KeyError, ValueError):
+            pass
+
         nodes_list.append({
             'id': node.id,
             'ip': node.ip,
@@ -319,13 +324,21 @@ def get_one_node(node_id):
             raise APIError(
                 "Error. Node exists in db but don't exists in kubernetes",
                 status_code=404)
+
+        resources = res['status'].get('capacity', {})
+
+        try:
+            resources['memory'] = from_binunit(resources['memory'])
+        except (KeyError, ValueError):
+            pass
+
         data = {
             'id': m.id,
             'ip': m.ip,
             'hostname': m.hostname,
             'kube_type': m.kube.id,
             'status': 'running' if _node_is_active(res) else 'troubles',
-            'resources': res['status'].get('capacity', {})
+            'resources': resources
         }
         return jsonify({'status': 'OK', 'data': data})
     else:

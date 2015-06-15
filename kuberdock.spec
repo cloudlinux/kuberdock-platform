@@ -1,7 +1,7 @@
 Version: 0.1
 Name: kuberdock
 Summary: KuberDock
-Release: 60%{?dist}.cloudlinux
+Release: 61%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -134,6 +134,19 @@ restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Mon Jun 15 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.1-61
+- AC-474: Add style to persistent volumes & publick IPs tabs
+- AWS persistent storage bugfix
+- Fix bug widts button add subnet
+- AC-342 Added additional fields to package IP, persistent storage, over traffic price&values
+- AC-505: Add active status to li items, AC-497: change icon status in add container steps
+- AC-498: Apply replication controller for one pod
+- AC-506: Fix missing restartPolicy
+- AC-483: Add new design to setting progile&settings profile edit pages
+- Modify deploy.sh not to ask any questions on amazon
+- AC-246: Add logic bulk operation to pods
+- AC-490 Recursive parse dockerfiles
+
 * Tue Jun 09 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.1-60
 - AC-344: Add new style to second step in add container
 - AC-331: Added 2 additional fields to package: prefix & suffix

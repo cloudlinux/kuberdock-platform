@@ -287,8 +287,11 @@ do_and_log chown kube:kube /var/run/kubernetes
 
 #4.2 SELinux rules
 # After kuberdock, we need installed semanage
-log_it echo 'Adding SELinux rule for http on port 9200'
-do_and_log semanage port -a -t http_port_t -p tcp 9200
+SESTATUS=$(sestatus|awk '/SELinux\sstatus/ {print $3}')
+if [ "$SESTATUS" != disabled ];then
+    log_it echo 'Adding SELinux rule for http on port 9200'
+    do_and_log semanage port -a -t http_port_t -p tcp 9200
+fi
 
 
 
@@ -450,7 +453,7 @@ do_and_log systemctl restart redis
 log_it echo "Setuping flannel config to etcd..."
 if [ "$ISAMAZON" = true ];then
     # host-gw don't work on AWS so we use udp
-    etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "udp"}}' 2> /dev/null
+    etcdctl mk /kuberdock/network/config "{\"Network\":\"10.254.0.0/16\", \"SubnetLen\": 24, \"Backend\": {\"Type\": \"aws-vpc\", \"RouteTableID\": \"$ROUTE_TABLE_ID\"}}" 2> /dev/null
 else
     etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
 fi

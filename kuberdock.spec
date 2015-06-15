@@ -56,6 +56,7 @@ Requires: python-sse >= 1.2
 Requires: python-webassets >= 0.10.1
 Requires: python-wsgiref >= 0.1.2
 Requires: python-psycogreen >= 1.0
+Requires: python-botocore
 Requires: python-boto
 Requires: python-alembic
 Requires: python-flask-migrate
@@ -121,9 +122,12 @@ root@${FQDN}
 EOF
 fi
 
-# Even if SELinux disabled, we set labels for future
-semanage fcontext -a -t httpd_sys_content_t /var/opt/kuberdock/kubedock/frontend/static\(/.\*\)\?
-restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
+# Setting labels
+SESTATUS=$(sestatus|awk '/SELinux\sstatus/ {print $3}')
+if [ "$SESTATUS" != disabled ];then
+    semanage fcontext -a -t httpd_sys_content_t /var/opt/kuberdock/kubedock/frontend/static\(/.\*\)\?
+    restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
+fi
 
 %files
 %defattr(-,root,root)

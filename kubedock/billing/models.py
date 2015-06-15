@@ -16,6 +16,11 @@ class Package(db.Model):
     period = db.Column(db.String(16), default="hour", nullable=False)
     prefix = db.Column(db.String, nullable=True)
     suffix = db.Column(db.String, nullable=True)
+    price_ip = db.Column(db.Float, default=0.0, nullable=False)
+    price_pstorage = db.Column(db.Float, default=0.0, nullable=False)
+    value_pstorage = db.Column(db.Float, default=0.0, nullable=False)
+    price_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
+    value_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
     kubes = db.relationship('Kube', secondary=tags, backref=db.backref('packages', lazy='dynamic'))
     users = db.relationship("User", backref="package")
 

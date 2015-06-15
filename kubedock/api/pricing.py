@@ -73,7 +73,8 @@ def create_package():
     params = request.json
     if params is None:
         params = request.form
-    defaults = {'currency': 'USD', 'period': 'hour', 'setup_fee': 0.0, 'prefix': '', 'suffix': ''}
+    defaults = {'currency': 'USD', 'period': 'hour', 'setup_fee': 0.0, 'prefix': '', 'suffix': '', 'price_ip': 0.0,
+                'price_pstorage': 0.0, 'value_pstorage': 0.0, 'price_over_traffic': 0.0, 'value_over_traffic': 0.0}
     for attr in 'name', 'setup_fee', 'currency', 'period', 'prefix', 'suffix':
         data[attr] = params.get(attr, defaults.get(attr))
         if data[attr] is None:

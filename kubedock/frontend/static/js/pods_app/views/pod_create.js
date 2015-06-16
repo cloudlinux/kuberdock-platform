@@ -915,7 +915,8 @@ define(['pods_app/app',
                     kube_types: kubeTypes,
                     restart_policies: {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                     restart_policy: this.model.get('restartPolicy'),
-                    image_name_id: this.model.get('lastAddedImageNameId')
+                    image_name_id: this.model.get('lastAddedImageNameId'),
+                    package: this.package ? this.package : {}
                 };
             },
 
@@ -996,7 +997,7 @@ define(['pods_app/app',
                         return k.id === kube_id
                     }),
                     pack = _.find(packages, function(p){
-                        return p.kube_id === kube_id
+                        return p.id === kube_id
                     }),
                     currency = pack ? pack.currency : 'USD',
                     image_name_id = this.ui.main.attr('image_name_id'),
@@ -1023,7 +1024,7 @@ define(['pods_app/app',
                         return k.id === kube_id
                     }),
                     pack = _.find(packages, function(p){  // 'packages' is taken from index.html
-                        return p.kube_id === kube_id
+                        return p.id === kube_id
                     }),
                     currency = pack ? pack.currency : 'USD',
                     kube_price = kube_data ? kube_data.price : 0;
@@ -1038,6 +1039,7 @@ define(['pods_app/app',
                 this.container_price = (kube_price * num) + currency;
                 this.total_price = _.reduce(containers, function(sum, c) { return sum + kube_price * c.kubes; }, 0)
                     + currency;
+                this.package = pack;
                 this.render();
                 this.ui.kubeTypes.val(kube_id);
                 this.ui.kubeQuantity.val(num);

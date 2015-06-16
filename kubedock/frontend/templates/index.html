@@ -38,7 +38,7 @@
                     </div>
                     <% if (description && name) { %>
                         <div class="more">
-                            <a href="http://<%= _options.requestData.url %>/u/<%= name %>"
+                            <a href="http://<%= _options.requestData.url %>/<%= is_official?'_':'u' %>/<%= name %>"
                                target="blank">more...</a>
                         </div>
                     <% } %>

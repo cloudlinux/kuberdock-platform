@@ -1,7 +1,7 @@
-Version: 0.1
+Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 61%{?dist}.cloudlinux
+Release: 0%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -139,6 +139,12 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Tue Jun 16 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-0
+- AC-293: Add style to alerts windows
+- AC-487: Show node memory
+- added to deploy.sh and kuberdock.spec changes for impersonated install
+- AC-509 WHMCS. Persistent storage в GB
+
 * Mon Jun 15 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.1-61
 - AC-474: Add style to persistent volumes & publick IPs tabs
 - AWS persistent storage bugfix

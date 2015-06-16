@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 4%{?dist}.cloudlinux
+Release: 5%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -47,6 +47,10 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Tue Jun 16 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-5
+- AC-518 cPanel. Added image  get command
+- kcli set kube count and no ports by default
+
 * Tue Jun 02 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-4
 - fixed volume mounts and settings port as public
 - Silenced untrusted cert warning

@@ -279,6 +279,8 @@ define(['pods_app/app',
                 removeVolume   : '.remove-volume',
                 restartPolicy  : '.restart-policy',
                 addDriveCancel : '.add-drive-cancel',
+                containerPort  : '.containerPort',
+                podPorts       : '.hostPort'
             },
 
             events: {
@@ -470,16 +472,60 @@ define(['pods_app/app',
             },
 
             goNext: function(evt){
-                var vm = this.model.get('volumeMounts');
+                var that = this,
+                    uniquePodPorts = [],
+                    uniqueContainePorts = [],
+                    podPorts = this.ui.podPorts,
+                    vm = this.model.get('volumeMounts'),
+                    containerPorts = this.ui.containerPort;
+
+                /* mountPath check */
                 for (var i=0; i<vm.length; i++) {
                     if (!vm[i].mountPath) {
-                        alert('mount path must be set!');
+                        utils.modelError('Mount path must be set!');
                         return;
                     }
                     var itemName = vm[i].mountPath.charAt(0) === '/' ? vm[i].mountPath.substring(1) : vm[i].mountPath;
                     vm[i].name = itemName.replace(new RegExp('/','g'), '-') + _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
+                };
+                /* end mountPath check */
+
+                /* check ports */
+                _.each(containerPorts, function(el){
+                    var value = parseInt($(el).find('span').text());
+                    if($.inArray( value, uniqueContainePorts) === -1) uniqueContainePorts.push(value);
+                });
+
+                _.each(podPorts, function(el){
+                    var value = parseInt($(el).find('span').text());
+                    if($.inArray( value, uniquePodPorts) === -1) uniquePodPorts.push(value);
+                });
+
+                if (uniqueContainePorts.length != containerPorts.length){
+                    _.each(containerPorts,function(el, i){
+                        var value = parseInt($(el).find('span').text());
+                        for (var i = uniqueContainePorts.length - 1; i >= 0; i--) {
+                            if (uniqueContainePorts[i] == value ) {
+                                utils.modelError('You have a duplicate container port');
+                                break
+                            }
+                        };
+                    })
+                } else if( uniquePodPorts.length != podPorts.length ){
+                     _.each(podPorts,function(el, i){
+                        var value = parseInt($(el).find('span').text());
+                        for (var i = uniquePodPorts.length - 1; i >= 0; i--) {
+                            if (uniquePodPorts[i] == value ) {
+                                utils.modelError('You have a duplicate pod port');
+                                break
+                            }
+                        };
+                    })
+                } else {
+                    this.trigger('step:envconf', this);
                 }
-                this.trigger('step:envconf', this);
+                /* end check ports */
+
             },
 
             onRender: function(){

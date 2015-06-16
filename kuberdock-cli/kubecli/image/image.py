@@ -73,3 +73,10 @@ class Image(KubeQuery, PrintOut, object):
         data = self._unwrap(self._get('/api/podapi'))[0]
         containers = data.get('containers', [])
         self._list(containers)
+
+    def get(self):
+        try:
+            data = self._unwrap(self._post('/api/images/new', {'image': self.image}))
+        except (AttributeError, TypeError):
+            data = {'volumeMounts': [], 'command': [], 'env': [], 'ports': []}
+        self._list(data)

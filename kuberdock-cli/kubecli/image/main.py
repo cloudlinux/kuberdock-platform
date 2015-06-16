@@ -14,6 +14,9 @@ def parser(subs):
     search.add_argument('-p', '--page', default=0, type=int, help="Page to display")
     search.add_argument('-R', '--registry', help="Registry to search in. By default dockerhub is used")
 
+    get = action.add_parser('get')
+    get.add_argument('image', help="Image name")
+
 def wrapper(data):
     args = make_config(data)
     container = Image(**args)

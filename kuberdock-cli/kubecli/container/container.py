@@ -86,15 +86,17 @@ class KuberDock(KubeCtl):
     def set(self):
         if hasattr(self, 'image'):
             i = self._get_image()
+            i.kubes = int(self.kubes)
             for attr in 'container_port', 'host_port', 'protocol', 'mount_path':
                 try:
                     operator.methodcaller(
                         'set_' + attr, getattr(self, attr), self.index)(i)
                 except AttributeError:
                     continue
+            if i.ports:
+                operator.methodcaller(
+                    'set_public', self.set_public_ip, self.index)(i)
 
-            operator.methodcaller(
-                'set_public', self.set_public_ip, self.index)(i)
         self._save()
 
     def save(self):
@@ -149,14 +151,20 @@ class KuberDock(KubeCtl):
         if pod['status'] == 'stopped':
             pod['command'] = 'start'
         res = self._put('/api/podapi/'+pod['id'], json.dumps(pod))
-        print res
+        if self.json:
+            self._print_json(res)
+        else:
+            self._print(res)
 
     def stop(self):
         pod = self._get_pod()
         if pod['status'] in ['running', 'pending']:
             pod['command'] = 'stop'
         res = self._put('/api/podapi/'+pod['id'], json.dumps(pod))
-        print res
+        if self.json:
+            self._print_json(res)
+        else:
+            self._print(res)
 
     def _get_pod(self):
         data = self._unwrap(self._get('/api/podapi/'))
@@ -196,11 +204,10 @@ class KuberDock(KubeCtl):
             json.dump(self._prepare(), o)
 
     def _prepare(self):
-
         valid = set(['name', 'containers', 'volumes', 'service', 'cluster',
                      'replicas', 'set_public_ip', 'kube_type', 'restartPolicy'])
         self._prepare_volumes()
-        self._prepare_ports()
+        #self._prepare_ports()
         data = dict(filter((lambda x: x[0] in valid), vars(self).items()))
         return data
 

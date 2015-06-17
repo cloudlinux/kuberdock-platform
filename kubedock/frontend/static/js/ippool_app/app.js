@@ -39,6 +39,24 @@ define(['marionette', 'utils'],
                 'click @ui.unbind_ip'     : 'unbindIP'
             },
 
+            templateHelpers: function(){
+                var allocation = this.model.get('allocation');
+
+                allocation.sort(function(a, b){
+                    var aa = a[0].split("."),
+                        bb = b[0].split(".");
+
+                    for (var i=0, n=Math.max(aa.length, bb.length); i<n; i++) {
+                        if (aa[i] !== bb[i]) return aa[i] - bb[i];
+                    }
+                    return 0;
+                });
+
+                return{
+                    allocation : allocation
+                }
+            },
+
             deleteNetwork_btn: function(){
                 var that = this;
                 utils.modalDialog({

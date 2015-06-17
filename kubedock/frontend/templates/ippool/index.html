@@ -92,44 +92,43 @@
     </script>
 
     <script type="text/template" id="network-item-template">
-        <td>
+        <td class="col-xs-4 network">
             <%- network %>
             <span id="deleteNetwork" class="pull-right"></span>
         </td>
-        <td>
+        <td class="col-xs-2">
             <ul id="hosts-list">
             <% _.each(allocation, function(itm){ %>
                 <li>
                     <%- itm[0] %>
                 </li>
-            <% }); %>
+            <% });%>
             </ul>
         </td>
-        <td>
+        <td class="col-xs-2">
             <ul id="hosts-list">
-            <% _.each(allocation, function(itm){ %>
-            <li>
-                <span class="<%- itm[1] ? itm[1] : itm[2] %>"><%- itm[1] ? itm[1] : itm[2] %></span>
-                <% if(itm[2] == 'busy') { %>
-                    <span class="unbind_ip" data-ip="<%- itm[0] %>">unbind</span>
-                <% } else if(itm[2] == 'blocked') { %>
-                    <span class="unblock_ip" data-ip="<%- itm[0] %>"></span>
-                <% } else if(itm[2] == 'free') { %>
-                    <span class="block_ip" data-ip="<%- itm[0] %>"></span>
-                <% } %>
-            </li>
-            <% }); %>
+                <% _.each(allocation, function(itm){ %>
+                <li>
+                    <span class="<%- itm[1] ? itm[1] : itm[2] %>"><%- itm[1] ? itm[1] : itm[2] %></span>
+                    <% if(itm[2] == 'busy') { %>
+                        <span class="unbind_ip" data-ip="<%- itm[0] %>">unbind</span>
+                    <% } else if(itm[2] == 'blocked') { %>
+                        <span class="unblock_ip" data-ip="<%- itm[0] %>"></span>
+                    <% } else if(itm[2] == 'free') { %>
+                        <span class="block_ip" data-ip="<%- itm[0] %>"></span>
+                    <% } %>
+                </li>
+                <% });%>
             </ul>
         </td>
         <td>
             <ul id="hosts-list">
             <% _.each(allocation, function(itm){ %>
                 <li>
-                    yes/no (static data)
+                    yes or no
                 </li>
             <% }); %>
             </ul>
-
         </td>
     </script>
 

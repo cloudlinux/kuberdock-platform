@@ -488,7 +488,6 @@ define(['pods_app/app',
                     var itemName = vm[i].mountPath.charAt(0) === '/' ? vm[i].mountPath.substring(1) : vm[i].mountPath;
                     vm[i].name = itemName.replace(new RegExp('/','g'), '-') + _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
                 };
-                /* end mountPath check */
 
                 /* check ports */
                 _.each(containerPorts, function(el){
@@ -524,8 +523,6 @@ define(['pods_app/app',
                 } else {
                     this.trigger('step:envconf', this);
                 }
-                /* end check ports */
-
             },
 
             onRender: function(){

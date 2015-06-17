@@ -58,10 +58,7 @@ def parse(data):
             env, val = process(line)
             ready['env'].extend([dict({'name': env, 'value': val})])
         elif line.startswith('FROM'):
-            patt = re.compile('^(?:(.+)):')
-            m = patt.findall(process(line)[0])
-            if m:
-                parent_image = m[0]
+            parent_image = process(line)[0]
     entry_point = ready.pop('EntryPoint', [])
     command = ready.get('command', [])
     if entry_point:

@@ -205,10 +205,12 @@ class KuberDock(KubeCtl):
 
     def _prepare(self):
         valid = set(['name', 'containers', 'volumes', 'service', 'cluster',
-                     'replicas', 'set_public_ip', 'kube_type', 'restartPolicy'])
+                     'replicas', 'set_public_ip', 'kube_type', 'restartPolicy', 'public_ip'])
+        self.cluster = True
         self._prepare_volumes()
-        #self._prepare_ports()
+        self._prepare_ports()
         data = dict(filter((lambda x: x[0] in valid), vars(self).items()))
+
         return data
 
     def _prepare_volumes(self):
@@ -232,12 +234,14 @@ class KuberDock(KubeCtl):
 
     def _prepare_ports(self):
         """Checks if all necessary port entry data are set"""
+        is_public_ip = []
         for c in self.containers:
-            if not c.get('ports'):
-                raise SystemExit("At least one port entry is expected for '{0}' container".format(c['image']))
             for p in c['ports']:
-                if not p.get('protocol'):
-                    p['protocol'] = 'tcp'
+                is_public_ip.append(p['isPublic'])
+        if True in is_public_ip:
+            ip = self._get_free_host()
+            if ip:
+                self.public_ip = ip
 
     def _resolve_containers_directory(self):
         """
@@ -306,3 +310,9 @@ class KuberDock(KubeCtl):
     def _clear(self):
         """Deletes pending pod file"""
         os.unlink(self._data_path)
+
+    def _get_free_host(self):
+        """
+        Gets free IP address from backend ippool
+        """
+        return self._unwrap(self._get('/api/ippool/getFreeHost'))

@@ -7,7 +7,7 @@ EXIT_MESSAGE="Installation error."
 check_status()
 {
     local temp=$?
-    if [ $? -ne 0 ];then
+    if [ $temp -ne 0 ];then
         echo $EXIT_MESSAGE
         exit $temp
     fi
@@ -15,7 +15,7 @@ check_status()
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
-echo "Using MASTER_IP={{ master_ip }}"
+echo "Using MASTER_IP=${MASTER_IP}"
 
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
@@ -76,13 +76,13 @@ check_status
 
 # 2. install components
 echo "Installing kubernetes..."
-yum -y install {{ cur_master_kubernetes }}
+yum -y install ${CUR_MASTER_KUBERNETES}
 check_status
 yum -y install flannel cadvisor
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
-AWS={{ aws }}
+AWS=${AWS}
 if [ "$AWS" = True ];then
     yum -y install aws-cli
     check_status
@@ -110,10 +110,10 @@ check_status
 
 # 5. configure Node config
 echo "Configuring kubernetes..."
-sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|http://{{ master_ip }}:7080|}" $KUBERNETES_CONF_DIR/config
+sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|http://${MASTER_IP}:7080|}" $KUBERNETES_CONF_DIR/config
 sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
-sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://{{ master_ip }}:6443|}" $KUBERNETES_CONF_DIR/kubelet
+sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 sed -i '/^KUBELET_ARGS/ {s|""|"--auth_path=/var/lib/kubelet/kubernetes_auth --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock"|}' $KUBERNETES_CONF_DIR/kubelet
 check_status
 
@@ -124,14 +124,14 @@ cat > /etc/sysconfig/flanneld << EOF
 # Flanneld configuration options
 
 # etcd url location.  Point this to the server where etcd runs
-FLANNEL_ETCD="https://{{ master_ip }}:2379"
+FLANNEL_ETCD="https://${MASTER_IP}:2379"
 
 # etcd config key.  This is the configuration key that flannel queries
 # For address range assignment
 FLANNEL_ETCD_KEY="/kuberdock/network/"
 
 # Any additional options that you want to pass
-FLANNEL_OPTIONS="--iface={{ flannel_iface }}"
+FLANNEL_OPTIONS="--iface=${FLANNEL_IFACE}"
 ETCD_CAFILE="/etc/pki/etcd/ca.crt"
 ETCD_CERTFILE="/etc/pki/etcd/etcd-client.crt"
 ETCD_KEYFILE="/etc/pki/etcd/etcd-client.key"
@@ -264,7 +264,7 @@ check_status
 
 CADVISOR_CONF=/etc/sysconfig/cadvisor
 sed -i "/^CADVISOR_STORAGE_DRIVER/ {s/\"\"/\"influxdb\"/}" $CADVISOR_CONF
-sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/{{ master_ip }}/}" $CADVISOR_CONF
+sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/${MASTER_IP}/}" $CADVISOR_CONF
 systemctl enable cadvisor
 check_status
 systemctl restart cadvisor

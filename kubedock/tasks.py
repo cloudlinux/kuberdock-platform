@@ -1,5 +1,4 @@
 import ipaddress
-import jinja2
 import json
 import operator
 import re
@@ -9,7 +8,6 @@ import time
 
 from collections import OrderedDict
 from datetime import datetime
-from StringIO import StringIO
 
 from .api.stream import send_event, send_logs
 from .api.namespaces import Namespaces
@@ -20,6 +18,7 @@ from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User
 from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS
+from .settings import NODE_INSTALL_TIMEOUT_SEC
 from .kapi.podcollection import PodCollection
 
 
@@ -180,7 +179,7 @@ def add_new_node(host, kube_type, db_node):
 
         try:
             current_master_kubernetes = subprocess.check_output(
-                ['rpm', '-q', 'kubernetes'])
+                ['rpm', '-q', 'kubernetes']).strip()
         except subprocess.CalledProcessError as e:
             mes = 'Kuberdock needs correctly installed kubernetes' \
                   ' on master. {0}'.format(e.output)
@@ -206,35 +205,32 @@ def add_new_node(host, kube_type, db_node):
             db.session.commit()
             return error_message
 
-        i, o, e = ssh.exec_command('mkdir -p /var/lib/kuberdock/scripts')
+        ssh.exec_command('mkdir -p /var/lib/kuberdock/scripts')
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read())
         sftp = ssh.open_sftp()
-        with open('kub_install.template') as f:
-            r = jinja2.Template(f.read()).render(
-                master_ip=MASTER_IP,
-                flannel_iface=node_interface,
-                cur_master_kubernetes=current_master_kubernetes,
-                aws=AWS)
-            fo = StringIO(r)
-            sftp.putfo(fo, '/kub_install.sh')
+        sftp.put('node_install.sh', '/node_install.sh')
         sftp.put('pd.sh', '/var/lib/kuberdock/scripts/pd.sh')
         sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.close()
-        i, o, e = ssh.exec_command('chmod +x /var/lib/kuberdock/scripts/pd.sh')
-        i, o, e = ssh.exec_command('bash /kub_install.sh')
+        ssh.exec_command('chmod +x /var/lib/kuberdock/scripts/pd.sh')
+        deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
+                     'FLANNEL_IFACE={3} bash /node_install.sh'
+        i, o, e = ssh.exec_command(deploy_cmd.format(AWS,
+                                                     current_master_kubernetes,
+                                                     MASTER_IP, node_interface))
         s_time = time.time()
         while not o.channel.exit_status_ready():
             if o.channel.recv_ready():
                 for line in o.channel.recv(1024).split('\n'):
                     send_logs(host, line, log_file)
-            if (time.time() - s_time) > 15*60:   # 15 min timeout
-                err = 'Timeout during install(15 min). Installation has failed.'
+            if (time.time() - s_time) > NODE_INSTALL_TIMEOUT_SEC:
+                err = 'Timeout during install. Installation has failed.'
                 send_logs(host, err, log_file)
-                ssh.exec_command('rm /kub_install.sh')
+                ssh.exec_command('rm /node_install.sh')
                 ssh.close()
                 db_node.state = 'completed'
                 db.session.add(db_node)
@@ -242,7 +238,7 @@ def add_new_node(host, kube_type, db_node):
                 return err
             time.sleep(0.2)
         s = o.channel.recv_exit_status()
-        ssh.exec_command('rm /kub_install.sh')
+        ssh.exec_command('rm /node_install.sh')
         if s != 0:
             res = 'Installation script error. Exit status: {0}. Error: {1}'\
                 .format(s, e.read())

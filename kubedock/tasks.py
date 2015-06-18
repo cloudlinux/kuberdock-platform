@@ -116,12 +116,46 @@ def delete_service_nodelay(item, namespace=None):
     return r.json()
 
 
+image_pattern = re.compile('^(?P<name>\S+?)(?::(?P<tag>\S*?))?$')
+
+
 @celery.task()
 def get_dockerfile(data):
+    image_from = image_pattern.match(data).groupdict()
+    if '/' not in image_from['name']:
+        return get_dockerfile_official(image_from['name'], image_from['tag'])
     url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(
-        data.strip('/'))
+        image_from['name'])
     r = requests.get(url)
     return r.text
+
+
+info_pattern = re.compile('^(?P<tag>\S+):\s+(?:\S+://)?(?P<url>\S+?)'
+                          '(?:@(?P<commit>\S*?))?(?:\s+(?P<dir>\S+?))?$')
+
+
+def get_dockerfile_official(name, tag=None):
+    if not tag:
+        tag = 'latest'
+    info_url = ('https://github.com/docker-library/official-images/'
+                'raw/master/library/{0}'.format(name))
+    r_info = requests.get(info_url)
+    docker_url = ''
+    for line in r_info.text.splitlines():
+        info_match = info_pattern.match(line)
+        if info_match:
+            info = info_match.groupdict()
+            if info.get('tag') == tag:
+                docker_url = ('https://{0}/raw/{1}{2}/Dockerfile'.format(
+                    info['url'],
+                    info.get('commit', 'master'),
+                    '/{0}'.format(info['dir']) if info['dir'] else '',
+                ))
+                break
+    if docker_url:
+        r_docker = requests.get(docker_url)
+        return r_docker.text
+    return ''
 
 
 def get_all_nodes():

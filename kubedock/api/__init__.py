@@ -70,7 +70,7 @@ def filter_event(data):
     return data
 
 
-def process_endpoints_event(data):
+def process_endpoints_event(data, app):
     if data is None:
         return
     if SERVICES_VERBOSE_LOG >= 2:
@@ -93,10 +93,10 @@ def process_endpoints_event(data):
                 print 'SERVICE IN MODIF(pods 0)', service
             state = json.loads(service['metadata']['annotations']['public-ip-state'])
             if 'assigned-to' in state:
-                res = modify_node_ips(state['assigned-to'], 'del',
+                res = modify_node_ips(service_name, state['assigned-to'], 'del',
                                       state['assigned-pod-ip'],
                                       state['assigned-public-ip'],
-                                      service['spec']['ports'])
+                                      service['spec']['ports'], app)
                 if res is True:
                     del state['assigned-to']
                     del state['assigned-pod-ip']
@@ -126,7 +126,7 @@ def process_endpoints_event(data):
         current_host = kub_pod['spec']['host']
         pod_ip = pods[0]['addresses'][0]['IP']
         if not assigned_to:
-            res = modify_node_ips(current_host, 'add', pod_ip, public_ip, ports)
+            res = modify_node_ips(service_name, current_host, 'add', pod_ip, public_ip, ports, app)
             if res is True:
                 state['assigned-to'] = current_host
                 state['assigned-pod-ip'] = pod_ip
@@ -138,12 +138,12 @@ def process_endpoints_event(data):
             if current_host != assigned_to:     # migrate pod
                 if SERVICES_VERBOSE_LOG >= 2:
                     print 'MIGRATE POD'
-                res = modify_node_ips(assigned_to, 'del',
+                res = modify_node_ips(service_name, assigned_to, 'del',
                                       state['assigned-pod-ip'],
-                                      public_ip, ports)
+                                      public_ip, ports, app)
                 if res is True:
-                    res2 = modify_node_ips(current_host, 'add', pod_ip,
-                                           public_ip, ports)
+                    res2 = modify_node_ips(service_name, current_host, 'add', pod_ip,
+                                           public_ip, ports, app)
                     if res2 is True:
                         state['assigned-to'] = current_host
                         state['assigned-pod-ip'] = pod_ip
@@ -155,7 +155,7 @@ def process_endpoints_event(data):
         pass
 
 
-def listen_endpoints():
+def listen_endpoints(app):
     while True:
         try:
             if SERVICES_VERBOSE_LOG >= 2:
@@ -172,7 +172,7 @@ def listen_endpoints():
                     content = r.raw.read(int(content_length, 16)).strip()
                     data = json.loads(content)
                     data = filter_event(data)
-                    process_endpoints_event(data)
+                    process_endpoints_event(data, app)
                     if r.raw.readline() != '\r\n':
                         print 'Wrong end block in listen_endpoints. Reconnect.'
                         r.raw.close()

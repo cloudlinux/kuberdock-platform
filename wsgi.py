@@ -10,9 +10,11 @@ from gevent.wsgi import WSGIServer
 
 from kubedock import frontend, api
 
+front_app = frontend.create_app()
+back_app = api.create_app()
 application = DispatcherMiddleware(
-    frontend.create_app(),
-    {'/api': api.create_app()}
+    front_app,
+    {'/api': back_app}
 )
 
 try:
@@ -21,13 +23,13 @@ except ImportError:
     pass
 else:
     if uwsgi.worker_id() == 1:
-        g = gevent.spawn(api.listen_endpoints)
+        g = gevent.spawn(api.listen_endpoints, back_app)
 
 if __name__ == "__main__":
 
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN'):
-        g = gevent.spawn(api.listen_endpoints)
+        g = gevent.spawn(api.listen_endpoints, back_app)
 
     @run_with_reloader
     def run_server():

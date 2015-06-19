@@ -76,10 +76,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
             if 'assigned-to' in state:
                 res = modify_node_ips(
+                    service_name,
                     state['assigned-to'], 'del',
                     state['assigned-pod-ip'],
                     state['assigned-public-ip'],
-                    service.get('spec', {}).get('ports'))
+                    service.get('spec', {}).get('ports'), current_app)
                 if not res:
                     self._raise("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
             rv = self._del(['services', service_name], use_v3=True, ns=pod.namespace)
@@ -185,19 +186,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _merge(self):
         db_pods = self._fetch_pods(users=True)
         for db_pod in db_pods:
+            db_pod_config = json.loads(db_pod.config)
             namespace = db_pod.namespace
-            if (db_pod.name, namespace) not in self._collection:
-                pod = Pod(json.loads(db_pod.config))
+            if (db_pod.name, namespace) not in self._collection:    # exists in DB only
+                pod = Pod(db_pod_config)
                 pod._forge_dockers()
                 self._collection[pod.name, namespace] = pod
             else:
                 self._collection[db_pod.name, namespace].id = db_pod.id
                 # TODO if remove _is_related then add serviceIP attribute here
                 # self._collection[db_pod.name, namespace].service = json.loads(db_pod.config).get('service')
-                self._collection[db_pod.name, namespace].kube_type = json.loads(db_pod.config).get('kube_type')
+                self._collection[db_pod.name, namespace].kube_type = db_pod_config.get('kube_type')
                 a = self._collection[db_pod.name, namespace].containers
-                b = json.loads(db_pod.config).get('containers')
+                b = db_pod_config.get('containers')
                 self._collection[db_pod.name, namespace].containers = self.merge_lists(a, b, 'name')
+            if db_pod_config.get('public_aws'):
+                self._collection[db_pod.name, namespace].public_aws = db_pod_config['public_aws']
             if not hasattr(self._collection[db_pod.name, namespace], 'owner'):
                 self._collection[db_pod.name, namespace].owner = db_pod.owner.username
             if not hasattr(self._collection[db_pod.name, namespace], 'status'):
@@ -225,7 +229,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 'labels': {'name': pod._make_dash(limit=54) + '-service'},
                 'annotations': {
                     'public-ip-state': json.dumps({
-                        'assigned-public-ip': getattr(pod, 'public_ip', None)
+                        'assigned-public-ip': getattr(pod, 'public_ip',
+                                                      getattr(pod, 'public_aws', None))
                     })
                 },
             },

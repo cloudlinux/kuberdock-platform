@@ -36,8 +36,8 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                 if (data.hasOwnProperty('ports')) {
                     _.each(data['ports'], function(p){
                         container['ports'].push({
-                            containerPort: parseInt(p),
-                            protocol: 'tcp',
+                            containerPort: p['number'],
+                            protocol: p['protocol'],
                             hostPort: null,
                             isPublic: false
                         })

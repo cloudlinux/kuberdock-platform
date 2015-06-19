@@ -5,6 +5,7 @@ from flask import Blueprint, request, current_app, jsonify
 
 from .. import tasks
 from ..core import db
+from ..dockerfile import DockerfileParser
 from ..models import ImageCache, DockerfileCache
 from ..validation import check_container_image_name
 
@@ -14,60 +15,7 @@ images = Blueprint('images', __name__, url_prefix='/images')
 DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 
 
-def is_array(data):
-    line = data.lstrip()
-    try:
-        p=line.index(' ')
-        try:
-            line.index('[', p)
-        except ValueError:
-            return False
-    except ValueError:
-        return False
-    return True
-
-
-def process(data):
-    patt=re.compile(r'(?:\s,\s|\s,|,\s|,|\s|=)')
-    data = data.strip()
-    pos = data.find(' ')
-    if pos <= 0:
-        return []
-    return filter((lambda x: x != ''),
-        [i.strip('\'"[] ') for i in patt.split(data[pos:])])
-
-
-def parse(data):
-    entrypoint_is_array = False
-    ready = {'command': [], 'workingDir': '', 'ports': [], 'volumeMounts': [], 'EntryPoint': [], 'env': []}
-    for line in data.splitlines():
-        if line.startswith('CMD'):
-            ready['command'].extend(process(line))
-        elif line.startswith('ENTRYPOINT'):
-            entrypoint_is_array = is_array(line)
-            ready['EntryPoint'].extend(process(line))
-        elif line.startswith('WORKDIR'):
-            res = process(line)
-            ready['workingDir'] = '' if not res else res[0]
-        elif line.startswith('VOLUME'):
-            ready['volumeMounts'].extend(process(line))
-        elif line.startswith('EXPOSE'):
-            ready['ports'].extend(process(line))
-        elif line.startswith('ENV'):
-            env, val = process(line)
-            ready['env'].extend([dict({'name': env, 'value': val})])
-        elif line.startswith('FROM'):
-            ready['parent'] = process(line)[0]
-    entry_point = ready.pop('EntryPoint', [])
-    command = ready.get('command', [])
-    if entry_point:
-        if entrypoint_is_array:
-            entry_point.extend(command)
-        ready['command'] = entry_point
-    return ready
-
-
-def _get_docker_file(image):
+def _get_docker_file(image, tag=None):
     data = {}
     query = db.session.query(DockerfileCache).get(image)
     #current_app.logger.debug(query)
@@ -75,9 +23,9 @@ def _get_docker_file(image):
         if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
             data = query.data
     if not data:
-        result = tasks.get_dockerfile.delay(image)
+        result = tasks.get_dockerfile.delay(image, tag)
         rv = result.wait()
-        data = parse(rv)
+        data = DockerfileParser(rv).get()
         data['image'] = image
         # current_app.logger.debug(out)
         if query is None:
@@ -87,9 +35,9 @@ def _get_docker_file(image):
             query.data = data
             query.time_stamp = datetime.datetime.now()
         db.session.commit()
-    parent = data.pop('parent', None)
+    parent = data.pop('parent', {})
     if parent:
-        parent_data = _get_docker_file(parent)
+        parent_data = _get_docker_file(parent['name'], parent['tag'])
         data = _merge_parent(data, parent_data)
     return data
 
@@ -97,6 +45,14 @@ def _get_docker_file(image):
 def _merge_parent(current, parent):
     for attr in 'ports', 'env', 'volumeMounts':
         current[attr].extend(parent[attr])
+        if 'onbuild' in parent:
+            current[attr].extend(parent['onbuild'][attr])
+    for p_attr in 'command', 'workingDir':
+        if not current[p_attr] and parent[p_attr]:
+            current[p_attr] = parent[p_attr]
+        if 'onbuild' in parent:
+            if not current[p_attr] and parent['onbuild'][p_attr]:
+                current[p_attr] = parent['onbuild'][p_attr]
     return current
 
 
@@ -171,4 +127,5 @@ def search_image():
 def get_dockerfile_data():
     image = request.form.get('image', 'none')
     out = _get_docker_file(image)
+    out.pop('onbuild', None)
     return jsonify({'status': 'OK', 'data': out})

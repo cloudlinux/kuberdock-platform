@@ -115,16 +115,11 @@ def delete_service_nodelay(item, namespace=None):
     return r.json()
 
 
-image_pattern = re.compile('^(?P<name>\S+?)(?::(?P<tag>\S*?))?$')
-
-
 @celery.task()
-def get_dockerfile(data):
-    image_from = image_pattern.match(data).groupdict()
-    if '/' not in image_from['name']:
-        return get_dockerfile_official(image_from['name'], image_from['tag'])
-    url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(
-        image_from['name'])
+def get_dockerfile(name, tag=None):
+    if '/' not in name:
+        return get_dockerfile_official(name, tag)
+    url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(name)
     r = requests.get(url)
     return r.text
 

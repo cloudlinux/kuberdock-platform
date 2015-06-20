@@ -24,6 +24,51 @@ define(['marionette', 'utils'],
         Views.NetworkItem = Backbone.Marionette.ItemView.extend({
             template: '#network-item-template',
             tagName: 'tr',
+            className: function(){
+                return this.model.checked ? 'checked' : ''
+            },
+
+            ui: {
+                deleteNetwork : '#deleteNetwork',
+            },
+
+            events: {
+                'click @ui.deleteNetwork' : 'deleteNetwork_btn',
+            },
+
+            templateHelpers: function(){
+                return {
+                    id : this.model.get('id')
+                }
+            },
+
+            initialize: function(){
+                this.$el.attr('data-id', this.model.get('id'));
+            },
+
+            deleteNetwork_btn: function(){
+                var that = this;
+                utils.modalDialog({
+                    title: 'Delete network',
+                    body: "Do you really want to delete network '" +
+                        this.model.get('network') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            that.model.destroy({wait: true});
+                        },
+                        buttonCancel: true
+                    }
+                });
+            },
+        });
+
+        Views.NetworkItemMore = Backbone.Marionette.ItemView.extend({
+            template: '#network-item-more-template',
+            className: function(){
+                return this.model.checked ? '' : 'hidden'
+            },
 
             ui: {
                 deleteNetwork : '#deleteNetwork',
@@ -73,6 +118,7 @@ define(['marionette', 'utils'],
                     }
                 });
             },
+
             blockIP: function(btn){
                 var alloc = this.model.get('allocation'),
                     ip = $(btn.currentTarget).data('ip'),
@@ -87,6 +133,7 @@ define(['marionette', 'utils'],
                     }
                 });
             },
+
             unblockIP: function(btn){
                 var alloc = this.model.get('allocation'),
                     ip = $(btn.currentTarget).data('ip'),
@@ -101,6 +148,7 @@ define(['marionette', 'utils'],
                     }
                 });
             },
+
             unbindIP: function(btn){
                 var alloc = this.model.get('allocation'),
                     ip = $(btn.currentTarget).data('ip'),
@@ -131,10 +179,8 @@ define(['marionette', 'utils'],
             }
         });
 
-        Views.NetworksListView = Backbone.Marionette.CompositeView.extend({
-            template: '#networks-list-template',
-            childView: Views.NetworkItem,
-            childViewContainer: "tbody",
+        Views.BreadcrumbView = Backbone.Marionette.ItemView.extend({
+            template: '#breadcrumb',
 
             events: {
                 'click button#create_network' : 'createNetwork'
@@ -143,6 +189,26 @@ define(['marionette', 'utils'],
             createNetwork: function(){
                 App.router.navigate('/create/', {trigger: true});
             }
+        });
+
+        Views.LeftView = Backbone.Marionette.CompositeView.extend({
+            template: '#ippool-left-template',
+            childView: Views.NetworkItem,
+            childViewContainer: "tbody.networks-list",
+
+            initialize: function(){
+                this.collection.models[0].checked = true
+            }
+        });
+
+        Views.RightView = Backbone.Marionette.CompositeView.extend({
+            template: '#ippool-right-template',
+            childView: Views.NetworkItemMore,
+            childViewContainer: "div.right",
+        });
+
+        Views.AsideView = Backbone.Marionette.ItemView.extend({
+            template: '#ippool-aside-template',
         });
 
         Views.NetworkCreateView = Backbone.Marionette.ItemView.extend({
@@ -220,9 +286,36 @@ define(['marionette', 'utils'],
 
         Views.NetworksLayout = Marionette.LayoutView.extend({
             template: '#networks-layout-template',
+
             regions: {
-                main: 'div#main'
-            }
+                main: 'div#main',
+                aside: 'div#aside',
+                left: 'div#left',
+                right: 'div#right'
+            },
+
+            ui: {
+                'tr' : '.ip_pool_table tbody tr',
+            },
+
+            events: {
+                'click @ui.tr' : 'onCheckItem'
+            },
+
+            onCheckItem: function (e) {
+                var target = $(e.currentTarget),
+                    id = target.attr('data-id'),
+                    models = App.Data.networks.models;
+
+                this.$('.networks-list tr').removeClass('checked');
+                target.addClass('checked');
+
+                _.each(models, function(model){
+                    model.get('id') == id) ? model.checked = true : model.checked = false;
+                })
+
+                this.right.currentView.render();
+            },
         });
     });
 
@@ -232,10 +325,20 @@ define(['marionette', 'utils'],
         IPPoolCRUD.Controller = Marionette.Controller.extend({
             showNetworks: function(){
                 var layout_view = new App.Views.NetworksLayout();
-                var networks_list_view = new App.Views.NetworksListView({
-                    collection: IPPoolApp.Data.networks});
+                var breadcrumb = new App.Views.BreadcrumbView();
+                var aside = new App.Views.AsideView();
+                var left = new App.Views.LeftView({
+                    collection: IPPoolApp.Data.networks
+                });
+                var right = new App.Views.RightView({
+                    collection: IPPoolApp.Data.networks
+                });
+
                 this.listenTo(layout_view, 'show', function(){
-                    layout_view.main.show(networks_list_view);
+                    layout_view.main.show(breadcrumb);
+                    layout_view.aside.show(aside);
+                    layout_view.left.show(left);
+                    layout_view.right.show(right);
                 });
                 App.contents.show(layout_view);
             },

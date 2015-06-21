@@ -22,8 +22,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         owner = data.pop('owner', None)
         pod = Pod(data)
         pod._check_pod_name(owner)
-        if set_public_ip and public_ip:
-            pod.public_ip = public_ip
+        if set_public_ip:
+            if public_ip:
+                pod.public_ip = public_ip
+            elif AWS:
+                pod.public_aws = True
         pod._make_uuid_if_missing()
         pod.sid = pod._make_sid()
         return pod

@@ -216,7 +216,8 @@ define(['pods_app/app',
                 var thisItem = this.getItem();
                 var kubeType = '',
                     labels = thisItem.get('labels'),
-                    publicIP = labels !== undefined ? labels['kuberdock-public-ip'] : '';
+                    publicIP = labels !== undefined ? labels['kuberdock-public-ip'] : '',
+                    publicName = thisItem.has('public_aws') ? thisItem.get('public_aws') : '';
                 _.each(kubeTypes, function(kube){
                     if(parseInt(kube.id) == parseInt(thisItem.get('kube_type')))
                         kubeType = kube.name;
@@ -229,6 +230,7 @@ define(['pods_app/app',
                     price:         thisItem.get('price'),
                     kubeType:      kubeType,
                     publicIP:      publicIP,
+                    publicName:    publicName,
                     serviceIP:     thisItem.get('serviceIP'),
                     restartPolicy: thisItem.get('restartPolicy')
                 };

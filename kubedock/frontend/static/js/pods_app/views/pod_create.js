@@ -529,7 +529,7 @@ define(['pods_app/app',
                 var that = this,
                     disks = [];
 
-                this.ui.input_command.val(this.model.get('command'));
+                this.ui.input_command.val(this.filterCommand(this.model.get('command')));
 
                 if (this.model.has('persistentDrives')) {
                     disks = _.map(this.model.get('persistentDrives'), function(i){
@@ -578,6 +578,12 @@ define(['pods_app/app',
                         pEntry['used'] = true;
                     }
                 });
+            },
+            filterCommand: function(command) {
+                command = _.map(command, function(e) {
+                    return e.indexOf(' ') > 0 ? '"' + e + '"': e;
+                });
+                return command.join(' ');
             }
         });
 

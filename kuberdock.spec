@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 0%{?dist}.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -139,6 +139,21 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Sun Jun 21 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-1
+- Added AWS public interface for pods
+- Returned stdout logging of public IP events
+- Added passing application context to gevent
+- Added basic ELB url showing in web-interface
+- AC-249: Add new design to IPPool page
+- AC-537 Show Pod entrypoint as space-separated list
+- Fixes for AWS node deploy. Rename kub_install.template to node_install.sh
+- Fix bugs with pkgname and check_status now works.
+- AC-536: Fix recursive Dockerfile data retrieving problems
+- AC-526: Get Dockerfile for official images
+- AC-382: Sort ip list in IP Pool table
+- AC-335: Check the added ports in 1 container
+- AC-400: Fix 'more...' link for official Docker images
+
 * Tue Jun 16 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-0
 - AC-293: Add style to alerts windows
 - AC-487: Show node memory

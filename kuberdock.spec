@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -139,6 +139,17 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Mon Jun 22 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-3
+- AC-557: Fix ports, volume mounts and environment variables duplicates
+- removed conditional displaying 'Add volume' button
+- removed ternary conditional logic in favour of if/else blocks in ippool/app.js
+- added conversion port to int in dockerfile.py
+- AC-556; Command for adding node to cluster from console.
+- Fix requests logging;
+- Change pd.sh placement logic;
+- Add development utility function INTERACT().
+- Added 'strict_slashes=False' to all pod REST routines
+
 * Mon Jun 22 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-2
 - AC-495: Add new design to calendar in user activity page
 

@@ -42,11 +42,20 @@ def _get_docker_file(image, tag=None):
     return data
 
 
+def _update_set_attr(current, attr, parent):
+    s = set()
+    for i in current[attr] + parent[attr]:
+        if isinstance(i, list):
+            i = tuple(i)
+        s.add(i)
+    current[attr] = list(s)
+
+
 def _merge_parent(current, parent):
     for attr in 'ports', 'env', 'volumeMounts':
-        current[attr].extend(parent[attr])
+        _update_set_attr(current, attr, parent)
         if 'onbuild' in parent:
-            current[attr].extend(parent['onbuild'][attr])
+            _update_set_attr(current, attr, parent['onbuild'])
     for p_attr in 'command', 'workingDir':
         if not current[p_attr] and parent[p_attr]:
             current[p_attr] = parent[p_attr]
@@ -128,4 +137,7 @@ def get_dockerfile_data():
     image = request.form.get('image', 'none')
     out = _get_docker_file(image)
     out.pop('onbuild', None)
+    out['env'] = [{'name': k, 'value': v} for k, v in out['env']]
+    out['ports'] = [{'number': k, 'protocol': v} for k, v in out['ports']]
+    out['volumeMounts'] = list(out['volumeMounts'])
     return jsonify({'status': 'OK', 'data': out})

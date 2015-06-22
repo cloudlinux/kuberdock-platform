@@ -42,10 +42,10 @@ class DockerfileParser(object):
         self._build = None
         self.parent = {}
         self.command = []
-        self.ports = []
-        self.envs = []
+        self.ports = set()
+        self.envs = set()
         self.entry_point = []
-        self.volumes = []
+        self.volumes = set()
         self.workging_dir = ''
 
         if data is not None:
@@ -78,9 +78,9 @@ class DockerfileParser(object):
             if '-' in number:
                 start, end = map(int, number.split('-'))
                 for n in range(start, end + 1):
-                    self.ports.append({'number': n, 'protocol': protocol})
+                    self.ports.add((n, protocol))
             else:
-                self.ports.append({'number': number, 'protocol': protocol})
+                self.ports.add((number, protocol))
 
     def _env(self, data):
         name, _, value = data.partition(' ')
@@ -94,9 +94,9 @@ class DockerfileParser(object):
                         raise ValueError
                 except ValueError:
                     raise ValueError('Error parsing "{0}"'.format(data))
-                self.envs.append({'name': name, 'value': value})
+                self.envs.add((name, value))
         else:
-            self.envs.append({'name': name, 'value': value})
+            self.envs.add((name, value))
 
     def _entry_point(self, data):
         self.entry_point = _process_cmd(data)
@@ -108,8 +108,7 @@ class DockerfileParser(object):
                 raise ValueError
         except ValueError:
             volumes = data.split()
-        self.volumes.extend(map(
-            lambda x: _shlex(x.strip('\\')), volumes))
+        self.volumes.update(map(lambda x: _shlex(x.strip('\\')), volumes))
 
     def _workdir(self, data):
         if not self.workging_dir:
@@ -144,9 +143,9 @@ class DockerfileParser(object):
             'parent': self.parent,
             'command': command,
             'workingDir': self.workging_dir,
-            'ports': self.ports,
-            'volumeMounts': self.volumes,
-            'env': self.envs,
+            'ports': list(self.ports),
+            'volumeMounts': list(self.volumes),
+            'env': list(self.envs),
         }
         if self._build:
             result['onbuild'] = self._build.get()

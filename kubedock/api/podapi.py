@@ -34,4 +34,4 @@ class PodsAPI(KubeUtils, MethodView):
         user = self._get_current_user()
         pods = PodCollection(user)
         return pods.delete(pod_id)
-register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id')
+register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)

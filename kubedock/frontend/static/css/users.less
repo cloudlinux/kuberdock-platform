@@ -278,28 +278,85 @@
     }
 }
 #ui-datepicker-div{
-    margin-top: 5px;
-    background: #f5fafe;
+    .border-radius(0);
+    padding: 0;
+    margin-top: -1px;
+    background: #f5f5f5;
+    font-family: "ProximaNovaReg";
+    border-bottom: 2px solid #466eb1;
+    .ui-datepicker-calendar{
+        margin: 0;
+        th{
+            font-weight: 400;
+            background-color: #fff;
+            border-bottom: 1px solid #dce0e0;
+        }
+        td{
+            padding: 0;
+        }
+        tbody{
+            tr{
+                &:last-child{
+                    td{
+                        a{
+                            border-bottom: transparent;
+                        }
+                    }
+                }
+                td{
+                    &:last-child{
+                        a{
+                            border-right: transparent;
+                        }
+                    }
+                }
+            }
+        }
+    }
     .ui-datepicker-header{
+        .border-radius(0);
         border: none;
-        background: #466EB1;
+        color: #1d1d1d;
+        font-size: 17px;
+        font-weight: 400;
+        background: #FFFFFF;
+        font-family: initial;
         a{
+            &.ui-datepicker-next{
+                .ui-icon{
+                    background-position: -11px 0;
+                }
+            }
+            .ui-icon{
+                width: 9px;
+                height: 18px;
+                background-image: url("../img/calendar-arrows.png");
+                background-position: 0;
+            }
             &.ui-state-hover{
                 color: initial;
                 border: initial;
                 background: initial;
                 font-weight: initial;
                 .ui-icon{
-                    background-image: url("images/ui-icons_ffffff_256x240.png");
+                    background-image: url("../img/calendar-arrows.png");
                 }
             }
         }
     }
     a{
         &.ui-state-default{
-            color: #1d1d1d;
-            font-weight: 400;
-            background: transparent;
+          color: #1d1d1d;
+          min-width: 33px;
+          padding-top: 6px;
+          font-weight: 400;
+          background: white;
+          text-align: center;
+          padding-bottom: 5px;
+          font-family: initial;
+          border-color: #dce0e0;
+          border-top-color: transparent;
+          border-left-color: transparent;
         }
         &.ui-state-hover, &.ui-state-active{
             color: #fff;
@@ -313,5 +370,4 @@
         border-color: #466EB1;
     }
 }
-/*.ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default*/
 /* end create edit user page */

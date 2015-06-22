@@ -197,7 +197,7 @@ define(['marionette', 'utils'],
             childViewContainer: "tbody.networks-list",
 
             initialize: function(){
-                this.collection.models[0].checked = true
+                this.collection.length != 0 ? this.collection.models[0].checked = true : '';
             }
         });
 
@@ -311,7 +311,7 @@ define(['marionette', 'utils'],
                 target.addClass('checked');
 
                 _.each(models, function(model){
-                    model.get('id') == id) ? model.checked = true : model.checked = false;
+                    model.get('id') == id ? model.checked = true : model.checked = false;
                 })
 
                 this.right.currentView.render();

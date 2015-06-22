@@ -8,6 +8,29 @@ from werkzeug.serving import run_with_reloader
 from werkzeug.debug import DebuggedApplication
 from gevent.wsgi import WSGIServer
 
+
+# Utility function for development =============================================
+# http://projects.unbit.it/uwsgi/wiki/TipsAndTricks
+import sys, code, inspect, os
+
+
+class RestoredStandardInputContext(object):
+    def __enter__(self):
+        self.backup_stdin = os.dup(sys.stdin.fileno())
+        os.dup2(sys.stdout.fileno(), sys.stdin.fileno())
+
+    def __exit__(self, error_type, error, traceback):
+        os.dup2(self.backup_stdin, sys.stdin.fileno())
+
+
+def interact(locals=None, plain=False):
+    with RestoredStandardInputContext():
+        code.interact(local=locals or inspect.currentframe().f_back.f_locals)
+
+__builtins__['INTERACT'] = interact
+# ==============================================================================
+
+
 from kubedock import frontend, api
 
 front_app = frontend.create_app()

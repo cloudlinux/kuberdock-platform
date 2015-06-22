@@ -167,6 +167,29 @@ def remove_node_by_host(host):
     return r.json()
 
 
+def add_node_to_k8s(host, kube_type):
+    """
+    :param host: Node hostname
+    :param kube_type: Kuberdock kube type (integer id)
+    :return: Error text if error else False
+    """
+    res = requests.post(get_api_url('nodes', use_v3=True, namespace=False),
+                        json={
+                            'metadata': {
+                                'name': host,
+                                'labels': {
+                                    'kuberdock-node-hostname': host,
+                                    'kuberdock-kube-type':
+                                        'type_' + str(kube_type)
+                                }
+                            },
+                            'spec': {
+                                'externalID': host,
+                            }
+                        })
+    return res.text if not res.ok else False
+
+
 @celery.task()
 def add_new_node(host, kube_type, db_node):
 
@@ -200,18 +223,16 @@ def add_new_node(host, kube_type, db_node):
             db.session.commit()
             return error_message
 
-        ssh.exec_command('mkdir -p /var/lib/kuberdock/scripts')
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read())
         sftp = ssh.open_sftp()
         sftp.put('node_install.sh', '/node_install.sh')
-        sftp.put('pd.sh', '/var/lib/kuberdock/scripts/pd.sh')
+        sftp.put('pd.sh', '/pd.sh')
         sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.close()
-        ssh.exec_command('chmod +x /var/lib/kuberdock/scripts/pd.sh')
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} bash /node_install.sh'
         i, o, e = ssh.exec_command(deploy_cmd.format(AWS,
@@ -239,23 +260,10 @@ def add_new_node(host, kube_type, db_node):
                 .format(s, e.read())
             send_logs(host, res, log_file)
         else:
-            res = requests.post(get_api_url('nodes', use_v3=True, namespace=False),
-                                json={
-                                    'metadata': {
-                                        'name': host,
-                                        'labels': {
-                                            'kuberdock-node-hostname': host,
-                                            'kuberdock-kube-type':
-                                                'type_' + str(kube_type)
-                                        }
-                                    },
-                                    'spec': {
-                                        'externalID': host,
-                                    }
-                                })
-            if not res.ok:
+            err = add_node_to_k8s(host, kube_type)
+            if err:
                 send_logs(host, 'ERROR adding node.', log_file)
-                send_logs(host, res.text, log_file)
+                send_logs(host, err, log_file)
             else:
                 send_logs(host, 'Adding Node completed successful.',
                           log_file)
@@ -264,7 +272,6 @@ def add_new_node(host, kube_type, db_node):
         db_node.state = 'completed'
         db.session.add(db_node)
         db.session.commit()
-    return res.json()
 
 
 def parse_pods_statuses(data):

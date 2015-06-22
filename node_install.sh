@@ -106,6 +106,13 @@ mv /etcd-client.crt /etc/pki/etcd/
 mv /etcd-client.key /etc/pki/etcd/
 check_status
 
+# 4.1 create and populate scripts directory
+mkdir -p /var/lib/kuberdock/scripts
+check_status
+mv /pd.sh /var/lib/kuberdock/scripts/pd.sh
+chmod +x /var/lib/kuberdock/scripts/pd.sh
+check_status
+
 
 
 # 5. configure Node config

@@ -1,7 +1,12 @@
 import os
 import shutil
+import logging
+from datetime import datetime
 
 from kubedock.api import create_app
+from kubedock.api.nodes import add_node
+from kubedock.validation import check_node_data
+from kubedock.utils import APIError
 from kubedock.core import db
 from kubedock.models import User, Pod
 from kubedock.billing.models import Package, Kube
@@ -15,6 +20,8 @@ from flask.ext.migrate import Migrate, MigrateCommand, init, upgrade
 from flask.ext.migrate import migrate as migrate_func
 
 directory = 'kdmigrations'
+logging.getLogger("requests").setLevel(logging.WARNING)
+
 
 class Creator(Command):
     option_list = (Option('password'),)
@@ -82,14 +89,37 @@ class Creator(Command):
             shutil.rmtree(directory)
         init(directory=directory)
 
+
 class Updater(Command):
     def run(self):
         migrate_func(directory=directory)
         upgrade(directory=directory)
 
+
+class NodeManager(Command):
+    option_list = (
+        Option('--ip', dest='ip', required=True),
+        Option('--hostname', dest='hostname', required=True),
+        Option('--kube-type', dest='kube_type', type=int, required=True),
+        Option('--do-deploy', dest='do_deploy', action='store_true'),
+    )
+
+    def run(self, ip, hostname, kube_type, do_deploy):
+        data = {'ip': ip, 'hostname': hostname, 'kube_type': kube_type}
+        try:
+            check_node_data(data)
+            res = add_node(data, do_deploy)
+        except APIError as e:
+            print e.message
+        except Exception as e:
+            print e
+        else:
+            print res.get_data()
+
 app = create_app()
 manager = Manager(app, with_default_commands=False)
 migrate = Migrate(app, db)
+
 
 def make_shell_context():
     return dict(app=app, db=db, User=User, Pod=Pod, Package=Package, Kube=Kube)
@@ -98,6 +128,7 @@ manager.add_command('shell', Shell(make_context=make_shell_context))
 manager.add_command('db', MigrateCommand)
 manager.add_command('createdb', Creator())
 manager.add_command('updatedb', Updater())
+manager.add_command('add_node', NodeManager())
 
 
 if __name__ == '__main__':

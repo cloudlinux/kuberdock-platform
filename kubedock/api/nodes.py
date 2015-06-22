@@ -1,4 +1,7 @@
 from flask import Blueprint, request, jsonify
+from fabric.api import run, settings, env
+from fabric.tasks import execute
+import boto.ec2
 import math
 import operator
 import socket
@@ -13,11 +16,9 @@ from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, CEPH
 from ..settings import KUBERDOCK_INTERNAL_USER
 from ..kapi.podcollection import PodCollection
+from ..tasks import add_node_to_k8s
 from . import APIError
 from .stream import send_event
-from fabric.api import run, settings, env
-from fabric.tasks import execute
-import boto.ec2
 
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
@@ -346,11 +347,7 @@ def get_one_node(node_id):
                        status_code=404)
 
 
-@nodes.route('/', methods=['POST'])
-@check_permission('create', 'nodes')
-def create_item():
-    data = request.json
-    check_node_data(data)
+def add_node(data, do_deploy=True):
     m = db.session.query(Node).filter_by(hostname=data['hostname']).first()
     if not m:
         kube = Kube.query.get(data.get('kube_type', 0))
@@ -384,7 +381,17 @@ def create_item():
         except OSError:
             pass
 
-        r = tasks.add_new_node.delay(m.hostname, kube.id, m)
+        if do_deploy:
+            tasks.add_new_node.delay(m.hostname, kube.id, m)
+        else:
+            err = add_node_to_k8s(m.hostname, kube.id)
+            if err:
+                raise APIError('Error during adding node to k8s. {0}'
+                               .format(err))
+            else:
+                m.state = 'completed'
+                db.session.add(m)
+                db.session.commit()
         data.update({'id': m.id})
         send_event('pull_nodes_state', 'ping')
         return jsonify({'status': 'OK', 'data': data})
@@ -392,6 +399,14 @@ def create_item():
         raise APIError(
             'Conflict, Node with hostname "{0}" already exists'
             .format(m.hostname), status_code=409)
+
+
+@nodes.route('/', methods=['POST'])
+@check_permission('create', 'nodes')
+def create_item():
+    data = request.json
+    check_node_data(data)
+    return add_node(data)
 
 
 @nodes.route('/<node_id>', methods=['PUT'])

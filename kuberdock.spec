@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 1%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -139,6 +139,9 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Mon Jun 22 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-2
+- AC-495: Add new design to calendar in user activity page
+
 * Sun Jun 21 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-1
 - Added AWS public interface for pods
 - Returned stdout logging of public IP events

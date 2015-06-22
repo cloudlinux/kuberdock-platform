@@ -1,6 +1,7 @@
 import bitmath
 import boto.ec2
 import boto.ec2.elb
+import json
 import random
 import re
 import socket
@@ -366,8 +367,8 @@ def handle_aws_node(service, host, cmd, pod_ip, ports, app):
             elb = elbconn.create_load_balancer(
                 name=service, zones=None, listeners=listeners,
                 subnets=data['sn'], security_groups=sg)
-
             elb.register_instances(data['instances'])
+
             with app.app_context():
                 register_elb_name(service, elb.dns_name)
 

@@ -76,6 +76,10 @@ check_amazon()
 }
 check_amazon
 
+if [ "$ISAMAZON" = true ] && [ -z "$ROUTE_TABLE_ID" ];then
+    echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
+    exit 1
+fi
 
 #yesno()
 ## $1 = Message prompt

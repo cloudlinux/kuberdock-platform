@@ -143,11 +143,9 @@
                             <% } %>
                             </tbody>
                         </table>
-                        <% if (volumeMounts.length == 0){ %>
-                            <div>
-                                <button type="button" class="add-volume">Add volume</button>
-                            </div>
-                        <% }%>
+                        <div>
+                            <button type="button" class="add-volume">Add volume</button>
+                        </div>
                     </div>
                 </div>
             </div>

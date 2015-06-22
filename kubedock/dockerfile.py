@@ -66,6 +66,7 @@ class DockerfileParser(object):
     def _cmd(self, data):
         self.command = _process_cmd(data)
 
+
     def _expose(self, data):
         for port_raw in data.split():
             port_raw = _shlex(port_raw)

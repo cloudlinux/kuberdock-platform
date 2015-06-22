@@ -27,7 +27,7 @@ def interact(locals=None, plain=False):
     with RestoredStandardInputContext():
         code.interact(local=locals or inspect.currentframe().f_back.f_locals)
 
-__builtins__['INTERACT'] = interact
+# __builtins__['INTERACT'] = interact
 # ==============================================================================
 
 

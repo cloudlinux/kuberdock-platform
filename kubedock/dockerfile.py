@@ -81,7 +81,7 @@ class DockerfileParser(object):
                 for n in range(start, end + 1):
                     self.ports.add((n, protocol))
             else:
-                self.ports.add((number, protocol))
+                self.ports.add((int(number), protocol))
 
     def _env(self, data):
         name, _, value = data.partition(' ')

@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 3%{?dist}.cloudlinux
+Release: 4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -139,6 +139,15 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 %changelog
+* Tue Jun 23 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-4
+- AC-542: Add more modal dilogs
+- AC-550: Added setting AWS ELB DNS-name in web-interface
+- refactored pod_item.js a bit
+- moved send_events and send_logs routines to kubedock/utils.py
+- AC-347: Add "Learn more..." link to variables page
+- bugfix. Added missing import 'json' in kubedock/utils.py
+- To deploy.sh a check has been added to verify that ROUTE_TABLE_ID envvar is set if amazon
+
 * Mon Jun 22 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-3
 - AC-557: Fix ports, volume mounts and environment variables duplicates
 - removed conditional displaying 'Add volume' button

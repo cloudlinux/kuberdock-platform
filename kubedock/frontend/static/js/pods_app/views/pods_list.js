@@ -69,7 +69,7 @@ define(['pods_app/app',
             removePods: function(){
                var items = App.WorkFlow.getCollection().fullCollection.models;
 
-               utils.modalDialog({
+               utils.modalDialogDelete({
                     title: "Delete",
                     body: "Are you sure want to delete selected pods?",
                     small: true,

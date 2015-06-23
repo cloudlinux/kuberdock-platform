@@ -1,16 +1,6 @@
 "use strict";
 
-/*function modalDialog(options){
-    var modal = $('.modal');
-    if(options.title) modal.find('.modal-title').html(options.title);
-    if(options.body) modal.find('.modal-body').html(options.body);
-    if(options.large) modal.addClass('bs-example-modal-lg');
-    if(options.small) modal.addClass('bs-example-modal-sm');
-    if(options.show) modal.modal('show');
-    return modal;
-}*/
-
-function modalDialog(options){
+function modalDialogDelete(options){
     var modal = $('.modal'),
         modalDialog = modal.find('.modal-dialog');
     modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
@@ -26,7 +16,7 @@ function modalDialog(options){
                 $('<button type="button" class="btn blue" ' +
                       'data-dismiss="modal">').unbind('click')
                     .bind('click', options.footer.buttonOk)
-                    .text('OK')
+                    .text('Delete')
             )
         }
         if(options.footer.buttonCancel){
@@ -217,7 +207,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         deleteNode: function(){
             var that = this,
                 name = that.model.get('hostname');
-            modalDialog({
+            modalDialogDelete({
                 title: "Delete " + name + "?",
                 body: "Are you sure want to delete node '" + name + "'?",
                 small: true,
@@ -456,7 +446,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         deleteNode: function() {
             var that = this,
                 name = that.model.get('hostname');
-            modalDialog({
+            modalDialogDelete({
                 title: "Delete " + name + "?",
                 body: "Are you sure want to delete node '" + name + "'?",
                 small: true,

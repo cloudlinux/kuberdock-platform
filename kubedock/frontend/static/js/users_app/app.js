@@ -100,7 +100,7 @@ define(['marionette', 'paginator', 'utils'],
 
             removeUser: function(){
                 var that = this;
-                utils.modalDialog({
+                utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
                     body: "Are you sure want to delete user '" +
                         this.model.get('username') + "'?",
@@ -472,7 +472,7 @@ define(['marionette', 'paginator', 'utils'],
 
             delete_user: function(){
                 var that = this;
-                utils.modalDialog({
+                utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
                     body: "Are you sure want to delete user '" +
                         this.model.get('username') + "'?",
@@ -574,7 +574,7 @@ define(['marionette', 'paginator', 'utils'],
 
             delete_user: function(){
                 var that = this;
-                utils.modalDialog({
+                utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
                     body: "Are you sure want to delete user '" +
                         this.model.get('username') + "'?",

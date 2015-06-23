@@ -48,7 +48,7 @@ define(['marionette', 'utils'],
 
             deleteNetwork_btn: function(){
                 var that = this;
-                utils.modalDialog({
+                utils.modalDialogDelete({
                     title: 'Delete network',
                     body: "Do you really want to delete network '" +
                         this.model.get('network') + "'?",
@@ -104,7 +104,7 @@ define(['marionette', 'utils'],
 
             deleteNetwork_btn: function(){
                 var that = this;
-                utils.modalDialog({
+                utils.modalDialogDelete({
                     title: 'Delete network',
                     body: "Do you really want to delete network '" +
                         this.model.get('network') + "'?",

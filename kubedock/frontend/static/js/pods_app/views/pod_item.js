@@ -136,7 +136,7 @@ define(['pods_app/app',
             deleteItem: function(evt){
                 var that = this,
                     name = that.model.get('name');
-                utils.modalDialog({
+                utils.modalDialogDelete({
                     title: "Delete container?",
                     body: "Are you sure want to delete container '" + name + "'?",
                     small: true,
@@ -295,7 +295,7 @@ define(['pods_app/app',
                     item = that.getItem(),
                     name = item.get('name'),
                     preloader = $('#page-preloader');
-                utils.modalDialog({
+                utils.modalDialogDelete({
                     title: "Delete " + name + "?",
                     body: "Are you sure you want to delete pod '" + name + "'?",
                     small: true,

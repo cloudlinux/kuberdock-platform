@@ -22,14 +22,14 @@
             <% if (publicName) { %>
                 <div>Public name: <%- publicName %></div>
             <% } %>
-            <div>Pod IP: <%- serviceIP ? serviceIP : 'Internal ip is not assigned yet'%></div>
+            <div>Pod IP: <%- (typeof(serviceIP) != 'undefined') ? serviceIP : 'Internal ip is not assigned yet'%></div>
         </div>
         <div class="col-xs-6 servers">
             <div><b><%- name %></b></div>
-            <div>Kube type: <%- kubeType %></div>
+            <div>Kube type: <%- (typeof(kubeType) != 'undefined') ? kubeType : 'Standard' %></div>
             <div>Restart policy: <%- restartPolicy %></div>
-            <div>Kubes:  <%- kubes ? kubes : '0' %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
-            <div>Price: <%- price ? price : '0' %>$/hour</div>
+            <div>Kubes:  <%- (typeof(kubes) != 'undefined') ? kubes : 0 %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
+            <div>Price: <%- (typeof(price) != 'undefined') ? price : 0 %>$/hour</div>
             <!--
             <div class="edit">Edit pod</div>
             -->

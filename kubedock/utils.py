@@ -16,10 +16,9 @@ from json import JSONEncoder
 from .settings import KUBE_MASTER_URL
 from .pods import Pod
 from .users import User
-from .core import ssh_connect, db
+from .core import ssh_connect, db, ConnectionPool
 from .rbac import check_permission
 from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS
-
 
 def login_required_or_basic_or_token(func):
     @wraps(func)
@@ -45,6 +44,31 @@ def login_required_or_basic_or_token(func):
             #return current_app.login_manager.unauthorized()
         return func(*args, **kwargs)
     return decorated_view
+
+
+def send_event(event_name, data, to_file=None, channel='common'):
+    conn = ConnectionPool.get_connection()
+    conn.publish(channel, json.dumps([event_name, data]))
+    if to_file is not None:
+        try:
+            to_file.write(data)
+            to_file.write('\n')
+            to_file.flush()
+        except Exception as e:
+            print 'Error writing to log file', e.__repr__()
+
+
+def send_logs(node, data, to_file=None, channel='common'):
+    conn = ConnectionPool.get_connection()
+    conn.publish(channel, json.dumps(['install_logs',
+                                      {'for_node': node, 'data': data}]))
+    if to_file is not None:
+        try:
+            to_file.write(data)
+            to_file.write('\n')
+            to_file.flush()
+        except Exception as e:
+            print 'Error writing to log file', e.__repr__()
 
 
 def check_perms(rolename):
@@ -371,6 +395,7 @@ def handle_aws_node(service, host, cmd, pod_ip, ports, app):
 
             with app.app_context():
                 register_elb_name(service, elb.dns_name)
+                send_event('pull_pods_state', 'elb-ready')
 
     elif cmd == 'del':
         if elb:

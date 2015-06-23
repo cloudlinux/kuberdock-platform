@@ -204,6 +204,14 @@ define(['pods_app/app',
             tagName: 'div',
             className: 'pod-controls',
 
+            initialize: function(options){
+                this.graphs = options.graphs;
+            },
+
+            modelEvents: {
+                'change': 'onModelChange'
+            },
+
             events: {
                 'click .stats-btn'     : 'statsItem',
                 'click .list-btn'      : 'listItem',
@@ -213,26 +221,17 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var thisItem = this.getItem();
-                var kubeType = '',
-                    labels = thisItem.get('labels'),
-                    publicIP = labels !== undefined ? labels['kuberdock-public-ip'] : '',
-                    publicName = thisItem.has('public_aws') ? thisItem.get('public_aws') : '';
-                _.each(kubeTypes, function(kube){
-                    if(parseInt(kube.id) == parseInt(thisItem.get('kube_type')))
-                        kubeType = kube.name;
-                });
+                var publicIP = this.model.has('labels')
+                        ? this.model.get('labels')['kuberdock-public-ip']
+                        : '',
+                    publicName = this.model.has('public_aws')
+                        ? this.model.get('public_aws')
+                        : '',
+                    graphs = this.graphs;
                 return {
-                    name:          thisItem.get('name'),
-                    status:        thisItem.get('status'),
-                    replicas:      thisItem.get('replicas'),
-                    kubes:         thisItem.get('kubes'),
-                    price:         thisItem.get('price'),
-                    kubeType:      kubeType,
-                    publicIP:      publicIP,
-                    publicName:    publicName,
-                    serviceIP:     thisItem.get('serviceIP'),
-                    restartPolicy: thisItem.get('restartPolicy')
+                    publicIP   : publicIP,
+                    publicName : publicName,
+                    graphs     : graphs
                 };
             },
 
@@ -298,7 +297,7 @@ define(['pods_app/app',
                     preloader = $('#page-preloader');
                 utils.modalDialog({
                     title: "Delete " + name + "?",
-                    body: "Are you sure want to delete pod '" + name + "'?",
+                    body: "Are you sure you want to delete pod '" + name + "'?",
                     small: true,
                     show: true,
                     footer: {
@@ -321,6 +320,10 @@ define(['pods_app/app',
                         buttonCancel: true
                     }
                 });
+            },
+
+            onModelChange: function(){
+                this.render();
             }
         });
 

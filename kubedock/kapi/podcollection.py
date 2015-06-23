@@ -1,10 +1,9 @@
 import json
 from flask import current_app
 
-from ..utils import modify_node_ips, run_ssh_command
+from ..utils import modify_node_ips, run_ssh_command, send_event
 from .pod import Pod
 from .helpers import KubeQuery, ModelQuery, Utilities
-from ..api.stream import send_event
 from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES
 
 

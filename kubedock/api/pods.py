@@ -12,7 +12,7 @@ from .. import tasks, signals
 from ..models import User, Pod
 from ..core import db, ssh_connect
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token, modify_node_ips
+from ..utils import login_required_or_basic_or_token, modify_node_ips, send_event
 from ..kubedata.kuberesolver import KubeResolver, add_fake_dockers
 from ..validation import check_new_pod_data, check_change_pod_data
 from ..billing import kubes_to_limits
@@ -21,7 +21,6 @@ from .namespaces import Namespaces, NamespacesPods
 from ..pods.models import PodIP
 from ..settings import KUBE_API_VERSION, SERVICES_VERBOSE_LOG
 from ..settings import KUBERDOCK_INTERNAL_USER
-from .stream import send_event
 
 
 ALLOWED_ACTIONS = ('start', 'stop', 'inspect',)

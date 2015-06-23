@@ -10,7 +10,7 @@ from .. import tasks
 from ..models import Node, User, Pod
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit
+from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit, send_event
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, CEPH
@@ -18,7 +18,6 @@ from ..settings import KUBERDOCK_INTERNAL_USER
 from ..kapi.podcollection import PodCollection
 from ..tasks import add_node_to_k8s
 from . import APIError
-from .stream import send_event
 
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')

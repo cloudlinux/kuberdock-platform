@@ -1,15 +1,5 @@
 define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
 
-    //function modalDialog(options){
-    //    var modal = $('.modal');
-    //    if(options.title) modal.find('.modal-title').html(options.title);
-    //    if(options.body) modal.find('.modal-body').html(options.body);
-    //    if(options.large) modal.addClass('bs-example-modal-lg');
-    //    if(options.small) modal.addClass('bs-example-modal-sm');
-    //    if(options.show) modal.modal('show');
-    //    return modal;
-    //}
-
     Pods.module("WorkFlow", function(WorkFlow, App, Backbone, Marionette, $, _){
 
         WorkFlow.getCollection = function(){
@@ -101,8 +91,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             reset: true,
                             success: function(){
                                 itemLayout.controls.show(new App.Views.Item.ControlsPanel({
-                                    // TODO pass model, not id, and simplify view!
-                                    model: new Backbone.Model({id: model.get('id'), graphs: true})
+                                    graphs: true,
+                                    model: model
                                 }));
                                 itemLayout.info.show(new App.Views.Item.PodGraph({
                                     collection: statCollection
@@ -117,8 +107,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     that.listenTo(itemLayout, 'display:pod:list', function(data){
 
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
-                            // TODO pass model, not id, and simplify view!
-                            model: new Backbone.Model({id: model.get('id'), graphs: false})
+                            graphs: false,
+                            model: model
                         }));
 
                         itemLayout.info.show(new App.Views.Item.InfoPanel({
@@ -131,8 +121,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.masthead.show(masthead);
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
-                            // TODO pass model, not id, and simplify view!
-                            model: new Backbone.Model({id: model.get('id'), graphs: false})
+                            graphs: false,
+                            model: model
                         }));
                         itemLayout.info.show(infoPanel);
                     });

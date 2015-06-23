@@ -9,11 +9,10 @@ import time
 from collections import OrderedDict
 from datetime import datetime
 
-from .api.stream import send_event, send_logs
 from .api.namespaces import Namespaces
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
-from .utils import update_dict, get_api_url
+from .utils import update_dict, get_api_url, send_event, send_logs
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User

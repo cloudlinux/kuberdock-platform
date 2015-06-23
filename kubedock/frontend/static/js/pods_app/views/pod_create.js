@@ -56,8 +56,8 @@ define(['pods_app/app',
             getImage: function(data){
                 this.trigger('step:getimage', data);
             },
-            imageSelected: function(data){
-                this.trigger('image:selected', data);
+            imageSelected: function(image, url){
+                this.trigger('image:selected', image, url);
             },
             portConf: function(data){
                 this.trigger('step:portconf', data.model);
@@ -142,6 +142,7 @@ define(['pods_app/app',
 
             addItem: function(evt){
                 evt.stopPropagation();
+                // it is used?
                 this.trigger('image:selected');
             }
         });
@@ -229,7 +230,7 @@ define(['pods_app/app',
                     requestData: {searchkey: query, url: imageSearchURL},
                     onAddItem: function(count, $col, $item, data){
                         $item.find('.add-item').on('click', function() {
-                            that.trigger('image:selected', data.name);
+                            that.trigger('image:selected', data.name, data.url);
                         });
                         return $item;
                     }
@@ -247,6 +248,7 @@ define(['pods_app/app',
             },
 
             nextStep : function(evt){
+                // it is used?
                 this.trigger('image:selected', this.ui.buttonNext.data('name'));
             },
 
@@ -255,6 +257,7 @@ define(['pods_app/app',
             },
 
             childImageSelected: function(data){
+                // it is used?
                 this.trigger('image:selected', data.model.get('name'));
             }
         });

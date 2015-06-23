@@ -36,6 +36,10 @@
                 <div class="col-sm-12 no-padding">
                     <button type="button" class="add-env">Add field</button>
                 </div>
+                <div class="more">
+                    <a href="<%- url %>" target="blank">
+                        Learn more about variables for this image</a>
+                </div>
                 <% if (env.length != 0){ %>
                 <div class="col-sm-12 no-padding reset">
                     <button type="button" class="reset-button">Reset values</button>

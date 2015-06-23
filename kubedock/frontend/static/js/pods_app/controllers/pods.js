@@ -289,6 +289,9 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         }
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
+                        _.each(data.get('containers'), function(container){
+                            delete container.url;
+                        });
                         data.unset('lastAddedImage', {silent: true});
                         data.unset('lastAddedImageNameId', {silent: true});
                         data.set({'save_only': true}, {silent: true});
@@ -324,7 +327,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }));
                         });
                     });
-                    that.listenTo(wizardLayout, 'image:selected', function(image){
+                    that.listenTo(wizardLayout, 'image:selected', function(image, url){
                         var that = this,
                             slash = image.indexOf('/'),
                             name = (slash >= 0) ? image.substring(slash+1) : image,
@@ -337,7 +340,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         var contents = {
                             image: image, name: name, workingDir: null,
                             ports: [], volumeMounts: [], env: [], command: [], kubes: 1,
-                            terminationMessagePath: null
+                            terminationMessagePath: null, url: url
                         };
                         if (model.has('persistentDrives')) {
                             contents['persistentDrives'] = model.get('persistentDrives');

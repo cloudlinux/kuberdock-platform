@@ -145,6 +145,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Jun 24 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.2-5
+- First part of update system for kuberdock.
+- deploy.sh, manage.py add_node now have -t --testing option to enable testing repo.
+- Change our repos to disabled by default.
+- Little optimizations of deploy scripts.
+- Fix ntpq exit code checking.
+- AC-574: Fix docker command
+
 * Tue Jun 23 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-4
 - AC-542: Add more modal dilogs
 - AC-550: Added setting AWS ELB DNS-name in web-interface

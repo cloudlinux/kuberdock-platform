@@ -12,6 +12,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def __init__(self, data=None):
         if data is not None:
+            for c in data['containers']:
+                if len(c['command']) == 1:
+                    # it seems the command has been changed
+                    # or may be its length is only 1 item
+                    c['command'] = self._parse_cmd_string(c['command'][0])
             for k, v in data.items():
                 setattr(self, k, v)
 
@@ -239,8 +244,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if type(wd) is list:
             data['workingDir'] = ','.join(data['workingDir'])
 
-        if data['command']:
-            data['command'] = self._parse_cmd_string(data['command'][0])
         if self.owner != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
                 p.pop('hostPort', None)

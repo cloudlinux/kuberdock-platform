@@ -346,7 +346,7 @@ def get_one_node(node_id):
                        status_code=404)
 
 
-def add_node(data, do_deploy=True):
+def add_node(data, do_deploy=True, with_testing=False):
     m = db.session.query(Node).filter_by(hostname=data['hostname']).first()
     if not m:
         kube = Kube.query.get(data.get('kube_type', 0))
@@ -381,7 +381,7 @@ def add_node(data, do_deploy=True):
             pass
 
         if do_deploy:
-            tasks.add_new_node.delay(m.hostname, kube.id, m)
+            tasks.add_new_node.delay(m.hostname, kube.id, m, with_testing)
         else:
             err = add_node_to_k8s(m.hostname, kube.id)
             if err:

@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 4%{?dist}.cloudlinux
+Release: 5%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -81,8 +81,12 @@ mkdir -p %{buildroot}/var/opt/kuberdock
 mkdir -p %{buildroot}%{_sysconfdir}/uwsgi/vassals
 mkdir -p %{buildroot}%{_sysconfdir}/nginx/conf.d/
 mkdir -p %{buildroot}%{_sysconfdir}/nginx/ssl/
-mkdir -p %{buildroot}/var/log/kuberdock
+mkdir -p %{buildroot}/var/log/kuberdock/updates
+mkdir -p %{buildroot}/var/lib/kuberdock
+mkdir -p %{buildroot}%{_bindir}
 cp -r * %{buildroot}/var/opt/kuberdock
+ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_bindir}/kuberdock_upgrade.py
+chmod 755 %{buildroot}/var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py
 %{__install} -D -m 0644 conf/kuberdock.ini %{buildroot}%{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %{__install} -D -m 0644 conf/kuberdock.conf %{buildroot}%{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
@@ -133,10 +137,12 @@ fi
 %defattr(-,root,root)
 %attr (-,nginx,nginx) /var/opt/kuberdock
 %attr (-,nginx,nginx) /var/log/kuberdock
+%attr (-,nginx,nginx) /var/lib/kuberdock
 %dir %{_sysconfdir}/nginx/ssl
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %config %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
+%attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
 * Tue Jun 23 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-4

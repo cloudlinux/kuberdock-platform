@@ -4,12 +4,23 @@
 KUBERNETES_CONF_DIR=/etc/kubernetes
 EXIT_MESSAGE="Installation error."
 
+# SOME HELPERS
+
 check_status()
 {
     local temp=$?
     if [ $temp -ne 0 ];then
         echo $EXIT_MESSAGE
         exit $temp
+    fi
+}
+
+yum_wrapper()
+{
+    if [ -z "$WITH_TESTING" ];then
+        yum --enablerepo=kube $@
+    else
+        yum --enablerepo=kube,kube-testing $@
     fi
 }
 
@@ -41,29 +52,23 @@ if [ $? == 0 ];then
 fi
 
 
-
-#0 Install ntp, we need correct time for node logs
-yum install -y ntp
-check_status
-systemctl daemon-reload
-check_status
-ntpd -gq
-systemctl restart ntpd
-check_status
-systemctl enable ntpd
-check_status
-ntpq -p
-check_status
-
-
-
 # 1. create yum repo file
 
 cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
 [kube]
 name=kube
 baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
-enabled=1
+enabled=0
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF
+
+# Add kubernetes testing repo
+cat > /etc/yum.repos.d/kube-cloudlinux-testing.repo << EOF
+[kube-testing]
+name=kube-testing
+baseurl=http://repo.cloudlinux.com/kubernetes-testing/x86_64/
+enabled=0
 gpgcheck=1
 gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
@@ -74,24 +79,38 @@ rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLin
 check_status
 
 
+# 1.2 Install ntp, we need correct time for node logs
+yum_wrapper install -y ntp
+check_status
+systemctl daemon-reload
+check_status
+ntpd -gq
+systemctl restart ntpd
+check_status
+systemctl enable ntpd
+check_status
+ntpq -p
+if [ $? -ne 0 ];then
+    echo "WARNING: ntpq -p exit with error. Maybe some problems with ntpd settings and manual changes needed"
+fi
+
+
 # 2. install components
 echo "Installing kubernetes..."
-yum -y install ${CUR_MASTER_KUBERNETES}
-check_status
-yum -y install flannel cadvisor
+yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel cadvisor
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
 AWS=${AWS}
 if [ "$AWS" = True ];then
-    yum -y install aws-cli
+    yum_wrapper -y install aws-cli
     check_status
     # we need to install command-line json parser from epel
     rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
     check_status
-    yum -y install epel-release
+    yum_wrapper -y install epel-release
     check_status
-    yum -y install jq
+    yum_wrapper -y install jq
     check_status
 fi
 

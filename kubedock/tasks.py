@@ -190,7 +190,7 @@ def add_node_to_k8s(host, kube_type):
 
 
 @celery.task()
-def add_new_node(host, kube_type, db_node):
+def add_new_node(host, kube_type, db_node, with_testing):
 
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
 
@@ -234,6 +234,8 @@ def add_new_node(host, kube_type, db_node):
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} bash /node_install.sh'
+        if with_testing:
+            deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
         i, o, e = ssh.exec_command(deploy_cmd.format(AWS,
                                                      current_master_kubernetes,
                                                      MASTER_IP, node_interface))

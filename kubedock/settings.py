@@ -32,7 +32,7 @@ KUBE_API_VERSION = 'v1beta2'
 KUBE_MASTER_URL = 'http://localhost:8080/api/{0}'.format(KUBE_API_VERSION)
 
 # If None, defaults will be used
-SSH_KEY_FILENAME = None
+SSH_KEY_FILENAME = '/var/lib/nginx/.ssh/id_rsa'
 
 SERVICES_VERBOSE_LOG = 1
 
@@ -59,6 +59,10 @@ CELERYBEAT_SCHEDULE = {
 ONLINE_LAST_MINUTES = 5
 
 NODE_INSTALL_LOG_FILE = '/var/log/kuberdock/node-install-log-{0}.log'
+UPDATE_LOG_FILE = '/var/log/kuberdock/update.log'
+MAINTENANCE_LOCK_FILE = '/var/lib/kuberdock/maintenance.lock'
+UPDATES_PATH = '/var/opt/kuberdock/kubedock/updates/scripts'
+KUBERDOCK_SERVICE = 'emperor.uwsgi'
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'

@@ -13,8 +13,16 @@ if [ $USER != "root" ]; then
     exit 1
 fi
 
+case $1 in
+  -t|--testing)
+  WITH_TESTING='yes'
+  ;;
+esac
+
+
 
 # SOME HELPERS
+
 do_and_log()
 # Log all output to LOG-file and screen, and stop script on error
 {
@@ -80,6 +88,16 @@ if [ "$ISAMAZON" = true ] && [ -z "$ROUTE_TABLE_ID" ];then
     echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
     exit 1
 fi
+
+yum_wrapper()
+{
+    if [ -z "$WITH_TESTING" ];then
+        log_errors yum --enablerepo=kube $@
+    else
+        log_errors yum --enablerepo=kube,kube-testing $@
+    fi
+}
+
 
 #yesno()
 ## $1 = Message prompt
@@ -207,11 +225,32 @@ else
 fi
 
 
+#1 Add kubernetes repo
+cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
+[kube]
+name=kube
+baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
+enabled=0
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF
 
-#1 Import some keys
+
+#1.1 Add kubernetes testing repo
+cat > /etc/yum.repos.d/kube-cloudlinux-testing.repo << EOF
+[kube-testing]
+name=kube-testing
+baseurl=http://repo.cloudlinux.com/kubernetes-testing/x86_64/
+enabled=0
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF
+
+
+#2 Import some keys
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 do_and_log rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-log_errors yum -y install epel-release
+yum_wrapper -y install epel-release
 
 
 CLUSTER_NETWORK=$(get_network $MASTER_IP)
@@ -255,8 +294,10 @@ else
 fi
 
 
-#2 Install ntp, we need correct time for node logs
-log_errors yum install -y ntp
+
+# 3 Install ntp, we need correct time for node logs
+# for now, etcd-ca and bridge-utils needed during deploy only
+yum_wrapper install -y ntp etcd-ca bridge-utils
 do_and_log systemctl daemon-reload
 log_it ntpd -gq
 do_and_log systemctl restart ntpd
@@ -265,24 +306,15 @@ do_and_log ntpq -p
 
 
 
-#3. Add kubernetes repo
-cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
-[kube]
-name=kube
-baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF
-
-
-
 #4. Install kuberdock
 PACKAGE=$(ls -1 |awk '/kuberdock.*\.rpm/ {print $1; exit}')
 if [ ! -z $PACKAGE ];then
-    log_errors yum -y install $PACKAGE
+    log_it echo 'WARNING: Installation from local package. Using repository is strongly recommended.'
+    log_it echo 'To do this just move kuberdock package file to any other dir from deploy script.'
+    yum_wrapper -y install $PACKAGE
+else
+    yum_wrapper -y install kuberdock
 fi
-log_errors yum -y install kuberdock
 
 #4.1 Fix package path bug
 mkdir /var/run/kubernetes || /bin/true
@@ -308,7 +340,6 @@ echo "NODE_TOBIND_FLANNEL=$NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 
 
 #6 Setting up etcd
-log_errors yum -y install etcd-ca
 log_it echo 'Generating etcd-ca certificates...'
 do_and_log mkdir /etc/pki/etcd
 etcd-ca init --passphrase ""
@@ -493,7 +524,6 @@ do_and_log source /run/flannel/subnet.env
 #nmcli -n c delete kuberdock-flannel-br0 &> /dev/null
 #nmcli -n connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
 
-log_errors yum -y install bridge-utils
 
 cat > /etc/sysconfig/network-scripts/ifcfg-kuberdock-flannel-br0 << EOF
 DEVICE=br0

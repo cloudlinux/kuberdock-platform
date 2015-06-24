@@ -1,4 +1,5 @@
 import os
+import pytz
 import shutil
 import logging
 from datetime import datetime
@@ -14,6 +15,8 @@ from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
 from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import KUBERDOCK_INTERNAL_USER
+from kubedock.updates.models import Updates
+from kubedock.updates.helpers import get_available_updates, UPDATE_STATUSES
 
 from flask.ext.script import Manager, Shell, Command, Option
 from flask.ext.migrate import Migrate, MigrateCommand, init, upgrade
@@ -29,6 +32,14 @@ class Creator(Command):
     def run(self, password):
         db.drop_all()
         db.create_all()
+
+        now = datetime.utcnow()
+        now.replace(tzinfo=pytz.utc)
+        last_upd = Updates(fname=get_available_updates()[-1],
+                           status=UPDATE_STATUSES.applied,
+                           start_time=now, end_time=now)
+        db.session.add(last_upd)
+        db.session.commit()
         
         # Create default packages and kubes
         # Package and Kube with id=0 are default
@@ -102,13 +113,14 @@ class NodeManager(Command):
         Option('--hostname', dest='hostname', required=True),
         Option('--kube-type', dest='kube_type', type=int, required=True),
         Option('--do-deploy', dest='do_deploy', action='store_true'),
+        Option('-t', '--testing', dest='testing', action='store_true'),
     )
 
-    def run(self, ip, hostname, kube_type, do_deploy):
+    def run(self, ip, hostname, kube_type, do_deploy, testing):
         data = {'ip': ip, 'hostname': hostname, 'kube_type': kube_type}
         try:
             check_node_data(data)
-            res = add_node(data, do_deploy)
+            res = add_node(data, do_deploy, testing)
         except APIError as e:
             print e.message
         except Exception as e:

@@ -206,21 +206,23 @@ define(['marionette', 'utils'],
             template: '#user-edit-template',
 
             ui: {
-                'first_name'      : 'input#firstname',
-                'last_name'       : 'input#lastname',
-                'middle_initials' : 'input#middle_initials',
-                'password'        : 'input#password',
-                'password_again'  : 'input#password-again',
-                'email'           : 'input#email',
-                'save'            : 'button#template-save-btn',
-                'back'            : 'button#template-back-btn',
+                'first_name'       : 'input#firstname',
+                'last_name'        : 'input#lastname',
+                'middle_initials'  : 'input#middle_initials',
+                'password'         : 'input#password',
+                'password_again'   : 'input#password-again',
+                'email'            : 'input#email',
+                'save'             : 'button#template-save-btn',
+                'back'             : 'button#template-back-btn',
                 'editBtn'          : '#template-edit-btn',
+                'deleteBtn'        : '#template-remove-btn'
             },
 
             events: {
                 'click @ui.back'       : 'back',
                 'click @ui.save'       : 'onSave',
                 'click @ui.editBtn'    : 'editTemplate',
+                'click @ui.deleteBtn'  : 'deleteProfile',
             },
 
             templateHelpers: function(){
@@ -248,6 +250,28 @@ define(['marionette', 'utils'],
             editTemplate: function(){
                 this.model.in_edit = true;
                 this.render();
+            },
+
+            deleteProfile: function(){
+                var that = this;
+                utils.modalDialogDelete({
+                    title: "Terminate account?",
+                    body: "Are you sure want to terminate your account ?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            that.model.destroy(undefined, {
+                                wait: true,
+                                success: function(){
+                                    that.model.in_edit = false;
+                                    that.render();
+                                },
+                            })
+                        },
+                        buttonCancel: true
+                    }
+                });
             },
 
             onSave: function(){

@@ -52,7 +52,7 @@ define(['pods_app/app',
 
             showPodList: function(data){
                 this.trigger('display:pod:list', data);
-            }
+            },
         });
 
         Item.PageHeader = Backbone.Marionette.ItemView.extend({
@@ -63,7 +63,9 @@ define(['pods_app/app',
         Item.InfoPanelItem = Backbone.Marionette.ItemView.extend({
             template    : pageContainerItemTpl,
             tagName     : 'tr',
-            className   : 'container-item',
+            className   : function(){
+                return this.model.is_checked ? 'container-item checked' : 'container-item';
+            },
 
             templateHelpers: function(){
                 var modelIndex = this.model.collection.indexOf(this.model);
@@ -77,15 +79,17 @@ define(['pods_app/app',
             },
 
             ui: {
-                'start'  : '.start-btn',
-                'stop'   : '.stop-btn',
-                'delete' : '.terminate-btn'
+                'start'    : '.start-btn',
+                'stop'     : '.stop-btn',
+                'delete'   : '.terminate-btn',
+                'checkbox' : 'label.custom span'
             },
 
             events: {
-                'click @ui.start' : 'startItem',
-                'click @ui.stop'  : 'stopItem',
-                'click @ui.delete'  : 'deleteItem',
+                'click @ui.start'    : 'startItem',
+                'click @ui.stop'     : 'stopItem',
+                'click @ui.delete'   : 'deleteItem',
+                'click @ui.checkbox' : 'checkItem',
             },
 
             command: function(evt, cmd){
@@ -149,6 +153,17 @@ define(['pods_app/app',
                     }
                 });
             },
+
+            checkItem: function(evt){
+                if (this.model.is_checked){
+                    this.$el.removeClass('checked');
+                    this.model.is_checked = false;
+                } else {
+                    this.model.is_checked = true;
+                    this.$el.addClass('checked');
+                }
+                this.render();
+            }
         });
 
         Item.InfoPanel = Backbone.Marionette.CompositeView.extend({
@@ -186,8 +201,8 @@ define(['pods_app/app',
                         utils.modelError(response);
                     }
                 });
-
             },
+
             startItems: function(evt){
                 this.command('start');
             },
@@ -195,8 +210,6 @@ define(['pods_app/app',
             stopItems: function(evt){
                 this.command('stop');
             },
-
-
         });
 
         Item.ControlsPanel = Backbone.Marionette.ItemView.extend({
@@ -204,12 +217,8 @@ define(['pods_app/app',
             tagName: 'div',
             className: 'pod-controls',
 
-            initialize: function(options){
-                this.graphs = options.graphs;
-            },
-
             modelEvents: {
-                'change': 'onModelChange'
+                'change' : 'onModelChange'
             },
 
             events: {
@@ -218,6 +227,10 @@ define(['pods_app/app',
                 'click .start-btn'     : 'startItem',
                 'click .stop-btn'      : 'stopItem',
                 'click .terminate-btn' : 'terminateItem'
+            },
+
+            initialize: function(options){
+                this.graphs = options.graphs;
             },
 
             templateHelpers: function(){
@@ -374,7 +387,6 @@ define(['pods_app/app',
                 catch(e){
                     console.log('Cannot display graph');
                 }
-
             }
         });
 

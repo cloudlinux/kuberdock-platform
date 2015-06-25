@@ -35,5 +35,5 @@
     <% } %>
 </td>
 <td>
-    <%- kubeTypes[kube_type].name %> (<%- kubes %>)
+    <%- _.find(kubeTypes, function(e) { return e.id == kube_type; }).name %> (<%- kubes %>)
 </td>

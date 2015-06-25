@@ -10,7 +10,7 @@ from kubedock.validation import check_node_data
 from kubedock.utils import APIError
 from kubedock.core import db
 from kubedock.models import User, Pod
-from kubedock.billing.models import Package, Kube
+from kubedock.billing.models import Package, Kube, PackageKube
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
 from kubedock.static_pages.fixtures import generate_menu
@@ -45,27 +45,27 @@ class Creator(Command):
         # Package and Kube with id=0 are default
         # end must be undeletable (always present with id=0) for fallback
         k1 = Kube(id=0, name='Standard kube', cpu=.01, cpu_units='Cores',
-                  memory=64, memory_units='MB', disk_space='0', total_traffic=0, price=0)
+                  memory=64, memory_units='MB', disk_space='0', total_traffic=0)
         k2 = Kube(name='High CPU', cpu=.02, cpu_units='Cores',
-                  memory=64, memory_units='MB', disk_space='0', total_traffic=0, price=1)
+                  memory=64, memory_units='MB', disk_space='0', total_traffic=0)
         k3 = Kube(name='High memory', cpu=.01, cpu_units='Cores',
-                  memory=256, memory_units='MB', disk_space='0', total_traffic=0, price=2)
+                  memory=256, memory_units='MB', disk_space='0', total_traffic=0)
         
-        p1 = Package(id=0, name='basic', setup_fee=0, currency='USD', period='hour')
-        p2 = Package(id=1, name='professional', setup_fee=1, currency='USD', period='hour')
-        p3 = Package(id=2, name='enterprise', setup_fee=2, currency='USD', period='hour')
-        
-        p1.kubes.append(k1)
-        p2.kubes.append(k1)
-        p2.kubes.append(k2)
-        p3.kubes.append(k1)
-        p3.kubes.append(k2)
-        p3.kubes.append(k3)
-        
+        p1 = Package(id=0, name='basic', setup_fee=0, currency='USD', period='hour', prefix='$', suffix=' USD')
+        p2 = Package(id=1, name='professional', setup_fee=1, currency='USD', period='hour', prefix='$', suffix=' USD')
+        p3 = Package(id=2, name='enterprise', setup_fee=2, currency='USD', period='hour', prefix='$', suffix=' USD')
+
+        PackageKube(packages=p1, kubes=k1, kube_price=0)
+        PackageKube(packages=p2, kubes=k1, kube_price=0)
+        PackageKube(packages=p2, kubes=k2, kube_price=1)
+        PackageKube(packages=p3, kubes=k1, kube_price=0)
+        PackageKube(packages=p3, kubes=k2, kube_price=1)
+        PackageKube(packages=p3, kubes=k3, kube_price=2)
+
         db.session.commit()
         
         add_permissions()
-        
+
         # Create all roles with users that has same name and password as role_name.
         # Useful to test permissions.
         # Delete all users from setup KuberDock. Only admin must be after install.
@@ -99,6 +99,9 @@ class Creator(Command):
         if os.path.isdir(directory):
             shutil.rmtree(directory)
         init(directory=directory)
+
+        # Fix packages id next val
+        db.engine.execute("SELECT setval('packages_id_seq', (SELECT MAX(id) FROM packages))")
 
 
 class Updater(Command):

@@ -82,7 +82,9 @@
                 kubeTypes = {{ kube_types|tojson|safe }},
                 packages = {{ packages|tojson|safe }},
                 extraTaxes = {{ extra_taxes|tojson|safe }},
-                userSettings = {{ user_settings|tojson|safe }};
+                userSettings = {{ user_settings|tojson|safe }},
+                packageKubes = {{ package_kubes|tojson|safe }},
+                userPackage = {{ user_package|safe }};
         </script>
         {% endblock %}
         {% block users_app_js_asset %}{% endblock %}

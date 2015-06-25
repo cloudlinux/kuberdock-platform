@@ -2,10 +2,21 @@ from ..core import db
 
 # Package and Kube with id=0 are default
 # end must be undeletable (always present with id=0) for fallback
-tags = db.Table('package_kube',
-    db.Column('package_id', db.Integer, db.ForeignKey('packages.id')),
-    db.Column('kube_id', db.Integer, db.ForeignKey('kubes.id'))
-)
+
+
+class PackageKube(db.Model):
+    __tablename__ = 'package_kube'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    package_id = db.Column(db.Integer, db.ForeignKey('packages.id'))
+    kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
+    kube_price = db.Column(db.Float, default=0.0, nullable=False)
+
+    kubes = db.relationship('Kube', backref=db.backref('packages_assocs'))
+    packages = db.relationship('Package', backref=db.backref('kubes_assocs'))
+
+    def to_dict(self):
+        return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])
+
 
 class Package(db.Model):
     __tablename__ = 'packages'
@@ -21,7 +32,7 @@ class Package(db.Model):
     value_pstorage = db.Column(db.Float, default=0.0, nullable=False)
     price_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
     value_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
-    kubes = db.relationship('Kube', secondary=tags, backref=db.backref('packages', lazy='dynamic'))
+    kubes = db.relationship('PackageKube', backref=db.backref('package'))
     users = db.relationship("User", backref="package")
 
     def to_dict(self):
@@ -38,7 +49,6 @@ class Kube(db.Model):
     memory_units = db.Column(db.String(3), default='MB', nullable=False)
     disk_space = db.Column(db.Integer, default=0, nullable=False)
     total_traffic = db.Column(db.Integer, default=0, nullable=False)
-    price = db.Column(db.Float, nullable=False, default=0.0)
     nodes = db.relationship('Node', backref='kube')
     pods = db.relationship('Pod', backref='kube')
 

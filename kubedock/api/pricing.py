@@ -7,7 +7,7 @@ from ..rbac import check_permission
 from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..users import User
 from ..pods import Pod
-from ..billing.models import Package, Kube
+from ..billing.models import Package, Kube, PackageKube
 from ..stats import StatWrap5Min
 from collections import defaultdict
 import time
@@ -75,7 +75,8 @@ def create_package():
         params = request.form
     defaults = {'currency': 'USD', 'period': 'hour', 'setup_fee': 0.0, 'prefix': '', 'suffix': '', 'price_ip': 0.0,
                 'price_pstorage': 0.0, 'value_pstorage': 0.0, 'price_over_traffic': 0.0, 'value_over_traffic': 0.0}
-    for attr in 'name', 'setup_fee', 'currency', 'period', 'prefix', 'suffix':
+    for attr in 'name', 'setup_fee', 'currency', 'period', 'prefix', 'suffix', 'price_ip', 'price_pstorage', \
+                'value_pstorage', 'price_over_traffic', 'value_over_traffic':
         data[attr] = params.get(attr, defaults.get(attr))
         if data[attr] is None:
             return jsonify({
@@ -137,9 +138,9 @@ def create_kube():
 def add_kube(data):
     attrs = {}
     defaults = {'cpu': 0, 'cpu_units': 'Cores', 'memory': 0, 'memory_units': 'MB',
-                'disk_space': 0, 'total_traffic': 0, 'default': False, 'price': 0.0}
+                'disk_space': 0, 'total_traffic': 0, 'default': False}
     for attr in ('name',  'cpu', 'cpu_units', 'memory', 'memory_units',
-                 'disk_space', 'total_traffic', 'price'):
+                 'disk_space', 'total_traffic'):
         attrs[attr] = data.get(attr, defaults.get(attr))
         if attrs[attr] is None:
             return {
@@ -201,7 +202,7 @@ def get_package_kube_ids(package_id):
         raise APIError('Package not found', 404)
     kubes = []
     for kube in package.kubes:
-        kubes.append(kube.id)
+        kubes.append(kube.kube_id)
     return jsonify({'status': 'OK', 'data': kubes})
 
 
@@ -214,7 +215,7 @@ def get_package_kube_names(package_id):
         raise APIError('Package not found', 404)
     kubes = []
     for kube in package.kubes:
-        kubes.append(kube.name)
+        kubes.append(kube.kubes.name)
     return jsonify({'status': 'OK', 'data': kubes})
 
 
@@ -227,7 +228,7 @@ def get_package_kubes(package_id):
         raise APIError('Package not found', 404)
     kubes = []
     for kube in package.kubes:
-        kubes.append(kube.to_dict())
+        kubes.append(kube.kubes.to_dict())
     return jsonify({'status': 'OK', 'data': kubes})
 
 
@@ -239,10 +240,10 @@ def add_kube_to_package(package_id, kube_id=None):
     package = db.session.query(Package).get(package_id)
     if package is None:
         raise APIError('Package not found', 404)
+    params = request.json
+    if params is None:
+        params = request.form
     if kube_id is None:
-        params = request.json
-        if params is None:
-            params = request.form
         if 'id' not in params:
             rv = add_kube(params)
             if 'data' not in rv:
@@ -253,7 +254,15 @@ def add_kube_to_package(package_id, kube_id=None):
     kube = db.session.query(Kube).get(kube_id)
     if kube is None:
         raise APIError('Kube not found', 404)
-    package.kubes.append(kube)
+
+    package_kube = PackageKube.query.filter_by(package_id=package_id, kube_id=kube_id).first()
+    if package_kube is None:
+        package_kube = PackageKube()
+    package_kube.kube_id = kube_id
+    for key in ['kube_price']:
+        if hasattr(package_kube, key):
+            setattr(package_kube, key, params[key])
+    package.kubes.append(package_kube)
     db.session.commit()
     return jsonify({'status': 'OK'})
 
@@ -268,6 +277,7 @@ def delete_kube_from_package(package_id, kube_id):
     kube = db.session.query(Kube).get(kube_id)
     if kube is None:
         raise APIError('Kube not found', 404)
-    package.kubes.remove(kube)
+    package_kube = PackageKube.query.filter_by(package_id=package_id, kube_id=kube_id).first()
+    db.session.delete(package_kube)
     db.session.commit()
     return jsonify({'status': 'OK'})

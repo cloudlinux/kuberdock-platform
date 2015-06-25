@@ -1,4 +1,4 @@
-from .models import Kube, Package, ExtraTax
+from .models import Kube, Package, ExtraTax, PackageKube
 
 
 def kubes_to_limits(count, kube_type):

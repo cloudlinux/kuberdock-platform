@@ -10,7 +10,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/pod_item_graph.tpl',
         'tpl!pods_app/templates/wizard_set_container_complete.tpl',
         'pods_app/utils',
-        'scroll-model', 'scroll-view', 'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer'],
+        'scroll-model', 'scroll-view', 'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral'],
        function(Pods,
                 layoutWizardTpl,
                 breadcrumbHeaderTpl,
@@ -958,7 +958,9 @@ define(['pods_app/app',
             template: wizardSetContainerCompleteTpl,
             tagName: 'div',
 
-            templateHelpers: function(){
+            templateHelpers: function() {
+                this.package = this.getUserPackage();
+
                 return {
                     cpu_data: this.cpu_data,
                     ram_data: this.ram_data,
@@ -968,7 +970,9 @@ define(['pods_app/app',
                     restart_policies: {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                     restart_policy: this.model.get('restartPolicy'),
                     image_name_id: this.model.get('lastAddedImageNameId'),
-                    package: this.package ? this.package : {}
+                    package: this.package,
+                    price_ip: this.getFormattedPrice(this.package.price_ip),
+                    price_pstorage: this.getFormattedPrice(this.package.price_pstorage)
                 };
             },
 
@@ -1044,22 +1048,14 @@ define(['pods_app/app',
                 var num = parseInt(evt.target.value),
                     kube_id = parseInt(this.ui.kubeTypes.find(':selected').val()),
                     containers = this.model.get('containers'),
-                    container_length = containers.length,
-                    kube_data = _.find(kubeTypes, function(k){
-                        return k.id === kube_id
-                    }),
-                    pack = _.find(packages, function(p){
-                        return p.id === kube_id
-                    }),
-                    currency = pack ? pack.currency : 'USD',
                     image_name_id = this.ui.main.attr('image_name_id'),
                     container = _.find(containers, function(c) { return c.name == image_name_id }),
-                    container = container ? container : _.last(containers);
-                    kube_price = kube_data ? kube_data.price : 0;
+                    container = container ? container : _.last(containers),
+                    kube_price = this.getKubePrice(kube_id);
                 container.kubes = num;
-                this.container_price = (kube_price * num) + currency;
-                this.total_price = _.reduce(containers, function(sum, c) { return sum + kube_price * c.kubes; }, 0)
-                    + currency;
+                this.container_price = this.getFormattedPrice(kube_price * num);
+                this.total_price = this.getFormattedPrice(_.reduce(containers,
+                    function(sum, c) { return sum + kube_price * c.kubes; }, 0));
                 this.render();
                 this.ui.kubeTypes.val(kube_id);
                 this.ui.kubeQuantity.val(num);
@@ -1072,15 +1068,10 @@ define(['pods_app/app',
                 var kube_id = parseInt(evt.target.value),
                     num = parseInt(this.ui.kubeQuantity.find(':selected').text()),
                     containers = this.model.get('containers'),
-                    container_length = containers.length,
                     kube_data = _.find(kubeTypes, function(k){
                         return k.id === kube_id
                     }),
-                    pack = _.find(packages, function(p){  // 'packages' is taken from index.html
-                        return p.id === kube_id
-                    }),
-                    currency = pack ? pack.currency : 'USD',
-                    kube_price = kube_data ? kube_data.price : 0;
+                    kube_price = this.getKubePrice(kube_id);
                 this.model.set('kube_type', kube_id);
                 if (kube_data.length === 0) {
                     this.cpu_data = '0 Cores';
@@ -1089,10 +1080,9 @@ define(['pods_app/app',
                     this.cpu_data = kube_data.cpu + ' Cores';
                     this.ram_data = kube_data.memory + ' ' + kube_data.memory_units;
                 }
-                this.container_price = (kube_price * num) + currency;
-                this.total_price = _.reduce(containers, function(sum, c) { return sum + kube_price * c.kubes; }, 0)
-                    + currency;
-                this.package = pack;
+                this.container_price = this.getFormattedPrice(kube_price * num);
+                this.total_price = this.getFormattedPrice(_.reduce(containers,
+                    function(sum, c) { return sum + kube_price * c.kubes; }, 0));
                 this.render();
                 this.ui.kubeTypes.val(kube_id);
                 this.ui.kubeQuantity.val(num);
@@ -1110,7 +1100,27 @@ define(['pods_app/app',
                 }
             },
 
-            onRender: function(){
+            getKubePrice: function(kubeId) {
+                var packageId = this.package.id;
+                var packageKube = _.find(packageKubes, function(p) {
+                    return p.package_id == packageId && p.kube_id == kubeId;
+                });
+
+                return packageKube ? packageKube.kube_price : 0;
+            },
+
+            getUserPackage: function() {
+                return _.find(packages, function(p) {  // 'packages' && 'userPackage' is taken from index.html
+                    return p.id === userPackage
+                })
+            },
+
+            getFormattedPrice: function(price, format) {
+                format = typeof format !== 'undefined' ? format : '0.00';
+                return this.package.prefix + numeral(price).format(format) + this.package.suffix;
+            },
+
+            onRender: function() {
                 if (!this.model.get('kube_type'))
                     this.model.set('kube_type', parseInt(kubeTypes[0].id));
                 if(!this.container_price) {

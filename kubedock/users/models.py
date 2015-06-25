@@ -207,8 +207,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return dict(
             id=pkg.id,
             name=pkg.name,
-            kube_id=[k.id for k in pkg.kubes],
-            kube_info=[kube.to_dict() for kube in pkg.kubes],
+            kube_id=[k.kube_id for k in pkg.kubes],
+            kube_info=[kube.kubes.to_dict() for kube in pkg.kubes],
             setup_fee=pkg.setup_fee,
             currency=pkg.currency,
             period=pkg.period

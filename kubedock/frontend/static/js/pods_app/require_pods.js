@@ -21,6 +21,8 @@ requirejs.config({
         moment                 : "lib/moment.min",
         "moment-timezone"      : "lib/moment-timezone-with-data.min",
         selectpicker           : 'lib/bootstrap-select.min',
+        numeral                : "lib/numeral/numeral.min",
+        numeral_langs          : "lib/numeral/languages.min"
     },
     shim: {
         underscore: {

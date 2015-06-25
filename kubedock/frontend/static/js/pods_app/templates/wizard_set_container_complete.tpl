@@ -88,12 +88,12 @@
                 </p>
                 <p class="clearfix">
                     <span class="pull-left"><b>IP Adress:</b></span>
-                    <span class="pull-right"><span id="ipaddress_price"><%- package.price_ip %><%- package.currency %></span></span>
+                    <span class="pull-right"><span id="ipaddress_price"><%- price_ip %></span></span>
                 </p>
                 <p class="clearfix">
                     <span class="pull-left"><b>Persistent<br>storage:</b></span>
                     <span class="pull-right"><span id="pstorage_price">
-                        <%- package.price_pstorage %><%- package.currency %> per <%- package.value_pstorage %> GB
+                        <%- price_pstorage %> per <%- package.value_pstorage %> GB
                     </span></span>
                 </p>
                 <p class="total"><b>Total price:</b> <span id="total_price"><%- total_price %></span></p>

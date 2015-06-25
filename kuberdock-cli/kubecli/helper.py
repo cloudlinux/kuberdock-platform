@@ -140,6 +140,8 @@ class PrintOut(object):
         elif isinstance(data, list):
             for item in data:
                 self._r_print(item, offset)
+        elif isinstance(data, basestring):
+            print '{0}{1}'.format(' ' * (self._INDENT * offset), data)
         else:
             raise SystemExit("Unknown format")
 

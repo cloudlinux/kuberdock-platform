@@ -63,7 +63,7 @@ new_pod_scheme = {
     },
     'replicas': {'type': 'integer', 'min': 0},
     'kube_type': {'type': 'integer', 'min': 0, 'required': True},
-    'cluster': {'type': 'boolean'},
+    'replicationController': {'type': 'boolean'},
     'node': {'type': 'string', 'nullable': True},
     'save_only': {'type': 'boolean'},
     'freeHost': {'type': 'string', 'required': False, 'nullable': True},

@@ -8,7 +8,7 @@
     <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>
 </td>
 <td>
-    <% if (cluster){ %>
+    <% if (replicationController){ %>
         <!-- <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span> -->
         <span><%- replicas %></span>
     <% }  else { %>

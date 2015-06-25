@@ -46,10 +46,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.id         = metadata.get('uid')
         pod.name       = metadata.get('labels', {}).get('name')
         pod.namespace  = metadata.get('namespace')
-        pod.cluster    = False
+        pod.replicationController = False
         pod.replicas   = 1
         pod.status     = status.get('phase', 'pending').lower()
-        pod.podIP      = status.get('podIP', '')
         pod.host       = spec.get('host')
         pod.kube_type  = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
         pod.node       = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
@@ -120,7 +119,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)
-        if self.cluster:
+        if self.replicationController:
             config = {
                 "kind": "ReplicationController",
                 "apiVersion": "v1beta3",
@@ -188,7 +187,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
 
     #def prepare(self, sid=None):
-    #    if not self.cluster:
+    #    if not self.replicationController:
     #        return self._prepare_pod()
     #    sid = self._make_sid()
     #    return {
@@ -261,7 +260,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     @property
     def kind(self):
-        if getattr(self, 'cluster', False):
+        if getattr(self, 'replicationController', False):
             return 'replicationcontrollers'
         else:
             return 'pods'

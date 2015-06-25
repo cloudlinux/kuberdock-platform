@@ -1015,11 +1015,11 @@ define(['pods_app/app',
 
             toggleCluster: function(evt){
                 evt.stopPropagation();
-                if (this.model.get('cluster')) {
-                    this.model.set('cluster', false);
+                if (this.model.get('replicationController')) {
+                    this.model.set('replicationController', false);
                 }
                 else {
-                    var obj = {cluster: true};
+                    var obj = {replicationController: true};
                     this.model.set(obj);
                 }
                 this.render();
@@ -1102,9 +1102,9 @@ define(['pods_app/app',
                 var restart_policy = $(evt.target).val();
                 this.model.set('restartPolicy', restart_policy)
                 if (restart_policy == 'Always') {
-                    this.model.set('cluster', true);
+                    this.model.set('replicationController', true);
                 } else {
-                    this.model.set('cluster', false);
+                    this.model.set('replicationController', false);
                 }
             },
 

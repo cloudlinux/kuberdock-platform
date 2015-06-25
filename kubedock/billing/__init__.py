@@ -12,3 +12,12 @@ def kubes_to_limits(count, kube_type):
         'requires': resources,
         'limits': resources,
     }}
+
+
+def repr_limits(count, kube_type):
+    kube = Kube.query.get(kube_type)
+
+    cpu = '{0} {1}'.format(count * kube.cpu, kube.cpu_units)
+    memory = '{0} {1}'.format(count * kube.memory, kube.memory_units)
+
+    return {'cpu': cpu, 'memory': memory}

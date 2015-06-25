@@ -1,6 +1,7 @@
 import json
 from flask import current_app
 
+from ..billing import repr_limits
 from ..utils import modify_node_ips, run_ssh_command, send_event
 from .pod import Pod
 from .helpers import KubeQuery, ModelQuery, Utilities
@@ -67,7 +68,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if hasattr(pod, 'sid'):
             rv = self._del([pod.kind, pod.sid], use_v3=True, ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a pod")
-            if pod.cluster:
+            if pod.replicationController:
                 self._stop_cluster(pod)
         service_name = pod.get_config('service')
         if service_name:
@@ -169,13 +170,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
             for s in services_data:
                 if self._is_related(item['metadata']['labels'], s['spec']['selector']):
-                    pod.serviceIP = s['spec'].get('portalIP')
+                    pod.podIP = s['spec'].get('portalIP')
                     break
 
             for r in replicas_data:
                 if self._is_related(item['metadata']['labels'], r['spec']['selector']):
                     pod.sid = r['metadata']['name']
-                    pod.cluster = True
+                    pod.replicationController = True
                     break
 
             if pod.sid not in pod_index:
@@ -193,7 +194,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._collection[pod.name, namespace] = pod
             else:
                 self._collection[db_pod.name, namespace].id = db_pod.id
-                # TODO if remove _is_related then add serviceIP attribute here
+                # TODO if remove _is_related then add podIP attribute here
                 # self._collection[db_pod.name, namespace].service = json.loads(db_pod.config).get('service')
                 self._collection[db_pod.name, namespace].kube_type = db_pod_config.get('kube_type')
                 a = self._collection[db_pod.name, namespace].containers
@@ -205,6 +206,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._collection[db_pod.name, namespace].owner = db_pod.owner.username
             if not hasattr(self._collection[db_pod.name, namespace], 'status'):
                 self._collection[db_pod.name, namespace].status = 'stopped'
+            for container in self._collection[db_pod.name, namespace].containers:
+                container.pop('resources', None)
+                container['limits'] = repr_limits(container['kubes'], db_pod_config['kube_type'])
 
     def _run_service(self, pod):
         ports = []
@@ -275,7 +279,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod.status = 'stopped'
         if hasattr(pod, 'sid'):
             rv = self._del([pod.kind, pod.sid], use_v3=True, ns=pod.namespace)
-            if pod.cluster:
+            if pod.replicationController:
                 self._stop_cluster(pod)
             self._raise_if_failure(rv, "Could not stop a pod")
             #return rv

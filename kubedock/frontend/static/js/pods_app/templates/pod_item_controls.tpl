@@ -22,7 +22,7 @@
             <% if (publicName) { %>
                 <div>Public name: <%- publicName %></div>
             <% } %>
-            <div>Pod IP: <%- (typeof(serviceIP) != 'undefined') ? serviceIP : 'Internal ip is not assigned yet'%></div>
+            <div>Pod IP: <%- (typeof(podIP) != 'undefined') ? podIP : 'Internal ip is not assigned yet'%></div>
         </div>
         <div class="col-xs-6 servers">
             <div><b><%- name %></b></div>

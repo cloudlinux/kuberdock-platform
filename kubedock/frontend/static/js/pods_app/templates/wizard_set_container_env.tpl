@@ -10,6 +10,10 @@
         </div>
         <div id="details_content" class="col-sm-9 set-up-image clearfix no-padding">
             <div id="tab-content" class="environment clearfix">
+                <label class="pull-left">
+                Adding: <%- image %>
+                </label>
+                <a class="pull-right" href="<%- url %>" target="blank">Learn more about variables for this image</a>
                 <% if (env.length != 0){ %>
                     <div class="col-sm-12 no-padding fields">
                         <div class="col-sm-4 no-padding">
@@ -35,10 +39,6 @@
                 <% } %>
                 <div class="col-sm-12 no-padding">
                     <button type="button" class="add-env">Add field</button>
-                </div>
-                <div class="more">
-                    <a href="<%- url %>" target="blank">
-                        Learn more about variables for this image</a>
                 </div>
                 <% if (env.length != 0){ %>
                 <div class="col-sm-12 no-padding reset">

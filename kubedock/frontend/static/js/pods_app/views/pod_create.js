@@ -981,7 +981,8 @@ define(['pods_app/app',
                 'editPolycyDescription'   : '.edit-polycy-description',
                 'editKubeType'            : '.edit-kube-type',
                 'editKubeTypeDescription' : '.edit-kube-type-description',
-                'main'                    : '#add-image'
+                'main'                    : '#add-image',
+                'selectpicker'            : '.selectpicker',
             },
 
             events: {
@@ -1036,7 +1037,6 @@ define(['pods_app/app',
             changeReplicas: function(evt){
                 evt.stopPropagation();
                 this.model.set('replicas', parseInt($(evt.target).val().trim()));
-
             },
 
             changeKubeQuantity: function(evt){
@@ -1063,6 +1063,7 @@ define(['pods_app/app',
                 this.render();
                 this.ui.kubeTypes.val(kube_id);
                 this.ui.kubeQuantity.val(num);
+                $('.kube-quantity button span').text(num);
             },
 
             changeKubeType: function(evt){
@@ -1095,6 +1096,7 @@ define(['pods_app/app',
                 this.render();
                 this.ui.kubeTypes.val(kube_id);
                 this.ui.kubeQuantity.val(num);
+                $('.kube-quantity button span').text(num);
             },
 
             changePolicy: function(evt){
@@ -1136,18 +1138,21 @@ define(['pods_app/app',
                         }
                     }
                 });
+                this.ui.selectpicker.selectpicker();
             },
 
             editPolicy: function(){
                 this.ui.editPolicy.hide();
                 this.ui.editPolycyDescription.hide()
                 this.ui.policy.attr('disabled',false);
+                this.$('.policy .disabled').removeClass('disabled');
             },
 
             editKubeType: function(){
                 this.ui.editKubeType.hide();
                 this.ui.editKubeTypeDescription.hide()
                 this.ui.kubeTypes.attr('disabled',false);
+                this.$('.kube-type-wrapper .disabled').removeClass('disabled');
             },
         });
 

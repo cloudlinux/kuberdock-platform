@@ -15,12 +15,12 @@ requirejs.config({
         "bootstrap-editable"   : "lib/bootstrap-editable.min",
         jqplot                 : "lib/jquery.jqplot.min",
         "jqplot-axis-renderer" : "lib/jqplot.dateAxisRenderer.min",
-        "dropdowns-enhancement": "lib/dropdowns-enhancement",
         "scroll-model"         : "lib/scroll-model",
         "scroll-view"          : "lib/scroll-view",
         "notify"               : "lib/notify.min",
         moment                 : "lib/moment.min",
-        "moment-timezone"      : "lib/moment-timezone-with-data.min"
+        "moment-timezone"      : "lib/moment-timezone-with-data.min",
+        selectpicker           : 'lib/bootstrap-select.min',
     },
     shim: {
         underscore: {
@@ -36,6 +36,9 @@ requirejs.config({
         'jquery-spin': ['spin'],
         tpl: ['text'],
         'jqplot-axis-renderer': ['jqplot'],
+        selectpicker: {
+            deps: ['jquery', 'bootstrap']
+        },
     },
     config: {
         moment: {

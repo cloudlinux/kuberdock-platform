@@ -356,13 +356,18 @@ define(['marionette', 'paginator', 'utils'],
                 'role_select'     : 'select#role-select',
                 'users_page'      : 'div#users-page',
                 'user_add_btn'    : 'button#user-add-btn',
-                'user_cancel_btn' : 'button#user-cancel-btn'
+                'user_cancel_btn' : 'button#user-cancel-btn',
+                'selectpicker'    : '.selectpicker'
             },
 
             events: {
                 'click @ui.users_page'      : 'breadcrumbClick',
                 'click @ui.user_add_btn'    : 'onSave',
                 'click @ui.user_cancel_btn' : 'cancel'
+            },
+
+            onRender: function(){
+                this.ui.selectpicker.selectpicker();
             },
 
             onSave: function(){
@@ -407,7 +412,7 @@ define(['marionette', 'paginator', 'utils'],
                 'user_cancel_btn'     : 'button#user-cancel-btn',
                 'login_this_user_btn' : 'button#login_this_user',
                 'edit_user'           : 'button#edit_user',
-                'tb'                  : '#user-profile-logs-table tbody'
+                'tb'                  : '#user-profile-logs-table tbody',
             },
 
             events: {
@@ -507,7 +512,7 @@ define(['marionette', 'paginator', 'utils'],
                 'user_cancel_btn'     : 'button#user-cancel-btn',
                 'login_this_user_btn' : 'button#login_this_user',
                 'edit_user'           : 'button#edit_user',
-                'logHistory'          : '.logHistory',
+                'logHistory'          : '.logHistory'
             },
 
             events: {
@@ -516,7 +521,7 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.delete_user_btn'     : 'delete_user',
                 'click @ui.login_this_user_btn' : 'login_this_user',
                 'click @ui.edit_user'           : 'edit_user',
-                'click @ui.logHistory'          : 'logHistory',
+                'click @ui.logHistory'          : 'logHistory'
             },
 
             templateHelpers: function(){
@@ -616,6 +621,7 @@ define(['marionette', 'paginator', 'utils'],
                 this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
                 this.ui.role_select.val(this.model.get('rolename'));
                 this.ui.user_add_btn.html('Save');
+                this.ui.selectpicker.selectpicker();
             },
 
             onSave: function(){

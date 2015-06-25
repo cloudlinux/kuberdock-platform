@@ -288,7 +288,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         ui: {
-            'nodes_page' : 'div#nodes-page'
+            'nodes_page'   : 'div#nodes-page',
         },
 
         events:{
@@ -317,6 +317,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'node_type_select' : 'select.kube_type',
             'node_name'        : 'input#node_address',
             'spinner'          : '#address-spinner',
+            'selectpicker'     : '.selectpicker',
         },
 
         events:{
@@ -380,6 +381,10 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         cancel: function () {
             App.router.navigate('/', {trigger: true});
+        },
+
+        onRender: function(){
+            this.ui.selectpicker.selectpicker();
         },
 
         initialize: function () {

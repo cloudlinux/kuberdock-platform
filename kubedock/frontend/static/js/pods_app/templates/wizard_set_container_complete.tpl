@@ -29,7 +29,7 @@
                         <label>Restart policy</label>
                     </div>
                     <div class="col-md-11">
-                        <select class="restart-policy"<%= containers.length > 1 ? ' disabled' : '' %>>
+                        <select class="restart-policy selectpicker"<%= containers.length > 1 ? ' disabled' : '' %>>
                             <% _.each(restart_policies, function(value, key) {%>
                             <option value="<%- key %>"<%= key === restart_policy ? ' selected' : '' %>><%- value %></option>
                             <% }) %>
@@ -44,7 +44,7 @@
                     <% if (containers.length > 1){ %>
                     <label class="col-xs-12">Type</label>
                     <div class="col-xs-11">
-                        <select class="kube_type" id="extra-options" disabled>
+                        <select class="kube_type selectpicker" id="extra-options" disabled>
                             <% _.each(kube_types, function(k_type){ %>
                             <option value="<%- k_type.id %>"<%= k_type.id === kube_type ? ' selected' : '' %>><%- k_type.name %></option>
                             <% }) %>
@@ -55,7 +55,7 @@
                     <% } else { %>
                     <label class="col-xs-12">Type</label>
                     <div class="col-xs-12">
-                        <select class="kube_type" id="extra-options">
+                        <select class="kube_type selectpicker" id="extra-options">
                             <% _.each(kube_types, function(kube_type){ %>
                             <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
                             <% }) %>
@@ -63,10 +63,10 @@
                     </div>
                     <% } %>
                 </div>
-                <div class="row">
+                <div class="row kube-quantity-wrapper">
                     <div class="col-xs-12">
                         <label>Kubes per container:</label>
-                        <select class="kube-quantity">
+                        <select class="kube-quantity selectpicker">
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>

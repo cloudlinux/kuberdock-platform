@@ -2,19 +2,19 @@ requirejs.config({
     waitSeconds: 200,
     baseUrl: '/static/js',
     paths: {
-        backbone: 'lib/backbone',
-        jquery: 'lib/jquery',
-        'jquery-ui': 'lib/jquery-ui',
-        underscore: 'lib/underscore',
-        marionette: 'lib/backbone.marionette',
-        bootstrap: 'lib/bootstrap',
-        'bootstrap3-typeahead': 'lib/bootstrap3-typeahead.min',
-        paginator: 'lib/backbone.paginator',
-        tpl: 'lib/tpl',
-        text: 'lib/text',
-        notify: 'lib/notify.min',
-        utils: 'utils',
-        dde: 'lib/dropdowns-enhancement'
+        backbone               : 'lib/backbone',
+        jquery                 : 'lib/jquery',
+        'jquery-ui'            : 'lib/jquery-ui',
+        underscore             : 'lib/underscore',
+        marionette             : 'lib/backbone.marionette',
+        bootstrap              : 'lib/bootstrap',
+        'bootstrap3-typeahead' : 'lib/bootstrap3-typeahead.min',
+        paginator              : 'lib/backbone.paginator',
+        tpl                    : 'lib/tpl',
+        text                   : 'lib/text',
+        notify                 : 'lib/notify.min',
+        utils                  : 'utils',
+        selectpicker           : 'lib/bootstrap-select.min',
     },
     shim: {
         jquery: {
@@ -48,12 +48,12 @@ requirejs.config({
             deps: ['backbone'],
             exports: "utils"
         },
-        dde: {
+        selectpicker: {
             deps: ['jquery', 'bootstrap']
         }
     }
 });
-require(['jquery', 'users_app/app', 'notify', 'jquery-ui', 'dde', 'bootstrap3-typeahead'],
+require(['jquery', 'users_app/app', 'notify', 'jquery-ui', 'selectpicker', 'bootstrap3-typeahead'],
 function(jQuery, UsersApp){
     UsersApp.Data.users = new UsersApp.Data.UsersPageableCollection(usersCollection);
     UsersApp.Data.onlineUsers = new UsersApp.Data.UsersPageableCollection(onlineUsersCollection);

@@ -853,4 +853,97 @@ body{
         }
     }
     /* end edit form */
+
+    /* select styles */
+    .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){
+        width: 100%;
+    }
+    .bootstrap-select{
+        button{
+            width: 100%;
+            height: 51px;
+            display: block;
+            padding: 0 20px;
+            background-color: #fff;
+            border: 1px solid #e5e5e5;
+            &:hover, &:focus{
+                background-color: transparent;
+                border-color: #e5e5e5;
+            }
+        }
+        &.btn-group{
+            .dropdown-menu{
+                .box-shadow(none);
+                .border-radius(0);
+                padding: 0;
+                margin: -1px 0 0;
+                border: 1px solid #e5e5e5;
+                > li{
+                    > a{
+                        color: #3d464d;
+                        font-size: 14px;
+                        padding: 15px 20px;
+                        text-decoration: none;
+                        font-family: "ProximaNovaReg";
+                        border-left: 3px solid transparent;
+                        &:hover{
+                            color: #3197ee;
+                            border-color: #3197ee;
+                            background-color: #f5fafe;
+                        }
+                    }
+                    &.selected{
+                        a{
+                            color: #3197ee;
+                            border-color: #3197ee;
+                            background-color: #f5fafe;
+                        }
+                    }
+                    &.disabled{
+                        a{
+                            color: #c0c0c0  ;
+                            border-color: transparent;
+                            background-color: transparent;
+                            border-bottom: 1px solid #e5e5e5;
+                        }
+                    }
+                }
+            }
+            .dropdown-toggle{
+                .border-radius(0);
+                &:focus{
+                    outline: 0 !important;
+                }
+                .caret{
+                    top: 50%;
+                    width: 8px;
+                    right: 26px;
+                    height: 6px;
+                    margin-top: -3px;
+                    color: transparent;
+                    position: absolute;
+                    display: inline-block;
+                    vertical-align: middle;
+                    border-top: 7px solid #b1b9c0;
+                    border-right: 4.6px solid transparent;
+                    border-left: 4.5px solid transparent;
+                }
+            }
+            &.open{
+                button{
+                    background-color: transparent;
+                    border-color: #e5e5e5;
+                }
+                .dropdown-toggle{
+                    .box-shadow(none);
+                }
+            }
+        }
+    }
+    .btn{
+        &.active, &:active{
+            .box-shadow(none);
+        }
+    }
+    /* end select styles */
 }

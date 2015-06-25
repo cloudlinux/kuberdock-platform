@@ -1,7 +1,7 @@
-define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbone){
-    
+define(['pods_app/app', 'backbone', 'backbone-paginator', 'selectpicker' ], function(Pods, Backbone){
+
     Pods.module('Data', function(Data, App, Backbone, Marionette, $, _){
-    
+
         var unwrapper = function(response) {
             var data = response.hasOwnProperty('data') ? response['data'] : response
             if (response.hasOwnProperty('status')) {
@@ -17,9 +17,9 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
             }
             return data;
         };
-    
+
         Data.Pod = Backbone.Model.extend({
-    
+
             defaults: {
                 name: 'Nameless',
                 containers: [],
@@ -29,9 +29,9 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                 restartPolicy: "Always",
                 node: null
             },
-    
+
             parse: unwrapper,
-    
+
             fillContainer: function(container, data){
                 if (data.hasOwnProperty('ports')) {
                     _.each(data['ports'], function(p){
@@ -55,20 +55,20 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                 });
             },
         });
-    
+
         Data.Image = Backbone.Model.extend({
-    
+
             defaults: {
                 image: 'Imageless'
             },
-    
+
             parse: unwrapper
         });
-    
+
         Data.Stat = Backbone.Model.extend({
             parse: unwrapper
         });
-    
+
         Data.PodCollection = Backbone.PageableCollection.extend({
             url: '/api/podapi/',
             model: Data.Pod,
@@ -78,7 +78,7 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                 pageSize: 5
             }
         });
-    
+
         Data.ImageCollection = Backbone.PageableCollection.extend({
             url: '/api/images/',
             model: Data.Image,
@@ -88,13 +88,13 @@ define(['pods_app/app', 'backbone', 'backbone-paginator'], function(Pods, Backbo
                 pageSize: 10
             }
         });
-    
+
         Data.StatsCollection = Backbone.Collection.extend({
             url: '/api/stats',
             model: Data.Stat,
             parse: unwrapper
         });
     });
-    
+
     return Pods.Data;
 });

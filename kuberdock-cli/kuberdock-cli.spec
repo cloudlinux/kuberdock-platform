@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 6%{?dist}.cloudlinux
+Release: 7%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -47,6 +47,10 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Thu Jun 25 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-7
+- AC-568: Fixed 'Unknown format' error on 'kcli kubectl describe pods <NAME>' command
+- AC-527: Added comments for user and password
+
 * Sun Jun 21 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-6
 - AC-502 cPanel. Public IP for application. kcli added get free ip method
 

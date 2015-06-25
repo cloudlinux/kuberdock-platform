@@ -60,6 +60,7 @@
                 </div>
                 <div class="buttons pull-right">
                     <button id="template-edit-btn" class="" type="submit">Edit</button>
+                    <!-- <button id="template-remove-btn" class="pull-right" type="submit">Terminate account</button> -->
                 </div>
             </div>
         <% } %>
@@ -138,8 +139,8 @@
                     </div>
                     <div class="col-xs-5 inline">
                         <label for="autorization" class="custom">
-                        	<input type="checkbox" id="autorization"/>
-                        	<span></span>
+                            <input type="checkbox" id="autorization"/>
+                            <span></span>
                         Authorization needed</label>
                     </div>
                 </div>
@@ -251,7 +252,7 @@
                                         192.168.0.2
                                     </td>
                                     <td>
-                                        <span class="running">My best Pod 2</span>
+                                        <span class="running">Free (unused)</span>
                                         <span class="terminate-btn pull-right"></span>
                                     </td>
                                 </tr>
@@ -270,7 +271,6 @@
                 </div>
                 <div class="buttons clearfix">
                     <div class="description pull-left col-md-offset-1">* Unused Public IP billed as usual</div>
-                    <button class="pull-right" type="submit">Terminate account</button>
                 </div>
             </div>
         </div>
@@ -304,9 +304,7 @@
                         </table>
                     </div>
                 </div>
-                <div class="buttons clearfix">
-                    <button class="pull-right" type="submit">Terminate account</button>
-                </div>
+                <div class="buttons clearfix"></div>
             </div>
         </div>
     </script>

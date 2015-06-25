@@ -31,6 +31,18 @@ function modalDialogDelete(options){
     return modal;
 };
 
+function modalDialog(options){
+    var modal = $('.modal'),
+        modalDialog = modal.find('.modal-dialog');
+    modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
+    if(options.title) modal.find('.modal-title').html(options.title);
+    if(options.body) modal.find('.modal-body').html(options.body);
+    if(options.large) modal.addClass('bs-example-modal-lg');
+    if(options.small) modal.addClass('bs-example-modal-sm');
+    if(options.show) modal.modal('show');
+    return modal;
+};
+
 function modelError(b, t){
     modalDialog({
         title: t ? t : 'Error',
@@ -338,9 +350,9 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 //                    that.trigger('show_console');
                     App.router.navigate('/', {trigger: true});
                 },
-                error: function(){
+                /*error: function(){
                     modelError('error while saving! Maybe some fields required.');
-                }
+                } */
             });
         },
 
@@ -354,7 +366,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     that.state.set('hostname', data.hostname);
                     that.ui.node_name.addClass('success');
                 }).error(function(resp) {
-                    modelError(resp);
+/*                    modelError(resp);*/
                     that.ui.node_name.addClass('error');
                 });
                 that.ui.spinner.spin(false);

@@ -1,3 +1,6 @@
+<div class="containersControl">
+    <span class="count"></span><span class="removePods">Delete</span>
+</div>
 <table class="table" id="imagelist-table">
 <thead>
     <tr>

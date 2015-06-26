@@ -59,7 +59,7 @@ Requires: python-psycogreen >= 1.0
 Requires: python-botocore
 Requires: python-boto
 Requires: python-alembic
-Requires: python-flask-migrate
+Requires: python-flask-migrate >= 1.4.0
 Requires: python-flask-script
 Requires: python-bitmath
 

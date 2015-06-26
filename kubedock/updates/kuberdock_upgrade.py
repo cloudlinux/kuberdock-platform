@@ -16,6 +16,7 @@ from kubedock.api import create_app
 from kubedock.settings import KUBERDOCK_SERVICE
 from kubedock.updates import helpers
 from kubedock.updates.models import Updates, db
+from flask.ext.migrate import Migrate
 
 FAILED_MESSAGE = """\
 Cluster was left in a maintenance mode, \
@@ -66,7 +67,8 @@ def do_cycle_updates(with_testing=False):
             in_db_update.status = helpers.UPDATE_STATUSES.failed
             helpers.print_log(in_db_update,
                               'Error in update script '
-                              '{0}. {1}. Starting downgrade...'.format(upd, e))
+                              '{0}. {1}. Starting downgrade...'
+                              .format(upd, e.__repr__()))
             try:
                 module.downgrade(in_db_update, with_testing)
             except Exception as e:
@@ -124,7 +126,12 @@ if __name__ == '__main__':
         yb.repos.enableRepo('kube-testing')
         print 'Testing repo enabled.'
 
-    with create_app().app_context():
+    app = create_app()
+    directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                             'kdmigrations')
+    migrate = Migrate(app, db, directory)
+
+    with app.app_context():
         try:
             installed_kuberdock = list(
                 yb.doPackageLists('installed', patterns=['kuberdock']))[0]
@@ -132,8 +139,13 @@ if __name__ == '__main__':
             print >> sys.stderr, 'Kuberdock package is not installed'
             sys.exit(1)
 
-        all_kuberdocks = yb.doPackageLists(pkgnarrow='available', showdups=True,
-                                           patterns=['kuberdock'])
+        try:
+            all_kuberdocks = yb.doPackageLists(pkgnarrow='available',
+                                               showdups=True,
+                                               patterns=['kuberdock'])
+        except yum.Errors.YumBaseError:
+            all_kuberdocks = []
+
         new_kuberdocks = sorted(
             [i for i in all_kuberdocks if i > installed_kuberdock])
 

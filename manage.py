@@ -1,6 +1,5 @@
 import os
 import pytz
-import shutil
 import logging
 from datetime import datetime
 
@@ -19,10 +18,9 @@ from kubedock.updates.models import Updates
 from kubedock.updates.helpers import get_available_updates, UPDATE_STATUSES
 
 from flask.ext.script import Manager, Shell, Command, Option
-from flask.ext.migrate import Migrate, MigrateCommand, init, upgrade
+from flask.ext.migrate import Migrate, MigrateCommand, upgrade, stamp
 from flask.ext.migrate import migrate as migrate_func
 
-directory = 'kdmigrations'
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 
@@ -95,19 +93,17 @@ class Creator(Command):
         db.session.commit()
         
         generate_menu()
-        
-        if os.path.isdir(directory):
-            shutil.rmtree(directory)
-        init(directory=directory)
 
         # Fix packages id next val
         db.engine.execute("SELECT setval('packages_id_seq', (SELECT MAX(id) FROM packages))")
 
+        stamp()
+
 
 class Updater(Command):
     def run(self):
-        migrate_func(directory=directory)
-        upgrade(directory=directory)
+        migrate_func()
+        upgrade()
 
 
 class NodeManager(Command):
@@ -133,7 +129,11 @@ class NodeManager(Command):
 
 app = create_app()
 manager = Manager(app, with_default_commands=False)
-migrate = Migrate(app, db)
+directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                         'kubedock',
+                         'updates',
+                         'kdmigrations')
+migrate = Migrate(app, db, directory)
 
 
 def make_shell_context():

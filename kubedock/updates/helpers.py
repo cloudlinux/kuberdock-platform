@@ -12,6 +12,9 @@ from kubedock import settings
 from kubedock.sessions import SessionData
 from .models import Updates, db
 
+# For convenience to use in update scripts:
+from flask.ext.migrate import upgrade as upgradedb
+
 
 class UPDATE_STATUSES:
     started = 'started'
@@ -20,7 +23,7 @@ class UPDATE_STATUSES:
     failed_downgrade = 'downgrade failed too'
 
 
-def set_param(text, var, param, value):
+def _set_param(text, var, param, value):
     res = param + value
 
     def x(matchobj):
@@ -43,8 +46,8 @@ def set_evicting_timeout(timeout):
     config_file = '/etc/kubernetes/controller-manager'
     with open(config_file, 'rt') as fr:
         text = fr.read()
-    res = set_param(text, "KUBE_CONTROLLER_MANAGER_ARGS",
-                    "--pod-eviction-timeout=", timeout)
+    res = _set_param(text, "KUBE_CONTROLLER_MANAGER_ARGS",
+                     "--pod-eviction-timeout=", timeout)
     with open(config_file, 'wt') as fw:
         fw.write(res)
     return restart_service('kube-controller-manager')

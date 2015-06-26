@@ -165,7 +165,7 @@ new_pod_scheme = {
                     'allowed': ['PullAlways', 'PullIfNotPresent', 'IfNotPresent'],
                     'required': False
                 },
-                'resources': {
+                'limits': {
                     'type': 'dict',
                     'required': False
                 },

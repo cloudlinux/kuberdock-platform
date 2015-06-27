@@ -20,7 +20,7 @@ def create_app(settings_override=None):
     # app.session_interface = sessions.ManagedSessionInterface(
     #     sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
     #     skip_paths, datetime.timedelta(days=1))
-    
+
     # registering blueprings
     from .images import images
     from .pods import pods
@@ -36,11 +36,13 @@ def create_app(settings_override=None):
     from .settings import settings
     from .podapi import podapi
     from .auth import auth
+    from .pstorage import pstorage
 
     for bp in images, pods, stream, nodes, stats, users, notifications, \
-              static_pages, usage, pricing, ippool, settings, podapi, auth:
+              static_pages, usage, pricing, ippool, settings, podapi, auth, \
+              pstorage:
         app.register_blueprint(bp)
-        
+
     #app.json_encoder = JSONEncoder
     app.errorhandler(404)(on_404)
     app.errorhandler(PermissionDenied)(on_permission_denied)

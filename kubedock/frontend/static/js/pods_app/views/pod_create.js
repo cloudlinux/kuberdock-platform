@@ -929,18 +929,31 @@ define(['pods_app/app',
                 });
 
                 $.ajax({
-                    url: '/api/pods/containers',
-                    data: {action: cmd, host: host, containers: _containers.join(','),
-                           pod_uuid: model.get('id')},
+                    url: '/api/podapi/' + model.get('id'),
+                    data: {command: cmd, host: host, containers: _containers.join(',')},
                     type: 'PUT',
                     dataType: 'JSON',
                     success: function(rs){
                         preloader.hide();
                     },
                     error: function(xhr){
-                        modelError(xhr);
+                        utils.modelError(xhr);
                     }
                 });
+                
+                //$.ajax({
+                //    url: '/api/pods/containers',
+                //    data: {action: cmd, host: host, containers: _containers.join(','),
+                //           pod_uuid: model.get('id')},
+                //    type: 'PUT',
+                //    dataType: 'JSON',
+                //    success: function(rs){
+                //        preloader.hide();
+                //    },
+                //    error: function(xhr){
+                //        modelError(xhr);
+                //    }
+                //});
             },
 
             startItem: function(evt){

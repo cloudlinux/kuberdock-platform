@@ -23,7 +23,6 @@ def create_app(settings_override=None):
 
     # registering blueprings
     from .images import images
-    from .pods import pods
     from .stream import stream
     from .nodes import nodes
     from .stats import stats
@@ -38,7 +37,7 @@ def create_app(settings_override=None):
     from .auth import auth
     from .pstorage import pstorage
 
-    for bp in images, pods, stream, nodes, stats, users, notifications, \
+    for bp in images, stream, nodes, stats, users, notifications, \
               static_pages, usage, pricing, ippool, settings, podapi, auth, \
               pstorage:
         app.register_blueprint(bp)

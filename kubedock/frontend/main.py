@@ -2,7 +2,6 @@ import json
 from flask import Blueprint, render_template, redirect, url_for
 from flask.ext.login import current_user, login_required
 
-from ..api.pods import get_pods_collection
 #from ..utils import JSONDefaultEncoder
 from ..billing import Kube, Package, ExtraTax, PackageKube
 from ..kapi.podcollection import PodCollection
@@ -17,7 +16,6 @@ def index():
     # In setup KuberDock admin has no access to pods pages (AC-228)
     if current_user.is_administrator():
         return redirect(url_for('nodes.index'))
-    #coll = get_pods_collection()
     coll = PodCollection(current_user).get()
     packages = [package.to_dict() for package in Package.query.all()]
     extra_taxes_list = [e.to_dict() for e in ExtraTax.query.all()]

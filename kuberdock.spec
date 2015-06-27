@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 5%{?dist}.cloudlinux
+Release: 6%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -145,6 +145,22 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Sat Jun 27 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.2-6
+- AC-571: remove extra buttons from settings templates, remove extra modal dilog from add node page
+- AC-527: Added comments for user and password
+- AC-568: Fixed 'Unknown format' error on 'kcli kubectl describe pods <NAME>' command
+- AC-549: Change kapi output
+- AC-430: Add new style to selects
+- AC-574: Add image name to 3-th step in adding container & change link about more position
+- AC-558 Set kube price depending on package
+- Properly working alembic migrations added.
+- Fixed kdmigrations directory path.
+- Fix yum errors.
+- Fixed bug with Flask-Migrate
+- Added backend CRUD for persistent storage
+- Added 'loading.gif' for x-editable
+- removed old unused code
+
 * Wed Jun 24 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.2-5
 - First part of update system for kuberdock.
 - deploy.sh, manage.py add_node now have -t --testing option to enable testing repo.

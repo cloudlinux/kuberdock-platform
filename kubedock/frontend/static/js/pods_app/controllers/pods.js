@@ -220,6 +220,26 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
                         _.each(data.get('containers'), function(c){
                             if (c.hasOwnProperty('persistentDrives')) { delete c.persistentDrives; }
+                            //_.each(c.volumeMounts, function(v){
+                            //    if (v.isPersistent) {
+                            //        var entry = {name: v.name, persistentDisk: v.persistentDisk};
+                            //        var used = _.filter(data.attributes.persistentDrives,
+                            //            function(i){return i.pdName === v.persistentDisk.pdName});
+                            //        if (used.length) {
+                            //            used[0].used = true;
+                            //        }
+                            //        delete v.persistentDisk;
+                            //    }
+                            //    else {
+                            //        var entry = {name: v.name, emptyDir: {}};
+                            //    }
+                            //    data.get('volumes').push(entry);
+                            //    delete v.isPersistent;
+                            //});
+                            // this change makes volumes from persistent drives only
+                            c.volumeMounts = _.filter(c.volumeMounts, function(v){
+                                return v.isPersistent;
+                            });
                             _.each(c.volumeMounts, function(v){
                                 if (v.isPersistent) {
                                     var entry = {name: v.name, persistentDisk: v.persistentDisk};
@@ -228,12 +248,9 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                     if (used.length) {
                                         used[0].used = true;
                                     }
+                                    data.get('volumes').push(entry);
                                     delete v.persistentDisk;
                                 }
-                                else {
-                                    var entry = {name: v.name, emptyDir: {}};
-                                }
-                                data.get('volumes').push(entry);
                                 delete v.isPersistent;
                             });
                         });

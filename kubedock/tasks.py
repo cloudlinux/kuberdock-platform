@@ -9,7 +9,6 @@ import time
 from collections import OrderedDict
 from datetime import datetime
 
-from .api.namespaces import Namespaces
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
 from .utils import update_dict, get_api_url, send_event, send_logs
@@ -64,18 +63,6 @@ def get_services_nodelay(namespace=None):
         url = get_api_url('services', use_v3=True)
     r = requests.get(url)
     return r.json()
-
-
-def create_containers_nodelay(data):
-    kind = data['kind'][0].lower() + data['kind'][1:] + 's'
-    namespace = data.get('namespace')
-    if namespace is not None:
-        if not Namespaces.get(namespace):
-            Namespaces.create(namespace)
-    url = get_api_url(kind, namespace=namespace, use_v3=True)
-    r = requests.post(url, data=json.dumps(data))
-    res = r.text
-    return res
 
 
 def create_service_nodelay(data, namespace=None):

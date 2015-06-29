@@ -59,17 +59,13 @@
         <div class="blue-line"><div>
       </div>
     </div>
+
     {% assets "vendor_js" -%}
       <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
     {% block app_js_asset %}
-        {% assets "app_js" -%}
-          <script src="{{ ASSET_URL }}"></script>
-        {% endassets %}
         <script type="text/javascript">
-            var initPodCollection = new KubeDock.Data.PodCollection({{ pod_collection|safe }});
-
             function autoClosingMessage(selector, delay) {
                 var message = $(selector).alert();
                 window.setTimeout(function() { message.slideUp() }, delay);

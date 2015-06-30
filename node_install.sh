@@ -188,6 +188,7 @@ EOF
 
 
 echo "Starting Flanneld ..."
+rm -f /run/flannel/docker 2>/dev/null
 systemctl enable flanneld
 check_status
 systemctl restart flanneld
@@ -210,14 +211,28 @@ cat > /etc/rsyslog.d/kuberdock.conf << EOF
 *.* @127.0.0.1:5140
 EOF
 
+
+echo 'Restarting rsyslog...'
 systemctl restart rsyslog
 check_status
 
 
 
 # 9. prepare things for logging pod
-echo 'Preparing logs collection...'
 
+# waiting for flanneld to start.
+count=0
+while [ ! -f /run/flannel/docker ]
+do
+  sleep 0.2;
+  let "count += 1"
+  if [ $count -ge 100 ];then
+    echo "Waiting for flanneld longer then 20 seconds. Exiting. $EXIT_MESSAGE"
+    exit 1
+  fi
+done
+
+echo 'Restarting docker...'
 # pull images (update if already exists)
 systemctl enable docker
 check_status
@@ -226,10 +241,6 @@ check_status
 
 docker pull kuberdock/fluentd:1.0 > /dev/null 2>&1 &
 docker pull kuberdock/elasticsearch:1.0 > /dev/null 2>&1 &
-
-if [ -d /etc/kubernetes/manifests ]; then
-  rm -rf /etc/kubernetes/manifests/
-fi
 
 for c in $(docker ps -a | grep 'kuberdock-.*\.file' | awk '{print $1}'); do
   docker rm -f $c > /dev/null 2>&1

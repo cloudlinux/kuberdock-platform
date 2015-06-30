@@ -286,8 +286,9 @@ class KuberDock(KubeCtl):
             pulled['volumeMounts'] = [{'mountPath': x}
                 for x in pulled['volumeMounts']]
         if 'ports' in pulled:
-            pulled['ports'] = [{'containerPort': int(x)}
-                for x in pulled['ports']]
+            pulled['ports'] = [
+                {'containerPort': x.get('number'), 'protocol': x.get('protocol')}
+                    for x in pulled['ports']]
 
         image.update(pulled)
         self.containers.append(image)

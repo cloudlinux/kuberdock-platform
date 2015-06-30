@@ -71,14 +71,12 @@ define(['marionette', 'utils'],
             },
 
             ui: {
-                deleteNetwork : '#deleteNetwork',
                 block_ip      : '.block_ip',
                 unblock_ip    : '.unblock_ip',
                 unbind_ip     : '.unbind_ip'
             },
 
             events: {
-                'click @ui.deleteNetwork' : 'deleteNetwork_btn',
                 'click @ui.block_ip'      : 'blockIP',
                 'click @ui.unblock_ip'    : 'unblockIP',
                 'click @ui.unbind_ip'     : 'unbindIP'
@@ -100,23 +98,6 @@ define(['marionette', 'utils'],
                 return{
                     allocation : allocation
                 }
-            },
-
-            deleteNetwork_btn: function(){
-                var that = this;
-                utils.modalDialogDelete({
-                    title: 'Delete network',
-                    body: "Do you really want to delete network '" +
-                        this.model.get('network') + "'?",
-                    small: true,
-                    show: true,
-                    footer: {
-                        buttonOk: function(){
-                            that.model.destroy({wait: true});
-                        },
-                        buttonCancel: true
-                    }
-                });
             },
 
             blockIP: function(btn){

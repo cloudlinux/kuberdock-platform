@@ -86,7 +86,8 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.profileUser'    : 'profileUser_btn',
                 'click @ui.remove_user'    : 'removeUser',
                 'click @ui.block_user'     : 'blockUser',
-                'click @ui.activated_user' : 'activatedUser'
+                'click @ui.activated_user' : 'activatedUser',
+                'click'                    : 'checkUser'
             },
 
             templateHelpers: function(){
@@ -128,6 +129,10 @@ define(['marionette', 'paginator', 'utils'],
 
             profileUser_btn: function(){
                 App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
+            },
+
+            checkUser: function(){
+                this.$el.toggleClass('checked').siblings().removeClass('checked');
             }
         });
 

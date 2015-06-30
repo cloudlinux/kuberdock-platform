@@ -82,14 +82,13 @@ define(['pods_app/app',
                 'start'    : '.start-btn',
                 'stop'     : '.stop-btn',
                 'delete'   : '.terminate-btn',
-                'checkbox' : 'label.custom span'
             },
 
             events: {
                 'click @ui.start'    : 'startItem',
                 'click @ui.stop'     : 'stopItem',
                 'click @ui.delete'   : 'deleteItem',
-                'click @ui.checkbox' : 'checkItem',
+                'click'              : 'checkItem',
             },
 
             command: function(evt, cmd){

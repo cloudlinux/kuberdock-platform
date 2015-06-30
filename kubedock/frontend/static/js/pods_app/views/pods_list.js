@@ -118,7 +118,7 @@ define(['pods_app/app',
                 'click @ui.start'      : 'startItem',
                 'click @ui.stop'       : 'stopItem',
                 'click @ui.terminate'  : 'terminateItem',
-                'click @ui.checkbox'   : 'checkItem',
+                'click'                : 'checkItem',
             },
 
             onRender: function(){

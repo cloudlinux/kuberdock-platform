@@ -474,9 +474,6 @@ do_and_log systemctl restart postgresql
 cd $KUBERDOCK_DIR
 ADMIN_PASSWORD="CHANGE_ME"
 ADMIN_PASSWORD=$(tr -dc 'A-Za-z0-9-_*' < /dev/urandom | head -c10)
-if [ ! -d /var/opt/kuberdock/kubedock/updates/kdmigrations/versions ];then
-    mkdir -p /var/opt/kuberdock/kubedock/updates/kdmigrations/versions
-fi
 do_and_log python manage.py createdb $ADMIN_PASSWORD
 
 

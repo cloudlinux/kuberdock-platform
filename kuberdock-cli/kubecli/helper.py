@@ -88,23 +88,21 @@ class KubeQuery(object):
 
 class PrintOut(object):
 
-    def _check_defaults(self):
-        if getattr(self, '_WANTS_HEADER', None) is None:
-            self._WANTS_HEADER = False
-        if getattr(self, '_FIELDS', None) is None:
-            self._FIELDS = (('name', 32),)
-        if getattr(self, '_INDENT', None) is None:
-            self._INDENT = 4
+    def __getattr__(self, attr):
+        if attr == '_WANTS_HEADER':
+            return False
+        if attr == '_FIELDS':
+            return (('name', 32),)
+        if attr == '_INDENT':
+            return 4
 
     def _list(self, data):
-        self._check_defaults()
         if self.json:
             self._print_json(data)
         else:
             self._print(data)
 
     def _show(self, data):
-        self._check_defaults()
         if self.json:
             self._print_json(data)
         else:

@@ -185,7 +185,7 @@ class KuberDock(KubeCtl):
             with open(self._data_path) as data:
                 for attr, val in json.load(data).items():
                     setattr(self, attr, val)
-        except (IOError, ValueError): # no file, no JSON
+        except (IOError, ValueError, TypeError): # no file, no JSON
             pass
 
     def _save(self):
@@ -206,9 +206,9 @@ class KuberDock(KubeCtl):
             json.dump(self._prepare(), o)
 
     def _prepare(self):
-        valid = set(['name', 'containers', 'volumes', 'service', 'cluster',
+        valid = set(['name', 'containers', 'volumes', 'service', 'replicationController',
                      'replicas', 'set_public_ip', 'kube_type', 'restartPolicy', 'public_ip'])
-        self.cluster = True
+        self.replicationController = True
         self._prepare_volumes()
         self._prepare_ports()
         data = dict(filter((lambda x: x[0] in valid), vars(self).items()))

@@ -147,20 +147,22 @@ class KuberDock(KubeCtl):
         self._list([{'name': k, 'id': v} for k, v in data.items()])
 
     def start(self):
+        self._FIELDS = (('status', 32),)
         pod = self._get_pod()
         if pod['status'] == 'stopped':
             pod['command'] = 'start'
-        res = self._put('/api/podapi/'+pod['id'], json.dumps(pod))
+        res = self._unwrap(self._put('/api/podapi/'+pod['id'], json.dumps(pod)))
         if self.json:
             self._print_json(res)
         else:
             self._print(res)
 
     def stop(self):
+        self._FIELDS = (('status', 32),)
         pod = self._get_pod()
         if pod['status'] in ['running', 'pending']:
             pod['command'] = 'stop'
-        res = self._put('/api/podapi/'+pod['id'], json.dumps(pod))
+        res = self._unwrap(self._put('/api/podapi/'+pod['id'], json.dumps(pod)))
         if self.json:
             self._print_json(res)
         else:
@@ -237,7 +239,7 @@ class KuberDock(KubeCtl):
         is_public_ip = []
         for c in self.containers:
             for p in c['ports']:
-                is_public_ip.append(p['isPublic'])
+                is_public_ip.append(p.get('isPublic'))
         if True in is_public_ip:
             ip = self._get_free_host()
             if ip:

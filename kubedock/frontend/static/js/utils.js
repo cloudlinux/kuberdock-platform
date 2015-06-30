@@ -13,7 +13,7 @@ define(function () {
                 $.notify(err, {
                     autoHideDelay: 15000,
                     clickToHide: true,
-                    globalPosition: 'top center',
+                    globalPosition: 'top left',
                     className: 'error'
                 });
             },
@@ -25,8 +25,8 @@ define(function () {
                     err = JSON.stringify(err);
                 $.notify(err, {
                     autoHideDelay: 5000,
-                    globalPosition: 'top center',
-                    className: 'danger'
+                    globalPosition: 'top left',
+                    className: 'error'
                 });
 
                 // Redirect to the login page.
@@ -49,8 +49,8 @@ define(function () {
                     err = JSON.stringify(err);
                 $.notify(err, {
                     autoHideDelay: 5000,
-                    globalPosition: 'top center',
-                    className: 'danger'
+                    globalPosition: 'top left',
+                    className: 'error'
                 });
             }
         }

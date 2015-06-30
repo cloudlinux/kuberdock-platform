@@ -19,15 +19,15 @@
                     <li role="presentation" class="stats go-to-logs">Logs</li>
                     <li role="presentation" class="active">Monitoring</li>
                     <!-- <li role="presentation" class="go-to-volumes">Timelines</li> -->
-                    <li role="presentation" class="configuration">
+                    <li role="presentation" class="go-to-ports configuration">General</li>
+                    <li role="presentation" class="go-to-envs">Variables</li>
+                    <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
+<!--                     <li role="presentation" class="configuration">
                         <span class="go-to-ports">Configuration</span>
                         <ul class="nav sub-nav">
-                            <li role="presentation" class="go-to-ports">General</li>
-                            <li role="presentation" class="go-to-envs">Variables</li>
-                            <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
                         </ul>
                     </li>
-                </ul>
+                </ul> -->
             </div>
             <div id="details_content" class="col-xs-10 monitoring-tab no-padding">
                 <div id="tab-content">

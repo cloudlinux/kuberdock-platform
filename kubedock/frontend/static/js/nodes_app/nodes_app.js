@@ -40,6 +40,25 @@ function modalDialog(options){
     if(options.large) modal.addClass('bs-example-modal-lg');
     if(options.small) modal.addClass('bs-example-modal-sm');
     if(options.show) modal.modal('show');
+    if(options.footer){
+        modal.find('.modal-footer').empty();
+        if(options.footer.buttonOk){
+            modal.find('.modal-footer').append(
+                $('<button type="button" class="btn blue" ' +
+                      'data-dismiss="modal">').unbind('click')
+                    .bind('click', options.footer.buttonOk)
+                    .text('Ok')
+            )
+        }
+        if(options.footer.buttonCancel){
+            if(options.footer.buttonCancel === true){
+                modal.find('.modal-footer').prepend(
+                    $('<button type="button" class="btn"' +
+                          'data-dismiss="modal">Cancel</button>')
+                )
+            }
+        }
+    }
     return modal;
 };
 
@@ -75,10 +94,10 @@ var _ajaxStatusCodes = {
             if(typeof err === "object")
                 err = JSON.stringify(err);
             $.notify(err, {
-                autoHideDelay: 15000,
+                autoHideDelay: 5000,
                 clickToHide: true,
-                globalPosition: 'top center',
-                className: 'error'
+                globalPosition: 'top left',
+                className: 'error',
             });
         },
         401: function (xhr) {
@@ -89,8 +108,8 @@ var _ajaxStatusCodes = {
                 err = JSON.stringify(err);
             $.notify(err, {
                 autoHideDelay: 5000,
-                globalPosition: 'top center',
-                className: 'danger'
+                globalPosition: 'top left',
+                className: 'error',
             });
 
             // Redirect to the login page.
@@ -112,9 +131,8 @@ var _ajaxStatusCodes = {
             if(typeof err === "object")
                 err = JSON.stringify(err);
             $.notify(err, {
-                autoHideDelay: 5000,
-                globalPosition: 'top center',
-                className: 'danger'
+                globalPosition: 'top left',
+                className: 'error'
             });
         }
     }
@@ -455,9 +473,23 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         redeployNode: function() {
-            $.ajax({
-                url: '/api/nodes/redeploy/' + this.model.id,
+            var that = this,
+                name = that.model.get('hostname');
+            modalDialog({
+                title: "Re-install " + name + "?",
+                body: "Are you sure want to re-install node '" + name + "'?",
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        $.ajax({
+                            url: '/api/nodes/redeploy/' + that.model.id,
+                        });
+                    },
+                    buttonCancel: true
+                }
             });
+
         },
 
         deleteNode: function() {

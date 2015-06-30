@@ -534,7 +534,7 @@ body{
                         content: '';
                         height: 11px;
                         position: absolute;;
-                        background: url('../img/checkbox-checked.png') 0 0 no-repeat;
+                        background: url('../img/checkbox-checked-blue.png') 0 0 no-repeat;
                     }
                 }
             }
@@ -777,8 +777,47 @@ body{
             background-color: #5CA959;
         }
     }
+    .notifyjs-corner{
+        margin: 0;
+        width: 100%;
+        .notifyjs-wrapper{
+            margin: 0 0 5px 0;
+        }
+        .notifyjs-container{
+            margin: 0;
+            .notifyjs-bootstrap-base{
+                .border-radius(0);
+                .opacity(0.9);
+                padding: 15px;
+                border: 0;
+                color: #fff;
+                text-align: center;
+                background-image: none;
+                border-color: transparent;
+                &:after{
+                    .opacity(1);
+                    color: #fff;
+                    font-size: 18px;
+                    font-weight: 100;
+                    line-height: 16px;
+                    content: 'x';
+                    font-weight: 400;
+                    right: 16px;
+                    position: absolute;
+                }
+                span{
+                    font-weight: 400;
+                }
+                &.notifyjs-bootstrap-error{
+                    background-color: #E85546;
+                }
+                &.notifyjs-bootstrap-success{
+                    background-color: #5CA959;
+                }
+            }
+        }
+    }
     /*end alert messages */
-
 
     @import "pods.less";
     @import "nodes.less";

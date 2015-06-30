@@ -183,13 +183,13 @@
                     <li role="presentation" class="stats go-to-logs">Logs</li>
                     <li role="presentation" class="go-to-stats">Monitoring</li>
                     <!-- <li role="presentation" class="go-to-volumes">Timelines</li> -->
-                    <li role="presentation" class="configuration active">Configuration
+                    <li role="presentation" class="configuration active">General</li>
+                    <li role="presentation" class="go-to-envs">Variables</li>
+                    <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
+<!--                     <li role="presentation" class="configuration active">Configuration
                         <ul class="nav sub-nav">
-                            <li role="presentation" class="active">General</li>
-                            <li role="presentation" class="go-to-envs">Variables</li>
-                            <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
                         </ul>
-                    </li>
+                    </li> -->
                 </ul>
             </div>
             <div id="details_content" class="col-sm-10 no-padding configuration-general-tab">

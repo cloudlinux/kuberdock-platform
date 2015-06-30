@@ -22,8 +22,6 @@ def parser(subs):
     c_set.add_argument('--public', action="store_true", help="Assign a public IP address to container", dest="set_public_ip")
     c_set.add_argument('--restart-policy', default="Always", help="Set container restart policy",
                        dest="restartPolicy", choices=['Always', 'Never', 'OnFailure'])
-    c_set.add_argument('--run', action="store_true", help="Send this container data to KuberDock to run")
-    c_set.add_argument('--save-only', action="store_true", help="Send this container data to KuberDock to save")
 
     c_del = action.add_parser('delete')
     c_del.add_argument('name', help="Container name")
@@ -36,6 +34,9 @@ def parser(subs):
 
     c_start = action.add_parser('save')
     c_start.add_argument('name', help="Container name")
+
+    c_forget = action.add_parser('forget')
+    c_forget.add_argument('name', nargs='?', default='', help="Container name to forget")
 
     action.add_parser('list')
     #c_list = action.add_parser('list')

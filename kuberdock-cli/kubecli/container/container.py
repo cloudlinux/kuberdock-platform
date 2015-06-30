@@ -168,6 +168,35 @@ class KuberDock(KubeCtl):
         else:
             self._print(res)
 
+    def forget(self):
+        """
+        Deletes one or all pending containers
+        """
+        if self.name:
+            return self._forget_one()
+        return self._forget_all()
+
+
+    def _forget_all(self):
+        """
+        Deletes all pending containers
+        """
+        try:
+            for f in os.listdir(self._kube_path):
+                if not f.endswith(self.EXT):
+                    continue
+                _path = os.path.join(self._kube_path, f)
+                os.unlink(_path)
+        except OSError:
+            pass
+
+    def _forget_one(self):
+        """
+        Deletes a given pending container
+        """
+        if self._data_path:
+            os.unlink(self._data_path)
+
     def _get_pod(self):
         data = self._unwrap(self._get('/api/podapi/'))
         item = [i for i in data if i['name'] == self.name]

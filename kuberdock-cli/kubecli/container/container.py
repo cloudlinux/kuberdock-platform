@@ -94,10 +94,14 @@ class KuberDock(KubeCtl):
                 except AttributeError:
                     continue
             if i.ports:
-                operator.methodcaller(
-                    'set_public', self.set_public_ip, self.index)(i)
+                for k, v in enumerate(i.ports):
+                    operator.methodcaller('set_public', self.set_public_ip, k)(i)
 
-        self._save()
+        if self.delete is None:
+            self._save()
+        else:
+            self._delete_container_image()
+            self._save()
 
     def save(self):
         """
@@ -348,3 +352,6 @@ class KuberDock(KubeCtl):
         Gets free IP address from backend ippool
         """
         return self._unwrap(self._get('/api/ippool/getFreeHost'))
+
+    def _delete_container_image(self):
+        self.containers = [c for c in self.containers if c['image'] != self.delete]

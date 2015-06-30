@@ -81,7 +81,7 @@ define(['pods_app/app',
             ui: {
                 'start'    : '.start-btn',
                 'stop'     : '.stop-btn',
-                'delete'   : '.terminate-btn',
+                'delete'   : '.terminate-btn'
             },
 
             events: {

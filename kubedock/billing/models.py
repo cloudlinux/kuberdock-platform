@@ -29,9 +29,7 @@ class Package(db.Model):
     suffix = db.Column(db.String, nullable=True)
     price_ip = db.Column(db.Float, default=0.0, nullable=False)
     price_pstorage = db.Column(db.Float, default=0.0, nullable=False)
-    value_pstorage = db.Column(db.Float, default=0.0, nullable=False)
     price_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
-    value_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
     kubes = db.relationship('PackageKube', backref=db.backref('package'))
     users = db.relationship("User", backref="package")
 

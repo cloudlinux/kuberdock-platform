@@ -93,7 +93,7 @@
                 <p class="clearfix">
                     <span class="pull-left"><b>Persistent<br>storage:</b></span>
                     <span class="pull-right"><span id="pstorage_price">
-                        <%- price_pstorage %> per <%- package.value_pstorage %> GB
+                        <%- price_pstorage %> per 1 MB
                     </span></span>
                 </p>
                 <p class="total"><b>Total price:</b> <span id="total_price"><%- total_price %></span></p>

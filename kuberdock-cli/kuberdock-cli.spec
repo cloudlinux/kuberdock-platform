@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 7%{?dist}.cloudlinux
+Release: 8%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -47,6 +47,13 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Wed Jul 01 2015 Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-8
+- AC-535: added command kcli kuberdock forget [NAME] to delete one or all pending pods
+- AC-546 KCLI Delete image from container not worked
+- AC-530: fixed. Added self._FIELDS for start/stop methods
+- AC-531: in PrintOut mix-in default attributes checks changed to use __getattr__
+- AC-567: KCLI. Traceback в команде --mount-path. Fixed
+
 * Thu Jun 25 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-7
 - AC-568: Fixed 'Unknown format' error on 'kcli kubectl describe pods <NAME>' command
 - AC-527: Added comments for user and password

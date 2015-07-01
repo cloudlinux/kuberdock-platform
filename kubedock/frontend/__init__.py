@@ -10,12 +10,15 @@ from ..utils import APIError
 from . import assets
 
 
-def create_app(settings_override=None):
+def create_app(settings_override=None, fake_sessions=False):
     skip_paths = []
     app = factory.create_app(__name__, __path__, settings_override)
-    app.session_interface = sessions.ManagedSessionInterface(
-        sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
-        skip_paths, datetime.timedelta(days=1))
+    if fake_sessions:
+        app.session_interface = sessions.FakeSessionInterface()
+    else:
+        app.session_interface = sessions.ManagedSessionInterface(
+            sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
+            skip_paths, datetime.timedelta(days=1))
     assets.init_app(app)
     
     # registering blueprings

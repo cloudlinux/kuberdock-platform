@@ -127,7 +127,7 @@ class NodeManager(Command):
         else:
             print res.get_data()
 
-app = create_app()
+app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                          'kubedock',

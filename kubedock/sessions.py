@@ -20,6 +20,12 @@ def _generate_sid():
 def _calc_hmac(body, secret):
     return base64.b64encode(hmac.new(secret, body, hashlib.sha1).digest())
 
+class FakeSessionInterface(SessionInterface):
+    def open_session(self, app, req):
+        pass
+    def save_session(self, app, sess, res):
+        pass
+
 class ManagedSession(CallbackDict, SessionMixin):
     def __init__(self, initial=None, sid=None, new=False, randval=None, hmac_digest=None):
         def on_update(self):

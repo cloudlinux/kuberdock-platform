@@ -45,7 +45,7 @@ def get_user_package():
     current_app.logger.debug(user.package.kubes)
     return jsonify({
         'status': 'OK',
-        'data': dict([(k.name, k.id) for k in user.package.kubes])})
+        'data': dict([(k.kubes.name, k.kubes.id) for k in user.package.kubes])})
 
 
 @pricing.route('/packages/<package_id>', methods=['PUT'])

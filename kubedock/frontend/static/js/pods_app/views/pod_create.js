@@ -355,6 +355,7 @@ define(['pods_app/app',
                 if (!this.model.has('volumeMounts')) {
                     this.model.set({'volumeMounts': []});
                 }
+                this.modelOptions = options;
             },
 
             addItem: function(evt){
@@ -476,11 +477,12 @@ define(['pods_app/app',
 
             goNext: function(evt){
                 var that = this,
-                    uniquePodPorts = [],
-                    uniqueContainePorts = [],
-                    podPorts = this.ui.podPorts,
+                    podContainersPorts = [],
+                    uniqueContainerPorts = [],
+                    podContainersHostPorts = [],
+                    uniqueContainerHostPorts = [],
                     vm = this.model.get('volumeMounts'),
-                    containerPorts = this.ui.containerPort;
+                    containers = this.modelOptions.model.get('containers');
 
                 /* mountPath check */
                 for (var i=0; i<vm.length; i++) {
@@ -493,36 +495,24 @@ define(['pods_app/app',
                 };
 
                 /* check ports */
-                _.each(containerPorts, function(el){
-                    var value = parseInt($(el).find('span').text());
-                    if($.inArray( value, uniqueContainePorts) === -1) uniqueContainePorts.push(value);
-                });
+                _.each(containers, function(container){
+                    _.filter(container.ports, function(item){return item});
+                    _.each(container.ports, function(item){
+                        var port = parseInt(item.containerPort,10),
+                            hostPort = parseInt(item.hostPort,10);
 
-                _.each(podPorts, function(el){
-                    var value = parseInt($(el).find('span').text());
-                    if($.inArray( value, uniquePodPorts) === -1) uniquePodPorts.push(value);
-                });
+                        if (port) podContainersPorts.push(port);
+                        if (hostPort) podContainersHostPorts.push(hostPort);
+                    })
+                })
 
-                if (uniqueContainePorts.length != containerPorts.length){
-                    _.each(containerPorts,function(el, i){
-                        var value = parseInt($(el).find('span').text());
-                        for (var i = uniqueContainePorts.length - 1; i >= 0; i--) {
-                            if (uniqueContainePorts[i] == value ) {
-                                utils.modelError('You have a duplicate container port');
-                                break
-                            }
-                        };
-                    })
-                } else if( uniquePodPorts.length != podPorts.length ){
-                     _.each(podPorts,function(el, i){
-                        var value = parseInt($(el).find('span').text());
-                        for (var i = uniquePodPorts.length - 1; i >= 0; i--) {
-                            if (uniquePodPorts[i] == value ) {
-                                utils.modelError('You have a duplicate pod port');
-                                break
-                            }
-                        };
-                    })
+                uniqueContainerPorts = _.uniq(podContainersPorts);
+                uniqueContainerHostPorts = _.uniq(podContainersHostPorts);
+
+                if (podContainersPorts.length != uniqueContainerPorts.length){
+                    utils.modelError('You have a duplicate container port in ' + this.model.get('name') + ' container!');
+                }  else if (podContainersHostPorts.length != uniqueContainerHostPorts.length){
+                    utils.modelError('You have a duplicate pod port in ' + this.model.get('name') + ' container!');
                 } else {
                     this.trigger('step:envconf', this);
                 }
@@ -940,7 +930,7 @@ define(['pods_app/app',
                         utils.modelError(xhr);
                     }
                 });
-                
+
                 //$.ajax({
                 //    url: '/api/pods/containers',
                 //    data: {action: cmd, host: host, containers: _containers.join(','),

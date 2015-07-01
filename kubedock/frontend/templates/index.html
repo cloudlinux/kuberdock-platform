@@ -75,7 +75,7 @@
         {% endblock %}
 
         {% block app_js_asset %}
-        <script data-main="{{ url_for('static', filename='js/pods_app/require_pods.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
+        <script data-main="{{ url_for('static', filename='js/pods_app/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
         <script type="text/javascript">
             var podCollectionData = {{ pod_collection|safe }},
                 containerCollection,

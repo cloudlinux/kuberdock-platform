@@ -73,6 +73,11 @@ Kuberdock
 %setup -n %{name}-%{version}
 
 %build
+# TODO nodes app still not on require.js, change here when merge all apps in one
+start='urlArgs: "bust="'
+replace='(new Date()).getTime()'
+replace_with=$(date +"%s")
+sed -i "/$start/ {s/$replace/$replace_with/}" kubedock/frontend/static/js/*/require_main.js
 
 %install
 rm -rf %{buildroot}

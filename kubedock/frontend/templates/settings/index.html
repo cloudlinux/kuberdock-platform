@@ -285,28 +285,30 @@
                             <thead>
                                 <tr>
                                     <th>Volume Name</th>
-                                    <th>Size/used GB</th>
+                                    <th>Size</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="col-md-2">name 1</td>
-                                    <td class="col-md-2">2 (1.4) GB</td>
-                                    <td>
-                                        <span class="stopped">My best Pod 1</span>
-                                        <span class="terminate-btn pull-right"></span>
-                                        <span class="unmount pull-right"></span>
-                                        <span class="onsearsh pull-right"></span>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
                 <div class="buttons clearfix"></div>
             </div>
         </div>
+    </script>
+    
+    <script type="text/template" id="persistent-volumes-item-template">
+        <td class="col-md-2"><%- name %></td>
+        <td class="col-md-2"><%- size %>&nbsp;GB</td>
+        <td>
+            <span class="<%- in_use ? 'stopped' : 'running' %>">
+                <%- pod %>
+            </span>
+            <span class="terminate-btn pull-right"></span>
+            <span class="unmount pull-right"></span>
+            <span class="onsearsh pull-right"></span>
+        </td>
     </script>
 
     <!-- main template -->

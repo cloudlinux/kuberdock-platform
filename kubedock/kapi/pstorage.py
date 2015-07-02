@@ -1,12 +1,15 @@
+import base64
 import boto.ec2
 import json
 
 from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
 from hashlib import md5
+from operator import itemgetter
 
 from ..core import db
 from ..nodes.models import Node
+from ..pods.models import Pod
 from ..settings import PD_SEPARATOR
 
 
@@ -19,6 +22,7 @@ class PersistentStorage(object):
         """
         if not hasattr(self, '_drives'):
             self._get_drives()
+        self._bind_to_pod()
         if drive_id is None:
             return self._drives
         drives = [i for i in self._drives if i['id'] == drive_id]
@@ -33,6 +37,7 @@ class PersistentStorage(object):
         """
         if not hasattr(self, '_drives'):
             self._get_drives()
+        self._bind_to_pod()
         # strip owner
         if device_id is None:
             return [dict([(k, v) for k, v in d.items() if k != 'owner'])
@@ -48,7 +53,7 @@ class PersistentStorage(object):
         Returns unmapped drives
         :return: list -> list of dicts of unmapped drives
         """
-        return [d for d in self._drives if not d['in-use']]
+        return [d for d in self._drives if not d['in_use']]
 
     def get_user_unmapped_drives(self, user):
         """
@@ -73,7 +78,7 @@ class PersistentStorage(object):
                 'name'   : name,
                 'owner'  : user.username,
                 'size'   : size,
-                'in-use' : False}
+                'in_use' : False}
             if hasattr(self, '_drives'):
                 self._drives.append(data)
             return data
@@ -101,6 +106,50 @@ class PersistentStorage(object):
             self._drives = [d for d in self._drives
                 if d['id'] != drive_id]
         return rv
+
+    def _get_pod_drives(self):
+        """
+        Pulls pod configs from DB and produces persistent drive -> pod name
+        mappings if any.
+        :return: dict -> 'drive name':'pod name' mapping
+        """
+        if hasattr(self, '_drives_from_db'):
+            return self._drives_from_db
+        self._drives_from_db = {}
+        pods = db.session.query(Pod).filter(Pod.status!='deleted')
+        for pod in pods:
+            try:
+                drive_names = self._find_persistent(json.loads(pod.config))
+                self._drives_from_db.update(dict.fromkeys(drive_names, pod.name))
+            except (TypeError, ValueError):
+                continue
+        return self._drives_from_db
+
+    @staticmethod
+    def _find_persistent(config):
+        """
+        Iterates through 'volume' list and gets 'scriptableDisk' entries.
+        Then base64-decodes them and returns
+        :param config: dict -> pod config as dict
+        :return: list -> list of names of persistent drives
+        """
+        data = []
+        for v in config['volumes']:
+            scriptable = v.get('scriptableDisk')
+            if scriptable:
+                data.append(base64.b64decode(scriptable['params']).split(';')[1])
+        return data
+
+    def _bind_to_pod(self):
+        """
+        If list of drives has mapped ones add pod it mounted to info
+        """
+        if not any(map(itemgetter('in_use'), self._drives)):
+            return
+        names = self._get_pod_drives()
+        for d in filter(itemgetter('in_use'), self._drives):
+            name = '{0}{1}{2}'.format(d['name'], PD_SEPARATOR, d['owner'])
+            d['pod'] = names.get(name)
 
     def _get_drives(self):
         """
@@ -141,10 +190,10 @@ class CephStorage(PersistentStorage):
         have additional values
         :return: dict -> device name mapped to mapping info
         """
-        all_devices = dict([(i['image'], {'size': i['size'], 'in-use': False})
+        all_devices = dict([(i['image'], {'size': i['size'], 'in_use': False})
             for i in json.loads(run('rbd list --long --format=json'))])
         mapped_devices = dict([
-            (j['name'], {'pool': j['pool'], 'device': j['device'], 'in-use': True})
+            (j['name'], {'pool': j['pool'], 'device': j['device'], 'in_use': True})
                 for j in json.loads(run('rbd showmapped --format=json')).values()])
         for device in mapped_devices:
             all_devices[device].update(mapped_devices[device])
@@ -192,7 +241,7 @@ class CephStorage(PersistentStorage):
             for name, data in raw_drives[node].items():
                 hashed = md5(name).hexdigest()
                 if hashed == drive_id:
-                    if data['in-use']:
+                    if data['in_use']:
                         return
                     with settings(host_string=node):
                         with settings(hide('running', 'warnings', 'stdout', 'stderr'),
@@ -211,7 +260,7 @@ class CephStorage(PersistentStorage):
         for node in raw_drives:
             for name, data in raw_drives[node].items():
                 if name == drive_name:
-                    if data['in-use']:
+                    if data['in_use']:
                         return
                     with settings(host_string=node):
                         with settings(hide('running', 'warnings', 'stdout', 'stderr'),
@@ -245,13 +294,13 @@ class CephStorage(PersistentStorage):
                          'owner' : user,
                          'size'  : int(raw_drives[node][item]['size'] / 1073741824),
                          'id'    : md5(item).hexdigest(),
-                         'in-use': raw_drives[node][item]['in-use']}
-                if raw_drives[node][item]['in-use']:
+                         'in_use': raw_drives[node][item]['in_use']}
+                if raw_drives[node][item]['in_use']:
                     entry['device'] = raw_drives[node][item].get('device')
                     entry['node'] = node
                 if item not in drives:
                     drives[item] = entry
-                elif item in drives and not drives[item]['in-use']:
+                elif item in drives and not drives[item]['in_use']:
                     drives[item].update(entry)
         self._drives = drives.values()
 
@@ -313,8 +362,8 @@ class AmazonStorage(PersistentStorage):
                      'owner' : user,
                      'size'  : vol.size,
                      'id'    : md5(item).hexdigest(),
-                     'in-use': True if vol.status == 'in-use' else False}
-            if vol.status == 'in-use':
+                     'in_use': True if vol.status == 'in_use' else False}
+            if vol.status == 'in_use':
                 entry['node'] = vol.attach_data.instance_id
                 entry['device'] = vol.attach_data.device
             self._drives.append(entry)

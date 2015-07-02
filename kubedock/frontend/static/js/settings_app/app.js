@@ -9,6 +9,13 @@ define(['marionette', 'utils'],
 
     SettingsApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
+        var unwrapper = function(response){
+            if (response.hasOwnProperty('data')) {
+                return response['data'];
+            }
+            return response;
+        };
+
         Data.CurrentUserModel = utils.BaseModel.extend({
             url: function(){ return '/api/users/editself' }
         });
@@ -29,6 +36,22 @@ define(['marionette', 'utils'],
         Data.NotificationsCollection = utils.BaseCollection.extend({
             url: '/api/settings/notifications',
             model: Data.NotificationModel
+        });
+
+        Data.PersistentStorageModel = Backbone.Model.extend({
+            defaults: {
+                name   : 'Nameless',
+                size   : 0,
+                in_use : false,
+                pod    : ''
+            },
+            parse: unwrapper
+        });
+
+        Data.PersistentStorageCollection = Backbone.Collection.extend({
+            url: '/api/pstorage',
+            model: Data.PersistentStorageModel,
+            parse: unwrapper
         });
 
     });
@@ -197,10 +220,38 @@ define(['marionette', 'utils'],
             template: '#publicIPs-template',
         });
 
+        /* Persistent volumes entry view */
+        Views.PersistentVolumesItemView = Marionette.ItemView.extend({
+            template: '#persistent-volumes-item-template',
+            tagName: 'tr',
+
+            ui: {
+                terminate: 'span.terminate-btn'
+            },
+
+            events: {
+                'click @ui.terminate': 'terminateVolume'
+            },
+
+            terminateVolume: function(){
+                var that = this;
+                if (this.model.get('in_use')) {
+                    return;
+                }
+                this.model.destroy({
+                    wait: true,
+                    success: function(){that.remove()}
+                });
+            }
+        });
+
         /* Persistent volumes Views */
         Views.PersistentVolumesView = Marionette.CompositeView.extend({
             template: '#persistent-volumes-template',
+            childView: Views.PersistentVolumesItemView,
+            childViewContainer: 'tbody'
         });
+
         /* Profile edit volumes Views */
         Views.ProfileEditView = Backbone.Marionette.ItemView.extend({
             template: '#user-edit-template',
@@ -486,12 +537,19 @@ define(['marionette', 'utils'],
             },
 
             showPersistentVolumes: function(){
-                var layout_view = new App.Views.SettingsLayout();
-                var persistent_volumes_view = new App.Views.PersistentVolumesView();
+                var layout_view = new App.Views.SettingsLayout(),
+                    collection = new App.Data.PersistentStorageCollection(),
+                    persistent_volumes_view = new App.Views.PersistentVolumesView({
+                        collection: collection
+                    }),
+                    promise = collection.fetch();
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show(persistent_volumes_view);
                 });
-                App.contents.show(layout_view);
+                promise.done(function(data){
+                    App.contents.show(layout_view);
+                });
+
             },
         });
 

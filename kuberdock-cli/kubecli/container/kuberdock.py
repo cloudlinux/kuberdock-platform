@@ -1,6 +1,7 @@
 from ..helper import make_config
 from .container import KuberDock
 
+
 def parser(subs):
     container = subs.add_parser('kuberdock')
     container.set_defaults(call=wrapper)
@@ -37,6 +38,14 @@ def parser(subs):
 
     c_forget = action.add_parser('forget')
     c_forget.add_argument('name', nargs='?', default='', help="Container name to forget")
+
+    c_search = action.add_parser('search')
+    c_search.add_argument('search_string', help="Search string")
+    c_search.add_argument('-p', '--page', default=0, type=int, help="Page to display")
+    c_search.add_argument('-R', '--registry', help="Registry to search in. By default dockerhub is used")
+
+    c_image_get = action.add_parser('image_info')
+    c_image_get.add_argument('image', help="Image name")
 
     action.add_parser('list')
     #c_list = action.add_parser('list')

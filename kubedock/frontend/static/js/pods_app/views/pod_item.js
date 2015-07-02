@@ -113,22 +113,10 @@ define(['pods_app/app',
                         preloader.hide();
                     },
                     error: function(xhr){
+                        preloader.hide();
                         utils.modelError(xhr);
                     }
                 });
-                //$.ajax({
-                //    url: '/api/pods/containers',
-                //    data: {action: cmd, host: host, containers: _containers.join(','),
-                //           pod_uuid: model.get('id')},
-                //    type: 'PUT',
-                //    dataType: 'JSON',
-                //    success: function(rs){
-                //        preloader.hide();
-                //    },
-                //    error: function(xhr){
-                //        utils.modelError(xhr);
-                //    }
-                //});
             },
             startItem: function(evt){
                 this.command(evt, 'start');
@@ -146,7 +134,7 @@ define(['pods_app/app',
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            this.command(evt, 'delete');
+                            that.command(evt, 'delete');
                         },
                         buttonCancel: true
                     }
@@ -171,8 +159,58 @@ define(['pods_app/app',
             childViewContainer: "tbody",
 
             events: {
-                'click .stop-checked'  : 'stopItems',
-                'click .start-checked' : 'startItems',
+                'click .stop-checked'        : 'stopItems',
+                'click .start-checked'       : 'startItems',
+                'click @ui.checkAllItems'    : 'checkAllItems',
+                'click @ui.removeContainers' : 'removeContainers',
+            },
+
+            ui: {
+                count             : '.count',
+                defaultTableHead  : '.main-table-head',
+                removeContainers  : '.removeContainers',
+                containersControl : '.containersControl',
+                checkAllItems     : 'table thead .custom',
+            },
+
+            childEvents: {
+                render: function() {
+                    var col = this.collection,
+                        count = 0;
+                    if (col.length != 0){
+                        _.each(col.models, function(model){
+                            if (model.is_checked) count++
+                        });
+                    }
+                    if ( count != 0 ) {
+                        this.ui.count.text('Item ' + count);
+
+                        this.ui.containersControl.show();
+                        this.ui.defaultTableHead.hide();
+                    } else {
+                        this.ui.containersControl.hide();
+                        this.ui.defaultTableHead.show();
+                    }
+                    if (count >= 2) this.ui.count.text('Items ' + count);
+                }
+            },
+
+            checkAllItems: function(){
+                var col = this.collection;
+
+                _.each(col.models, function(model){
+                    model.is_checked = true
+                });
+                this.render();
+            },
+
+            removeContainers: function(){
+                var col = this.collection;
+
+                _.each(col.models, function(model){
+                    if (model.is_checked) model.destroy()
+                });
+                this.render();
             },
 
             command: function(cmd){
@@ -396,5 +434,4 @@ define(['pods_app/app',
     });
 
     return Pods.Views.Item;
-
 });

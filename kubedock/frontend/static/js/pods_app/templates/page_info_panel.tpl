@@ -1,9 +1,6 @@
-<div class="containersControl">
-    <span class="count"></span><span class="removePods">Delete</span>
-</div>
 <table class="table" id="imagelist-table">
 <thead>
-    <tr>
+    <tr class="main-table-head">
         <th data-column="0" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><label class="custom"><input type="checkbox"><span></span></label></div></th>
         <th data-column="1" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner"><b class="caret"></b></div></th>
         <th data-column="2" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Image name<b class="caret"></b></div></th>
@@ -18,6 +15,9 @@
             <div class="tablesorter-header-inner">Deployed<b class="caret"></b></div>
         </th>
     </tr>
+    <tr class="containersControl">
+        <th colspan="6"><span class="count"></span><span class="removeContainers">Delete</span></th>
+    <tr>
 </thead>
 <tbody></tbody>
 </table>

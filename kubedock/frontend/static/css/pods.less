@@ -314,6 +314,19 @@
 .variables-table, #imagelist-table{
     margin-top: 10px;
 }
+#imagelist-table{
+    .containersControl{
+        height: initial;
+        position: initial;
+        line-height: initial;
+        th{
+            border: none;
+            .count{
+                color: #1d1d1d;
+            }
+        }
+    }
+}
 .podsControl, .containersControl{
     z-index: 1;
     width: 100%;
@@ -326,7 +339,7 @@
     .count{
         font-weight: bold;
     }
-    .removePods{
+    .removePods, .removeContainers{
         color: #3197ee;
         position: relative;
         padding-left: 40px;

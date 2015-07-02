@@ -67,6 +67,7 @@ define({
             title: t ? t : 'Error',
             body: typeof b == "string" ? b : b.responseJSON ? JSON.stringify(b.responseJSON): b.responseText,
             show: true,
+            buttonCancel: false,
         })
     }
 });

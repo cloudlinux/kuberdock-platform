@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 8%{?dist}.cloudlinux
+Release: 9%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -47,6 +47,10 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Fri Jul 03 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-9
+- AC-563 KCLI Merge image and kuberdock commands
+- AC-601 Fix
+
 * Wed Jul 01 2015 Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-8
 - AC-535: added command kcli kuberdock forget [NAME] to delete one or all pending pods
 - AC-546 KCLI Delete image from container not worked

@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 11%{?dist}.cloudlinux
+Release: 12%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -150,6 +150,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Fri Jul 03 2015 Igor Savenko <bliss@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-12
+- AC-474: User persistent storage page
+- add aws-kd-deploy
+- AC-552: Add bulk operation in container list table
+- AC-515, AC-516, AC-588: Design fixes
+- Moved ippool logic from view to kapi
+- AC-600: Implemeted basic functionality. Shows only used IPs
+
 * Wed Jul 01 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-11
 - AC-335: Add validation to dublicates containers ports
 - Added FakeSessionInterface

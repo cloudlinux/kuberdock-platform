@@ -66,9 +66,9 @@ define(['marionette', 'utils'],
 
         Views.NetworkItemMore = Backbone.Marionette.ItemView.extend({
             template: '#network-item-more-template',
-            className: function(){
-                return this.model.checked ? '' : 'hidden'
-            },
+            //className: function(){
+            //    return this.model.checked ? '' : 'hidden'
+            //},
 
             ui: {
                 block_ip      : '.block_ip',
@@ -316,10 +316,10 @@ define(['marionette', 'utils'],
                 var breadcrumb = new App.Views.BreadcrumbView();
                 var aside = new App.Views.AsideView();
                 var left = new App.Views.LeftView({
-                    collection: IPPoolApp.Data.networks
+                    collection: App.Data.networks
                 });
                 var right = new App.Views.RightView({
-                    collection: IPPoolApp.Data.networks
+                    collection: App.Data.networks
                 });
 
                 this.listenTo(layout_view, 'show', function(){
@@ -345,6 +345,7 @@ define(['marionette', 'utils'],
 
         IPPoolCRUD.addInitializer(function(){
             var controller = new IPPoolCRUD.Controller();
+            App.Data.networks = new App.Data.NetworksCollection(networksCollection);
             App.router = new Marionette.AppRouter({
                 controller: controller,
                 appRoutes: {

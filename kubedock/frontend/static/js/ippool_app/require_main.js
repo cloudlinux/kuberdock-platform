@@ -59,6 +59,6 @@ requirejs.config({
     }
 });
 require(['jquery', 'ippool_app/app', 'notify', 'jquery-ui', 'mask', 'dde'], function(jQuery, IPPoolApp){
-    IPPoolApp.Data.networks = new IPPoolApp.Data.NetworksCollection(networksCollection);
+    //IPPoolApp.Data.networks = new IPPoolApp.Data.NetworksCollection(networksCollection);
     IPPoolApp.start();
 });

@@ -4,17 +4,17 @@ from ..pods.models import IPPool, PodIP
 from ..api import APIError
 
 class IpAddrPool(object):
-    
+
     def get(self, net=None):
         if net is None:
             return [p.to_dict() for p in IPPool.all()]
         rv = IPPool.filter_by(network=net).first()
         if rv is not None:
             return rv.to_dict()
-        
+
     def get_free(self):
         return IPPool.get_free_host()
-    
+
     def create(self, data):
         try:
             network = ipaddress.ip_network(data.get('network'))
@@ -44,12 +44,20 @@ class IpAddrPool(object):
         if unbind_ip:
             self.unbind_address(unbind_ip)
         return net.to_dict()
-    
+
     def unbind_address(self, addr):
         ip = PodIP.filter_by(ip_address=int(ipaddress.ip_address(addr))).first()
         if ip:
             ip.delete()
-    
+
+    def get_user_addresses(self, user):
+        pods = dict([(pod.id, pod.name)
+            for pod in user.pods if pod.status != 'deleted'])
+        return [{
+                'id': str(ipaddress.ip_address(i.ip_address)),
+                'pod': pods[i.pod_id]
+            } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
+
     def delete(self, network):
         network = str(ipaddress.ip_network(network))
         if not IPPool.filter_by(network=network).first():

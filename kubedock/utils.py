@@ -469,7 +469,8 @@ class KubeUtils(object):
             return rv(*args, **kwargs)
         return inner
 
-    def _get_params(self):
+    @staticmethod
+    def _get_params():
         #pretty ugly. Wants refactoring
         params = {}
         data = request.args.to_dict()

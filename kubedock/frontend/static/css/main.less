@@ -188,10 +188,27 @@ body{
                     line-height: 34px;
                     font-family: @regular;
                     .editable{
-                        color: #ffffff;
+                        color: #a2a2a2;
                         display: inline;
+                        position: relative;
+                        margin-left: 32px;
                         font-weight: normal;
-                        border-color: #ffffff;
+                        border-color: #a2a2a2;
+                        &:before{
+                            content: '';
+                            top: 3px;
+                            left: -25px;
+                            width: 20px;
+                            height: 17px;
+                            font-size: 0;
+                            position: absolute;
+                            background: url('../img/pencil-big.png') 0 0 no-repeat
+                        }
+                        &:hover{
+                            .transition(all 300ms ease);
+                            color: #fff;
+                            border-color: #fff;
+                        }
                     }
                     a{
                         color: #ffffff;
@@ -304,7 +321,13 @@ body{
                             position: absolute;
                         }
                     }
-                    &#add_node, &#add_user, &#login_this_user, &#add_pod, &#create_network, &#redeploy_node, &#edit_user{
+                    &#add_pod,
+                    &#add_node,
+                    &#add_user,
+                    &#edit_user,
+                    &#redeploy_node,
+                    &#create_network,
+                    &#login_this_user{
                         margin-right: 25px;
                         padding: 0 0 0 38px;
                         &:before{
@@ -315,7 +338,9 @@ body{
                             height: 21px;
                         }
                     }
-                    &#add_node, &#add_pod, &#create_network{
+                    &#add_pod,
+                    &#add_node,
+                    &#create_network{
                         &:before{
                             background: url('../img/add-one.png') 0 0 no-repeat;
                         }
@@ -333,7 +358,8 @@ body{
                             background: url('../img/small-profile-ico.png') 0 0 no-repeat;
                         }
                     }
-                    &#rename_node, &#edit_user{
+                    &#edit_user,
+                    &#rename_node{
                         margin-right: 17px;
                         padding: 0 0 0 38px;
                         &:before{
@@ -357,7 +383,8 @@ body{
                             background: url('../img/stop-node.png') 0 0 no-repeat;
                         }
                     }
-                    &#delete_node, &#delete_user{
+                    &#delete_node,
+                    &#delete_user{
                         padding:0 0 0 28px;
                         &:before{
                             top: 8px;

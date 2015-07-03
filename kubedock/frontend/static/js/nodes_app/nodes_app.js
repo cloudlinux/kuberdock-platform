@@ -124,6 +124,17 @@ var _ajaxStatusCodes = {
                 '404 Page not found'
             );
         },
+        409: function(xhr){
+            var err = xhr.statusText;
+            if(xhr.responseJSON && xhr.responseJSON.data)
+                err = xhr.responseJSON.data;
+            if(typeof err === "object")
+                err = JSON.stringify(err);
+            $.notify(err, {
+                globalPosition: 'top left',
+                className: 'error'
+            });
+        },
         500: function(xhr){
             var err = xhr.statusText;
             if(xhr.responseJSON && xhr.responseJSON.data)
@@ -211,15 +222,18 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         tagName: 'tr',
 
         ui: {
-            'deleteNode' : '#deleteNode',
+            'deleteNode'       : '#deleteNode',
+            'detailedNode'     : 'button#detailedNode',
+            'upgradeNode'      : 'button#upgradeNode',
+            'configurationTab' : 'button#detailedConfigurationTab'
         },
 
         events: {
-            'click'                                 : 'checkItem',
-            'click @ui.deleteNode'                  : 'deleteNode',
-            'click button#detailedNode'             : 'detailedNode',
-            'click button#upgradeNode'              : 'detailedNode',
-            'click button#detailedConfigurationTab' : 'detailedConfigurationTab',
+            'click'                      : 'checkItem',
+            'click @ui.deleteNode'       : 'deleteNode',
+            'click @ui.detailedNode'     : 'detailedNode',
+            'click @ui.upgradeNode'      : 'detailedNode',
+            'click @ui.configurationTab' : 'detailedConfigurationTab',
         },
 
         templateHelpers: function(){
@@ -339,16 +353,15 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         events:{
-            'click @ui.node_add_btn'      : 'complete',
             'click @ui.node_cancel_btn'   : 'cancel',
+            'click @ui.node_add_btn'      : 'complete',
+            'click @ui.node_name'         : 'removeExtraClass',
             'change @ui.node_type_select' : 'change_kube_type',
             'change @ui.node_name'        : 'validateStep',
-            'click @ui.node_name'         : 'removeExtraClass',
         },
 
         change_kube_type: function(evt) {
             if (this.ui.node_type_select.value !== null) {
-                this.ui.node_type_select.addClass('success');
                 this.state.set('kube_type', parseInt(evt.target.value));
             }
         },
@@ -383,7 +396,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 Backbone.ajax({ url:"/api/nodes/checkhost/" + val }).done(function (data) {
                     that.state.set('ip', data.ip);
                     that.state.set('hostname', data.hostname);
-                    that.ui.node_name.addClass('success');
                 }).error(function(resp) {
 /*                    modelError(resp);*/
                     that.ui.node_name.addClass('error');
@@ -394,7 +406,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         removeExtraClass: function(){
             this.ui.node_name.hasClass('error') ? this.ui.node_name.removeClass('error') : '';
-            this.ui.node_name.hasClass('success') ? this.ui.node_name.removeClass('success') : '';
         },
 
         cancel: function () {
@@ -402,6 +413,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         onRender: function(){
+            this.state.set('kube_type', parseInt(this.ui.node_type_select.val()));
             this.ui.selectpicker.selectpicker();
         },
 
@@ -433,14 +445,16 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             'nodes_page' : 'div#nodes-page',
             'redeploy'   : 'button#redeploy_node',
             'delete'     : 'button#delete_node',
+            'addBtn'     : 'button#node-add-btn',
+            'tabItem'    : 'ul.nav li'
         },
 
         events: {
-            'click ul.nav li'           : 'changeTab',
-            'click button#node-add-btn' : 'saveNode',
-            'click @ui.nodes_page'      : 'breadcrumbClick',
-            'click @ui.redeploy'        : 'redeployNode',
-            'click @ui.delete'          : 'deleteNode',
+            'click @ui.tabItem'    : 'changeTab',
+            'click @ui.addBtn'     : 'saveNode',
+            'click @ui.nodes_page' : 'breadcrumbClick',
+            'click @ui.redeploy'   : 'redeployNode',
+            'click @ui.delete'     : 'deleteNode',
         },
 
         initialize: function (options) {
@@ -489,7 +503,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     buttonCancel: true
                 }
             });
-
         },
 
         deleteNode: function() {
@@ -639,7 +652,6 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
                 layout_view.main.show(nodes_list_view);
                 layout_view.pager.show(node_list_pager);
             });
-
             App.contents.show(layout_view);
         },
 
@@ -652,22 +664,18 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
             this.listenTo(find_step.state, 'change', function () {
                 layout_view.trigger('show');
             });
-
             this.listenTo(find_step.state, 'change', function () {
                 final_step.state.set('ip', find_step.state.get('ip'));
                 final_step.state.set('hostname', find_step.state.get('hostname'));
             });
-
             this.listenTo(final_step, 'show_console', function () {
                 layout_view.find_step.empty();
                 layout_view.final_step.show(console_view);
             });
-
             this.listenTo(layout_view, 'show', function(){
                 layout_view.find_step.show(find_step);
                 find_step.state.get('isFinished') ? layout_view.final_step.show(final_step) : {};
             });
-
             App.contents.show(layout_view);
         },
 

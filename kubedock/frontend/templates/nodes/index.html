@@ -388,7 +388,6 @@
             <div class="col-lg-6">
                 <label for="extra-options">Choose kube type</label>
                 <select class="kube_type selectpicker" id="extra-options">
-                    <option selected disabled>Choose kube type</option>
                     {% for kube_type in kube_types %}
                     <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
                     {% endfor %}

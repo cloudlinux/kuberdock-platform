@@ -986,13 +986,16 @@
                     border-right: 0;
                     background-color: #fff;
                 }
-                .search-image{
-                    width: 100%;
+                .search-image-inner{
                     height: 52px;
-                    border: none;
-                    font-size: 0;
-                    color: transparent;
-                    background: #466eb1 url('../img/search-ico-big.png') center center no-repeat;
+                    .search-image{
+                        width: 100%;
+                        height: 52px;
+                        border: none;
+                        font-size: 0;
+                        color: transparent;
+                        background: #466eb1 url('../img/search-ico-big.png') center center no-repeat;
+                    }
                 }
             }
             .login-user{
@@ -1015,7 +1018,7 @@
                     .item {
                         color: #000000;
                         height: 110px;
-                        margin: 15px 0;
+                        margin-bottom: 15px;
                         padding-left: 120px;
                         position: relative;
                         &:before{
@@ -1026,6 +1029,9 @@
                             height: 86px;
                             position: absolute;
                             background: url('../img/container-image.png') 0 0 no-repeat;
+                        }
+                        &:last-child{
+                            margin-bottom: 0;
                         }
                         .item-header-title {
                             font-size: 16px;
@@ -1081,10 +1087,11 @@
                 .search-control{
                     text-align: center;
                     > div {
-                        line-height: 20px;
-                        margin-bottom: 5px;
-                        padding: 6px 12px;
                         display: none;
+                        padding: 12px;
+                        line-height: 20px;
+                        position: relative;
+                        margin-top: -25px;
                         &.btn-more{
                             color: #3197ee;
                             margin-bottom: 0;

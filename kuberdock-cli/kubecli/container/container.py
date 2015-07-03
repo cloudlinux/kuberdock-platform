@@ -190,6 +190,12 @@ class KuberDock(KubeCtl):
         image = Image(vars(self))
         image.get()
 
+    def describe(self):
+        if not os.path.exists(self._data_path):
+            raise SystemExit("No such item")
+        data = self._prepare()
+        self._show(data)
+
     def _forget_all(self):
         """
         Deletes all pending containers

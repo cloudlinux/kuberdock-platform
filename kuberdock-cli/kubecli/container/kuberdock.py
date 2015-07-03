@@ -69,6 +69,9 @@ def parser(subs):
     #c_kubes = action.add_parser('kubes')
     action.add_parser('kubes')
 
+    c_desc = action.add_parser('describe')
+    c_desc.add_argument('name', help="Container name")
+
 
 def wrapper(data):
     args = make_config(data)

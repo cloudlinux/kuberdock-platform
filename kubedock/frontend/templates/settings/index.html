@@ -237,35 +237,7 @@
                                     <th>Pod Name</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="col-md-2">
-                                        192.168.0.1
-                                    </td>
-                                    <td>
-                                        <span class="stopped">My best Pod</span>
-                                        <span class="terminate-btn pull-right"></span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="col-md-2">
-                                        192.168.0.2
-                                    </td>
-                                    <td>
-                                        <span class="running">Free (unused)</span>
-                                        <span class="terminate-btn pull-right"></span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="col-md-2">
-                                        192.168.0.3
-                                    </td>
-                                    <td>
-                                        <span class="stopped">My best Pod 3</span>
-                                        <span class="terminate-btn pull-right"></span>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
@@ -274,6 +246,17 @@
                 </div>
             </div>
         </div>
+    </script>
+
+     <!-- settingsPublicIPsTab item template -->
+    <script type="text/template" id="publicIPs-item-template">
+        <td class="col-md-2">
+            <%- id %>
+        </td>
+        <td>
+            <span class="<%- pod ? 'stopped' : 'running' %>"><%- pod %></span>
+            <span class="terminate-btn pull-right"></span>
+        </td>
     </script>
 
     <script type="text/template" id="persistent-volumes-template">
@@ -297,7 +280,7 @@
             </div>
         </div>
     </script>
-    
+
     <script type="text/template" id="persistent-volumes-item-template">
         <td class="col-md-2"><%- name %></td>
         <td class="col-md-2"><%- size %>&nbsp;GB</td>

@@ -9,13 +9,6 @@ define(['marionette', 'utils'],
 
     SettingsApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
-        var unwrapper = function(response){
-            if (response.hasOwnProperty('data')) {
-                return response['data'];
-            }
-            return response;
-        };
-
         Data.CurrentUserModel = utils.BaseModel.extend({
             url: function(){ return '/api/users/editself' }
         });
@@ -38,20 +31,29 @@ define(['marionette', 'utils'],
             model: Data.NotificationModel
         });
 
-        Data.PersistentStorageModel = Backbone.Model.extend({
+        Data.PersistentStorageModel = utils.BaseModel.extend({
             defaults: {
                 name   : 'Nameless',
                 size   : 0,
                 in_use : false,
                 pod    : ''
             },
-            parse: unwrapper
         });
 
-        Data.PersistentStorageCollection = Backbone.Collection.extend({
+        Data.PersistentStorageCollection = utils.BaseCollection.extend({
             url: '/api/pstorage',
             model: Data.PersistentStorageModel,
-            parse: unwrapper
+        });
+
+        Data.UserAddressModel = utils.BaseModel.extend({
+            defaults: {
+                pod    : ''
+            },
+        });
+
+        Data.UserAddressCollection = utils.BaseCollection.extend({
+            url: '/api/ippool/userstat',
+            model: Data.UserAddressModel,
         });
 
     });
@@ -215,9 +217,21 @@ define(['marionette', 'utils'],
             childViewContainer: '#notification-templates',
             childView: Views.NotificationItemView
         });
+
+        /* Public IPs Views */
+        Views.PublicIPsItemView = Marionette.ItemView.extend({
+            template: '#publicIPs-item-template',
+            tagName: 'tr'
+        });
+
         /* Public IPs Views */
         Views.PublicIPsView = Marionette.CompositeView.extend({
             template: '#publicIPs-template',
+            childView: Views.PublicIPsItemView,
+            childViewContainer: 'tbody',
+            initialize: function(){
+                console.log(this.collection);
+            }
         });
 
         /* Persistent volumes entry view */
@@ -528,12 +542,18 @@ define(['marionette', 'utils'],
             },
 
             showIPs: function(){
-                var layout_view = new App.Views.SettingsLayout();
-                var public_ips_view = new App.Views.PublicIPsView();
+                var layout_view = new App.Views.SettingsLayout(),
+                    collection = new App.Data.UserAddressCollection(),
+                    public_ips_view = new App.Views.PublicIPsView({
+                        collection: collection
+                    }),
+                    promise = collection.fetch();
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show(public_ips_view);
                 });
-                App.contents.show(layout_view);
+                promise.done(function(data){
+                    App.contents.show(layout_view);
+                });
             },
 
             showPersistentVolumes: function(){

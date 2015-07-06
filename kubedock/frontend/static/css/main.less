@@ -854,6 +854,19 @@ body{
 
     /* edit form */
     .popover{
+        -webkit-border-radius: 5px;
+        -webkit-border-bottom-right-radius: 0px;
+        -webkit-border-bottom-left-radius: 0px;
+        -moz-border-radius: 5px;
+        -moz-border-radius-bottomright: 0px;
+        -moz-border-radius-bottomleft: 0px;
+        border-radius: 5px;
+        border-bottom-right-radius: 0px;
+        border-bottom-left-radius: 0px;
+        border-color: #aeaeae;
+        .arrow{
+            top: 100% !important;
+        }
         .form-group{
             float: initial !important;
             height: initial !important;
@@ -868,20 +881,19 @@ body{
                     }
                 }
                 .editable-error-block{
-                    .border-radius(5px);
-                    .box-shadow(0 5px 10px rgba(0, 0, 0, .2));
                     left: 0;
-                    top: 71px;
+                    top: 54px;
+                    z-index: -1;
                     width: 100%;
                     margin-top: 0;
-                    color: #1d1d1d !important;
+                    color: #ffffff !important;
                     font-size: 12px;
                     line-height: 14px;
                     position: absolute;
                     text-align: justify;
-                    background-color: #fefef6;
-                    padding: 10px 14px 11px 14px;
-                    border: 1px solid rgba(0, 0, 0, 0.2);
+                    background-color: #ff2727;
+                    padding: 16px 14px 11px 14px;
+                    border: 1px solid #ff2727;
                 }
             }
             .editable-input{

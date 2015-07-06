@@ -97,16 +97,23 @@
                             border: 1px solid #589630;
                         }
                     }
-                    &.stopped{
+                    &.stopped, &.troubles{
                         &:before{
                             border: 1px solid #bc1b14;
                             background-color: #f5544d;
                         }
                     }
-                    &.troubles, &.pending, &.waiting{
+                    &.pending, &.waiting{
+                        padding-left: 33px;
                         &:before{
-                            border: 1px solid #c0a630;
-                            background-color: #f0d765;
+                            .border-radius(0);
+                            left: 5px;
+                            width: 22px;
+                            content: '';
+                            margin: auto;
+                            height: 18px;
+                            position: absolute;
+                            background: url('../img/pending.gif') 0 0 no-repeat;
                         }
                     }
                     &.termination{
@@ -367,16 +374,22 @@
                 border: 1px solid #5d973c;
             }
         }
-        &.stopped{
+        &.stopped, &.troubles{
             &:before{
                 background-color: #f25552;
                 border: 1px solid #bc2322;
             }
         }
-        &.troubles, &.pending{
+        &.pending{
             &:before{
-                background-color: #efd66d;
-                border: 1px solid #c1a741;
+                .border-radius(0);
+                left: 13px;
+                content: '';
+                width: 22px;
+                bottom: 16px;
+                height: 22px;
+                position: absolute;
+                background: url('../img/pending.gif') 0 0 no-repeat;
             }
         }
         &.termination{

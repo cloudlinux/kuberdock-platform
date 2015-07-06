@@ -231,16 +231,23 @@
                             border: 1px solid #589630;
                         }
                     }
-                    &.stopped{
+                    &.stopped, &.troubles{
                         &:before{
                             border: 1px solid #bc1b14;
                             background-color: #f5544d;
                         }
                     }
-                    &.troubles, &.pending, &.waiting{
+                    &.pending, &.waiting{
+                        padding-left: 33px;
                         &:before{
-                            border: 1px solid #c0a630;
-                            background-color: #f0d765;
+                            .border-radius(0);
+                            left: 5px;
+                            width: 22px;
+                            content: '';
+                            margin: auto;
+                            height: 18px;
+                            position: absolute;
+                            background: url('../img/pending.gif') 0 0 no-repeat;
                         }
                     }
                     &.termination{
@@ -367,6 +374,75 @@
 }
 #item-controls{
     margin-bottom: 0px;
+    .start-btn, .stop-btn, .terminate-btn, .list-btn, .stats-btn{
+        padding-left: 25px;
+        position: relative;
+        &:before{
+            .border-radius(0);
+            content: '';
+            left: 2px;
+            width: 20px;
+            height: 17px;
+            position: absolute;
+        }
+    }
+    .stats-btn,{
+        &:before{
+            top: 4px;
+            height: 16px;
+            background: url('../img/stats-data-icon.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -16px;
+            }
+        }
+    }
+    .list-btn{
+        &:before{
+            top: 4px;
+            height: 16px;
+            background: url('../img/stats-data-icon.png') 0 -16px no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 0;
+            }
+        }
+    }
+    .start-btn{
+        &:before{
+            top: 5px;
+            background: url('../img/start.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -18px;
+            }
+        }
+    }
+    .stop-btn{
+        &:before{
+            top: 5px;
+            background: url('../img/stop.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -17px;
+            }
+        }
+    }
+    .terminate-btn{
+        &:before{
+            top: 4px;
+            background: url('../img/recycling.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -18px;
+            }
+        }
+    }
     .no-padding{
         font-size: 0;
         line-height: 29px;
@@ -463,19 +539,19 @@
             font-weight: bold;
             position: relative;
             padding-left: 37px;
-            margin-right: 40px;
+            margin-right: 20px;
             &:hover{
                 cursor: default;
             }
-        }
-        &:before{
-            .border-radius(50%);
-            left: 11px;
-            width: 13px;
-            content: '';
-            height: 13px;
-            bottom: 20px;
-            position: absolute;
+            &:before{
+                .border-radius(50%);
+                left: 11px;
+                width: 13px;
+                content: '';
+                height: 13px;
+                bottom: 20px;
+                position: absolute;
+            }
         }
         &.running, &.OK{
             &:before{
@@ -483,16 +559,22 @@
                 border: 1px solid #589630;
             }
         }
-        &.stopped{
+        &.stopped, &.troubles{
             &:before{
                 border: 1px solid #bc1b14;
                 background-color: #f5544d;
             }
         }
-        &.troubles, &.pending, &.waiting{
+        &.pending, &.waiting{
             &:before{
-                border: 1px solid #c0a630;
-                background-color: #f0d765;
+                .border-radius(0);
+                left: 5px;
+                content: '';
+                width: 22px;
+                bottom: 16px;
+                height: 22px;
+                position: absolute;
+                background: url('../img/pending.gif') 0 0 no-repeat;
             }
         }
         &.rename_pod{
@@ -606,6 +688,11 @@
         }
     }
     #details_content{
+        .buttons{
+           a{
+               margin-right: 0;
+           }
+        }
         &.set-up-image{
             #tab-content{
                 margin-bottom: 0px;

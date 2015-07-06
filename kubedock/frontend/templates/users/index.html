@@ -322,10 +322,11 @@
         <td><%- email ? email : 'No mail' %></td>
         <td><%- rolename  %></td>
         <td>
-            <%- active ? 'Active' : 'Locked' %>
             <% if (active) { %>
+                <span class="active">Active</span>
                 <span id="blockUser" title="Lock user <%- username %>"></span>
             <% } else { %>
+                <span class="locked">Locked</span>
                 <span id="activeteUser" title="Activate <%- username %>"></span>
             <% } %>
         </td>

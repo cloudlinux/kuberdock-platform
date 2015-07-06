@@ -45,7 +45,7 @@
                     <button type="button" class="reset-button">Reset values</button>
                 </div>
                 <% } %>
-            <div>
+            </div>
         </div>
     </div>
     <div class="buttons pull-right">

@@ -586,7 +586,6 @@ define(['pods_app/app',
 
             ui: {
                 ieditable  : '.ieditable',
-                chngeInput : '.changeInput',
                 table      : '#data-table',
                 reset      : '.reset-button',
                 input      : '.change-input',
@@ -638,9 +637,10 @@ define(['pods_app/app',
                 'click .go-to-logs'      : 'step:logsconf',
             },
 
-            addItem: function(env){
-                env.stopPropagation();
-                this.model.get('env').push({name: null, value: null});
+            addItem: function(evt){
+                evt.stopPropagation();
+                var env = this.model.get('env');
+                env.push({name: null, value: null});
                 this.render();
             },
 
@@ -673,18 +673,30 @@ define(['pods_app/app',
                 this.render();
             },
 
-            onChangeInput: function(e){
+            onChangeInput: function(evt){
                 var env = this.model.get('env'),
-                    item = $(e.currentTarget),
-                    index = item.parents('.fields').index()-1;
+                    tgt = $(evt.target),
+                    row = tgt.closest('div.fields'),
+                    index = row.index() - 3; // FUCK! WHY THE ELEMS IN QUESTION START AT 3RD POSITION???
+                if (tgt.hasClass('name')) {
+                    env[index].name = tgt.val().trim();
+                }
+                else if (tgt.hasClass('value')) {
+                    env[index].value = tgt.val().trim();
+                }
+                // WHO THE FUCK INVENTED THAT CRAP BELOW???
+                //var env = this.model.get('env'),
+                //    item = $(e.currentTarget),
+                //    index = item.parents('.fields').index()-1;
+                //
+                // if ( item.hasClass('name') ){
+                //    env[index] = { name: item.val(), value: item.parent().next().find('input').val() };
+                //    this.model.set('env', env);
+                // } else {
+                //    env[index] = { name: item.parent().prev().find('input').val(), value: item.val() };
+                //    this.model.set('env', env);
+                // }
 
-                 if ( item.hasClass('name') ){
-                    env[index] = { name: item.val(), value: item.parent().next().find('input').val() };
-                    this.model.set('env', env);
-                 } else {
-                    env[index] = { name: item.parent().prev().find('input').val(), value: item.val() };
-                    this.model.set('env', env);
-                 }
             },
 
 /*            onRender: function(){

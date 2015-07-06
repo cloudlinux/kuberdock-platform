@@ -83,6 +83,9 @@ class KuberDock(KubeCtl):
         self._load(args)
         super(KuberDock, self).__init__(**args)
 
+    def create(self):
+        self.set()
+
     def set(self):
         if self.image is not None:
             i = self._get_image()
@@ -125,7 +128,6 @@ class KuberDock(KubeCtl):
                 raise SystemExit(str(res))
         except TypeError, e:
             raise SystemExit(str(e))
-
 
     def list(self):
         """
@@ -241,6 +243,8 @@ class KuberDock(KubeCtl):
         except OSError, e:
             if e.strerror != 'File exists':
                 raise SystemExit(e.strerror)
+        if not os.path.exists(self._data_path) and self.action == 'set':
+            raise SystemExit("Use create command before setup pod")
 
         with open(self._data_path, 'w') as o:
             json.dump(self._prepare(), o)

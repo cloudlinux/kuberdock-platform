@@ -7,6 +7,22 @@ def parser(subs):
     container.set_defaults(call=wrapper)
     action = container.add_subparsers(help="Action", title="Target actions", description="Valid actions for targets", dest="action")
 
+    c_create = action.add_parser('create')
+    c_create.add_argument('name', help="Container name")
+
+    c_create.add_argument('-i', '--image', help="Image to take action upon")
+    c_create.add_argument('--index', default=0, type=int, help="Index of ports or volumes entry (by default 0)")
+    c_create.add_argument('--container-port', type=int, help="Add or change a container port of ports entry")
+    c_create.add_argument('--host-port', type=int, help="Add or change a host port of ports entry")
+    c_create.add_argument('--protocol', choices=['tcp', 'udp'], help="Change protocol of ports entry (by default 'tcp')")
+    c_create.add_argument('--mount-path', help="Point to existent mount path entry or create a new one")
+    c_create.add_argument('--read-only', help="Set mount path entry read-only", dest="readOnly")
+    c_create.add_argument('--kubes', help="Set image kubes", default=1)
+    c_create.add_argument('--kube-type', help="Set pod kube type")
+    c_create.add_argument('--public', action="store_true", help="Assign a public IP address to container", dest="set_public_ip")
+    c_create.add_argument('--restart-policy', default="Always", help="Set container restart policy",
+                       dest="restartPolicy", choices=['Always', 'Never', 'OnFailure'])
+
     c_set = action.add_parser('set')
     c_set.add_argument('name', help="Container name")
 

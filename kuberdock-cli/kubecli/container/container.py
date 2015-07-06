@@ -31,7 +31,7 @@ class KubeCtl(KubeQuery, PrintOut, object):
         self._WANTS_HEADER = True
         self._FIELDS = (('name', 32), ('images', 32), ('labels', 64), ('status', 10))
         data = self._unwrap(self._get('/api/podapi/'))
-        if self.name is not None:
+        if hasattr(self, 'name'):
             self._list([self._transform(i) for i in data if i['name'] == self.name])
         else:
             self._list([self._transform(i) for i in data])
@@ -87,7 +87,7 @@ class KuberDock(KubeCtl):
         self.set()
 
     def set(self):
-        if self.image is not None:
+        if hasattr(self, 'image'):
             i = self._get_image()
             i.kubes = int(self.kubes)
             for attr in 'container_port', 'host_port', 'protocol', 'mount_path':
@@ -240,7 +240,7 @@ class KuberDock(KubeCtl):
         """
         Saves current container as JSON file
         """
-        if self._data_path is None:
+        if not hasattr(self, '_data_path') or self._data_path is None:
             raise SystemExit("No data path. No place to save to")
 
         # Trying to create the folder for storing configs.
@@ -299,7 +299,7 @@ class KuberDock(KubeCtl):
         """
         Container configs are kept in a user homedir. Get the path to it
         """
-        if self._kube_path is not None:
+        if hasattr(self, '_kube_path'):
             return
         uid = os.geteuid()
         homedir = pwd.getpwuid(uid).pw_dir
@@ -310,7 +310,7 @@ class KuberDock(KubeCtl):
         Get the path of a pending container config
         :param name: string -> name of pening pod
         """
-        if self._data_path is not None:
+        if hasattr(self, '_data_path'):
             return
         self._resolve_containers_directory()
         encoded_name = base64.urlsafe_b64encode(name) + self.EXT

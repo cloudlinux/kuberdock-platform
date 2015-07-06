@@ -134,7 +134,9 @@ def search_image():
 
 @images.route('/new', methods=['POST'])
 def get_dockerfile_data():
-    image = request.form.get('image', 'none')
+    image = request.form.get('image')
+    if image is None and request.json is not None:
+        image = request.json.get('image')
     out = _get_docker_file(image)
     out.pop('onbuild', None)
     out['env'] = [{'name': k, 'value': v} for k, v in out['env']]

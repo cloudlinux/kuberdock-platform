@@ -95,6 +95,8 @@ class PrintOut(object):
             return (('name', 32),)
         if attr == '_INDENT':
             return 4
+        raise AttributeError("'{0}' object has no attribute '{1}'".format(
+            self.__class__.__name__, attr))
 
     def _list(self, data):
         if self.json:

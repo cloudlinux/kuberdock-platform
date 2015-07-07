@@ -653,14 +653,13 @@ define(['pods_app/app',
                     return false;
                 };
             },
-
-            removeItem: function(e){
+            removeItem: function(evt){
                 var env = this.model.get('env'),
-                    item = $(e.currentTarget),
-                    index = item.parents('.fields').index()-1;
-
+                    item = $(evt.target);
+                    index = item.parents('tr').index();
+                    item.parents('tr').remove();
                     env.splice(index, 1);
-                    item.parents('.fields').remove();
+
                     this.render();
             },
 
@@ -676,46 +675,15 @@ define(['pods_app/app',
             onChangeInput: function(evt){
                 var env = this.model.get('env'),
                     tgt = $(evt.target),
-                    row = tgt.closest('div.fields'),
-                    index = row.index() - 3; // FUCK! WHY THE ELEMS IN QUESTION START AT 3RD POSITION???
+                    row = tgt.closest('tr'),
+                    index = row.index();
                 if (tgt.hasClass('name')) {
                     env[index].name = tgt.val().trim();
                 }
                 else if (tgt.hasClass('value')) {
                     env[index].value = tgt.val().trim();
                 }
-                // WHO THE FUCK INVENTED THAT CRAP BELOW???
-                //var env = this.model.get('env'),
-                //    item = $(e.currentTarget),
-                //    index = item.parents('.fields').index()-1;
-                //
-                // if ( item.hasClass('name') ){
-                //    env[index] = { name: item.val(), value: item.parent().next().find('input').val() };
-                //    this.model.set('env', env);
-                // } else {
-                //    env[index] = { name: item.parent().prev().find('input').val(), value: item.val() };
-                //    this.model.set('env', env);
-                // }
-
             },
-
-/*            onRender: function(){
-                var that = this;
-                this.ui.ieditable.editable({
-                   type: 'text',
-                   mode: 'inline',
-                   success: function(response, newValue) {
-                       var item = $(this);
-                       index = item.closest('tr').index();
-                       if (item.hasClass('name')) {
-                           that.model.get('env')[index]['name'] = newValue;
-                       }
-                       else if (item.hasClass('value')) {
-                           that.model.get('env')[index]['value'] = newValue;
-                       }
-                   }
-                });
-            }*/
         });
 
         NewItem.WizardStatsSubItemView = Backbone.Marionette.ItemView.extend({

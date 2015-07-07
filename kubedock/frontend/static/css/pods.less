@@ -970,20 +970,8 @@
                             border: 1px solid #b9b9b9;
                         }
                     }
-                }
-                &.environment, .entrypoint{
                     .fields{
                         .clearfix;
-                        .remove-env{
-                            width: 40px;
-                            height: 50px;
-                            margin: auto;
-                            display: inline-block;
-                            background: url('../img/remove-line.png') center no-repeat;
-                            &:hover{
-                                cursor: pointer;
-                            }
-                        }
                         > div{
                             &:first-child{
                                 margin-right: 4px;
@@ -999,6 +987,51 @@
                             border: 1px solid #e5e5e5;
                         }
                     }
+                }
+                &.environment{
+                    .environment-set-up{
+                        thead{
+                            tr{
+                                th{
+                                    width: 270px;
+                                    &:first-child{
+                                        padding-right: 4px;
+                                    }
+                                }
+                            }
+                        }
+                        tbody{
+                            tr{
+                                td{
+                                    width: 270px;
+                                    &:first-child{
+                                        padding-right: 4px;
+                                    }
+                                    input{
+                                        width: 100%;
+                                        height: 52px;
+                                        padding: 0 15px;
+                                        margin-bottom: 5px;
+                                        vertical-align: top;
+                                        display: inline-block;
+                                        border: 1px solid #e5e5e5;
+                                    }
+                                }
+                            }
+                        }
+                        .remove-env{
+                            width: 40px;
+                            height: 50px;
+                            margin: auto;
+                            display: inline-block;
+                            background: url('../img/remove-line.png') center no-repeat;
+                            &:hover{
+                                cursor: pointer;
+                            }
+                        }
+                    }
+                }
+                &.environment, .entrypoint{
                     label{
                         display: block;
                         margin-bottom: 10px;

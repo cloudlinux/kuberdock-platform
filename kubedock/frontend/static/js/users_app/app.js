@@ -8,7 +8,6 @@ define(['marionette', 'paginator', 'utils'],
     });
 
     UsersApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
-
         Data.UserModel = utils.BaseModel.extend({
             urlRoot: '/api/users/full'
         });
@@ -53,6 +52,9 @@ define(['marionette', 'paginator', 'utils'],
                     c: options.view.collection
                 });
                 this.listenTo(this.model.get('c'), 'remove', function(){
+                    this.render();
+                });
+                this.listenTo(this.model.get('c'), 'reset', function(){
                     this.render();
                 });
             },
@@ -166,7 +168,8 @@ define(['marionette', 'paginator', 'utils'],
                 'add_user'           : 'button#add_user',
                 'edit_selected_user' : 'span#editUser',
                 'activity_page'      : '.activityPage',
-                'online_page'        : '.onlinePage'
+                'online_page'        : '.onlinePage',
+                'user_search'        : 'input#nav-search-input'
             },
 
             events: {
@@ -176,7 +179,33 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.block_selected_user'    : 'blockSelectedUser',
                 'click @ui.activate_selected_user' : 'activateSelectedUser',
                 'click @ui.activity_page'          : 'activity',
-                'click @ui.online_page'            : 'online'
+                'click @ui.online_page'            : 'online',
+                'keyup @ui.user_search'            : 'filter'
+            },
+
+            initialize: function() {
+                this.fakeCollection = this.collection.fullCollection.clone();
+
+                this.listenTo(this.collection, 'reset', function (col, options) {
+                    options = _.extend({ reindex: true }, options || {});
+                    if(options.reindex && options.from == null && options.to == null) {
+                        this.fakeCollection.reset(col.models);
+                    }
+                });
+            },
+
+            filter: function(e) {
+                var value = this.ui.user_search[0].value,
+                    valueLength = value.length;
+
+                if (valueLength >= 2){
+                    this.collection.fullCollection.reset(_.filter(this.fakeCollection.models, function(e) {
+                        if(e.get('username').indexOf( value || '') >= 0) return e
+                    }), { reindex: false });
+                } else{
+                    this.collection.fullCollection.reset(this.fakeCollection.models, { reindex: false});
+                }
+                this.collection.getFirstPage();
             },
 
             editSelectedUser: function(e){
@@ -199,14 +228,13 @@ define(['marionette', 'paginator', 'utils'],
 
             online: function(){
                 App.router.navigate('/online/', {trigger: true});
-            },
+            }
         });
 
         Views.OnlineUsersListView = Marionette.CompositeView.extend({
             template: '#online-users-list-template',
             childView: Views.OnlineUserItem,
             childViewContainer: "tbody",
-
 
             ui: {
                 'users_page'    : '.usersPage',
@@ -232,17 +260,6 @@ define(['marionette', 'paginator', 'utils'],
             template: '#users-activities-template',
             childView: Views.ActivityItem,
             childViewContainer: "tbody",
-
-/*            ui: {
-            },
-
-            events: {
-            },
-
-            usersPage: function(){
-                console.log(this);
-            }*/
-
         });
 
         Views.AllUsersActivitiesView = Backbone.Marionette.ItemView.extend({

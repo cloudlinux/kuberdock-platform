@@ -90,6 +90,31 @@
                         width: 20px;
                         height: 15px;
                     }
+                    &.active, &.locked{
+                        position: relative;
+                        padding-left: 22px;
+                        &:before{
+                            .border-radius(50%);
+                            left: 2px;
+                            width: 12px;
+                            content: '';
+                            height: 12px;
+                            bottom: 3px;
+                            position: absolute;
+                        }
+                    }
+                    &.active{
+                        &:before{
+                            background-color: #97cd75;
+                            border: 1px solid #589630;
+                        }
+                    }
+                    &.locked{
+                        &:before{
+                            border: 1px solid #bc1b14;
+                            background-color: #f5544d;
+                        }
+                    }
                 }
                 .tooltip.bottom{
                     margin-top: 8px;
@@ -206,7 +231,6 @@
             border: 1px solid #e5e5e5;
             background-color: #fff;
             padding: 0 20px;
-            line-height: 52px;
             width: 100%;
             &:focus{
                 .box-shadow(none);

@@ -7,9 +7,9 @@
     <% } %>
     <span class="terminate-btn">delete</span>
     <% if (graphs) { %>
-        <span class="list-btn">data</span>
+        <span class="list-btn pull-right">data</span>
     <% } else { %>
-        <span class="stats-btn">stats</span>
+        <span class="stats-btn pull-right">stats</span>
     <% } %>
 </div>
 <div class="row placeholders">

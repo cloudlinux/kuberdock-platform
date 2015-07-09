@@ -6,7 +6,7 @@ from datetime import datetime
 from kubedock.api import create_app
 from kubedock.api.nodes import add_node
 from kubedock.validation import check_node_data
-from kubedock.utils import APIError
+from kubedock.utils import APIError, UPDATE_STATUSES
 from kubedock.core import db
 from kubedock.models import User, Pod
 from kubedock.billing.models import Package, Kube, PackageKube
@@ -15,7 +15,7 @@ from kubedock.rbac.models import Role
 from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import KUBERDOCK_INTERNAL_USER
 from kubedock.updates.models import Updates
-from kubedock.updates.helpers import get_available_updates, UPDATE_STATUSES
+from kubedock.updates.kuberdock_upgrade import get_available_updates
 
 from flask.ext.script import Manager, Shell, Command, Option
 from flask.ext.migrate import Migrate, MigrateCommand, upgrade, stamp
@@ -33,9 +33,10 @@ class Creator(Command):
 
         now = datetime.utcnow()
         now.replace(tzinfo=pytz.utc)
-        last_upd = Updates(fname=get_available_updates()[-1],
-                           status=UPDATE_STATUSES.applied,
-                           start_time=now, end_time=now)
+        last_upd = Updates.create(fname=get_available_updates()[-1],
+                                  status=UPDATE_STATUSES.applied,
+                                  log='Applied at createdb stage.',
+                                  start_time=now, end_time=now)
         db.session.add(last_upd)
         db.session.commit()
         

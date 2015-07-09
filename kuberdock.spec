@@ -12,7 +12,7 @@ Requires: nginx
 Requires: influxdb
 Requires: redis
 Requires: postgresql-server
-Requires: fabric
+Requires: fabric >= 1.10.2
 Requires: etcd >= 2.0.9-1.el7.centos
 Requires: kubernetes >= 0.15.0-4.el7.centos.1
 Requires: flannel >= 0.3.0

@@ -1,26 +1,67 @@
 """
 Most of this helper functions should be used for constructing 000XX_update.py
 scripts.
-They must be backward compatible because they may be used during applying
-older 000XX_update.py scripts too
 """
 
 import os
 import re
 import subprocess
+from fabric.api import run, local as fabric_local
 from kubedock import settings
 from kubedock.sessions import SessionData
-from .models import Updates, db
 
 # For convenience to use in update scripts:
 from flask.ext.migrate import upgrade as upgradedb
 
 
-class UPDATE_STATUSES:
-    started = 'started'
-    applied = 'applied'
-    failed = 'failed'
-    failed_downgrade = 'downgrade failed too'
+class UpgradeError(Exception):
+    """
+    Raise it if error "expected" and downgrade_func can handle it properly.
+    Raise it when need to start downgrade right now.
+    Pass some 'code' that helps downgrade_func to determine where was an error.
+    If this code is 0 then exception is some kind of "unexpected"
+    """
+    def __init__(self, msg, code=0):
+        # By this code we could determine on which point was error, but we still
+        # need full downgrade for consistency
+        super(UpgradeError, self).__init__(msg)
+        self.code = code
+
+    def __repr__(self):
+        return "<{0}. message='{1}' code={2}>".format(self.__class__.__name__,
+                                                      self.message,
+                                                      self.code)
+
+    def __str__(self):
+        return "{0}. Code={1}".format(self.message, self.code)
+
+
+
+def local(*args, **kwargs):
+    if 'capture' not in kwargs:
+        kwargs['capture'] = True
+    return fabric_local(*args, **kwargs)
+
+def _make_install_opts(pkg, testing=False, reinstall=False, noprogress=False):
+    opts = ['yum', '--enablerepo=kube',
+            '-y',
+            'reinstall' if reinstall else 'install'] + pkg.split()
+    if testing:
+        opts[1] += ',kube-testing'
+    if noprogress:
+        opts += ['-d', '1']
+    return opts
+
+
+def install_package(pkg, testing=False, reinstall=False):
+    """
+    :return: exit code
+    """
+    return subprocess.call(_make_install_opts(pkg, testing, reinstall))
+
+
+def remote_install(pkg, testing=False, reinstall=False):
+    return run(' '.join(_make_install_opts(pkg, testing, reinstall, True)))
 
 
 def _set_param(text, var, param, value):
@@ -40,6 +81,7 @@ def _set_param(text, var, param, value):
 
 def set_evicting_timeout(timeout):
     """
+    Set pod evicting timeout and restarts kube-controller-manager
     :param timeout: string representing timeout like '5m0s' (default value)
     :return:
     """
@@ -53,20 +95,26 @@ def set_evicting_timeout(timeout):
     return restart_service('kube-controller-manager')
 
 
-def get_available_updates():
-    patt = re.compile(r'^[0-9]{5}_update\.py$')
-    return sorted(filter(patt.match, os.listdir(settings.UPDATES_PATH)))
+def restart_master_kubernetes():
+    for i in ('kube-apiserver', 'kube-scheduler', 'kube-controller-manager',):
+        res = restart_service(i)
+        if res > 0:
+            return i, res
+    return 0, 0
 
 
-def get_applied_updates():
-    return sorted(
-        [i.fname for i in Updates.query.filter_by(status=UPDATE_STATUSES.applied).all()])
-
-
-def print_log(upd_obj, msg):
-    print msg
-    upd_obj.log = (upd_obj.log or '') + msg + '\n'
-    db.session.commit()
+def restart_node_kubenetes(with_docker=False):
+    """
+    :return: Tuple: service on which restart was error or 0, + fabric res
+    """
+    services = ('kubelet', 'kube-proxy',)
+    if with_docker:
+        services += ('docker',)
+    for i in services:
+        res = run('systemctl restart ' + i)
+        if res.failed:
+            return i, res
+    return 0, 'All node services restarted'
 
 
 def set_maintenance(state):
@@ -86,11 +134,10 @@ def get_maintenance():
     return False
 
 
-# remote node, async, other params?
 def restart_service(service):
     return subprocess.call(['systemctl', 'restart', service])
 
 
-# do it inside updates
+# do it inside update scripts
 def close_all_sessions():
     return SessionData.query.delete()

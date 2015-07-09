@@ -388,6 +388,7 @@ def add_node(data, do_deploy=True, with_testing=False):
                 raise APIError('Error during adding node to k8s. {0}'
                                .format(err))
             else:
+                # TODO write all possible states to class
                 m.state = 'completed'
                 db.session.add(m)
                 db.session.commit()

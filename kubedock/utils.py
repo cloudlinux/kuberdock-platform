@@ -20,6 +20,20 @@ from .core import ssh_connect, db, ConnectionPool
 from .rbac import check_permission
 from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS
 
+
+class UPDATE_STATUSES:
+    """
+    Possible upgrade statuses for both - upgrade scripts and node upgrades
+    """
+    started = 'started'
+    master_applied = 'master applied'
+    applied = 'applied'
+    failed = 'failed'
+    failed_downgrade = 'downgrade failed too'
+    nodes_started = 'nodes started'
+    nodes_failed = 'nodes failed'
+
+
 def login_required_or_basic_or_token(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):

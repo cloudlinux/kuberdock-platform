@@ -1,4 +1,5 @@
 from ..core import db
+from ..utils import UPDATE_STATUSES
 
 
 class Node(db.Model):
@@ -8,6 +9,7 @@ class Node(db.Model):
     hostname = db.Column(db.String(255), unique=True)
     kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
     state = db.Column(db.String(40))
+    upgrade_status = db.Column(db.Text, default=UPDATE_STATUSES.applied)
 
     def __repr__(self):
         return "<Node(hostname='{0}', ip='{1}', kube_type='{2} ({3})')>".format(

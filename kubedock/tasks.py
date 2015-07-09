@@ -159,6 +159,7 @@ def add_node_to_k8s(host, kube_type):
     :param kube_type: Kuberdock kube type (integer id)
     :return: Error text if error else False
     """
+    # TODO handle connection errors except requests.RequestException
     res = requests.post(get_api_url('nodes', use_v3=True, namespace=False),
                         json={
                             'metadata': {

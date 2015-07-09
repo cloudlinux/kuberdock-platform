@@ -78,25 +78,50 @@ def ssh_connect(host, timeout=10):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     error_message = None
     try:
-        ssh.connect(host, username='root', key_filename=SSH_KEY_FILENAME, timeout=timeout)
+        ssh.connect(host, username='root', key_filename=SSH_KEY_FILENAME,
+                    timeout=timeout)
     except (AuthenticationException, SSHException) as e:
         error_message =\
             '{0}.\nCheck hostname, check that user from which '.format(e) +\
             'Kuberdock runs (usually nginx) has ability to login as root on ' +\
             'this node, and try again'
     except socket.timeout:
-        error_message = 'Connection timeout. Check hostname and try again'
+        error_message = 'Connection timeout({0} sec). '.format(timeout) +\
+                        'Check hostname and try again'
     except socket.error as e:
         error_message =\
             '{0} Check hostname, your credentials, and try again'.format(e)
     return ssh, error_message
 
 
-def fast_cmd(ssh, cmd):
-    i, o, e = ssh.exec_command(cmd)
-    s = o.channel.recv_exit_status()
-    if s != 0:
-        err = 'Remote error. Exit status: {0}. Error: {1}'.format(s, e.read())
-        return False, err
-    else:
-        return True, o.read()
+class RemoteManager(object):
+    """
+    Set of helper functions for convenient work with remote hosts.
+    """
+    def __init__(self, host, timeout=10):
+        self.raw_ssh, self.errors = ssh_connect(host, timeout)
+        if self.errors:
+            self.raw_ssh = None
+
+    def close(self):
+        self.raw_ssh.close()
+
+    def exec_command(self, cmd):
+        """
+        Asynchronously execute commend and return i, o, e  streams
+        """
+        return self.raw_ssh.exec_command(cmd)
+
+    def fast_cmd(self, cmd):
+        """
+        Synchronously execute command
+        :return: exit status and error string or data string if success
+        """
+        i, o, e = self.raw_ssh.exec_command(cmd)
+        exit_status = o.channel.recv_exit_status()
+        if exit_status == -1:
+            return exit_status,\
+                'No exit status, maybe connection is closed by remote server'
+        if exit_status > 0:
+            return exit_status, e.read()
+        return exit_status, o.read()

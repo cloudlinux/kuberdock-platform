@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 12%{?dist}.cloudlinux
+Release: 13%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -150,6 +150,16 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Thu Jul 09 2015 Igor Savenko <bliss@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-13
+- AC-612: Added unit tests for 'PodCollection' method 'delete'
+- AC-496, AC-501, AC-512, AC-607, AC-514, Add pending animation, add icons to podcontrol menu, design fixes, add icons to user statuses
+- Fix bug with remove environment variables fields
+- AC-277: Add filter to podlist&nodelist; Hotfix in nodelist with dublicated node
+- New upgrade system, now can handle node upgrades too.
+- Supports local install and many more console commands.
+- Upgrade to fabric 1.10.2
+
+
 * Fri Jul 03 2015 Igor Savenko <bliss@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-12
 - AC-474: User persistent storage page
 - add aws-kd-deploy

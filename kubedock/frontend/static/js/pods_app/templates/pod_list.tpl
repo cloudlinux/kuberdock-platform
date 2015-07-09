@@ -8,10 +8,10 @@
         <div class="control-group">
             <a id="add_pod" href="/#newpod">Add new container</a>
             <div class="nav-search" id="nav-search">
-                <form class="form-search">
+                <div class="form-search">
                     <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
                     <i class="nav-search-icon"></i>
-                </form>
+                </div>
             </div>
         </div>
     </div>

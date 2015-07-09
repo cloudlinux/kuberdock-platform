@@ -191,10 +191,8 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 v: options.view,
                 c: options.view.collection
             });
-            this.listenTo(this.model.get('c'), 'remove', function(){
-//                this.model.get('v').render();     //don't need, maybe in my case
-                this.render();
-            });
+            this.listenTo(options.view.collection, 'remove', this.render);
+            this.listenTo(options.view.collection, 'reset', this.render);
         },
 
         events: {
@@ -284,17 +282,44 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         childViewContainer: "tbody",
 
         ui: {
-            'addNode': 'button#add_node',
+            'addNode'     : 'button#add_node',
+            'node_search' : 'input#nav-search-input'
         },
 
         events: {
-            'click @ui.addNode' : 'addNode',
+            'click @ui.addNode'     : 'addNode',
+            'keyup @ui.node_search' : 'filter'
         },
 
         collectionEvents: {
             "remove": function () {
                 this.render()
             }
+        },
+
+        initialize: function() {
+            this.fakeCollection = this.collection.fullCollection.clone();
+
+            this.listenTo(this.collection, 'reset', function (col, options) {
+                options = _.extend({ reindex: true }, options || {});
+                if(options.reindex && options.from == null && options.to == null) {
+                    this.fakeCollection.reset(col.models);
+                }
+            });
+        },
+
+        filter: function() {
+            var value = this.ui.node_search[0].value,
+                valueLength = value.length;
+
+            if (valueLength >= 2){
+                this.collection.fullCollection.reset(_.filter(this.fakeCollection.models, function(e) {
+                    if(e.get('hostname').indexOf( value || '') >= 0) return e
+                }), { reindex: false });
+            } else{
+                this.collection.fullCollection.reset(this.fakeCollection.models, { reindex: false});
+            }
+            this.collection.getFirstPage();
         },
 
         templateHelpers: function(){
@@ -375,8 +400,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 kube_type: this.state.get('kube_type'),
                 install_log: ''
             }, {
-                wait: false,
-//                wait: true,
+                wait: true,
                 success: function(){
                     // TODO redirect to this node page
 //                    that.trigger('show_console');

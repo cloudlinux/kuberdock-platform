@@ -75,7 +75,7 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'selectpicker' ], func
             parse: unwrapper,
             mode: 'client',
             state: {
-                pageSize: 5
+                pageSize: 10
             }
         });
 

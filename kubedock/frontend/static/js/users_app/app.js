@@ -51,12 +51,8 @@ define(['marionette', 'paginator', 'utils'],
                     v: options.view,
                     c: options.view.collection
                 });
-                this.listenTo(this.model.get('c'), 'remove', function(){
-                    this.render();
-                });
-                this.listenTo(this.model.get('c'), 'reset', function(){
-                    this.render();
-                });
+                this.listenTo(options.view.collection, 'remove', this.render);
+                this.listenTo(options.view.collection, 'reset', this.render);
             },
             events: {
                 'click li.pseudo-link' : 'paginateIt'
@@ -194,7 +190,7 @@ define(['marionette', 'paginator', 'utils'],
                 });
             },
 
-            filter: function(e) {
+            filter: function() {
                 var value = this.ui.user_search[0].value,
                     valueLength = value.length;
 

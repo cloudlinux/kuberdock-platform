@@ -208,10 +208,43 @@ define(['pods_app/app',
         });
 
         List.PodCollection = Backbone.Marionette.CompositeView.extend({
+            template            : podListTpl,
             childView: List.PodListItem,
             tagName             : 'div',
             childViewContainer  : 'tbody',
-            template            : podListTpl,
+
+            ui: {
+                'node_search' : 'input#nav-search-input'
+            },
+
+            events: {
+                'keyup @ui.node_search' : 'filterCollection'
+            },
+
+            initialize: function() {
+                this.fakeCollection = this.collection.fullCollection.clone();
+
+                this.listenTo(this.collection, 'reset', function (col, options) {
+                    options = _.extend({ reindex: true }, options || {});
+                    if(options.reindex && options.from == null && options.to == null) {
+                        this.fakeCollection.reset(col.models);
+                    }
+                });
+            },
+
+            filterCollection: function(){
+                var value = this.ui.node_search[0].value,
+                    valueLength = value.length;
+
+                if (valueLength >= 2){
+                    this.collection.fullCollection.reset(_.filter(this.fakeCollection.models, function(e) {
+                        if(e.get('name').indexOf( value || '') >= 0) return e
+                    }), { reindex: false });
+                } else{
+                    this.collection.fullCollection.reset(this.fakeCollection.models, { reindex: false});
+                }
+                this.collection.getFirstPage();
+            },
 
             onBeforeDestroy: function(){
                 this.trigger('pager:clear');

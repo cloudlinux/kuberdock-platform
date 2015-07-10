@@ -261,6 +261,7 @@ class KuberDock(KubeCtl):
         self.replicationController = True
         self._prepare_volumes()
         self._prepare_ports()
+        self._prepare_env()
         data = dict(filter((lambda x: x[0] in valid), vars(self).items()))
 
         return data
@@ -294,6 +295,18 @@ class KuberDock(KubeCtl):
             ip = self._get_free_host()
             if ip:
                 self.public_ip = ip
+
+    def _prepare_env(self):
+        """
+        Add container environment variables
+        """
+        if not hasattr(self, 'env'):
+            return
+        for c in self.containers:
+            if c['image'] != self.image:
+                continue
+            c['env'] = [dict(zip(['name', 'value'], item.strip().split(':')))
+                        for item in self.env.strip().split(',') if len(item.split(':')) == 2]
 
     def _resolve_containers_directory(self):
         """

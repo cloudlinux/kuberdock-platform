@@ -97,7 +97,7 @@ fi
 
 # 2. install components
 echo "Installing kubernetes..."
-yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel cadvisor
+yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel cadvisor docker
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq

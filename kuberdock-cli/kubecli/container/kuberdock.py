@@ -22,6 +22,7 @@ def parser(subs):
     c_create.add_argument('--public', action="store_true", help="Assign a public IP address to container", dest="set_public_ip")
     c_create.add_argument('--restart-policy', default="Always", help="Set container restart policy",
                        dest="restartPolicy", choices=['Always', 'Never', 'OnFailure'])
+    c_create.add_argument('--env', help="Add or change environment variables")
 
     c_set = action.add_parser('set')
     c_set.add_argument('name', help="Container name")
@@ -39,6 +40,7 @@ def parser(subs):
     c_set.add_argument('--public', action="store_true", help="Assign a public IP address to container", dest="set_public_ip")
     c_set.add_argument('--restart-policy', default="Always", help="Set container restart policy",
                        dest="restartPolicy", choices=['Always', 'Never', 'OnFailure'])
+    c_set.add_argument('--env', help="Add or change environment variables")
 
     c_del = action.add_parser('delete')
     c_del.add_argument('name', help="Container name")

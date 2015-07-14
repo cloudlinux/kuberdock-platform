@@ -1,4 +1,9 @@
-{% if auth_by_id %}<a href="/users/logoutA">Log out [{{ auth_by_id }}]</a>{% endif %}
+{% if auth_by_id %}
+    <div class="login-view-mode-wrapper">
+        <span>User View Mode</span>
+        <a href="/users/logoutA">Exit Mode</a>
+    </div>
+{% endif %}
 
 <div class="container">
     <div class="navbar" role="navigation">
@@ -15,7 +20,6 @@
                 </a>
             </div>
             <div class="navbar-collapse collapse">
-
                 <ul class="nav navbar-nav">
                     {% for item in items %}<li class="dropdown">
                         {% with children=item.get_children() %}
@@ -24,12 +28,15 @@
                     </li>
                     {% endfor %}
                 </ul>
-
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown profile-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ current_user.username }}<b class="caret"></b></a>
                         <ul class="dropdown-menu">
-                            <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                            {% if auth_by_id %}
+                                <li><a href="/users/logoutA">Back to admin</a></li>
+                            {% else %}
+                                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                            {% endif %}
                         </ul>
                     </li>
                 </ul>

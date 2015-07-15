@@ -9,8 +9,8 @@ podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
 
 class PodsAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, KubeUtils.pod_permissions, login_required_or_basic_or_token]
-
+    decorators = [KubeUtils.jsonwrap, KubeUtils.pod_permissions, KubeUtils.pod_start_permissions,
+                  login_required_or_basic_or_token]
 
     def get(self, pod_id):
         #params = self._get_params()

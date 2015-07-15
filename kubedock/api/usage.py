@@ -8,6 +8,7 @@ from ..utils import login_required_or_basic_or_token
 from ..users import User
 from ..pods import Pod
 from ..stats import StatWrap5Min
+from . import APIError
 from collections import defaultdict
 import time
 from datetime import datetime
@@ -24,10 +25,8 @@ def get_total_usage():
     for user in users:
         if user.username not in data:
             data[user.username] = []
-        kube_id = user.package.kube_id
         for pod in user.pods:
             entry = unfold_entry(pod)
-            entry.update({"kube_id": kube_id})
             data[user.username].append(entry)
     return jsonify({'status': 'OK', 'data': data})
 
@@ -39,6 +38,8 @@ def get_usage(login):
     #end = request.args.get('end', None)
     #period = db.session.query(User).filter(User.username==login).first().package.period
     user = db.session.query(User).filter(User.username==login).first()
+    if user is None:
+        raise APIError('User with username {0} does not exist'.format(login))
     data = []
     for pod in user.pods:
         entry = unfold_entry(pod)

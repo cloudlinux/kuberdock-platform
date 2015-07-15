@@ -36,16 +36,16 @@ class UpgradeError(Exception):
         return "{0}. Code={1}".format(self.message, self.code)
 
 
-
 def local(*args, **kwargs):
     if 'capture' not in kwargs:
         kwargs['capture'] = True
     return fabric_local(*args, **kwargs)
 
-def _make_install_opts(pkg, testing=False, reinstall=False, noprogress=False):
+
+def _make_yum_opts(pkg, testing=False, action='install', noprogress=False):
     opts = ['yum', '--enablerepo=kube',
             '-y',
-            'reinstall' if reinstall else 'install'] + pkg.split()
+            action] + pkg.split()
     if testing:
         opts[1] += ',kube-testing'
     if noprogress:
@@ -57,11 +57,12 @@ def install_package(pkg, testing=False, reinstall=False):
     """
     :return: exit code
     """
-    return subprocess.call(_make_install_opts(pkg, testing, reinstall))
+    return subprocess.call(
+        _make_yum_opts(pkg, testing, 'reinstall' if reinstall else 'install'))
 
 
-def remote_install(pkg, testing=False, reinstall=False):
-    return run(' '.join(_make_install_opts(pkg, testing, reinstall, True)))
+def remote_install(pkg, testing=False, action='install'):
+    return run(' '.join(_make_yum_opts(pkg, testing, action, True)))
 
 
 def _set_param(text, var, param, value):

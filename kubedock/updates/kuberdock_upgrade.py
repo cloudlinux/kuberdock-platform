@@ -429,7 +429,9 @@ if __name__ == '__main__':
         if args.command == CLI_COMMANDS.upgrade:
             if args.local:
                 # Check if it's newer
-                res = subprocess.call(['rpm', '-i', '--replacefiles', '--test',
+                res = subprocess.call(['rpm', '-i', '--replacefiles',
+                                       '--nodeps',
+                                       '--test',
                                        args.local])
                 new_kuberdocks = [] if res and not args.reinstall else [args.local]
             else:

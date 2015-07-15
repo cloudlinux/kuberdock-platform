@@ -35,6 +35,7 @@ KUBE_MASTER_URL = 'http://localhost:8080/api/'
 SSH_KEY_FILENAME = '/var/lib/nginx/.ssh/id_rsa'
 
 SERVICES_VERBOSE_LOG = 1
+PODS_VERBOSE_LOG = 1
 
 INFLUXDB_HOST = '127.0.0.1'
 INFLUXDB_PORT = 8086

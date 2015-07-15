@@ -44,11 +44,11 @@ class Creator(Command):
         # Package and Kube with id=0 are default
         # end must be undeletable (always present with id=0) for fallback
         k1 = Kube(id=0, name='Standard kube', cpu=.01, cpu_units='Cores',
-                  memory=64, memory_units='MB', disk_space='0', total_traffic=0)
+                  memory=64, memory_units='MB', disk_space=512*2**20, total_traffic=0)
         k2 = Kube(name='High CPU', cpu=.02, cpu_units='Cores',
-                  memory=64, memory_units='MB', disk_space='0', total_traffic=0)
+                  memory=64, memory_units='MB', disk_space=512*2**20, total_traffic=0)
         k3 = Kube(name='High memory', cpu=.01, cpu_units='Cores',
-                  memory=256, memory_units='MB', disk_space='0', total_traffic=0)
+                  memory=256, memory_units='MB', disk_space=512*2**20, total_traffic=0)
         
         p1 = Package(id=0, name='basic', first_deposit=0, currency='USD', period='hour', prefix='$', suffix=' USD')
         p2 = Package(id=1, name='professional', first_deposit=1, currency='USD', period='hour', prefix='$', suffix=' USD')

@@ -14,11 +14,12 @@ from itertools import chain
 from json import JSONEncoder
 
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
+from .billing import Kube
 from .pods import Pod
 from .users import User
 from .core import ssh_connect, db, ConnectionPool
 from .rbac import check_permission, PermissionDenied
-from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS
+from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS, PODS_VERBOSE_LOG
 
 
 class UPDATE_STATUSES:
@@ -493,6 +494,36 @@ def modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app=None):
     set_bridge_rules(ssh, service, cmd, pod_ip, app)
     ssh.close()
     return result
+
+
+def set_limit(host, pod_name, containers, app):
+    ssh, errors = ssh_connect(host)
+    if errors:
+        print errors
+        return False
+    with app.app_context():
+        pod = Pod.query.filter_by(name=pod_name).first()
+        config = json.loads(pod.config)
+        kube_type = config['kube_type']
+        kube = Kube.query.get(kube_type)
+    limits = []
+    for container in config['containers']:
+        disk_space = kube.disk_space * container['kubes']
+        limits.append((containers[container['name']], str(disk_space)))
+    limits_repr = ' '.join('='.join(limit) for limit in limits)
+    _, o, e = ssh.exec_command(
+        'python /var/lib/kuberdock/scripts/fslimit.py {0}'.format(limits_repr)
+    )
+    exit_status = o.channel.recv_exit_status()
+    if exit_status > 0:
+        if PODS_VERBOSE_LOG >= 2:
+            print 'O', o.read()
+            print 'E', e.read()
+        print 'Error fslimit.py with exit status {0}'.format(exit_status)
+        ssh.close()
+        return False
+    ssh.close()
+    return True
 
 
 class JSONDefaultEncoder(JSONEncoder):

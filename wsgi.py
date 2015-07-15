@@ -51,12 +51,14 @@ except ImportError:
 else:
     if uwsgi.worker_id() == 1:
         g = gevent.spawn(api.listen_endpoints, back_app)
+        h = gevent.spawn(api.listen_pods, back_app)
 
 if __name__ == "__main__":
 
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN'):
         g = gevent.spawn(api.listen_endpoints, back_app)
+        h = gevent.spawn(api.listen_pods, back_app)
 
     @run_with_reloader
     def run_server():

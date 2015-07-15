@@ -2,8 +2,8 @@ import datetime
 from .. import factory
 from .. import sessions
 from ..rbac import get_user_role
-from ..settings import SERVICES_VERBOSE_LOG
-from ..utils import APIError, modify_node_ips, get_api_url
+from ..settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
+from ..utils import APIError, modify_node_ips, get_api_url, set_limit
 
 from flask.ext.login import current_user
 from flask import jsonify
@@ -160,6 +160,26 @@ def process_endpoints_event(data, app):
         pass
 
 
+def process_pods_event(data, app):
+    if data is None:
+        return
+    if PODS_VERBOSE_LOG >= 2:
+        print 'POD EVENT', data
+    event_type = data['type']
+    if event_type != 'MODIFIED':
+        return
+    host = data['object']['spec']['nodeName']
+    pod_name = data['object']['metadata']['labels']['name']
+    containers = {}
+    for container in data['object']['status'].get('containerStatuses', []):
+        if 'containerID' in container:
+            container_name = container['name']
+            container_id = container['containerID'].partition('docker://')[2]
+            containers[container_name] = container_id
+    if containers:
+        set_limit(host, pod_name, containers, app)
+
+
 def listen_endpoints(app):
     while True:
         try:
@@ -188,9 +208,45 @@ def listen_endpoints(app):
                             print 'Content_length {0}'.format(content_length)
             gevent.sleep(0.1)
             if SERVICES_VERBOSE_LOG >= 2:
-                print 'CLOSED. RECONNECT(Listen pods events)'
+                print 'CLOSED. RECONNECT(Listen endpoints events)'
         except KeyboardInterrupt:
             break
         except Exception as e:
             print e.__repr__(), '...restarting listen endpoints...'
+            gevent.sleep(0.2)
+
+
+def listen_pods(app):
+    while True:
+        try:
+            if PODS_VERBOSE_LOG >= 2:
+                print '==START WATCH PODS== pid:', os.getpid()
+            r = requests.get(
+                get_api_url('watch', 'pods', use_v3=True, namespace=False),
+                stream=True)
+            if r.status_code != 200:
+                gevent.sleep(0.1)
+                print "CAN'T CONNECT TO KUBERNETES APISERVER WATCH. RECONNECT"
+            while not r.raw.closed:
+                content_length = r.raw.readline().strip()
+                if content_length not in ('0', ''):
+                    content = r.raw.read(int(content_length, 16)).strip()
+                    data = json.loads(content)
+                    data = filter_event(data)
+                    process_pods_event(data, app)
+                    if r.raw.readline() != '\r\n':
+                        print 'Wrong end block in listen_pods. Reconnect.'
+                        r.raw.close()
+                else:
+                    if PODS_VERBOSE_LOG >= 3:
+                        print 'CONNECTION CLOSED:', r.raw.closed
+                        if not r.raw.closed:
+                            print 'Content_length {0}'.format(content_length)
+            gevent.sleep(0.1)
+            if PODS_VERBOSE_LOG >= 2:
+                print 'CLOSED. RECONNECT(Listen pods events)'
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print e.__repr__(), '...restarting listen pods...'
             gevent.sleep(0.2)

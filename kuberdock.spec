@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 13%{?dist}.cloudlinux
+Release: 14%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -150,6 +150,11 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Jul 15 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-14
+- Added explicit docker installation on node
+- Fix package version detection
+- AC-650: Add style to User View Mode
+
 * Thu Jul 09 2015 Igor Savenko <bliss@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-13
 - AC-612: Added unit tests for 'PodCollection' method 'delete'
 - AC-496, AC-501, AC-512, AC-607, AC-514, Add pending animation, add icons to podcontrol menu, design fixes, add icons to user statuses

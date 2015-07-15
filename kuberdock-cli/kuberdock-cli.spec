@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 10%{?dist}.cloudlinux
+Release: 11%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -47,6 +47,9 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Fri Jul 03 2015 ARuslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-11
+- AC-626 KCLI Add --env command, adding env variables
+
 * Fri Jul 03 2015 Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.1-10
 - AC-632: fixed
 - AC-564 KCLI Add create command

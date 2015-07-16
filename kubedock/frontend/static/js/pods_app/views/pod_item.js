@@ -6,7 +6,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/pod_item_controls.tpl',
         'tpl!pods_app/templates/pod_item_graph.tpl',
         'moment-timezone', 'pods_app/utils',
-        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer'
+        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral'
         ],
        function(Pods,
                 layoutPodItemTpl,
@@ -277,11 +277,22 @@ define(['pods_app/app',
                     publicName = this.model.has('public_aws')
                         ? this.model.get('public_aws')
                         : '',
-                    graphs = this.graphs;
+                    graphs = this.graphs,
+                    kube = this.getKubeById(),
+                    kubes = _.reduce(this.model.get('containers'), function(memo, c) {
+                        return memo + c.kubes
+                    }, 0),
+                    kubesPrice = this.getFormattedPrice(kubes * kube.kube_price),
+                    package = this.getUserPackage();
+
                 return {
                     publicIP   : publicIP,
                     publicName : publicName,
-                    graphs     : graphs
+                    graphs     : graphs,
+                    kube       : kube,
+                    kubes      : kubes,
+                    kubesPrice : kubesPrice,
+                    package    : package
                 };
             },
 
@@ -374,6 +385,31 @@ define(['pods_app/app',
 
             onModelChange: function(){
                 this.render();
+            },
+
+            getKubeById: function() {
+                var kubeId = this.model.get('kube_type'),
+                    packageKube = _.find(packageKubes, function(p) {
+                        return p.package_id == userPackage && p.kube_id == kubeId;
+                    }),
+                    kube = _.find(kubeTypes, function(p) {
+                        return p.id == kubeId;
+                    });
+
+                return _.extend(packageKube || { kube_price: 0 }, kube);
+            },
+
+            getUserPackage: function() {
+                return _.find(packages, function(e) {
+                    return e.id == userPackage
+                });
+            },
+
+            getFormattedPrice: function(price, format) {
+                var package = this.getUserPackage();
+                format = typeof format !== 'undefined' ? format : '0.00';
+
+                return package.prefix + numeral(price).format(format) + package.suffix;
             }
         });
 

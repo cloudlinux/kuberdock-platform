@@ -277,17 +277,17 @@ def parse_pods_statuses(data):
     items = data.get('items')
     res = []
     for item in items:
-        current_state = item['currentState']
+        current_state = item['status']
         try:
-            pod_name = item['labels']['name']
+            pod_name = item['metadata']['labels']['name']
         except KeyError:
-            pod_name = item['id']
+            pod_name = item['metadata']['name']
         if pod_name in db_pods:
             current_state['uid'] = db_pods[pod_name]['uid']
-            if 'info' in current_state:
-                for name, data in current_state['info'].items():
-                    if name in db_pods[pod_name]['kubes']:
-                        data['kubes'] = db_pods[pod_name]['kubes'][name]
+            if 'containerStatuses' in current_state:
+                for container in current_state['containerStatuses']:
+                    if container['name'] in db_pods[pod_name]['kubes']:
+                        container['kubes'] = db_pods[pod_name]['kubes'][container['name']]
             res.append(current_state)
     return res
 
@@ -331,13 +331,13 @@ def check_events():
 
     pods_list = redis.get('cached_pods')
     if not pods_list:
-        pods_list = requests.get(get_api_url('pods')).json()
+        pods_list = requests.get(get_api_url('pods', use_v3=True, namespace=False)).json()
         pods_list = parse_pods_statuses(pods_list)
         redis.set('cached_pods', json.dumps(pods_list))
         send_event('pull_pods_state', 'ping')
     else:
         pods_list = json.loads(pods_list)
-        temp = requests.get(get_api_url('pods')).json()
+        temp = requests.get(get_api_url('pods', use_v3=True, namespace=False)).json()
         temp = parse_pods_statuses(temp)
         if temp != pods_list:
             pods_list = temp

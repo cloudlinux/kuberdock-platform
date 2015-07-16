@@ -17,7 +17,7 @@ from .settings import KUBE_MASTER_URL
 from .pods import Pod
 from .users import User
 from .core import ssh_connect, db, ConnectionPool
-from .rbac import check_permission
+from .rbac import check_permission, PermissionDenied
 from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS
 
 
@@ -482,6 +482,16 @@ class KubeUtils(object):
             rv = check_permission('get', 'pods')(func)
             return rv(*args, **kwargs)
         return inner
+
+    @classmethod
+    def pod_start_permissions(cls, func):
+        def wrapper(*args, **kwargs):
+            user = cls._get_current_user()
+            params = cls._get_params()
+            if ('command' in params and params['command'] in ['start'] or params) and user.suspended is True:
+                raise PermissionDenied('Permission denied. User suspended.')
+            return func(*args, **kwargs)
+        return wrapper
 
     @staticmethod
     def _get_params():

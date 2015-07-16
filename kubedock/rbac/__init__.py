@@ -2,7 +2,7 @@ from functools import wraps
 from flask import g, current_app
 from flask.ext.login import current_user, logout_user
 from rbac.acl import Registry as RegistryOrigin
-from rbac.context import IdentityContext
+from rbac.context import IdentityContext, PermissionDenied
 
 from .models import Resource, Role
 from ..core import cache

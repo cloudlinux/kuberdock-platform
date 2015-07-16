@@ -65,7 +65,7 @@ define({
     modelError: function(b, t){
         this.modalDialog({
             title: t ? t : 'Error',
-            body: typeof b == "string" ? b : b.responseJSON ? JSON.stringify(b.responseJSON): b.responseText,
+            body: typeof b == "string" ? b : b.responseJSON ? b.responseJSON.data || JSON.stringify(b.responseJSON): b.responseText,
             show: true,
             buttonCancel: false,
         })

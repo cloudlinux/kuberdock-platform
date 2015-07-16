@@ -8,6 +8,7 @@ import time
 
 from collections import OrderedDict
 from datetime import datetime
+from distutils.util import strtobool
 
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
@@ -447,5 +448,15 @@ def user_lock_task(user):
 
 @db.event.listens_for(User.active, 'set')
 def user_lock_event(target, value, oldvalue, initiator):
+    if not isinstance(value, bool):
+        value = bool(strtobool(value))
     if value != oldvalue and not value:
+        user_lock_task.delay(target)
+
+
+@db.event.listens_for(User.suspended, 'set')
+def user_suspend_event(target, value, oldvalue, initiator):
+    if not isinstance(value, bool):
+        value = bool(strtobool(value))
+    if value != oldvalue and value is True:
         user_lock_task.delay(target)

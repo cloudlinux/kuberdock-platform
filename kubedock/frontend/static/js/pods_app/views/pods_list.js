@@ -97,12 +97,14 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var kubes = this.model.get('kubes');
+                var kubes = _.reduce(this.model.get('containers'), function(memo, c) {
+                    return memo + c.kubes
+                }, 0);
                 var modelIndex = this.model.collection.indexOf(this.model);
 
                 return {
                     index: modelIndex + 1,
-                    kubes: kubes ? kubes : 0
+                    kubes: kubes
                 }
             },
 

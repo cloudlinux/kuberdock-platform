@@ -96,18 +96,28 @@ def set_evicting_timeout(timeout):
     return restart_service('kube-controller-manager')
 
 
-def restart_master_kubernetes():
+def restart_master_kubernetes(with_enable=False):
+    res = subprocess.call(['systemctl', 'daemon-reload'])
+    if res > 0:
+        return 'systemctl daemon-reload', res
     for i in ('kube-apiserver', 'kube-scheduler', 'kube-controller-manager',):
         res = restart_service(i)
         if res > 0:
             return i, res
+        if with_enable:
+            res = subprocess.call(['systemctl', 'reenable', i])
+            if res > 0:
+                return 'Error_reenable {0}'.format(i), res
     return 0, 0
 
 
-def restart_node_kubenetes(with_docker=False):
+def restart_node_kubenetes(with_docker=False, with_enable=False):
     """
     :return: Tuple: service on which restart was error or 0, + fabric res
     """
+    res = run('systemctl daemon-reload')
+    if res.failed:
+        return 'Error_daemon-reload', res
     services = ('kubelet', 'kube-proxy',)
     if with_docker:
         services += ('docker',)
@@ -115,6 +125,10 @@ def restart_node_kubenetes(with_docker=False):
         res = run('systemctl restart ' + i)
         if res.failed:
             return i, res
+        if with_enable:
+            res = run('systemctl reenable ' + i)
+            if res.failed:
+                return i, res
     return 0, 'All node services restarted'
 
 

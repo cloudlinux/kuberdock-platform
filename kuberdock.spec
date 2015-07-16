@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 14%{?dist}.cloudlinux
+Release: 15%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -150,6 +150,16 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Thu Jul 16 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-15
+- AC-643 User suspend status
+- AC-631: Show only checked network ip(s)
+- Switch parse_pods_statuses to v1beta3
+- AC-621 Display correct kube count on pod page
+- Added reenabling feature to restart service helpers
+- AC-660: mount point problem
+- AC-622 Display actual kube data on single pod page
+- 
+
 * Wed Jul 15 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-14
 - Added explicit docker installation on node
 - Fix package version detection

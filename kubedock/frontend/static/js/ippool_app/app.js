@@ -43,10 +43,10 @@ define(['marionette', 'utils'],
             },
 
             initialize: function(){
-                this.$el.attr('data-id', this.model.get('id'));
+                $(this.el).attr('data-id', this.model.get('network'));
             },
 
-            deleteNetwork_btn: function(){
+            deleteNetwork_btn: function(evt){
                 var that = this;
                 utils.modalDialogDelete({
                     title: 'Delete network',
@@ -61,14 +61,12 @@ define(['marionette', 'utils'],
                         buttonCancel: true
                     }
                 });
+                evt.stopPropagation()
             },
         });
 
         Views.NetworkItemMore = Backbone.Marionette.ItemView.extend({
             template: '#network-item-more-template',
-            //className: function(){
-            //    return this.model.checked ? '' : 'hidden'
-            //},
 
             ui: {
                 block_ip      : '.block_ip',
@@ -188,6 +186,13 @@ define(['marionette', 'utils'],
             template: '#ippool-right-template',
             childView: Views.NetworkItemMore,
             childViewContainer: "div.right",
+
+            initialize: function(){
+                App.Data.networksClone = new Backbone.Collection(
+                    App.Data.networks.filter(function(item){ return item.checked; })
+                );
+                this.collection = App.Data.networksClone;
+            }
         });
 
         Views.AsideView = Backbone.Marionette.ItemView.extend({
@@ -288,21 +293,23 @@ define(['marionette', 'utils'],
             onCheckItem: function (e) {
                 var target = $(e.currentTarget),
                     id = target.attr('data-id'),
-                    models = App.Data.networks.models;
+                    models = App.Data.networks.models,
+                    collection = App.Data.networksClone;
 
                 this.$('.networks-list tr').removeClass('checked');
                 target.addClass('checked');
 
-                _.each(models, function(model){
-                    if (model.get('id') == id) {
+                collection.reset();
+
+                _.each(models, function(model,index){
+                    if (model.get('network') == id) {
+                        collection.add(model);
                         model.checked = true;
                     }
                     else {
                         model.checked = false;
                     }
                 });
-
-                this.right.currentView.render();
             },
         });
     });
@@ -319,7 +326,7 @@ define(['marionette', 'utils'],
                     collection: App.Data.networks
                 });
                 var right = new App.Views.RightView({
-                    collection: App.Data.networks
+                    collection : App.Data.networksClone
                 });
 
                 this.listenTo(layout_view, 'show', function(){

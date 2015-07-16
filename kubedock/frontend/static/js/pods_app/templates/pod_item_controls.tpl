@@ -26,10 +26,10 @@
         </div>
         <div class="col-xs-6 servers">
             <div><b><%- name %></b></div>
-            <div>Kube type: <%- (typeof(kubeType) != 'undefined') ? kubeType : 'Standard' %></div>
+            <div>Kube type: <%- kube.name %></div>
             <div>Restart policy: <%- restartPolicy %></div>
-            <div>Kubes:  <%- (typeof(kubes) != 'undefined') ? kubes : 0 %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
-            <div>Price: <%- (typeof(price) != 'undefined') ? price : 0 %>$/hour</div>
+            <div>Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
+            <div>Price: <%- kubesPrice %> / <%- package.period %></div>
             <!--
             <div class="edit">Edit pod</div>
             -->

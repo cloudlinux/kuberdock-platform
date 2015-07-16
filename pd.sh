@@ -63,7 +63,7 @@ function create_map_and_mount {
         rbd create $DEVICE --size=$SIZE_MB
         DEVICE=$(rbd map $DEVICE)
         mkfs.ext4 $DEVICE
-        mount "$DEVICE" "$MP"
+        mount -o context="\"system_u:object_r:cgroup_t:s0\"" "$DEVICE" "$MP"
     else # aws
         get_next
         if [ -z "$FREE_CHAR" ];then
@@ -84,7 +84,7 @@ function create_map_and_mount {
                 sleep 2
                 mkfs.ext4 "/dev/$NEXT_DEV"
             done
-            mount "/dev/$NEXT_DEV" "$MP"
+            mount -o context="\"system_u:object_r:cgroup_t:s0\"" "/dev/$NEXT_DEV" "$MP"
             unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
         fi
     fi
@@ -98,7 +98,7 @@ function map_and_mount {
         fi
         mkdir_if_missing
         DEVICE=$(rbd map $DEVICE)
-        mount "$DEVICE" "$MP"
+        mount -o context="\"system_u:object_r:cgroup_t:s0\"" "$DEVICE" "$MP"
     else
         RV=$(aws ec2 describe-volumes --region=$REGION --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=$DEVICE")
         RES=$(echo $RV | jq -r ".Volumes[0].State")
@@ -117,10 +117,10 @@ function map_and_mount {
             sleep 1
             aws ec2 attach-volume --volume-id=$VOL --instance-id=$IID --device=$NEXT_DEV --region=$REGION
         done
-        mount "/dev/$NEXT_DEV" "$MP"
+        mount -o context="\"system_u:object_r:cgroup_t:s0\"" "/dev/$NEXT_DEV" "$MP"
         while [ $? -ne 0 ];do
             sleep 1
-            mount "/dev/$NEXT_DEV" "$MP"
+            mount -o context="\"system_u:object_r:cgroup_t:s0\"" "/dev/$NEXT_DEV" "$MP"
         done
     fi
 }

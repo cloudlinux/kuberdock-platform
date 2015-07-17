@@ -45,11 +45,9 @@ define(['pods_app/app',
                     that.listenTo(view, 'display:pod:list', that.showPodList);
                 });
             },
-
             showPodStats: function(data){
                 this.trigger('display:pod:stats', data);
             },
-
             showPodList: function(data){
                 this.trigger('display:pod:list', data);
             },
@@ -79,16 +77,18 @@ define(['pods_app/app',
             },
 
             ui: {
-                'start'    : '.start-btn',
-                'stop'     : '.stop-btn',
-                'delete'   : '.terminate-btn'
+                'start'            : '.start-btn',
+                'stop'             : '.stop-btn',
+                'delete'           : '.terminate-btn',
+                'containerPageBtn' : '.container-page-btn'
             },
 
             events: {
-                'click @ui.start'    : 'startItem',
-                'click @ui.stop'     : 'stopItem',
-                'click @ui.delete'   : 'deleteItem',
-                'click'              : 'checkItem',
+                'click @ui.start'            : 'startItem',
+                'click @ui.stop'             : 'stopItem',
+                'click @ui.delete'           : 'deleteItem',
+                'click @ui.containerPageBtn' : 'containerPage',
+                'click'                      : 'checkItem',
             },
 
             command: function(evt, cmd){
@@ -140,7 +140,10 @@ define(['pods_app/app',
                     }
                 });
             },
-
+            containerPage: function(evt){
+                App.navigate('poditem/' + this.model.get('parentID') + '/' + this.model.get('name') , {trigger: true});
+                evt.stopPropagation;
+            },
             checkItem: function(evt){
                 if (this.model.is_checked){
                     this.$el.removeClass('checked');
@@ -158,19 +161,19 @@ define(['pods_app/app',
             childView: Item.InfoPanelItem,
             childViewContainer: "tbody",
 
+            ui: {
+                count             : '.count',
+                defaultTableHead  : '.main-table-head',
+                /*stopContainers    : '.stopContainers',*/
+                containersControl : '.containersControl',
+                checkAllItems     : 'table thead .custom',
+            },
+
             events: {
                 'click .stop-checked'        : 'stopItems',
                 'click .start-checked'       : 'startItems',
                 'click @ui.checkAllItems'    : 'checkAllItems',
-                'click @ui.removeContainers' : 'removeContainers',
-            },
-
-            ui: {
-                count             : '.count',
-                defaultTableHead  : '.main-table-head',
-                removeContainers  : '.removeContainers',
-                containersControl : '.containersControl',
-                checkAllItems     : 'table thead .custom',
+                /*'click @ui.stopContainers'   : 'stopContainers',*/
             },
 
             childEvents: {
@@ -184,12 +187,11 @@ define(['pods_app/app',
                     }
                     if ( count != 0 ) {
                         this.ui.count.text('Item ' + count);
-
                         this.ui.containersControl.show();
-                        this.ui.defaultTableHead.hide();
+                        this.ui.defaultTableHead.addClass('min-opacity');
                     } else {
                         this.ui.containersControl.hide();
-                        this.ui.defaultTableHead.show();
+                        this.ui.defaultTableHead.removeClass('min-opacity');
                     }
                     if (count >= 2) this.ui.count.text('Items ' + count);
                 }
@@ -204,14 +206,15 @@ define(['pods_app/app',
                 this.render();
             },
 
-            removeContainers: function(){
-                var col = this.collection;
+            /* stopContainers: function(){
+                var col = this.collection,
+                    that = this;
 
                 _.each(col.models, function(model){
                     if (model.is_checked) model.destroy()
                 });
                 this.render();
-            },
+            }, */
 
             command: function(cmd){
                 var preloader = $('#page-preloader');

@@ -4,12 +4,11 @@
 </td>
 <td class="index"><%- index %></td>
 <td>
-    <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" ><%- name %></a>
-    <a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>
+    <span class="poditem-page-btn" title="Edit <%- name %> pod" ><%- name %></span>
+    <!--<a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>-->
 </td>
 <td>
     <% if (replicationController){ %>
-        <!-- <span class="reditable editable editable-click" style="display: inline-block;"><%- replicas %></span> -->
         <span><%- replicas %></span>
     <% }  else { %>
         none

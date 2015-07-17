@@ -2,9 +2,7 @@
     <div class="container breadcrumbs" id="breadcrumbs">
         <ul class="breadcrumb">
             <li>
-                <div id="podlistPage">
-                    <a href="/#pods">Pods</a>
-                </div>
+                <a href="/#pods">Pods</a>
             </li>
             <li id="masthead-title" class="active"></li>
         </ul>
@@ -25,10 +23,3 @@
     <div id="item-controls" class="col-md-12"></div>
 </div>
 <div id="item-info" class="container"></div>
-
-<!--
-<div class="container">
-    <div id="layout-aside" class="col-md-4"></div>
-    <div id="layout-contents" class="col-md-8"></div>
-</div>
--->

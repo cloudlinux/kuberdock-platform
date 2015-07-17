@@ -1,6 +1,6 @@
 define(['pods_app/app',
         'tpl!pods_app/templates/layout_pod_list.tpl',
-        'tpl!pods_app/templates/pod_list_item.tpl',
+        'tpl!pods_app/templates/pod_list_item.	tpl',
         'tpl!pods_app/templates/pod_list.tpl',
         'pods_app/utils',
         'bootstrap', 'bootstrap-editable'],
@@ -109,17 +109,19 @@ define(['pods_app/app',
             },
 
             ui: {
-                reditable : '.reditable',
-                start     : '.start-btn',
-                stop      : '.stop-btn',
-                terminate : '.terminate-btn',
-                checkbox  : 'label.custom span'
+                reditable  : '.reditable',
+                start      : '.start-btn',
+                stop       : '.stop-btn',
+                terminate  : '.terminate-btn',
+                checkbox   : 'label.custom span',
+                podPageBtn : '.poditem-page-btn'
             },
 
             events: {
                 'click @ui.start'      : 'startItem',
                 'click @ui.stop'       : 'stopItem',
                 'click @ui.terminate'  : 'terminateItem',
+                'click @ui.podPageBtn' : 'podPage',
                 'click'                : 'checkItem',
             },
 
@@ -137,6 +139,11 @@ define(['pods_app/app',
                         that.model.save();
                     }
                 });
+            },
+
+            podPage: function(evt){
+                App.navigate('pods/' + this.model.get('id'), {trigger: true});
+                evt.stopPropagation();
             },
 
             startItem: function(evt){

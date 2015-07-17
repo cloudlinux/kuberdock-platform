@@ -1,11 +1,8 @@
 <td><label class="custom"><input type="checkbox"><span></span></label></td>
 <td class="index"><%- index %></td>
 <td>
-    <a href="#poditem/<%- parentID %>/<%- name %>"><%- image %></a>
+    <span class="container-page-btn"><%- image %></span>
 </td>
-<!--
-<td><span>10.10.10.10</span></td>
--->
 <td>
     <% if (state == 'running' )  { %>
         <span class="<%- state %>"><%- state %></span>

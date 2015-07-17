@@ -304,14 +304,13 @@
                     }
                 }
             }
-            a{
+            a, .poditem-page-btn, .container-page-btn{
                 padding: 0;
                 color: #3197ee;
                 font-size: 14px;
                 font-family: @regular;
                 text-decoration: none;
                 &:hover{
-                    text-decoration: none;
                     cursor: pointer;
                 }
             }
@@ -322,12 +321,21 @@
     margin-top: 10px;
 }
 #imagelist-table{
+    position: relative;
+    thead{
+        tr{
+            &.main-table-head{
+                th{ border-bottom: 0; }
+            }
+        }
+    }
     .containersControl{
-        height: initial;
-        position: initial;
-        line-height: initial;
+        top: 0px;
+        height: 30px;
+        display: none;
+        position: absolute;
         th{
-            border: none;
+            border-bottom: none;
             .count{
                 color: #1d1d1d;
             }
@@ -346,7 +354,7 @@
     .count{
         font-weight: bold;
     }
-    .removePods, .removeContainers{
+    .removePods, .stopContainers{
         color: #3197ee;
         position: relative;
         padding-left: 40px;
@@ -354,23 +362,38 @@
             width: 20px;
             content: '';
             height: 17px;
-            top: -1px;
-            left: 20px;
             position: absolute;
             display: inline-block;
             background: url('../img/recycling.png') 0 0 no-repeat;
         }
         &:hover{
             cursor: pointer;
+        }
+    }
+    .removePods{
+        &:before{
+            top: -1px;
+            left: 20px;
+            background: url('../img/recycling.png') 0 0 no-repeat;
+        }
+        &:hover{
             &:before{
                 background-position: 0 -18px;
             }
         }
     }
-}
-.containersControl{
-    line-height: 0;
-    height: 30px;
+    .stopContainers{
+        &:before{
+            top: 0px;
+            left: 16px;
+            background: url('../img/stop.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -17px;
+            }
+        }
+    }
 }
 #item-controls{
     margin-bottom: 0px;

@@ -173,6 +173,28 @@ def compose_dnat(*params):
     return IPTABLES.format(*params)
 
 
+def compose_mark(*params):
+    """
+    Composes iptables FORWARD rule to mark packets with user ID
+    :param params: array of positional params
+    :return: string -> iptables rule
+    """
+    IPTABLES = ('iptables -{0} FORWARD -i docker0 -o docker0 '
+                '-s {1} -j MARK --set-mark {2}')
+    return IPTABLES.format(*params)
+
+
+def compose_check(*params):
+    """
+    Composes iptables FORWARD rule to check packets by user ID
+    :param params: array of positional params
+    :return: string -> iptables rule
+    """
+    IPTABLES = ('iptables -{0} FORWARD -i docker0 -o docker0 '
+                '-d {1} -m mark ! --mark {2} -j REJECT')
+    return IPTABLES.format(*params)
+
+
 def get_available_port(host):
     """
     Generates random port in loop and tries to connect to specified host
@@ -289,7 +311,20 @@ def register_elb_name(service, name):
     db.session.commit()
 
 
-def handle_generic_node(service, host, cmd, pod_ip, public_ip, ports, app):
+def get_pod_owner_id(service):
+    """
+    Returns pod owner from db
+    :param service: string -> service name
+    :return: integer
+    """
+    item = db.session.query(Pod).filter(
+        (Pod.status!='deleted')&(Pod.config.like('%'+service+'%'))).first()
+    if item is None:
+        return
+    return item.owner_id
+
+
+def handle_generic_node(ssh, service, cmd, pod_ip, public_ip, ports, app):
     """
     Handles IP addresses and iptables rules on non-amazon node
     :param service: string -> service name
@@ -299,11 +334,6 @@ def handle_generic_node(service, host, cmd, pod_ip, public_ip, ports, app):
     :param ports: list -> list of port dicts
     :return: boolean
     """
-    ssh, errors = ssh_connect(host)
-    if errors:
-        print errors
-        return False
-
     i, o, e = ssh.exec_command(
         'bash /var/lib/kuberdock/scripts/modify_ip.sh {0} {1} {2}'
         .format(cmd, public_ip, NODE_TOBIND_EXTERNAL_IPS)
@@ -315,7 +345,6 @@ def handle_generic_node(service, host, cmd, pod_ip, public_ip, ports, app):
             print 'E', e.read()
         print 'Error modify_ip.sh with exit status {0} public_ip={1} IFACE={2}'\
             .format(exit_status, public_ip, NODE_TOBIND_EXTERNAL_IPS)
-        ssh.close()
         return False
 
     for port_spec in ports:
@@ -337,15 +366,10 @@ def handle_generic_node(service, host, cmd, pod_ip, public_ip, ports, app):
             if SERVICES_VERBOSE_LOG >= 1:
                 print '==DELETED PORTS==', public_port, container_port, protocol
             ssh.exec_command(compose_dnat('D', *params))
-    ssh.close()
     return True
 
 
-def handle_aws_node(service, host, cmd, pod_ip, ports, app):
-    ssh, errors = ssh_connect(host)
-    if errors:
-        return False
-
+def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
     try:
         from .settings import REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
     except ImportError:
@@ -431,14 +455,44 @@ def handle_aws_node(service, host, cmd, pod_ip, ports, app):
                                           protocol, private_ip, ruleset.host_port,
                                           ruleset.pod_ip, ruleset.pod_port)
                     ssh.exec_command(rule)
-    ssh.close()
     return True
 
 
+def set_bridge_rules(ssh, service, cmd, pod_ip, app):
+    """
+    Sets docker bridge iptables rules to intercontainer communication for containers
+    belonging to a same user
+    :param ssh: object -> ssh connection object
+    :param service: string -> service name
+    :param cmd: string -> command (currently 'add' and 'del')
+    :param pod_ip: string -> pod ip address
+    """
+    if app is None:
+        return
+    with app.app_context():
+        user_id = get_pod_owner_id(service)
+    if cmd == 'add':
+        for routine in compose_mark, compose_check:
+            i, o, e = ssh.exec_command(routine('C', pod_ip, user_id))
+            exit_status = o.channel.recv_exit_status()
+            if exit_status != 0:
+                ssh.exec_command(routine('I', pod_ip, user_id))
+    elif cmd == 'del':
+        for routine in compose_mark, compose_check:
+            ssh.exec_command(routine('D', pod_ip, user_id))
+
+
 def modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app=None):
+    ssh, errors = ssh_connect(host)
+    if errors:
+        return False
     if AWS:
-        return handle_aws_node(service, host, cmd, pod_ip, ports, app)
-    return handle_generic_node(service, host, cmd, pod_ip, public_ip, ports, app)
+        result = handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app)
+    else:
+        result = handle_generic_node(ssh, service, cmd, pod_ip, public_ip, ports, app)
+    set_bridge_rules(ssh, service, cmd, pod_ip, app)
+    ssh.close()
+    return result
 
 
 class JSONDefaultEncoder(JSONEncoder):

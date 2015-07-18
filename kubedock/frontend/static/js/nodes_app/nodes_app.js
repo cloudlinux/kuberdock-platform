@@ -3,7 +3,7 @@
 function modalDialogDelete(options){
     var modal = $('.modal'),
         modalDialog = modal.find('.modal-dialog');
-    modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
+    modalDialog.css('margin-top', ( screen.height / 2 - 140 ));
     if(options.title) modal.find('.modal-title').html(options.title);
     if(options.body) modal.find('.modal-body').html(options.body);
     if(options.large) modal.addClass('bs-example-modal-lg');
@@ -34,7 +34,7 @@ function modalDialogDelete(options){
 function modalDialog(options){
     var modal = $('.modal'),
         modalDialog = modal.find('.modal-dialog');
-    modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
+    modalDialog.css('margin-top', ( screen.height / 2 - 140 ));
     if(options.title) modal.find('.modal-title').html(options.title);
     if(options.body) modal.find('.modal-body').html(options.body);
     if(options.large) modal.addClass('bs-example-modal-lg');

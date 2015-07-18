@@ -229,8 +229,10 @@ define(['marionette', 'utils'],
             template: '#publicIPs-template',
             childView: Views.PublicIPsItemView,
             childViewContainer: 'tbody',
-            initialize: function(){
-                console.log(this.collection);
+            templateHelpers: function(){
+                return {
+                    collection : this.collection
+                }
             }
         });
 
@@ -263,7 +265,12 @@ define(['marionette', 'utils'],
         Views.PersistentVolumesView = Marionette.CompositeView.extend({
             template: '#persistent-volumes-template',
             childView: Views.PersistentVolumesItemView,
-            childViewContainer: 'tbody'
+            childViewContainer: 'tbody',
+            templateHelpers: function(){
+                return {
+                    collection : this.collection
+                }
+            }
         });
 
         /* Profile edit volumes Views */

@@ -237,7 +237,13 @@
                                     <th>Pod Name</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <% if (collection.length == 0) { %>
+                                    <tr>
+                                        <td class="text-center" colspan="2">Public IPs not specified</td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -272,7 +278,13 @@
                                     <th>Status</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <% if (collection.length == 0) { %>
+                                    <tr>
+                                        <td class="text-center" colspan="3">Persistent volumes not specified</td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
                         </table>
                     </div>
                 </div>

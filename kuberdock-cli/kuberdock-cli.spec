@@ -7,7 +7,7 @@ Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
 URL: http://www.cloudlinux.com
-BuildArch: noarch
+#BuildArch: noarch
 Source0: %{name}-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -33,9 +33,11 @@ mkdir -p %{buildroot}/usr/share/kuberdock-cli
 
 %{__install} -D -d -m 755 %{buildroot}%{python_sitelib}/kubecli
 %{__install} -D -m 755 kcli %{buildroot}%{_bindir}/kcli
+%{__install} -D -m 755 kcli-iptables %{buildroot}%{_bindir}/kcli-iptables
 %{__install} -D -m 644 kubecli.conf %{buildroot}%{_sysconfdir}/kubecli.conf
 cp -r kubecli/* %{buildroot}%{python_sitelib}/kubecli
-
+сс -DHOOKEXEC=/usr/bin/kcli-iptables -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
+chmod 4755 %{buildroot}%{_libexecdir}/suidwrap
 %clean
 rm -rf %{buildroot}
 

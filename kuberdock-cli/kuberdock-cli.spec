@@ -36,7 +36,10 @@ mkdir -p %{buildroot}/usr/share/kuberdock-cli
 %{__install} -D -m 755 kcli-iptables %{buildroot}%{_bindir}/kcli-iptables
 %{__install} -D -m 644 kubecli.conf %{buildroot}%{_sysconfdir}/kubecli.conf
 cp -r kubecli/* %{buildroot}%{python_sitelib}/kubecli
-сс -DHOOKEXEC='"/usr/bin/kcli-iptables"' -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
+if [ ! -d %{buildroot}%{_libexecdir} ];then
+    mkdir -p %{buildroot}%{_libexecdir}
+fi
+cc -DHOOKEXEC='"/usr/bin/kcli-iptables"' -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
 chmod 4755 %{buildroot}%{_libexecdir}/suidwrap
 %clean
 rm -rf %{buildroot}
@@ -45,7 +48,9 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %{_bindir}/kcli
+%{_bindir}/kcli-iptables
 %{_sysconfdir}/kubecli.conf
+%{_libexecdir}/suidwrap
 %{python_sitelib}/kubecli/*
 
 %changelog
@@ -92,6 +97,6 @@ rm -rf %{buildroot}
 * Mon Jun 01 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-2
 - Refactored to reflect current kuberdock functinality
 
-* Wed Apr 15 2014 Igor Savenko <bliss@cloudlinux.com> 0.1-1
+* Wed Apr 15 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-1
 - First release
 

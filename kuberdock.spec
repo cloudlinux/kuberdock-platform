@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 15%{?dist}.cloudlinux
+Release: 16%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -156,6 +156,11 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Sun Jul 19 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-16
+- AC-602: Fixed design bugs in bulk operation on podlist page & podItem page
+- AC-663: Add text if not have collection in settings, fix bug with modal dilog position
+- AC-491: added nginx configs, selinux module for nginx, containers in docker bridge are isolated by owners
+
 * Thu Jul 16 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-15
 - AC-643 User suspend status
 - AC-631: Show only checked network ip(s)

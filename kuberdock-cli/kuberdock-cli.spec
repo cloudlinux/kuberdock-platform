@@ -36,7 +36,7 @@ mkdir -p %{buildroot}/usr/share/kuberdock-cli
 %{__install} -D -m 755 kcli-iptables %{buildroot}%{_bindir}/kcli-iptables
 %{__install} -D -m 644 kubecli.conf %{buildroot}%{_sysconfdir}/kubecli.conf
 cp -r kubecli/* %{buildroot}%{python_sitelib}/kubecli
-сс -DHOOKEXEC=/usr/bin/kcli-iptables -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
+сс -DHOOKEXEC='"/usr/bin/kcli-iptables"' -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
 chmod 4755 %{buildroot}%{_libexecdir}/suidwrap
 %clean
 rm -rf %{buildroot}

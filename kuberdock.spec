@@ -94,6 +94,8 @@ ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_
 chmod 755 %{buildroot}/var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py
 %{__install} -D -m 0644 conf/kuberdock.ini %{buildroot}%{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
+%{__install} -D -m 0644 conf/shared-kubernetes.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
+%{__install} -D -m 0644 conf/shared-etcd.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-etcd.conf
 %{__install} -D -m 0644 conf/kuberdock.conf %{buildroot}%{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 
 
@@ -136,6 +138,10 @@ SESTATUS=$(sestatus|awk '/SELinux\sstatus/ {print $3}')
 if [ "$SESTATUS" != disabled ];then
     semanage fcontext -a -t httpd_sys_content_t /var/opt/kuberdock/kubedock/frontend/static\(/.\*\)\?
     restorecon -Rv /var/opt/kuberdock/kubedock/frontend/static
+    # Setting permission for using etch from nginx
+    if [ -e /var/opt/kuberdock/nginx.pp ];then
+        semodule -i /var/opt/kuberdock/nginx.pp
+    fi
 fi
 
 %files

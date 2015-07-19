@@ -1,0 +1,9 @@
+#!/bin/sh
+
+PROG=/sbin/iptables
+if [ $1 = "insert" ];then
+    ACTION="I"
+else
+    ACTION="D"
+fi
+$PROG $ACTION OUTPUT -d $2 -m owner ! --uid-owner $3 -j REJECT

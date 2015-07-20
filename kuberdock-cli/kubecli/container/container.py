@@ -302,11 +302,20 @@ class KuberDock(KubeCtl):
         """
         if not hasattr(self, 'env'):
             return
+        if not hasattr(self, 'image'):
+            raise SystemExit("You must specify an image with option '-i|--image'")
         for c in self.containers:
             if c['image'] != self.image:
                 continue
-            c['env'] = [dict(zip(['name', 'value'], item.strip().split(':')))
+            existing = map(operator.itemgetter('name'), c['env'])
+            data_to_add = [dict(zip(['name', 'value'], item.strip().split(':')))
                         for item in self.env.strip().split(',') if len(item.split(':')) == 2]
+            for i in c['env']:
+                for j in data_to_add:
+                    if i['name'] == j['name']:
+                        i['value'] = j['value']
+                        break
+            c['env'].extend(filter((lambda x: x['name'] not in existing), data_to_add))
 
     def _resolve_containers_directory(self):
         """

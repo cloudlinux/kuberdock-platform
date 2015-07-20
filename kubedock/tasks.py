@@ -185,7 +185,7 @@ def add_new_node(host, kube_type, db_node, with_testing):
 
         try:
             current_master_kubernetes = subprocess.check_output(
-                ['rpm', '-q', 'kubernetes']).strip()
+                ['rpm', '-q', 'kubernetes-master']).strip()
         except subprocess.CalledProcessError as e:
             mes = 'Kuberdock needs correctly installed kubernetes' \
                   ' on master. {0}'.format(e.output)
@@ -195,7 +195,9 @@ def add_new_node(host, kube_type, db_node, with_testing):
             db.session.commit()
             return mes
         except OSError:     # no rpm
-            current_master_kubernetes = 'kubernetes'
+            current_master_kubernetes = 'kubernetes-master'
+        current_master_kubernetes = current_master_kubernetes.replace(
+            'master', 'node')
 
         send_logs(host, 'Current kubernetes package on master is'
                         ' "{0}". Will install same package.'
@@ -216,7 +218,7 @@ def add_new_node(host, kube_type, db_node, with_testing):
         sftp = ssh.open_sftp()
         sftp.put('node_install.sh', '/node_install.sh')
         sftp.put('pd.sh', '/pd.sh')
-        sftp.put('/etc/kubernetes/kubelet_token.dat', '/kubelet_token.dat')
+        sftp.put('/etc/kubernetes/configfile_for_nodes', '/configfile')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')

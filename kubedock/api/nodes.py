@@ -85,7 +85,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
                 "ports": [
                     {
                         "isPublic": False,
-                        "protocol": "udp",
+                        "protocol": "UDP",
                         "containerPort": 53
                     }
                 ],
@@ -140,7 +140,7 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
                 "ports": [
                     {
                         "isPublic": False,
-                        "protocol": "udp",
+                        "protocol": "UDP",
                         "containerPort": 5140,
                         "hostPort": 5140
                     }
@@ -169,13 +169,13 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
                 "ports": [
                     {
                         "isPublic": False,
-                        "protocol": "tcp",
+                        "protocol": "TCP",
                         "containerPort": 9200,
                         "hostPort": 9200
                     },
                     {
                         "isPublic": False,
-                        "protocol": "tcp",
+                        "protocol": "TCP",
                         "containerPort": 9300,
                         "hostPort": 9300
                     }
@@ -364,15 +364,17 @@ def add_node(data, do_deploy=True, with_testing=False):
         logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
                                                 kube.id, logs_kubes, MASTER_IP)
         check_new_pod_data(logs_config)
-        logs_pod = PodCollection(ku).add(logs_config)
-        PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
+        # TODO enable when create|delete namespaces explicitly
+        # logs_pod = PodCollection(ku).add(logs_config)
+        # PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
 
         dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns', owner=ku).first()
         if not dns_pod:
             dns_config = get_dns_pod_config()
             check_new_pod_data(dns_config)
-            dns_pod = PodCollection(ku).add(dns_config)
-            PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
+            # TODO enable when create|delete namespaces explicitly
+            # dns_pod = PodCollection(ku).add(dns_config)
+            # PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 
         try:
             # clear old log before it pulled by SSE event

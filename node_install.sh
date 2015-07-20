@@ -97,7 +97,7 @@ fi
 
 # 2. install components
 echo "Installing kubernetes..."
-yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel cadvisor docker
+yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel-0.4.1 cadvisor docker
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
@@ -117,7 +117,7 @@ fi
 
 # 4 copy kubelet auth token and etcd certs
 echo "Copy certificates and tokens..."
-mv /kubelet_token.dat /var/lib/kubelet/kubernetes_auth
+mv /configfile $KUBERNETES_CONF_DIR/configfile
 mkdir -p /etc/pki/etcd
 check_status
 mv /ca.crt /etc/pki/etcd/
@@ -136,11 +136,13 @@ check_status
 
 # 5. configure Node config
 echo "Configuring kubernetes..."
-sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|http://${MASTER_IP}:7080|}" $KUBERNETES_CONF_DIR/config
+sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
+# TODO maybe unneeded and insecure:
 sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
-sed -i '/^KUBELET_ARGS/ {s|""|"--auth_path=/var/lib/kubelet/kubernetes_auth --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock"|}' $KUBERNETES_CONF_DIR/kubelet
+sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false"|}' $KUBERNETES_CONF_DIR/kubelet
+sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile"|}' $KUBERNETES_CONF_DIR/proxy
 check_status
 
 
@@ -198,9 +200,11 @@ check_status
 
 # 7. Setting kernel parameters
 sysctl -w net.ipv4.ip_nonlocal_bind=1
+sysctl -w net.ipv4.ip_forward=1
 check_status
 cat > /etc/sysctl.d/75-kuberdock.conf << EOF
 net.ipv4.ip_nonlocal_bind = 1
+net.ipv4.ip_forward = 1
 EOF
 
 

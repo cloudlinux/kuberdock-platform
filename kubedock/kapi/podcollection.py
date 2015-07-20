@@ -162,7 +162,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 replicas_data.extend(self._get(['replicationcontrollers'], use_v3=True, ns=namespace)['items'])
         else:
             data.extend(self._get(['pods'], use_v3=True)['items'])
-            services_data.extend(self._get(['services'], use_v3=True)['items'])
+            services_data.extend(
+                filter(lambda x: x['metadata']['namespace'] != 'default',
+                       self._get(['services'], use_v3=True)['items']))
             replicas_data.extend(self._get(['replicationcontrollers'], use_v3=True)['items'])
 
         for item in data:
@@ -221,11 +223,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 ports.append({
                     "name": port_name,
                     "port": host_port,
-                    "protocol": p.get('protocol'),
+                    "protocol": p.get('protocol', 'TCP').upper(),
                     "targetPort": p.get('containerPort')})
 
         conf = {
             'kind': 'Service',
+            'apiVersion': 'v1beta3',    # TODO get from settings
             'metadata': {
                 # 'generateName': pod.name.lower() + '-service-',
                 'generateName': 'service-',
@@ -240,11 +243,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'spec': {
                 'selector': {'name': pod.name},
                 'ports': ports,
+                'type': 'ClusterIP',
                 'sessionAffinity': 'None'   # may be ClientIP is better
             }
         }
         if hasattr(pod, 'portalIP') and pod.portalIP:
-            conf['spec']['portalIP'] = pod.portalIP
+            conf['spec']['portalIP'] = pod.portalIP     # TODO will be clusterIP
         return self._post(['services'], json.dumps(conf), rest=True, use_v3=True, ns=pod.namespace)
 
     def _resize_replicas(self, pod, data):

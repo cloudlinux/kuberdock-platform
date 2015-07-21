@@ -39,7 +39,7 @@ cp -r kubecli/* %{buildroot}%{python_sitelib}/kubecli
 if [ ! -d %{buildroot}%{_libexecdir} ];then
     mkdir -p %{buildroot}%{_libexecdir}
 fi
-cc -DHOOKEXEC=/usr/bin/kcli -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
+cc -DHOOKEXEC='"/usr/bin/kcli"' -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
 chmod 4755 %{buildroot}%{_libexecdir}/suidwrap
 %clean
 rm -rf %{buildroot}

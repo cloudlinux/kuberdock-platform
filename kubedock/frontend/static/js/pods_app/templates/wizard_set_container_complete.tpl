@@ -86,16 +86,20 @@
                     <span class="pull-left"><b>Container(s):</b></span>
                     <span class="pull-right"><span id="containers_price"><%- container_price %></span></span>
                 </p>
+                <% if (isPublic) { %>
                 <p class="clearfix">
                     <span class="pull-left"><b>IP Adress:</b></span>
                     <span class="pull-right"><span id="ipaddress_price"><%- price_ip %></span></span>
                 </p>
+                <% } %>
+                <% if (isPerSorage) { %>
                 <p class="clearfix">
                     <span class="pull-left"><b>Persistent<br>storage:</b></span>
                     <span class="pull-right"><span id="pstorage_price">
                         <%- price_pstorage %> per 1 MB
                     </span></span>
                 </p>
+                <% } %>
                 <p class="total"><b>Total price:</b> <span id="total_price"><%- total_price %></span></p>
             </div>
             <div class="col-xs-12 no-padding servers">

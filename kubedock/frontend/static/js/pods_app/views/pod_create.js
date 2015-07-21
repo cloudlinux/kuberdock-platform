@@ -944,7 +944,21 @@ define(['pods_app/app',
             templateHelpers: function() {
                 this.package = this.getUserPackage();
 
+                var isPublic = isPerSorage = false,
+                    containers = this.model.get('containers');
+
+                _.each(containers, function(container){
+                    _.each(container.ports, function(port){
+                        if (port.isPublic) isPublic = true
+                    })
+                    _.each(container.volumeMounts, function(volume){
+                        if (volume.isPersistent) isPerSorage = true
+                    })
+                })
+
                 return {
+                    isPublic : isPublic,
+                    isPerSorage : isPerSorage,
                     cpu_data: this.cpu_data,
                     ram_data: this.ram_data,
                     container_price: this.container_price,

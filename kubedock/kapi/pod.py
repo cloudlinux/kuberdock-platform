@@ -243,6 +243,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if type(wd) is list:
             data['workingDir'] = ','.join(data['workingDir'])
 
+        for p in data.get('ports', []):
+            p['protocol'] = p.get('protocol', 'TCP').upper()
+
         if self.owner != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
                 p.pop('hostPort', None)

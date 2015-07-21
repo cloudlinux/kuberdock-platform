@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 16%{?dist}.cloudlinux
+Release: 17%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -14,8 +14,12 @@ Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
 Requires: etcd >= 2.0.9-1.el7.centos
-Requires: kubernetes >= 0.15.0-4.el7.centos.1
-Requires: flannel >= 0.3.0
+# TODO change to >=?
+Requires: kubernetes-master == 1:0.20.2-0.4.git323fde5.el7.centos.2
+# TODO remove at some time after migration:
+Obsoletes: kubernetes
+# TODO 0.5 works wrong
+Requires: flannel == 0.4.1
 Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2
@@ -151,6 +155,8 @@ fi
 %attr (-,nginx,nginx) /var/lib/kuberdock
 %dir %{_sysconfdir}/nginx/ssl
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
+%config %{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
+%config %{_sysconfdir}/nginx/conf.d/shared-etcd.conf
 %config %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py

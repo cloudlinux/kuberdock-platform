@@ -1,6 +1,7 @@
 {% if auth_by_id %}
     <div class="login-view-mode-wrapper">
-        <span>User View Mode</span>
+        <span class="glass pull-left">User View Mode</span>
+        <span>Loggend in as user: <b>{{ current_user.username }}</b></span>
         <a href="/users/logoutA">Exit Mode</a>
     </div>
 {% endif %}
@@ -28,18 +29,16 @@
                     </li>
                     {% endfor %}
                 </ul>
+                {% if not auth_by_id %}
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown profile-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ current_user.username }}<b class="caret"></b></a>
                         <ul class="dropdown-menu">
-                            {% if auth_by_id %}
-                                <li><a href="/users/logoutA">Back to admin</a></li>
-                            {% else %}
-                                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
-                            {% endif %}
+                            <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                         </ul>
                     </li>
                 </ul>
+                {% endif %}
             </div><!--/.nav-collapse -->
         </div><!--/.container-fluid -->
     </div>

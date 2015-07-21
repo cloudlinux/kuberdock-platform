@@ -328,12 +328,14 @@
                             <li class="profile">
                                 Profile
                             </li>
-                            <li class="publicIPs">
-                                Public IPs
-                            </li>
-                            <li class="persistent-volumes">
-                                Persistent volumes
-                            </li>
+                            <% if(!administrator) { %>
+                                <li class="publicIPs">
+                                    Public IPs
+                                </li>
+                                <li class="persistent-volumes">
+                                    Persistent volumes
+                                </li>
+                            <% } %>
                             <!-- <li class="notifications">
                                 Notification
                             </li>
@@ -361,6 +363,9 @@
     var notifications = {{ notifications|safe }};
     var eventsKeysList = {{ events_keys|safe }};
     var userSettings = {{ user_settings|tojson|safe }};
+
+    var current_username = "{{current_user.username }}",
+        administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
     </script>
 
 {% endblock %}

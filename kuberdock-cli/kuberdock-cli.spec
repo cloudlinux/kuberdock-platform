@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 12%{?dist}.cloudlinux
+Release: 13%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,10 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Tue Jul 25 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-13
+- kcli bugfix: env variables now are being appended, not overriden
+- AC-491: finished
+
 * Sun Jul 19 2015 ARuslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-12
 - AC-491: added suidwrapper for kcli-iptables-wrapper
 

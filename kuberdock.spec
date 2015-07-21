@@ -162,6 +162,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Tue Jul 21 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-17
+- AC-680: Hide extra links in settings page to admin
+- Upgrade to 20.3 kubernetes. Fixed some kuberdock errors, but not all.
+- Kuberdock-internal pods are disabled due bugs with namespaces CRUD.
+- Start Posgresql before uwsgi
+- AC-667: Hide extra elements in add container, last step
+- Fix User View Mode Design
+
 * Sun Jul 19 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-16
 - AC-602: Fixed design bugs in bulk operation on podlist page & podItem page
 - AC-663: Add text if not have collection in settings, fix bug with modal dilog position
@@ -290,7 +298,7 @@ fi
 - AC-293: Add style to alerts windows
 - AC-487: Show node memory
 - added to deploy.sh and kuberdock.spec changes for impersonated install
-- AC-509 WHMCS. Persistent storage в GB
+- AC-509 WHMCS. Persistent storage in GB
 
 * Mon Jun 15 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.1-61
 - AC-474: Add style to persistent volumes & publick IPs tabs

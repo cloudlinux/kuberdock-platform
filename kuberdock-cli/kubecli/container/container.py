@@ -6,7 +6,9 @@ import operator
 import os
 import pwd
 import random
+import re
 import string
+import subprocess
 
 from ..image.image import Image
 from ..helper import KubeQuery, PrintOut
@@ -56,6 +58,48 @@ class KubeCtl(KubeQuery, PrintOut, object):
             self._del('/api/podapi/' + item['id'])
         except (IndexError, KeyError):
             print "No such item"
+        self._set_delayed()
+
+    def postprocess(self):
+        if os.geteuid() != 0:
+            raise SystemExit('The postprocess expects superuser privileges')
+        if not hasattr(self, 'uid'):
+            raise SystemExit('User UID is expected')
+        if hasattr(self, 'token'):
+            data = self._unwrap(self._get('/api/podapi/?token='+self.token))
+        else:
+            data = self._unwrap(self._get('/api/podapi/'))
+        pod = [i for i in data if i['name'] == self.name]
+        if pod:
+            service_ip = pod[0].get('podIP')
+            if service_ip is None:
+                return
+            params = ['/sbin/iptables', '-C', 'OUTPUT', '-d', service_ip,
+                      '-m', 'owner', '!', '--uid-owner', self.uid, '-j', 'REJECT']
+            try:
+                subprocess.check_call(params, stdout=open('/dev/null', 'a'), stderr=open('/dev/null', 'a'))
+            except subprocess.CalledProcessError:
+                params[1] = '-I'
+                subprocess.call(params, stdout=open('/dev/null', 'a'), stderr=open('/dev/null', 'a'))
+        else:
+            existing_ips = [i['podIP'] for i in data if 'podIP' in i]
+            rv = subprocess.Popen(['/sbin/iptables', '-L', 'OUTPUT', '-n', '--line-numbers'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            o, e = rv.communicate()
+            rules = o.splitlines()
+            patt = re.compile(r'!\sowner\sUID\smatch\s(?P<uid>\d+)')
+            for i in reversed(rules[2:]):
+                fields = i.split(None, 6)
+                m = patt.match(fields[6])
+                if m is None:
+                    continue
+                if m.group('uid') != self.uid:
+                    continue
+                if fields[5] not in existing_ips:
+                    params = ['/sbin/iptables', '-D', 'OUTPUT', fields[0]]
+                    try:
+                        subprocess.check_call(params, stdout=open('/dev/null', 'a'), stderr=open('/dev/null', 'a'))
+                    except subprocess.CalledProcessError:
+                        print "Could not delete rule for uid {0} ({1})".format(self.uid, fields[5])
 
     @staticmethod
     def _transform(data):
@@ -67,7 +111,15 @@ class KubeCtl(KubeQuery, PrintOut, object):
             [i.get('image', 'imageless') for i in data.get('containers', [])])
         return out
 
-
+    def _set_delayed(self):
+        data = self._get('/api/auth/token')
+        try:
+            fmt = """echo /usr/libexec/suidwrap '"{0}"' {1} |at now + 2 minute > /dev/null 2>&1"""
+            subprocess.check_call([fmt.format(data['token'], self.name)], shell=True)
+        except (KeyError, TypeError, subprocess.CalledProcessError):
+            return
+        
+        
 class KuberDock(KubeCtl):
     """
     Class for creating KuberDock entities
@@ -162,6 +214,7 @@ class KuberDock(KubeCtl):
             self._print_json(res)
         else:
             self._print(res)
+        self._set_delayed()
 
     def stop(self):
         self._FIELDS = (('status', 32),)

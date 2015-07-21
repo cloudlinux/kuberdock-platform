@@ -39,7 +39,7 @@ cp -r kubecli/* %{buildroot}%{python_sitelib}/kubecli
 if [ ! -d %{buildroot}%{_libexecdir} ];then
     mkdir -p %{buildroot}%{_libexecdir}
 fi
-cc -DHOOKEXEC='"/usr/bin/kcli-iptables"' -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
+cc -DHOOKEXEC=/usr/bin/kcli -o %{buildroot}%{_libexecdir}/suidwrap src/suidwrap.c
 chmod 4755 %{buildroot}%{_libexecdir}/suidwrap
 %clean
 rm -rf %{buildroot}
@@ -74,7 +74,7 @@ rm -rf %{buildroot}
 - AC-546 KCLI Delete image from container not worked
 - AC-530: fixed. Added self._FIELDS for start/stop methods
 - AC-531: in PrintOut mix-in default attributes checks changed to use __getattr__
-- AC-567: KCLI. Traceback в команде --mount-path. Fixed
+- AC-567: KCLI. Traceback --mount-path. Fixed
 
 * Thu Jun 25 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-7
 - AC-568: Fixed 'Unknown format' error on 'kcli kubectl describe pods <NAME>' command

@@ -45,6 +45,10 @@ def parser(subs):
     delete_pod.add_argument('name', help=resource_help)
     delete_pods.add_argument('name', help=resource_help)
 
+    post = action.add_parser('postprocess')
+    post.add_argument('name', help="Container name")
+    post.add_argument('--uid', help="User UID to be run for")
+
 def wrapper(data):
     args = make_config(data)
     container = KubeCtl(**args)

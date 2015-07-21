@@ -48,22 +48,27 @@ body{
         span{
             color: #fff;
             font-size: 16px;
-            position: relative;
-            padding-left: 40px;
-            &:before{
-                content: '';
-                height: 18px;
-                width: 35px;
-                position: absolute;
-                left: 0;
-                top: 0;
-                background: url('../img/glasses.png') 0 0 no-repeat;
+            &.glass{
+                position: relative;
+                padding-left: 40px;
+                &:before{
+                    top: 0;
+                    left: 0;
+                    content: '';
+                    width: 35px;
+                    height: 18px;
+                    position: absolute;
+                    background: url('../img/glasses.png') 0 0 no-repeat;
+                }
             }
         }
         a{
             color: #fff;
             float: right;
             font-size: 16px;
+            &:hover, &:active{
+                text-decoration: none;
+            }
         }
     }
     .navbar{

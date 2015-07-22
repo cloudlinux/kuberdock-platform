@@ -75,7 +75,7 @@ class TestPodCollectionDelete(unittest.TestCase):
         self.app.delete(str(uuid4()), force=True)
 
         # Checking our _del has been called only once with expected args
-        del_.assert_called_once_with(['k', 's'], use_v3=True, ns='n')
+        del_.assert_called_once_with(['k', 's'], ns='n')
         self.assertFalse(raise_.called)
 
     @mock.patch.object(PodCollection, '_del')
@@ -121,7 +121,7 @@ class TestPodCollectionDelete(unittest.TestCase):
         self.app.delete(str(uuid4()))
 
         # Checking our _del has been called only once with expected args
-        del_.assert_called_once_with(['k', 's'], use_v3=True, ns='n')
+        del_.assert_called_once_with(['k', 's'], ns='n')
 
     @mock.patch.object(PodCollection, '_stop_cluster')
     @mock.patch.object(PodCollection, '_del')
@@ -145,7 +145,7 @@ class TestPodCollectionDelete(unittest.TestCase):
         self.app.delete(str(uuid4()))
 
         # Checking our _del has been called only once with expected args
-        del_.assert_called_once_with(['k', 's'], use_v3=True, ns='n')
+        del_.assert_called_once_with(['k', 's'], ns='n')
         self.assertTrue(stop_.called)
 
     @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
@@ -175,11 +175,11 @@ class TestPodCollectionDelete(unittest.TestCase):
         self.app.delete(str(uuid4()))
 
         # Checking our _get has been called only once with expected args
-        get_.assert_called_once_with(['services', 'fs'], use_v3=True, ns='n')
+        get_.assert_called_once_with(['services', 'fs'], ns='n')
 
         # Making sure del_ has been called twice with proper params each time
-        expected = [mock.call(['k', 's'], use_v3=True, ns='n'),
-                    mock.call(['services', 'fs'], use_v3=True, ns='n')]
+        expected = [mock.call(['k', 's'], ns='n'),
+                    mock.call(['services', 'fs'], ns='n')]
         self.assertEqual(del_.call_args_list, expected,
                          "Arguments for deletion pod and service differ from expected ones")
 

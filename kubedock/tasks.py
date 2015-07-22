@@ -58,26 +58,18 @@ def get_replicas_nodelay():
 
 
 def get_services_nodelay(namespace=None):
-    if namespace:
-        url = get_api_url('services', namespace=namespace, use_v3=True)
-    else:
-        url = get_api_url('services', use_v3=True)
-    r = requests.get(url)
+    r = requests.get(get_api_url('services', namespace=namespace))
     return r.json()
 
 
 def create_service_nodelay(data, namespace=None):
-    r = requests.post(get_api_url('services', use_v3=True, namespace=namespace),
+    r = requests.post(get_api_url('services', namespace=namespace),
                       data=json.dumps(data))
-    return r.text
+    return r.text   # TODO must return json()
 
 
 def delete_pod_nodelay(item, namespace=None):
-    if namespace:
-        url = get_api_url('pods', item, namespace=namespace,  use_v3=True)
-    else:
-        url = get_api_url('pods', item)
-    r = requests.delete(url)
+    r = requests.delete(get_api_url('pods', item, namespace=namespace))
     return r.json()
 
 
@@ -97,8 +89,7 @@ def update_replica_nodelay(item, diff):
 
 
 def delete_service_nodelay(item, namespace=None):
-    r = requests.delete(get_api_url('services', item, namespace=namespace,
-                                    use_v3=True))
+    r = requests.delete(get_api_url('services', item, namespace=namespace))
     return r.json()
 
 
@@ -140,17 +131,17 @@ def get_dockerfile_official(name, tag=None):
 
 
 def get_all_nodes():
-    r = requests.get(get_api_url('nodes', use_v3=True, namespace=False))
+    r = requests.get(get_api_url('nodes', namespace=False))
     return r.json().get('items') or []
 
 
 def get_node_by_host(host):
-    r = requests.get(get_api_url('nodes', host, use_v3=True, namespace=False))
+    r = requests.get(get_api_url('nodes', host, namespace=False))
     return r.json()
 
 
 def remove_node_by_host(host):
-    r = requests.delete(get_api_url('nodes', host, use_v3=True, namespace=False))
+    r = requests.delete(get_api_url('nodes', host, namespace=False))
     return r.json()
 
 
@@ -161,7 +152,7 @@ def add_node_to_k8s(host, kube_type):
     :return: Error text if error else False
     """
     # TODO handle connection errors except requests.RequestException
-    res = requests.post(get_api_url('nodes', use_v3=True, namespace=False),
+    res = requests.post(get_api_url('nodes', namespace=False),
                         json={
                             'metadata': {
                                 'name': host,
@@ -333,13 +324,13 @@ def check_events():
 
     pods_list = redis.get('cached_pods')
     if not pods_list:
-        pods_list = requests.get(get_api_url('pods', use_v3=True, namespace=False)).json()
+        pods_list = requests.get(get_api_url('pods', namespace=False)).json()
         pods_list = parse_pods_statuses(pods_list)
         redis.set('cached_pods', json.dumps(pods_list))
         send_event('pull_pods_state', 'ping')
     else:
         pods_list = json.loads(pods_list)
-        temp = requests.get(get_api_url('pods', use_v3=True, namespace=False)).json()
+        temp = requests.get(get_api_url('pods', namespace=False)).json()
         temp = parse_pods_statuses(temp)
         if temp != pods_list:
             pods_list = temp

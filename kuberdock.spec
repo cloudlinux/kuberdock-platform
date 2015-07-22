@@ -14,12 +14,9 @@ Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
 Requires: etcd >= 2.0.9-1.el7.centos
-# TODO change to >=?
-Requires: kubernetes-master == 1:0.20.2-0.4.git323fde5.el7.centos.2
-# TODO remove at some time after migration:
-Obsoletes: kubernetes
+Requires: kubernetes-master >= 1:1.0.1-0.1.git6a5c06e.el7.centos
 # TODO 0.5 works wrong
-Requires: flannel == 0.4.1
+Requires: flannel >= 0.4.1
 Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2

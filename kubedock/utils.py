@@ -13,7 +13,7 @@ from functools import wraps
 from itertools import chain
 from json import JSONEncoder
 
-from .settings import KUBE_MASTER_URL
+from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .pods import Pod
 from .users import User
 from .core import ssh_connect, db, ConnectionPool
@@ -115,18 +115,18 @@ def get_api_url(*args, **kwargs):
     :param args:
     :param kwargs:
         namespace - namespace
-        use_v3 - True/False to use API version v1beta3
+        api_version - overrides default api version
+        watch - True if you need append ?watch=true
     :return: string
     """
-    url = KUBE_MASTER_URL
+    api_version = kwargs.get('api_version', KUBE_API_VERSION)
+    url = '/'.join([KUBE_MASTER_URL.rstrip('/'), api_version])
     if args:
         url = '{0}/{1}'.format(url.rstrip('/'), '/'.join(map(str, args)))
-    if not kwargs.get('use_v3'):
-        return url
     namespace = kwargs.get('namespace', 'default')
     if namespace:
-        return url.replace('v1beta2', 'v1beta3/namespaces/{0}'.format(namespace))
-    return url.replace('v1beta2', 'v1beta3')
+        url = url.replace(api_version, '{0}/namespaces/{1}'.format(api_version, namespace))
+    return url + '?watch=true' if kwargs.get('watch') else url
 
 
 # separate function because set_roles_loader decorator don't return function. Lib bug.

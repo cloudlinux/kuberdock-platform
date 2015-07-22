@@ -1,11 +1,23 @@
 import json
+import hashlib
 from flask import current_app
 
 from ..billing import repr_limits
 from ..utils import modify_node_ips, run_ssh_command, send_event
 from .pod import Pod
 from .helpers import KubeQuery, ModelQuery, Utilities
-from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES
+from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION
+
+
+def generate_ns_name(user, podname):
+    s = '{0}-{1}'.format(user.username, podname)    # + timestamp?
+    h = hashlib.md5(s)
+    return '{0}-{1}'.format(s[:30].lower(), h.hexdigest())
+
+
+def get_user_namespaces(user):
+    return [generate_ns_name(user, p.name) for p in user.pods
+            if not p.is_deleted]
 
 
 class PodCollection(KubeQuery, ModelQuery, Utilities):
@@ -18,9 +30,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def add(self, params):
         self._check_trial(params)
-        namespace = '{0}-{1}-pods'.format(
-            self.owner.username, params['name']).lower()
-        params['namespace'] = namespace
+        params['namespace'] = generate_ns_name(self.owner, params['name'])
         params['owner'] = self.owner
         pod = Pod.create(params)
         pod.compose_persistent(self.owner.username)
@@ -66,13 +76,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
         if hasattr(pod, 'sid'):
-            rv = self._del([pod.kind, pod.sid], use_v3=True, ns=pod.namespace)
+            rv = self._del([pod.kind, pod.sid], ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a pod")
             if pod.replicationController:
                 self._stop_cluster(pod)
         service_name = pod.get_config('service')
         if service_name:
-            service = self._get(['services', service_name], use_v3=True, ns=pod.namespace)
+            service = self._get(['services', service_name], ns=pod.namespace)
             state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
             if 'assigned-to' in state:
                 res = modify_node_ips(
@@ -83,7 +93,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     service.get('spec', {}).get('ports'), current_app)
                 if not res:
                     self._raise("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
-            rv = self._del(['services', service_name], use_v3=True, ns=pod.namespace)
+            rv = self._del(['services', service_name], ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a service")
         if hasattr(pod, 'public_ip'):
             pod._free_ip()
@@ -92,35 +102,38 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._mark_pod_as_deleted(pod_id)
 
     def _make_namespace(self, namespace):
-        config = {
-            "kind": "Namespace",
-            "apiVersion": 'v1beta3',
-            "metadata": {"name": namespace}}
         data = self._get_namespace(namespace)
         if data is None:
-            rv = self._post(['namespaces'], json.dumps(config), rest=True, use_v3=True, ns=False)
+            config = {
+                "kind": "Namespace",
+                "apiVersion": KUBE_API_VERSION,
+                "metadata": {"name": namespace}}
+            rv = self._post(['namespaces'], json.dumps(config), rest=True,
+                            ns=False)
+            # TODO where raise ?
             # current_app.logger.debug(rv)
 
     def _get_namespace(self, namespace):
-        data = self._get(use_v3=True, ns=namespace)
+        data = self._get(ns=namespace)
         if data.get('code') == 404:
             return None
         return data
 
     def _get_namespaces(self):
-        data = self._get(['namespaces'], use_v3=True, ns=False)
+        data = self._get(['namespaces'], ns=False)
         if self.owner is None:
+            # TODO refactor to return result of same type as below
+            # [i['metadata']['name'] for i in data['items']]
             return data['items']
-        # check for uniqueness ?
         namespaces = []
         for namespace in data['items']:
-            name = namespace.get('metadata', {}).get('name', '')
-            if name.startswith(self.owner.username + '-') and name.endswith('-pods'):
-                namespaces.append(name)
+            ns_name = namespace.get('metadata', {}).get('name', '')
+            if ns_name in get_user_namespaces(self.owner):
+                namespaces.append(ns_name)
         return namespaces
 
     def _drop_namespace(self, namespace):
-        rv = self._del(['namespaces', namespace], use_v3=True, ns=False)
+        rv = self._del(['namespaces', namespace], ns=False)
         self._raise_if_failure(rv, "Cannot delete namespace '{}'".format(namespace))
         return rv
 
@@ -157,22 +170,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         if namespaces:
             for namespace in namespaces:
-                data.extend(self._get(['pods'], use_v3=True, ns=namespace)['items'])
-                services_data.extend(self._get(['services'], use_v3=True, ns=namespace)['items'])
-                replicas_data.extend(self._get(['replicationcontrollers'], use_v3=True, ns=namespace)['items'])
+                data.extend(self._get(['pods'], ns=namespace)['items'])
+                services_data.extend(self._get(['services'], ns=namespace)['items'])
+                replicas_data.extend(self._get(['replicationcontrollers'], ns=namespace)['items'])
         else:
-            data.extend(self._get(['pods'], use_v3=True)['items'])
+            data.extend(self._get(['pods'])['items'])
             services_data.extend(
                 filter(lambda x: x['metadata']['namespace'] != 'default',
-                       self._get(['services'], use_v3=True)['items']))
-            replicas_data.extend(self._get(['replicationcontrollers'], use_v3=True)['items'])
+                       self._get(['services'])['items']))
+            replicas_data.extend(self._get(['replicationcontrollers'])['items'])
 
         for item in data:
             pod = Pod.populate(item)
 
             for s in services_data:
                 if self._is_related(item['metadata']['labels'], s['spec']['selector']):
-                    pod.podIP = s['spec'].get('portalIP')
+                    pod.podIP = s['spec'].get('clusterIP')
                     break
 
             for r in replicas_data:
@@ -228,7 +241,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         conf = {
             'kind': 'Service',
-            'apiVersion': 'v1beta3',    # TODO get from settings
+            'apiVersion': KUBE_API_VERSION,
             'metadata': {
                 # 'generateName': pod.name.lower() + '-service-',
                 'generateName': 'service-',
@@ -247,9 +260,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 'sessionAffinity': 'None'   # may be ClientIP is better
             }
         }
-        if hasattr(pod, 'portalIP') and pod.portalIP:
-            conf['spec']['portalIP'] = pod.portalIP     # TODO will be clusterIP
-        return self._post(['services'], json.dumps(conf), rest=True, use_v3=True, ns=pod.namespace)
+        if hasattr(pod, 'clusterIP') and pod.clusterIP:
+            conf['spec']['clusterIP'] = pod.clusterIP
+        return self._post(['services'], json.dumps(conf), rest=True, ns=pod.namespace)
 
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now
@@ -273,7 +286,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     self._update_pod_config(pod, **{'service': service_rv['metadata']['name']})
                     break
         config = pod.prepare()
-        rv = self._post([pod.kind], json.dumps(config), rest=True, use_v3=True, ns=pod.namespace)
+        rv = self._post([pod.kind], json.dumps(config), rest=True,
+                        ns=pod.namespace)
         # current_app.logger.debug(rv)
         self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
         #return rv
@@ -282,7 +296,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _stop_pod(self, pod, data=None):
         pod.status = 'stopped'
         if hasattr(pod, 'sid'):
-            rv = self._del([pod.kind, pod.sid], use_v3=True, ns=pod.namespace)
+            rv = self._del([pod.kind, pod.sid], ns=pod.namespace)
             if pod.replicationController:
                 self._stop_cluster(pod)
             self._raise_if_failure(rv, "Could not stop a pod")
@@ -290,12 +304,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return {'status': 'stopped'}
 
     def _stop_cluster(self, pod):
-        for p in self._get(['pods'], use_v3=True, ns=pod.namespace)['items']:
+        for p in self._get(['pods'], ns=pod.namespace)['items']:
             if self._is_related(p['metadata']['labels'], {'name': pod.name}):
-                self._del(['pods', p['metadata']['name']], use_v3=True, ns=pod.namespace)
+                self._del(['pods', p['metadata']['name']], ns=pod.namespace)
 
     def _do_container_action(self, action, data):
-        host = data.get('host')
+        host = data.get('nodeName')
         if not host:
             return
         rv = {}

@@ -57,7 +57,7 @@ nullable_port_scheme['nullable'] = True
 
 new_pod_scheme = {
     'name': pod_name_scheme,
-    'portalIP': {                                   # ignore, read-only
+    'clusterIP': {                                   # ignore, read-only
         'type': 'ipv4',
         'nullable': True
     },
@@ -71,7 +71,6 @@ new_pod_scheme = {
     'public_ip': {'type': 'ipv4', 'required': False},
     'restartPolicy': {
         'type': 'string', 'required': True,
-#        'restart_polices': ['always', 'onFailure', 'never']
         'restart_polices': ['Always', 'OnFailure', 'Never']
     },
 #    'namespace': {'type': 'string', 'required': True},

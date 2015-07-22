@@ -128,7 +128,7 @@ class KubeStat(object):
     @staticmethod
     def _get_nodes_info():
         data = {}
-        url = get_api_url('nodes', use_v3=True, namespace=False)
+        url = get_api_url('nodes', namespace=False)
         r=requests.get(url)
 
         try:

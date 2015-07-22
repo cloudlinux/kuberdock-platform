@@ -68,7 +68,7 @@ def set_schedulable(node_id, value, upd=None):
     :param upd: db update record, if present print logs there too
     :return: boolean true if successful
     """
-    url = get_api_url('nodes', node_id, use_v3=True, namespace=False)
+    url = get_api_url('nodes', node_id, namespace=False)
     try_times = 100
     for i in range(try_times):
         try:

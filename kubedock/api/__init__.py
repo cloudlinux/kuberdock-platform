@@ -81,7 +81,8 @@ def process_endpoints_event(data, app):
         print 'ENDPOINT EVENT', data
     service_name = data['object']['metadata']['name']
     current_namespace = data['object']['metadata']['namespace']
-    r = requests.get(get_api_url('services', service_name, use_v3=True, namespace=current_namespace))
+    r = requests.get(get_api_url('services', service_name,
+                                 namespace=current_namespace))
     if r.status_code == 404:
         return
     service = r.json()
@@ -106,9 +107,9 @@ def process_endpoints_event(data, app):
                     del state['assigned-pod-ip']
                     service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
                     # TODO what if resourceVersion has changed?
-                    r = requests.put(
-                        get_api_url('services', service_name, use_v3=True, namespace=current_namespace),
-                        json.dumps(service))
+                    r = requests.put(get_api_url('services', service_name,
+                                     namespace=current_namespace),
+                                     json.dumps(service))
         elif event_type == 'DELETED':
             pass
             # Handle here if public-ip removed during runtime
@@ -123,21 +124,22 @@ def process_endpoints_event(data, app):
         assigned_to = state.get('assigned-to')
         podname = pods[0]['addresses'][0]['targetRef']['name']
         # Can't use task.get_pods_nodelay due cyclic imports
-        kub_pod = requests.get(get_api_url('pods', podname, use_v3=True, namespace=current_namespace)).json()
+        kub_pod = requests.get(get_api_url('pods', podname,
+                                           namespace=current_namespace)).json()
         ports = service['spec']['ports']
         # TODO what to do here when pod yet not assigned to node at this moment?
         # skip only this event or reconnect(like now)?
-        current_host = kub_pod['spec']['host']
-        pod_ip = pods[0]['addresses'][0]['IP']
+        current_host = kub_pod['spec']['nodeName']
+        pod_ip = pods[0]['addresses'][0]['ip']
         if not assigned_to:
             res = modify_node_ips(service_name, current_host, 'add', pod_ip, public_ip, ports, app)
             if res is True:
                 state['assigned-to'] = current_host
                 state['assigned-pod-ip'] = pod_ip
                 service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                r = requests.put(
-                    get_api_url('services', service_name, use_v3=True, namespace=current_namespace),
-                    json.dumps(service))
+                r = requests.put(get_api_url('services', service_name,
+                                 namespace=current_namespace),
+                                 json.dumps(service))
         else:
             if current_host != assigned_to:     # migrate pod
                 if SERVICES_VERBOSE_LOG >= 2:
@@ -152,9 +154,8 @@ def process_endpoints_event(data, app):
                         state['assigned-to'] = current_host
                         state['assigned-pod-ip'] = pod_ip
                         service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                        r = requests.put(
-                            get_api_url('services', service_name, use_v3=True, namespace=current_namespace),
-                            service)
+                        r = requests.put(get_api_url('services', service_name,
+                                         namespace=current_namespace), service)
     else:   # more? replica case
         pass
 
@@ -165,7 +166,7 @@ def listen_endpoints(app):
             if SERVICES_VERBOSE_LOG >= 2:
                 print '==START WATCH ENDPOINTS== pid:', os.getpid()
             r = requests.get(
-                get_api_url('watch', 'endpoints', use_v3=True, namespace=False),
+                get_api_url('endpoints', namespace=False, watch=True),
                 stream=True)
             if r.status_code != 200:
                 gevent.sleep(0.1)

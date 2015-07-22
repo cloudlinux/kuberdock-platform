@@ -33,7 +33,7 @@ def get_kuberdock_logs_pod_name(node):
 def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     return {
         "name": "kuberdock-dns",
-        "portalIP": ip,
+        "clusterIP": ip,
         "replicas": 1,
         "kube_type": 0,
         "replicationController": True,
@@ -100,7 +100,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
 def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
     return {
         "name": name,
-        "portalIP": None,
+        "clusterIP": None,
         "replicas": 1,
         "kube_type": kube_type,
         "replicationController": False,
@@ -364,17 +364,16 @@ def add_node(data, do_deploy=True, with_testing=False):
         logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
                                                 kube.id, logs_kubes, MASTER_IP)
         check_new_pod_data(logs_config)
-        # TODO enable when create|delete namespaces explicitly
-        # logs_pod = PodCollection(ku).add(logs_config)
-        # PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
+        logs_pod = PodCollection(ku).add(logs_config)
+        PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
 
-        dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns', owner=ku).first()
+        dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
+                                                  owner=ku).first()
         if not dns_pod:
             dns_config = get_dns_pod_config()
             check_new_pod_data(dns_config)
-            # TODO enable when create|delete namespaces explicitly
-            # dns_pod = PodCollection(ku).add(dns_config)
-            # PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
+            dns_pod = PodCollection(ku).add(dns_config)
+            PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 
         try:
             # clear old log before it pulled by SSE event
@@ -442,7 +441,8 @@ def delete_item(node_id):
     m = db.session.query(Node).get(node_id)
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
     logs_pod_name = get_kuberdock_logs_pod_name(m.hostname)
-    logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name, owner=ku).first()
+    logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name,
+                                               owner=ku).first()
     if logs_pod:
         PodCollection(ku).delete(logs_pod.id, force=True)
     if m:
@@ -471,13 +471,14 @@ def poll():
     devices = dict.fromkeys(run('rbd ls').split(), None)
     mapped_list = [i.strip().split() for i in run('rbd showmapped').splitlines()]
     # Maybe we'll want mounted later
-    #mounted_list = run('mount | grep /dev/rbd')
+    # mounted_list = run('mount | grep /dev/rbd')
     mapped = [dict(zip(mapped_list[0], i)) for i in mapped_list[1:]]
     for i in mapped:
         devices[i['image']] = dict(filter(
             (lambda x: x[0] not in ['id', 'image', 'snap']),
             i.items()))
     return devices
+
 
 def get_ceph_volumes():
     drives = []
@@ -499,6 +500,7 @@ def get_ceph_volumes():
             drives.append(drive)
     return drives
 
+
 def get_aws_volumes():
     drives = []
     try:
@@ -519,6 +521,7 @@ def get_aws_volumes():
         if user == username and vol.status == 'available':
             drives.append(drive)
     return drives
+
 
 @nodes.route('/lookup', methods=['GET'])
 @login_required_or_basic_or_token

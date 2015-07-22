@@ -476,6 +476,7 @@ chmod 600 $KUBERNETES_CONF_DIR/configfile_for_nodes
 #9. Configure kubernetes
 log_it echo "Configure kubernetes"
 sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission_control=NamespaceLifecycle,NamespaceExists,SecurityContextDeny|}" $KUBERNETES_CONF_DIR/apiserver
 
 
 

@@ -44,15 +44,14 @@ class KubeQuery(object):
             raise SystemExit(error_string)
 
     @staticmethod
-    def _make_url(res, use_v3=False, ns=None):
+    def _make_url(res, ns=None):
         """
         Composes a full URL
         :param res: list -> list of URL path items
         """
-        kw = {'use_v3': use_v3, 'namespace': ns}
         if res is not None:
-            return get_api_url(*res, **kw)
-        return get_api_url(**kw)
+            return get_api_url(*res, namespace=ns)
+        return get_api_url(namespace=ns)
 
     def _return_request(self, req):
         try:
@@ -62,7 +61,7 @@ class KubeQuery(object):
         except (ValueError, TypeError), e:
             raise APIError("Cannot process request: {0}".format(str(e)))
 
-    def _get(self, res=None, params=None, use_v3=False, ns=None):
+    def _get(self, res=None, params=None, ns=None):
         """
         GET request wrapper.
         :param res: list of URL path items
@@ -71,23 +70,23 @@ class KubeQuery(object):
         args = self._compose_args()
         if params:
             args['params'] = params
-        return self._run('get', res, args, use_v3, ns)
+        return self._run('get', res, args, ns)
 
-    def _post(self, res, data, rest=False, use_v3=False, ns=None):
+    def _post(self, res, data, rest=False, ns=None):
         args = self._compose_args(rest)
         args['data'] = data
-        return self._run('post', res, args, use_v3, ns)
+        return self._run('post', res, args, ns)
 
-    def _put(self, res, data, rest=False, use_v3=False, ns=None):
+    def _put(self, res, data, rest=False, ns=None):
         args = self._compose_args(rest)
         args['data'] = data
-        return self._run('put', res, args, use_v3, ns)
+        return self._run('put', res, args, ns)
 
-    def _del(self, res, use_v3=False, ns=None):
+    def _del(self, res, ns=None):
         args = self._compose_args()
-        return self._run('del', res, args, use_v3, ns)
+        return self._run('del', res, args, ns)
 
-    def _run(self, act, res, args, use_v3, ns):
+    def _run(self, act, res, args, ns):
         dispatcher = {
             'get': requests.get,
             'post': requests.post,
@@ -95,7 +94,8 @@ class KubeQuery(object):
             'del': requests.delete
         }
         try:
-            req = dispatcher.get(act, requests.get)(self._make_url(res, use_v3, ns), **args)
+            req = dispatcher.get(act, requests.get)(self._make_url(res, ns),
+                                                    **args)
             return self._return_request(req)
         except requests.exceptions.ConnectionError, e:
             return self._raise_error(str(e))
@@ -154,7 +154,8 @@ class ModelQuery(object):
 
     def _save_pod(self, obj):
         kube_type = getattr(obj, 'kube_type', 0)
-        pod = Pod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id, status='stopped')
+        pod = Pod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
+                  status='stopped')
         kube = db.session.query(Kube).get(kube_type)
         if kube is None:
             kube = db.session.query(Kube).get(0)

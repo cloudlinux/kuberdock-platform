@@ -49,7 +49,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.replicationController = False
         pod.replicas   = 1
         pod.status     = status.get('phase', 'pending').lower()
-        pod.host       = spec.get('host')
+        pod.host       = spec.get('nodeName')
         pod.kube_type  = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
         pod.node       = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
         pod.volumes    = spec.get('volumes', [])
@@ -122,7 +122,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if self.replicationController:
             config = {
                 "kind": "ReplicationController",
-                "apiVersion": "v1beta3",
+                "apiVersion": KUBE_API_VERSION,
                 "metadata": {
                     "name": self.sid,
                     "namespace": self.namespace,
@@ -144,9 +144,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         },
                         "spec": {
                             "volumes": getattr(self, 'volumes', []),
-                            "containers": [
-                                self._prepare_container(c, kube_type)
-                                    for c in self.containers],
+                            "containers": [self._prepare_container(c, kube_type)
+                                           for c in self.containers],
                             "nodeSelector": {
                                 "kuberdock-kube-type": "type_{0}".format(kube_type)
                             },
@@ -158,7 +157,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         else:
             config = {
                 "kind": "Pod",
-                "apiVersion": "v1beta3",
+                "apiVersion": KUBE_API_VERSION,
                 "metadata": {
                     "name": self.sid,
                     "namespace": self.namespace,
@@ -184,49 +183,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if hasattr(self, 'public_ip'):
             pod_config['metadata']['labels']['kuberdock-public-ip'] = self.public_ip
         return config
-
-
-    #def prepare(self, sid=None):
-    #    if not self.replicationController:
-    #        return self._prepare_pod()
-    #    sid = self._make_sid()
-    #    return {
-    #        'kind': 'ReplicationController',
-    #        'apiVersion': KUBE_API_VERSION,
-    #        'id': sid,
-    #        'desiredState': {
-    #            'replicas': self.replicas,
-    #            'replicaSelector': {'name': self.name},
-    #            'podTemplate': self._prepare_pod(sid=sid, separate=False),
-    #        },
-    #        'labels': {'name': self._make_dash() + '-cluster'}}
-    #
-    #def _prepare_pod(self, sid=None, separate=True):
-    #    # separate=True means that this is just a pod, not replica
-    #    # to insert config into replicas config set separate to False
-    #    if sid is None:
-    #        sid = self._make_sid()
-    #    inner = {'version': 'v1beta3'}
-    #    if separate:
-    #        inner['id'] = sid
-    #        inner['restartPolicy'] = getattr(self, 'restartPolicy', {'always': {}})
-    #    inner['volumes'] = getattr(self, 'volumes', [])
-    #    kube_type = getattr(self, 'kube_type', 0)
-    #    inner['containers'] = [self._prepare_container(c, kube_type) for c in self.containers]
-    #    outer = {}
-    #    if separate:
-    #        outer['kind'] = 'Pod'
-    #        outer['apiVersion'] = KUBE_API_VERSION
-    #        outer['id'] = sid
-    #        outer['nodeSelector'] = {'kuberdock-kube-type': 'type_' + str(kube_type)}
-    #    outer['desiredState'] = {'manifest': inner}
-    #    if not hasattr(self, 'labels'):
-    #        outer['labels'] = {'name': self.name}
-    #        if hasattr(self, 'public_ip'):
-    #            outer['labels']['kuberdock-public-ip'] = self.public_ip
-    #    else:
-    #        outer['labels'] = self.labels
-    #    return outer
 
     def _prepare_container(self, data, kube_type=0):
         if not data.get('name'):

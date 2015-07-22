@@ -13,6 +13,7 @@ def process_args():
     parser.add_argument(
         '-u', '--user', help="User account to use. By default current one is used")
     parser.add_argument('-p', '--password')
+    parser.add_argument('-t', '--token')
     parser.add_argument(
         '-j', '--json', action="store_true", help="Output data as JSON")
     

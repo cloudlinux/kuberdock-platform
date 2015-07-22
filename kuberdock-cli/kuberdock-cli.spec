@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 13%{?dist}.cloudlinux
+Release: 14%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,14 +54,19 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
-* Tue Jul 25 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-13
+* Wed Jul 22 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-14
+- Change postprocess iptables rules
+- added --token parameter to kcli
+- commented out volumeMounts data because the PD functionality not implemented
+
+* Tue Jul 21 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-13
 - kcli bugfix: env variables now are being appended, not overriden
 - AC-491: finished
 
-* Sun Jul 19 2015 ARuslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-12
+* Sun Jul 19 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-12
 - AC-491: added suidwrapper for kcli-iptables-wrapper
 
-* Fri Jul 03 2015 ARuslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-11
+* Fri Jul 03 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-11
 - AC-626 KCLI Add --env command, adding env variables
 
 * Fri Jul 03 2015 Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.1-10

@@ -328,15 +328,17 @@ class KuberDock(KubeCtl):
             if c.get('volumeMounts') is None:
                 c['volumeMounts'] = []
                 continue
+            #c['volumeMounts'] = [v for v in c['volumeMounts']
+            #                        if v.get('mountPath')]
             c['volumeMounts'] = [v for v in c['volumeMounts']
-                                    if v.get('mountPath')]
-            for vm in c['volumeMounts']:
-                if not vm.get('name'):
-                    vm['name'] = \
-                    self._generate_image_name(vm['mountPath']).replace('/', '-')
-                    vol = [v for v in self.volumes if v['name'] == vm['name']]
-                    if not vol:
-                        self.volumes.append({'name': vm['name'], 'emptyDir': {}})
+                                    if v.get('mountPath') and v.get('name')]
+            #for vm in c['volumeMounts']:
+            #    if not vm.get('name'):
+            #        vm['name'] = \
+            #        self._generate_image_name(vm['mountPath']).replace('/', '-')
+            #        vol = [v for v in self.volumes if v['name'] == vm['name']]
+            #        if not vol:
+            #            self.volumes.append({'name': vm['name'], 'emptyDir': {}})
 
     def _prepare_ports(self):
         """Checks if all necessary port entry data are set"""

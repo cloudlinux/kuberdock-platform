@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 17%{?dist}.cloudlinux
+Release: 18%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -159,6 +159,11 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Jul 22 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-18
+- Full switch to kubernetes 1.0.1 and api v1 except kubestat.py and PD related code.
+- Refactored get_api_url
+- apiVersion is not hardcoded anymore
+
 * Tue Jul 21 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-17
 - AC-680: Hide extra links in settings page to admin
 - Upgrade to 20.3 kubernetes. Fixed some kuberdock errors, but not all.

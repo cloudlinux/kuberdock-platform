@@ -81,7 +81,7 @@ class KubeCtl(KubeQuery, PrintOut, object):
                 subprocess.check_call(params, stdout=open('/dev/null', 'a'),
                                       stderr=open('/dev/null', 'a'))
             except subprocess.CalledProcessError:
-                params[1] = '-I'
+                params[3] = '-I'
                 subprocess.call(params, stdout=open('/dev/null', 'a'),
                                 stderr=open('/dev/null', 'a'))
         else:

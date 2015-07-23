@@ -50,9 +50,9 @@ class Creator(Command):
         k3 = Kube(name='High memory', cpu=.01, cpu_units='Cores',
                   memory=256, memory_units='MB', disk_space='0', total_traffic=0)
         
-        p1 = Package(id=0, name='basic', setup_fee=0, currency='USD', period='hour', prefix='$', suffix=' USD')
-        p2 = Package(id=1, name='professional', setup_fee=1, currency='USD', period='hour', prefix='$', suffix=' USD')
-        p3 = Package(id=2, name='enterprise', setup_fee=2, currency='USD', period='hour', prefix='$', suffix=' USD')
+        p1 = Package(id=0, name='basic', first_deposit=0, currency='USD', period='hour', prefix='$', suffix=' USD')
+        p2 = Package(id=1, name='professional', first_deposit=1, currency='USD', period='hour', prefix='$', suffix=' USD')
+        p3 = Package(id=2, name='enterprise', first_deposit=2, currency='USD', period='hour', prefix='$', suffix=' USD')
 
         PackageKube(packages=p1, kubes=k1, kube_price=0)
         PackageKube(packages=p2, kubes=k1, kube_price=0)

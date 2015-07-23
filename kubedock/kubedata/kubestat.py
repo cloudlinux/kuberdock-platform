@@ -43,7 +43,7 @@ class KubeUnitResolver(object):
 
     def __getattr__(self, name):
         if name == '_data':
-            url = get_api_url('pods')
+            url = get_api_url('pods', namespace=False)
             r = requests.get(url)
             return r.json()
         raise AttributeError("No such attribute: %s" % (name,))
@@ -54,15 +54,15 @@ class KubeUnitResolver(object):
         ip_patt = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
         for item in self._data['items']:
             try:
-                if item['labels']['name'] not in self._names:
+                if item['metadata']['labels']['name'] not in self._names:
                     continue
-                host = item['currentState']['host']
+                host = item['spec']['nodeName']
                 if ip_patt.match(host):
                     host = socket.gethostbyaddr(host)[0]
                 if host not in self._containers:
                     self._containers[host] = []
-                for c in item['desiredState']['manifest']['containers']:
-                    self._containers[host].append((c['name'], item['id'], item['labels']['name']))
+                for c in item['spec']['containers']:
+                    self._containers[host].append((c['name'], item['metadata']['name'], item['metadata']['labels']['name']))
             except KeyError:
                 continue
             except socket.herror:

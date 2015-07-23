@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 14%{?dist}.cloudlinux
+Release: 15%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,9 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Thu Jul 23 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-15
+- kuberdock-cli KubeCtl bugfix
+
 * Wed Jul 22 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-14
 - Change postprocess iptables rules
 - added --token parameter to kcli

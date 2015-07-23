@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 18%{?dist}.cloudlinux
+Release: 19%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,13 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Thu Jul 23 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-19
+- Remove getFreeHost logic. Now ip allocated on server during pod creation.
+- Fix AC-702
+- Logs pods now replacas.
+- fixed stat charts for v1
+- Fixed flanneld 0.5.1
+
 * Wed Jul 22 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-18
 - Full switch to kubernetes 1.0.1 and api v1 except kubestat.py and PD related code.
 - Refactored get_api_url

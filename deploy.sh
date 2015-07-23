@@ -660,5 +660,5 @@ log_it echo "Will be used $TGT_PATH Please, copy it to all your nodes with comma
 log_it echo "ssh-copy-id -i $TGT_PATH.pub root@your_node"
 log_it echo "Installation completed and log saved to $DEPLOY_LOG_FILE"
 log_it echo "KuberDock is available at https://$MASTER_IP/"
-log_it echo "login: admin"
-log_it echo "password: $ADMIN_PASSWORD"
+echo "login: admin"
+echo "password: $ADMIN_PASSWORD"

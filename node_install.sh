@@ -173,6 +173,8 @@ Before=docker.service
 
 [Service]
 Type=notify
+Restart=always
+RestartSec=10
 EnvironmentFile=/etc/sysconfig/flanneld
 EnvironmentFile=-/etc/sysconfig/docker-network
 ExecStart=/usr/bin/flanneld \

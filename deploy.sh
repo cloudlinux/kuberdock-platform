@@ -517,6 +517,7 @@ do_and_log etcdctl get /kuberdock/network/config
 
 
 #13 Setuping Flannel on master ==========================================
+log_it echo "Configuring Flannel..."
 # Only on master flannel can use non https connection
 cat > /etc/sysconfig/flanneld << EOF
 # Flanneld configuration options
@@ -531,6 +532,10 @@ FLANNEL_ETCD_KEY="/kuberdock/network/"
 # Any additional options that you want to pass
 FLANNEL_OPTIONS="--iface=$MASTER_TOBIND_FLANNEL"
 EOF
+
+cp /usr/lib/systemd/system/flanneld.service /etc/systemd/system/flanneld.service
+sed -i "/^\[Service\]/a Restart=always\nRestartSec=10" /etc/systemd/system/flanneld.service
+
 
 log_it echo "Starting flannel..."
 do_and_log systemctl enable flanneld

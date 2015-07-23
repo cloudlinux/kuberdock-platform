@@ -20,11 +20,11 @@ def get_ippool(network=None):
     return IpAddrPool().get(network)
 
 
-@ippool.route('/getFreeHost', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
-@KubeUtils.jsonwrap
-def get_free_address():
-    return IpAddrPool().get_free()
+# @ippool.route('/getFreeHost', methods=['GET'], strict_slashes=False)
+# @login_required_or_basic_or_token
+# @KubeUtils.jsonwrap
+# def get_free_address():
+#     return IpAddrPool().get_free()
 
 
 @ippool.route('/userstat', methods=['GET'], strict_slashes=False)

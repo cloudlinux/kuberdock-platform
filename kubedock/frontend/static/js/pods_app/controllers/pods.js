@@ -333,16 +333,9 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             this.container[key] = value;
                         }, {container: container});
 
-                        var rqst = $.ajax({
-                            type: 'GET',
-                            url: '/api/ippool/getFreeHost'
-                        });
-                        rqst.done(function(rs){
-                            model.set({freeHost: rs.data});
-                            wizardLayout.steps.show(new App.Views.NewItem.WizardCompleteSubView({
-                                model: model
-                            }));
-                        });
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardCompleteSubView({
+                            model: model
+                        }));
                     });
                     that.listenTo(wizardLayout, 'image:selected', function(image, url){
                         var that = this,

@@ -4,6 +4,7 @@ import shlex
 from uuid import uuid4
 from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
+from .ippool import IpAddrPool
 
 from ..billing import kubes_to_limits
 from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, AWS, CEPH
@@ -23,15 +24,15 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     @staticmethod
     def create(data):
         set_public_ip = data.pop('set_public_ip', None)
-        public_ip = data.pop('freeHost', None)
         owner = data.pop('owner', None)
         pod = Pod(data)
         pod._check_pod_name(owner)
         if set_public_ip:
-            if public_ip:
-                pod.public_ip = public_ip
-            elif AWS:
+            if AWS:
                 pod.public_aws = True
+            else:
+                pod.public_ip = unicode(IpAddrPool().get_free(),
+                                        encoding='utf-8')
         pod._make_uuid_if_missing()
         pod.sid = pod._make_sid()
         return pod

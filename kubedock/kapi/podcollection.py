@@ -36,7 +36,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod.compose_persistent(self.owner.username)
         self._save_pod(pod)
         pod._forge_dockers()
-        if hasattr(pod, 'public_ip'):
+        if hasattr(pod, 'public_ip') and pod.public_ip:
             pod._allocate_ip()
         return pod.as_dict()
 

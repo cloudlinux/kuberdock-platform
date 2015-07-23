@@ -15,14 +15,17 @@ def login():
         return redirect(url_for('main.index'))
     username = request.form.get('login-form-username-field')
     passwd = request.form.get('login-form-password-field')
-    if username is not None and passwd is not None:
+    token = request.args.get('token')
+    if token:
+        username = token.split('|', 1)[0] or None
+    if username is not None and (passwd is not None or token is not None):
         user = User.query.filter_by(username=username).first()
         error = 'Invalid credentials provided'
         if user is None:
             pass
         elif not user.active:
             error = 'User "{0}" is blocked'.format(username)
-        elif user.verify_password(passwd):
+        elif passwd is not None and user.verify_password(passwd) or user.verify_token(token):
             login_user(user)
             user_logged_in.send((user.id, request.remote_addr))
             main_index = url_for('main.index')

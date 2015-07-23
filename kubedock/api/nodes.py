@@ -103,7 +103,7 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
         "clusterIP": None,
         "replicas": 1,
         "kube_type": kube_type,
-        "replicationController": False,
+        "replicationController": True,
         "node": node,
         "save_only": True,
         "restartPolicy": "Always",

@@ -212,7 +212,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
             name=pkg.name,
             kube_id=[k.kube_id for k in pkg.kubes],
             kube_info=[kube.kubes.to_dict() for kube in pkg.kubes],
-            setup_fee=pkg.setup_fee,
+            first_deposit=pkg.first_deposit,
             currency=pkg.currency,
             period=pkg.period
         )

@@ -152,7 +152,6 @@ define(['marionette', 'utils'],
                                 buttonCancel: true
                             }
                         });
-
                     }
                 });
             }

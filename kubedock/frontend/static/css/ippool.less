@@ -47,6 +47,12 @@
                             background-position: 0 -18px;
                         }
                     }
+                    &.unbind_ip{
+                        background: url('../img/unblock.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -17px;
+                        }
+                    }
                 }
             }
             &:last-child{
@@ -87,13 +93,13 @@
                             background-color: #97cd75;
                         }
                     }
-                    &.blocked{
+                    &.blocked, &.busy{
                         &:before{
                             border: 1px solid #bc1b14;
                             background-color: #f5544d;
                         }
                     }
-                    &#deleteNetwork, &.block_ip, &.unblock_ip{
+                    &#deleteNetwork, &.block_ip, &.unblock_ip, &.unbind_ip{
                         top: 2px;
                         left: 7px;
                         width: 20px;
@@ -109,7 +115,7 @@
                         top: 16px;
                         height: 17px;
                     }
-                    &.block_ip, &.unblock_ip{
+                    &.block_ip, &.unblock_ip, &.unbind_ip{
                         top: 4px;
                     }
                 }

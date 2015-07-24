@@ -73,7 +73,7 @@
                     <tr>
                         <th>IP</th>
                         <th>Status</th>
-                        <th>Assigned</th>
+                        <!-- <th>Assigned</th> -->
                     </tr>
                 </thead>
                 <tbody class="networks-list-more">
@@ -83,18 +83,21 @@
                                 <%- itm[0] %>
                             </td>
                             <td>
-                                <span class="<%- itm[1] ? itm[1] : itm[2] %>"><%- itm[1] ? itm[1] : itm[2] %></span>
                                 <% if(itm[2] == 'busy') { %>
-                                    <span class="unbind_ip" data-ip="<%- itm[0] %>">unbind</span>
-                                <% } else if(itm[2] == 'blocked') { %>
+                                    <span class="<%- itm[1] %>"><%- itm[2] %></span>
+                                    <span class="unbind_ip" data-ip="<%- itm[0] %>"></span>
+                                <% } else { %>
+                                    <span class="<%- itm[1] ? itm[1] : itm[2] %>"><%- itm[1] ? itm[1] : itm[2] %></span>
+                                <% }%>
+                                <% if(itm[2] == 'blocked') { %>
                                     <span class="unblock_ip" data-ip="<%- itm[0] %>"></span>
                                 <% } else if(itm[2] == 'free') { %>
                                     <span class="block_ip" data-ip="<%- itm[0] %>"></span>
                                 <% } %>
                             </td>
-                            <td>
+                            <!-- <td>
                                 yes or no
-                            </td>
+                            </td> -->
                         </tr>
                     <% });%>
                 </tbody>

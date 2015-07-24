@@ -12,7 +12,8 @@ from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION
 def generate_ns_name(user, podname):
     s = '{0}-{1}'.format(user.username, podname)    # + timestamp?
     h = hashlib.md5(s)
-    return '{0}-{1}'.format(s[:30].lower(), h.hexdigest())
+    readable_part = ''.join([i if i not in '@._' else '-' for i in s[:30].lower()])
+    return '{0}-{1}'.format(readable_part, h.hexdigest())
 
 
 def get_user_namespaces(user):

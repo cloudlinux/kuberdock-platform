@@ -259,14 +259,14 @@ def add_new_node(host, kube_type, db_node, with_testing):
 
 def parse_pods_statuses(data):
     db_pods = {}
-    for pod in Pod.query.filter(Pod.status != 'deleted').values(
-            Pod.name, Pod.id, Pod.config):
+    for pod_name, pod_id, pod_config in Pod.query.filter(
+            Pod.status != 'deleted').values(Pod.name, Pod.id, Pod.config):
         kubes = {}
-        containers = json.loads(pod[2]).get('containers', [])
+        containers = json.loads(pod_config).get('containers', [])
         for container in containers:
             if 'kubes' in container:
                 kubes[container['name']] = container['kubes']
-        db_pods[pod[0]] = {'uid': pod[1], 'kubes': kubes}
+        db_pods[pod_name] = {'uid': pod_id, 'kubes': kubes}
     items = data.get('items')
     res = []
     for item in items:
@@ -274,7 +274,7 @@ def parse_pods_statuses(data):
         try:
             pod_name = item['metadata']['labels']['name']
         except KeyError:
-            pod_name = item['metadata']['name']
+            pod_name = item['metadata']['name']   # don't match our needs at all
         if pod_name in db_pods:
             current_state['uid'] = db_pods[pod_name]['uid']
             if 'containerStatuses' in current_state:
@@ -331,7 +331,8 @@ def check_events():
     else:
         pods_list = json.loads(pods_list)
         temp = requests.get(get_api_url('pods', namespace=False)).json()
-        temp = parse_pods_statuses(temp)
+        # Little hack to convert all str to unicode for easy comparing
+        temp = json.loads(json.dumps(parse_pods_statuses(temp)))
         if temp != pods_list:
             pods_list = temp
             redis.set('cached_pods', json.dumps(pods_list))

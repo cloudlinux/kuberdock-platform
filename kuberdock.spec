@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 19%{?dist}.cloudlinux
+Release: 20%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Fri Jul 24 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-20
+- AC-591 Package rename setup_fee
+- Added checkpoints to updates.
+- AC-249: Some fix in design in IPPoot page
+- Escape bad chars in user name for namespace
+
 * Thu Jul 23 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-19
 - Remove getFreeHost logic. Now ip allocated on server during pod creation.
 - Fix AC-702

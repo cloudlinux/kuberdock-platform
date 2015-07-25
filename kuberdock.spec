@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 20%{?dist}.cloudlinux
+Release: 21%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,10 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Sat Jul 25 2015 Alex Tishin <atishin@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-21
+- Fixed error during node addition. Now ip is not required and resolved from hostname as expected.
+- AC-659: FS limits (+overlayfs/-selinux)
+
 * Fri Jul 24 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-20
 - AC-591 Package rename setup_fee
 - Added checkpoints to updates.

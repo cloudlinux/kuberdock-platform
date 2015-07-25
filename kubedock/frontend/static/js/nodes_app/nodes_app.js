@@ -393,23 +393,25 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
         complete: function () {
             var that = this;
-            App.Data.nodes.create({
-                ip: this.state.get('ip'),
-                hostname: this.state.get('hostname'),
-                status: 'pending',
-                kube_type: this.state.get('kube_type'),
-                install_log: ''
-            }, {
-                wait: true,
-                success: function(){
-                    // TODO redirect to this node page
-//                    that.trigger('show_console');
-                    App.router.navigate('/', {trigger: true});
-                },
-                /*error: function(){
-                    modelError('error while saving! Maybe some fields required.');
-                } */
-            });
+            var val = this.state.get('hostname');
+            if (val !== '') {
+                App.Data.nodes.create({
+                    hostname: val,
+                    status: 'pending',
+                    kube_type: this.state.get('kube_type'),
+                    install_log: ''
+                }, {
+                    wait: true,
+                    success: function(){
+                        // TODO redirect to this node page
+    //                    that.trigger('show_console');
+                        App.router.navigate('/', {trigger: true});
+                    },
+                    /*error: function(){
+                        modelError('error while saving! Maybe some fields required.');
+                    } */
+                });
+            }
         },
 
         validateStep: function (evt) {
@@ -417,11 +419,11 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             if (val !== '') {
                 var that = this;
                 this.ui.spinner.spin({color: '#437A9E'});
-                Backbone.ajax({ url:"/api/nodes/checkhost/" + val }).done(function (data) {
-                    that.state.set('ip', data.ip);
-                    that.state.set('hostname', data.hostname);
+                Backbone.ajax({ url:"/api/nodes/checkhost/" + val, async: false }).done(function (data) {
+                    that.state.set('hostname', val);
                 }).error(function(resp) {
 /*                    modelError(resp);*/
+                    that.state.set('hostname', '');
                     that.ui.node_name.addClass('error');
                 });
                 that.ui.spinner.spin(false);

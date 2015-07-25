@@ -109,15 +109,14 @@ class Updater(Command):
 
 class NodeManager(Command):
     option_list = (
-        Option('--ip', dest='ip', required=True),
         Option('--hostname', dest='hostname', required=True),
         Option('--kube-type', dest='kube_type', type=int, required=True),
         Option('--do-deploy', dest='do_deploy', action='store_true'),
         Option('-t', '--testing', dest='testing', action='store_true'),
     )
 
-    def run(self, ip, hostname, kube_type, do_deploy, testing):
-        data = {'ip': ip, 'hostname': hostname, 'kube_type': kube_type}
+    def run(self, hostname, kube_type, do_deploy, testing):
+        data = {'hostname': hostname, 'kube_type': kube_type}
         try:
             check_node_data(data)
             res = add_node(data, do_deploy, testing)

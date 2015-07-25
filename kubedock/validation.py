@@ -362,10 +362,19 @@ def check_node_data(data):
             'kube_type': {'type': 'integer', 'min': 0, 'required': True},
         }):
         raise APIError(validator.errors)
-    if data['ip'] == data['hostname']:
+    if is_ip(data['hostname']):
         raise APIError('Please add nodes by hostname, not by ip')
     kube_type = data.get('kube_type', 0)
     check_kube_indb(kube_type)
+
+
+def is_ip(addr):
+    try:
+        socket.inet_pton(socket.AF_INET, addr)
+    except socket.error:
+        return False
+    else:
+        return True
 
 
 def check_hostname(hostname):
@@ -373,11 +382,7 @@ def check_hostname(hostname):
     if not validator.validate({'Hostname': hostname},
                               {'Hostname': hostname_scheme}):
         raise APIError(validator.errors)
-    try:
-        socket.inet_pton(socket.AF_INET, hostname)
-    except socket.error:
-        pass
-    else:
+    if is_ip(hostname):
         raise APIError('Please, enter hostname, not ip address.')
 
 

@@ -3,6 +3,7 @@ from fabric.api import run, settings, env
 from fabric.tasks import execute
 import boto.ec2
 import math
+import socket
 import operator
 import socket
 import os
@@ -350,8 +351,8 @@ def add_node(data, do_deploy=True, with_testing=False):
     m = db.session.query(Node).filter_by(hostname=data['hostname']).first()
     if not m:
         kube = Kube.query.get(data.get('kube_type', 0))
-        m = Node(ip=data['ip'], hostname=data['hostname'], kube=kube,
-                 state='pending')
+        m = Node(ip=socket.gethostbyname(data['hostname']),
+                 hostname=data['hostname'], kube=kube, state='pending')
         logs_kubes = 1
         node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
         logs_memory_limit = node_resources['limits']['memory']
@@ -463,8 +464,7 @@ def delete_item(node_id):
 @nodes.route('/checkhost/<hostname>', methods=['GET'])
 def check_host(hostname):
     check_hostname(hostname)
-    ip = socket.gethostbyname(hostname)
-    return jsonify({'status': 'OK', 'ip': ip, 'hostname': hostname})
+    return jsonify({'status': 'OK'})
 
 
 def poll():

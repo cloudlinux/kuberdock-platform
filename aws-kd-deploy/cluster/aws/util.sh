@@ -563,13 +563,12 @@ function kube-up {
   # Basic sanity checking
   local rc # Capture return code without exiting because of errexit bash option
   for (( i=0; i<${#MINION_NAMES[@]}; i++)); do
-  MINION_PRIVATE_IP=$(get_instance_private_ip ${MINION_NAMES[$i]})
   MINION_HOSTNAME=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" hostname -f)
 	scp -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -r ${KUBE_ROOT}/kuberdock-files ${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}:/home/${EC2_USER}/
 	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" "stty raw -echo; sudo cp /home/${EC2_USER}/kuberdock-files/* /  | cat" < <(cat) 2>"$LOG"
 	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" "stty raw -echo; sudo mkdir -p /var/lib/kuberdock/scripts | cat" < <(cat) 2>"$LOG"
 	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" "sudo AWS=True CUR_MASTER_KUBERNETES=${CUR_MASTER_KUBERNETES} MASTER_IP=${MASTER_INTERNAL_IP} bash /node_install.sh | cat" < <(cat) 2>"$LOG"
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" python /var/opt/kuberdock/manage.py add_node --ip=${MINION_PRIVATE_IP} --hostname=${MINION_HOSTNAME} --kube-type=0 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" python /var/opt/kuberdock/manage.py add_node --hostname=${MINION_HOSTNAME} --kube-type=0 2>"$LOG"
   done
 
   rm -rf ${KUBE_ROOT}/kuberdock-files

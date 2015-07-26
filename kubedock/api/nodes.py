@@ -45,13 +45,18 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
         "containers": [
             {
                 "command": [
-                    "/etcd",
-                    "-listen-client-urls=http://0.0.0.0:2379,http://0.0.0.0:4001",
-                    "-initial-cluster-token=skydns-etcd",
-                    "-advertise-client-urls=http://127.0.0.1:4001"
+                    "/usr/local/bin/etcd",
+                    "-data-dir",
+                    "/var/etcd/data",
+                    "-listen-client-urls",
+                    "http://127.0.0.1:2379,http://127.0.0.1:4001",
+                    "-advertise-client-urls",
+                    "http://127.0.0.1:2379,http://127.0.0.1:4001",
+                    "-initial-cluster-token",
+                    "skydns-etcd"
                 ],
                 "kubes": 1,
-                "image": "quay.io/coreos/etcd:v2.0.3",
+                "image": "gcr.io/google_containers/etcd:2.0.9",
                 "name": "etcd",
                 "env": [],
                 "ports": [],
@@ -65,7 +70,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
                     "-domain={0}".format(domain),
                 ],
                 "kubes": 1,
-                "image": "gcr.io/google-containers/kube2sky:1.1",
+                "image": "gcr.io/google_containers/kube2sky:1.11",
                 "name": "kube2sky",
                 "env": [],
                 "ports": [],
@@ -76,11 +81,12 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
             {
                 "command": [
                     "/skydns",
-                    "-machines=http://127.0.0.1:4001", "-addr=0.0.0.0:53",
+                    "-machines=http://127.0.0.1:4001",
+                    "-addr=0.0.0.0:53",
                     "-domain={0}.".format(domain)
                 ],
                 "kubes": 1,
-                "image": "gcr.io/google-containers/skydns:2015-03-11-001",
+                "image": "gcr.io/google_containers/skydns:2015-03-11-001",
                 "name": "skydns",
                 "env": [],
                 "ports": [

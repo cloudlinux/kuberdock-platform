@@ -62,6 +62,7 @@ Requires: python-alembic
 Requires: python-flask-migrate >= 1.4.0
 Requires: python-flask-script
 Requires: python-bitmath
+Requires: python-websocket-client >= 0.32.0
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

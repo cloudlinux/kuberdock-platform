@@ -165,7 +165,10 @@ NodesApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
     Data.NodeModel = Backbone.Model.extend({
         urlRoot: '/api/nodes/',
-        parse: unwrapper
+        parse: unwrapper,
+        defaults: {
+            'ip': ''
+        }
     });
 
     Data.NodesCollection = Backbone.PageableCollection.extend({
@@ -691,7 +694,6 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
                 layout_view.trigger('show');
             });
             this.listenTo(find_step.state, 'change', function () {
-                final_step.state.set('ip', find_step.state.get('ip'));
                 final_step.state.set('hostname', find_step.state.get('hostname'));
             });
             this.listenTo(final_step, 'show_console', function () {

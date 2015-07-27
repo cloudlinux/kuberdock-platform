@@ -12,6 +12,7 @@ import requests
 import gevent
 import os
 from rbac.context import PermissionDenied
+from websocket import create_connection, WebSocketException
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -222,7 +223,7 @@ def listen_pods(app):
             if PODS_VERBOSE_LOG >= 2:
                 print '==START WATCH PODS== pid:', os.getpid()
             r = requests.get(
-                get_api_url('watch', 'pods', use_v3=True, namespace=False),
+                get_api_url('pods', use_v3=True, namespace=False, watch=True),
                 stream=True)
             if r.status_code != 200:
                 gevent.sleep(0.1)
@@ -250,3 +251,47 @@ def listen_pods(app):
         except Exception as e:
             print e.__repr__(), '...restarting listen pods...'
             gevent.sleep(0.2)
+
+
+def listen_fabric(url, func, verbose=1):
+    fn_name = func.func_name
+
+    def result(app):
+        while True:
+            try:
+                if verbose >= 2:
+                    print '==START WATCH {0} == pid: {1}'.format(
+                        fn_name, os.getpid())
+                try:
+                    ws = create_connection(url)
+                except WebSocketException as e:
+                    print e.__repr__()
+                    gevent.sleep(0.1)
+                    continue
+                while True:
+                    content = ws.recv()
+                    if verbose >= 2:
+                        print '==EVENT CONTENT {0} ==: {1}'.format(
+                            fn_name, content)
+                    data = json.loads(content)
+                    data = filter_event(data)
+                    func(data, app)
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                print e.__repr__(), '..restarting listen {0}...'.format(fn_name)
+                gevent.sleep(0.2)
+    return result
+
+
+l_pods = listen_fabric(
+    get_api_url('pods', namespace=False, watch=True).replace('http', 'ws'),
+    process_pods_event,
+    PODS_VERBOSE_LOG
+)
+
+l_endpoints = listen_fabric(
+    get_api_url('endpoints', namespace=False, watch=True).replace('http', 'ws'),
+    process_endpoints_event,
+    SERVICES_VERBOSE_LOG
+)

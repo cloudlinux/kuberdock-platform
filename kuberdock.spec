@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 21%{?dist}.cloudlinux
+Release: 22%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -159,6 +159,17 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Jul 27 2015 Alex Tishin <atishin@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-22
+- AC-715: Update cluster DNS containers
+- Fixed node deploy js error.
+- Switch to listen events via WebSockets, add listen fabric func.
+- raised flannel to 0.5.1
+- modified nginx configs
+- AC-597 Api usage change kube_id data type.
+- AC-711 Add all default kubes to standart package
+- Added -u --udp-backend option to deploy.sh to use udp for flannel
+- AC-717: Fix node_install.sh due to node reboot
+
 * Sat Jul 25 2015 Alex Tishin <atishin@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-21
 - Fixed error during node addition. Now ip is not required and resolved from hostname as expected.
 - AC-659: FS limits (+overlayfs/-selinux)

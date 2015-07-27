@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 23%{?dist}.cloudlinux
+Release: 24%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -159,6 +159,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Jul 27 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-24
+- removed logo shrinking
+- Fix container states not saved
+- added firewalld rules for cpanel flanneld and kube-proxy
+- replaced logos
+
 * Mon Jul 27 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.2-23
 - deploy.sh hotfix
 

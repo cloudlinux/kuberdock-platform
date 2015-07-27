@@ -339,8 +339,8 @@ def check_events():
             send_event('pull_pods_state', 'ping')
 
     for pod in pods_list:
-        if 'info' in pod:
-            for container_name, container_data in pod['info'].items():
+        if 'containerStatuses' in pod:
+            for container_data in pod['containerStatuses']:
                 kubes = container_data.get('kubes', 1)
                 for s in container_data['state'].values():
                     start = s.get('startedAt')
@@ -350,7 +350,7 @@ def check_events():
                     end = s.get('finishedAt')
                     if end is not None:
                         end = datetime.strptime(end, DATETIME_FORMAT)
-                    add_container_state(pod['uid'], container_name, kubes,
+                    add_container_state(pod['uid'], container_data.get('name'), kubes,
                                         start, end)
 
     cs1 = db.aliased(ContainerState, name='cs1')

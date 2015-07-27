@@ -62,7 +62,7 @@ def unfold_entry(row):
         'id': row.id,
         'name': row.name,
         'kubes': row.kubes,
-        'kube_id': [k.kube_id for k in row.owner.package.kubes],
+        'kube_id': row.kube_id,
         'time': time_,
         }
 

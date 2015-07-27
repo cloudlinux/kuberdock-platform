@@ -14,7 +14,7 @@ if [ $USER != "root" ]; then
 fi
 
 # TODO parse options more correctly
-FLANNEL_BACKEND='host-gw'
+CONF_FLANNEL_BACKEND='host-gw'
 case $1 in
   -t|--testing)
   WITH_TESTING='yes'

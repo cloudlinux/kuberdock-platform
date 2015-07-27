@@ -55,6 +55,8 @@ class Creator(Command):
         p3 = Package(id=2, name='enterprise', first_deposit=2, currency='USD', period='hour', prefix='$', suffix=' USD')
 
         PackageKube(packages=p1, kubes=k1, kube_price=0)
+        PackageKube(packages=p1, kubes=k2, kube_price=0)
+        PackageKube(packages=p1, kubes=k3, kube_price=0)
         PackageKube(packages=p2, kubes=k1, kube_price=0)
         PackageKube(packages=p2, kubes=k2, kube_price=1)
         PackageKube(packages=p3, kubes=k1, kube_price=0)

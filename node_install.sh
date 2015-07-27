@@ -85,8 +85,6 @@ check_status
 systemctl daemon-reload
 check_status
 ntpd -gq
-systemctl restart ntpd
-check_status
 systemctl enable ntpd
 check_status
 ntpq -p
@@ -191,11 +189,9 @@ WantedBy=multi-user.target
 EOF
 
 
-echo "Starting Flanneld ..."
+echo "Enabling Flanneld ..."
 rm -f /run/flannel/docker 2>/dev/null
 systemctl enable flanneld
-check_status
-systemctl restart flanneld
 check_status
 
 
@@ -218,44 +214,17 @@ cat > /etc/rsyslog.d/kuberdock.conf << EOF
 EOF
 
 
-echo 'Restarting rsyslog...'
-systemctl restart rsyslog
-check_status
-
-
-
-# 9. prepare things for logging pod
-
-# waiting for flanneld to start.
-count=0
-while [ ! -f /run/flannel/docker ]
-do
-  sleep 0.2;
-  let "count += 1"
-  if [ $count -ge 100 ];then
-    echo "Waiting for flanneld longer then 20 seconds. Exiting. $EXIT_MESSAGE"
-    exit 1
-  fi
-done
 
 # overlayfs enable
 systemctl mask docker-storage-setup
 sed -i '/^OPTIONS=/ s/--selinux-enabled//' /etc/sysconfig/docker
-sed -i '/^DOCKER_STORAGE_OPTIONS=/ s/$/--storage-driver=overlay/' /etc/sysconfig/docker-storage
+sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=overlay' /etc/sysconfig/docker-storage
 
-echo 'Restarting docker...'
-# pull images (update if already exists)
+echo 'Enabling docker...'
 systemctl enable docker
 check_status
-#systemctl restart docker
-#check_status
 
-docker pull kuberdock/fluentd:1.0 > /dev/null 2>&1 &
-docker pull kuberdock/elasticsearch:1.0 > /dev/null 2>&1 &
-
-for c in $(docker ps -a | grep 'kuberdock-.*\.file' | awk '{print $1}'); do
-  docker rm -f $c > /dev/null 2>&1
-done
+# 9. prepare things for logging pod
 
 # fix elasticsearch home directory ownership (if ES was running as service)
 if [ -d /var/lib/elasticsearch ]; then
@@ -274,6 +243,9 @@ chcon -Rt svirt_sandbox_file_t /var/lib/docker/containers
 check_status
 
 # prjquota enable
+if [ ! -d /var/lib/docker/overlay ]; then
+  mkdir -p /var/lib/docker/overlay
+fi
 FS=$(df --print-type /var/lib/docker/overlay | tail -1)
 FS_TYPE=$(awk '{print $2}' <<< "$FS")
 if [ "$FS_TYPE" == "xfs" ]; then
@@ -446,14 +418,10 @@ EOF
 
 
 # 10. enable services
-echo "Starting services..."
+echo "Enabling services..."
 systemctl enable kubelet
 check_status
-systemctl restart kubelet
-check_status
 systemctl enable kube-proxy
-check_status
-systemctl restart kube-proxy
 check_status
 
 CADVISOR_CONF=/etc/sysconfig/cadvisor
@@ -461,12 +429,10 @@ sed -i "/^CADVISOR_STORAGE_DRIVER/ {s/\"\"/\"influxdb\"/}" $CADVISOR_CONF
 sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/${MASTER_IP}/}" $CADVISOR_CONF
 systemctl enable cadvisor
 check_status
-systemctl restart cadvisor
-check_status
 
 # 11. install kernel
 echo "Installing new kernel..."
-yum_wrapper -y install kernel kernel-tools kernel-tools-libs
+yum_wrapper -y install kernel kernel-tools kernel-tools-libs kernel-headers
 
 # 12. reboot
 echo "Your node has to be rebooted. Performing now..."

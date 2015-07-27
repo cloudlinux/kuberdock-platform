@@ -13,12 +13,25 @@ if [ $USER != "root" ]; then
     exit 1
 fi
 
+# TODO parse options more correctly
+FLANNEL_BACKEND='host-gw'
 case $1 in
   -t|--testing)
   WITH_TESTING='yes'
   ;;
+  -u|--udp-backend)
+  CONF_FLANNEL_BACKEND='udp'
+  ;;
 esac
 
+case $2 in
+  -t|--testing)
+  WITH_TESTING='yes'
+  ;;
+  -u|--udp-backend)
+  CONF_FLANNEL_BACKEND='udp'
+  ;;
+esac
 
 
 # SOME HELPERS
@@ -122,6 +135,8 @@ yum_wrapper()
 #      esac
 #   done
 #}
+
+log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND"
 
 # Get number of interfaces up
 IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)
@@ -506,11 +521,16 @@ do_and_log systemctl restart redis
 
 #12 Flannel
 log_it echo "Setuping flannel config to etcd..."
+
+# This must be same as cluster network (ex. Portal_net):
+CONF_FLANNEL_NET=10.254.0.0/16
+CONF_FLANNEL_SUBNET_LEN=24
+
 if [ "$ISAMAZON" = true ];then
-    # host-gw don't work on AWS so we use udp
-    etcdctl mk /kuberdock/network/config "{\"Network\":\"10.254.0.0/16\", \"SubnetLen\": 24, \"Backend\": {\"Type\": \"aws-vpc\", \"RouteTableID\": \"$ROUTE_TABLE_ID\"}}" 2> /dev/null
+    # host-gw don't work on AWS so we use aws-vpc
+    etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"aws-vpc\", \"RouteTableID\": \"$ROUTE_TABLE_ID\"}}" 2> /dev/null
 else
-    etcdctl mk /kuberdock/network/config '{"Network":"10.254.0.0/16", "SubnetLen": 24, "Backend": {"Type": "host-gw"}}' 2> /dev/null
+    etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"$CONF_FLANNEL_BACKEND\"}}" 2> /dev/null
 fi
 do_and_log etcdctl get /kuberdock/network/config
 

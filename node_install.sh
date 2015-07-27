@@ -97,7 +97,7 @@ fi
 
 # 2. install components
 echo "Installing kubernetes..."
-yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel-0.4.1 cadvisor docker
+yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel-0.5.1 cadvisor docker
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
@@ -247,8 +247,8 @@ echo 'Restarting docker...'
 # pull images (update if already exists)
 systemctl enable docker
 check_status
-systemctl restart docker
-check_status
+#systemctl restart docker
+#check_status
 
 docker pull kuberdock/fluentd:1.0 > /dev/null 2>&1 &
 docker pull kuberdock/elasticsearch:1.0 > /dev/null 2>&1 &

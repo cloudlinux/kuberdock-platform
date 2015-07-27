@@ -304,6 +304,10 @@ else
     # etcd secure
     do_and_log firewall-cmd --permanent --zone=public --add-port=2379/tcp
 
+    # open ports for cpanel flannel and kube-proxy
+    do_and_log firewall-cmd --permanent --zone=public --add-port=8123/tcp
+    do_and_log firewall-cmd --permanent --zone=public --add-port=8118/tcp
+
     log_it echo 'Reload firewall...'
     do_and_log firewall-cmd --reload
 fi

@@ -151,6 +151,8 @@ class PrintOut(object):
         print fmt.format(*[i[0].upper() for i in self._FIELDS])
 
     def _list_data(self, data):
+        if self._FIELDS is None:
+            self._FIELDS = list((k, 32) for k, v in data.items())
         fmt = ''.join(['{{{0[0]}:<{0[1]}}}'.format(i) for i in self._FIELDS])
         print fmt.format(**data)
 
@@ -171,6 +173,7 @@ def make_config(args):
         if v is not None:
             config[k] = v
     return config
+
 
 def parse_config(path):
     data = {}

@@ -20,6 +20,7 @@ from .users import User
 from .core import ssh_connect, db, ConnectionPool
 from .rbac import check_permission, PermissionDenied
 from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS, PODS_VERBOSE_LOG
+from kubedock.updates.helpers import get_maintenance
 
 
 class UPDATE_STATUSES:
@@ -59,6 +60,17 @@ def login_required_or_basic_or_token(func):
             #return current_app.login_manager.unauthorized()
         return func(*args, **kwargs)
     return decorated_view
+
+
+def maintenance_protected(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        if get_maintenance():
+            raise APIError(
+                "Sorry, Kuberdock now is in maintenance mode, please, wait "
+                "until it finishes upgrade and try again")
+        return func(*args, **kwargs)
+    return wrapped
 
 
 def send_event(event_name, data, to_file=None, channel='common'):

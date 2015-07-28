@@ -16,6 +16,7 @@ from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import KUBERDOCK_INTERNAL_USER
 from kubedock.updates.models import Updates
 from kubedock.updates.kuberdock_upgrade import get_available_updates
+from kubedock.updates.helpers import get_maintenance
 
 from flask.ext.script import Manager, Shell, Command, Option
 from flask.ext.migrate import Migrate, MigrateCommand, upgrade, stamp
@@ -118,6 +119,9 @@ class NodeManager(Command):
     )
 
     def run(self, hostname, kube_type, do_deploy, testing):
+        if get_maintenance():
+            print 'Kuberdock is in maintenance mode. Operation canceled'
+            return
         data = {'hostname': hostname, 'kube_type': kube_type}
         try:
             check_node_data(data)

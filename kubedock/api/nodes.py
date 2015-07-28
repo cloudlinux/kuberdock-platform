@@ -3,7 +3,6 @@ from fabric.api import run, settings, env
 from fabric.tasks import execute
 import boto.ec2
 import math
-import socket
 import operator
 import socket
 import os
@@ -12,6 +11,7 @@ from ..models import Node, User, Pod
 from ..core import db
 from ..rbac import check_permission
 from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit, send_event
+from ..utils import maintenance_protected
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
 from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, CEPH
@@ -411,6 +411,7 @@ def add_node(data, do_deploy=True, with_testing=False):
 
 @nodes.route('/', methods=['POST'])
 @check_permission('create', 'nodes')
+@maintenance_protected
 def create_item():
     data = request.json
     check_node_data(data)
@@ -419,6 +420,7 @@ def create_item():
 
 @nodes.route('/<node_id>', methods=['PUT'])
 @check_permission('edit', 'nodes')
+@maintenance_protected
 def put_item(node_id):
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)
@@ -443,6 +445,7 @@ def put_item(node_id):
 
 @nodes.route('/<node_id>', methods=['DELETE'])
 @check_permission('delete', 'nodes')
+@maintenance_protected
 def delete_item(node_id):
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)
@@ -542,6 +545,7 @@ def pd_lookup():
 
 @nodes.route('/redeploy/<node_id>', methods=['GET'])
 @check_permission('redeploy', 'nodes')
+@maintenance_protected
 def redeploy_item(node_id):
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)

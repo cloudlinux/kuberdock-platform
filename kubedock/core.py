@@ -91,6 +91,9 @@ def ssh_connect(host, timeout=10):
     except socket.error as e:
         error_message =\
             '{0} Check hostname, your credentials, and try again'.format(e)
+    except IOError as e:
+        error_message =\
+            'ssh_connect: cannot use SSH-key: {0}'.format(e)
     return ssh, error_message
 
 

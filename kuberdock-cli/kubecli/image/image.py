@@ -10,6 +10,8 @@ class Image(KubeQuery, PrintOut, object):
             super(Image, self).__setattr__(attr, value)
 
     def __getattr__(self, name):
+        if name == '_INDENT':
+            return 4
         return self._data.get(name)
 
     def __setattr__(self, name, value):
@@ -79,4 +81,4 @@ class Image(KubeQuery, PrintOut, object):
             data = self._unwrap(self._post('/api/images/new', {'image': self.image}))
         except (AttributeError, TypeError):
             data = {'volumeMounts': [], 'command': [], 'env': [], 'ports': []}
-        self._list(data)
+        self._show(data)

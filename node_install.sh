@@ -249,13 +249,14 @@ fi
 FS=$(df --print-type /var/lib/docker/overlay | tail -1)
 FS_TYPE=$(awk '{print $2}' <<< "$FS")
 if [ "$FS_TYPE" == "xfs" ]; then
-  DEVICE=$(awk '{print $1}' <<< "$FS")
   MOUNTPOINT=$(awk '{print $7}' <<< "$FS")
-  if [ "$MOUNTPOINT" == "/" ]; then
-    sed -i '/^GRUB_CMDLINE_LINUX=/ s/"$/ rootflags=prjquota"/' /etc/default/grub
+  if [ "$MOUNTPOINT" == "/" ] && ! grep -E '^GRUB_CMDLINE_LINUX=.*rootflags=prjquota|^GRUB_CMDLINE_LINUX=.*rootflags=pquota' /etc/default/grub; then
+    sed -i '/^GRUB_CMDLINE_LINUX=/s/"$/ rootflags=prjquota"/' /etc/default/grub
     grub2-mkconfig -o /boot/grub2/grub.cfg
   fi
-  sed -i "\|^$DEVICE | s|defaults|defaults,prjquota|" /etc/fstab
+  if ! grep -E "^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*prjquota|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*pquota" /etc/fstab; then
+    sed -i "\|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]]|s|defaults|defaults,prjquota|" /etc/fstab
+  fi
 else
   echo "Only XFS supported as backing filesystem for disk space limits"
 fi

@@ -29,19 +29,6 @@ class Image(KubeQuery, PrintOut, object):
                 except IndexError:
                     self._data['ports'].append({name: attr})
 
-    def _conf_mount_point(self, name, attr, index):
-        if 'volumeMounts' not in self._data:
-            self._data['volumeMounts'] = [{name: attr}]
-        else:
-            if not len(self._data['volumeMounts']):
-                self._data['volumeMounts'].append({name: attr})
-            else:
-                try:
-                    self._data['volumeMounts'][index].update({name: attr})
-                except IndexError:
-                    self._data['volumeMounts'].append({name: attr})
-
-
     def set_container_port(self, port, index=0):
         self._conf_port('containerPort', port, index)
 
@@ -53,9 +40,6 @@ class Image(KubeQuery, PrintOut, object):
 
     def set_public(self, public, index=0):
         self._conf_port('isPublic', public, index)
-
-    def set_mount_path(self, path, index=0):
-        self._conf_mount_point('mountPath', path, index)
 
     def _get_registry(self):
         if self.registry.startswith('http'):

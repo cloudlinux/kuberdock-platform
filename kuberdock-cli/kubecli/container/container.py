@@ -128,8 +128,8 @@ class KubeCtl(KubeQuery, PrintOut, object):
             subprocess.check_call([fmt.format(data['token'], self.name)], shell=True)
         except (KeyError, TypeError, subprocess.CalledProcessError):
             return
-        
-        
+
+
 class KuberDock(KubeCtl):
     """
     Class for creating KuberDock entities
@@ -152,7 +152,7 @@ class KuberDock(KubeCtl):
         if hasattr(self, 'image'):
             i = self._get_image()
             i.kubes = int(self.kubes)
-            for attr in 'container_port', 'host_port', 'protocol', 'mount_path':
+            for attr in 'container_port', 'host_port', 'protocol':
                 try:
                     operator.methodcaller(
                         'set_' + attr, getattr(self, attr), self.index)(i)
@@ -172,7 +172,7 @@ class KuberDock(KubeCtl):
         """
         Sends POST request to KuberDock to save configured container
         """
-        data = self._prepare()
+        data = self._prepare(final=True)
         kubes = self._get_kubes()
         try:
             data['kube_type'] = int(kubes[data['kube_type']])
@@ -213,6 +213,14 @@ class KuberDock(KubeCtl):
         self._FIELDS = (('id', 12), ('name', 32))
         data = self._get_kubes()
         self._list([{'name': k, 'id': v} for k, v in data.items()])
+
+    def drives(self):
+        """
+        Returns list of user persistent drives
+        """
+        self._WANTS_HEADER = True
+        self._FIELDS = (('id', 48), ('name', 32), ('size', 12), ('in_use', 12))
+        self._list(self._get_drives())
 
     def start(self):
         self._FIELDS = (('status', 32),)
@@ -318,18 +326,18 @@ class KuberDock(KubeCtl):
         with open(self._data_path, 'w') as o:
             json.dump(self._prepare(), o)
 
-    def _prepare(self):
+    def _prepare(self, final=False):
         valid = set(['name', 'containers', 'volumes', 'service', 'replicationController',
                      'replicas', 'set_public_ip', 'kube_type', 'restartPolicy', 'public_ip'])
         self.replicationController = True
-        self._prepare_volumes()
+        self._prepare_volumes(final)
         self._prepare_ports()
         self._prepare_env()
         data = dict(filter((lambda x: x[0] in valid), vars(self).items()))
 
         return data
 
-    def _prepare_volumes(self):
+    def _prepare_volumes(self, final=False):
         """
         Makes names for volumeMount entries and populate 'volumes' with them
         :param data: dict -> data to process
@@ -338,17 +346,46 @@ class KuberDock(KubeCtl):
             if c.get('volumeMounts') is None:
                 c['volumeMounts'] = []
                 continue
-            #c['volumeMounts'] = [v for v in c['volumeMounts']
-            #                        if v.get('mountPath')]
-            c['volumeMounts'] = [v for v in c['volumeMounts']
+
+            if final:   # We cannot send volumeMount if has no match in volumes
+                c['volumeMounts'] = [v for v in c['volumeMounts']
                                     if v.get('mountPath') and v.get('name')]
-            #for vm in c['volumeMounts']:
-            #    if not vm.get('name'):
-            #        vm['name'] = \
-            #        self._generate_image_name(vm['mountPath']).replace('/', '-')
-            #        vol = [v for v in self.volumes if v['name'] == vm['name']]
-            #        if not vol:
-            #            self.volumes.append({'name': vm['name'], 'emptyDir': {}})
+                continue
+
+            c['volumeMounts'] = [v for v in c['volumeMounts']
+                                if v.get('mountPath')]
+
+            if hasattr(self, 'persistent_drive'):
+                if getattr(self, 'image', None) != c['image']:
+                    continue
+
+                if not hasattr(self, 'mount_path'):
+                    raise SystemExit('"--mount-path" option is expected')
+
+                curr = filter((lambda i: i['name'] == self.persistent_drive), self._get_drives())
+                if not curr and not hasattr(self, 'size'):
+                    raise SystemExit('Drive not found. To set a new drive option "--size" is expected')
+
+                mount_paths = [i for i in c['volumeMounts'] if i['mountPath'] == self.mount_path]
+                if mount_paths:
+                    mount_path = mount_paths[0]
+                else:
+                    mount_path = {'mountPath': self.mount_path}
+                    c['volumeMounts'].append(mount_path)
+
+                if not mount_path.get('name'):
+                    mount_path['name'] = self._generate_image_name(
+                        self.mount_path.lstrip('/').replace('/', '-'))
+
+                vols = [v for v in self.volumes if v.get('name') == mount_path['name']]
+                if vols:
+                    vol = vols[0]
+                else:
+                    vol = {'name': mount_path['name']}
+                    self.volumes.append(vol)
+                vol['persistentDisk'] = {
+                    'pdName': self.persistent_drive,
+                    'pdSize': getattr(self, 'size', None)}
 
     def _prepare_ports(self):
         """Checks if all necessary port entry data are set"""
@@ -428,7 +465,6 @@ class KuberDock(KubeCtl):
             pulled['ports'] = [
                 {'containerPort': x.get('number'), 'protocol': x.get('protocol')}
                     for x in pulled['ports']]
-
         image.update(pulled)
         self.containers.append(image)
         return Image(image)
@@ -446,6 +482,12 @@ class KuberDock(KubeCtl):
         Gets user kubes info from backend
         """
         return self._unwrap(self._get('/api/pricing/userpackage'))
+
+    def _get_drives(self):
+        """
+        Gets user drives info from backend
+        """
+        return self._unwrap(self._get('/api/pstorage'))
 
     def _clear(self):
         """Deletes pending pod file"""

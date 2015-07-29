@@ -23,6 +23,8 @@ def parser(subs):
     c_create.add_argument('--restart-policy', default="Always", help="Set container restart policy",
                        dest="restartPolicy", choices=['Always', 'Never', 'OnFailure'])
     c_create.add_argument('--env', help="Add or change environment variables")
+    c_create.add_argument('-p', '--persistent-drive', help="Specify persistent drive for mount path")
+    c_create.add_argument('-s', '--size', type=int, help="Specify size in GB for drive to be created")
 
     c_set = action.add_parser('set')
     c_set.add_argument('name', help="Container name")
@@ -41,6 +43,8 @@ def parser(subs):
     c_set.add_argument('--restart-policy', default="Always", help="Set container restart policy",
                        dest="restartPolicy", choices=['Always', 'Never', 'OnFailure'])
     c_set.add_argument('--env', help="Add or change environment variables")
+    c_set.add_argument('-p', '--persistent-drive', help="Specify persistent drive for mount path")
+    c_set.add_argument('-s', '--size', type=int, help="Specify size in GB for drive to be created")
 
     c_del = action.add_parser('delete')
     c_del.add_argument('name', help="Container name")
@@ -70,6 +74,8 @@ def parser(subs):
 
     #c_kubes = action.add_parser('kubes')
     action.add_parser('kubes')
+
+    action.add_parser('drives')
 
     c_desc = action.add_parser('describe')
     c_desc.add_argument('name', help="Container name")

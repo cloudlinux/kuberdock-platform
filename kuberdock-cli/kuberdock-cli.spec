@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 15%{?dist}.cloudlinux
+Release: 16%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,10 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Wed Jul 29 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.1-16
+- AC-661 KCLI FIxed plain data output
+- AC-570: Added persistent storage functinality for KCLI. Added persistent storage listing
+
 * Thu Jul 23 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-15
 - kuberdock-cli KubeCtl bugfix
 

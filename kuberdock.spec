@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 24%{?dist}.cloudlinux
+Release: 25%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -159,6 +159,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Jul 29 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-25
+- Added exception handler to core/ssh_connect to handle permission errors
+- Simple maintenance mode implementetion. Pods and nodes are now protected.
+- sqlalchemy workaround
+- require.js dependencies loader bugfix
+- Hotfix cahnge logo
+- AC-749: Fix setup node disk quota
+
 * Mon Jul 27 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-24
 - removed logo shrinking
 - Fix container states not saved

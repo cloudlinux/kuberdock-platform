@@ -1,6 +1,6 @@
 define(['pods_app/app',
         'tpl!pods_app/templates/layout_pod_list.tpl',
-        'tpl!pods_app/templates/pod_list_item.	tpl',
+        'tpl!pods_app/templates/pod_list_item.tpl',
         'tpl!pods_app/templates/pod_list.tpl',
         'pods_app/utils',
         'bootstrap', 'bootstrap-editable'],

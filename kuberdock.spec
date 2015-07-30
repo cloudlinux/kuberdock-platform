@@ -92,7 +92,6 @@ mkdir -p %{buildroot}/var/lib/kuberdock
 mkdir -p %{buildroot}%{_bindir}
 cp -r * %{buildroot}/var/opt/kuberdock
 ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_bindir}/kuberdock_upgrade.py
-chmod 755 %{buildroot}/var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py
 %{__install} -D -m 0644 conf/kuberdock.ini %{buildroot}%{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %{__install} -D -m 0644 conf/shared-kubernetes.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf

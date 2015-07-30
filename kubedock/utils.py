@@ -66,9 +66,10 @@ def maintenance_protected(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
         if get_maintenance():
-            raise APIError(
-                "Sorry, Kuberdock now is in maintenance mode, please, wait "
-                "until it finishes upgrade and try again")
+            raise APIError({
+                'title': 'Kuberdock in maintenance mode',
+                'body': "Sorry, Kuberdock now is in maintenance mode, please, "
+                        "wait until it finishes upgrade and try again"})
         return func(*args, **kwargs)
     return wrapped
 

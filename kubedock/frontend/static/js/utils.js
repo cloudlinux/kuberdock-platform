@@ -75,7 +75,7 @@ define(function () {
                 if(typeof data !== 'string') err = JSON.stringify(data);
                 $.notify(err, {
                     autoHideDelay: 10000,
-                    globalPosition: 'top center',
+                    globalPosition: 'top left',
                     className: response.status == 'error' ? 'danger' : 'warning'
                 });
             }

@@ -655,60 +655,6 @@
                 }
             }
         }
-        .added-containers{
-            .border-radius(5px);
-            border: 1px solid #e5e5e5;
-            padding: 18px 0 20px 23px;
-            margin: 30px 0px 10px 10px;
-            > div{
-                margin-bottom: 10px;
-            }
-            label{
-                margin-bottom: 15px;
-            }
-            button{
-                outline: 0;
-                width: 17px;
-                border: none;
-                color: #ffffff;
-                background: none;
-                margin-left: 10px;
-                line-height: 17px;
-                position: relative;
-                display: inline-block;
-                font-family: @regular;
-                &:before{
-                    top: 0px;
-                    left: 0px;
-                    content: '';
-                    position: absolute;
-                }
-                &.delete-item{
-                    &:before{
-                        width: 16px;
-                        height: 17px;
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                    }
-                    &:hover{
-                        &:before{
-                            background-position: 0 -18px;
-                        }
-                    }
-                }
-                &.edit-item{
-                    &:before{
-                        width: 18px;
-                        height: 17px;
-                        background: url('../img/pencil-big.png') 0 0 no-repeat;
-                    }
-                    &:hover{
-                        &:before{
-                            background-position: 0 -18px;
-                        }
-                    }
-                }
-            }
-        }
     }
     #details_content{
         .buttons{
@@ -729,44 +675,113 @@
                     padding-right: 10px;
                     .left{
                         margin-bottom: 29px;
-                        border-bottom: 1px solid #e5e5e5;
                     }
-                    .right{
+                    .total-wrapper{
                         position: relative;
-                        padding: 72px 30px 30px;
+                        padding: 14px 20px;
+                        margin-bottom: 52px;
                         border: 1px solid #e5e5e5;
                         &:before{
-                            top: -18px;
-                            right: 25px;
+                            top: -13px;
+                            right: 6px;
                             content: '';
                             width: 67px;
                             height: 64px;
                             position: absolute;
                             background: url('../img/clip.png') 0 0 no-repeat;
+                            .background-size(73%);
+                        }
+                        table{
+                            width: 100%;
+                            thead{
+                                tr{
+                                    th{
+                                        color: #b5b7c1;
+                                        font-weight: 400;
+                                    }
+                                }
+                            }
+                            tbody{
+                                tr{
+                                    height: 40px;
+                                    .total, #total_price{
+                                        color: #3f920e;
+                                        font-size: 18px;
+                                        margin-top: 30px;
+                                        margin-bottom: 0;
+                                        text-align: right;
+                                    }
+                                }
+                            }
+                        }
+                        > div {
+                            margin-bottom: 15px;
+                        }
+                        label{
+                            margin-bottom: 15px;
+                        }
+                        button{
+                            outline: 0;
+                            width: 17px;
+                            border: none;
+                            color: #ffffff;
+                            background: none;
+                            margin-left: 10px;
+                            line-height: 17px;
+                            position: relative;
+                            display: inline-block;
+                            font-family: @regular;
+                            &:before{
+                                top: 0px;
+                                left: 0px;
+                                content: '';
+                                position: absolute;
+                            }
+                            &.delete-item{
+                                &:before{
+                                    width: 16px;
+                                    height: 17px;
+                                    background: url('../img/recycling.png') 0 0 no-repeat;
+                                }
+                                &:hover{
+                                    &:before{
+                                        background-position: 0 -18px;
+                                    }
+                                }
+                            }
+                            &.edit-item{
+                                &:before{
+                                    width: 18px;
+                                    height: 17px;
+                                    background: url('../img/pencil-big.png') 0 0 no-repeat;
+                                }
+                                &:hover{
+                                    &:before{
+                                        background-position: 0 -18px;
+                                    }
+                                }
+                            }
                         }
                         .clearfix{
                             margin-bottom: 0;
                         }
-                        .total{
-                            color: #3f920e;
-                            font-size: 22px;
-                            margin-top: 30px;
-                            margin-bottom: 0;
-                            text-align: center;
-                        }
                     }
                     .servers{
-                        margin-bottom: 35px;
-                        padding-left: 107px;
                         position: relative;
+                        margin-bottom: 35px;
+                        background-color: #fcfcfc;
+                        border: 1px solid #e5e5e5;
+                        padding: 25px 0 25px 110px;
                         > div{
                             line-height: 23px
                         }
                         &:before{
                             top: 0;
-                            left: 0;
-                            width: 107px;
+                            bottom: 0;
+                            left: 15px;
                             content: '';
+                            width: 80px;
+                            margin: auto;
                             height: 66px;
                             position: absolute;
                             background: url('../img/servers.png') 0 0 no-repeat;
@@ -787,8 +802,7 @@
                         }
                     }
                 }
-                .policy, .kube-type-wrapper, .kube-quantity-wrapper{
-                    margin-bottom: 29px;
+                .policy, .kube-type-wrapper{
                     position: relative;
                     select{
                         margin-bottom: 0px;
@@ -798,8 +812,8 @@
                     }
                     .edit-polycy-description, .edit-kube-type-description{
                         left: 10px;
-                        bottom: -18px;
-                        color: #d3d3d3;
+                        bottom: -20px;
+                        color: #adaaaa;
                         font-size: 12px;
                         position: absolute;
                     }
@@ -824,6 +838,12 @@
                             }
                         }
                     }
+                }
+                .policy{
+                    margin-bottom: 29px;
+                }
+                .kube-type-wrapper{
+                    margin-bottom: 50px;
                 }
                 .ports, .volumes{
                     table{

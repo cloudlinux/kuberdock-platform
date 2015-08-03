@@ -421,6 +421,53 @@ class TestPodCollectionRunService(unittest.TestCase):
     def tearDown(self):
         self.pod_collection = None
 
+
+class TestPodCollectionMakeNamespace(unittest.TestCase):
+
+    def setUp(self):
+        U = type('User', (), {'username': 'bliss'})
+        PodCollection._get_namespaces = (lambda s: None)
+        PodCollection._get_pods = (lambda s, n: None)
+        PodCollection._merge = (lambda s: None)
+        self.pod_collection = PodCollection(U())
+        self.test_ns = "user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094"
+
+    @mock.patch.object(PodCollection, '_post')
+    def test_pod_make_namespace_is_presented(self, post_):
+        """
+        Test that _make_namespace do nothing when ns already exists
+        :type post_: mock.Mock
+        """
+        self.pod_collection._get_namespace = mock.Mock(return_value=True)
+
+        # Actual call
+        self.pod_collection._make_namespace(self.test_ns)
+
+        self.pod_collection._get_namespace.assert_called_once_with(self.test_ns)
+        self.assertEquals(post_.called, False)
+
+    @mock.patch.object(PodCollection, '_post')
+    def test_pod_make_namespace_new_created(self, post_):
+        """
+        Test that _make_namespace create new ns
+        :type post_: mock.Mock
+        """
+        self.pod_collection._get_namespace = mock.Mock(return_value=None)
+
+        # Actual call
+        self.pod_collection._make_namespace(self.test_ns)
+
+        ns_conf = '{"kind": "Namespace", "apiVersion": "v1", ' \
+                  '"metadata": {"name": ' \
+                  '"%s"}}' % self.test_ns
+        self.pod_collection._get_namespace.assert_called_once_with(self.test_ns)
+        post_.assert_called_once_with(['namespaces'], ns_conf, rest=True,
+                                      ns=False)
+
+    def tearDown(self):
+        self.pod_collection = None
+
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger('TestPodCollection.test_pod').setLevel(logging.DEBUG)

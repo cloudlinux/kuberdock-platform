@@ -1007,7 +1007,7 @@ define(['pods_app/app',
 
             deleteItem: function(evt){
                 evt.stopPropagation();
-                var name = $(evt.target).closest('div').children('span:first').attr('id');
+                var name = $(evt.target).closest('tr').children('td:first').attr('id');
                 this.model.attributes.containers = _.filter(this.model.get('containers'),
                 function(i){ return i.name !== this.name }, {name: name});
                 delete this.container_price;

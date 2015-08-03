@@ -36,7 +36,7 @@
 	border-bottom-left-radius:          @bottomleft;
 	border-top-left-radius:             @topleft;
 
-	-moz-background-clip:    padding; 
+	-moz-background-clip:    padding;
 	-webkit-background-clip: padding-box;
 	background-clip:         padding-box;
 }
@@ -79,7 +79,7 @@
 		color: @color;
 	}
 	&:-moz-placeholder {
-		color: @color;  
+		color: @color;
 	}
 	&::-moz-placeholder {
 		color: @color;
@@ -87,6 +87,12 @@
 	&:-ms-input-placeholder {
 		color: @color;
 	}
+}
+.background-size(@size) {
+	-webkit-background-size: @size;
+	-moz-background-size: @size;
+	-o-background-size: @size;
+	background-size: @size;
 }
 .align-right{
 	text-align: right;

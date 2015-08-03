@@ -6,20 +6,6 @@
             <li role="presentation" class="success">Environment variables</li>
             <li role="presentation" class="active">Final</li>
         </ul>
-        <% if (containers.length > 1){ %>
-        <div class="added-containers">
-            <label>Added containers</label>
-                <% _.each(containers, function(c){ %>
-                    <div>
-                        <span id="<%- c.name %>"><%- c.image %></span>
-                        <span>
-                            <!-- <button class="edit-item">&nbsp;</button> -->
-                            <button class="delete-item">&nbsp;</button>
-                        </span>
-                    </div>
-                <% }) %>
-        </div>
-        <% } %>
     </div>
     <div id="details_content" class="col-sm-9 set-up-image no-padding">
         <div id="tab-content" class="clearfix complete">
@@ -28,22 +14,22 @@
                     <div class="col-xs-12">
                         <label>Restart policy</label>
                     </div>
-                    <div class="col-md-11">
+                    <div class="col-md-<%= containers.length > 1 ? '11' : '12 no-padding-right' %>">
                         <select class="restart-policy selectpicker"<%= containers.length > 1 ? ' disabled' : '' %>>
                             <% _.each(restart_policies, function(value, key) {%>
                             <option value="<%- key %>"<%= key === restart_policy ? ' selected' : '' %>><%- value %></option>
                             <% }) %>
                         </select>
                     </div>
+                    <div class="col-xs-12 edit-polycy-description">Type will apply for each container</div>
                     <% if (containers.length > 1){ %>
                     <div class="col-md-1 no-padding edit-policy"></div>
-                    <div class="col-xs-12 edit-polycy-description">Type will apply for each container</div>
                     <% } %>
                 </div>
                 <div class="row kube-type-wrapper">
                     <% if (containers.length > 1){ %>
-                    <label class="col-xs-12">Type</label>
-                    <div class="col-xs-11">
+                    <label class="col-xs-8">Kube type</label>
+                    <div class="col-xs-7">
                         <select class="kube_type selectpicker" id="extra-options" disabled>
                             <% _.each(kube_types, function(k_type){ %>
                             <option value="<%- k_type.id %>"<%= k_type.id === kube_type ? ' selected' : '' %>><%- k_type.name %></option>
@@ -51,10 +37,9 @@
                         </select>
                     </div>
                     <div class="col-xs-1 no-padding edit-kube-type"></div>
-                    <div class="col-xs-12 edit-kube-type-description">Type will apply for each container</div>
                     <% } else { %>
-                    <label class="col-xs-12">Type</label>
-                    <div class="col-xs-12">
+                    <div class="col-xs-8">
+                        <label>Kube type</label>
                         <select class="kube_type selectpicker" id="extra-options">
                             <% _.each(kube_types, function(kube_type){ %>
                             <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
@@ -62,10 +47,8 @@
                         </select>
                     </div>
                     <% } %>
-                </div>
-                <div class="row kube-quantity-wrapper">
-                    <div class="col-xs-12">
-                        <label>Kubes per container:</label>
+                    <label>Kubes/replicas:</label>
+                    <div class="col-xs-4 no-padding">
                         <select class="kube-quantity selectpicker">
                             <option value="1">1</option>
                             <option value="2">2</option>
@@ -79,32 +62,67 @@
                             <option value="10">10</option>
                         </select>
                     </div>
+                    <div class="col-xs-12 edit-kube-type-description">Type will apply for each container</div>
                 </div>
             </div>
-            <div class="col-md-4 col-md-offset-2 right">
-                <p class="clearfix">
-                    <span class="pull-left"><b>Container(s):</b></span>
-                    <span class="pull-right"><span id="containers_price"><%- container_price %></span></span>
-                </p>
-                <% if (isPublic) { %>
-                <p class="clearfix">
-                    <span class="pull-left"><b>IP Adress:</b></span>
-                    <span class="pull-right"><span id="ipaddress_price"><%- price_ip %></span></span>
-                </p>
-                <% } %>
-                <% if (isPerSorage) { %>
-                <p class="clearfix">
-                    <span class="pull-left"><b>Persistent<br>storage:</b></span>
-                    <span class="pull-right"><span id="pstorage_price">
-                        <%- price_pstorage %> per 1 MB
-                    </span></span>
-                </p>
-                <% } %>
-                <p class="total"><b>Total price:</b> <span id="total_price"><%- total_price %></span></p>
-            </div>
-            <div class="col-xs-12 no-padding servers">
+            <div class="col-md-5 col-xs-offset-1 servers">
                 <div>CPU: <span id="total_cpu"><%- cpu_data %></span></div>
                 <div>RAM: <span id="total_ram"><%- ram_data %></span></div>
+            </div>
+            <div class="col-md-12 total-wrapper">
+                <table>
+                    <thead>
+                       <tr>
+                           <th class="col-xs-5 no-padding">Name</th>
+                           <th class="col-xs-4 no-padding">Kybe QTY</th>
+                           <th class="col-xs-2 no-padding">Price</th>
+                           <th class="col-xs-1 no-padding"></th>
+                       </tr>
+                    </thead>
+                    <tbody>
+                        <% _.each(containers, function(c){ %>
+                            <tr class="added-containers">
+                                 <td id="<%- c.name %>"><b><%- c.image %></b></td>
+                                 <td><%- c.kubes %></td>
+                                 <td></td>
+                                 <td>
+                                     <button class="delete-item pull-right">&nbsp;</button>
+                                     <!-- <button class="edit-item">&nbsp;</button> -->
+                                 </td>
+                            </tr>
+                        <% }) %>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td>
+                                <span id="containers_price"><%- container_price %></span>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <% if (isPublic) { %>
+                            <tr>
+                                <td><b>IP Adress:</b></td>
+                                <td></td>
+                                <td><span id="ipaddress_price"><%- price_ip %></td>
+                                <td></td>
+                            </tr>
+                        <% } %>
+                        <% if (isPerSorage) { %>
+                            <tr>
+                                <td><b>Persistent storage:</b></td>
+                                <td></td>
+                                <td colspan="2">
+                                    <span id="pstorage_price"><%- price_pstorage %> per 1 MB</span>
+                                </td>
+                            </tr>
+                        <% } %>
+                        <tr>
+                            <td class="total" colspan="4">
+                                Total price: <span id="total_price"><%- total_price %></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

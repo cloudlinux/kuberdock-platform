@@ -5,6 +5,7 @@ from flask.ext.login import current_user, login_required
 #from ..utils import JSONDefaultEncoder
 from ..billing import Kube, Package, ExtraTax, PackageKube
 from ..kapi.podcollection import PodCollection
+from ..settings import TEST
 
 
 main = Blueprint('main', __name__)
@@ -36,3 +37,10 @@ def index():
         package_kubes=package_kubes,
         user_package=current_user.package_id
     )
+
+
+@main.route('/test', methods=['GET'])
+def run_tests():
+    if TEST:
+        return render_template('t/index.html')
+    return "not found", 404

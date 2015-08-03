@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 25%{?dist}.cloudlinux
+Release: 26%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,16 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Aug 03 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-26
+- AC-721: Fix style notifi message on user create/edit pages
+- Small improve of maintenance mode message
+- Make kuberdock_upgrade.py executable
+- Exit if selinux not enabled on node. Clean up old code.
+- introduces jasmine-based unit testing
+- Fix for get_api_url bug with special pod name.
+- Tests for run_service and get_api_url
+- AC-687: Add new design to last step in add pod
+
 * Wed Jul 29 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-25
 - Added exception handler to core/ssh_connect to handle permission errors
 - Simple maintenance mode implementetion. Pods and nodes are now protected.

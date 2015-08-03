@@ -139,7 +139,9 @@ def get_api_url(*args, **kwargs):
         url = '{0}/{1}'.format(url.rstrip('/'), '/'.join(map(str, args)))
     namespace = kwargs.get('namespace', 'default')
     if namespace:
-        url = url.replace(api_version, '{0}/namespaces/{1}'.format(api_version, namespace))
+        url = url.replace('/' + api_version,
+                          '/{0}/namespaces/{1}'.format(api_version, namespace),
+                          1)
     return url + '?watch=true' if kwargs.get('watch') else url
 
 

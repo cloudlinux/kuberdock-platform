@@ -17,6 +17,8 @@ sys.modules['kubedock.pods.models'] = mock.Mock()
 sys.modules['kubedock.utils'] = mock.Mock()
 
 from ..podcollection import PodCollection, ModelQuery, KUBERDOCK_INTERNAL_USER
+from ..pod import Pod
+
 
 class TestPodCollectionDelete(unittest.TestCase):
 
@@ -356,6 +358,68 @@ class TestPodCollectionDelete(unittest.TestCase):
     def tearDown(self):
         self.app = None
 
+
+class TestPodCollectionRunService(unittest.TestCase):
+
+    def setUp(self):
+        U = type('User', (), {'username': 'bliss'})
+        PodCollection._get_namespaces = (lambda s: None)
+        PodCollection._get_pods = (lambda s, n: None)
+        PodCollection._merge = (lambda s: None)
+        self.pod_collection = PodCollection(U())
+
+    def test_make_dash(self):
+        """
+        Test _make_dash() must return string no longer then 'limit' and spaces
+        replaced with dashes
+        """
+        pod = type('FakePod', (Pod,), {
+            'name': 'Some Very long pod name that is not compatible with dns -1'
+        })()
+        res = pod._make_dash(limit=54)
+        self.assertLessEqual(len(res), 54)
+        self.assertNotIn(' ', res)
+
+    @mock.patch.object(PodCollection, '_post')
+    def test_pod_run_service(self, post_):
+        """
+        Test that _run_service generates expected service config
+        :type post_: mock.Mock
+        """
+        # Fake Pod instance
+        pod_name = 'bla bla pod'
+        pod = type('Pod', (Pod,), {
+            'sid': 's',
+            'kind': 'k',
+            'namespace': 'n',
+            'owner': 'u',
+            'public_ip': '127.0.0.1',
+            'replicationController': False,
+            'name': pod_name
+        })()
+
+        pod.containers = [{
+            'ports': [{'hostPort': 1000, 'containerPort': 80, 'isPublic': True},
+                      {'containerPort': 80, 'isPublic': False}],
+        }]
+
+        # Making actual call
+        self.pod_collection._run_service(pod)
+
+        expected_service_conf = \
+            '{"kind": "Service", "spec": {"sessionAffinity": "None", "type": ' \
+            '"ClusterIP", "ports": [{"targetPort": 80, "protocol": "TCP", ' \
+            '"name": "c0-p0-public", "port": 1000}, {"targetPort": 80, ' \
+            '"protocol": "TCP", "name": "c0-p1", "port": 80}], "selector": ' \
+            '{"name": "bla bla pod"}}, "apiVersion": "v1", "metadata": ' \
+            '{"generateName": "service-", "labels": {"name": ' \
+            '"bla-bla-pod-service"}, "annotations": {"public-ip-state": ' \
+            '"{\\"assigned-public-ip\\": \\"127.0.0.1\\"}"}}}'
+        post_.assert_called_once_with(['services'], expected_service_conf,
+                                      ns='n', rest=True)
+
+    def tearDown(self):
+        self.pod_collection = None
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

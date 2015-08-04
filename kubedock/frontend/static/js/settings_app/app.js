@@ -102,8 +102,8 @@ define(['marionette', 'utils'],
                     success: function(rs){
                         if(rs.status == 'OK')
                             $.notify('Settings changed successfully', {
-                                autoHideDelay: 10000,
-                                globalPosition: 'top center',
+                                autoHideDelay: 4000,
+                                globalPosition: 'top left',
                                 className: 'success'
                         });
                     }
@@ -373,6 +373,11 @@ define(['marionette', 'utils'],
                     success: function(){
                         that.model.in_edit = false;
                         that.render();
+                        $.notify('Proffile changed successfully', {
+                            autoHideDelay: 4000,
+                            globalPosition: 'top left',
+                            className: 'success'
+                        });
                     }
                 });
             }
@@ -418,7 +423,7 @@ define(['marionette', 'utils'],
                     success: function(rs){
                         $.notify('Permission changed successfully', {
                             autoHideDelay: 10000,
-                            globalPosition: 'top right',
+                            globalPosition: 'top left',
                             className: 'success'
                         });
                     }

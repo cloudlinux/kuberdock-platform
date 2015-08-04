@@ -243,8 +243,7 @@ define(['marionette', 'utils'],
 
             onSave: function(){
                 // temp validation
-                var network = this.ui.network.val(),
-                    that = this;
+                var network = this.ui.network.val();
                 if(network.length == 0 || network.split('.').length < 4){
                     this.ui.network.notify('Wrong IP-address');
                     return false;

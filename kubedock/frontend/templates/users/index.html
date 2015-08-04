@@ -319,7 +319,7 @@
         </td>
         <td><%- podsCount %></td>
         <td><%- containersCount %></td>
-        <td><%- email ? email : 'No mail' %></td>
+        <td><%- email ? email : 'No email' %></td>
         <td><%- rolename  %></td>
         <td>
             <% if (active) { %>
@@ -334,7 +334,7 @@
 
     <script type="text/template" id="online-user-item-template">
         <td><button id="userActivityHistory" title="<%- username %> activety history"><%- username %></button></td>
-        <td><%- email ? email : 'No mail' %></td>
+        <td><%- email ? email : 'No email' %></td>
         <td><%- rolename %></td>
         <td><%- active ? 'Active' : 'Locked' %></td>
         {# <td><%- last_activity ? last_activity : 'none' %></td> #}

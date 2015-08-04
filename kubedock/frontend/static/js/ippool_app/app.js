@@ -36,17 +36,12 @@ define(['marionette', 'utils'],
                 'click @ui.deleteNetwork' : 'deleteNetwork_btn',
             },
 
-            templateHelpers: function(){
-                return {
-                    id : this.model.get('id')
-                }
-            },
-
             initialize: function(){
                 $(this.el).attr('data-id', this.model.get('network'));
             },
 
             deleteNetwork_btn: function(evt){
+                evt.stopPropagation()
                 var that = this;
                 utils.modalDialogDelete({
                     title: 'Delete network',
@@ -61,7 +56,6 @@ define(['marionette', 'utils'],
                         buttonCancel: true
                     }
                 });
-                evt.stopPropagation()
             },
         });
 
@@ -83,15 +77,17 @@ define(['marionette', 'utils'],
             templateHelpers: function(){
                 var allocation = this.model.get('allocation');
 
-                allocation.sort(function(a, b){
-                    var aa = a[0].split("."),
-                        bb = b[0].split(".");
+                if (allocation){
+                    allocation.sort(function(a, b){
+                        var aa = a[0].split("."),
+                            bb = b[0].split(".");
 
-                    for (var i=0, n=Math.max(aa.length, bb.length); i<n; i++) {
-                        if (aa[i] !== bb[i]) return aa[i] - bb[i];
-                    }
-                    return 0;
-                });
+                        for (var i=0, n=Math.max(aa.length, bb.length); i<n; i++) {
+                            if (aa[i] !== bb[i]) return aa[i] - bb[i];
+                        }
+                        return 0;
+                    });
+                }
 
                 return{
                     allocation : allocation
@@ -186,6 +182,10 @@ define(['marionette', 'utils'],
             childView: Views.NetworkItemMore,
             childViewContainer: "div.right",
 
+            onBeforeRender: function(){
+                App.Data.networks.fetch()
+            },
+
             initialize: function(){
                 App.Data.networksClone = new Backbone.Collection(
                     App.Data.networks.filter(function(item){ return item.checked; })
@@ -243,7 +243,8 @@ define(['marionette', 'utils'],
 
             onSave: function(){
                 // temp validation
-                var network = this.ui.network.val();
+                var network = this.ui.network.val(),
+                    that = this;
                 if(network.length == 0 || network.split('.').length < 4){
                     this.ui.network.notify('Wrong IP-address');
                     return false;
@@ -290,6 +291,7 @@ define(['marionette', 'utils'],
             },
 
             onCheckItem: function (e) {
+                e.stopPropagation();
                 var target = $(e.currentTarget),
                     id = target.attr('data-id'),
                     models = App.Data.networks.models,
@@ -309,6 +311,7 @@ define(['marionette', 'utils'],
                         model.checked = false;
                     }
                 });
+
             },
         });
     });

@@ -123,13 +123,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _get_namespaces(self):
         data = self._get(['namespaces'], ns=False)
         if self.owner is None:
-            # TODO refactor to return result of same type as below
-            # [i['metadata']['name'] for i in data['items']]
-            return data['items']
+            return [i['metadata']['name'] for i in data['items']]
         namespaces = []
+        user_namespaces = get_user_namespaces(self.owner)
         for namespace in data['items']:
             ns_name = namespace.get('metadata', {}).get('name', '')
-            if ns_name in get_user_namespaces(self.owner):
+            if ns_name in user_namespaces:
                 namespaces.append(ns_name)
         return namespaces
 

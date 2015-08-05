@@ -4,6 +4,7 @@ import sys
 import unittest
 
 from uuid import uuid4
+from collections import namedtuple
 
 # We want to mock real modules which could be missing on test system
 sys.modules['kubedock.core'] = mock.Mock()
@@ -19,12 +20,15 @@ sys.modules['kubedock.utils'] = mock.Mock()
 from ..podcollection import PodCollection, ModelQuery, KUBERDOCK_INTERNAL_USER
 from ..pod import Pod
 
+get_ns_patcher = mock.patch.object(PodCollection, '_get_namespaces')
+
 
 class TestPodCollectionDelete(unittest.TestCase):
 
     def setUp(self):
         U = type('User', (), {'username': 'bliss'})
-        PodCollection._get_namespaces = (lambda s: None)
+        get_ns_patcher.start()
+        self.addCleanup(get_ns_patcher.stop)
         PodCollection._get_pods = (lambda s, n: None)
         PodCollection._merge = (lambda s: None)
         self.app = PodCollection(U())
@@ -426,7 +430,8 @@ class TestPodCollectionMakeNamespace(unittest.TestCase):
 
     def setUp(self):
         U = type('User', (), {'username': 'bliss'})
-        PodCollection._get_namespaces = (lambda s: None)
+        get_ns_patcher.start()
+        self.addCleanup(get_ns_patcher.stop)
         PodCollection._get_pods = (lambda s, n: None)
         PodCollection._merge = (lambda s: None)
         self.pod_collection = PodCollection(U())
@@ -467,6 +472,60 @@ class TestPodCollectionMakeNamespace(unittest.TestCase):
     def tearDown(self):
         self.pod_collection = None
 
+
+class TestPodCollectionGetNamespaces(unittest.TestCase):
+
+    def setUp(self):
+        pod = namedtuple('pod_tuple', ['name', 'is_deleted'])
+        pods = [
+            pod(name='Unnamed-1', is_deleted=False),
+            pod(name='test-some-long.pod.name1', is_deleted=False),
+        ]
+        U = type('User', (), {'username': 'user', 'pods': pods})
+        get_ns_patcher.start()
+        self.addCleanup(get_ns_patcher.stop)
+        PodCollection._get_pods = (lambda s, n: None)
+        PodCollection._merge = (lambda s: None)
+        self.pod_collection = PodCollection(U())
+
+    def test_pod_get_namespaces(self):
+        """
+        Test that _get_namespaces returns list of correct namespaces for this
+        user
+        """
+        test_nses = [
+            'default',
+            'kuberdock-internal-kuberdock-d-80ca388842da44badab255d8dccfca5c',
+            'user-test-some-long-pod-name1-8e8843452313cdc9edec704dee6919bb',
+            'user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094',
+        ]
+        ns_items = {'items': [{'metadata': {'name': i}} for i in test_nses]}
+        self.pod_collection._get = mock.Mock(return_value=ns_items)
+
+        # Actual call
+        self.pod_collection._get.reset_mock()
+        get_ns_patcher.stop()
+        res = self.pod_collection._get_namespaces()
+        get_ns_patcher.start()
+
+        self.pod_collection._get.assert_called_once_with(['namespaces'],
+                                                         ns=False)
+        self.assertEquals(res, test_nses[2:])
+
+    @mock.patch.object(PodCollection, '_del')
+    def test_pod_drop_namespace(self, del_):
+        """
+        Test that _drop_namespace call _del with expected args.
+        """
+        test_ns = 'some-ns'
+
+        # Actual call
+        self.pod_collection._drop_namespace(test_ns)
+
+        del_.assert_called_once_with(['namespaces', test_ns], ns=False)
+
+    def tearDown(self):
+        self.pod_collection = None
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

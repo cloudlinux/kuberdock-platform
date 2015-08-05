@@ -23,13 +23,21 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
             showPods: function(){
                 var that = this;
                 require(['pods_app/views/pods_list',
+                         'pods_app/views/breadcrumbs',
                          'pods_app/views/paginator'], function(){
-                    var listLayout = new App.Views.List.PodListLayout();
-                    var podCollection = new App.Views.List.PodCollection({
-                        collection: WorkFlow.getCollection()
-                    });
+                    var listLayout = new App.Views.List.PodListLayout(),
+                        breadcrumbsData = {breadcrumbs: [{name: 'Pods'}],
+                                           buttonID: 'add_pod',
+                                           buttonLink: '/#newpod',
+                                           buttonTitle: 'Add new container'},
+                        breadcrumbsModel = new Backbone.Model(breadcrumbsData)
+                        breadcrumbs = new App.Views.Misc.Breadcrumbs({model: breadcrumbsModel}),
+                        podCollection = new App.Views.List.PodCollection({
+                            collection: WorkFlow.getCollection()
+                        });
 
                     that.listenTo(listLayout, 'show', function(){
+                        listLayout.header.show(breadcrumbs);
                         listLayout.list.show(podCollection);
                         listLayout.pager.show(
                             new App.Views.Paginator.PaginatorView({
@@ -37,8 +45,21 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             })
                         );
                     });
+
                     that.listenTo(listLayout, 'clear:pager', function(){
                         listLayout.pager.empty();
+                    });
+
+                    that.listenTo(listLayout, 'collection:filter', function(data){
+                        if (data.length < 2) {
+                            var collection = WorkFlow.getCollection();
+                        }
+                        else {
+                            var collection = new App.Data.PodCollection(WorkFlow.getCollection().searchIn(data));
+                        }
+                        view = new App.Views.List.PodCollection({collection: collection});
+                        listLayout.list.show(view);
+                        listLayout.pager.show(new App.Views.Paginator.PaginatorView({view: view}));
                     });
 
                     that.listenTo(listLayout, 'pods:check', function(){
@@ -220,23 +241,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
                         _.each(data.get('containers'), function(c){
                             if (c.hasOwnProperty('persistentDrives')) { delete c.persistentDrives; }
-                            //_.each(c.volumeMounts, function(v){
-                            //    if (v.isPersistent) {
-                            //        var entry = {name: v.name, persistentDisk: v.persistentDisk};
-                            //        var used = _.filter(data.attributes.persistentDrives,
-                            //            function(i){return i.pdName === v.persistentDisk.pdName});
-                            //        if (used.length) {
-                            //            used[0].used = true;
-                            //        }
-                            //        delete v.persistentDisk;
-                            //    }
-                            //    else {
-                            //        var entry = {name: v.name, emptyDir: {}};
-                            //    }
-                            //    data.get('volumes').push(entry);
-                            //    delete v.isPersistent;
-                            //});
-                            // this change makes volumes from persistent drives only
                             c.volumeMounts = _.filter(c.volumeMounts, function(v){
                                 return v.isPersistent;
                             });

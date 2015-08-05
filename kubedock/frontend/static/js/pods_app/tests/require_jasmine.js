@@ -42,6 +42,9 @@ requirejs.config({
         //selectpicker: {
         //    deps: ['jquery', 'bootstrap']
         //},
+        bootstrap: {
+            deps: ['jquery']
+        },
         'bootstrap-editable': {
             deps: ['bootstrap']
         },

@@ -3,6 +3,16 @@
 <head>
     <title>Kuberdock tests</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/jasmine.css') }}">
+    {% assets "app_css" -%}
+        <link rel="stylesheet"href="{{ ASSET_URL }}">
+    {%- endassets %}
+    {% assets "less_css" -%}
+        <link rel="stylesheet/less" type="text/css" href="{{ ASSET_URL }}">
+    {%- endassets %}
+
+    {% assets "less_js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
 </head>
 <body>
     <script data-main="{{ url_for('static', filename='js/pods_app/tests/require_jasmine.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>

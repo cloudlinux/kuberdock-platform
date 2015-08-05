@@ -373,7 +373,7 @@ define(['marionette', 'utils'],
                     success: function(){
                         that.model.in_edit = false;
                         that.render();
-                        $.notify('Proffile changed successfully', {
+                        $.notify('Profile changed successfully', {
                             autoHideDelay: 4000,
                             globalPosition: 'top left',
                             className: 'success'

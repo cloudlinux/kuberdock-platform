@@ -3,7 +3,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/pod_list_item.tpl',
         'tpl!pods_app/templates/pod_list.tpl',
         'pods_app/utils',
-        'bootstrap', 'bootstrap-editable'],
+        'bootstrap'],
        function(Pods, layoutPodListTpl, podListItemTpl, podListTpl, utils){
 
     Pods.module('Views.List', function(List, App, Backbone, Marionette, $, _){
@@ -15,6 +15,10 @@ define(['pods_app/app',
                 var that = this;
                 this.listenTo(this.list, 'show', function(view){
                     that.listenTo(view, 'pager:clear', that.clearPager);
+
+                });
+                this.listenTo(this.header, 'show', function(view){
+                    that.listenTo(view, 'collection:filter', that.collectionFilter);
                 });
                 this.countChecked = 0;
             },
@@ -23,7 +27,12 @@ define(['pods_app/app',
                 this.trigger('pager:clear');
             },
 
+            collectionFilter: function(data){
+                this.trigger('collection:filter', data);
+            },
+
             regions: {
+                header: '#layout-header',
                 list: '#layout-list',
                 pager: '#layout-footer'
             },
@@ -125,22 +134,6 @@ define(['pods_app/app',
                 'click'                : 'checkItem',
             },
 
-            onRender: function(){
-                var that = this;
-                var status = this.model.get('status');
-                this.ui.reditable.editable({
-                    type: 'text',
-                    title: 'Change replicas number',
-                    success: function(response, newValue) {
-                        that.model.set({
-                            'command'   : 'resize',
-                            'replicas'  : parseInt(newValue.trim())
-                        });
-                        that.model.save();
-                    }
-                });
-            },
-
             podPage: function(evt){
                 App.navigate('pods/' + this.model.get('id'), {trigger: true});
                 evt.stopPropagation();
@@ -218,42 +211,10 @@ define(['pods_app/app',
 
         List.PodCollection = Backbone.Marionette.CompositeView.extend({
             template            : podListTpl,
-            childView: List.PodListItem,
+            childView           : List.PodListItem,
             tagName             : 'div',
+            className           : 'container',
             childViewContainer  : 'tbody',
-
-            ui: {
-                'node_search' : 'input#nav-search-input'
-            },
-
-            events: {
-                'keyup @ui.node_search' : 'filterCollection'
-            },
-
-            initialize: function() {
-                this.fakeCollection = this.collection.fullCollection.clone();
-
-                this.listenTo(this.collection, 'reset', function (col, options) {
-                    options = _.extend({ reindex: true }, options || {});
-                    if(options.reindex && options.from == null && options.to == null) {
-                        this.fakeCollection.reset(col.models);
-                    }
-                });
-            },
-
-            filterCollection: function(){
-                var value = this.ui.node_search[0].value,
-                    valueLength = value.length;
-
-                if (valueLength >= 2){
-                    this.collection.fullCollection.reset(_.filter(this.fakeCollection.models, function(e) {
-                        if(e.get('name').indexOf( value || '') >= 0) return e
-                    }), { reindex: false });
-                } else{
-                    this.collection.fullCollection.reset(this.fakeCollection.models, { reindex: false});
-                }
-                this.collection.getFirstPage();
-            },
 
             onBeforeDestroy: function(){
                 this.trigger('pager:clear');

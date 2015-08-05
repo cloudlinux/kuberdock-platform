@@ -1,4 +1,4 @@
-define(['pods_app/app', 'backbone', 'backbone-paginator', 'selectpicker' ], function(Pods, Backbone){
+define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Pods, Backbone){
 
     Pods.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
@@ -75,7 +75,12 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'selectpicker' ], func
             parse: unwrapper,
             mode: 'client',
             state: {
-                pageSize: 10
+                pageSize: 8
+            },
+            searchIn: function(val){
+                return this.fullCollection.models.filter(function(i){
+                    return i.get('name').indexOf(val) === 0;
+                });
             }
         });
 

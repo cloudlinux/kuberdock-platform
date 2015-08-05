@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 26%{?dist}.cloudlinux
+Release: 27%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,16 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Aug 05 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-27
+- Tests for make_namespace
+- AC-701: Fix bug with display networks list after adding
+- AC-724: Prepare design notification windows & remove extra code from users, notifications application, fix some design bug in nodelist page
+- Tests for _get_namespaces and _drop_namespace. Switch to patcher in tests. Small improvment.
+- Fix for maintenance mode.
+- refactored pod_list. Breadcrumbs moved to separate view/template.
+- added jasmine unit tests. pods.less and settings_app/app.js small bugfixes
+- AC-724: Add notification in maintenance mode to nodes&pods application
+
 * Mon Aug 03 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-26
 - AC-721: Fix style notifi message on user create/edit pages
 - Small improve of maintenance mode message

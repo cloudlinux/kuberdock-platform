@@ -87,7 +87,7 @@ define(['pods_app/app',
                         buttonOk: function(){
                             _.each(items, function(item){
                                 if (item.is_checked){
-                                    item.destroy();
+                                    item.destroy({wait: true});
                                 }
                             });
                         },
@@ -153,7 +153,7 @@ define(['pods_app/app',
                     error: function(model, response, options, data){
                         that.render();
                         preloader.hide();
-                        utils.modelError(response);
+                        utils.notifyWindow(response);
                     }
                 });
             },
@@ -172,7 +172,7 @@ define(['pods_app/app',
                     error: function(model, response, options, data){
                         that.render();
                         preloader.hide();
-                        utils.modelError(response);
+                        utils.notifyWindow(response);
                     }
                 });
             },
@@ -191,7 +191,7 @@ define(['pods_app/app',
                    error: function(model, response, options, data){
                         that.render();
                         preloader.hide();
-                        utils.modelError(response);
+                        utils.notifyWindow(response);
                     }
                 });
                 evt.stopPropagation();

@@ -1,7 +1,5 @@
 define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
-
     Pods.module("WorkFlow", function(WorkFlow, App, Backbone, Marionette, $, _){
-
         WorkFlow.getCollection = function(){
             if (!WorkFlow.hasOwnProperty('PodCollection')) {
                 WorkFlow.PodCollection = new App.Data.PodCollection(podCollectionData);
@@ -273,10 +271,10 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             error: function(model, response, options, data){
                                 console.log('error applying data');
                                 var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
-                                utils.modalDialog({
-                                    title: 'Error',
-                                    body: body,
-                                    show: true
+                                $.notify(body, {
+                                    autoHideDelay: 5000,
+                                    globalPosition: 'top left',
+                                    className: 'error'
                                 });
                             }
                         });

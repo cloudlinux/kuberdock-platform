@@ -252,6 +252,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         deleteNode: function(){
             var that = this,
                 name = that.model.get('hostname');
+
             modalDialogDelete({
                 title: "Delete " + name + "?",
                 body: "Are you sure want to delete node '" + name + "'?",
@@ -259,7 +260,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        that.model.destroy();
+                        that.model.destroy({wait: true});
                     },
                     buttonCancel: true
                 }
@@ -544,7 +545,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        that.model.destroy();
+                        that.model.destroy({wait: true});
                         App.router.navigate('/', {trigger: true})
                     },
                     buttonCancel: true

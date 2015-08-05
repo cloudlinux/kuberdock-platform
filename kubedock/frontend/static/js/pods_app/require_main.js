@@ -17,7 +17,7 @@ requirejs.config({
         "jqplot-axis-renderer" : "lib/jqplot.dateAxisRenderer.min",
         "scroll-model"         : "lib/scroll-model",
         "scroll-view"          : "lib/scroll-view",
-        "notify"               : "lib/notify.min",
+        notify                 : "lib/notify.min",
         moment                 : "lib/moment.min",
         "moment-timezone"      : "lib/moment-timezone-with-data.min",
         selectpicker           : 'lib/bootstrap-select.min',
@@ -25,6 +25,9 @@ requirejs.config({
         numeral_langs          : "lib/numeral/languages.min"
     },
     shim: {
+        jquery: {
+            exports: "$"
+        },
         underscore: {
             exports: "_"
         },
@@ -32,7 +35,7 @@ requirejs.config({
             deps: ['jquery', 'underscore'],
             exports: 'Backbone'
         },
-        'backbone-paginator': ['backbone'],
+        'backbone-paginator' : ['backbone'],
         marionette: ['backbone'],
         'bootstrap-editable': ['bootstrap'],
         'jquery-spin': ['spin'],
@@ -41,6 +44,10 @@ requirejs.config({
         selectpicker: {
             deps: ['jquery', 'bootstrap']
         },
+        notify: {
+            deps: ["jquery"],
+            exports: 'jQuery.fn.notify'
+        }
     },
     config: {
         moment: {
@@ -49,6 +56,6 @@ requirejs.config({
     }
 });
 
-require(['pods_app/app'], function(Pods){
+require(['pods_app/app', 'notify'], function(Pods, notify){
     Pods.start();
 });

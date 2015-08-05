@@ -114,7 +114,7 @@ define(['pods_app/app',
                     },
                     error: function(xhr){
                         preloader.hide();
-                        utils.modelError(xhr);
+                        utils.notifyWindow(xhr);
                     }
                 });
             },
@@ -164,7 +164,6 @@ define(['pods_app/app',
             ui: {
                 count             : '.count',
                 defaultTableHead  : '.main-table-head',
-                /*stopContainers    : '.stopContainers',*/
                 containersControl : '.containersControl',
                 checkAllItems     : 'table thead .custom',
             },
@@ -173,7 +172,6 @@ define(['pods_app/app',
                 'click .stop-checked'        : 'stopItems',
                 'click .start-checked'       : 'startItems',
                 'click @ui.checkAllItems'    : 'checkAllItems',
-                /*'click @ui.stopContainers'   : 'stopContainers',*/
             },
 
             childEvents: {
@@ -206,16 +204,6 @@ define(['pods_app/app',
                 this.render();
             },
 
-            /* stopContainers: function(){
-                var col = this.collection,
-                    that = this;
-
-                _.each(col.models, function(model){
-                    if (model.is_checked) model.destroy()
-                });
-                this.render();
-            }, */
-
             command: function(cmd){
                 var preloader = $('#page-preloader');
                     preloader.show();
@@ -238,7 +226,7 @@ define(['pods_app/app',
                     },
                     error: function(model, response, options, data){
                         preloader.hide();
-                        utils.modelError(response);
+                        utils.notifyWindow(response);
                     }
                 });
             },
@@ -330,7 +318,7 @@ define(['pods_app/app',
                     error: function(model, response, options, data){
                         preloader.hide();
                         that.render();
-                        utils.modelError(response);
+                        utils.notifyWindow(response);
                     }
                 });
             },
@@ -349,7 +337,7 @@ define(['pods_app/app',
                     },
                     error: function(model, response, options, data){
                         preloader.hide();
-                        utils.modelError(response);
+                        utils.notifyWindow(response);
                     }
                 });
             },
@@ -377,7 +365,7 @@ define(['pods_app/app',
                                 },
                                 error: function(model, response, options, data){
                                     preloader.hide();
-                                    utils.modelError('Could not remove ' + name);
+                                    utils.notifyWindow(response);
                                 }
                             });
                         },

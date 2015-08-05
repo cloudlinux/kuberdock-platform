@@ -255,13 +255,15 @@ def do_cycle_updates(with_testing=False):
     last = get_applied_updates()
     if last:
         to_apply = to_apply[to_apply.index(last[-1])+1:]
-    failed = False
+    is_failed = False
     if not to_apply:
-        print 'There is no new upgrade scripts to apply.'
-        return failed
+        print 'There is no new upgrade scripts to apply. ' \
+              'Maintenance mode is now disabled.'
+        helpers.set_maintenance(False)
+        return is_failed
 
     for upd in to_apply:
-        failed = upd
+        is_failed = upd
         db_upd, upgrade_func, downgrade_func, upgrade_node_func,\
             downgrade_node_func = load_update(upd)
         if not db_upd:
@@ -272,7 +274,7 @@ def do_cycle_updates(with_testing=False):
             if upgrade_node_func:
                 if upgrade_nodes(upgrade_node_func, downgrade_node_func,
                                  db_upd, with_testing):
-                    failed = False
+                    is_failed = False
                     db_upd.status = UPDATE_STATUSES.applied
                     db_upd.print_log('{0} successfully applied. '
                                      'All nodes are upgraded'.format(upd))
@@ -281,19 +283,19 @@ def do_cycle_updates(with_testing=False):
                     db_upd.print_log("{0} failed. Unable to upgrade some nodes"
                                      .format(upd))
             else:
-                failed = False
+                is_failed = False
                 db_upd.status = UPDATE_STATUSES.applied
                 db_upd.print_log('{0} successfully applied'.format(upd))
         db_upd.end_time = datetime.utcnow()
         db.session.commit()
-    if failed:
-        print >> sys.stderr, "Update {0} has failed.".format(failed)
+    if is_failed:
+        print >> sys.stderr, "Update {0} has failed.".format(is_failed)
         sys.exit(2)
     else:
         print 'All update scripts are applied. Kuberdock has been restarted'
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
-    return failed
+    return is_failed
 
 
 def get_kuberdocks_toinstall(testing=False):

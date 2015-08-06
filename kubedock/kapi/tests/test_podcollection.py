@@ -2,6 +2,7 @@ import logging
 import mock
 import sys
 import unittest
+import json
 
 from uuid import uuid4
 from collections import namedtuple
@@ -526,6 +527,40 @@ class TestPodCollectionGetNamespaces(unittest.TestCase):
 
     def tearDown(self):
         self.pod_collection = None
+
+
+class TestPodCollection(unittest.TestCase):
+
+    def setUp(self):
+        self.pods = [{'id': 1, 'name': 'Unnamed-1', 'namespace': 'Unnamed-1-namespace-md5',
+                      'owner': 'user', 'containers': ''},
+                     {'id': 2, 'name': 'Unnamed-2', 'namespace': 'Unnamed-2-namespace-md5',
+                      'owner': 'user', 'containers': ''}]
+        U = type('User', (), {'username': 'user'})
+        get_ns_patcher.start()
+        self.addCleanup(get_ns_patcher.stop)
+        PodCollection._merge = (lambda s: None)
+        self.pod_collection = PodCollection(U())
+        for data in self.pods:
+            pod = Pod(data)
+            self.pod_collection._collection[pod.name, pod.namespace] = pod
+
+    def test_collection_get_as_json(self):
+        self.assertEqual(self.pod_collection.get(True), json.dumps(self.pods))
+
+    def test_collection_get_as_list(self):
+        self.assertListEqual(self.pod_collection.get(False), self.pods)
+
+    def test_collection_get_by_id_if_id_exist(self):
+        self.assertIsInstance(self.pod_collection.get_by_id(1), Pod)
+
+    @mock.patch.object(PodCollection, '_raise')
+    def test_collection_get_by_id_if_id_not_exist(self, raise_):
+        self.pod_collection.get_by_id(3)
+        self.assertTrue(raise_.called)
+
+    def tearDown(self):
+        self.app = None
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

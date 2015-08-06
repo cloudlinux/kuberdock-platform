@@ -77,7 +77,7 @@ define({
         $.notify(err, {
             autoHideDelay: 5000,
             clickToHide: true,
-            globalPosition: 'top left',
+            globalPosition: 'bottom left',
             className: 'error',
         });
     }

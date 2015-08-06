@@ -273,7 +273,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
                                 $.notify(body, {
                                     autoHideDelay: 5000,
-                                    globalPosition: 'top left',
+                                    globalPosition: 'bottom left',
                                     className: 'error'
                                 });
                             }

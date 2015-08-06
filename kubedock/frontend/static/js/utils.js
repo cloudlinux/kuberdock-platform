@@ -11,9 +11,9 @@ define(function () {
                 if(typeof err === "object")
                     err = JSON.stringify(err);
                 $.notify(err, {
-                    autoHideDelay: 15000,
+                    autoHideDelay: 5000,
                     clickToHide: true,
-                    globalPosition: 'top left',
+                    globalPosition: 'bottom left',
                     className: 'error'
                 });
             },
@@ -25,7 +25,7 @@ define(function () {
                     err = JSON.stringify(err);
                 $.notify(err, {
                     autoHideDelay: 5000,
-                    globalPosition: 'top left',
+                    globalPosition: 'bottom left',
                     className: 'error'
                 });
 
@@ -49,7 +49,7 @@ define(function () {
                     err = JSON.stringify(err);
                 $.notify(err, {
                     autoHideDelay: 5000,
-                    globalPosition: 'top left',
+                    globalPosition: 'bottom left',
                     className: 'error'
                 });
             }
@@ -75,7 +75,7 @@ define(function () {
                 if(typeof data !== 'string') err = JSON.stringify(data);
                 $.notify(err, {
                     autoHideDelay: 10000,
-                    globalPosition: 'top left',
+                    globalPosition: 'bottom left',
                     className: response.status == 'error' ? 'danger' : 'warning'
                 });
             }

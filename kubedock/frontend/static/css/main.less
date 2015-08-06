@@ -837,40 +837,45 @@ body{
     }
     .notifyjs-corner{
         margin: 0;
-        width: 100%;
         .notifyjs-wrapper{
-            margin: 0 0 5px 0;
+            .box-shadow(0px 3px 8px 0px rgba(0,0,0,0.4));
+            margin: 0 0 28px 25px;
         }
         .notifyjs-container{
             margin: 0;
+            position: relative;
+            &:after{
+                .opacity(1);
+                top: 0;
+                width: 7px;
+                color: #eee;
+                right: 16px;
+                content: 'x';
+                height: 14px;
+                font-size: 16px;
+                font-weight: 400;
+                line-height: 50px;
+                position: absolute;
+            }
             .notifyjs-bootstrap-base{
                 .border-radius(0);
                 .opacity(0.9);
-                padding: 15px;
                 border: 0;
-                color: #fff;
+                color: #eee;
+                padding: 15px;
+                font-size: 14px;
                 text-align: center;
+                padding-right: 40px;
                 background-image: none;
                 border-color: transparent;
-                &:after{
-                    .opacity(1);
-                    color: #fff;
-                    font-size: 18px;
-                    font-weight: 100;
-                    line-height: 16px;
-                    content: 'x';
-                    font-weight: 400;
-                    right: 16px;
-                    position: absolute;
-                }
                 span{
                     font-weight: 400;
                 }
                 &.notifyjs-bootstrap-error{
-                    background-color: #E85546;
+                    background-color: #b04242;
                 }
                 &.notifyjs-bootstrap-success{
-                    background-color: #5CA959;
+                    background-color: #3a588b;
                 }
             }
         }

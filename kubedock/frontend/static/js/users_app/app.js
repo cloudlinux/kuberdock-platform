@@ -693,7 +693,7 @@ define(['marionette', 'paginator', 'utils'],
                         App.router.navigate('/profile/' + model.id + '/general/', {trigger: true});
                         $.notify( "Changes to user '" + model.get('username') + "' saved successfully", {
                             autoHideDelay: 4000,
-                            globalPosition: 'top left',
+                            globalPosition: 'bottom left',
                             className: 'success'
                         });
                     }

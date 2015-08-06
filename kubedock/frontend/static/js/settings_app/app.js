@@ -1,5 +1,4 @@
-define(['marionette', 'utils'],
-       function (Marionette, utils) {
+define(['marionette', 'utils'], function (Marionette, utils) {
 
     var SettingsApp = new Marionette.Application({
         regions: {
@@ -103,7 +102,7 @@ define(['marionette', 'utils'],
                         if(rs.status == 'OK')
                             $.notify('Settings changed successfully', {
                                 autoHideDelay: 4000,
-                                globalPosition: 'top left',
+                                globalPosition: 'bottom left',
                                 className: 'success'
                         });
                     }
@@ -375,7 +374,7 @@ define(['marionette', 'utils'],
                         that.render();
                         $.notify('Profile changed successfully', {
                             autoHideDelay: 4000,
-                            globalPosition: 'top left',
+                            globalPosition: 'bottom left',
                             className: 'success'
                         });
                     }
@@ -423,7 +422,7 @@ define(['marionette', 'utils'],
                     success: function(rs){
                         $.notify('Permission changed successfully', {
                             autoHideDelay: 10000,
-                            globalPosition: 'top left',
+                            globalPosition: 'bottom left',
                             className: 'success'
                         });
                     }

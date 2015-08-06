@@ -96,7 +96,7 @@ var _ajaxStatusCodes = {
             $.notify(err, {
                 autoHideDelay: 5000,
                 clickToHide: true,
-                globalPosition: 'top left',
+                globalPosition: 'bottom left',
                 className: 'error',
             });
         },
@@ -108,7 +108,7 @@ var _ajaxStatusCodes = {
                 err = JSON.stringify(err);
             $.notify(err, {
                 autoHideDelay: 5000,
-                globalPosition: 'top left',
+                globalPosition: 'bottom left',
                 className: 'error',
             });
             // Redirect to the login page.
@@ -130,7 +130,7 @@ var _ajaxStatusCodes = {
             if(typeof err === "object")
                 err = JSON.stringify(err);
             $.notify(err, {
-                globalPosition: 'top left',
+                globalPosition: 'bottom left',
                 className: 'error'
             });
         },
@@ -141,7 +141,7 @@ var _ajaxStatusCodes = {
             if(typeof err === "object")
                 err = JSON.stringify(err);
             $.notify(err, {
-                globalPosition: 'top left',
+                globalPosition: 'bottom left',
                 className: 'error'
             });
         }

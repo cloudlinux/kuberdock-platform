@@ -1,5 +1,4 @@
-define(['marionette', 'utils'],
-       function (Marionette, utils) {
+define(['marionette', 'utils'], function (Marionette, utils) {
 
     var IPPoolApp = new Marionette.Application({
         regions: {

@@ -389,25 +389,41 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             onSave: function(){
-                // temp validation
-                if (!this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val())) {
-                    // set error messages to password fields
-                    this.ui.password.notify("empty password or don't match");
-                    return false
-                }
+                var pattern = /^([a-z0-9_\.-])+@[a-z0-9-]+\.([a-z]{2,4}\.)?[a-z]{2,4}$/i;
 
-                App.Data.users.create({
-                    'username' : this.ui.username.val(),
-                    'password' : this.ui.password.val(),
-                    'email'    : this.ui.email.val(),
-                    'active'   : (this.ui.user_status.val() == 1 ? true : false),
-                    'rolename' : this.ui.role_select.val()
-                }, {
-                    wait: true,
-                    success: function(){
-                        App.router.navigate('/', {trigger: true})
-                    }
-                });
+                switch (true)
+                {
+                case this.ui.username.val() == '':
+                    this.ui.username.notify("empty username");
+                    break;
+                case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
+                    this.ui.password.notify("empty password or don't match");
+                    break;
+                case this.ui.email.val() == '':
+                   this.ui.email.notify("empty E-mail");
+                   break;
+                case this.ui.email.val() != '' && !pattern.test(this.ui.email.val()):
+                    this.ui.email.notify("E-mail must be correct");
+                    break;
+                default:
+                    App.Data.users.create({
+                        'username' : this.ui.username.val(),
+                        'password' : this.ui.password.val(),
+                        'email'    : this.ui.email.val(),
+                        'active'   : (this.ui.user_status.val() == 1 ? true : false),
+                        'rolename' : this.ui.role_select.val()
+                    }, {
+                        wait: true,
+                        success: function(){
+                            App.router.navigate('/', {trigger: true})
+                            $.notify( "User created successfully", {
+                                autoHideDelay: 4000,
+                                globalPosition: 'top left',
+                                className: 'success'
+                            });
+                        }
+                    });
+                }
             },
 
             cancel: function(){

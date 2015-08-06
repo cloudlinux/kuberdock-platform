@@ -111,13 +111,12 @@ var _ajaxStatusCodes = {
                 globalPosition: 'top left',
                 className: 'error',
             });
-
             // Redirect to the login page.
-                window.location.href = "/login";
+            window.location.href = "/login";
         },
         403: function (xhr) {
             // 403 -- Access denied
-//                    Backbone.history.navigate("login", true);
+            // Backbone.history.navigate("login", true);
         },
         404: function(xhr){
             $('body').html(
@@ -150,7 +149,6 @@ var _ajaxStatusCodes = {
 };
 
 NodesApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
-
     Backbone.ajax = function() {
         // Invoke $.ajaxSetup in the context of Backbone.$
         Backbone.$.ajaxSetup.call(Backbone.$, _ajaxStatusCodes);
@@ -182,10 +180,9 @@ NodesApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
     });
 });
 
-
 NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
-    //=================Copy from app.js ===========================================================
+    //================= Paginator TODO NEED MERGE =================//
     Views.PaginatorView = Backbone.Marionette.ItemView.extend({
         template: '#paginator-template',
 
@@ -203,7 +200,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         paginateIt: function(evt){
-            // TODO NEED MERGE ====================================================================
             evt.stopPropagation();
             var tgt = $(evt.target);
             var coll = this.model.get('c');
@@ -211,13 +207,11 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
             else if (tgt.hasClass('paginatorPrev') && coll.hasPreviousPage()) coll.getPreviousPage();
             else if (tgt.hasClass('paginatorNext') && coll.hasNextPage()) coll.getNextPage();
             else if (tgt.hasClass('paginatorLast')) coll.getLastPage();
-//            this.model.get('v').render();     //don't need, maybe in my case
             this.render();
         }
     });
 
-    //=============================================================================================
-
+    //================= NodeItem =================//
     Views.NodeItem = Backbone.Marionette.ItemView.extend({
         template: '#node-item-template',
         tagName: 'tr',
@@ -280,6 +274,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
+    //================= NodeList =================//
     Views.NodesListView = Backbone.Marionette.CompositeView.extend({
         template: '#nodes-list-template',
         childView: Views.NodeItem,
@@ -335,21 +330,19 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         addNode: function(){
             App.router.navigate('/add/', {trigger: true});
         },
-
     });
 
-    // =========== Add Node wizard ====================================
+    // ================= Add Node wizard =================//
     Views.NodeAddWizardLayout = Backbone.Marionette.LayoutView.extend({
         template: '#node-add-layout-template',
 
         regions: {
-            header: '#node-header',
-            find_step: '#node-find-step',
-            final_step: '#node-final-step'
+            header        : '#node-header',
+            node_add_step : '#node-add-step'
         },
 
         ui: {
-            'nodes_page'   : 'div#nodes-page',
+            'nodes_page' : 'div#nodes-page',
         },
 
         events:{
@@ -361,16 +354,9 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    Views.NodeFindStep = Backbone.Marionette.ItemView.extend({
-        template: '#node-find-step-template',
-
-        initialize: function () {
-            this.state = new Backbone.Model({ isFinished: true });
-        }
-    });
-
-    Views.NodeFinalStep = Backbone.Marionette.ItemView.extend({
-        template: '#node-final-step-template',
+    //================= Add Node Page =================//
+    Views.NodeAddStep = Backbone.Marionette.ItemView.extend({
+        template: '#node-add-step-template',
 
         ui: {
             'node_add_btn'     : 'button#node-add-btn',
@@ -390,9 +376,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         },
 
         change_kube_type: function(evt) {
-            if (this.ui.node_type_select.value !== null) {
-                this.state.set('kube_type', parseInt(evt.target.value));
-            }
+            if (this.ui.node_type_select.value !== null) this.state.set('kube_type', parseInt(evt.target.value));
         },
 
         complete: function () {
@@ -407,13 +391,14 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 }, {
                     wait: true,
                     success: function(){
-                        // TODO redirect to this node page
-    //                    that.trigger('show_console');
                         App.router.navigate('/', {trigger: true});
+                        $.notify("Added node successfully", {
+                            autoHideDelay: 5000,
+                            clickToHide: true,
+                            globalPosition: 'top left',
+                            className: 'success',
+                        });
                     },
-                    /*error: function(){
-                        modelError('error while saving! Maybe some fields required.');
-                    } */
                 });
             }
         },
@@ -426,7 +411,6 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 Backbone.ajax({ url:"/api/nodes/checkhost/" + val, async: false }).done(function (data) {
                     that.state.set('hostname', val);
                 }).error(function(resp) {
-/*                    modelError(resp);*/
                     that.state.set('hostname', '');
                     that.ui.node_name.addClass('error');
                 });
@@ -452,18 +436,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
-    // TODO delete this view at all, not needed
-    Views.ConsoleView = Backbone.Marionette.ItemView.extend({
-        template: '#node-console-template',
-        model: new Backbone.Model({'text': []}),
-
-        events: {
-            'click button#main' : function () { App.router.navigate('/', {trigger: true}) }
-        }
-    });
-    // =========== //Add Node wizard ==================================
-
-    // =========== Detailed view ========================================
+    // ================= Detailed View =================//
     Views.NodeDetailedLayout = Backbone.Marionette.LayoutView.extend({
         template: '#node-detailed-layout-template',
 
@@ -564,6 +537,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
+    //================= Node Genegal Tab =================//
     Views.NodeGeneralTabView = Backbone.Marionette.ItemView.extend({
         template: '#node-general-tab-template',
 
@@ -592,10 +566,12 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
+    //================= Node Stats Tab =================//
     Views.NodeStatsTabView = Backbone.Marionette.ItemView.extend({
         template: '#node-stats-tab-template'
     });
 
+    //================= Node Stats Tab  =================//
     Views.NodeLogsTabView = Backbone.Marionette.ItemView.extend({
         template: '#node-logs-tab-template',
 
@@ -646,20 +622,22 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         }
     });
 
+    //================= Node Monitoring Tab =================//
     Views.NodeMonitoringTabView = Backbone.Marionette.ItemView.extend({
         template: '#node-monitoring-tab-template',
     });
 
+    //================= Node Timelines Tab =================//
     Views.NodeTimelinesTabView = Backbone.Marionette.ItemView.extend({
         template: '#node-timelines-tab-template',
     });
 
+    //================= Node Configuration Tab =================//
     Views.NodeConfigurationTabView = Backbone.Marionette.ItemView.extend({
         template: '#node-configuration-tab-template'
     });
 
-    // =========== //Detailed view ======================================
-
+    //================= Node Layout View =================//
     Views.NodesLayout = Backbone.Marionette.LayoutView.extend({
         template: '#nodes-layout-template',
 
@@ -687,23 +665,10 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
 
         showAddNode: function(){
             var layout_view = new App.Views.NodeAddWizardLayout();
-            var find_step = new App.Views.NodeFindStep();
-            var final_step = new App.Views.NodeFinalStep();
-            var console_view = new App.Views.ConsoleView();
+            var node_add_step = new App.Views.NodeAddStep();
 
-            this.listenTo(find_step.state, 'change', function () {
-                layout_view.trigger('show');
-            });
-            this.listenTo(find_step.state, 'change', function () {
-                final_step.state.set('hostname', find_step.state.get('hostname'));
-            });
-            this.listenTo(final_step, 'show_console', function () {
-                layout_view.find_step.empty();
-                layout_view.final_step.show(console_view);
-            });
             this.listenTo(layout_view, 'show', function(){
-                layout_view.find_step.show(find_step);
-                find_step.state.get('isFinished') ? layout_view.final_step.show(final_step) : {};
+                layout_view.node_add_step.show(node_add_step)
             });
             App.contents.show(layout_view);
         },
@@ -766,7 +731,7 @@ NodesApp.module('NodesCRUD', function(NodesCRUD, App, Backbone, Marionette, $, _
             }, false);
             source.addEventListener('install_logs', function (ev) {
                 var decoded = JSON.parse(ev.data);
-//                console.log(decoded);
+                // console.log(decoded);
                 var node = App.Data.nodes.findWhere({'hostname': decoded.for_node});
                 if (typeof node != 'undefined') {
                     node.set('install_log', node.get('install_log') + decoded.data + '\n');
@@ -791,5 +756,4 @@ NodesApp.on('start', function(){
 
 $(function(){
     NodesApp.start();
-    $('[data-toggle="tooltip"]').tooltip()
 });

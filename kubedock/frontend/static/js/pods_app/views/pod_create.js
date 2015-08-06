@@ -1105,14 +1105,10 @@ define(['pods_app/app',
             },
 
             onRender: function() {
-                if (!this.model.get('kube_type'))
-                    this.model.set('kube_type', parseInt(kubeTypes[0].id));
-                if(!this.container_price) {
-                    this.$('.kube-quantity').trigger('change');
-                }
-                if(!this.cpu_data) {
-                    this.$('.kube_type').trigger('change');
-                }
+                if(!this.model.get('kube_type')) this.model.set('kube_type', parseInt(kubeTypes[0].id));
+                if(!this.container_price) this.ui.kubeQuantity.trigger('change');
+                if(!this.cpu_data) this.ui.kubeTypes.trigger('change');
+
                 var that = this;
                 this.ui.ieditable.editable({
                     type: 'text',

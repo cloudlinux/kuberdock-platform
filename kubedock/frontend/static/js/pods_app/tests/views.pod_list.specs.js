@@ -50,17 +50,17 @@ define(['pods_app/views/pods_list',
             expect('#jasmine-fixtures tbody > tr').toHaveLength(2);
         });
 
-        it('if collection has 2 models list has 2 entries', function(){
-            var model1 = new data.Pod({id: 1, name: 'first', kube_type: 0}),
-                model2 = new data.Pod({id: 2, name: 'second', kube_type: 0}),
-                collection = new data.PodCollection([model1, model2]),
-                listView = new views.PodCollection({collection: collection});
-            listView.ui.node_search[0].value = 'fir';
-            listView.filterCollection();
-            console.log(listView.collection.length);
-            //var view = listView.render();
-            //expect('#jasmine-fixtures tbody > tr').toHaveLength(2);
-        });
+        //it('if collection has 2 models list has 2 entries', function(){
+        //    var model1 = new data.Pod({id: 1, name: 'first', kube_type: 0}),
+        //        model2 = new data.Pod({id: 2, name: 'second', kube_type: 0}),
+        //        collection = new data.PodCollection([model1, model2]),
+        //        listView = new views.PodCollection({collection: collection});
+        //    listView.ui.node_search[0].value = 'fir';
+        //    listView.filterCollection();
+        //    console.log(listView.collection.length);
+        //    //var view = listView.render();
+        //    //expect('#jasmine-fixtures tbody > tr').toHaveLength(2);
+        //});
 
         listLayout.remove();
 

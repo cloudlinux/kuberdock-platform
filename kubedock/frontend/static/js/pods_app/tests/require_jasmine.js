@@ -58,6 +58,9 @@ requirejs.config({
         "jasmine-jquery": {
             deps: ["jquery"]
         },
+        "jasmine-sinon": {
+            deps: ["sinon"]
+        },
         //"blanket-jasmine": {
         //    deps: ["blanket", "jasmine-boot"],
         //    exports: 'blanket'

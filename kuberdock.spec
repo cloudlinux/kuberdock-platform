@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 27%{?dist}.cloudlinux
+Release: 28%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,15 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Thu Aug 06 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.2-28
+- AC-778: Add validation to user create page
+- AC-573: Show container price
+- AC-729 Unit-test python (pod). Method get
+- AC-730 Unit-test python (pod). Method get_by_id
+- updated js tests
+- AC-779: Add new design to notification windows
+- AC-776: Remove extra Views.ConsoleView; AC-774: Merge two views: Views.NodeFindStep and Views.NodeFinalStep, remove extra styles & small design fixes
+
 * Wed Aug 05 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-27
 - Tests for make_namespace
 - AC-701: Fix bug with display networks list after adding

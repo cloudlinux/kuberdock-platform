@@ -84,21 +84,13 @@
                             <tr class="added-containers">
                                  <td id="<%- c.name %>"><b><%- c.image %></b></td>
                                  <td><%- c.kubes %></td>
-                                 <td></td>
+                                 <td><%- container_price %></td>
                                  <td>
                                      <button class="delete-item pull-right">&nbsp;</button>
                                      <!-- <button class="edit-item">&nbsp;</button> -->
                                  </td>
                             </tr>
                         <% }) %>
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td>
-                                <span id="containers_price"><%- container_price %></span>
-                            </td>
-                            <td></td>
-                        </tr>
                         <% if (isPublic) { %>
                             <tr>
                                 <td><b>IP Adress:</b></td>
@@ -117,7 +109,7 @@
                             </tr>
                         <% } %>
                         <tr>
-                            <td class="total" colspan="4">
+                            <td class="total" colspan="3">
                                 Total price: <span id="total_price"><%- total_price %></span>
                             </td>
                         </tr>

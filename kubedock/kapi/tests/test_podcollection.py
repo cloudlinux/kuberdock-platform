@@ -562,6 +562,114 @@ class TestPodCollection(unittest.TestCase):
     def tearDown(self):
         self.app = None
 
+
+class TestPodCollectionStartPod(unittest.TestCase):
+
+    def setUp(self):
+        U = type('User', (), {'username': 'user'})
+        PodCollection._get_pods = (lambda s, n: None)
+        PodCollection._merge = (lambda s: None)
+        self.pod_collection = PodCollection(U())
+
+        self.test_service_name = 'service-eu53y'
+        self.pod_collection._run_service = mock.Mock(
+            return_value={'metadata': {'name': self.test_service_name}})
+
+        self.valid_config = '{"valid": "config"}'
+        self.test_pod = mock.Mock()
+        self.test_pod.name = 'unnamed-1'
+        self.test_pod.is_deleted = False
+        self.test_pod.kind = 'replicationcontrollers'
+        self.test_pod.namespace = "user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094"
+        self.test_pod.containers = [{
+            'ports': [{'hostPort': 1000, 'containerPort': 80, 'isPublic': True},
+                      {'containerPort': 80, 'isPublic': False}],
+        }]
+
+    @mock.patch.object(PodCollection, '_post')
+    @mock.patch.object(PodCollection, '_make_namespace')
+    def test_pod_normal_first_start(self, mk_ns, post_):
+        """
+        Test first _start_pod in usual case
+        :type post_: mock.Mock
+        """
+
+        self.test_pod.get_config = mock.Mock(return_value=None)
+        self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
+
+        self.pod_collection._run_service.reset_mock()
+
+        # Actual call
+        res = self.pod_collection._start_pod(self.test_pod)
+
+        mk_ns.assert_called_once_with(self.test_pod.namespace)
+        self.test_pod.get_config.assert_called_once_with('service')
+        self.pod_collection._run_service.assert_called_once_with(self.test_pod)
+        self.test_pod.prepare.assert_called_once_with()
+        post_.assert_called_once_with(
+            [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
+            ns=self.test_pod.namespace)
+        self.assertEquals(res, {'status': 'pending'})
+
+    @mock.patch.object(PodCollection, '_post')
+    @mock.patch.object(PodCollection, '_make_namespace')
+    def test_pod_first_start_without_ports(self, mk_ns, post_):
+        """
+        Test first _start_pod for pod without ports
+        :type post_: mock.Mock
+        """
+        saved_ports = self.test_pod.containers[0]['ports']
+        self.test_pod.containers[0]['ports'] = []
+
+        self.test_pod.get_config = mock.Mock(return_value=None)
+        self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
+
+        self.pod_collection._run_service.reset_mock()
+
+        # Actual call
+        res = self.pod_collection._start_pod(self.test_pod)
+
+        mk_ns.assert_called_once_with(self.test_pod.namespace)
+        self.test_pod.get_config.assert_called_once_with('service')
+        self.assertEquals(self.pod_collection._run_service.called, False)
+        self.test_pod.prepare.assert_called_once_with()
+        post_.assert_called_once_with(
+            [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
+            ns=self.test_pod.namespace)
+        self.assertEquals(res, {'status': 'pending'})
+
+        self.test_pod.containers[0]['ports'] = saved_ports
+
+    @mock.patch.object(PodCollection, '_post')
+    @mock.patch.object(PodCollection, '_make_namespace')
+    def test_pod_normal_second_start(self, mk_ns, post_):
+        """
+        Test second _start_pod in usual case
+        :type post_: mock.Mock
+        """
+
+        self.test_pod.get_config = mock.Mock(
+            return_value=self.test_service_name)
+        self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
+
+        self.pod_collection._run_service.reset_mock()
+
+        # Actual call
+        res = self.pod_collection._start_pod(self.test_pod)
+
+        mk_ns.assert_called_once_with(self.test_pod.namespace)
+        self.test_pod.get_config.assert_called_once_with('service')
+        self.assertEquals(self.pod_collection._run_service.called, False)
+        self.test_pod.prepare.assert_called_once_with()
+        post_.assert_called_once_with(
+            [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
+            ns=self.test_pod.namespace)
+        self.assertEquals(res, {'status': 'pending'})
+
+    def tearDown(self):
+        self.pod_collection = None
+
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger('TestPodCollection.test_pod').setLevel(logging.DEBUG)

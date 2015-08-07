@@ -397,7 +397,7 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.username.notify("empty username");
                     break;
                 case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
-                    this.ui.password.notify("empty password or don't match");
+                    this.ui.password_again.notify("empty password or don't match");
                     break;
                 case this.ui.email.val() == '':
                    this.ui.email.notify("empty E-mail");
@@ -418,7 +418,7 @@ define(['marionette', 'paginator', 'utils'],
                             App.router.navigate('/', {trigger: true})
                             $.notify( "User created successfully", {
                                 autoHideDelay: 4000,
-                                globalPosition: 'top left',
+                                globalPosition: 'bottom left',
                                 className: 'success'
                             });
                         }

@@ -207,7 +207,7 @@ class CephStorage(PersistentStorage):
         :return: int -> return code of 'run'
         """
         ip = db.session.query(Node).first().ip
-        mb_size = int(1024 * size)
+        mb_size = 1024 * int(size)
         with settings(host_string=ip):
             with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                           warn_only=True):

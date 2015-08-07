@@ -216,11 +216,35 @@ class KuberDock(KubeCtl):
 
     def drives(self):
         """
+        Persistent drives related actions
+        """
+        {'list': self.list_drives,
+         'add': self.add_drive,
+         'delete': self.delete_drive}.get(self.pdaction, self.list_drives)()
+
+    def list_drives(self):
+        """
         Returns list of user persistent drives
         """
         self._WANTS_HEADER = True
         self._FIELDS = (('id', 48), ('name', 32), ('size', 12), ('in_use', 12))
         self._list(self._get_drives())
+
+    def add_drive(self):
+        """
+        Creates a persistent drive for a user
+        """
+        self._post('/api/pstorage', {'name': self.name, 'size': self.size})
+
+    def delete_drive(self):
+        """
+        Deletes a user persistent drive
+        """
+        drives = self._get_drives()
+        filtered = [d for d in drives if d.get('name') == self.name]
+        if not filtered:
+            raise SystemExit('No such drive')
+        self._del('/api/pstorage/' + filtered[0]['id'])
 
     def start(self):
         self._FIELDS = (('status', 32),)

@@ -880,6 +880,27 @@ body{
             }
         }
     }
+    .form-group{
+        .notifyjs-wrapper{
+            &.notifyjs-hidable{
+                .notifyjs-arrow{display: none !important}
+                .notifyjs-container{
+                    .notifyjs-bootstrap-base{
+                        padding: 0;
+                        border: none;
+                        background: transparent;
+                        &.notifyjs-bootstrap-error{
+                        }
+                        span{
+                            color: #ff5252;
+                            font-size: 13px;
+                            font-weight: normal;
+                        }
+                    }
+                }
+            }
+        }
+    }
     /*end alert messages */
 
     @import "pods.less";

@@ -38,13 +38,17 @@ define(['pods_app/app',
             },
 
             ui: {
-                'checkAll'   : 'thead label.custom span',
-                'removePods' : '.removePods'
+                'runPods'    : '.runPods',
+                'stopPods'   : '.stopPods',
+                'removePods' : '.removePods',
+                'checkAll'   : 'thead label.custom span'
             },
 
             events: {
+                'click @ui.runPods'    : 'runPods',
+                'click @ui.stopPods'   : 'stopPods',
                 'click @ui.checkAll'   : 'checkAll',
-                'click @ui.removePods' : 'removePods'
+                'click @ui.removePods' : 'removePods',
             },
 
             childEvents: {
@@ -95,6 +99,24 @@ define(['pods_app/app',
                    }
                 });
             },
+
+            runPods: function(){
+                var items = App.WorkFlow.getCollection().fullCollection.models;
+                _.each(items, function(item){
+                    if (item.is_checked){
+                        item.save({command: 'start'});
+                    }
+                });
+            },
+
+            stopPods: function(){
+                var items = App.WorkFlow.getCollection().fullCollection.models;
+                _.each(items, function(item){
+                    if (item.is_checked){
+                        item.save({command: 'stop'});
+                    }
+                });
+            },
         });
 
         // View for showing a single pod item as a container in pods list
@@ -135,8 +157,9 @@ define(['pods_app/app',
             },
 
             podPage: function(evt){
-                App.navigate('pods/' + this.model.get('id'), {trigger: true});
                 evt.stopPropagation();
+                this.checked = false;
+                App.navigate('pods/' + this.model.get('id'), {trigger: true});
             },
 
             startItem: function(evt){

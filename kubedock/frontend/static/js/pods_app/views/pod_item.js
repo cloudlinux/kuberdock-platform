@@ -118,12 +118,15 @@ define(['pods_app/app',
                     }
                 });
             },
+
             startItem: function(evt){
                 this.command(evt, 'start');
             },
+
             stopItem: function(evt){
                 this.command(evt, 'stop');
             },
+
             deleteItem: function(evt){
                 var that = this,
                     name = that.model.get('name');
@@ -140,11 +143,8 @@ define(['pods_app/app',
                     }
                 });
             },
-            containerPage: function(evt){
-                App.navigate('poditem/' + this.model.get('parentID') + '/' + this.model.get('name') , {trigger: true});
-                evt.stopPropagation;
-            },
-            checkItem: function(evt){
+
+            checkItem: function(){
                 if (this.model.is_checked){
                     this.$el.removeClass('checked');
                     this.model.is_checked = false;
@@ -153,7 +153,14 @@ define(['pods_app/app',
                     this.$el.addClass('checked');
                 }
                 this.render();
-            }
+            },
+
+            containerPage: function(evt){
+                evt.stopPropagation();
+                this.checked = false;
+                App.navigate('poditem/' + this.model.get('parentID') + '/' + this.model.get('name') , {trigger: true});
+            },
+
         });
 
         Item.InfoPanel = Backbone.Marionette.CompositeView.extend({

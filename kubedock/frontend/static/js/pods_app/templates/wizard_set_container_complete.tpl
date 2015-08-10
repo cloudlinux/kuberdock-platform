@@ -68,6 +68,7 @@
             <div class="col-md-5 col-xs-offset-1 servers">
                 <div>CPU: <span id="total_cpu"><%- cpu_data %></span></div>
                 <div>RAM: <span id="total_ram"><%- ram_data %></span></div>
+                <div>HDD: <span id="hdd_data"><%- hdd_data %></span></div>
             </div>
             <div class="col-md-12 total-wrapper">
                 <table>

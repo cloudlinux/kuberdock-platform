@@ -948,6 +948,7 @@ define(['pods_app/app',
                     isPerSorage : isPerSorage,
                     cpu_data: this.cpu_data,
                     ram_data: this.ram_data,
+                    hdd_data: this.hdd_data,
                     container_price: this.container_price,
                     total_price: this.total_price,
                     kube_types: kubeTypes,
@@ -1060,9 +1061,11 @@ define(['pods_app/app',
                 if (kube_data.length === 0) {
                     this.cpu_data = '0 Cores';
                     this.ram_data = '0 MB';
+                    this.hdd_data = '0 GB';
                 } else {
-                    this.cpu_data = kube_data.cpu + ' Cores';
+                    this.cpu_data = kube_data.cpu + ' ' + kube_data.cpu_units;
                     this.ram_data = kube_data.memory + ' ' + kube_data.memory_units;
+                    this.hdd_data = kube_data.disk_space;
                 }
                 this.container_price = this.getFormattedPrice(kube_price * num);
                 this.total_price = this.getFormattedPrice(_.reduce(containers,

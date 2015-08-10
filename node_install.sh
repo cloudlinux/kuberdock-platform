@@ -227,7 +227,6 @@ EOF
 
 # overlayfs enable
 systemctl mask docker-storage-setup
-sed -i '/^OPTIONS=/ s/--selinux-enabled//' /etc/sysconfig/docker
 sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=overlay' /etc/sysconfig/docker-storage
 
 echo 'Enabling docker...'
@@ -244,12 +243,6 @@ else
 fi
 check_status
 chcon -Rt svirt_sandbox_file_t /var/lib/elasticsearch
-check_status
-
-if [ ! -d /var/lib/docker/containers ]; then
-  mkdir -p /var/lib/docker/containers
-fi
-chcon -Rt svirt_sandbox_file_t /var/lib/docker/containers
 check_status
 
 # prjquota enable

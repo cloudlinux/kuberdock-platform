@@ -586,12 +586,15 @@ class TestPodCollectionStartPod(unittest.TestCase):
                       {'containerPort': 80, 'isPublic': False}],
         }]
 
+    @mock.patch.object(PodCollection, '_raise_if_failure')
     @mock.patch.object(PodCollection, '_post')
     @mock.patch.object(PodCollection, '_make_namespace')
-    def test_pod_normal_first_start(self, mk_ns, post_):
+    def test_pod_normal_first_start(self, mk_ns, post_, rif):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
+        :type mk_ns: mock.Mock
+        :type rif: mock.Mock
         """
 
         self.test_pod.get_config = mock.Mock(return_value=None)
@@ -609,6 +612,7 @@ class TestPodCollectionStartPod(unittest.TestCase):
         post_.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
+        self.assertEquals(rif.called, True)
         self.assertEquals(res, {'status': 'pending'})
 
     @mock.patch.object(PodCollection, '_post')
@@ -665,6 +669,45 @@ class TestPodCollectionStartPod(unittest.TestCase):
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
         self.assertEquals(res, {'status': 'pending'})
+
+    def tearDown(self):
+        self.pod_collection = None
+
+
+class TestPodCollectionStopPod(unittest.TestCase):
+
+    def setUp(self):
+        U = type('User', (), {'username': 'user'})
+        PodCollection._get_pods = (lambda s, n: None)
+        PodCollection._merge = (lambda s: None)
+        self.pod_collection = PodCollection(U())
+
+    @mock.patch.object(PodCollection, '_del')
+    @mock.patch.object(PodCollection, '_stop_cluster')
+    @mock.patch.object(PodCollection, '_raise_if_failure')
+    def test_pod_normal_first_start(self, rif, stop_cluster, del_):
+        """
+        Test _stop_pod in usual case
+        :type del_: mock.Mock
+        :type stop_cluster: mock.Mock
+        :type rif: mock.Mock
+        """
+        pod = type('TestPod', (), {
+            'status': 'Running',
+            'kind': 'RC',
+            'namespace': 'some_ns',
+            'replicationController': True,
+            'sid': 'yyy',
+        })
+
+        # Actual call
+        res = self.pod_collection._stop_pod(pod)
+
+        self.assertEquals(pod.status, 'stopped')
+        del_.assert_called_once_with([pod.kind, pod.sid], ns=pod.namespace)
+        stop_cluster.assert_called_once_with(pod)
+        self.assertEquals(rif.called, True)
+        self.assertEquals(res, {'status': 'stopped'})
 
     def tearDown(self):
         self.pod_collection = None

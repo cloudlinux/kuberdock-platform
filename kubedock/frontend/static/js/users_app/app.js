@@ -161,7 +161,7 @@ define(['marionette', 'paginator', 'utils'],
             childViewContainer: "tbody",
 
             ui: {
-                'add_user'           : 'button#add_user',
+                'create_user'        : 'button#create_user',
                 'edit_selected_user' : 'span#editUser',
                 'activity_page'      : '.activityPage',
                 'online_page'        : '.onlinePage',
@@ -169,7 +169,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             events: {
-                'click @ui.add_user'               : 'addUser',
+                'click @ui.create_user'            : 'createUser',
                 'click @ui.remove_selected_user'   : 'removeSelectedUser',
                 'click @ui.edit_selected_user'     : 'editSelectedUser',
                 'click @ui.block_selected_user'    : 'blockSelectedUser',
@@ -214,7 +214,7 @@ define(['marionette', 'paginator', 'utils'],
                 e.stopPropagation();
             },
 
-            addUser: function(){
+            createUser: function(){
                 App.router.navigate('/create/', {trigger: true});
             },
 
@@ -375,13 +375,15 @@ define(['marionette', 'paginator', 'utils'],
                 'users_page'      : 'div#users-page',
                 'user_add_btn'    : 'button#user-add-btn',
                 'user_cancel_btn' : 'button#user-cancel-btn',
-                'selectpicker'    : '.selectpicker'
+                'selectpicker'    : '.selectpicker',
+                'input'           : 'input'
             },
 
             events: {
                 'click @ui.users_page'      : 'breadcrumbClick',
                 'click @ui.user_add_btn'    : 'onSave',
-                'click @ui.user_cancel_btn' : 'cancel'
+                'click @ui.user_cancel_btn' : 'cancel',
+                'focus @ui.input'           : 'removeError'
             },
 
             onRender: function(){
@@ -395,14 +397,19 @@ define(['marionette', 'paginator', 'utils'],
                 {
                 case this.ui.username.val() == '':
                     this.ui.username.notify("empty username");
+                    this.ui.username.addClass('error');
                     break;
                 case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
+                    this.ui.password.addClass('error');
+                    this.ui.password_again.addClass('error');
                     this.ui.password_again.notify("empty password or don't match");
                     break;
                 case this.ui.email.val() == '':
-                   this.ui.email.notify("empty E-mail");
-                   break;
+                    this.ui.email.addClass('error');
+                    this.ui.email.notify("empty E-mail");
+                    break;
                 case this.ui.email.val() != '' && !pattern.test(this.ui.email.val()):
+                    this.ui.email.addClass('error');
                     this.ui.email.notify("E-mail must be correct");
                     break;
                 default:
@@ -424,6 +431,11 @@ define(['marionette', 'paginator', 'utils'],
                         }
                     });
                 }
+            },
+
+            removeError: function(evt){
+                var target = $(evt.target);
+                if (target.hasClass('error')) target.removeClass('error');
             },
 
             cancel: function(){
@@ -666,38 +678,43 @@ define(['marionette', 'paginator', 'utils'],
                     'active'   : (this.ui.user_status.val() == 1 ? true : false),
                     'rolename' : this.ui.role_select.val()
                 };
-                if(this.ui.password.val()){
-                    if (!this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val())) {
-                        // set error messages to password fields
-                        this.ui.password.notify("empty password or don't match");
-                        return false;
-                    }
-                    data['password'] = this.ui.password.val();
-                }
-                if(!data.username){
-                    this.ui.username.notify('Username is required');
-                    this.ui.username.focus();
-                    return false;
-                }
-                if(!data.rolename){
-                    this.ui.role_select.notify('Role is required');
-                    this.ui.role_select.focus();
-                    return false;
-                }
-                this.model.set(data);
+                var pattern = /^([a-z0-9_\.-])+@[a-z0-9-]+\.([a-z]{2,4}\.)?[a-z]{2,4}$/i;
 
-                this.model.save(this.model.changedAttributes(), {
-                    wait: true,
-                    patch: true,
-                    success: function(model){
-                        App.router.navigate('/profile/' + model.id + '/general/', {trigger: true});
-                        $.notify( "Changes to user '" + model.get('username') + "' saved successfully", {
-                            autoHideDelay: 4000,
-                            globalPosition: 'bottom left',
-                            className: 'success'
-                        });
-                    }
-                });
+                switch (true)
+                {
+                case this.ui.username.val() == '':
+                    this.ui.username.notify("empty username");
+                    this.ui.username.addClass('error');
+                    break;
+                case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
+                    this.ui.password.addClass('error');
+                    this.ui.password_again.addClass('error');
+                    this.ui.password_again.notify("empty password or don't match");
+                    break;
+                case this.ui.email.val() == '':
+                    this.ui.email.addClass('error');
+                    this.ui.email.notify("empty E-mail");
+                    break;
+                case this.ui.email.val() != '' && !pattern.test(this.ui.email.val()):
+                    this.ui.email.addClass('error');
+                    this.ui.email.notify("E-mail must be correct");
+                    break;
+                default:
+                    this.model.set(data);
+
+                    this.model.save(this.model.changedAttributes(), {
+                        wait: true,
+                        patch: true,
+                        success: function(model){
+                            App.router.navigate('/profile/' + model.id + '/general/', {trigger: true});
+                            $.notify( "Changes to user '" + model.get('username') + "' saved successfully", {
+                                autoHideDelay: 4000,
+                                globalPosition: 'bottom left',
+                                className: 'success'
+                            });
+                        }
+                    });
+                }
             },
 
             cancel: function(){

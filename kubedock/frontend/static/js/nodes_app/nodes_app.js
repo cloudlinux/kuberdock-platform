@@ -395,7 +395,7 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                         $.notify("Added node successfully", {
                             autoHideDelay: 5000,
                             clickToHide: true,
-                            globalPosition: 'top left',
+                            globalPosition: 'bottom left',
                             className: 'success',
                         });
                     },

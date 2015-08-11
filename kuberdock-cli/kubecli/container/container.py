@@ -134,6 +134,7 @@ class KuberDock(KubeCtl):
     """
     KUBEDIR = '.kube_containers'    #default directory for storing container configs
     EXT = '.kube'
+
     def __init__(self, **args):
         """Constructor"""
         # First we need to load possibly saved configuration for a new pod
@@ -150,15 +151,6 @@ class KuberDock(KubeCtl):
         if hasattr(self, 'image'):
             i = self._get_image()
             i.kubes = int(self.kubes)
-            for attr in 'container_port', 'host_port', 'protocol':
-                try:
-                    operator.methodcaller(
-                        'set_' + attr, getattr(self, attr), self.index)(i)
-                except AttributeError:
-                    continue
-            if i.ports:
-                for k, v in enumerate(i.ports):
-                    operator.methodcaller('set_public', self.set_public_ip, k)(i)
 
         if self.delete is None:
             self._save()
@@ -411,14 +403,45 @@ class KuberDock(KubeCtl):
 
     def _prepare_ports(self):
         """Checks if all necessary port entry data are set"""
+        if not hasattr(self, 'container_port'):
+            return
+        if not hasattr(self, 'image'):
+            raise SystemExit("You must specify an image with option '-i|--image'")
+
+        patt = re.compile("^(?P<public>\+)?(?P<container_port>\d+)\:?(?P<host_port>\d+)?\:?(?P<protocol>tcp|udp)?$")
+        ports = []
         is_public_ip = []
+
+        for p in getattr(self, 'container_port').strip().split(','):
+            m = patt.match(p)
+            if m:
+                public = bool(m.group('public'))
+                container_port = int(m.group('container_port'))
+                host_port = m.group('host_port')
+                host_port = int(host_port) if host_port else container_port
+                protocol = m.group('protocol') if m.group('protocol') else 'tcp'
+
+                if public is True:
+                    is_public_ip.append(public)
+                ports.append({
+                    'isPublic': public,
+                    'containerPort': container_port,
+                    'hostPort': host_port,
+                    'protocol': protocol,
+                })
+            else:
+                raise SystemExit("Wrong port format. Example: +453:54:udp where '+' is a public IP, "
+                                 "453 - container port, 54 - pod port, 'udp' - protocol (tcp or udp)")
+
         for c in self.containers:
-            for p in c['ports']:
-                is_public_ip.append(p.get('isPublic'))
+            if c['image'] != self.image:
+                continue
+            c['ports'] = ports
+
         if True in is_public_ip:
-            ip = self._get_free_host()
-            if ip:
-                self.public_ip = ip
+            self.set_public_ip = True
+        else:
+            self.set_public_ip = False
 
     def _prepare_env(self):
         """
@@ -484,9 +507,8 @@ class KuberDock(KubeCtl):
             pulled['volumeMounts'] = [{'mountPath': x}
                 for x in pulled['volumeMounts']]
         if 'ports' in pulled:
-            pulled['ports'] = [
-                {'containerPort': x.get('number'), 'protocol': x.get('protocol')}
-                    for x in pulled['ports']]
+            pulled['ports'] = [{'isPublic': False, 'containerPort': x.get('number'), 'hostPort': x.get('number'),
+                                'protocol': x.get('protocol')} for x in pulled['ports']]
         image.update(pulled)
         self.containers.append(image)
         return Image(image)
@@ -514,12 +536,6 @@ class KuberDock(KubeCtl):
     def _clear(self):
         """Deletes pending pod file"""
         os.unlink(self._data_path)
-
-    def _get_free_host(self):
-        """
-        Gets free IP address from backend ippool
-        """
-        return self._unwrap(self._get('/api/ippool/getFreeHost'))
 
     def _delete_container_image(self):
         self.containers = [c for c in self.containers if c['image'] != self.delete]

@@ -17,6 +17,7 @@ class Image(KubeQuery, PrintOut, object):
     def __setattr__(self, name, value):
         self._data[name] = value
 
+    # Not used
     def _conf_port(self, name, attr, index):
         if 'ports' not in self._data:
             self._data['ports'] = [{name: attr}]

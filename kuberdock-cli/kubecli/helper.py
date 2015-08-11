@@ -35,9 +35,11 @@ class KubeQuery(object):
             raise SystemExit(error_string)
 
     def _make_url(self, res):
+        token = getattr(self, 'token', None)
+        token = '?token=%s' % token if token is not None else ''
         if res is not None:
-            return self.url + res
-        return self.url
+            return self.url + res + token
+        return self.url + token
 
     def _return_request(self, req):
         try:

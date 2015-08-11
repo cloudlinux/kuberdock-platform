@@ -65,10 +65,8 @@ class KubeCtl(KubeQuery, PrintOut, object):
             raise SystemExit('The postprocess expects superuser privileges')
         if not hasattr(self, 'uid'):
             raise SystemExit('User UID is expected')
-        if hasattr(self, 'token'):
-            data = self._unwrap(self._get('/api/podapi/?token='+self.token))
-        else:
-            data = self._unwrap(self._get('/api/podapi/'))
+
+        data = self._unwrap(self._get('/api/podapi/'))
         pod = [i for i in data if i['name'] == self.name]
         if pod:
             service_ip = pod[0].get('podIP')

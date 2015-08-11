@@ -11,7 +11,11 @@
                 <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;">
                     <div class="tablesorter-header-inner">
                         <label class="custom">
+                            <% if (allChecked){ %>
+                            <input type="checkbox" checked>
+                            <% } else { %>
                             <input type="checkbox">
+                            <% } %>
                             <span></span>
                         </label>
                     </div>

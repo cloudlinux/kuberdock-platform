@@ -1,6 +1,13 @@
 <!-- table data row -->
 <td>
-    <label class="custom"><input type="checkbox" class="checkbox"><span></span></label>
+    <label class="custom">
+        <% if (checked){ %>
+        <input type="checkbox" class="checkbox" checked>
+        <% } else { %>
+        <input type="checkbox" class="checkbox">
+        <% } %>
+        <span></span>
+    </label>
 </td>
 <td class="index"><%- index %></td>
 <td>
@@ -16,17 +23,13 @@
 </td>
 <td>
     <% if (status) { %>
+        <span class="<%- status %>"><%- status %></span>
         <% if ( status == 'running') { %>
-            <span class="<%- status %>"><%- status %></span>
             <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } else if ( status == 'stopped' ) { %>
-            <span class="<%- status %>"><%- status %></span>
             <span class="start-btn" title="Start <%- name %> pod">Start</span>
         <% } else if ( status == 'waiting' ) { %>
-            <span class="<%- status %>"><%- status %></span>
-            <span class="start-btn" title="Start <%- name %> pod">Start</span>
-        <% } else { %>
-            <span class="<%- status %>"><%- status %></span>
+            <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } %>
     <% } else { %>
         <span class="stopped">stopped</span>

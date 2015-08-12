@@ -31,8 +31,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             if AWS:
                 pod.public_aws = True
             else:
-                pod.public_ip = unicode(IpAddrPool().get_free(),
-                                        encoding='utf-8')
+                ip = IpAddrPool().get_free()
+                pod.public_ip = unicode(ip, encoding='utf-8') if ip is not None else None
         pod._make_uuid_if_missing()
         pod.sid = pod._make_sid()
         return pod

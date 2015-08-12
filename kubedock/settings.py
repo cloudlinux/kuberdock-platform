@@ -63,6 +63,7 @@ ONLINE_LAST_MINUTES = 5
 NODE_INSTALL_LOG_FILE = '/var/log/kuberdock/node-install-log-{0}.log'
 UPDATE_LOG_FILE = '/var/log/kuberdock/update.log'
 MAINTENANCE_LOCK_FILE = '/var/lib/kuberdock/maintenance.lock'
+UPDATES_RELOAD_LOCK_FILE = '/var/lib/kuberdock/updates-reload.lock'
 UPDATES_PATH = '/var/opt/kuberdock/kubedock/updates/scripts'
 KUBERDOCK_SERVICE = 'emperor.uwsgi'
 

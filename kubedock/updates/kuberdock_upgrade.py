@@ -31,6 +31,8 @@ class CLI_COMMANDS:
     resume_upgrade = 'resume-upgrade'
     set_maintenance = 'set-maintenance'
     set_node_schedulable = 'set-node-schedulable'
+    # not documented for user. It's for internal use only:
+    after_reload = '--after-reload'
 
 
 FAILED_MESSAGE = """\
@@ -292,9 +294,10 @@ def do_cycle_updates(with_testing=False):
         print >> sys.stderr, "Update {0} has failed.".format(is_failed)
         sys.exit(2)
     else:
-        print 'All update scripts are applied. Kuberdock has been restarted'
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
+        print 'All update scripts are applied. Kuberdock has been restarted. ' \
+              'Maintenance mode is now disabled.'
     return is_failed
 
 
@@ -402,6 +405,11 @@ if __name__ == '__main__':
         sys.exit()
 
     setup_fabric()
+
+    AFTER_RELOAD = False
+    if CLI_COMMANDS.after_reload in sys.argv:
+        sys.argv.remove(CLI_COMMANDS.after_reload)
+        AFTER_RELOAD = True
     args = parse_cmdline()
 
     if args.command == CLI_COMMANDS.set_maintenance:
@@ -422,8 +430,18 @@ if __name__ == '__main__':
         os.path.dirname(os.path.realpath(__file__)), 'kdmigrations')
     migrate = Migrate(app, db, directory)
 
-    # All command that need app context are follow here:
+    # All commands that need app context are follow here:
     with app.app_context():
+        if AFTER_RELOAD:
+            try:
+                os.unlink(settings.UPDATES_RELOAD_LOCK_FILE)
+            except OSError:
+                pass
+            do_cycle_updates(args.use_testing)
+            if not args.local:
+                print 'Restarting upgrade script to check next new package...'
+                os.execv(__file__, sys.argv)
+            sys.exit(0)     # if local install case
         if args.command == CLI_COMMANDS.resume_upgrade:
             helpers.set_maintenance(True)
             do_cycle_updates(args.use_testing)
@@ -453,10 +471,11 @@ if __name__ == '__main__':
                                 "Update package to {0} has failed.".format(pkg)
                             print >> sys.stderr, FAILED_MESSAGE
                             sys.exit(err)
-                        do_cycle_updates(args.use_testing)
-                        if not args.local:
-                            print 'Restarting upgrade script from new package...'
-                            os.execv(__file__, sys.argv)
+                        # Now, after successfully upgraded package:
+                        open(settings.UPDATES_RELOAD_LOCK_FILE, 'a').close()
+                        print 'Restarting this script from new package...'
+                        os.execv(__file__,
+                                 sys.argv + [CLI_COMMANDS.after_reload])
                 else:
                     print 'Stop upgrading.'
                     sys.exit(0)

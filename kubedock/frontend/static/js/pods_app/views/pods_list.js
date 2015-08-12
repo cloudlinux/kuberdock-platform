@@ -132,14 +132,15 @@ define(['pods_app/app',
             childViewContainer  : 'tbody',
 
             initialize: function(){
-                if (!this.collection.hasOwnProperty('checkedNumber')) {
-                    this.collection.checkedNumber = 0;
+                if (!this.collection.fullCollection.hasOwnProperty('checkedNumber')) {
+                    this.collection.fullCollection.checkedNumber = 0;
                 }
             },
 
             templateHelpers: function(){
                 return {
-                    allChecked: this.collection.allChecked ? true : false
+                    allChecked: this.collection.fullCollection.allChecked ? true : false,
+                    checked: this.collection.fullCollection.checkedNumber
                 }
             },
 
@@ -158,34 +159,19 @@ define(['pods_app/app',
             },
 
             toggleCheck: function(evt){
-                var tgt = evt.target,
-                    thead = this.$('thead th:not(:first)'),
-                    count = this.$('.count'),
-                    podsControl = this.$('.podsControl');
+                var tgt = evt.target;
                 evt.stopPropagation();
-                if (this.collection.allChecked){
-                    this.collection.allChecked = false;
-                    this.collection.checkedNumber = 0;
-                    this.collection.each(function(m){m.is_checked = false;});
-                    $('tbody tr').each(function(i, el){
-                        $(el).find('input:checkbox').get(0).checked = false;
-                    });
-                    thead.removeClass('min-opacity');
-                    podsControl.hide();
-                    tgt.checked = false;
+                if (this.collection.fullCollection.allChecked){
+                    this.collection.fullCollection.allChecked = false;
+                    this.collection.fullCollection.checkedNumber = 0;
+                    this.collection.fullCollection.each(function(m){m.is_checked = false;});
                 }
                 else {
-                    this.collection.allChecked = true;
-                    this.collection.checkedNumber = this.collection.length;
-                    this.collection.each(function(m){m.is_checked = true;});
-                    $('tbody tr').each(function(i, el){
-                        $(el).find('input:checkbox').get(0).checked = true;
-                    });
-                    count.text(this.collection.length + (this.collection.length > 1 ? ' Items' : ' Item'))
-                    thead.addClass('min-opacity');
-                    podsControl.show();
-                    tgt.checked = true;
+                    this.collection.fullCollection.allChecked = true;
+                    this.collection.fullCollection.checkedNumber = this.collection.fullCollection.length;
+                    this.collection.fullCollection.each(function(m){m.is_checked = true;});
                 }
+                this.render();
             },
 
             childViewOptions: function(model, index){
@@ -196,30 +182,14 @@ define(['pods_app/app',
 
             childEvents: {
                 'item:clicked': function(view){
-                    var model = this.collection.at(view.index),
-                        thead = this.$('thead th:not(:first)'),
-                        allChecker = this.$('thead th:first input:checkbox').get(0),
-                        count = this.$('.count'),
-                        podsControl = this.$('.podsControl');
-
-                    if (model.is_checked) {
-                        model.is_checked = false;
-                        this.collection.checkedNumber--;
+                    var model = this.collection.at(view.index);
+                    model.is_checked = model.is_checked
+                        ? (this.collection.fullCollection.checkedNumber--, false)
+                        : (this.collection.fullCollection.checkedNumber++, true);
+                    if (!this.collection.fullCollection.checkedNumber) {
+                        this.collection.fullCollection.allChecked = false;
                     }
-                    else {
-                        model.is_checked = true;
-                        this.collection.checkedNumber++;
-                    }
-
-                    if (this.collection.checkedNumber && !thead.hasClass('min-opacity')){
-                        thead.addClass('min-opacity');
-                        podsControl.show();
-                    } else if (!this.collection.checkedNumber && thead.hasClass('min-opacity')) {
-                        thead.removeClass('min-opacity');
-                        podsControl.hide();
-                        if (allChecker.checked) { allChecker.checked = false; }
-                    }
-                    count.text(this.collection.checkedNumber + (this.collection.checkedNumber > 1 ? ' Items' : ' Item'))
+                    this.render();
                 }
             },
 
@@ -233,17 +203,22 @@ define(['pods_app/app',
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            var items = that.collection.filter(function(i){return i.is_checked});
+                            var items = that.collection.fullCollection.filter(function(i){return i.is_checked});
                             for (i in items) {items[i].destroy({wait: true})}
+                            that.collection.fullCollection.checkedNumber = 0;
+                            that.collection.fullCollection.allChecked = false;
+                            that.render();
                         },
                         buttonCancel: true
                    }
                });
+
             },
 
             runPods: function(evt){
                 evt.stopPropagation();
                 this.sendCommand('start');
+
             },
 
             stopPods: function(evt){
@@ -252,8 +227,14 @@ define(['pods_app/app',
             },
 
             sendCommand: function(command){
-                var items = this.collection.filter(function(i){return i.is_checked});
-                for (i in items) {items[i].save({command: command}, {wait: true})}
+                var items = this.collection.fullCollection.filter(function(i){return i.is_checked});
+                for (i in items) {
+                    items[i].save({command: command}, {wait: true});
+                    items[i].is_checked = false;
+                    this.collection.fullCollection.checkedNumber--;
+                }
+                this.collection.fullCollection.allChecked = false;
+                this.render();
             },
 
             onBeforeDestroy: function(){

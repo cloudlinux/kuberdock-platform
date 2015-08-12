@@ -713,6 +713,109 @@ class TestPodCollectionStopPod(unittest.TestCase):
         self.pod_collection = None
 
 
+class TestPodCollectionAdd(unittest.TestCase):
+
+    def setUp(self):
+        U = type('User', (), {'username': 'user', 'is_trial': lambda s: True})
+        get_ns_patcher.start()
+        self.addCleanup(get_ns_patcher.stop)
+        PodCollection._get_pods = lambda s, n: None
+        PodCollection._merge = lambda s: None
+        self.pod = type('User', (), {
+            'compose_persistent': mock.Mock(),
+            '_forge_dockers': mock.Mock(),
+            '_allocate_ip': mock.Mock(),
+            'as_dict': mock.Mock()
+        })
+        self.user = U()
+        self.name = 'nginx'
+        self.params = {'name': self.name}
+        self.namespace = 'n'
+        self.pod_collection = PodCollection(self.user)
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_check_trial_called(self, check_trial_, create_, save_pod_):
+        self.pod_collection.add(self.params)
+        check_trial_.assert_called_once_with(self.params)
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch('kubedock.kapi.podcollection.generate_ns_name')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_pod_create_called(self, check_trial_, generate_, create_, save_pod_):
+        generate_.return_value = self.namespace
+        create_.return_value(self.pod)
+        self.pod_collection.add(self.params)
+        create_.assert_called_once_with({
+            'name': self.name,
+            'namespace': self.namespace,
+            'owner': self.user
+        })
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_pod_compose_persistent_called(self, check_trial_, create_, save_pod_):
+        pod_ = self.pod()
+        create_.return_value = pod_
+        self.pod_collection.add(self.params)
+        pod_.compose_persistent.assert_called_once_with(self.user.username)
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_save_pod_called(self, check_trial_, create_, save_pod_):
+        self.pod_collection.add(self.params)
+        self.assertTrue(save_pod_.called)
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_pod_forge_dockers_called(self, check_trial_, create_, save_pod_):
+        pod_ = self.pod()
+        create_.return_value = pod_
+        self.pod_collection.add(self.params)
+        self.assertTrue(pod_._forge_dockers.called)
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_pod_allocate_ip_not_called(self, check_trial_, create_, save_pod_):
+        pod_ = self.pod()
+        create_.return_value = pod_
+        self.pod_collection.add(self.params)
+        self.assertFalse(pod_._allocate_ip.called)
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_pod_allocate_ip_called(self, check_trial_, create_, save_pod_):
+        pod_ = self.pod()
+        pod_.public_ip = True
+        create_.return_value = pod_
+        self.pod_collection.add(self.params)
+        self.assertTrue(pod_._allocate_ip.called)
+
+    @mock.patch.object(PodCollection, '_save_pod')
+    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_check_trial')
+    def test_pod_as_dict_called(self, check_trial_, create_, save_pod_):
+        pod_ = self.pod()
+        create_.return_value = pod_
+        self.pod_collection.add(self.params)
+        self.assertTrue(pod_.as_dict.called)
+
+    def tearDown(self):
+        self.pod = None
+        self.user = None
+        self.name = None
+        self.params = None
+        self.namespace = None
+        self.pod_collection = None
+
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger('TestPodCollection.test_pod').setLevel(logging.DEBUG)

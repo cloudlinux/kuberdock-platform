@@ -42,5 +42,5 @@ def index():
 @main.route('/test', methods=['GET'])
 def run_tests():
     if TEST:
-        return render_template('t/index.html')
+        return render_template('t/pod_index.html')
     return "not found", 404

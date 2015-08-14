@@ -311,7 +311,6 @@ def get_kuberdocks_toinstall(testing=False):
     yb.repos.enableRepo('kube')
     if testing:
         yb.repos.enableRepo('kube-testing')
-        print 'Testing repo enabled.'
     yb.cleanMetadata()  # only after enabling repos to clean them too!
 
     try:
@@ -447,6 +446,8 @@ if __name__ == '__main__':
             do_cycle_updates(args.use_testing)
             sys.exit(0)
         if args.command == CLI_COMMANDS.upgrade:
+            if args.use_testing:
+                print 'Testing repo enabled.'
             if args.local:
                 # Check if it's newer
                 res = subprocess.call(['rpm', '-i', '--replacefiles',

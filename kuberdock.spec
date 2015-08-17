@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 29%{?dist}.cloudlinux
+Release: 30%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,21 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Aug 17 2015 Alex Tishin <atishin@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-30
+- Tests for _stop_pod
+- AC-791: show disc space in final step on add pod
+- AC-784: Add borders to errors fields& some small design
+- reworked pods list page functionality
+- just another pods_app refactoring completion
+- Improved update system with auto-reloading of upgrade utility
+- AC-728: PodCollection.add unit-tests
+- renamed t/index.html to t/pod_index.html and modified main.py accordingly
+- Small fix kuberdock_upgrade.py
+- AC-809: deploy.sh --cleanup; more elegant args parsing
+- AC-744: Unit-test python (pod). Method _do_container_action
+- AC-828: implemented for ceph backend
+- AC-786: Disk space limits in MB
+
 * Sun Aug 09 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-29
 - AC-782: Add bulk run/stop pods in podlist
 - Tests for _start_pod

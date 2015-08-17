@@ -3,6 +3,7 @@ import mock
 import sys
 import unittest
 import json
+import random
 
 from uuid import uuid4
 from collections import namedtuple
@@ -814,6 +815,84 @@ class TestPodCollectionAdd(unittest.TestCase):
         self.params = None
         self.namespace = None
         self.pod_collection = None
+
+
+class TestPodCollectionDoContainerAction(unittest.TestCase):
+    # some available actions
+    actions = ('start', 'stop', 'rm')
+
+    def setUp(self):
+        # mock all these methods to prevent any accidental calls
+        for method in ('_get_namespaces', '_get_pods', '_merge'):
+            patcher = mock.patch.object(PodCollection, method)
+            self.addCleanup(patcher.stop)
+            patcher.start()
+
+        U = type('User', (), {'username': '4u5hfee'})
+        self.pod_collection = PodCollection(U())
+
+    def _create_request(self):
+        return random.choice(self.actions), {
+            'nodeName': str(uuid4()),
+            'containers': ','.join(str(uuid4()) for i in range(random.randrange(1, 10))),
+        }
+
+    @mock.patch('kubedock.kapi.podcollection.run_ssh_command')
+    @mock.patch('kubedock.kapi.podcollection.send_event')
+    def test_no_host(self, send_event_mock, run_ssh_command_mock):
+        """ If nodeName isn't specified, do nothing. """
+        action, data = self._create_request()
+        del data['nodeName']
+        result = self.pod_collection._do_container_action(action, data)
+
+        self.assertIsNone(result)
+        self.assertFalse(send_event_mock.called)
+        self.assertFalse(run_ssh_command_mock.called)
+
+    @mock.patch('kubedock.kapi.podcollection.run_ssh_command')
+    @mock.patch('kubedock.kapi.podcollection.send_event')
+    def test_run_ssh_command_called(self, send_event_mock, run_ssh_command_mock):
+        """ Check result. Check that `run_ssh_command` has right calls. """
+        run_ssh_command_mock.return_value = status, message = 0, 'ok'
+
+        action, data = self._create_request()
+        result = self.pod_collection._do_container_action(action, data)
+
+        self.assertDictEqual(
+            result,
+            {container: message for container in data['containers'].split(',')}
+        )
+        run_ssh_command_mock.assert_has_calls(
+            [mock.call(data['nodeName'], mock.ANY) for _ in data['containers'].split(',')]
+        )
+
+    @mock.patch('kubedock.kapi.podcollection.run_ssh_command')
+    @mock.patch('kubedock.kapi.podcollection.send_event')
+    def test_send_event_called(self, send_event_mock, run_ssh_command_mock):
+        """ When "start" or "stop" called, event "pull_pod_state" should be sent """
+        run_ssh_command_mock.return_value = status, message = 0, 'ok'
+
+        action, data = self._create_request()
+        self.pod_collection._do_container_action('start', data)
+        send_event_mock.assert_has_calls(
+            [mock.call('pull_pod_state', message) for _ in data['containers'].split(',')]
+        )
+        action, data = self._create_request()
+        self.pod_collection._do_container_action('stop', data)
+        send_event_mock.assert_has_calls(
+            [mock.call('pull_pod_state', message) for _ in data['containers'].split(',')]
+        )
+
+    @mock.patch('kubedock.kapi.podcollection.run_ssh_command')
+    @mock.patch('kubedock.kapi.podcollection.send_event')
+    def test_docker_error(self, send_event_mock, run_ssh_command_mock):
+        """ Raise an error, if exit status of run_ssh_command is not equal 0 """
+        run_ssh_command_mock.return_value = status, message = 1, 'sh-t happens'
+
+        action, data = self._create_request()
+        with self.assertRaises(Exception):
+            self.pod_collection._do_container_action(action, data)
+        run_ssh_command_mock.assert_called_once_with(data['nodeName'], mock.ANY)
 
 
 if __name__ == '__main__':

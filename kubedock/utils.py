@@ -514,7 +514,11 @@ def set_limit(host, pod_name, containers, app):
         print errors
         return False
     with app.app_context():
-        spaces = dict(Kube.query.values(Kube.id, Kube.disk_space))  #workaround
+        spaces = dict(
+            (i, (s, u)) for i, s, u in Kube.query.values(
+                Kube.id, Kube.disk_space, Kube.disk_space_units
+                )
+            )  #workaround
         pod = Pod.query.filter_by(name=pod_name).first()
         config = json.loads(pod.config)
         kube_type = config['kube_type']
@@ -522,8 +526,13 @@ def set_limit(host, pod_name, containers, app):
     limits = []
     for container in config['containers']:
         #disk_space = kube.disk_space * container['kubes']
-        disk_space = spaces.get(kube_type, 0) * container['kubes']
-        limits.append((containers[container['name']], str(disk_space)))
+        space, unit = spaces.get(kube_type, (0, 'MB'))
+        disk_space = space * container['kubes']
+        disk_space_unit = unit[0].lower() if unit else ''
+        if disk_space_unit not in ('', 'k', 'm', 'g', 't'):
+            disk_space_unit = ''
+        disk_space_str = '{0}{1}'.format(disk_space, disk_space_unit)
+        limits.append((containers[container['name']], disk_space_str))
     limits_repr = ' '.join('='.join(limit) for limit in limits)
     _, o, e = ssh.exec_command(
         'python /var/lib/kuberdock/scripts/fslimit.py {0}'.format(limits_repr)

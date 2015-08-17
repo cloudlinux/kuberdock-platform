@@ -2,10 +2,12 @@ import base64
 import boto.ec2
 import json
 
+from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
 from hashlib import md5
 from operator import itemgetter
+from StringIO import StringIO
 
 from ..core import db
 from ..nodes.models import Node
@@ -96,6 +98,14 @@ class PersistentStorage(object):
                 if d['name'] != name and d['owner'] != user.username]
         return rv
 
+    def makefs(self, drive, user, fs='ext4'):
+        """
+        Creates a filesystem on the device
+        :param fs: string -> fs type by default ext4
+        """
+        drive_name = '{0}{1}{2}'.format(drive, PD_SEPARATOR, user.username)
+        self._makefs(drive_name, fs)
+
     def delete_by_id(self, drive_id):
         """
         Deletes a user drive
@@ -182,6 +192,16 @@ class CephStorage(PersistentStorage):
         env.skip_bad_hosts = True
         super(CephStorage, self).__init__()
 
+    def __getattr__(self, attr):
+        if attr == '_first_node_ip':
+            item = db.session.query(Node).first()
+            if item is None:
+                raise type('NodesNotFoundError', (Exception,), {})(
+                    'Unable to get any node from database')
+            self.__dict__['_first_node_ip'] = item.ip
+            return item.ip
+        raise AttributeError('No such attribute: {0}'.format(attr))
+
     @staticmethod
     def _poll():
         """
@@ -199,6 +219,118 @@ class CephStorage(PersistentStorage):
             all_devices[device].update(mapped_devices[device])
         return all_devices
 
+    def get_monitors(self):
+        """
+        Parse ceph config and return ceph monitors list
+        :return: list -> list of ip addresses
+        """
+        conf = self._get_client_config()
+        if not conf:
+            return
+        fo = StringIO(conf)
+        cp = ConfigParser()
+        cp.readfp(fo)
+        if not cp.has_option('global', 'mon_host'):
+            return ['127.0.0.1']
+        return [i.strip() for i in cp.get('global', 'mon_host').split(',')]
+
+    def _get_client_config(self):
+        """
+        Returns a ceph-aware node ceph config
+        """
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                return run('cat /etc/ceph/ceph.conf')
+
+    def _makefs(self, drive, fs='ext4'):
+        """
+        Wrapper around checking drive status, mapper, fs creator and unmapper
+        :param drive: string -> drive name
+        :param fs: string -> desired filesystem
+        """
+        if self._is_mapped(drive):      # If defice is already mapped it means
+            return                      # it's in use. Exit
+        dev = self._map_drive(drive)    # mapping drive
+        if self._get_fs(dev):           # if drive already has filesystem
+            return                      # whatever it be return
+        self._create_fs(dev, fs)        # make fs
+        self._unmap_drive(dev)
+
+    def _create_fs(self, device, fs='ext4'):
+        """
+        Actually makes a filesystem
+        :param fs: string -> fs type
+        """
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                rv = run('mkfs.{0} {1} > /dev/null 2>&1'.format(fs, device))
+                if rv.return_code != 0:
+                    raise type('NodeCommandError', (Exception,), {})(
+                        'Node command returned non-zero status')
+
+
+    def _is_mapped(self, drive):
+        """
+        The routine is checked if a device is mapped to any of nodes
+        :param drive
+        """
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                rv = run('rbd info {0} --format json'.format(drive))
+                if rv.return_code != 0:
+                    raise type('NodeCommandError', (Exception,), {})(
+                        'Node command returned non-zero status')
+                try:
+                    if json.loads(rv).get('watchers'):
+                        return True
+                    return False
+                except (ValueError, TypeError):
+                    raise type('NodeCommandError', (Exception,), {})(
+                        'Node command returned unexpected result')
+
+    def _map_drive(self, drive):
+        """
+        Maps drive to a node
+        :param drive: string -> drive name
+        """
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                rv = run('rbd map {0}'.format(drive))
+                if rv.return_code != 0:
+                    raise type('NodeCommandError', (Exception,), {})(
+                        'Could not map drive: non-zero status')
+                return rv
+
+    def _unmap_drive(self, device):
+        """
+        Maps drive to a node
+        :param drive: string -> drive name
+        """
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                rv = run('rbd unmap {0}'.format(device))
+                if rv.return_code != 0:
+                    raise type('NodeCommandError', (Exception,), {})(
+                        'Could not unmap drive: non-zero status')
+
+    def _get_fs(self, device):
+        """
+        Tries to determine filesystem on mapped device
+        :param device: string -> device name
+        """
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                rv = run('blkid -o value -s TYPE {0}'.format(device))
+                if rv.return_code != 0:
+                    return
+                return rv
+
     def _create_drive(self, name, size):
         """
         Actually creates a ceph rbd image of a given size.
@@ -206,9 +338,8 @@ class CephStorage(PersistentStorage):
         :param size: int -> drive size in GB
         :return: int -> return code of 'run'
         """
-        ip = db.session.query(Node).first().ip
         mb_size = 1024 * int(size)
-        with settings(host_string=ip):
+        with settings(host_string=self._first_node_ip):
             with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                           warn_only=True):
                 rv = run('rbd create {0} --size={1}'.format(name, mb_size))
@@ -391,3 +522,10 @@ class AmazonStorage(PersistentStorage):
             name = vol.tags.get('Name', 'Nameless')
             if name == drive_name:
                 return 0 if vol.delete() else 1
+
+    def _makefs(self, drive_name):
+        """
+        Maps drive, determine fs, make fs if no fs and unmaps drive
+        :param drive_name: string -> drive name
+        """
+        pass

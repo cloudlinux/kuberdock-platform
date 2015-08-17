@@ -6,6 +6,7 @@ from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
 from .ippool import IpAddrPool
 
+from .pstorage import CephStorage, AmazonStorage
 from ..billing import kubes_to_limits
 from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, AWS, CEPH
 
@@ -87,36 +88,64 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             return
         self.id = str(uuid4())
 
-    def compose_persistent(self, username):
+    def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
             return
-        path = 'pd.sh'
         for volume in self.volumes:
             try:
                 pd = volume.pop('persistentDisk')
-                name = volume['name']
                 device = '{0}{1}{2}'.format(
-                    pd.get('pdName'), PD_SEPARATOR, username)
+                    pd.get('pdName'), PD_SEPARATOR, owner.username)
                 size = pd.get('pdSize')
-                if size is None:
-                    array = ['mount', device, name]
-                else:
-                    array = ['create', device, name, size]
-                    if AWS:
-                        try:
-                            from ..settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-                            array.extend([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY])
-                        except ImportError:
-                            pass
-                fmt = ';'.join(['{{{0}}}'.format(i) for i in range(len(array))])
-                params = base64.b64encode(fmt.format(*array))
-
-                volume['scriptableDisk'] = {
-                    'pathToScript': path,
-                    'params': params
-                }
+                if CEPH:
+                    volume['rbd'] = {
+                        'image': device,
+                        'keyring': '/etc/ceph/ceph.client.admin.keyring',
+                        'fsType': 'ext4',
+                        'user': 'admin',
+                        'pool': 'rbd'
+                    }
+                    if size is not None:
+                        volume['rbd']['size'] = size
+                    try:
+                        volume['rbd']['monitors'] = monitors
+                    except NameError:
+                        cs = CephStorage()
+                        monitors = cs.get_monitors()
+                        volume['rbd']['monitors'] = monitors
             except KeyError:
                 continue
+
+    #def compose_persistent(self, username):
+    #    if not getattr(self, 'volumes', False):
+    #        return
+    #    path = 'pd.sh'
+    #    for volume in self.volumes:
+    #        try:
+    #            pd = volume.pop('persistentDisk')
+    #            name = volume['name']
+    #            device = '{0}{1}{2}'.format(
+    #                pd.get('pdName'), PD_SEPARATOR, username)
+    #            size = pd.get('pdSize')
+    #            if size is None:
+    #                array = ['mount', device, name]
+    #            else:
+    #                array = ['create', device, name, size]
+    #                if AWS:
+    #                    try:
+    #                        from ..settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+    #                        array.extend([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY])
+    #                    except ImportError:
+    #                        pass
+    #            fmt = ';'.join(['{{{0}}}'.format(i) for i in range(len(array))])
+    #            params = base64.b64encode(fmt.format(*array))
+    #
+    #            volume['scriptableDisk'] = {
+    #                'pathToScript': path,
+    #                'params': params
+    #            }
+    #        except KeyError:
+    #            continue
 
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)

@@ -183,6 +183,19 @@ class ModelQuery(object):
         return json.loads(db_pod.config).get(param, default)
 
     @staticmethod
+    def replace_config(pod, data):
+        """
+        Replaces config in DB entirely with provided one
+        :param data: dict -> config to be saved
+        """
+        db_pod = db.session.query(Pod).get(pod.id)
+        try:
+            db_pod.config = json.dumps(data)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    @staticmethod
     def _update_pod_config(pod, **attrs):
         db_pod = db.session.query(Pod).get(pod.id)
         try:

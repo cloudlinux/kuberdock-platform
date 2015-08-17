@@ -234,16 +234,14 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 return v.isPersistent;
                             });
                             _.each(c.volumeMounts, function(v){
-                                if (v.isPersistent) {
-                                    var entry = {name: v.name, persistentDisk: v.persistentDisk};
-                                    var used = _.filter(data.attributes.persistentDrives,
-                                        function(i){return i.pdName === v.persistentDisk.pdName});
-                                    if (used.length) {
-                                        used[0].used = true;
-                                    }
-                                    data.get('volumes').push(entry);
-                                    delete v.persistentDisk;
+                                var entry = {name: v.name, persistentDisk: v.persistentDisk};
+                                var used = _.filter(data.attributes.persistentDrives,
+                                    function(i){return i.pdName === v.persistentDisk.pdName});
+                                if (used.length) {
+                                    used[0].used = true;
                                 }
+                                data.get('volumes').push(entry);
+                                delete v.persistentDisk;
                                 delete v.isPersistent;
                             });
                         });

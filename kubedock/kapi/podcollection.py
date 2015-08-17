@@ -5,6 +5,7 @@ from flask import current_app
 from ..billing import repr_limits
 from ..utils import modify_node_ips, run_ssh_command, send_event
 from .pod import Pod
+from .pstorage import CephStorage, AmazonStorage
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION
 
@@ -34,7 +35,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         params['namespace'] = generate_ns_name(self.owner, params['name'])
         params['owner'] = self.owner
         pod = Pod.create(params)
-        pod.compose_persistent(self.owner.username)
+        pod.compose_persistent(self.owner)
         self._save_pod(pod)
         pod._forge_dockers()
         if hasattr(pod, 'public_ip') and pod.public_ip:
@@ -278,19 +279,30 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _start_pod(self, pod, data=None):
         self._make_namespace(pod.namespace)
-        if not pod.get_config('service'):
+        db_config = pod.get_config()
+        if not db_config.get('service'):
             for c in pod.containers:
                 if len(c.get('ports', [])) > 0:
                     service_rv = self._run_service(pod)
                     self._raise_if_failure(service_rv, "Could not start a service")
-                    self._update_pod_config(pod, **{'service': service_rv['metadata']['name']})
+                    db_config['service'] = service_rv['metadata']['name']
                     break
+        # process persistent storage
+        for v in db_config['volumes']:
+            if 'rbd' in v:
+                cs = CephStorage()
+                if not v['rbd'].get('monitors'):
+                    v['rbd']['monitors'] = cs.get_monitors()
+                size = v['rbd'].pop('size', None)
+                if size:
+                    cs._create_drive(v['rbd']['image'], size)
+                cs._makefs(v['rbd']['image'])
+        self.replace_config(pod, db_config)
+
         config = pod.prepare()
         rv = self._post([pod.kind], json.dumps(config), rest=True,
                         ns=pod.namespace)
-        # current_app.logger.debug(rv)
         self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
-        #return rv
         return {'status': 'pending'}
 
     def _stop_pod(self, pod, data=None):

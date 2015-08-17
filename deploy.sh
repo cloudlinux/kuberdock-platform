@@ -13,25 +13,30 @@ if [ $USER != "root" ]; then
     exit 1
 fi
 
-# TODO parse options more correctly
-CONF_FLANNEL_BACKEND='host-gw'
-case $1 in
-  -t|--testing)
-  WITH_TESTING='yes'
-  ;;
-  -u|--udp-backend)
-  CONF_FLANNEL_BACKEND='udp'
-  ;;
-esac
 
-case $2 in
-  -t|--testing)
-  WITH_TESTING='yes'
-  ;;
-  -u|--udp-backend)
-  CONF_FLANNEL_BACKEND='udp'
-  ;;
-esac
+# Parse args
+
+
+CONF_FLANNEL_BACKEND='host-gw'
+while [[ $# > 0 ]];do
+    key="$1"
+    case $key in
+        -c|--cleanup)
+        CLEANUP=yes
+        ;;
+        -t|--testing)
+        WITH_TESTING=yes
+        ;;
+        -u|--udp-backend)
+        CONF_FLANNEL_BACKEND=udp
+        ;;
+        *)
+        echo "Unknown option: $key"
+        exit 1
+        ;;
+    esac
+    shift # past argument or value
+done
 
 
 # SOME HELPERS
@@ -97,11 +102,6 @@ check_amazon()
 }
 check_amazon
 
-if [ "$ISAMAZON" = true ] && [ -z "$ROUTE_TABLE_ID" ];then
-    echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
-    exit 1
-fi
-
 yum_wrapper()
 {
     if [ -z "$WITH_TESTING" ];then
@@ -135,6 +135,19 @@ yum_wrapper()
 #      esac
 #   done
 #}
+
+##########
+# Deploy #
+##########
+
+
+do_deploy()
+{
+
+if [ "$ISAMAZON" = true ] && [ -z "$ROUTE_TABLE_ID" ];then
+    echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
+    exit 1
+fi
 
 log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND"
 
@@ -506,7 +519,7 @@ sed -i "/^ExecStart=/ {s/-t 300/-t 900/}" /etc/systemd/system/postgresql.service
 sed -i "/^TimeoutSec=/ {s/300/900/}" /etc/systemd/system/postgresql.service
 sed -i "/^After=/ {s/After=network.target/After=network.target\nBefore=emperor.uwsgi.service/}" /etc/systemd/system/postgresql.service
 do_and_log systemctl enable postgresql
-do_and_log postgresql-setup initdb
+log_it postgresql-setup initdb  # may fail, if postgres data dir is not empty (it's ok)
 do_and_log systemctl restart postgresql
 do_and_log python $KUBERDOCK_DIR/postgresql_setup.py
 do_and_log systemctl restart postgresql
@@ -691,3 +704,114 @@ log_it echo "Installation completed and log saved to $DEPLOY_LOG_FILE"
 log_it echo "KuberDock is available at https://$MASTER_IP/"
 echo "login: admin"
 echo "password: $ADMIN_PASSWORD"
+
+}
+
+
+############
+# Clean up #
+############
+
+
+do_cleanup()
+{
+
+    log_it echo "Cleaning up..."
+
+    log_it echo "Stop and disable services..."
+    for i in nginx emperor.uwsgi flanneld redis postgresql influxdb etcd \
+             kube-apiserver kube-controller-manager kube-scheduler;do
+        log_it systemctl disable $i
+    done
+    for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kube-scheduler;do
+        log_it systemctl stop $i
+    done
+
+    log_it echo "Cleaning up etcd..."
+    log_it etcdctl rm --recursive /registry
+    log_it etcdctl rm --recursive /kuberdock
+    log_it echo "Cleaning up redis..."
+    log_it redis-cli flushall
+    log_it echo "Cleaning up influxdb..."
+    curl -X DELETE 'http://localhost:8086/db/cadvisor?u=root&p=root'
+    for i in flanneld redis influxdb etcd;do
+        log_it systemctl stop $i
+    done
+
+    log_it echo "Trying to remove postgres role and database..."
+    su -c 'dropdb kuberdock && dropuser kuberdock' - postgres
+    if [ $? -ne 0 ];then
+        log_it echo "Couldn't delete role and database!"
+
+        while true;do
+            read -p "Remove the whole postgres data dir (it will erase all data stored in postgres) (yes/no)? [yes]: " REMOVE_DIR
+            if [ "$REMOVE_DIR" = yes ] || [ -z "$REMOVE_DIR" ];then
+                log_it systemctl stop postgresql
+                log_it rm -rf /var/lib/pgsql
+                break
+            elif [ "$REMOVE_DIR" = no ];then
+                break
+            fi
+        done
+    fi
+
+    log_it echo 'Delete SELinux rule for http on port 9200'
+    log_it semanage port --delete -p tcp 9200
+
+    # Firewall
+    if rpm -q firewalld > /dev/null && firewall-cmd --state > /dev/null;then
+        log_it echo 'Clear old firewall rules...'
+        log_it firewall-cmd --permanent --zone=public --remove-port=80/tcp
+        log_it firewall-cmd --permanent --zone=public --remove-port=443/tcp
+        # ntp
+        log_it firewall-cmd --permanent --zone=public --remove-port=123/udp
+
+        log_it echo 'Remove cluster-only visible ports...'
+        re='rule family="ipv4" source address=".+" port port="((7080|8086|53)" protocol="tcp|53" protocol="udp)" accept'
+        firewall-cmd --permanent --zone=public --list-rich-rules | while read i;do
+            if [[ $i =~ $re ]];then
+                log_it firewall-cmd --permanent --zone=public --remove-rich-rule="$i"
+            fi
+        done
+
+        # kube-apiserver secure
+        log_it firewall-cmd --permanent --zone=public --remove-port=6443/tcp
+        # etcd secure
+        log_it firewall-cmd --permanent --zone=public --remove-port=2379/tcp
+        # close ports for cpanel flannel and kube-proxy
+        log_it firewall-cmd --permanent --zone=public --remove-port=8123/tcp
+        log_it firewall-cmd --permanent --zone=public --remove-port=8118/tcp
+
+        log_it echo 'Reload firewall...'
+        log_it firewall-cmd --reload
+    else
+        log_it echo 'Firewall is not running. Skip removing any old roles'
+    fi
+
+    log_it echo "Remove packages..."
+    log_it yum -y remove kuberdock ntp etcd-ca bridge-utils
+    log_it yum -y autoremove
+
+    log_it echo "Remove old repos..."
+    log_it rm -f /etc/yum.repos.d/kube-cloudlinux.repo \
+                 /etc/yum.repos.d/kube-cloudlinux-testing.repo
+
+    log_it echo "Remove dirs..."
+    for i in /var/run/kubernetes /etc/kubernetes /var/run/flannel ~/.etcd-ca \
+             /var/opt/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd; do
+        rm -rf $i
+    done
+
+}
+
+
+#########
+# Start #
+#########
+
+
+if [ "$CLEANUP" = yes ];then
+    do_cleanup
+else
+    do_deploy
+fi

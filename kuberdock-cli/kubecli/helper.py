@@ -5,7 +5,6 @@ import requests
 import ConfigParser
 import collections
 import warnings
-import os
 
 from requests.auth import HTTPBasicAuth
 
@@ -168,15 +167,13 @@ class PrintOut(object):
 
 
 def make_config(args):
-    path = create_user_config(args)
     excludes = ['call', 'config']
-    config = parse_config(path)
-    for k, v in vars(args).items():
+    config = parse_config(args.config)
+    for  k, v in vars(args).items():
         if k in excludes:
             continue
         if v is not None:
             config[k] = v
-
     return config
 
 
@@ -191,18 +188,3 @@ def parse_config(path):
     for section in conf.sections():
         data.update(dict(conf.items(section)))
     return data
-
-
-def create_user_config(args):
-    path = os.path.join(os.path.expanduser('~'), '.kubecli.conf')
-    if not os.path.exists(path):
-        conf = ConfigParser.ConfigParser()
-        conf.optionxform = str
-        conf.read('/etc/kubecli.conf')
-        conf.set('defaults', 'user', args.user)
-        conf.set('defaults', 'password', args.password)
-        conf.set('defaults', 'token', args.token)
-        with open(path, 'wb') as config:
-            conf.write(config)
-
-    return path

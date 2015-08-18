@@ -10,6 +10,16 @@ from collections import OrderedDict
 from datetime import datetime
 from distutils.util import strtobool
 
+# requests .json() errors handling workaround.
+# requests module uses simplejson as json by default
+# that raises JSONDecodeError if .json() method fails
+# but if simplejson is not available requests uses json module
+# that raises ValueError in this case
+try:
+    from simplejson import JSONDecodeError
+except ImportError:
+    JSONDecodeError = ValueError
+
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
 from .utils import update_dict, get_api_url, send_event, send_logs
@@ -97,9 +107,12 @@ def delete_service_nodelay(item, namespace=None):
 def get_dockerfile(name, tag=None):
     if '/' not in name:
         return get_dockerfile_official(name, tag)
-    url = 'https://registry.hub.docker.com/u/{0}/dockerfile/raw'.format(name)
+    url = 'https://hub.docker.com/v2/repositories/{0}/dockerfile/'.format(name)
     r = requests.get(url)
-    return r.text
+    try:
+        return r.json()['contents']
+    except (JSONDecodeError, KeyError):
+        return ''
 
 
 info_pattern = re.compile('^(?P<tag>\S+):\s+(?:\S+://)?(?P<url>\S+?)'

@@ -23,17 +23,22 @@ sys.modules['kubedock.kapi.pstorage'] = mock.Mock()
 from ..podcollection import PodCollection, ModelQuery, KUBERDOCK_INTERNAL_USER
 from ..pod import Pod
 
-get_ns_patcher = mock.patch.object(PodCollection, '_get_namespaces')
+
+class TestCaseMixin(object):
+    def mock_methods(self, obj, *methods):
+        for method in methods:
+            patcher = mock.patch.object(obj, method)
+            self.addCleanup(patcher.stop)
+            patcher.start()
 
 
-class TestPodCollectionDelete(unittest.TestCase):
+class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         U = type('User', (), {'username': 'bliss'})
-        get_ns_patcher.start()
-        self.addCleanup(get_ns_patcher.stop)
-        PodCollection._get_pods = (lambda s, n: None)
-        PodCollection._merge = (lambda s: None)
+
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+
         self.app = PodCollection(U())
 
     @mock.patch.object(PodCollection, '_raise')
@@ -366,13 +371,11 @@ class TestPodCollectionDelete(unittest.TestCase):
         self.app = None
 
 
-class TestPodCollectionRunService(unittest.TestCase):
+class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         U = type('User', (), {'username': 'bliss'})
-        PodCollection._get_namespaces = (lambda s: None)
-        PodCollection._get_pods = (lambda s, n: None)
-        PodCollection._merge = (lambda s: None)
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
         self.pod_collection = PodCollection(U())
 
     def test_make_dash(self):
@@ -429,14 +432,13 @@ class TestPodCollectionRunService(unittest.TestCase):
         self.pod_collection = None
 
 
-class TestPodCollectionMakeNamespace(unittest.TestCase):
+class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         U = type('User', (), {'username': 'bliss'})
-        get_ns_patcher.start()
-        self.addCleanup(get_ns_patcher.stop)
-        PodCollection._get_pods = (lambda s, n: None)
-        PodCollection._merge = (lambda s: None)
+
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+
         self.pod_collection = PodCollection(U())
         self.test_ns = "user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094"
 
@@ -476,7 +478,7 @@ class TestPodCollectionMakeNamespace(unittest.TestCase):
         self.pod_collection = None
 
 
-class TestPodCollectionGetNamespaces(unittest.TestCase):
+class TestPodCollectionGetNamespaces(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         pod = namedtuple('pod_tuple', ['name', 'is_deleted'])
@@ -485,10 +487,12 @@ class TestPodCollectionGetNamespaces(unittest.TestCase):
             pod(name='test-some-long.pod.name1', is_deleted=False),
         ]
         U = type('User', (), {'username': 'user', 'pods': pods})
-        get_ns_patcher.start()
-        self.addCleanup(get_ns_patcher.stop)
-        PodCollection._get_pods = (lambda s, n: None)
-        PodCollection._merge = (lambda s: None)
+        self.get_ns_patcher = mock.patch.object(PodCollection, '_get_namespaces')
+        self.addCleanup(self.get_ns_patcher.stop)
+        self.get_ns_patcher.start()
+
+        self.mock_methods(PodCollection, '_get_pods', '_merge')
+
         self.pod_collection = PodCollection(U())
 
     def test_pod_get_namespaces(self):
@@ -507,9 +511,9 @@ class TestPodCollectionGetNamespaces(unittest.TestCase):
 
         # Actual call
         self.pod_collection._get.reset_mock()
-        get_ns_patcher.stop()
+        self.get_ns_patcher.stop()
         res = self.pod_collection._get_namespaces()
-        get_ns_patcher.start()
+        self.get_ns_patcher.start()
 
         self.pod_collection._get.assert_called_once_with(['namespaces'],
                                                          ns=False)
@@ -531,7 +535,7 @@ class TestPodCollectionGetNamespaces(unittest.TestCase):
         self.pod_collection = None
 
 
-class TestPodCollection(unittest.TestCase):
+class TestPodCollection(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         self.pods = [{'id': 1, 'name': 'Unnamed-1', 'namespace': 'Unnamed-1-namespace-md5',
@@ -539,10 +543,11 @@ class TestPodCollection(unittest.TestCase):
                      {'id': 2, 'name': 'Unnamed-2', 'namespace': 'Unnamed-2-namespace-md5',
                       'owner': 'user', 'containers': ''}]
         U = type('User', (), {'username': 'user'})
-        get_ns_patcher.start()
-        self.addCleanup(get_ns_patcher.stop)
-        PodCollection._merge = (lambda s: None)
+
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+
         self.pod_collection = PodCollection(U())
+        self.pod_collection._collection = {}
         for data in self.pods:
             pod = Pod(data)
             self.pod_collection._collection[pod.name, pod.namespace] = pod
@@ -565,12 +570,13 @@ class TestPodCollection(unittest.TestCase):
         self.app = None
 
 
-class TestPodCollectionStartPod(unittest.TestCase):
+class TestPodCollectionStartPod(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         U = type('User', (), {'username': 'user'})
-        PodCollection._get_pods = (lambda s, n: None)
-        PodCollection._merge = (lambda s: None)
+
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+
         self.pod_collection = PodCollection(U())
 
         self.test_service_name = 'service-eu53y'
@@ -599,7 +605,7 @@ class TestPodCollectionStartPod(unittest.TestCase):
         :type rif: mock.Mock
         """
 
-        self.test_pod.get_config = mock.Mock(return_value=None)
+        self.test_pod.get_config = mock.Mock(return_value={'volumes': []})
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
         self.pod_collection._run_service.reset_mock()
@@ -608,7 +614,7 @@ class TestPodCollectionStartPod(unittest.TestCase):
         res = self.pod_collection._start_pod(self.test_pod)
 
         mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with('service')
+        self.test_pod.get_config.assert_called_once_with()
         self.pod_collection._run_service.assert_called_once_with(self.test_pod)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
@@ -627,7 +633,7 @@ class TestPodCollectionStartPod(unittest.TestCase):
         saved_ports = self.test_pod.containers[0]['ports']
         self.test_pod.containers[0]['ports'] = []
 
-        self.test_pod.get_config = mock.Mock(return_value=None)
+        self.test_pod.get_config = mock.Mock(return_value={'volumes': []})
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
         self.pod_collection._run_service.reset_mock()
@@ -636,7 +642,7 @@ class TestPodCollectionStartPod(unittest.TestCase):
         res = self.pod_collection._start_pod(self.test_pod)
 
         mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with('service')
+        self.test_pod.get_config.assert_called_once_with()
         self.assertEquals(self.pod_collection._run_service.called, False)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
@@ -655,7 +661,7 @@ class TestPodCollectionStartPod(unittest.TestCase):
         """
 
         self.test_pod.get_config = mock.Mock(
-            return_value=self.test_service_name)
+            return_value={'volumes': [], 'service': self.test_service_name})
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
         self.pod_collection._run_service.reset_mock()
@@ -664,7 +670,7 @@ class TestPodCollectionStartPod(unittest.TestCase):
         res = self.pod_collection._start_pod(self.test_pod)
 
         mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with('service')
+        self.test_pod.get_config.assert_called_once_with()
         self.assertEquals(self.pod_collection._run_service.called, False)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
@@ -676,12 +682,11 @@ class TestPodCollectionStartPod(unittest.TestCase):
         self.pod_collection = None
 
 
-class TestPodCollectionStopPod(unittest.TestCase):
+class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         U = type('User', (), {'username': 'user'})
-        PodCollection._get_pods = (lambda s, n: None)
-        PodCollection._merge = (lambda s: None)
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
         self.pod_collection = PodCollection(U())
 
     @mock.patch.object(PodCollection, '_del')
@@ -715,15 +720,14 @@ class TestPodCollectionStopPod(unittest.TestCase):
         self.pod_collection = None
 
 
-class TestPodCollectionAdd(unittest.TestCase):
+class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+
         U = type('User', (), {'username': 'user', 'is_trial': lambda s: True})
-        get_ns_patcher.start()
-        self.addCleanup(get_ns_patcher.stop)
-        PodCollection._get_pods = lambda s, n: None
-        PodCollection._merge = lambda s: None
-        self.pod = type('User', (), {
+
+        self.pod = type('Pod', (), {
             'compose_persistent': mock.Mock(),
             '_forge_dockers': mock.Mock(),
             '_allocate_ip': mock.Mock(),
@@ -763,7 +767,7 @@ class TestPodCollectionAdd(unittest.TestCase):
         pod_ = self.pod()
         create_.return_value = pod_
         self.pod_collection.add(self.params)
-        pod_.compose_persistent.assert_called_once_with(self.user.username)
+        pod_.compose_persistent.assert_called_once_with(self.user)
 
     @mock.patch.object(PodCollection, '_save_pod')
     @mock.patch.object(Pod, 'create')
@@ -818,15 +822,12 @@ class TestPodCollectionAdd(unittest.TestCase):
         self.pod_collection = None
 
 
-class TestPodCollectionUpdate(unittest.TestCase):
+class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):
     def setUp(self):
         # mock all these methods to prevent any accidental calls
-        methods = ('_get_namespaces', '_get_pods', '_merge', '_start_pod',
-                   '_stop_pod', '_resize_replicas', '_do_container_action')
-        for method in methods:
-            patcher = mock.patch.object(PodCollection, method)
-            self.addCleanup(patcher.stop)
-            patcher.start()
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge',
+                          '_start_pod', '_stop_pod', '_resize_replicas',
+                          '_do_container_action')
 
         U = type('User', (), {'username': 'oergjh'})
         self.pod_collection = PodCollection(U())
@@ -896,16 +897,12 @@ class TestPodCollectionUpdate(unittest.TestCase):
         get_by_id_mock.assert_has_calls([mock.call(pod_id)] * 6)
 
 
-class TestPodCollectionDoContainerAction(unittest.TestCase):
+class TestPodCollectionDoContainerAction(unittest.TestCase, TestCaseMixin):
     # some available actions
     actions = ('start', 'stop', 'rm')
 
     def setUp(self):
-        # mock all these methods to prevent any accidental calls
-        for method in ('_get_namespaces', '_get_pods', '_merge'):
-            patcher = mock.patch.object(PodCollection, method)
-            self.addCleanup(patcher.stop)
-            patcher.start()
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
 
         U = type('User', (), {'username': '4u5hfee'})
         self.pod_collection = PodCollection(U())
@@ -974,10 +971,9 @@ class TestPodCollectionDoContainerAction(unittest.TestCase):
         run_ssh_command_mock.assert_called_once_with(data['nodeName'], mock.ANY)
 
 
-class TestPodCollectionGetPods(unittest.TestCase):
+class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
     def setUp(self):
         # mock all these methods to prevent any accidental calls
-
         init_patcher = mock.patch.object(
             PodCollection, '__init__',
             lambda self, owner=None: setattr(self, 'owner', owner)
@@ -985,10 +981,7 @@ class TestPodCollectionGetPods(unittest.TestCase):
         self.addCleanup(init_patcher.stop)
         init_patcher.start()
 
-        for method in ('_get_namespaces', '_merge'):
-            patcher = mock.patch.object(PodCollection, method)
-            self.addCleanup(patcher.stop)
-            patcher.start()
+        self.mock_methods(PodCollection, '_get_namespaces', '_merge')
 
         U = type('User', (), {'username': '4u5hfee'})
         self.user = U()
@@ -1109,7 +1102,7 @@ class TestPodCollectionGetPods(unittest.TestCase):
         PodMock.populate.assert_has_calls(map(mock.call, api_pod_items))
 
 
-class TestPodCollectionIsRelated(unittest.TestCase):
+class TestPodCollectionIsRelated(unittest.TestCase, TestCaseMixin):
     def test_related(self):
         """
         Object is related iff all key/value pairs in selector exist in labels

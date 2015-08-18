@@ -18,6 +18,7 @@ sys.modules['requests'] = mock.Mock()
 sys.modules['kubedock.api'] = mock.Mock()
 sys.modules['kubedock.pods.models'] = mock.Mock()
 sys.modules['kubedock.utils'] = mock.Mock()
+sys.modules['kubedock.kapi.pstorage'] = mock.Mock()
 
 from ..podcollection import PodCollection, ModelQuery, KUBERDOCK_INTERNAL_USER
 from ..pod import Pod
@@ -815,6 +816,84 @@ class TestPodCollectionAdd(unittest.TestCase):
         self.params = None
         self.namespace = None
         self.pod_collection = None
+
+
+class TestPodCollectionUpdate(unittest.TestCase):
+    def setUp(self):
+        # mock all these methods to prevent any accidental calls
+        methods = ('_get_namespaces', '_get_pods', '_merge', '_start_pod',
+                   '_stop_pod', '_resize_replicas', '_do_container_action')
+        for method in methods:
+            patcher = mock.patch.object(PodCollection, method)
+            self.addCleanup(patcher.stop)
+            patcher.start()
+
+        U = type('User', (), {'username': 'oergjh'})
+        self.pod_collection = PodCollection(U())
+
+    def _create_dummy_pod(self):
+        """ Generate random pod_id and new mock pod. """
+        return str(uuid4()), mock.create_autospec(Pod, instance=True)
+
+    @mock.patch.object(PodCollection, 'get_by_id')
+    def test_pod_not_found(self, get_by_id_mock):
+        """ if the pod was not found, update must raise an error """
+        get_by_id_mock.side_effect = Exception
+        pod_id, _ = self._create_dummy_pod()
+        pod_data = {'command': 'start'}
+        with self.assertRaises(Exception):
+            self.pod_collection.update(pod_id, pod_data)
+        get_by_id_mock.assert_called_once_with(pod_id)
+
+    @mock.patch.object(PodCollection, 'get_by_id')
+    def test_pod_unknown_command(self, get_by_id_mock):
+        """ In case of an unknown command, update must raise an error """
+        pod_id, pod = self._create_dummy_pod()
+        pod_data = {'command': 'some_weird_stuff'}
+        get_by_id_mock.return_value = pod
+
+        with self.assertRaises(Exception):
+            self.pod_collection.update(pod_id, pod_data)
+        get_by_id_mock.assert_called_once_with(pod_id)
+
+    @mock.patch.object(PodCollection, 'get_by_id')
+    def test_pod_command(self, get_by_id_mock):
+        """ Test usual cases (update with correct commands) """
+        pod_id, pod = self._create_dummy_pod()
+        get_by_id_mock.return_value = pod
+        patch_method = lambda method: mock.patch.object(PodCollection, method)
+
+        with patch_method('_start_pod') as start_pod_mock:
+            pod_data = {'command': 'start'}
+            self.pod_collection.update(pod_id, pod_data)
+            start_pod_mock.assert_called_once_with(pod, pod_data)
+
+        with patch_method('_stop_pod') as stop_pod_mock:
+            pod_data = {'command': 'stop'}
+            self.pod_collection.update(pod_id, pod_data)
+            stop_pod_mock.assert_called_once_with(pod, pod_data)
+
+        with patch_method('_resize_replicas') as resize_replicas_mock:
+            pod_data = {'command': 'resize'}
+            resize_replicas_mock.return_value = 12345  # new length
+            result = self.pod_collection.update(pod_id, pod_data)
+            self.assertEqual(result, resize_replicas_mock.return_value)
+            resize_replicas_mock.assert_called_once_with(pod, pod_data)
+
+        with patch_method('_do_container_action') as do_container_action_mock:
+            pod_data = {'command': 'container_start'}
+            self.pod_collection.update(pod_id, pod_data)
+            do_container_action_mock.assert_called_with('start', pod_data)
+
+            pod_data = {'command': 'container_stop'}
+            self.pod_collection.update(pod_id, pod_data)
+            do_container_action_mock.assert_called_with('stop', pod_data)
+
+            pod_data = {'command': 'container_delete'}
+            self.pod_collection.update(pod_id, pod_data)
+            do_container_action_mock.assert_called_with('rm', pod_data)
+
+        get_by_id_mock.assert_has_calls([mock.call(pod_id)] * 6)
 
 
 class TestPodCollectionDoContainerAction(unittest.TestCase):

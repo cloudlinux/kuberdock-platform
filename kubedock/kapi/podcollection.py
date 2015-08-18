@@ -176,9 +176,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 replicas_data.extend(self._get(['replicationcontrollers'], ns=namespace)['items'])
         else:
             data.extend(self._get(['pods'])['items'])
-            services_data.extend(
-                filter(lambda x: x['metadata']['namespace'] != 'default',
-                       self._get(['services'])['items']))
+            services_data.extend(item for item in self._get(['services'])['items']
+                                 if item['metadata']['namespace'] != 'default')
             replicas_data.extend(self._get(['replicationcontrollers'])['items'])
 
         for item in data:
@@ -191,6 +190,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
             for r in replicas_data:
                 if self._is_related(item['metadata']['labels'], r['spec']['selector']):
+                    # If replication controller manages more then one pod,
+                    # _get_pods must return only one of them (we will filter by sid)
                     pod.sid = r['metadata']['name']
                     pod.replicationController = True
                     break
@@ -346,15 +347,18 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._do_container_action('rm', data)
 
     @staticmethod
-    def _is_related(one, two):
-        if one is None or two is None:
+    def _is_related(labels, selector):
+        """
+        Check that pod with labels is related to selector
+        https://github.com/kubernetes/kubernetes/blob/master/docs/user-guide/labels.md#label-selectors
+        """
+        # TODO: what about Set-based selectors?
+        if labels is None or selector is None:
             return False
-        for k in two.keys():
-            if k not in one:
+        for key, value in selector.iteritems():
+            if key not in labels or labels[key] != value:
                 return False
-            if one[k] != two[k]:
-                return False
-            return True
+        return True
 
     def _check_trial(self, params):
         if self.owner.is_trial():

@@ -3,7 +3,7 @@ import mock
 import sys
 import unittest
 import json
-import random
+from random import randrange, choice
 
 from uuid import uuid4
 from collections import namedtuple
@@ -911,9 +911,9 @@ class TestPodCollectionDoContainerAction(unittest.TestCase):
         self.pod_collection = PodCollection(U())
 
     def _create_request(self):
-        return random.choice(self.actions), {
+        return choice(self.actions), {
             'nodeName': str(uuid4()),
-            'containers': ','.join(str(uuid4()) for i in range(random.randrange(1, 10))),
+            'containers': ','.join(str(uuid4()) for i in range(randrange(1, 10))),
         }
 
     @mock.patch('kubedock.kapi.podcollection.run_ssh_command')
@@ -972,6 +972,141 @@ class TestPodCollectionDoContainerAction(unittest.TestCase):
         with self.assertRaises(Exception):
             self.pod_collection._do_container_action(action, data)
         run_ssh_command_mock.assert_called_once_with(data['nodeName'], mock.ANY)
+
+
+class TestPodCollectionGetPods(unittest.TestCase):
+    def setUp(self):
+        # mock all these methods to prevent any accidental calls
+
+        init_patcher = mock.patch.object(
+            PodCollection, '__init__',
+            lambda self, owner=None: setattr(self, 'owner', owner)
+        )
+        self.addCleanup(init_patcher.stop)
+        init_patcher.start()
+
+        for method in ('_get_namespaces', '_merge'):
+            patcher = mock.patch.object(PodCollection, method)
+            self.addCleanup(patcher.stop)
+            patcher.start()
+
+        U = type('User', (), {'username': '4u5hfee'})
+        self.user = U()
+
+    @staticmethod
+    def _get_uniq_fake_pod(*args):
+        pod = mock.MagicMock()
+        pod.sid = str(uuid4())
+        pod.name = str(uuid4())
+        pod.namespace = str(uuid4())
+        return pod
+
+    @mock.patch.object(PodCollection, '_get')
+    def test_many_namespace_provided(self, get_mock):
+        """
+        Test that _get_pods generates right api calls
+        in the case of multiple namespaces
+        """
+        get_mock.return_value = {'items': []}
+        namespaces = [str(uuid4()) for i in range(randrange(2, 10))]
+
+        pod_collection = PodCollection(self.user)
+        pod_collection._get_pods(namespaces)
+
+        get_mock.assert_has_calls([
+            mock.call([api], ns=namespace)
+            for namespace in namespaces
+            for api in ('pods', 'services', 'replicationcontrollers')
+        ])
+
+    @mock.patch('kubedock.kapi.podcollection.Pod')
+    @mock.patch.object(PodCollection, '_get')
+    def test_replication(self, get_mock, PodMock):
+        """
+        If replication controller manages more then one pod,
+        _get_pods should save only one of them in _collection
+        """
+        namespace = str(uuid4())
+        get_mock.side_effect = lambda res, ns=None: {  # fake kubernates API
+            'pods': {'items': [{'metadata': {'labels': {'name': name}}}
+                               for name in ('pod1', 'pod1', 'pod1', 'pod2', 'pod2')]},
+            'services': {'items': []},
+            'replicationcontrollers': {'items': [
+                {'spec': {'selector': {'name': 'pod1'}}, 'metadata': {'name': 'pod1'}},
+                {'spec': {'selector': {'name': 'pod2'}}, 'metadata': {'name': 'pod2'}}
+            ]}
+        }[res[0]]
+
+        def _get_uniq_fake_pod(item):
+            pod = self._get_uniq_fake_pod()
+            pod.name = item['metadata']['labels']['name']
+            pod.namespace = namespace
+            return pod
+        PodMock.populate.side_effect = _get_uniq_fake_pod
+
+        pod_collection = PodCollection(self.user)
+        pod_collection._get_pods([namespace])
+
+        self.assertSetEqual(set(pod_collection._collection.iterkeys()),
+                            set([('pod1', namespace), ('pod2', namespace)]))
+
+    @mock.patch('kubedock.kapi.podcollection.Pod')
+    @mock.patch.object(PodCollection, '_get')
+    def test_services(self, get_mock, PodMock):
+        """ _get_pods should take pod IP from the service this pod belong. """
+        namespace = str(uuid4())
+        ip_dispatcher = {'api': '1.1.1.1', 'db': '2.2.2.2'}
+        get_mock.side_effect = lambda res, ns=None: {  # fake kubernates API
+            'pods': {'items': [{'metadata': {'labels': {'app': app}}}
+                               for app in ('api', 'api', 'api', 'db', 'db')]},
+            'services': {'items': [
+                {'spec': {'selector': {'app': 'api'},
+                          'clusterIP': ip_dispatcher['api']}},
+                {'spec': {'selector': {'app': 'db'},
+                          'clusterIP': ip_dispatcher['db']}},
+            ]},
+            'replicationcontrollers': {'items': []}
+        }[res[0]]
+
+        generated_pods = set()
+
+        def _get_uniq_fake_pod(item):
+            pod = self._get_uniq_fake_pod()
+            pod._app = item['metadata']['labels']['app']
+            pod.namespace = namespace
+            generated_pods.add(pod)
+            return pod
+        PodMock.populate.side_effect = _get_uniq_fake_pod
+
+        pod_collection = PodCollection(self.user)
+        pod_collection._get_pods([namespace])
+
+        for pod in pod_collection._collection.itervalues():
+            self.assertEqual(pod.podIP, ip_dispatcher[pod._app])
+            self.assertIn(pod, generated_pods)
+            generated_pods.remove(pod)
+
+    @mock.patch('kubedock.kapi.podcollection.Pod')
+    @mock.patch.object(PodCollection, '_get')
+    def test_pods_metadata(self, get_mock, PodMock):
+        """
+        Pods in the resulting collection must be populated with metadata,
+        using Pod.populate(<api-pod-item>)
+        """
+        namespace = str(uuid4())
+        api_pod_items = [{'metadata': {'name': str(uuid4()), 'labels': {}}}
+                         for i in range(5)]
+        get_mock.side_effect = lambda res, ns=None: {  # fake kubernates API
+            'pods': {'items': api_pod_items},
+            'services': {'items': []},
+            'replicationcontrollers': {'items': []}
+        }[res[0]]
+        PodMock.populate.side_effect = self._get_uniq_fake_pod
+
+        pod_collection = PodCollection(self.user)
+        pod_collection._get_pods(namespace)
+
+        PodMock.populate.assert_has_calls(map(mock.call, api_pod_items))
 
 
 if __name__ == '__main__':

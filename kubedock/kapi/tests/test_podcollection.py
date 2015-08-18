@@ -1109,6 +1109,30 @@ class TestPodCollectionGetPods(unittest.TestCase):
         PodMock.populate.assert_has_calls(map(mock.call, api_pod_items))
 
 
+class TestPodCollectionIsRelated(unittest.TestCase):
+    def test_related(self):
+        """
+        Object is related iff all key/value pairs in selector exist in labels
+        """
+        labels = {str(uuid4()): str(uuid4()) for i in range(randrange(1, 10))}
+        selector = {str(uuid4()): str(uuid4()) for i in range(randrange(1, 10))}
+
+        self.assertFalse(PodCollection._is_related(labels, selector))
+
+        labels_related = labels.copy()
+        # If all key/value pairs in selector exist in labels, then object is related
+        labels_related.update(selector)
+        self.assertTrue(PodCollection._is_related(labels_related, selector))
+
+        # empty selector will match any object
+        self.assertTrue(PodCollection._is_related(labels, {}))
+
+        # if labels or selector is None, object is not related
+        self.assertFalse(PodCollection._is_related(labels, None))
+        self.assertFalse(PodCollection._is_related(None, selector))
+        self.assertFalse(PodCollection._is_related(None, None))
+
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger('TestPodCollection.test_pod').setLevel(logging.DEBUG)

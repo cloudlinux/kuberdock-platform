@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 29%{?dist}.cloudlinux
+Release: 31%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Aug 19 2015 Alex Tishin <atishin@cloudlinux.com>, Michail Bagrov <mbagrov@cloudlinux.com, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-31
+- AC-836: Iptables script to close the dangerous ports from outside
+- AC-862: Get Dockerfile from new docker hub
+- AC-733: Unit-test PodCollection._get_pods; rafactoring _get_pods and _is_related
+- old unit-tests fix (podcollection)
+- First attempt to upgrade kuberdock
+- Add jasmine to Ippool application
+
 * Sun Aug 09 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-29
 - AC-782: Add bulk run/stop pods in podlist
 - Tests for _start_pod

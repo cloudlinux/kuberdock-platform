@@ -7,6 +7,7 @@ import sys
 import json
 import argparse
 import requests
+import sqlalchemy.orm.exc
 import subprocess
 from datetime import datetime
 from importlib import import_module
@@ -278,8 +279,13 @@ def do_cycle_updates(with_testing=False):
                                  db_upd, with_testing):
                     is_failed = False
                     db_upd.status = UPDATE_STATUSES.applied
-                    db_upd.print_log('{0} successfully applied. '
+                    try:
+                        db_upd.print_log('{0} successfully applied. '
                                      'All nodes are upgraded'.format(upd))
+                    except sqlalchemy.orm.exc.DetachedInstanceError:
+                        new_db_upd = Updates.query.get(upd)
+                        if new_db_upd:
+                            new_db_upd.print_log('{0} successfully applied'.format(upd))
                 else:   # not successful
                     db_upd.status = UPDATE_STATUSES.nodes_failed
                     db_upd.print_log("{0} failed. Unable to upgrade some nodes"
@@ -287,7 +293,12 @@ def do_cycle_updates(with_testing=False):
             else:
                 is_failed = False
                 db_upd.status = UPDATE_STATUSES.applied
-                db_upd.print_log('{0} successfully applied'.format(upd))
+                try:
+                    db_upd.print_log('{0} successfully applied'.format(upd))
+                except sqlalchemy.orm.exc.DetachedInstanceError:
+                    new_db_upd = Updates.query.get(upd)
+                    if new_db_upd:
+                        new_db_upd.print_log('{0} successfully applied'.format(upd))
         db_upd.end_time = datetime.utcnow()
         db.session.commit()
     if is_failed:

@@ -317,6 +317,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return {'status': 'stopped'}
 
     def _stop_cluster(self, pod):
+        """ Delete all pods with the same name as pod.name in the same namespace """
         for p in self._get(['pods'], ns=pod.namespace)['items']:
             if self._is_related(p['metadata']['labels'], {'name': pod.name}):
                 self._del(['pods', p['metadata']['name']], ns=pod.namespace)

@@ -1126,6 +1126,36 @@ class TestPodCollectionIsRelated(unittest.TestCase, TestCaseMixin):
         self.assertFalse(PodCollection._is_related(None, None))
 
 
+class TestPodCollectionStopCluster(unittest.TestCase, TestCaseMixin):
+    def setUp(self):
+        self.mock_methods(PodCollection, '_get_namespaces', '_merge', '_get_pods')
+        U = type('User', (), {'username': '4u5hfee'})
+        self.user = U()
+        self.PodMock = namedtuple('Pod', ('name', 'namespace'))
+
+    @mock.patch.object(PodCollection, '_del')
+    @mock.patch.object(PodCollection, '_get')
+    def test_delete_right_pods(self, get_mock, del_mock):
+        """ _merge will fetch pods from db """
+        pod_name, namespace = 'test-app-pod', str(uuid4())
+        pod = self.PodMock(pod_name, namespace)
+        pod_collection = PodCollection(self.user)
+
+        pod_collection._get.return_value = {'items': [
+            {'metadata': {'name': 'pod1', 'labels': {'name': pod_name}}},
+            {'metadata': {'name': 'pod2', 'labels': {'name': pod_name}}},
+            {'metadata': {'name': 'pod3', 'labels': {'name': pod_name}}},
+            {'metadata': {'name': 'pod4', 'labels': {'name': 'other-pod'}}},
+            {'metadata': {'name': 'pod5', 'labels': {'name': 'other-pod2'}}},
+        ]}
+
+        pod_collection._stop_cluster(pod)
+
+        get_mock.assert_called_once_with(['pods'], ns=namespace)
+        del_mock.assert_has_calls([mock.call(['pods', 'pod1'], ns=namespace),
+                                   mock.call(['pods', 'pod2'], ns=namespace),
+                                   mock.call(['pods', 'pod3'], ns=namespace)])
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger('TestPodCollection.test_pod').setLevel(logging.DEBUG)

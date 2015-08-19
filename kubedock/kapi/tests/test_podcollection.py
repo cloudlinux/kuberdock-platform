@@ -1274,6 +1274,40 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
         ])
 
 
+@mock.patch('kubedock.kapi.podcollection.TRIAL_KUBES', 10)
+class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
+    def setUp(self):
+        self.mock_methods(PodCollection, '_get_namespaces', '_merge', '_get_pods')
+        U = type('User', (), {'username': '4u5hfee'})
+        self.user = U()
+
+    @mock.patch.object(PodCollection, '_raise')
+    def test_enough_kubes(self, raise_mock):
+        """ user is trial and have enough kubes for a new pod """
+        self.user.is_trial = lambda: True
+        self.user.kubes = 5
+        pod = {'containers': [{'kubes': 2}, {'kubes': 2}, {'kubes': 1}]}
+        PodCollection(self.user)._check_trial(pod)
+        self.assertFalse(raise_mock.called)
+
+    @mock.patch.object(PodCollection, '_raise')
+    def test_not_enough_kubes(self, raise_mock):
+        """ user is trial and don't have enough kubes for a new pod """
+        self.user.is_trial = lambda: True
+        self.user.kubes = 5
+        pod = {'containers': [{'kubes': 2}, {'kubes': 4}]}
+        PodCollection(self.user)._check_trial(pod)
+        raise_mock.assert_called_once_with(mock.ANY)
+
+    @mock.patch.object(PodCollection, '_raise')
+    def test_user_is_not_trial(self, raise_mock):
+        self.user.is_trial = lambda: False
+        self.user.kubes = 5
+        pod = {'containers': [{'kubes': 2}, {'kubes': 4}]}
+        PodCollection(self.user)._check_trial(pod)
+        self.assertFalse(raise_mock.called)
+
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger('TestPodCollection.test_pod').setLevel(logging.DEBUG)

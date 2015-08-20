@@ -4,7 +4,7 @@ from flask.ext.login import login_user, logout_user, current_user, login_require
 
 from ..api import users as api_users
 from ..rbac.models import Role
-from ..billing import Kube
+from ..billing import Kube, Package
 from ..users.models import User
 from ..users.utils import mark_online
 from ..users.signals import user_logged_out_by_another
@@ -30,7 +30,8 @@ def index(**kwargs):
         users_collection=api_users.get_full_users_collection(),
         online_users_collection=User.get_online_collection(),
         user_activity=current_user.user_activity(),
-        kube_types={k.id: k.name for k in Kube.query.all()}
+        kube_types={k.id: k.name for k in Kube.query.all()},
+        packages=[package.to_dict() for package in Package.query.all()]
     )
 
 

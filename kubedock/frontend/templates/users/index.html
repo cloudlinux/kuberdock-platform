@@ -111,6 +111,14 @@
                             </select>
                         </div>
                         <div class="form-group">
+                            <label for="package-select">Package</label>
+                            <select id="package-select" name="package-select" class="selectpicker">
+                            {% for item in packages %}
+                                <option>{{ item.name }}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="status-select">Status</label>
                             <select id="status-select" name="status-select" class="selectpicker">
                                 <option selected="selected" value="1">Active</option>
@@ -179,8 +187,8 @@
                         </div>
                     </div>
                 </div>
-            <div>
-        <div>
+            </div>
+        </div>
     </script>
 
     <script type="text/template" id="user-profile-template">

@@ -398,6 +398,7 @@ define(['marionette', 'paginator', 'utils'],
                 'email'           : 'input#email',
                 'user_status'     : 'select#status-select',
                 'role_select'     : 'select#role-select',
+                'package_select'  : 'select#package-select',
                 'users_page'      : 'div#users-page',
                 'user_add_btn'    : 'button#user-add-btn',
                 'user_cancel_btn' : 'button#user-cancel-btn',
@@ -444,7 +445,8 @@ define(['marionette', 'paginator', 'utils'],
                         'password' : this.ui.password.val(),
                         'email'    : this.ui.email.val(),
                         'active'   : (this.ui.user_status.val() == 1 ? true : false),
-                        'rolename' : this.ui.role_select.val()
+                        'rolename' : this.ui.role_select.val(),
+                        'package'  : this.ui.package_select.val()
                     }, {
                         wait: true,
                         success: function(){
@@ -692,6 +694,7 @@ define(['marionette', 'paginator', 'utils'],
                 this.ui.email.val(this.model.get('email'));
                 this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
                 this.ui.role_select.val(this.model.get('rolename'));
+                this.ui.package_select.val(this.model.get('package'));
                 this.ui.user_add_btn.html('Save');
                 this.ui.selectpicker.selectpicker();
             },
@@ -702,7 +705,8 @@ define(['marionette', 'paginator', 'utils'],
                     'username' : this.ui.username.val(),
                     'email'    : this.ui.email.val(),
                     'active'   : (this.ui.user_status.val() == 1 ? true : false),
-                    'rolename' : this.ui.role_select.val()
+                    'rolename' : this.ui.role_select.val(),
+                    'package'  : this.ui.package_select.val()
                 };
                 var pattern = /^([a-z0-9_\.-])+@[a-z0-9-]+\.([a-z]{2,4}\.)?[a-z]{2,4}$/i;
 

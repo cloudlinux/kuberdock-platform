@@ -191,14 +191,14 @@ define(['pods_app/app',
                         });
                     }
                     if ( count != 0 ) {
-                        this.ui.count.text('Item ' + count);
+                        this.ui.count.text(count + ' Item');
                         this.ui.containersControl.show();
                         this.ui.defaultTableHead.addClass('min-opacity');
                     } else {
                         this.ui.containersControl.hide();
                         this.ui.defaultTableHead.removeClass('min-opacity');
                     }
-                    if (count >= 2) this.ui.count.text('Items ' + count);
+                    if (count >= 2) this.ui.count.text(count + ' Items');
                 }
             },
 

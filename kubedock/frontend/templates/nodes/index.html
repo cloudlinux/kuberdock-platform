@@ -439,27 +439,23 @@
                 </ul>
                 <div class="control-group">
                     <button id="add_node">Add Node</button>
-                    <div class="nav-search" id="nav-search">
-                        <div class="form-search">
-                            <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
-                            <i class="nav-search-icon"></i>
-                        </div>
-                    </div>
+                    <div class="nav-search" id="nav-search"></div>
+                    <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
                 </div>
             </div>
         </div>
         <div class="container">
         <!--<div><strong>You have <%- totalNodes %> nodes</strong></div -->
-            <table id="nodelist-table" class="table tablesorter tablesorter-default">
+            <table id="nodelist-table" class="table">
                 <thead>
                     <tr class="tablesorter-headerRow">
-                        <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Node<b class="caret"></b></div></th>
-                        <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">IP<b class="caret"></b></div></th>
-                        <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube type<b class="caret"></b></div></th>
-{#                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Kube capacity<b class="caret"></b><br>(used/max)</div></th>#}
-{#                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Average<b class="caret"></b><br>CPU usage</div></th>#}
-{#                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Active pods<b class="caret"></b><br>(containers)</div></th>#}
-                        <th data-column="6" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status<b class="caret"></b></div></th>
+                        <th class="hostname">Node<b class="caret"></b></th>
+                        <th class="ip">IP<b class="caret"></b></th>
+                        <th class="kube_type">Kube type<b class="caret"></b></th>
+                        <!-- <th class="hostname">Kube capacity<b class="caret"></b><br>(used/max)</th> -->
+                        <!-- <th>Average<b class="caret"></b><br>CPU usage</th> -->
+                        <!-- <th>Active pods<b class="caret"></b><br>(containers)</th> -->
+                        <th class="status">Status<b class="caret"></b></th>
                     </tr>
                 </thead>
                 <tbody></tbody>

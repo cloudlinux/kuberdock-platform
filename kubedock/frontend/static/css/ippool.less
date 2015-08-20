@@ -1,31 +1,32 @@
 .ip_pool_table, .ip_table{
+    .box-shadow-materials();
     thead{
         background-color: transparent;
         tr{
+            background-color: transparent;
             th{
-                border: none;
-                color: #b1b9c0;
+                height: 50px;
+                color: #1d1d1d;
                 padding-top: 0;
-                font-size: 14px;
-                text-align: left;
+                font-size: 13px;
+                cursor: pointer;
+                border-bottom: 0;
+                padding-bottom: 0;
                 font-weight: normal;
-                vertical-align: top;
-                padding-bottom: 10px;
+                vertical-align: middle;
                 font-family: @regular;
-                border-bottom: 1px solid #e5e5e5;
+                &:first-child{
+                    padding-left: 24px;
+                }
                 &:focus{
                     outline: 0;
-                }
-                .tablesorter-header-inner{
-                    .caret{
-                        margin-left: 3px;
-                    }
                 }
             }
         }
     }
     tbody{
         tr{
+            background-color: #fff;
             &.checked, &:hover{
                 background-color: #f5fafe;
                 span{
@@ -35,7 +36,7 @@
                             background-position: 0 -18px;
                         }
                     }
-                   &.block_ip{
+                    &.block_ip{
                         background: url('../img/stop.png') 0 0 no-repeat;
                         &:hover{
                             background-position: 0 -17px;
@@ -55,20 +56,18 @@
                     }
                 }
             }
-            &:last-child{
-                td{
-                    border-bottom: 1px solid #e5e5e5;
-                }
-            }
             td{
                 height: 50px;
                 padding-top: 0;
                 color: #1d1d1d;
-                font-size: 14px;
+                font-size: 13px;
                 line-height: 50px;
                 padding-bottom: 0;
                 font-family: @regular;
                 vertical-align: middle;
+                &:first-child{
+                    padding-left: 24px;
+                }
                 &.network{
                     vertical-align: top;
                 }
@@ -82,20 +81,18 @@
                             left: 2px;
                             width: 12px;
                             content: '';
-                            bottom: 3px;
+                            bottom: 2px;
                             height: 12px;
                             position: absolute;
                         }
                     }
                     &.free{
                         &:before{
-                            border: 1px solid #589630;
                             background-color: #97cd75;
                         }
                     }
                     &.blocked, &.busy{
                         &:before{
-                            border: 1px solid #bc1b14;
                             background-color: #f5544d;
                         }
                     }
@@ -107,16 +104,27 @@
                         font-size: 0;
                         position: relative;
                         display: inline-block;
+                        margin-right: 10px;
                         &:hover{
                             cursor: pointer;
                         }
                     }
                     &#deleteNetwork{
                         top: 16px;
+                        width: 16px;
                         height: 17px;
                     }
                     &.block_ip, &.unblock_ip, &.unbind_ip{
-                        top: 4px;
+                        top: 16px;
+                    }
+                    &.block_ip{
+                        width: 17px;
+                    }
+                    &.unbind_ip{
+                        width: 14px;
+                    }
+                    &.unblock_ip{
+                        width: 13px;
                     }
                 }
             }
@@ -125,7 +133,7 @@
                 border: 0;
                 padding: 0;
                 color: #3197ee;
-                font-size: 14px;
+                font-size: 13px;
                 text-decoration: none;
                 font-family: @regular;
                 background-color: transparent;
@@ -140,8 +148,20 @@
 .right{
     .table-wrapper{
         .network-name{
-            font-weight: 800;
+            font-family: @bold;
             margin-bottom: 20px;
+        }
+    }
+}
+.ip_pool_table{
+    tbody{
+        tr{
+            &:hover{
+                cursor: pointer;
+                span{
+                    cursor: pointer;
+                }
+            }
         }
     }
 }
@@ -176,6 +196,10 @@
                     margin-bottom: 25px;
                     background-color: #fff;
                     border: 1px solid #e5e5e5;
+                    &:focus{
+                        .transition(color 500ms ease);
+                        border-color: #188eed;
+                    }
                 }
                 label{
                     margin-bottom: 13px;

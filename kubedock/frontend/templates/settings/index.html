@@ -227,9 +227,9 @@
      <!-- settingsPublicIPsTab template -->
     <script type="text/template" id="publicIPs-template">
         <div class="content-body clearfix" id="publicIPs-tab">
-            <div class="col-xs-12 no-padding">
+            <div class="col-xs-12">
                 <div class="row">
-                    <div class="col-xs-11 col-xs-offset-1">
+                    <div class="col-xs-12 no-padding">
                         <table class="table" id="publicIPs-table">
                             <thead>
                                 <tr>
@@ -245,10 +245,10 @@
                                 <% } %>
                             </tbody>
                         </table>
+                        <div class="buttons clearfix">
+                            <div class="description pull-left">* Unused Public IP billed as usual</div>
+                        </div>
                     </div>
-                </div>
-                <div class="buttons clearfix">
-                    <div class="description pull-left col-md-offset-1">* Unused Public IP billed as usual</div>
                 </div>
             </div>
         </div>
@@ -269,7 +269,7 @@
         <div class="content-body clearfix" id="persistentVolumes-tab">
             <div class="col-xs-12 no-padding">
                 <div class="row">
-                    <div class="col-xs-11 col-xs-offset-1">
+                    <div class="col-xs-12">
                         <table class="table" id="persistent-volumes-table">
                             <thead>
                                 <tr>

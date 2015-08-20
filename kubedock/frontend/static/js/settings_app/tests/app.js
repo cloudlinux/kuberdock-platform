@@ -1,6 +1,6 @@
-define(['ippool_app/app'], function(data){
+define(['settings_app/app'], function(data){
 
-    describe("IPPool TESTS", function(){
+    describe("Settings TESTS", function(){
        var jasmine = true;
 
        it("jasmine is 'true'", function(){

@@ -8,9 +8,9 @@ from ..billing import Kube, Package
 from ..users.models import User
 from ..users.utils import mark_online
 from ..users.signals import user_logged_out_by_another
+from ..settings import TEST
 
-
-users = Blueprint('users', __name__)
+users = Blueprint('users', __name__, url_prefix='/users')
 
 
 @users.before_app_request
@@ -19,8 +19,8 @@ def mark_current_user_online():
         mark_online(current_user.id)
 
 
-@users.route('/users/')
-@users.route('/users/<path:p>/', endpoint='other')
+@users.route('/')
+@users.route('/<path:p>/', endpoint='other')
 @login_required
 def index(**kwargs):
     """Returns the index page."""
@@ -35,14 +35,14 @@ def index(**kwargs):
     )
 
 
-@users.route('/users/online/')
-@users.route('/users/online/<path:p>/', endpoint='online_other')
+@users.route('/online/')
+@users.route('/online/<path:p>/', endpoint='online_other')
 @login_required
 def online_users(**kwargs):
     return index(**kwargs)
 
 
-@users.route('/users/logoutA/', methods=['GET'])
+@users.route('/logoutA/', methods=['GET'])
 # @login_required_or_basic_or_token
 # @check_permission('auth_by_another', 'users')
 def logout_another():
@@ -62,6 +62,10 @@ def logout_another():
     # current_app.logger.debug(
     #     'logout_another({0}) after'.format(current_user.id))
     user_logged_out_by_another.send((user_id, admin_user_id))
-    return redirect('/users/')
+    return redirect('/')
 
-
+@users.route('/test', methods=['GET'])
+def run_tests():
+    if TEST:
+        return render_template('t/users_index.html')
+    return "not found", 404

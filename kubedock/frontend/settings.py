@@ -3,13 +3,14 @@ from flask import Blueprint, render_template
 from flask.ext.login import login_required, current_user
 
 from ..api import settings as api_settings
+from ..settings import TEST
 
 
-settings = Blueprint('settings', __name__)
+settings = Blueprint('settings', __name__, url_prefix='/settings')
 
 
-@settings.route('/settings/')
-@settings.route('/settings/<path:p>/', endpoint='other')
+@settings.route('/')
+@settings.route('/<path:p>/', endpoint='other')
 @login_required
 def index(**kwargs):
     """Returns the index page."""
@@ -23,3 +24,8 @@ def index(**kwargs):
                'events': events}
     return render_template('settings/index.html', **context)
 
+@settings.route('/test', methods=['GET'])
+def run_tests():
+    if TEST:
+        return render_template('t/settings_index.html')
+    return "not found", 404

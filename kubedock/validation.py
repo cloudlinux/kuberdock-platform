@@ -1,20 +1,24 @@
+import re
 import socket
 import cerberus
 import cerberus.errors
 from copy import deepcopy
 
+from sqlalchemy import func
+
 from .api import APIError
 from .billing import Kube
+from .users.models import User
 
 
 """
-This schemes it's just a shortcut variables for convenience and reusability
+This schemas it's just a shortcut variables for convenience and reusability
 """
 # ===================================================================
 PATH_LENGTH = 512
 
 container_image_name = r"^[a-zA-Z0-9_]+[a-zA-Z0-9/:_!.\-]*$"
-container_image_name_scheme = {
+container_image_name_schema = {
     'type': 'string',
     'empty': False,
     'required': True,
@@ -24,8 +28,10 @@ container_image_name_scheme = {
 
 
 # http://stackoverflow.com/questions/1418423/the-hostname-regex
-hostname_regex = r"^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$"
-hostname_scheme = {
+hostname_regex = re.compile(r"^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?"
+                            r"(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$",
+                            re.IGNORECASE)
+hostname_schema = {
     'type': 'string',
     'empty': False,
     'required': True,
@@ -35,9 +41,23 @@ hostname_scheme = {
 }
 
 
+email_local_regex = re.compile(
+    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*\Z"  # dot-atom
+    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*"\Z)',  # quoted-string
+    re.IGNORECASE)
+email_domain_regex = re.compile(
+    r'^(?=.{1,255}$)(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+'
+    r'(?P<root>[A-Z0-9-]{2,63}(?<![-0-9]))\Z',
+    re.IGNORECASE)
+email_literal_regex = re.compile(
+    # literal form, ipv4 or ipv6 address (SMTP 4.1.3)
+    r'\[([A-f0-9:\.]+)\]\Z',
+    re.IGNORECASE)
+
+
 # Kubernetes restriction, names must be dns-compatible
 # pod_name = r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])+$"
-pod_name_scheme = {
+pod_name_schema = {
     'type': 'string',
     'empty': False,
     'required': True,
@@ -46,17 +66,74 @@ pod_name_scheme = {
 }
 
 
-port_scheme = {
+port_schema = {
     'type': 'integer',
     'min': 0,
     'max': 65535,
 }
-nullable_port_scheme = deepcopy(port_scheme)
-nullable_port_scheme['nullable'] = True
+nullable_port_schema = deepcopy(port_schema)
+nullable_port_schema['nullable'] = True
 
 
-new_pod_scheme = {
-    'name': pod_name_scheme,
+username_regex = {
+    'regex': re.compile(r'^[A-Z0-9](?:[A-Z0-9_-]{0,23}[A-Z0-9])?$', re.IGNORECASE),
+    'message': 'only letters of Latin alphabet, numbers, hyphen and underscore are allowed'
+}
+name_schema = {'type': 'string',
+               'nullable': True,
+               'maxlength': 25,
+               'regex': {'regex': re.compile(r'^[A-Z]{,25}$', re.IGNORECASE),
+                         'message': 'only letters of Latin alphabet are allowed'}}
+create_user_schema = {
+    'username': {
+        'type': 'string',
+        'required': True,
+        'empty': False,
+        'unique_case_insensitive': User.username,
+        'maxlength': 25,
+        'regex': username_regex,
+    },
+    'email': {
+        'type': 'email',
+        'required': True,
+        'empty': False,
+        'unique_case_insensitive': User.email,
+        'maxlength': 50.
+    },
+    'password': {
+        'type': 'string',
+        'required': True,
+        'empty': False,
+        'maxlength': 25.
+    },
+    'first_name': name_schema,
+    'last_name': name_schema,
+    'middle_initials': name_schema,
+    'rolename': {
+        'type': 'string',
+        'required': True,
+        'empty': False,
+        'maxlength': 64.
+    },
+    'package': {
+        'type': 'string',
+        'required': True,
+        'empty': False,
+        'maxlength': 64,
+    },
+    'active': {
+        'type': 'boolean',
+        'required': True,
+    },
+}
+update_user_schema = {}
+for field, schema in create_user_schema.iteritems():
+    update_user_schema[field] = schema.copy()
+    update_user_schema[field].pop('required', None)
+
+
+new_pod_schema = {
+    'name': pod_name_schema,
     'clusterIP': {                                   # ignore, read-only
         'type': 'ipv4',
         'nullable': True
@@ -73,7 +150,7 @@ new_pod_scheme = {
         'type': 'string', 'required': True,
         'restart_polices': ['Always', 'OnFailure', 'Never']
     },
-#    'namespace': {'type': 'string', 'required': True},
+   # 'namespace': {'type': 'string', 'required': True},
     'volumes': {
         'type': 'list',
         'schema': {
@@ -189,7 +266,7 @@ new_pod_scheme = {
                     }
                 },
                 'kubes': {'type': 'integer', 'min': 1},
-                'image': container_image_name_scheme,
+                'image': container_image_name_schema,
                 'parentID': {
                     'type': 'string',
                     'required': False
@@ -219,8 +296,8 @@ new_pod_scheme = {
                     'schema': {
                         'type': 'dict',
                         'schema': {
-                            'containerPort': port_scheme,
-                            'hostPort': nullable_port_scheme,  # TODO nullable?
+                            'containerPort': port_schema,
+                            'hostPort': nullable_port_schema,  # TODO nullable?
                             'isPublic': {'type': 'boolean'},
                             'protocol': {
                                 'type': 'string',
@@ -257,8 +334,8 @@ new_pod_scheme = {
     }
 }
 
-change_pod_scheme = deepcopy(new_pod_scheme)
-change_pod_scheme.update({
+change_pod_schema = deepcopy(new_pod_schema)
+change_pod_schema.update({
     'owner': {                                      # ignore, read-only
         'type': 'string',
         'maxlength': 255,
@@ -303,7 +380,7 @@ change_pod_scheme.update({
     'price': {'type': 'strnum', 'empty': True, 'required': False},
     'kubes': {'type': 'strnum', 'empty': True, 'required': False},
 })
-change_pod_scheme['containers']['schema']['schema']['volumeMounts']\
+change_pod_schema['containers']['schema']['schema']['volumeMounts']\
 ['schema']['schema']['path'] = {
     'type': 'string',
     'maxlength': PATH_LENGTH,
@@ -317,8 +394,85 @@ class V(cerberus.Validator):
     This class is for all custom and our app-specific validators and types,
     implement any new here.
     """
-    # TODO my be custom regex validator for allow compiled regexps
-    # TODO custom error messages for regex
+    # TODO: add readable error messages for regexps in old schemas
+
+    def _api_validation(self, data, schema):
+        if not self.validate(data, schema):
+            raise APIError(self.errors)
+
+    def _validate_regex(self, re_obj, field, value):
+        """
+        The same as original Validator._validate_regex, but can accept
+        pre-compiled regex as a parameter or a regex-object:
+        {'regex': <pattern or compiled regex>, 'message': <custom error message>}
+
+        Examples:
+
+        'regex': r'^[A-Za-z]*$'
+        'regex': re.compile(r'^[A-Z]*$', re.IGNORECASE)
+        'regex': {'regex': r'^[A-Za-z]*$',
+                  'message': 'should contain letters of Latin alphabet only'}
+        'regex': {'regex': re.compile(r'^[A-Z]*$', re.IGNORECASE),
+                  'message': 'should contain letters of Latin alphabet only'}
+        """
+        if not isinstance(value, basestring):
+            return
+
+        message = 'value "{value}" does not match regex "{regex}"'
+        if isinstance(re_obj, dict):
+            message = re_obj['message']
+            re_obj = re_obj['regex']
+
+        if isinstance(re_obj, basestring):
+            re_obj = re.compile(re_obj)
+
+        if not re_obj.match(value):
+            self._error(field, message.format(value=value, regex=re_obj.pattern))
+
+    def _validate_type_email(self, field, value):
+        super(V, self)._validate_type_string(field, value)
+
+        if not value or '@' not in value:
+            self._error(field, 'invalid email address (there is no @ in it)')
+            return
+
+        user_part, domain_part = value.rsplit('@', 1)
+
+        if not email_local_regex.match(user_part):
+            self._error(field, 'invalid email address (local part)')
+
+        try:
+            domain_part = domain_part.encode('idna')
+        except (TypeError, UnicodeError):
+            self._error(field, 'invalid email address (domain part)')
+
+        if domain_part.endswith('.web'):
+            self._error(field, 'invalid email address (domain part)')
+
+        if email_domain_regex.match(domain_part):
+            return
+
+        literal_match = email_literal_regex.match(domain_part)
+        if literal_match:
+            ip_address = literal_match.group(1)
+            try:
+                socket.inet_pton(socket.AF_INET, ip_address)
+                return
+            except socket.error:
+                pass
+        self._error(field, 'invalid email address (domain part)')
+
+    def _validate_unique_case_insensitive(self, model_field, field, value):
+        model = model_field.class_
+
+        taken_query = model.query.filter(
+            func.lower(model_field) == func.lower(value)
+        )
+        if self.document.get('_id') is not None:  # in case of update
+            taken_query = taken_query.filter(model.id != self.document['_id'])
+        if taken_query.first() is not None:
+            self._error(field, 'has already been taken')
+
     def _validate_type_ipv4(self, field, value):
         try:
             socket.inet_pton(socket.AF_INET, value)
@@ -363,14 +517,14 @@ def check_container_image_name(searchkey):
     validator = V()
     if not validator.validate(
             {'Container image name': searchkey},
-            {'Container image name': container_image_name_scheme}):
+            {'Container image name': container_image_name_schema}):
         raise APIError(validator.errors)
 
 
 def check_node_data(data):
     validator = V(allow_unknown=True)
     if not validator.validate(data, {
-            'hostname': hostname_scheme,
+            'hostname': hostname_schema,
             'kube_type': {'type': 'integer', 'min': 0, 'required': True},
         }):
         raise APIError(validator.errors)
@@ -392,7 +546,7 @@ def is_ip(addr):
 def check_hostname(hostname):
     validator = V()
     if not validator.validate({'Hostname': hostname},
-                              {'Hostname': hostname_scheme}):
+                              {'Hostname': hostname_schema}):
         raise APIError(validator.errors)
     if is_ip(hostname):
         raise APIError('Please, enter hostname, not ip address.')
@@ -400,13 +554,25 @@ def check_hostname(hostname):
 
 def check_change_pod_data(data):
     validator = V()
-    if not validator.validate(data, change_pod_scheme):
+    if not validator.validate(data, change_pod_schema):
         raise APIError(validator.errors)
 
 
 def check_new_pod_data(data):
     validator = V()
-    if not validator.validate(data, new_pod_scheme):
+    if not validator.validate(data, new_pod_schema):
         raise APIError(validator.errors)
     kube_type = data.get('kube_type', 0)
     check_kube_indb(kube_type)
+
+
+class UserValidator(V):
+    """Validator for user api"""
+    def validate_user_create(self, data):
+        self._api_validation(data, create_user_schema)
+
+    def validate_user_update(self, data, user_id):
+        data = deepcopy(data)
+        data['_id'] = user_id  # needed for _validate_unique_case_insensitive
+        self.allow_unknown = True
+        self._api_validation(data, update_user_schema)

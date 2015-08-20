@@ -10,6 +10,7 @@ from ..rbac import check_permission
 from ..rbac.models import Role
 from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..users.models import User, UserActivity
+from ..validation import UserValidator
 from ..users.signals import (
     user_logged_in_by_another, user_logged_out_by_another)
 
@@ -201,6 +202,7 @@ def create_item():
     if data is None:
         data = request.form.to_dict()
     try:
+        UserValidator().validate_user_create(data)
         rolename = data.pop('rolename', 'User')
         package = data.pop('package', 'basic')
         r = Role.filter_by(rolename=rolename).first()
@@ -231,6 +233,7 @@ def put_item(user_id):
     data = request.json
     if data is None:
         data = request.form.to_dict()
+    UserValidator().validate_user_update(data, user_id)
     if 'rolename' in data:
         rolename = data.pop('rolename', 'User')
         r = db.session.query(Role).filter_by(rolename=rolename).first()
@@ -245,7 +248,11 @@ def put_item(user_id):
             p = db.session.query(Package).filter_by(name='Standard package').first()
         data['package'] = p
     u.update(data)
-    u.save()
+    try:
+        u.save()
+    except (IntegrityError, InvalidRequestError), e:
+        db.session.rollback()
+        raise APIError('Cannot update a user: {0}'.format(str(e)))
     return jsonify({'status': 'OK'})
 
 
@@ -259,8 +266,14 @@ def edit_self():
     data = request.json
     if data is None:
         data = request.form.to_dict()
+    UserValidator().validate_user_update(data, user.id)
     db_user.update(data, for_profile=True)
-    db_user.save()
+
+    try:
+        db_user.save()
+    except (IntegrityError, InvalidRequestError), e:
+        db.session.rollback()
+        raise APIError('Cannot update a user: {0}'.format(str(e)))
     return jsonify({'status': 'OK'})
 
 

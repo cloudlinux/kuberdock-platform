@@ -320,12 +320,12 @@ define(['marionette', 'paginator', 'utils'],
                             } else {
                                 $.each(rs.data, function (i, itm) {
                                     that.ui.tbody.append($('<tr>').append(
-//                                        '<td>' + itm.username + '</td>' +
-//                                        '<td>' + itm.email + '</td>' +
-//                                        '<td>' + itm.rolename + '</td>' +
+                                       // '<td>' + itm.username + '</td>' +
+                                       // '<td>' + itm.email + '</td>' +
+                                       // '<td>' + itm.rolename + '</td>' +
                                         '<td>' + itm.ts + '</td>' +
                                         '<td>' + itm.action + '</td>'
-//                                        '<td>' + itm.ts + '</td>'
+                                       // '<td>' + itm.ts + '</td>'
                                     ));
                                 })
                             }
@@ -716,10 +716,10 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.username.notify("empty username");
                     this.ui.username.addClass('error');
                     break;
-                case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
+                case this.ui.password.val() !== this.ui.password_again.val():
                     this.ui.password.addClass('error');
                     this.ui.password_again.addClass('error');
-                    this.ui.password_again.notify("empty password or don't match");
+                    this.ui.password_again.notify("passwords don't match");
                     break;
                 case this.ui.email.val() == '':
                     this.ui.email.addClass('error');
@@ -730,6 +730,8 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.email.notify("E-mail must be correct");
                     break;
                 default:
+                    if (this.ui.password.val())  // update only if specified
+                        data.password = this.ui.password.val();
                     this.model.set(data);
 
                     this.model.save(this.model.changedAttributes(), {

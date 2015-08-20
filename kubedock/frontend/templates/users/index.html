@@ -232,6 +232,7 @@
                                     <div>Registered: <%- join_date %></div>
                                     <div>Last login: <%- last_login %></div>
                                     <div>Last activity: <%- last_activity %></div>
+                                    <div>Package: <%- package %></div>
                                 </div>
                                 <!-- <div class="col-xs-2 col-offset-1 info"></div>
                                 <div class="col-xs-3">
@@ -286,6 +287,7 @@
         <td><%- podsCount %></td>
         <td><%- containersCount %></td>
         <td><%- email ? email : 'No email' %></td>
+        <td><%- package  %></td>
         <td><%- rolename  %></td>
         <td>
             <% if (active) { %>
@@ -380,6 +382,7 @@
                                        <th class="pods_count">Pods<span class="caret"></span></th>
                                        <th class="containers_count">Containers<span class="caret"></span></th>
                                        <th class="email">Email<span class="caret"></span></th>
+				       <th class="package">Package<span class="caret"></span></th>
                                        <th class="rolename">Role<span class="caret"></span></th>
                                        <th class="active">Status<span class="caret"></span></th>
                                     </tr>

@@ -166,14 +166,15 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
         return False
 
     successful = True
-    if db_upd.status == UPDATE_STATUSES.nodes_failed:
-        nodes = db.session.query(Node).filter(
-            or_(Node.upgrade_status == UPDATE_STATUSES.failed,
-                Node.upgrade_status == UPDATE_STATUSES.failed_downgrade)).all()
-    else:
-        nodes = db.session.query(Node).all()
+    #if db_upd.status == UPDATE_STATUSES.nodes_failed:
+    #    nodes = db.session.query(Node).filter(
+    #        or_(Node.upgrade_status == UPDATE_STATUSES.failed,
+    #            Node.upgrade_status == UPDATE_STATUSES.failed_downgrade)).all()
+    #else:
+    #    nodes = db.session.query(Node).all()
+    nodes = db.session.query(Node).all()
 
-    db_upd.status == UPDATE_STATUSES.nodes_started
+    #db_upd.status == UPDATE_STATUSES.nodes_started
     try:
         db_upd.print_log('Started nodes upgrade. {0} nodes will be upgraded...'
                      .format(len(nodes)))
@@ -252,10 +253,10 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
     """
     :return: True if success else False
     """
-    if db_upd.status == UPDATE_STATUSES.nodes_failed:
-        # only nodes upgrade needed case
-        return True
-    db_upd.status = UPDATE_STATUSES.started
+    #if db_upd.status == UPDATE_STATUSES.nodes_failed:
+    #    # only nodes upgrade needed case
+    #    return True
+    #db_upd.status = UPDATE_STATUSES.started
     try:
         db_upd.print_log('Started master upgrade...')
     except sqlalchemy.orm.exc.DetachedInstanceError:
@@ -265,7 +266,7 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
         # not upgraded nodes. For now - always is.
         upgrade_func(db_upd, with_testing)
     except Exception as e:
-        db_upd.status = UPDATE_STATUSES.failed
+        #db_upd.status = UPDATE_STATUSES.failed
         try:
             db_upd.print_log('Error in update script '
                          '{0}. {1}. Starting downgrade...'
@@ -275,7 +276,7 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
         try:
             downgrade_func(db_upd, with_testing, e)
         except Exception as e:
-            db_upd.status = UPDATE_STATUSES.failed_downgrade
+            #db_upd.status = UPDATE_STATUSES.failed_downgrade
             try:
                 db_upd.print_log('Error downgrading script {0}. {1}'
                              .format(db_upd.fname, e.__repr__()))
@@ -289,7 +290,7 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
             except sqlalchemy.orm.exc.DetachedInstanceError:
                 pass
         return False
-    db_upd.status = UPDATE_STATUSES.master_applied
+    #db_upd.status = UPDATE_STATUSES.master_applied
     return True
 
 

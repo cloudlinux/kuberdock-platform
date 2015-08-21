@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 31%{?dist}.cloudlinux
+Release: 32%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Sun Aug 09 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-32
+- Added upgrade script for changing schema
+
 * Wed Aug 19 2015 Alex Tishin <atishin@cloudlinux.com>, Michail Bagrov <mbagrov@cloudlinux.com, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-31
 - AC-836: Iptables script to close the dangerous ports from outside
 - AC-862: Get Dockerfile from new docker hub

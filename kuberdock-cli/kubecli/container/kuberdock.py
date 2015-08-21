@@ -10,7 +10,7 @@ def parser(subs):
     c_create = action.add_parser('create')
     c_create.add_argument('name', help="Container name")
 
-    c_create.add_argument('-i', '--image', help="Image to take action upon")
+    c_create.add_argument('-C', '--container', dest='image', help="Image to take action upon")
     c_create.add_argument('--index', default=0, type=int, help="Index of ports or volumes entry (by default 0)")
     c_create.add_argument('--container-port', help="Add or change a container port of ports entry.")
     c_create.add_argument('--mount-path', help="Point to existent mount path entry or create a new one")
@@ -26,7 +26,7 @@ def parser(subs):
     c_set = action.add_parser('set')
     c_set.add_argument('name', help="Container name")
 
-    c_set.add_argument('-i', '--image', help="Image to take action upon")
+    c_set.add_argument('-C', '--container', dest='image', help="Image to take action upon")
     c_set.add_argument('-d', '--delete', help="Delete image from a container")
     c_set.add_argument('--index', default=0, type=int, help="Index of ports or volumes entry (by default 0)")
     c_set.add_argument('--container-port', help="Add or change a container port of ports entry")

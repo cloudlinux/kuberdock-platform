@@ -406,7 +406,7 @@ class KuberDock(KubeCtl):
         if not hasattr(self, 'container_port'):
             return
         if not hasattr(self, 'image'):
-            raise SystemExit("You must specify an image with option '-i|--image'")
+            raise SystemExit("You must specify an image with option '-C|--contaiter'")
 
         patt = re.compile("^(?P<public>\+)?(?P<container_port>\d+)\:?(?P<host_port>\d+)?\:?(?P<protocol>tcp|udp)?$")
         ports = []
@@ -450,7 +450,7 @@ class KuberDock(KubeCtl):
         if not hasattr(self, 'env'):
             return
         if not hasattr(self, 'image'):
-            raise SystemExit("You must specify an image with option '-i|--image'")
+            raise SystemExit("You must specify an image with option '-C|--container'")
         for c in self.containers:
             if c['image'] != self.image:
                 continue

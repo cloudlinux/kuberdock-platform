@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 29%{?dist}.cloudlinux
+Release: 29.2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,10 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Fri Aug 21 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-29.2
+- Modified updates scripts
+- added exceptions wrappings to kuberdock_update.py
+
 * Sun Aug 09 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-29
 - AC-782: Add bulk run/stop pods in podlist
 - Tests for _start_pod

@@ -230,6 +230,20 @@ else
             break
         fi
         if [ "$HAS_CEPH" = yes ];then
+            while [ -z "$CEPH_ADMIN_HOST" ];do
+                read -p "Enter the ceph-admin hostname or ip-address: " CEPH_ADMIN_HOST
+            done
+            read -p "Enter the ceph-deploy username [root]: " CEPH_USER
+                if [ -z "$CEPH_USER" ];then
+                    CEPH_USER=root
+                fi
+            echo "Trying to get your ceph config and keyring..."
+            #scp $CEPH_USER@$CEPH_ADMIN_HOST:/etc/ceph/ceph.* /tmp
+            FROM_CEPH_ADMIN=$(ssh $CEPH_USER@136.243.221.241 "grep mon_host /etc/ceph/ceph.conf | cut -d ' ' -f 3; ls /etc/ceph | grep keyring;")
+            if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please consider populating $KUBERDOCK_DIR/kubedock/ceph_settings.py manually"; fi
+            MONITORS=$(echo $FROM_CEPH_ADMIN | cut -f 1 -d " ")
+            KEYRING_PATH=/etc/ceph/$(echo $FROM_CEPH_ADMIN | cut -f 2 -d " ")
+
             break
         fi
         if [ "$HAS_CEPH" = no ];then
@@ -663,6 +677,8 @@ fi
 if [ "$HAS_CEPH" = yes ];then
 cat > $KUBERDOCK_DIR/kubedock/ceph_settings.py << EOF
 CEPH=True
+MONITORS=$MONITORS
+KEYRING_PATH=$KEYRING_PATH
 EOF
 fi
 

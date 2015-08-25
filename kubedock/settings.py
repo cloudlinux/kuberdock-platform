@@ -55,6 +55,10 @@ CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)
+    },
+    'fix-pods-timeline': {
+        'task': 'kubedock.tasks.fix_pods_timeline',
+        'schedule': timedelta(minutes=5)
     }
 }
 

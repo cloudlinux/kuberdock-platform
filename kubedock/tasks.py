@@ -31,9 +31,6 @@ from .settings import NODE_INSTALL_TIMEOUT_SEC
 from .kapi.podcollection import PodCollection
 
 
-DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
-
-
 celery = make_celery()
 
 
@@ -351,62 +348,7 @@ def check_events():
             redis.set('cached_pods', json.dumps(pods_list))
             send_event('pull_pods_state', 'ping')
 
-    for pod in pods_list:
-        if 'containerStatuses' in pod:
-            for container_data in pod['containerStatuses']:
-                kubes = container_data.get('kubes', 1)
-                for s in container_data['state'].values():
-                    start = s.get('startedAt')
-                    if start is None:
-                        continue
-                    start = datetime.strptime(start, DATETIME_FORMAT)
-                    end = s.get('finishedAt')
-                    if end is not None:
-                        end = datetime.strptime(end, DATETIME_FORMAT)
-                    add_container_state(pod['uid'], container_data.get('name'), kubes,
-                                        start, end)
-
-    cs1 = db.aliased(ContainerState, name='cs1')
-    cs2 = db.aliased(ContainerState, name='cs2')
-    cs_query = db.session.query(cs1, cs2.start_time).join(
-        cs2, db.and_(cs1.pod_id == cs2.pod_id,
-                     cs1.container_name == cs2.container_name,
-                     cs1.kubes == cs2.kubes)
-        ).filter(db.and_(cs1.start_time < cs2.start_time,
-                         db.or_(cs1.end_time > cs2.start_time,
-                                cs1.end_time.is_(None)))
-                 ).order_by(cs1.start_time, cs2.start_time)
-    prev_cs = None
-    for cs1_obj, cs2_start_time in cs_query:
-        if cs1_obj is not prev_cs:
-            cs1_obj.end_time = cs2_start_time
-        prev_cs = cs1_obj
-
-    css = ContainerState.query.filter_by(end_time=None)
-    pod_ids = [pod['uid'] for pod in pods_list]
-    now = datetime.now().replace(microsecond=0)
-
-    for cs in css:
-        if cs.pod_id not in pod_ids:
-            cs.end_time = now
-
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-
     redis.delete('events_lock')
-
-
-def add_container_state(pod, container, kubes, start, end):
-    cs = ContainerState.query.filter_by(pod_id=pod, container_name=container,
-                                        kubes=kubes, start_time=start).first()
-    if cs:
-        cs.end_time = end
-    else:
-        cs = ContainerState(pod_id=pod, container_name=container,
-                            kubes=kubes, start_time=start, end_time=end)
-        db.session.add(cs)
 
 
 @celery.task()
@@ -467,3 +409,72 @@ def user_suspend_event(target, value, oldvalue, initiator):
         value = bool(strtobool(value))
     if value != oldvalue and value is True:
         user_lock_task.delay(target)
+
+
+@celery.task()
+def fix_pods_timeline():
+    css = ContainerState.query.filter(ContainerState.end_time.is_(None))
+    pods_list = requests.get(get_api_url('pods', namespace=False)).json()
+    pods_list = parse_pods_statuses(pods_list)
+    pod_ids = [pod['uid'] for pod in pods_list]
+    now = datetime.utcnow().replace(microsecond=0)
+
+    for cs in css:
+        cs_next = ContainerState.query.filter(
+            ContainerState.pod_id == cs.pod_id,
+            ContainerState.container_name == cs.container_name,
+            ContainerState.start_time > cs.start_time,
+        ).order_by(
+            ContainerState.start_time,
+        ).first()
+        if cs_next:
+            cs.end_time = cs_next.start_time
+        elif cs.pod_id not in pod_ids:
+            cs.end_time = now
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+@celery.task()
+def fix_pods_timeline_heavy():
+    """
+    Fix time lines overlapping
+    This task should not be performed during normal operation
+    """
+    redis = ConnectionPool.get_connection()
+
+    if redis.get('fix_pods_timeline_heavy'):
+        return
+
+    redis.setex('fix_pods_timeline_heavy', 3600, 'true')
+
+    t0 = datetime.now()
+
+    cs1 = db.aliased(ContainerState, name='cs1')
+    cs2 = db.aliased(ContainerState, name='cs2')
+    cs_query = db.session.query(cs1, cs2.start_time).join(
+        cs2, db.and_(cs1.pod_id == cs2.pod_id,
+                     cs1.container_name == cs2.container_name)
+        ).filter(db.and_(cs1.start_time < cs2.start_time,
+                         db.or_(cs1.end_time > cs2.start_time,
+                                cs1.end_time.is_(None)))
+                 ).order_by(cs1.pod_id, cs1.container_name,
+                            db.desc(cs1.start_time), cs2.start_time)
+
+    prev_cs = None
+    for cs1_obj, cs2_start_time in cs_query:
+        if cs1_obj is not prev_cs:
+            cs1_obj.end_time = cs2_start_time
+        prev_cs = cs1_obj
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    print('fix_pods_timeline_heavy: {0}'.format(datetime.now() - t0))
+
+    redis.delete('fix_pods_timeline_heavy')

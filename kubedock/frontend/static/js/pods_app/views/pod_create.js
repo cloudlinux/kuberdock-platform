@@ -116,6 +116,12 @@ define(['pods_app/app',
                     type: 'text',
                     success: function(response, newValue) {
                         that.model.set({name: newValue});
+                        $.notify('New pod name "' + newValue + '" saved', {
+                            autoHideDelay: 5000,
+                            clickToHide: true,
+                            globalPosition: 'bottom left',
+                            className: 'success',
+                        });
                     },
                     validate: function(newValue) {
                         var model = App.WorkFlow.getCollection().find(
@@ -123,6 +129,9 @@ define(['pods_app/app',
                                 return item.get('name') == newValue;
                             }
                         );
+                        if (newValue.length > 64){
+                            return 'The maximum length of the Pod name must be less than 64 characters'
+                        }
                         if (model) {
                             return 'Pod with name "' + newValue +
                                 '" already exists. Try another name.'

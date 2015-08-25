@@ -10,8 +10,8 @@ from .pstorage import CephStorage, AmazonStorage
 from ..billing import kubes_to_limits
 from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, AWS, CEPH
 
-class Pod(KubeQuery, ModelQuery, Utilities):
 
+class Pod(KubeQuery, ModelQuery, Utilities):
     def __init__(self, data=None):
         if data is not None:
             for c in data['containers']:
@@ -91,6 +91,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
             return
+
         for volume in self.volumes:
             try:
                 pd = volume.pop('persistentDisk')
@@ -109,9 +110,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         volume['rbd']['size'] = size
                     try:
                         volume['rbd']['monitors'] = monitors
-                    except NameError:
+                    except NameError:  # will happen in the first iteration
                         cs = CephStorage()
-                        monitors = cs.get_monitors()
+                        monitors = cs.get_monitors()  # really slow operation
                         volume['rbd']['monitors'] = monitors
             except KeyError:
                 continue

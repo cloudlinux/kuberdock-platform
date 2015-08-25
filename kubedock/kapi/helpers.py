@@ -15,8 +15,9 @@ from ..utils import get_api_url
 
 from flask import current_app
 
+
 class KubeQuery(object):
-    return_json=True
+    return_json = True
 
     @staticmethod
     def _compose_args(rest=False):
@@ -106,13 +107,11 @@ class ModelQuery(object):
     def _fetch_pods(self, users=False, live_only=True):
         if users:
             if live_only:
-                return db.session.query(Pod).join(Pod.owner).filter(Pod.status!='deleted')
+                return db.session.query(Pod).join(Pod.owner).filter(Pod.status != 'deleted')
             return db.session.query(Pod).join(Pod.owner)
         if live_only:
-            return db.session.query(Pod).filter(Pod.status!='deleted')
+            return db.session.query(Pod).filter(Pod.status != 'deleted')
         return db.session.query(Pod)
-
-
 
     def _check_pod_name(self, owner=None):
         if not hasattr(self, 'name'):
@@ -122,10 +121,9 @@ class ModelQuery(object):
         else:
             pod = Pod.query.filter_by(name=self.name, owner=owner).first()
         if pod:
-            raise APIError(
-                "Conflict. Pod with name = '{0}' already exists. "
-                       "Try another name.".format(self.name),
-                       status_code=409)
+            raise APIError("Conflict. Pod with name = '{0}' already exists. "
+                           "Try another name.".format(self.name),
+                           status_code=409)
 
     def _allocate_ip(self, pod_id=None, ip=None):
         if pod_id is None:
@@ -236,10 +234,8 @@ class Utilities(object):
             return data
         return data[:limit]
 
-    def _make_sid(self):
-        sid = ''.join(
-            map((lambda x: x.lower()), re.split(r'[\s\\/\[\|\]{}\(\)\._]+',
-                self.name)))
+    def _make_sid(self, _re=re.compile(r'[\s\\/\[\|\]{}\(\)\._]+')):
+        sid = _re.sub('', self.name).lower()
         sid += ''.join(random.sample(string.lowercase + string.digits, 20))
         return sid
 
@@ -253,14 +249,15 @@ class Utilities(object):
         return "%s-%s" % (n, ''.join(
             random.sample(string.lowercase + string.digits, 10)))
 
-    def merge_lists(self, l1, l2, key, replace=False):
+    def merge_lists(self, list_1, list_2, key, replace=False):
         merged = {}
-        for item in l1+l2:
-            if item[key] in merged:
-                if replace is False:
-                    merged[item[key]].update(dict(item.items() + merged[item[key]].items()))
+        for item in list_1 + list_2:
+            item_key = item[key]
+            if item_key in merged:
+                if replace:
+                    merged[item_key].update(item)
                 else:
-                    merged[item[key]].update(item)
+                    merged[item_key].update(item.items() + merged[item_key].items())
             else:
-                merged[item[key]] = item
-        return [val for (_, val) in merged.items()]
+                merged[item_key] = item
+        return merged.values()

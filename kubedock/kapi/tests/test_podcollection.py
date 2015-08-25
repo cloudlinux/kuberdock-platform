@@ -25,9 +25,14 @@ from ..pod import Pod
 
 
 class TestCaseMixin(object):
-    def mock_methods(self, obj, *methods):
+    def mock_methods(self, obj, *methods, **replace_methods):
         for method in methods:
             patcher = mock.patch.object(obj, method)
+            self.addCleanup(patcher.stop)
+            patcher.start()
+
+        for method, replacement in replace_methods.iteritems():
+            patcher = mock.patch.object(obj, method, replacement)
             self.addCleanup(patcher.stop)
             patcher.start()
 
@@ -974,14 +979,10 @@ class TestPodCollectionDoContainerAction(unittest.TestCase, TestCaseMixin):
 class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
     def setUp(self):
         # mock all these methods to prevent any accidental calls
-        init_patcher = mock.patch.object(
-            PodCollection, '__init__',
-            lambda self, owner=None: setattr(self, 'owner', owner)
+        self.mock_methods(
+            PodCollection, '_get_namespaces', '_merge',
+            __init__=lambda self, owner=None: setattr(self, 'owner', owner)
         )
-        self.addCleanup(init_patcher.stop)
-        init_patcher.start()
-
-        self.mock_methods(PodCollection, '_get_namespaces', '_merge')
 
         U = type('User', (), {'username': '4u5hfee'})
         self.user = U()
@@ -1040,8 +1041,8 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
         pod_collection = PodCollection(self.user)
         pod_collection._get_pods([namespace])
 
-        self.assertSetEqual(set(pod_collection._collection.iterkeys()),
-                            set([('pod1', namespace), ('pod2', namespace)]))
+        self.assertItemsEqual(pod_collection._collection.iterkeys(),
+                              [('pod1', namespace), ('pod2', namespace)])
 
     @mock.patch('kubedock.kapi.podcollection.Pod')
     @mock.patch.object(PodCollection, '_get')
@@ -1155,6 +1156,123 @@ class TestPodCollectionStopCluster(unittest.TestCase, TestCaseMixin):
         del_mock.assert_has_calls([mock.call(['pods', 'pod1'], ns=namespace),
                                    mock.call(['pods', 'pod2'], ns=namespace),
                                    mock.call(['pods', 'pod3'], ns=namespace)])
+
+
+class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
+    def setUp(self):
+        self.mock_methods(
+            PodCollection, '_get_namespaces', '_get_pods',
+            __init__=lambda self, owner=None: setattr(self, 'owner', owner)
+        )
+
+        U = type('User', (), {'username': '4u5hfee'})
+        self.user = U()
+
+    @staticmethod
+    def _get_uniq_fake_pod(data):
+        pod = mock.create_autospec(Pod, instance=True)
+        pod.__dict__.update(data)
+        pod.__dict__.setdefault('sid', str(uuid4()))
+        pod.__dict__.setdefault('name', str(uuid4()))
+        pod.__dict__.setdefault('namespace', str(uuid4()))
+        return pod
+
+    def _get_fake_pod_model_instances(self, pods_total=10, namespaces_total=3):
+        namespaces = [str(uuid4()) for i in range(namespaces_total)]
+        pods_in_db = [{'name': 'pod{0}'.format(i),
+                       'namespace': namespaces[i % namespaces_total],
+                       'owner': self.user,
+                       'config': json.dumps({'name': 'pod{0}'.format(i),
+                                             'kube_type': randrange(3),
+                                             'containers': 'containers_in_db'})}
+                      for i in range(pods_total)]
+        pod_model_instances = []
+        for i, data in enumerate(pods_in_db):
+            pod_model_instance = mock.MagicMock()
+            pod_model_instance.__dict__.update(data)
+            pod_model_instance.__dict__.update(json.loads(data['config']))
+            pod_model_instance.id = i
+            pod_model_instances.append(pod_model_instance)
+        return pod_model_instances
+
+    @mock.patch.object(PodCollection, '_fetch_pods')
+    def test_pods_fetched(self, fetch_pods_mock):
+        """ _merge will fetch pods from db """
+        fetch_pods_mock.return_value = []
+        pod_collection = PodCollection()
+        pod_collection._collection = {}
+        pod_collection._merge()
+        fetch_pods_mock.assert_called_once_with(users=True)
+
+    @mock.patch('kubedock.kapi.podcollection.Pod')
+    @mock.patch.object(PodCollection, '_fetch_pods')
+    def test_pods_in_db_only(self, fetch_pods_mock, pod_mock):
+        """ If pod exists in db only, then _forge_dockers and add in _collection """
+        generated_pods = []
+
+        def pod_init_mock(data):
+            pod = mock.create_autospec(Pod, instance=True)
+            pod.__dict__.update(data)
+            # pod.name = data['name']
+            pod.containers = []
+            generated_pods.append(pod)
+            return pod
+        pod_mock.side_effect = pod_init_mock
+
+        pod_model_instances = self._get_fake_pod_model_instances()
+        fetch_pods_mock.return_value = pod_model_instances
+
+        pod_collection = PodCollection()
+        pod_collection._collection = {}
+        pod_collection._merge()
+
+        self.assertItemsEqual(
+            zip(*pod_mock.call_args_list)[0],  # [(args, kwargs),..] > [args, args,..]
+            [(json.loads(pod.config),) for pod in pod_model_instances]
+        )
+        for pod in generated_pods:
+            pod._forge_dockers.assert_called_once_with()
+
+        self.assertItemsEqual(
+            pod_collection._collection.iterkeys(),
+            ((pod.name, pod.namespace) for pod in pod_model_instances)
+        )
+
+    @mock.patch.object(PodCollection, 'merge_lists')
+    @mock.patch.object(PodCollection, '_fetch_pods')
+    def test_pods_in_db_and_kubernetes(self, fetch_pods_mock, merge_lists_mock):
+        """ If pod exists in db and kubernetes, then merge """
+        merge_lists_mock.return_value = tuple()
+
+        pods_total = 10
+        pod_model_instances = self._get_fake_pod_model_instances(pods_total)
+        fetch_pods_mock.return_value = pod_model_instances  # retrieved from db
+
+        pods_in_kubernetes = {  # retrieved from kubernates api
+            (pod.name, pod.namespace): self._get_uniq_fake_pod({
+                'sid': pod.name,
+                'name': pod.name,
+                'namespace': pod.namespace,
+                'containers': 'containers_in_kubernetes'
+            })
+            for pod in pod_model_instances
+        }
+
+        pod_collection = PodCollection()
+        pod_collection._collection = pods_in_kubernetes.copy()
+        pod_collection._merge()
+
+        self.assertEqual(len(pod_collection._collection), pods_total)
+        for pod in pod_model_instances:  # check that data from db was copied in pod
+            pod_in_collection = pod_collection._collection[pod.name, pod.namespace]
+            self.assertEqual(pod.id, pod_in_collection.id)
+            self.assertEqual(pod.kube_type, pod_in_collection.kube_type)
+        # check that containers lists were merged using "name" as key
+        merge_lists_mock.assert_has_calls([
+            mock.call('containers_in_kubernetes', 'containers_in_db', 'name')
+            for i in range(pods_total)
+        ])
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

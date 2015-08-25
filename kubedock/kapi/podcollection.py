@@ -201,6 +201,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod_index.add(pod.sid)
 
     def _merge(self):
+        """ Merge pods retrieved from kubernates api with data from DB """
         db_pods = self._fetch_pods(users=True)
         for db_pod in db_pods:
             db_pod_config = json.loads(db_pod.config)
@@ -217,12 +218,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 a = self._collection[db_pod.name, namespace].containers
                 b = db_pod_config.get('containers')
                 self._collection[db_pod.name, namespace].containers = self.merge_lists(a, b, 'name')
+
             if db_pod_config.get('public_aws'):
                 self._collection[db_pod.name, namespace].public_aws = db_pod_config['public_aws']
+
             if not hasattr(self._collection[db_pod.name, namespace], 'owner'):
                 self._collection[db_pod.name, namespace].owner = db_pod.owner.username
+
             if not hasattr(self._collection[db_pod.name, namespace], 'status'):
                 self._collection[db_pod.name, namespace].status = 'stopped'
+
             for container in self._collection[db_pod.name, namespace].containers:
                 container.pop('resources', None)
                 container['limits'] = repr_limits(container['kubes'], db_pod_config['kube_type'])
@@ -365,7 +370,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if self.owner.is_trial():
             user_kubes = self.owner.kubes
             kubes_left = TRIAL_KUBES - user_kubes
-            pod_kubes = sum([c['kubes'] for c in params['containers']])
+            pod_kubes = sum(c['kubes'] for c in params['containers'])
             if pod_kubes > kubes_left:
                 self._raise('Trial User limit is exceeded. '
                             'Kubes available for you: {0}'.format(kubes_left))

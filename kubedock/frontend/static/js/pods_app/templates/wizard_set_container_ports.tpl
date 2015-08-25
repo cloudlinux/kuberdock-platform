@@ -27,7 +27,7 @@
             <div class="ports">
                 <label>Ports:</label>
                 <div class="row">
-                    <div class="col-xs-10">
+                    <div class="col-xs-12">
                         <table id="ports-table" class="table">
                             <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Public</th></tr></thead>
                             <tbody>
@@ -69,7 +69,7 @@
             <div class="volumes">
                 <label>Volumes:</label>
                 <div class="row">
-                    <div class="col-xs-10">
+                    <div class="col-xs-12">
                         <table class="table" id="volumes-table">
                             <thead>
                                 <tr>

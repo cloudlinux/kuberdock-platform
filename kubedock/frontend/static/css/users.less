@@ -5,29 +5,32 @@
 #user-profile-logs-table,
 #user-profile-general-table,
 #all-users-activities-table{
+    .box-shadow-materials();
     thead{
         background-color: transparent;
-        &.min-opacity{
-            .opacity(0);
-        }
         tr{
             th{
-                border: none;
-                color: #b1b9c0;
+                .user-select(none);
+                height: 50px;
                 padding-top: 0;
-                font-size: 14px;
-                text-align: left;
+                color: #4e5665;
+                font-size: 13px;
+                cursor: default;
+                padding-bottom: 0;
                 font-weight: normal;
-                vertical-align: top;
-                padding-bottom: 10px;
+                border-bottom: none;
                 font-family: @regular;
-                border-bottom: 1px solid #e5e5e5;
+                vertical-align: middle;
+                &:first-child{
+                    padding-left: 24px;
+                }
                 &:focus{
                     outline: 0;
                 }
-                .tablesorter-header-inner{
-                    .caret{
-                        margin-left: 3px;
+                .caret{
+                    margin-left: 5px;
+                    &.rotate{
+                        .rotate(180deg)
                     }
                 }
             }
@@ -35,7 +38,8 @@
     }
     tbody{
         tr{
-            &.checked, &:hover{
+            background-color: #fff;
+            &:hover{
                 background-color: #f5fafe;
                 span{
                     &#deleteUser{
@@ -58,36 +62,37 @@
                     }
                 }
             }
-            &:last-child{
-                td{
-                    border-bottom: 1px solid #e5e5e5;
-                }
-            }
             td{
                 color: #1d1d1d;
-                font-size: 14px;
+                font-size: 13px;
                 font-family: @regular;
                 padding-top: 0;
                 padding-bottom: 0;
                 vertical-align: middle;
                 height: 50px;
+                &:first-child{
+                    padding-left: 24px;
+                }
                 span{
                     &#deleteUser, &#blockUser, &#activeteUser{
                         top: 3px;
-                        width: 28px;
-                        height: 17px;
-                        margin-left: 5px;
                         position: relative;
+                        margin-right: 10px;
                         display: inline-block;
                         &:hover{
                             cursor: pointer;
                         }
                     }
                     &#deleteUser{
+                        width: 16px;
                         height: 17px;
                     }
-                    &#blockUser, &#activeteUser{
-                        width: 20px;
+                    &#blockUser{
+                        width: 16px;
+                        height: 15px;
+                    }
+                    &#activeteUser{
+                        width: 19px;
                         height: 15px;
                     }
                     &.active, &.locked{
@@ -99,19 +104,17 @@
                             width: 12px;
                             content: '';
                             height: 12px;
-                            bottom: 3px;
+                            bottom: 2px;
                             position: absolute;
                         }
                     }
                     &.active{
                         &:before{
                             background-color: #97cd75;
-                            border: 1px solid #589630;
                         }
                     }
                     &.locked{
                         &:before{
-                            border: 1px solid #bc1b14;
                             background-color: #f5544d;
                         }
                     }
@@ -154,7 +157,7 @@
                 border: 0;
                 padding: 0;
                 color: #3197ee;
-                font-size: 14px;
+                font-size: 13px;
                 text-decoration: none;
                 font-family: @regular;
                 background-color: transparent;
@@ -181,15 +184,6 @@
         }
     }
 }
-#user-profile-logs-table{
-    thead{
-        tr{
-            th{
-                padding-bottom: 17px;
-            }
-        }
-    }
-}
 /* end-user-tables */
 
 /* create edit user page */
@@ -213,7 +207,7 @@
             }
         }
         label, input, select{
-            font-size: 14px;
+            font-size: 13px;
             font-family: @regular;
             color: #1d1d1d;
         }
@@ -242,6 +236,12 @@
                 border-color: red;
             }
         }
+        input{
+            &:focus{
+                .transition(color 500ms ease);
+                border-color: #188eed;
+            }
+        }
     }
 }
 #all-user-activity-tab{
@@ -264,6 +264,10 @@
                     padding-left: 46px;
                     padding-right: 17px;
                 }
+                &:focus{
+                    .transition(color 500ms ease);
+                    border-color: #188eed;
+                }
             }
             .dropdown-menu{
                 .border-radius(none);
@@ -282,7 +286,7 @@
                 left: 13px;
                 width: 15px;
                 height: 15px;
-                background: url('../img/search.png') 0 0 no-repeat;
+                background: url('../img/search2.png') 0 0 no-repeat;
             }
             .calendar{
                 top: 12px;
@@ -293,15 +297,6 @@
                 background: url('../img/calendar.png') 0 0 no-repeat;
             }
         }
-        #all-users-activities-table{
-            thead{
-                tr{
-                    th{
-                        padding-bottom: 25px;
-                    }
-                }
-            }
-        }
     }
 }
 #ui-datepicker-div{
@@ -309,7 +304,7 @@
     padding: 0;
     margin-top: -1px;
     background: #f5f5f5;
-    font-family: "ProximaNovaReg";
+    font-family: @regular;
     border-bottom: 2px solid #466eb1;
     .ui-datepicker-calendar{
         margin: 0;
@@ -344,10 +339,10 @@
         .border-radius(0);
         border: none;
         color: #1d1d1d;
-        font-size: 17px;
+        font-size: 16px;
         font-weight: 400;
         background: #FFFFFF;
-        font-family: initial;
+        font-family: @regular;
         a{
             &.ui-datepicker-next{
                 .ui-icon{
@@ -380,7 +375,7 @@
           background: white;
           text-align: center;
           padding-bottom: 5px;
-          font-family: initial;
+          font-family: @regular;
           border-color: #dce0e0;
           border-top-color: transparent;
           border-left-color: transparent;

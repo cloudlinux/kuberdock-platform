@@ -10,20 +10,30 @@ define(['pods_app/app',
                 className: 'breadcrumbs-wrapper',
 
                 ui: {
-                    'node_search' : 'input#nav-search-input'
+                    'pod_search'  : 'input#nav-search-input',
+                    'navSearch'   : '.nav-search'
                 },
 
                 events: {
-                    'keyup @ui.node_search' : 'filterCollection'
+                    'keyup @ui.pod_search'  : 'filterCollection',
+                    'click @ui.navSearch'   : 'showSearch',
+                    'blur @ui.pod_search'   : 'closeSearch',
                 },
 
                 filterCollection: function(evt){
                     evt.stopPropagation();
                     this.trigger('collection:filter', evt.target.value);
+                },
+
+                showSearch: function(){
+                    this.ui.navSearch.addClass('active');
+                    this.ui.pod_search.focus();
+                },
+
+                closeSearch: function(){
+                    this.ui.navSearch.removeClass('active');
                 }
-
             });
-
         });
 
         return Pods.Views.Misc;

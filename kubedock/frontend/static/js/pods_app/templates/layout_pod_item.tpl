@@ -7,9 +7,6 @@
             <li id="masthead-title" class="active"></li>
         </ul>
         <div class="control-group">
-            <!--
-            <a id="add_pod" href="/#newpod">Add container</a>
-            -->
             <div class="nav-search" id="nav-search">
                 <form class="form-search">
                     <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
@@ -20,6 +17,6 @@
     </div>
 </div>
 <div class="container">
-    <div id="item-controls" class="col-md-12"></div>
+    <div id="item-controls" class="col-md-12 no-padding"></div>
 </div>
 <div id="item-info" class="container"></div>

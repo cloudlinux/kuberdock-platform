@@ -131,10 +131,20 @@ define(['pods_app/app',
             className           : 'container',
             childViewContainer  : 'tbody',
 
-            initialize: function(){
-                if (!this.collection.fullCollection.hasOwnProperty('checkedNumber')) {
-                    this.collection.fullCollection.checkedNumber = 0;
-                }
+            ui: {
+                'runPods'       : '.runPods',
+                'stopPods'      : '.stopPods',
+                'removePods'    : '.removePods',
+                'toggleCheck'   : 'thead label.custom span',
+                'th'            : 'table th'
+            },
+
+            events: {
+                'click @ui.runPods'    : 'runPods',
+                'click @ui.stopPods'   : 'stopPods',
+                'click @ui.toggleCheck': 'toggleCheck',
+                'click @ui.removePods' : 'removePods',
+                'click @ui.th'         : 'toggleSort'
             },
 
             templateHelpers: function(){
@@ -144,18 +154,23 @@ define(['pods_app/app',
                 }
             },
 
-            ui: {
-                'runPods'    : '.runPods',
-                'stopPods'   : '.stopPods',
-                'removePods' : '.removePods',
-                'toggleCheck'   : 'thead label.custom span'
+            initialize: function(){
+                if (!this.collection.fullCollection.hasOwnProperty('checkedNumber')) {
+                    this.collection.fullCollection.checkedNumber = 0;
+                }
+                this.counter = 1;
             },
 
-            events: {
-                'click @ui.runPods'    : 'runPods',
-                'click @ui.stopPods'   : 'stopPods',
-                'click @ui.toggleCheck': 'toggleCheck',
-                'click @ui.removePods' : 'removePods',
+            toggleSort: function(e) {
+                var target = $(e.target),
+                  targetClass = target.attr('class');
+                if (targetClass) {
+                  this.collection.setSorting(targetClass, this.counter);
+                  this.collection.fullCollection.sort();
+                  this.counter = this.counter * (-1)
+                  target.find('.caret').toggleClass('rotate').parent()
+                      .siblings().find('.caret').removeClass('rotate');
+                }
             },
 
             toggleCheck: function(evt){

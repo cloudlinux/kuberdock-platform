@@ -1,5 +1,5 @@
 <!-- table data row -->
-<td>
+<td class="checkboxes">
     <label class="custom">
         <% if (checked){ %>
         <input type="checkbox" class="checkbox" checked>
@@ -24,18 +24,21 @@
 <td>
     <% if (status) { %>
         <span class="<%- status %>"><%- status %></span>
-        <% if ( status == 'running') { %>
-            <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
-        <% } else if ( status == 'stopped' ) { %>
-            <span class="start-btn" title="Start <%- name %> pod">Start</span>
-        <% } else if ( status == 'waiting' ) { %>
-            <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
-        <% } %>
     <% } else { %>
         <span class="stopped">stopped</span>
-        <span class="start-btn" title="Start <%- name %> pod">Start</span>
     <% } %>
 </td>
 <td>
     <%- _.find(kubeTypes, function(e) { return e.id == kube_type; }).name %> (<%- kubes %>)
+    <% if (status) { %>
+        <% if ( status == 'running') { %>
+            <span class="stop-btn pull-right" title="Stop <%- name %> pod">Stop</span>
+        <% } else if ( status == 'stopped' ) { %>
+            <span class="start-btn pull-right" title="Start <%- name %> pod">Start</span>
+        <% } else if ( status == 'waiting' ) { %>
+            <span class="stop-btn pull-right" title="Stop <%- name %> pod">Stop</span>
+        <% } %>
+    <% } else { %>
+        <span class="start-btn pull-right" title="Start <%- name %> pod">Start</span>
+    <% } %>
 </td>

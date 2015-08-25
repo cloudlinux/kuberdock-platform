@@ -23,9 +23,7 @@
                     <li>
                         <div id="users-page">Users</div>
                     </li>
-                    <li class="active">
-                        Activity
-                    </li>
+                    <li class="active">Activity</li>
                 </ul>
             </div>
         </div>
@@ -33,12 +31,8 @@
             <div class="row" id="all-user-activity-tab">
                 <div class="col-sm-2 sidebar">
                     <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                        <li class="usersPage general">
-                            Users
-                        </li>
-                        <li class="activityPage active">
-                            Users activity
-                        </li>
+                        <li class="usersPage general">Users</li>
+                        <li class="activityPage active">Users activity</li>
                     </ul>
                 </div>
                 <div class="tab-content col-sm-10">
@@ -58,13 +52,9 @@
                     </div>
                     <table class="table" id="all-users-activities-table">
                     <thead>
-                    <tr>
-{#                        <th>Name</th>#}
-{#                        <th>Email</th>#}
-{#                        <th>Role</th>#}
-{#                        <th>Active</th>#}
-                        <th>Last activity</th>
-                    </tr>
+                        <tr>
+                            <th>Last activity</th>
+                        </tr>
                     </thead>
                         <tbody id="users-activities-table"></tbody>
                     </table>
@@ -151,9 +141,7 @@
                             <%- username %>
                         <% } %>
                     </li>
-                    <li class="active">
-                        Login history
-                    </li>
+                    <li class="active">Login history</li>
                 </ul>
                 <div class="control-group">
                     <button id="edit_user">Edit user</button>
@@ -166,12 +154,8 @@
             <div class="row">
                 <div class="col-sm-3 col-md-2 sidebar">
                     <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                        <li class="general generalTab">
-                            General
-                        </li>
-                        <li class="logHistory active">
-                            Login history
-                        </li>
+                        <li class="general generalTab">General</li>
+                        <li class="logHistory active">Login history</li>
                     </ul>
                 </div>
                 <div id="details_content" class="col-sm-10">
@@ -182,18 +166,10 @@
                                     <table id="user-profile-logs-table" class="table">
                                         <thead>
                                             <tr>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Login</div>
-                                                </th>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Duration</div>
-                                                </th>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Logout</div>
-                                                </th>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>IP</div>
-                                                </th>
+                                                <th>Login</th>
+                                                <th>Duration</th>
+                                                <th>Logout</th>
+                                                <th>IP</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
@@ -221,9 +197,7 @@
                             <%- username %>
                         <% } %>
                     </li>
-                    <li class="active">
-                        General
-                    </li>
+                    <li class="active">General</li>
                 </ul>
                 <div class="control-group">
                     <button id="edit_user">Edit user</button>
@@ -236,12 +210,8 @@
             <div class="row">
                 <div class="col-sm-3 col-md-2 sidebar">
                     <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                        <li class="general active">
-                            General
-                        </li>
-                        <li class="logHistory">
-                            Login history
-                        </li>
+                        <li class="general active">General</li>
+                        <li class="logHistory">Login history</li>
                     </ul>
                 </div>
                 <div id="details_content" class="col-sm-10">
@@ -264,21 +234,11 @@
                                     <table id="user-profile-general-table" class="table">
                                         <thead>
                                             <tr>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Pods</div>
-                                                </th>
-{#                                                <th unselectable="on" style="-webkit-user-select: none;">#}
-{#                                                    <div>Average<br/>CPU usage</div>#}
-{#                                                </th>#}
-{#                                                <th unselectable="on" style="-webkit-user-select: none;">#}
-{#                                                    <div>Kube type column<br>(kubes quantity)</div>#}
-{#                                                </th>#}
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Kube type</div>
-                                                </th>
-                                                <th unselectable="on" style="-webkit-user-select: none;">
-                                                    <div>Kubes</div>
-                                                </th>
+                                                <th>Pods</th>
+                                                <!-- <th>Average<br/>CPU usage</th>
+                                                <th>Kube type column (kubes quantity)</th> -->
+                                                <th>Kube type</th>
+                                                <th>Kubes</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -312,10 +272,8 @@
 
     <script type="text/template" id="user-item-template">
         <td>
-            <button id="profileUser" title="Show <%- username %> profile">
-                <%- username %>
-            </button>
-            <span id="deleteUser" title="Remove <%- username %>"></span>
+            <button id="profileUser" title="Show <%- username %> profile"><%- username %></button>
+            <span id="deleteUser" class="pull-right" title="Remove <%- username %>"></span>
         </td>
         <td><%- podsCount %></td>
         <td><%- containersCount %></td>
@@ -324,10 +282,10 @@
         <td>
             <% if (active) { %>
                 <span class="active">Active</span>
-                <span id="blockUser" title="Lock user <%- username %>"></span>
+                <span id="blockUser" class="pull-right" title="Lock user <%- username %>"></span>
             <% } else { %>
                 <span class="locked">Locked</span>
-                <span id="activeteUser" title="Activate <%- username %>"></span>
+                <span id="activeteUser" class="pull-right" title="Activate <%- username %>"></span>
             <% } %>
         </td>
     </script>
@@ -347,9 +305,7 @@
                     <li class="usersPage">
                         <div id="users-page">Users</div>
                     </li>
-                    <li class="active" >
-                        Online
-                    </li>
+                    <li class="active" >Online</li>
                 </ul>
             </div>
         </div>
@@ -357,15 +313,9 @@
             <div class="row">
                 <div class="col-sm-3 col-md-2 sidebar">
                     <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                        <li class="usersPage general">
-                            Users
-                        </li>
-                        <li class="active">
-                            Online users
-                        </li>
-                        <li class="activityPage">
-                            Users activity
-                        </li>
+                        <li class="usersPage general">Users</li>
+                        <li class="active">Online users</li>
+                        <li class="activityPage">Users activity</li>
                     </ul>
                 </div>
                 <div id="details_content" class="col-sm-10">
@@ -392,20 +342,14 @@
 
     <script type="text/template" id="users-list-template">
         <div class="breadcrumbs-wrapper">
-            <div class="container breadcrumbs" id="breadcrumbs">
+            <div class="container breadcrumbs no-padding-right" id="breadcrumbs">
                 <ul class="breadcrumb">
-                    <li class="active">
-                        Users
-                    </li>
+                    <li class="active">Users</li>
                 </ul>
                 <div class="control-group">
                     <button id="create_user">Create user</button>
-                    <div class="nav-search" id="nav-search">
-                        <div class="form-search">
-                            <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
-                            <i class="nav-search-icon"></i>
-                        </div>
-                    </div>
+                    <div class="nav-search" id="nav-search"></div>
+                    <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
                 </div>
             </div>
         </div>
@@ -413,15 +357,9 @@
             <div class="row">
                 <div class="col-sm-3 col-md-2 sidebar">
                     <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                        <li class="general active">
-                            Users
-                        </li>
-                        <!-- <li class="onlinePage">
-                            Online users
-                        </li> -->
-                        <li class="activityPage">
-                            Users activity
-                        </li>
+                        <li class="general active">Users</li>
+                        <!-- <li class="onlinePage">Online users</li> -->
+                        <li class="activityPage">Users activity</li>
                     </ul>
                 </div>
                 <div id="details_content" class="col-sm-10">
@@ -429,13 +367,13 @@
                         <div class="tab-content col-xs-12 no-padding-right">
                             <table id="userslist-table" class="table col-sm-12">
                                 <thead>
-                                    <tr class="tablesorter-headerRow">
-                                        <th data-column="0" class="tablesorter-header tablesorter-headerDesc" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Name</div></th>
-                                        <th data-column="1" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Pods</div></th>
-                                        <th data-column="2" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Containers</div></th>
-                                        <th data-column="3" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Email</div></th>
-                                        <th data-column="4" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Role</div></th>
-                                        <th data-column="5" class="tablesorter-header" tabindex="0" unselectable="on" style="-webkit-user-select: none;"><div class="tablesorter-header-inner">Status</div></th>
+                                    <tr>
+                                       <th class="username">Name<span class="caret"></span></th>
+                                       <th class="pods_count">Pods<span class="caret"></span></th>
+                                       <th class="containers_count">Containers<span class="caret"></span></th>
+                                       <th class="email">Email<span class="caret"></span></th>
+                                       <th class="rolename">Role<span class="caret"></span></th>
+                                       <th class="active">Status<span class="caret"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -462,9 +400,7 @@
                     <li>
                         <a href="{{ url_for('users.index') }}online/">Online</a>
                     </li>
-                    <li class="active">
-                        Username
-                    </li>
+                    <li class="active">Username</li>
                 </ul>
             </div>
         </div>

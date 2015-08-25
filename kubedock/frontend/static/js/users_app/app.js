@@ -165,7 +165,9 @@ define(['marionette', 'paginator', 'utils'],
                 'edit_selected_user' : 'span#editUser',
                 'activity_page'      : '.activityPage',
                 'online_page'        : '.onlinePage',
-                'user_search'        : 'input#nav-search-input'
+                'user_search'        : 'input#nav-search-input',
+                'navSearch'          : '.nav-search',
+                'th'                 : 'table th'
             },
 
             events: {
@@ -176,7 +178,10 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.activate_selected_user' : 'activateSelectedUser',
                 'click @ui.activity_page'          : 'activity',
                 'click @ui.online_page'            : 'online',
-                'keyup @ui.user_search'            : 'filter'
+                'keyup @ui.user_search'            : 'filter',
+                'click @ui.navSearch'              : 'showSearch',
+                'blur @ui.user_search'             : 'closeSearch',
+                'click @ui.th'                     : 'toggleSort'
             },
 
             initialize: function() {
@@ -188,6 +193,18 @@ define(['marionette', 'paginator', 'utils'],
                         this.fakeCollection.reset(col.models);
                     }
                 });
+                this.counter = 1;
+            },
+
+            toggleSort: function(e) {
+                var target = $(e.target),
+                    targetClass = target.attr('class');
+
+                this.collection.setSorting(targetClass, this.counter);
+                this.collection.fullCollection.sort();
+                this.counter = this.counter * (-1)
+                target.find('.caret').toggleClass('rotate').parent()
+                      .siblings().find('.caret').removeClass('rotate');
             },
 
             filter: function() {
@@ -212,6 +229,15 @@ define(['marionette', 'paginator', 'utils'],
                     }
                 });
                 e.stopPropagation();
+            },
+
+            showSearch: function(){
+                this.ui.navSearch.addClass('active');
+                this.ui.user_search.focus();
+            },
+
+            closeSearch: function(){
+                this.ui.navSearch.removeClass('active');
             },
 
             createUser: function(){

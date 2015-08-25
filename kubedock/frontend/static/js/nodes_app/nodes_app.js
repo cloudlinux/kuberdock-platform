@@ -281,13 +281,18 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
         childViewContainer: "tbody",
 
         ui: {
+            'navSearch'   : '.nav-search',
             'addNode'     : 'button#add_node',
-            'node_search' : 'input#nav-search-input'
+            'node_search' : 'input#nav-search-input',
+            'th'          : 'table th'
         },
 
         events: {
             'click @ui.addNode'     : 'addNode',
-            'keyup @ui.node_search' : 'filter'
+            'keyup @ui.node_search' : 'filter',
+            'click @ui.navSearch'   : 'showSearch',
+            'blur @ui.node_search'  : 'closeSearch',
+            'click @ui.th'          : 'toggleSort'
         },
 
         collectionEvents: {
@@ -305,6 +310,18 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                     this.fakeCollection.reset(col.models);
                 }
             });
+            this.counter = 1;
+        },
+
+        toggleSort: function(e) {
+            var target = $(e.target),
+                targetClass = target.attr('class');
+
+            this.collection.setSorting(targetClass, this.counter);
+            this.collection.fullCollection.sort();
+            this.counter = this.counter * (-1)
+            target.find('.caret').toggleClass('rotate').parent()
+                  .siblings().find('.caret').removeClass('rotate');
         },
 
         filter: function() {
@@ -319,6 +336,15 @@ NodesApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
                 this.collection.fullCollection.reset(this.fakeCollection.models, { reindex: false});
             }
             this.collection.getFirstPage();
+        },
+
+        showSearch: function(){
+            this.ui.navSearch.addClass('active');
+            this.ui.node_search.focus();
+        },
+
+        closeSearch: function(){
+            this.ui.navSearch.removeClass('active');
         },
 
         templateHelpers: function(){

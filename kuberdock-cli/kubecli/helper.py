@@ -1,3 +1,5 @@
+import os
+import shutil
 import json
 import logging
 import operator
@@ -19,7 +21,7 @@ class KubeQuery(object):
     READ_TIMEOUT = 15
 
     def _compose_args(self):
-        args =  {
+        args = {
             'auth': HTTPBasicAuth(
                 getattr(self, 'user', 'user'),
                 getattr(self, 'password', 'password'))}
@@ -167,13 +169,15 @@ class PrintOut(object):
 
 
 def make_config(args):
+    create_user_config(args)
     excludes = ['call', 'config']
-    config = parse_config(args.config)
-    for  k, v in vars(args).items():
+    config = parse_config(os.path.expanduser(args.config))
+    for k, v in vars(args).items():
         if k in excludes:
             continue
         if v is not None:
             config[k] = v
+
     return config
 
 
@@ -188,3 +192,29 @@ def parse_config(path):
     for section in conf.sections():
         data.update(dict(conf.items(section)))
     return data
+
+
+def create_user_config(args):
+    path = os.path.expanduser(args.config)
+    default_path = os.path.expanduser('~/.kubecli.conf')
+    old_default_path = '/etc/kubecli.conf'
+
+    if not os.path.exists(default_path):
+        print('Default config was not found: {0}'.format(default_path))
+        conf = ConfigParser.ConfigParser()
+        conf.optionxform = str
+        if os.path.exists(path):
+            print('Saving specified config as default...')
+            conf.read(path)
+        elif os.path.exists(old_default_path):
+            print('Default config path was changed. Saving {0} as {1}...'
+                  ''.format(old_default_path, default_path))
+            conf.read(old_default_path)
+        else:
+            raise SystemExit("Config '{0}' not found. Try to specify a custom "
+                             "one with option '--config'".format(path))
+        conf.set('defaults', 'user', args.user)
+        conf.set('defaults', 'password', args.password)
+        conf.set('defaults', 'token', args.token)
+        with open(default_path, 'wb') as config:
+            conf.write(config)

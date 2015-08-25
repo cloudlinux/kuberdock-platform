@@ -9,20 +9,20 @@ from kubecli.image.docker import parser as docker
 
 def process_args():
     parser = argparse.ArgumentParser("KuberDock command line utilities")
-    parser.add_argument('-c', '--config', default='/etc/kubecli.conf')
+    parser.add_argument('-c', '--config', default='~/.kubecli.conf')
     parser.add_argument(
         '-u', '--user', help="User account to use. By default current one is used")
     parser.add_argument('-p', '--password')
     parser.add_argument('-t', '--token')
     parser.add_argument(
         '-j', '--json', action="store_true", help="Output data as JSON")
-    
+
     subs = parser.add_subparsers(
         help="Commands",
         title="Commands",
         description="Valid commands",
         dest="target")
-    
+
     kubectl(subs)
     kuberdock(subs)
     docker(subs)

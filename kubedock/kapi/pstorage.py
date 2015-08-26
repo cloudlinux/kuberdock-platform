@@ -600,12 +600,12 @@ class AmazonStorage(PersistentStorage):
         :param attach: bool -> action to be taken: if True attach otherwise detach
         """
         action = self._conn.attach_volume if attach else self._conn.detach_volume
-        message = 'An error occurred while drive being {}'.format(
+        message = 'An error occurred while drive being {0}: {{0}}'.format(
             'attached' if attach else 'detached')
         try:
             action(drive_id, instance_id, device)
-        except boto.exception.EC2ResponseError:
-            raise APIError(message)
+        except boto.exception.EC2ResponseError, e:
+            raise APIError(message.format(str(e)))
         
     @staticmethod
     def _raise_if_attached(drive):
@@ -613,9 +613,8 @@ class AmazonStorage(PersistentStorage):
         Raises the exception if drive is attached
         :param drive: object -> boto EBS volume object
         """
-        if getattr(drive, 'status', None) == 'available':
-            return
-        raise APIError("Drive already attached")
+        if getattr(drive, 'status', None) == 'in-use':
+            raise APIError("Drive already attached")
     
     def _get_first_instance_id(self):
         """

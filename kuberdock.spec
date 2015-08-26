@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 33%{?dist}.cloudlinux
+Release: 33.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Aug 26 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-33.1
+- small bugfix to AWS persistent storage
+
 * Wed Aug 26 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.2-33
 - AC-892: Add error if podname not less 64 characters & add success notification if correct
 - AC-786: Disk space limits in MB (again)

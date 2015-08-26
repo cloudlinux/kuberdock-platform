@@ -1,4 +1,5 @@
 import base64
+import boto
 import boto.ec2
 import json
 
@@ -13,9 +14,24 @@ from ..core import db
 from ..nodes.models import Node
 from ..pods.models import Pod
 from ..settings import PD_SEPARATOR
+from ..utils import APIError
 
 
 class PersistentStorage(object):
+    
+    def __init__(self):
+        env.user = 'root'
+        env.skip_bad_hosts = True
+
+    def __getattr__(self, attr):
+        if attr == '_first_node_ip':
+            item = db.session.query(Node).first()
+            if item is None:
+                raise type('NodesNotFoundError', (Exception,), {})(
+                    'Unable to get any node from database')
+            self.__dict__['_first_node_ip'] = item.ip
+            return item.ip
+        raise AttributeError('No such attribute: {0}'.format(attr))
 
     def get(self, drive_id=None):
         """
@@ -188,19 +204,7 @@ class PersistentStorage(object):
 class CephStorage(PersistentStorage):
 
     def __init__(self):
-        env.user = 'root'
-        env.skip_bad_hosts = True
         super(CephStorage, self).__init__()
-
-    def __getattr__(self, attr):
-        if attr == '_first_node_ip':
-            item = db.session.query(Node).first()
-            if item is None:
-                raise type('NodesNotFoundError', (Exception,), {})(
-                    'Unable to get any node from database')
-            self.__dict__['_first_node_ip'] = item.ip
-            return item.ip
-        raise AttributeError('No such attribute: {0}'.format(attr))
 
     @staticmethod
     def _poll():
@@ -256,6 +260,7 @@ class CephStorage(PersistentStorage):
             return                      # whatever it be return
         self._create_fs(dev, fs)        # make fs
         self._unmap_drive(dev)
+        return True
 
     def _create_fs(self, device, fs='ext4'):
         """
@@ -448,6 +453,7 @@ class AmazonStorage(PersistentStorage):
             self._aws_secret_access_key = AWS_SECRET_ACCESS_KEY
         except ImportError:
             pass
+        super(AmazonStorage, self).__init__()
 
     def _get_connection(self):
         if hasattr(self, '_conn'):
@@ -474,9 +480,29 @@ class AmazonStorage(PersistentStorage):
             return 0
 
     def _get_raw_drives(self):
+        """
+        Gets and returns EBS volumes objects as list
+        :return: list
+        """
         if not hasattr(self, '_conn'):
             self._get_connection()
         return self._conn.get_all_volumes()
+    
+    def _get_raw_drive_by_name(self, name):
+        """
+        Returns EBS volume object filtered by tag 'Name' if any
+        :param name: string -> drive name as EBS tag 'Name'
+        :return: object -> boto EBS object
+        """
+        drives = self._get_raw_drives()
+        for vol in drives:
+            try:
+                item = vol.tags.get('Name', 'Nameless')
+                if item == name:
+                    return vol
+            except ValueError:
+                continue
+        raise APIError("Drive not found")
 
     def _get_drives(self):
         if hasattr(self, '_drives'):
@@ -523,9 +549,109 @@ class AmazonStorage(PersistentStorage):
             if name == drive_name:
                 return 0 if vol.delete() else 1
 
-    def _makefs(self, drive_name):
+    def _makefs(self, drive_name, fs='ext4'):
         """
-        Maps drive, determine fs, make fs if no fs and unmaps drive
+        Wrapper around checking drive status, attacher, fs creator and detacher
         :param drive_name: string -> drive name
+        :param fs: string -> desired filesystem
         """
-        pass
+        drive = self._get_raw_drive_by_name(drive_name)
+        self._raise_if_attached(drive)
+        iid = self._get_first_instance_id()
+        device = self._get_next_drive()
+        self._handle_drive(drive.id, iid, device)
+        self._wait_until_ready(device)
+        self._create_fs_if_missing(device, fs)
+        self._handle_drive(drive.id, iid, device, False)
+        self._wait_until_ready(device, to_be_attached=False)
+        return drive.id
+    
+    def _wait_until_ready(self, device, to_be_attached=True, timeout=90):
+        """
+        Sends to node command to loop until state of /proc/partitions is changed
+        :param device: string -> a block device, e.g. /dev/xvda
+        :param to_be_attached: bool -> toggles checks to be taken: attached or detached
+        :param timeout: int -> number of seconds to wait for state change
+        """
+        check = 'n' if to_be_attached else 'z'
+        message = 'Device failed to switch to {} state'.format(
+            'attached' if to_be_attached else 'detached')
+        
+        command = ('KDWAIT=0 && while [ "$KDWAIT" -lt {0} ];'
+                   'do OUT=$(cat /proc/partitions|grep {1});'
+                   'if [ -{2} "$OUT" ];then break;'
+                   'else KDWAIT=$(($KDWAIT+1)) && $(sleep 1 && exit 1);'
+                   'fi;done'.format(timeout, device.replace('/dev/', ''), check))
+        
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                rv = run(command)
+                if rv.return_code == 0:
+                    return True
+        raise APIError(message)
+    
+    def _handle_drive(self, drive_id, instance_id, device, attach=True):
+        """
+        Attaches or detaches a drive
+        :param drive_id: string -> EBS volume ID
+        :param instance_id: string -> EC2 instance ID
+        :param device: string -> block device name, e.g. /dev/xvda
+        :param attach: bool -> action to be taken: if True attach otherwise detach
+        """
+        action = self._conn.attach_volume if attach else self._conn.detach_volume
+        message = 'An error occurred while drive being {}'.format(
+            'attached' if attach else 'detached')
+        try:
+            action(drive_id, instance_id, device)
+        except boto.exception.EC2ResponseError:
+            raise APIError(message)
+        
+    @staticmethod
+    def _raise_if_attached(drive):
+        """
+        Raises the exception if drive is attached
+        :param drive: object -> boto EBS volume object
+        """
+        if getattr(drive, 'status', None) == 'available':
+            return
+        raise APIError("Drive already attached")
+    
+    def _get_first_instance_id(self):
+        """
+        Gets all instances and filters out by IP pulled from DB
+        :return: string
+        """
+        reservations = self._conn.get_all_reservations()
+        for r in reservations:
+            for i in r.instances:
+                if i.private_ip_address == self._first_node_ip:
+                    return i.id
+        raise APIError("Instance not found")
+    
+    def _get_next_drive(self):
+        """
+        Gets current node xvdX devices, sorts'em and gets the last device letter.
+        Then returns next letter device name
+        :return: string -> device (/dev/xvdX)
+        """
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                rv = run("ls -1 /dev/xvd*|awk -F '' '/xvd/ {print $9}'|sort")
+                if rv.return_code != 0:
+                    raise APIError("An error occurred while list of node devices was being retrieved")
+                last = rv.splitlines()[-1]
+                last_num = ord(last)
+                if last_num >= 122:
+                    raise APIError("No free letters for devices")
+                return '/dev/xvd{0}'.format(chr(last_num+1))
+        
+    
+    def _create_fs_if_missing(self, device, fs='ext4'):
+        with settings(host_string=self._first_node_ip):
+            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+                          warn_only=True):
+                run("blkid -o value -s TYPE {0} || mkfs.{1} {2}".format(
+                    device, fs, device))
+    

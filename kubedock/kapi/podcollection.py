@@ -3,7 +3,7 @@ import hashlib
 from flask import current_app
 
 from ..billing import repr_limits
-from ..utils import modify_node_ips, run_ssh_command, send_event
+from ..utils import modify_node_ips, run_ssh_command, send_event, APIError
 from .pod import Pod
 from .pstorage import CephStorage, AmazonStorage
 from .helpers import KubeQuery, ModelQuery, Utilities
@@ -293,16 +293,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     self._raise_if_failure(service_rv, "Could not start a service")
                     db_config['service'] = service_rv['metadata']['name']
                     break
-        # process persistent storage
-        for v in db_config['volumes']:
-            if 'rbd' in v:
-                cs = CephStorage()
-                if not v['rbd'].get('monitors'):
-                    v['rbd']['monitors'] = cs.get_monitors()
-                size = v['rbd'].pop('size', None)
-                if size:
-                    cs._create_drive(v['rbd']['image'], size)
-                cs._makefs(v['rbd']['image'])
+
+        self._process_persistent_volumes(pod, db_config.get('volumes', []))
+
         self.replace_config(pod, db_config)
 
         config = pod.prepare()
@@ -342,6 +335,31 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 send_event('pull_pod_state', message)
             rv[container] = message or 'OK'
         return rv
+
+    @staticmethod
+    def _process_persistent_volumes(pod, volumes):
+        """
+        Processes preliminary persistent volume routines (create, attach, mkfs)
+        :param pod: object -> a Pod instance
+        :param volumes: list -> list of volumes
+        """
+        for v in volumes:
+            if 'rbd' in v:
+                ps = CephStorage()
+                if not v['rbd'].get('monitors'):
+                    v['rbd']['monitors'] = ps.get_monitors()
+                size = v['rbd'].get('size')
+                drive = v['rbd'].get('image')
+            elif 'awsElasticBlockStore' in v:
+                ps = AmazonStorage()
+                size = v['awsElasticBlockStore'].get('size')
+                drive = v['awsElasticBlockStore'].get('drive')
+            if drive is None:
+                raise APIError("Got no drive name")
+            if size is not None:
+                ps._create_drive(drive, size)
+            vid = ps._makefs(drive)
+            pod._update_volume_path(v['name'], vid)
 
     def _container_start(self, pod, data):
         self._do_container_action('start', data)

@@ -114,39 +114,21 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         cs = CephStorage()
                         monitors = cs.get_monitors()  # really slow operation
                         volume['rbd']['monitors'] = monitors
+                elif AWS:
+                    try:
+                        from ..settings import AVAILABILITY_ZONE
+                    except ImportError:
+                        return
+                    #volumeID: aws://<availability-zone>/<volume-id>
+                    volume['awsElasticBlockStore'] = {
+                        'volumeID': 'aws://{0}/'.format(AVAILABILITY_ZONE),
+                        'fsType': 'ext4',
+                        'drive': device
+                    }
+                    if size is not None:
+                        volume['awsElasticBlockStore']['size'] = size
             except KeyError:
                 continue
-
-    #def compose_persistent(self, username):
-    #    if not getattr(self, 'volumes', False):
-    #        return
-    #    path = 'pd.sh'
-    #    for volume in self.volumes:
-    #        try:
-    #            pd = volume.pop('persistentDisk')
-    #            name = volume['name']
-    #            device = '{0}{1}{2}'.format(
-    #                pd.get('pdName'), PD_SEPARATOR, username)
-    #            size = pd.get('pdSize')
-    #            if size is None:
-    #                array = ['mount', device, name]
-    #            else:
-    #                array = ['create', device, name, size]
-    #                if AWS:
-    #                    try:
-    #                        from ..settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-    #                        array.extend([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY])
-    #                    except ImportError:
-    #                        pass
-    #            fmt = ';'.join(['{{{0}}}'.format(i) for i in range(len(array))])
-    #            params = base64.b64encode(fmt.format(*array))
-    #
-    #            volume['scriptableDisk'] = {
-    #                'pathToScript': path,
-    #                'params': params
-    #            }
-    #        except KeyError:
-    #            continue
 
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)
@@ -214,6 +196,17 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if hasattr(self, 'public_ip'):
             pod_config['metadata']['labels']['kuberdock-public-ip'] = self.public_ip
         return config
+
+    def _update_volume_path(self, name, vid):
+        if vid is None:
+            return
+        for vol in getattr(self, 'volumes', []):
+            if vol.get('name') != name:
+                continue
+            try:
+                vol['awsElasticBlockStore']['volumeID'] += vid
+            except KeyError:
+                continue
 
     def _prepare_container(self, data, kube_type=0):
         if not data.get('name'):

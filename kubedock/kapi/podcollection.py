@@ -354,6 +354,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 ps = AmazonStorage()
                 size = v['awsElasticBlockStore'].get('size')
                 drive = v['awsElasticBlockStore'].get('drive')
+            else:
+                continue
             if drive is None:
                 raise APIError("Got no drive name")
             if size is not None:

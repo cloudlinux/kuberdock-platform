@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 32%{?dist}.cloudlinux
+Release: 33%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,7 +158,19 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
-* Sun Aug 09 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-32
+* Wed Aug 26 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.2-33
+- AC-892: Add error if podname not less 64 characters & add success notification if correct
+- AC-786: Disk space limits in MB (again)
+- AC-581 Added package field for user interface
+- Added jasmine to settings & users apps
+- AC-799, AC-856, AC-857, AC-859, AC-888 - orphography correction
+- AC-748: Unit-test python podcollection._check_trial
+- AC-633 Display package name on user page
+- AC-891: deploy.sh adds MONITORS and KEYRING_PATH options to ceph_settings.py
+- AC-842: Research how to mount persistent storage to AWS
+- AWS persistent storage moved to native implementation
+
+* Fri Aug 21 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-32
 - Added upgrade script for changing schema
 
 * Wed Aug 19 2015 Alex Tishin <atishin@cloudlinux.com>, Michail Bagrov <mbagrov@cloudlinux.com, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-31
@@ -168,6 +180,21 @@ fi
 - old unit-tests fix (podcollection)
 - First attempt to upgrade kuberdock
 - Add jasmine to Ippool application
+
+* Mon Aug 17 2015 Alex Tishin <atishin@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-30
+- Tests for _stop_pod
+- AC-791: show disc space in final step on add pod
+- AC-784: Add borders to errors fields& some small design
+- reworked pods list page functionality
+- just another pods_app refactoring completion
+- Improved update system with auto-reloading of upgrade utility
+- AC-728: PodCollection.add unit-tests
+- renamed t/index.html to t/pod_index.html and modified main.py accordingly
+- Small fix kuberdock_upgrade.py
+- AC-809: deploy.sh --cleanup; more elegant args parsing
+- AC-744: Unit-test python (pod). Method _do_container_action
+- AC-828: implemented for ceph backend
+- AC-786: Disk space limits in MB
 
 * Sun Aug 09 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-29
 - AC-782: Add bulk run/stop pods in podlist

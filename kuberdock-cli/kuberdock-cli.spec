@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 17%{?dist}.cloudlinux
+Release: 19%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,16 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Wed Aug 26 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.1-19
+- AC-569: kubecli: remove --read-only option
+- AC-562: change default config path (/etc/kubecli.conf -> ~/.kubecli.conf); if default config doesn't exist, copy specified config to default config path
+- AC-565: rename kcli kuberdock -i|--image -> -C|--container
+
+* Mon Aug 17 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-18
+- AC-566 KCLI new port syntax
+- AC-765 KCLI. Use token for all requests
+- AC-777 KCLI. Added user config
+
 * Sun Aug 09 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-17
 - AC-570: completed
 

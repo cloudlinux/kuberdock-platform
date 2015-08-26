@@ -500,20 +500,12 @@
 
 {% endblock %}
 
+{% block app_js_asset %}
+    <script data-main="{{ url_for('static', filename='js/nodes_app/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
 
-{% assets "vendor_js" -%}
-  <script src="{{ ASSET_URL }}"></script>
-{% endassets %}
-
-{% block app_js_asset %}{% endblock %} {# To cut off app_js temporary #}
-
-{% block nodes_app_js_asset %}
-    {% assets "nodes_app_js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
     <script type="text/javascript">
-        NodesApp.Data.nodes = new NodesApp.Data.NodesCollection({{ nodes_collection|safe }});
-        kubeTypes = {{ kube_types|tojson|safe }};
+        var nodesCollection = {{ nodes_collection|safe }};
+        var kubeTypes = {{ kube_types|tojson|safe }};
         var userSettings = {{ user_settings|tojson|safe }};
     </script>
 {% endblock %}

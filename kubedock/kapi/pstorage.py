@@ -2,6 +2,7 @@ import base64
 import boto
 import boto.ec2
 import json
+import time
 
 from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
@@ -18,7 +19,7 @@ from ..utils import APIError
 
 
 class PersistentStorage(object):
-    
+
     def __init__(self):
         env.user = 'root'
         env.skip_bad_hosts = True
@@ -477,6 +478,9 @@ class AmazonStorage(PersistentStorage):
         vol = self._conn.create_volume(size, self._availability_zone)
         if vol:
             vol.add_tag('Name', name)
+            while vol.status != 'available':
+                time.sleep(1)
+                vol.update()
             return 0
 
     def _get_raw_drives(self):
@@ -487,7 +491,7 @@ class AmazonStorage(PersistentStorage):
         if not hasattr(self, '_conn'):
             self._get_connection()
         return self._conn.get_all_volumes()
-    
+
     def _get_raw_drive_by_name(self, name):
         """
         Returns EBS volume object filtered by tag 'Name' if any
@@ -565,7 +569,7 @@ class AmazonStorage(PersistentStorage):
         self._handle_drive(drive.id, iid, device, False)
         self._wait_until_ready(device, to_be_attached=False)
         return drive.id
-    
+
     def _wait_until_ready(self, device, to_be_attached=True, timeout=90):
         """
         Sends to node command to loop until state of /proc/partitions is changed
@@ -576,13 +580,13 @@ class AmazonStorage(PersistentStorage):
         check = 'n' if to_be_attached else 'z'
         message = 'Device failed to switch to {} state'.format(
             'attached' if to_be_attached else 'detached')
-        
+
         command = ('KDWAIT=0 && while [ "$KDWAIT" -lt {0} ];'
                    'do OUT=$(cat /proc/partitions|grep {1});'
                    'if [ -{2} "$OUT" ];then break;'
                    'else KDWAIT=$(($KDWAIT+1)) && $(sleep 1 && exit 1);'
                    'fi;done'.format(timeout, device.replace('/dev/', ''), check))
-        
+
         with settings(host_string=self._first_node_ip):
             with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                           warn_only=True):
@@ -590,7 +594,7 @@ class AmazonStorage(PersistentStorage):
                 if rv.return_code == 0:
                     return True
         raise APIError(message)
-    
+
     def _handle_drive(self, drive_id, instance_id, device, attach=True):
         """
         Attaches or detaches a drive
@@ -606,7 +610,7 @@ class AmazonStorage(PersistentStorage):
             action(drive_id, instance_id, device)
         except boto.exception.EC2ResponseError, e:
             raise APIError(message.format(str(e)))
-        
+
     @staticmethod
     def _raise_if_attached(drive):
         """
@@ -615,7 +619,7 @@ class AmazonStorage(PersistentStorage):
         """
         if getattr(drive, 'status', None) == 'in-use':
             raise APIError("Drive already attached")
-    
+
     def _get_first_instance_id(self):
         """
         Gets all instances and filters out by IP pulled from DB
@@ -627,7 +631,7 @@ class AmazonStorage(PersistentStorage):
                 if i.private_ip_address == self._first_node_ip:
                     return i.id
         raise APIError("Instance not found")
-    
+
     def _get_next_drive(self):
         """
         Gets current node xvdX devices, sorts'em and gets the last device letter.
@@ -645,12 +649,11 @@ class AmazonStorage(PersistentStorage):
                 if last_num >= 122:
                     raise APIError("No free letters for devices")
                 return '/dev/xvd{0}'.format(chr(last_num+1))
-        
-    
+
+
     def _create_fs_if_missing(self, device, fs='ext4'):
         with settings(host_string=self._first_node_ip):
             with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                           warn_only=True):
                 run("blkid -o value -s TYPE {0} || mkfs.{1} {2}".format(
                     device, fs, device))
-    

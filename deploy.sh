@@ -238,9 +238,12 @@ else
                     CEPH_USER=root
                 fi
             echo "Trying to get your ceph config and keyring..."
-            #scp $CEPH_USER@$CEPH_ADMIN_HOST:/etc/ceph/ceph.* /tmp
-            FROM_CEPH_ADMIN=$(ssh $CEPH_USER@136.243.221.241 "grep mon_host /etc/ceph/ceph.conf | cut -d ' ' -f 3; ls /etc/ceph | grep keyring;")
-            if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please consider populating $KUBERDOCK_DIR/kubedock/ceph_settings.py manually"; fi
+            [ -d /tmp/ceph_tmp_config ] || mkdir /tmp/ceph_tmp_config
+            scp $CEPH_USER@$CEPH_ADMIN_HOST:/etc/ceph/ceph.* /tmp/ceph_tmp_config
+            #FROM_CEPH_ADMIN=$(ssh $CEPH_USER@$CEPH_ADMIN_HOST "grep mon_host /etc/ceph/ceph.conf | cut -d ' ' -f 3; ls /etc/ceph | grep keyring;")
+            #if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please consider populating $KUBERDOCK_DIR/kubedock/ceph_settings.py manually"; fi
+            if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please consider populating $KUBERDOCK_DIR/config manually"; fi
+            FROM_CEPH_ADMIN=$(grep mon_host /tmp/ceph_tmp_config/ceph.conf | cut -d ' ' -f 3; ls /tmp/ceph_tmp_config | grep keyring;)
             MONITORS=$(echo $FROM_CEPH_ADMIN | cut -f 1 -d " ")
             KEYRING_PATH=/etc/ceph/$(echo $FROM_CEPH_ADMIN | cut -f 2 -d " ")
 
@@ -680,6 +683,8 @@ CEPH=True
 MONITORS=$MONITORS
 KEYRING_PATH=$KEYRING_PATH
 EOF
+mv /tmp/ceph_tmp_config/ceph.* $KUBERDOCK_DIR/conf || /bin/true
+rm -rf /tmp/ceph_tmp_config || /bin/true
 fi
 
 # 18. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir

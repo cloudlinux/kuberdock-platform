@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 33.2%{?dist}.cloudlinux
+Release: 33.3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Aug 26 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-33.3
+- Added waiting for ebs is available after creation
+
 * Wed Aug 26 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-33.2
 - small bugfix in kubedock/kapi/podcollection.py
 

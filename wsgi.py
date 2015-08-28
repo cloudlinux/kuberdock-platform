@@ -35,7 +35,7 @@ except (TypeError, AttributeError):
 # ==============================================================================
 
 
-from kubedock import frontend, api
+from kubedock import frontend, api, listeners
 
 front_app = frontend.create_app()
 back_app = api.create_app()
@@ -50,15 +50,15 @@ except ImportError:
     pass
 else:
     if uwsgi.worker_id() == 1:
-        g = gevent.spawn(api.listen_endpoints, back_app)
-        h = gevent.spawn(api.listen_pods, back_app)
+        g = gevent.spawn(listeners.listen_endpoints, back_app)
+        h = gevent.spawn(listeners.listen_pods, back_app)
 
 if __name__ == "__main__":
 
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN'):
-        g = gevent.spawn(api.listen_endpoints, back_app)
-        h = gevent.spawn(api.listen_pods, back_app)
+        g = gevent.spawn(listeners.listen_endpoints, back_app)
+        h = gevent.spawn(listeners.listen_pods, back_app)
 
     @run_with_reloader
     def run_server():

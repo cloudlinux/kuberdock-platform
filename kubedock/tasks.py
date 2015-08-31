@@ -180,10 +180,10 @@ def add_node_to_k8s(host, kube_type):
 
 
 @celery.task()
-def add_new_node(host, kube_type, db_node, with_testing, nodes=None):
+def add_new_node(host, kube_type, db_node,
+                 with_testing=False, nodes=None, redeploy=False):
 
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
-
         try:
             current_master_kubernetes = subprocess.check_output(
                 ['rpm', '-q', 'kubernetes-master']).strip()
@@ -199,6 +199,13 @@ def add_new_node(host, kube_type, db_node, with_testing, nodes=None):
             current_master_kubernetes = 'kubernetes-master'
         current_master_kubernetes = current_master_kubernetes.replace(
             'master', 'node')
+
+        if redeploy:
+            send_logs(host, 'Redeploy.', log_file)
+            send_logs(host, 'Remove node {0} from kubernetes...'.format(host),
+                      log_file)
+            result = remove_node_by_host(host)
+            send_logs(host, json.dumps(result, indent=2), log_file)
 
         send_logs(host, 'Current kubernetes package on master is'
                         ' "{0}". Will install same package.'

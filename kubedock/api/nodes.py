@@ -591,5 +591,5 @@ def pd_lookup():
 def redeploy_item(node_id):
     check_int_id(node_id)
     m = db.session.query(Node).get(node_id)
-    tasks.add_new_node.delay(m.hostname, m.kube.id, m)
+    tasks.add_new_node.delay(m.hostname, m.kube.id, m, redeploy=True)
     return jsonify({'status': 'OK'})

@@ -85,7 +85,7 @@
                             <tr class="added-containers">
                                  <td id="<%- c.name %>"><b><%- c.image %></b></td>
                                  <td><%- c.kubes %></td>
-                                 <td><%- container_price %></td>
+                                 <td><%- container_price %> / <%- package.period %></td>
                                  <td>
                                      <button class="delete-item pull-right">&nbsp;</button>
                                      <!-- <button class="edit-item">&nbsp;</button> -->
@@ -96,7 +96,7 @@
                             <tr>
                                 <td><b>IP Adress:</b></td>
                                 <td></td>
-                                <td><span id="ipaddress_price"><%- price_ip %></td>
+                                <td><span id="ipaddress_price"><%- price_ip %> / <%- package.period %></td>
                                 <td></td>
                             </tr>
                         <% } %>
@@ -105,13 +105,13 @@
                                 <td><b>Persistent storage:</b></td>
                                 <td></td>
                                 <td colspan="2">
-                                    <span id="pstorage_price"><%- price_pstorage %> per 1 MB</span>
+                                    <span id="pstorage_price"><%- price_pstorage %> per 1 MB / <%- package.period %></span>
                                 </td>
                             </tr>
                         <% } %>
                         <tr>
                             <td class="total" colspan="3">
-                                Total price: <span id="total_price"><%- total_price %></span>
+                                Total price: <span id="total_price"><%- total_price %> / <%- package.period %></span>
                             </td>
                         </tr>
                     </tbody>

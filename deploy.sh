@@ -111,6 +111,18 @@ yum_wrapper()
     fi
 }
 
+#AWS stuff
+function get_vpc_id {
+    python -c "import json,sys; print json.load(sys.stdin)['Reservations'][0]['Instances'][0].get('VpcId', '')"
+}
+
+function get_subnet_id {
+    python -c "import json,sys; print json.load(sys.stdin)['Reservations'][0]['Instances'][0].get('SubnetId', '')"
+}
+
+function get_route_table_id {
+  python -c "import json,sys; lst = [str(route_table['RouteTableId']) for route_table in json.load(sys.stdin)['RouteTables'] if route_table['VpcId'] == '$1' and route_table['Associations'][0].get('SubnetId') == '$2']; print ''.join(lst)"
+}
 
 #yesno()
 ## $1 = Message prompt
@@ -222,6 +234,16 @@ if [ "$ISAMAZON" = true ];then
         log_it echo "Either AWS ACCESS KEY ID or AWS SECRET ACCESS KEY missing. Exit"
         exit 1
     fi
+    
+    if [ -z "$ROUTE_TABLE_ID" ];then
+        INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+        INSTANCE_DATA=$(aws ec2 describe-instances --region=$REGION --instance-id $INSTANCE_ID)
+        VPC_ID=$(echo "$INSTANCE_DATA"|get_vpc_id)
+        SUBNET_ID=$(echo "$INSTANCE_DATA"|get_subnet_id)
+        ROUTE_TABLES=$(aws ec2 describe-route-tables --region=$REGION)
+        ROUTE_TABLE_ID=$(echo "$ROUTE_TABLES"|get_route_table_id $VPC_ID $SUBNET_ID)
+    fi
+    
 else
     while true;do
         read -p "Do you have ceph (yes/no)? [no]: " HAS_CEPH
@@ -562,7 +584,11 @@ CONF_FLANNEL_SUBNET_LEN=24
 
 if [ "$ISAMAZON" = true ];then
     # host-gw don't work on AWS so we use aws-vpc
-    etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"aws-vpc\", \"RouteTableID\": \"$ROUTE_TABLE_ID\"}}" 2> /dev/null
+    if [ -z "$ROUTE_TABLE_ID" ];then
+        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"udp\"}}" 2> /dev/null
+    else
+        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"aws-vpc\", \"RouteTableID\": \"$ROUTE_TABLE_ID\"}}" 2> /dev/null
+    fi
 else
     etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"$CONF_FLANNEL_BACKEND\"}}" 2> /dev/null
 fi

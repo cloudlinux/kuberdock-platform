@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 33.3%{?dist}.cloudlinux
+Release: 34%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Aug 31 2015 Michael Bagrov <mbagrov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-34
+- AC-906: CEPH-client installation procedure simplification
+- AC-881 Display package payment type
+- AC-917 Pod's page=>Final step of creating container, MB is absent
+- AC-836: iptables rules to protect elasticsearch from unauthorized access
+- AC-894: allow any symbol in Pod.name
+- AC-808: Added workaround to deploy.sh to get ROUTE_TABLE_ID when started manually
+
 * Wed Aug 26 2015 Igor Savenko <bliss@cloudlinux.com> 0.2-33.3
 - Added waiting for ebs is available after creation
 

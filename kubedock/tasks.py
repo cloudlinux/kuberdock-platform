@@ -26,8 +26,8 @@ from .utils import update_dict, get_api_url, send_event, send_logs
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User
-from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS
-from .settings import NODE_INSTALL_TIMEOUT_SEC
+from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, \
+                        NODE_INSTALL_TIMEOUT_SEC, PORTS_TO_RESTRICT
 from .kapi.podcollection import PodCollection
 
 
@@ -180,7 +180,7 @@ def add_node_to_k8s(host, kube_type):
 
 
 @celery.task()
-def add_new_node(host, kube_type, db_node, with_testing):
+def add_new_node(host, kube_type, db_node, with_testing, nodes=None):
 
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
 
@@ -225,12 +225,17 @@ def add_new_node(host, kube_type, db_node, with_testing):
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
-                     'FLANNEL_IFACE={3} bash /node_install.sh'
+                     'FLANNEL_IFACE={3} bash /node_install.sh{4}'
+        # we pass ports and hosts to let the node know which hosts are allowed
+        data_for_firewall = reduce(
+            (lambda x, y: x + ' {0}'.format(','.join(y))),
+                [map(str, l) for l in PORTS_TO_RESTRICT, nodes if l], '')
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
         i, o, e = ssh.exec_command(deploy_cmd.format(AWS,
                                                      current_master_kubernetes,
-                                                     MASTER_IP, node_interface))
+                                                     MASTER_IP, node_interface,
+                                                     data_for_firewall))
         s_time = time.time()
         while not o.channel.exit_status_ready():
             if o.channel.recv_ready():

@@ -4,6 +4,9 @@
 KUBERNETES_CONF_DIR=/etc/kubernetes
 EXIT_MESSAGE="Installation error."
 
+PORTS=$1
+IPS=$2
+
 # SOME HELPERS
 
 check_status()
@@ -57,10 +60,8 @@ if [ $? == 0 ];then
     echo "Setting up firewall rules..."
     systemctl stop firewalld
     check_status
-    systemctl disable firewalld
-    check_status
+    systemctl mask firewalld
 fi
-
 
 # 1. create yum repo file
 
@@ -84,10 +85,17 @@ gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
 
 
-# 1.1 import CloudLinux key
+# 1.0 import CloudLinux key
 rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 check_status
 
+# 1.1 install iptables-services
+rpm -q iptables-services > /dev/null 2>&1
+if [ $? != 0 ];then
+    yum_wrapper install -y iptables-services
+    check_status
+fi
+systemctl enable iptables
 
 # 1.2 Install ntp, we need correct time for node logs
 yum_wrapper install -y ntp
@@ -419,6 +427,21 @@ if __name__ == '__main__':
     fslimit()
 EOF
 
+# 9. flush iptables rules and make new ones
+
+iptables -F
+
+for PORT in $(echo $PORTS|tr "," "\n");do
+    iptables -C INPUT -p tcp --dport $PORT -j REJECT > /dev/null 2>&1 || iptables -I INPUT -p tcp --dport $PORT -j REJECT
+done
+
+for PORT in $(echo $PORTS|tr "," "\n");do
+    for IP in $(echo $IPS|tr "," "\n");do
+        iptables -C INPUT -p tcp -s $IP --dport $PORT -j ACCEPT > /dev/null 2>&1 || iptables -I INPUT -p tcp -s $IP --dport $PORT -j ACCEPT
+    done
+done
+
+/sbin/service iptables save
 
 
 # 10. enable services

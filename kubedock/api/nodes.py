@@ -14,8 +14,8 @@ from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit, s
 from ..utils import maintenance_protected
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
-from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, CEPH
-from ..settings import KUBERDOCK_INTERNAL_USER
+from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, \
+                        CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT
 from ..kapi.podcollection import PodCollection
 from ..tasks import add_node_to_k8s
 from . import APIError
@@ -354,11 +354,12 @@ def get_one_node(node_id):
 
 
 def add_node(data, do_deploy=True, with_testing=False):
-    m = db.session.query(Node).filter_by(hostname=data['hostname']).first()
+    cursor = db.session.query(Node)
+    m = cursor.filter_by(hostname=data['hostname']).first()
     if not m:
         kube = Kube.query.get(data.get('kube_type', 0))
-        m = Node(ip=socket.gethostbyname(data['hostname']),
-                 hostname=data['hostname'], kube=kube, state='pending')
+        ip=socket.gethostbyname(data['hostname'])
+        m = Node(ip=ip, hostname=data['hostname'], kube=kube, state='pending')
         logs_kubes = 1
         node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
         logs_memory_limit = node_resources['limits']['memory']
@@ -388,8 +389,10 @@ def add_node(data, do_deploy=True, with_testing=False):
         except OSError:
             pass
 
+        nodes_data = cursor.values(Node.ip, Node.hostname)
+        nodes = dict(i for i in nodes_data if i[0] != ip).keys()
         if do_deploy:
-            tasks.add_new_node.delay(m.hostname, kube.id, m, with_testing)
+            tasks.add_new_node.delay(m.hostname, kube.id, m, with_testing, nodes)
         else:
             err = add_node_to_k8s(m.hostname, kube.id)
             if err:
@@ -400,6 +403,10 @@ def add_node(data, do_deploy=True, with_testing=False):
                 m.state = 'completed'
                 db.session.add(m)
                 db.session.commit()
+
+        for port in PORTS_TO_RESTRICT:
+            handle_nodes(process_rule, nodes=nodes, action='insert',
+                         port=port, target='ACCEPT', source=ip)
         data.update({'id': m.id})
         send_event('pull_nodes_state', 'ping')
         return jsonify({'status': 'OK', 'data': data})
@@ -448,7 +455,8 @@ def put_item(node_id):
 @maintenance_protected
 def delete_item(node_id):
     check_int_id(node_id)
-    m = db.session.query(Node).get(node_id)
+    cursor = db.session.query(Node)
+    m = cursor.get(node_id)
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
     logs_pod_name = get_kuberdock_logs_pod_name(m.hostname)
     logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name,
@@ -456,8 +464,13 @@ def delete_item(node_id):
     if logs_pod:
         PodCollection(ku).delete(logs_pod.id, force=True)
     if m:
+        nodes_data = cursor.values(Node.ip, Node.hostname)
+        nodes = dict(i for i in nodes_data if i[0] != m.ip).keys()
         db.session.delete(m)
         db.session.commit()
+        for port in PORTS_TO_RESTRICT:
+            handle_nodes(process_rule, nodes=nodes, action='delete',
+                port=port, target='ACCEPT', source=m.ip, append_reject=False)
         res = tasks.remove_node_by_host(m.hostname)
         if res['status'] == 'Failure':
             raise APIError('Failure. {0} Code: {1}'
@@ -489,14 +502,39 @@ def poll():
     return devices
 
 
-def get_ceph_volumes():
-    drives = []
+def process_rule(**kw):
+    append_reject = kw.pop('append_reject', True)
+    action = kw.pop('action', 'insert')
+    source = kw.pop('source', None)
+    kw['source'] = ' -s {0}'.format(source) if source else ''
+    kw['action'] = {'insert': 'I', 'append': 'A', 'delete': 'D'}[action]
+    kw['conj'] = {'insert': '||', 'append': '||', 'delete': '&&'}[action]
+
+    cmd = ('iptables -C INPUT -p tcp --dport {port}'
+           '{source} -j {target} > /dev/null 2>&1 '
+           '{conj} iptables -{action} INPUT -p tcp --dport {port}'
+           '{source} -j {target}')
+
+    run(cmd.format(**kw))
+    if append_reject:
+        run(cmd.format(
+            action='A', port=kw['port'], source='', target='REJECT', conj='||'))
+    run('/sbin/service iptables save')
+
+
+def handle_nodes(func, **kw):
     env.user = 'root'
     env.skip_bad_hosts = True
-    nodes = dict([(k, v)
-        for k, v in db.session.query(Node).values(Node.ip, Node.hostname)])
+    nodes = kw.pop('nodes', [])
     with settings(warn_only=True):
-        data = execute(poll, hosts=nodes.keys())
+        return execute(func, hosts=nodes, **kw)
+
+
+def get_ceph_volumes():
+    drives = []
+    nodes = dict([(k, v)
+        for k, v in db.session.query(Node).values(Node.ip, Node.hostname)]).keys()
+    data = handle_nodes(poll, nodes=nodes)
     sets = [set(filter((lambda x: x[1] is None), i.items())) for i in data.values()]
     intersection = map(operator.itemgetter(0), sets[0].intersection(*sets[1:]))
     username = KubeUtils._get_current_user().username

@@ -46,6 +46,7 @@ INFLUXDB_PASSWORD = 'root'
 INFLUXDB_DATABASE = 'cadvisor'
 
 PD_SEPARATOR = '__SEP__'
+PORTS_TO_RESTRICT = [9200]
 
 CELERYBEAT_SCHEDULE = {
     'event-stream': {
@@ -79,23 +80,43 @@ NODE_INSTALL_TIMEOUT_SEC = 30*60    # 30 min
 
 
 # Import hoster settings in update case
+
 import ConfigParser
-config = ConfigParser.RawConfigParser(
-    defaults=dict([(k, v) for k, v in globals().items() if k[0].isupper()])
-)
-try:
-    config.read('/etc/sysconfig/kuberdock/kuberdock.conf')
-    if not config.has_section('main'):
-        config.add_section('main')
-    DB_USER = config.get('main', 'DB_USER')
-    DB_PASSWORD = config.get('main', 'DB_PASSWORD')
-    DB_NAME = config.get('main', 'DB_NAME')
-    MASTER_IP = config.get('main', 'MASTER_IP')
-    MASTER_TOBIND_FLANNEL = config.get('main', 'MASTER_TOBIND_FLANNEL')
-    NODE_TOBIND_EXTERNAL_IPS = config.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
-    NODE_TOBIND_FLANNEL = config.get('main', 'NODE_TOBIND_FLANNEL')
-except ConfigParser.Error as e:
-    print 'ConfigParser Error: ', e
+cp = ConfigParser.ConfigParser()
+if cp.read('/etc/sysconfig/kuberdock/kuberdock.conf'):
+    if cp.has_section('main'):
+        if cp.has_option('main', 'DB_USER'):
+            DB_USER = cp.get('main', 'DB_USER')
+        if cp.has_option('main', 'DB_PASSWORD'):
+            DB_PASSWORD = cp.get('main', 'DB_PASSWORD')
+        if cp.has_option('main', 'DB_NAME'):
+            DB_NAME = cp.get('main', 'DB_NAME')
+        if cp.has_option('main', 'MASTER_IP'):
+            MASTER_IP = cp.get('main', 'MASTER_IP')
+        if cp.has_option('main', 'MASTER_TOBIND_FLANNEL'):
+            MASTER_TOBIND_FLANNEL = cp.get('main', 'MASTER_TOBIND_FLANNEL')
+        if cp.has_option('main', 'NODE_TOBIND_EXTERNAL_IPS'):
+            NODE_TOBIND_EXTERNAL_IPS = cp.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
+        if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
+            NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
+
+#import ConfigParser
+#config = ConfigParser.RawConfigParser(
+#    defaults=dict([(k, v) for k, v in globals().items() if k[0].isupper()])
+#)
+#try:
+#    config.read('/etc/sysconfig/kuberdock/kuberdock.conf')
+#    if not config.has_section('main'):
+#        config.add_section('main')
+#    DB_USER = config.get('main', 'DB_USER')
+#    DB_PASSWORD = config.get('main', 'DB_PASSWORD')
+#    DB_NAME = config.get('main', 'DB_NAME')
+#    MASTER_IP = config.get('main', 'MASTER_IP')
+#    MASTER_TOBIND_FLANNEL = config.get('main', 'MASTER_TOBIND_FLANNEL')
+#    NODE_TOBIND_EXTERNAL_IPS = config.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
+#    NODE_TOBIND_FLANNEL = config.get('main', 'NODE_TOBIND_FLANNEL')
+#except ConfigParser.Error as e:
+#    print 'ConfigParser Error: ', e
 
 
 # Import local settings

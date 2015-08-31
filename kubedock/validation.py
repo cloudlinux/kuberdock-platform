@@ -36,13 +36,13 @@ hostname_scheme = {
 
 
 # Kubernetes restriction, names must be dns-compatible
-pod_name = r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])+$"
+# pod_name = r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])+$"
 pod_name_scheme = {
     'type': 'string',
     'empty': False,
     'required': True,
-    'maxlength': 63,    # kubernetes restriction
-    'regex': pod_name,
+    'maxlength': 63,    # kubernetes restriction (was)
+    # 'regex': pod_name,
 }
 
 
@@ -277,7 +277,7 @@ change_pod_scheme.update({
         'type': 'string',
         'required': False,
         'empty': False,
-        'regex': pod_name
+        # 'regex': pod_name
     },
     'labels': {                                     # TODO when implement
         'type': 'dict',

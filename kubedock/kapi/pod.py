@@ -35,7 +35,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 ip = IpAddrPool().get_free()
                 pod.public_ip = unicode(ip, encoding='utf-8') if ip is not None else None
         pod._make_uuid_if_missing()
-        pod.sid = pod._make_sid()
+        pod.sid = str(uuid4())
         return pod
 
     @staticmethod
@@ -45,8 +45,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         status = data.get('status', {})
         spec = data.get('spec', {})
         pod.sid        = metadata.get('name')
-        pod.id         = metadata.get('uid')
-        pod.name       = metadata.get('labels', {}).get('name')
+        pod.id       = metadata.get('labels', {}).get('kuberdock-pod-uid')
         pod.namespace  = metadata.get('namespace')
         pod.replicationController = False
         pod.replicas   = 1
@@ -141,18 +140,18 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     "namespace": self.namespace,
                     "uid": self.id,
                     "labels": {
-                        "name": self.name
+                        "kuberdock-pod-uid": self.id
                     }
                 },
                 "spec": {
                     "replicas": 1,
                     "selector": {
-                        "name": self.name
+                        "kuberdock-pod-uid": self.id
                     },
                     "template": {
                         "metadata": {
                             "labels": {
-                                "name": self.name
+                                "kuberdock-pod-uid": self.id
                             }
                         },
                         "spec": {
@@ -176,7 +175,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     "namespace": self.namespace,
                     "uid": self.id,
                     "labels": {
-                        "name": self.name
+                        "kuberdock-pod-uid": self.id
                     }
                 },
                 "spec": {
@@ -261,4 +260,5 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             })
 
     def __repr__(self):
-        return "<Pod ('name':{0})>".format(self.name)
+        name = getattr(self, 'name', '').encode('ascii', 'replace')
+        return "<Pod ('id':{0}, 'name':{1})>".format(self.id, name)

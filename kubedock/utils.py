@@ -508,7 +508,7 @@ def modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app=None):
     return result
 
 
-def set_limit(host, pod_name, containers, app):
+def set_limit(host, pod_id, containers, app):
     ssh, errors = ssh_connect(host)
     if errors:
         print errors
@@ -519,7 +519,13 @@ def set_limit(host, pod_name, containers, app):
                 Kube.id, Kube.disk_space, Kube.disk_space_units
                 )
             )  #workaround
-        pod = Pod.query.filter_by(name=pod_name).first()
+
+        pod = Pod.query.filter_by(id=pod_id).first()
+
+        if pod is None:
+            print('Error: pod {0} not found in database'.format(pod_id))
+            return False
+
         config = json.loads(pod.config)
         kube_type = config['kube_type']
         #kube = Kube.query.get(kube_type) this query raises an exception

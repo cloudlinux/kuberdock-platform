@@ -24,7 +24,7 @@ class Pod(db.Model):
 
     def __repr__(self):
         return "<Pod(id='%s', name='%s', owner_id='%s', kubes='%s', config='%s', status='%s')>" % (
-            self.id, self.name, self.owner_id, self.kubes, self.config, self.status)
+            self.id, self.name.encode('ascii', 'replace'), self.owner_id, self.kubes, self.config, self.status)
 
     @property
     def kubes(self):

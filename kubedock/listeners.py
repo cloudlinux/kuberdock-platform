@@ -117,9 +117,7 @@ def process_pods_event(data, app):
         print 'POD EVENT', data
     event_type = data['type']
     pod = data['object']
-    pod_name = pod['metadata']['labels']['name']
-    with app.app_context():
-        pod_id = Pod.query.filter_by(name=pod_name).value(Pod.id)
+    pod_id = pod['metadata']['labels']['kuberdock-pod-uid']
 
     if event_type in ('MODIFIED', 'DELETED'):
 
@@ -186,7 +184,7 @@ def process_pods_event(data, app):
                 container_id = container['containerID'].partition('docker://')[2]
                 containers[container_name] = container_id
         if containers:
-            set_limit(host, pod_name, containers, app)
+            set_limit(host, pod_id, containers, app)
 
 
 def listen_fabric(url, func, verbose=1):

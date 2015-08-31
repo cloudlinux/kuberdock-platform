@@ -343,9 +343,10 @@ def do_cycle_updates(with_testing=False):
                 try:
                     db_upd.print_log('{0} successfully applied'.format(upd))
                 except sqlalchemy.orm.exc.DetachedInstanceError:
-                    new_db_upd = Updates.query.get(upd)
-                    if new_db_upd:
-                        new_db_upd.print_log('{0} successfully applied'.format(upd))
+                    db_upd = Updates.query.get(upd)
+                    if db_upd:
+                        db_upd.status = UPDATE_STATUSES.applied
+                        db_upd.print_log('{0} successfully applied'.format(upd))
         db_upd.end_time = datetime.utcnow()
         db.session.commit()
     if is_failed:

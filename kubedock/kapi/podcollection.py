@@ -1,5 +1,5 @@
 import json
-import hashlib
+from uuid import uuid4
 from flask import current_app
 
 from ..billing import repr_limits
@@ -10,16 +10,8 @@ from .helpers import KubeQuery, ModelQuery, Utilities
 from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION
 
 
-def generate_ns_name(user, podname):
-    s = '{0}-{1}'.format(user.username, podname)    # + timestamp?
-    h = hashlib.md5(s)
-    readable_part = ''.join([i if i not in '@._' else '-' for i in s[:30].lower()])
-    return '{0}-{1}'.format(readable_part, h.hexdigest())
-
-
 def get_user_namespaces(user):
-    return [generate_ns_name(user, p.name) for p in user.pods
-            if not p.is_deleted]
+    return {pod.namespace for pod in user.pods if not pod.is_deleted}
 
 
 class PodCollection(KubeQuery, ModelQuery, Utilities):
@@ -32,7 +24,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def add(self, params):
         self._check_trial(params)
-        params['namespace'] = generate_ns_name(self.owner, params['name'])
+        params['id'] = str(uuid4())
+        params['namespace'] = params['id']
         params['owner'] = self.owner
         pod = Pod.create(params)
         pod.compose_persistent(self.owner)
@@ -150,7 +143,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     'sid': item['id'],
                     'replicas': item['currentState']['replicas'],
                     'replicaSelector': item['desiredState']['replicaSelector'],
-                    'name': item['labels']['name']}
+                    'name': item['labels']['kuberdock-pod-uid']}
 
                 if name is not None and replica_item['replicaSelector'] != name:
                     continue
@@ -184,7 +177,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             pod = Pod.populate(item)
 
             for s in services_data:
-                if self._is_related(item['metadata']['labels'], s['spec']['selector']):
+                if self._is_related(item['metadata']['labels'], s['spec'].get('selector')):
                     pod.podIP = s['spec'].get('clusterIP')
                     break
 
@@ -197,7 +190,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     break
 
             if pod.sid not in pod_index:
-                self._collection[pod.name, pod.namespace] = pod
+                self._collection[pod.id, pod.namespace] = pod
                 pod_index.add(pod.sid)
 
     def _merge(self):
@@ -206,29 +199,31 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         for db_pod in db_pods:
             db_pod_config = json.loads(db_pod.config)
             namespace = db_pod.namespace
-            if (db_pod.name, namespace) not in self._collection:    # exists in DB only
+
+            if (db_pod.id, namespace) not in self._collection:  # exists in DB only
                 pod = Pod(db_pod_config)
+                pod.id = db_pod.id
                 pod._forge_dockers()
-                self._collection[pod.name, namespace] = pod
+                self._collection[pod.id, namespace] = pod
             else:
-                self._collection[db_pod.name, namespace].id = db_pod.id
+                self._collection[db_pod.id, namespace].name = db_pod.name
                 # TODO if remove _is_related then add podIP attribute here
-                # self._collection[db_pod.name, namespace].service = json.loads(db_pod.config).get('service')
-                self._collection[db_pod.name, namespace].kube_type = db_pod_config.get('kube_type')
-                a = self._collection[db_pod.name, namespace].containers
+                # self._collection[db_pod.id, namespace].service = json.loads(db_pod.config).get('service')
+                self._collection[db_pod.id, namespace].kube_type = db_pod_config.get('kube_type')
+                a = self._collection[db_pod.id, namespace].containers
                 b = db_pod_config.get('containers')
-                self._collection[db_pod.name, namespace].containers = self.merge_lists(a, b, 'name')
+                self._collection[db_pod.id, namespace].containers = self.merge_lists(a, b, 'name')
 
             if db_pod_config.get('public_aws'):
-                self._collection[db_pod.name, namespace].public_aws = db_pod_config['public_aws']
+                self._collection[db_pod.id, namespace].public_aws = db_pod_config['public_aws']
 
-            if not hasattr(self._collection[db_pod.name, namespace], 'owner'):
-                self._collection[db_pod.name, namespace].owner = db_pod.owner.username
+            if not hasattr(self._collection[db_pod.id, namespace], 'owner'):
+                self._collection[db_pod.id, namespace].owner = db_pod.owner.username
 
-            if not hasattr(self._collection[db_pod.name, namespace], 'status'):
-                self._collection[db_pod.name, namespace].status = 'stopped'
+            if not hasattr(self._collection[db_pod.id, namespace], 'status'):
+                self._collection[db_pod.id, namespace].status = 'stopped'
 
-            for container in self._collection[db_pod.name, namespace].containers:
+            for container in self._collection[db_pod.id, namespace].containers:
                 container.pop('resources', None)
                 container['limits'] = repr_limits(container['kubes'], db_pod_config['kube_type'])
 
@@ -252,7 +247,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'metadata': {
                 # 'generateName': pod.name.lower() + '-service-',
                 'generateName': 'service-',
-                'labels': {'name': pod._make_dash(limit=54) + '-service'},
+                'labels': {'name': pod.id[:54] + '-service'},
                 'annotations': {
                     'public-ip-state': json.dumps({
                         'assigned-public-ip': getattr(pod, 'public_ip',
@@ -261,7 +256,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 },
             },
             'spec': {
-                'selector': {'name': pod.name},
+                'selector': {'kuberdock-pod-uid': pod.id},
                 'ports': ports,
                 'type': 'ClusterIP',
                 'sessionAffinity': 'None'   # may be ClientIP is better
@@ -274,7 +269,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now
         number = int(data.get('replicas', getattr(pod, 'replicas', 0)))
-        replicas = self._get_replicas(pod.name)
+        replicas = self._get_replicas(pod.id)
         # TODO check replica numbers and compare to ones set in config
         for replica in replicas:
             rv = self._put(
@@ -301,7 +296,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         config = pod.prepare()
         rv = self._post([pod.kind], json.dumps(config), rest=True,
                         ns=pod.namespace)
-        self._raise_if_failure(rv, "Could not start '{0}' pod".format(pod.name))
+        self._raise_if_failure(rv, "Could not start '{0}' pod".format(
+            pod.name.encode('ascii', 'replace')))
         return {'status': 'pending'}
 
     def _stop_pod(self, pod, data=None):
@@ -315,9 +311,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return {'status': 'stopped'}
 
     def _stop_cluster(self, pod):
-        """ Delete all pods with the same name as pod.name in the same namespace """
+        """ Delete all replicas of the pod """
         for p in self._get(['pods'], ns=pod.namespace)['items']:
-            if self._is_related(p['metadata']['labels'], {'name': pod.name}):
+            if self._is_related(p['metadata']['labels'], {'kuberdock-pod-uid': pod.id}):
                 self._del(['pods', p['metadata']['name']], ns=pod.namespace)
 
     def _do_container_action(self, action, data):

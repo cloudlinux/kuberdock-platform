@@ -225,20 +225,6 @@ class Utilities(object):
         #if status is not None and status.lower() not in ['success', 'working']:
         #    self._raise(message)
 
-    def _make_dash(self, limit=None):
-        """
-        Substitutes certain symbols for dashes to make DNS-compatible string
-        """
-        data = '-'.join(re.split(r'[\s\\/\[\|\]{}\(\)\._]+', self.name))
-        if limit is None:
-            return data
-        return data[:limit]
-
-    def _make_sid(self, _re=re.compile(r'[\s\\/\[\|\]{}\(\)\._]+')):
-        sid = _re.sub('', self.name).lower()
-        sid += ''.join(random.sample(string.lowercase + string.digits, 20))
-        return sid
-
     @staticmethod
     def _make_name_from_image(image):
         """

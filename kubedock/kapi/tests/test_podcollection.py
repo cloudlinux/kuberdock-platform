@@ -383,18 +383,6 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
         self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
         self.pod_collection = PodCollection(U())
 
-    def test_make_dash(self):
-        """
-        Test _make_dash() must return string no longer then 'limit' and spaces
-        replaced with dashes
-        """
-        pod = type('FakePod', (Pod,), {
-            'name': 'Some Very long pod name that is not compatible with dns -1'
-        })()
-        res = pod._make_dash(limit=54)
-        self.assertLessEqual(len(res), 54)
-        self.assertNotIn(' ', res)
-
     @mock.patch.object(PodCollection, '_post')
     def test_pod_run_service(self, post_):
         """
@@ -403,6 +391,7 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
         """
         # Fake Pod instance
         pod_name = 'bla bla pod'
+        pod_id = str(uuid4())
         pod = type('Pod', (Pod,), {
             'sid': 's',
             'kind': 'k',
@@ -410,7 +399,8 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
             'owner': 'u',
             'public_ip': '127.0.0.1',
             'replicationController': False,
-            'name': pod_name
+            'name': pod_name,
+            'id': pod_id
         })()
 
         pod.containers = [{
@@ -426,10 +416,10 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
             '"ClusterIP", "ports": [{"targetPort": 80, "protocol": "TCP", ' \
             '"name": "c0-p0-public", "port": 1000}, {"targetPort": 80, ' \
             '"protocol": "TCP", "name": "c0-p1", "port": 80}], "selector": ' \
-            '{"name": "bla bla pod"}}, "apiVersion": "v1", "metadata": ' \
+            '{"kuberdock-pod-uid": "%(id)s"}}, "apiVersion": "v1", "metadata": ' \
             '{"generateName": "service-", "labels": {"name": ' \
-            '"bla-bla-pod-service"}, "annotations": {"public-ip-state": ' \
-            '"{\\"assigned-public-ip\\": \\"127.0.0.1\\"}"}}}'
+            '"%(id)s-service"}, "annotations": {"public-ip-state": ' \
+            '"{\\"assigned-public-ip\\": \\"127.0.0.1\\"}"}}}' % {'id': pod_id}
         post_.assert_called_once_with(['services'], expected_service_conf,
                                       ns='n', rest=True)
 
@@ -486,10 +476,14 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
 class TestPodCollectionGetNamespaces(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
-        pod = namedtuple('pod_tuple', ['name', 'is_deleted'])
+        pod = namedtuple('pod_tuple', ['name', 'is_deleted', 'namespace'])
         pods = [
-            pod(name='Unnamed-1', is_deleted=False),
-            pod(name='test-some-long.pod.name1', is_deleted=False),
+            pod(name='Unnamed-1', is_deleted=False,
+                namespace='user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094'),
+            pod(name='test-some-long.pod.name1', is_deleted=False,
+                namespace='user-test-some-long-pod-name1-8e8843452313cdc9edec704dee6919bb'),
+            pod(name='Pod with some weird name #3', is_deleted=False,
+                namespace='ccc6736151b6011c2442c72ddb077be6'),
         ]
         U = type('User', (), {'username': 'user', 'pods': pods})
         self.get_ns_patcher = mock.patch.object(PodCollection, '_get_namespaces')
@@ -510,6 +504,7 @@ class TestPodCollectionGetNamespaces(unittest.TestCase, TestCaseMixin):
             'kuberdock-internal-kuberdock-d-80ca388842da44badab255d8dccfca5c',
             'user-test-some-long-pod-name1-8e8843452313cdc9edec704dee6919bb',
             'user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094',
+            'ccc6736151b6011c2442c72ddb077be6',
         ]
         ns_items = {'items': [{'metadata': {'name': i}} for i in test_nses]}
         self.pod_collection._get = mock.Mock(return_value=ns_items)
@@ -738,6 +733,7 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
             '_allocate_ip': mock.Mock(),
             'as_dict': mock.Mock()
         })
+
         self.user = U()
         self.name = 'nginx'
         self.params = {'name': self.name}
@@ -753,13 +749,14 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
 
     @mock.patch.object(PodCollection, '_save_pod')
     @mock.patch.object(Pod, 'create')
-    @mock.patch('kubedock.kapi.podcollection.generate_ns_name')
+    @mock.patch('kubedock.kapi.podcollection.uuid4')
     @mock.patch.object(PodCollection, '_check_trial')
-    def test_pod_create_called(self, check_trial_, generate_, create_, save_pod_):
-        generate_.return_value = self.namespace
+    def test_pod_create_called(self, check_trial_, uuid4_, create_, save_pod_):
+        uuid4_.return_value = self.namespace
         create_.return_value(self.pod)
         self.pod_collection.add(self.params)
         create_.assert_called_once_with({
+            'id': uuid4_.return_value,
             'name': self.name,
             'namespace': self.namespace,
             'owner': self.user
@@ -991,6 +988,7 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
     def _get_uniq_fake_pod(*args):
         pod = mock.MagicMock()
         pod.sid = str(uuid4())
+        pod.id = str(uuid4())
         pod.name = str(uuid4())
         pod.namespace = str(uuid4())
         return pod
@@ -1033,7 +1031,8 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
 
         def _get_uniq_fake_pod(item):
             pod = self._get_uniq_fake_pod()
-            pod.name = item['metadata']['labels']['name']
+            pod.id = item['metadata']['labels']['name']
+            pod.name = pod.id + 'creepy invalid stuff !@#$'
             pod.namespace = namespace
             return pod
         PodMock.populate.side_effect = _get_uniq_fake_pod
@@ -1132,22 +1131,22 @@ class TestPodCollectionStopCluster(unittest.TestCase, TestCaseMixin):
         self.mock_methods(PodCollection, '_get_namespaces', '_merge', '_get_pods')
         U = type('User', (), {'username': '4u5hfee'})
         self.user = U()
-        self.PodMock = namedtuple('Pod', ('name', 'namespace'))
+        self.PodMock = namedtuple('Pod', ('id', 'name', 'namespace'))
 
     @mock.patch.object(PodCollection, '_del')
     @mock.patch.object(PodCollection, '_get')
     def test_delete_right_pods(self, get_mock, del_mock):
         """ _merge will fetch pods from db """
-        pod_name, namespace = 'test-app-pod', str(uuid4())
-        pod = self.PodMock(pod_name, namespace)
+        pod_id, pod_name, namespace = str(uuid4()), 'test-app-pod', str(uuid4())
+        pod = self.PodMock(pod_id, pod_name, namespace)
         pod_collection = PodCollection(self.user)
 
         pod_collection._get.return_value = {'items': [
-            {'metadata': {'name': 'pod1', 'labels': {'name': pod_name}}},
-            {'metadata': {'name': 'pod2', 'labels': {'name': pod_name}}},
-            {'metadata': {'name': 'pod3', 'labels': {'name': pod_name}}},
-            {'metadata': {'name': 'pod4', 'labels': {'name': 'other-pod'}}},
-            {'metadata': {'name': 'pod5', 'labels': {'name': 'other-pod2'}}},
+            {'metadata': {'name': 'pod1', 'labels': {'kuberdock-pod-uid': pod_id}}},
+            {'metadata': {'name': 'pod2', 'labels': {'kuberdock-pod-uid': pod_id}}},
+            {'metadata': {'name': 'pod3', 'labels': {'kuberdock-pod-uid': pod_id}}},
+            {'metadata': {'name': 'pod4', 'labels': {'kuberdock-pod-uid': 'other-pod'}}},
+            {'metadata': {'name': 'pod5', 'labels': {'kuberdock-pod-uid': 'other-pod2'}}},
         ]}
 
         pod_collection._stop_cluster(pod)
@@ -1179,13 +1178,15 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
 
     def _get_fake_pod_model_instances(self, pods_total=10, namespaces_total=3):
         namespaces = [str(uuid4()) for i in range(namespaces_total)]
-        pods_in_db = [{'name': 'pod{0}'.format(i),
+        pod_ids = [str(uuid4()) for i in range(pods_total)]
+        pods_in_db = [{'id': pod_id,
+                       'name': 'pod{0}'.format(i),
                        'namespace': namespaces[i % namespaces_total],
                        'owner': self.user,
-                       'config': json.dumps({'name': 'pod{0}'.format(i),
+                       'config': json.dumps({'name': pod_id,
                                              'kube_type': randrange(3),
-                                             'containers': 'containers_in_db'})}
-                      for i in range(pods_total)]
+                                             'containers': ()})}
+                      for i, pod_id in enumerate(pod_ids)]
         pod_model_instances = []
         for i, data in enumerate(pods_in_db):
             pod_model_instance = mock.MagicMock()
@@ -1235,7 +1236,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
 
         self.assertItemsEqual(
             pod_collection._collection.iterkeys(),
-            ((pod.name, pod.namespace) for pod in pod_model_instances)
+            ((pod.id, pod.namespace) for pod in pod_model_instances)
         )
 
     @mock.patch.object(PodCollection, 'merge_lists')
@@ -1249,7 +1250,8 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
         fetch_pods_mock.return_value = pod_model_instances  # retrieved from db
 
         pods_in_kubernetes = {  # retrieved from kubernates api
-            (pod.name, pod.namespace): self._get_uniq_fake_pod({
+            (pod.id, pod.namespace): self._get_uniq_fake_pod({
+                'id': pod.id,
                 'sid': pod.name,
                 'name': pod.name,
                 'namespace': pod.namespace,
@@ -1264,12 +1266,12 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
 
         self.assertEqual(len(pod_collection._collection), pods_total)
         for pod in pod_model_instances:  # check that data from db was copied in pod
-            pod_in_collection = pod_collection._collection[pod.name, pod.namespace]
+            pod_in_collection = pod_collection._collection[pod.id, pod.namespace]
             self.assertEqual(pod.id, pod_in_collection.id)
             self.assertEqual(pod.kube_type, pod_in_collection.kube_type)
         # check that containers lists were merged using "name" as key
         merge_lists_mock.assert_has_calls([
-            mock.call('containers_in_kubernetes', 'containers_in_db', 'name')
+            mock.call('containers_in_kubernetes', [], 'name')
             for i in range(pods_total)
         ])
 

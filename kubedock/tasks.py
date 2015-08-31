@@ -274,28 +274,28 @@ def add_new_node(host, kube_type, db_node, with_testing, nodes=None):
 
 def parse_pods_statuses(data):
     db_pods = {}
-    for pod_name, pod_id, pod_config in Pod.query.filter(
-            Pod.status != 'deleted').values(Pod.name, Pod.id, Pod.config):
+    for pod_id, pod_config in Pod.query.filter(
+            Pod.status != 'deleted').values(Pod.id, Pod.config):
         kubes = {}
         containers = json.loads(pod_config).get('containers', [])
         for container in containers:
             if 'kubes' in container:
                 kubes[container['name']] = container['kubes']
-        db_pods[pod_name] = {'uid': pod_id, 'kubes': kubes}
+        db_pods[pod_id] = {'kubes': kubes}
     items = data.get('items')
     res = []
     for item in items:
         current_state = item['status']
         try:
-            pod_name = item['metadata']['labels']['name']
+            pod_id = item['metadata']['labels']['kuberdock-pod-uid']
         except KeyError:
-            pod_name = item['metadata']['name']   # don't match our needs at all
-        if pod_name in db_pods:
-            current_state['uid'] = db_pods[pod_name]['uid']
+            pod_id = item['metadata']['name']   # don't match our needs at all
+        if pod_id in db_pods:
+            current_state['uid'] = pod_id
             if 'containerStatuses' in current_state:
                 for container in current_state['containerStatuses']:
-                    if container['name'] in db_pods[pod_name]['kubes']:
-                        container['kubes'] = db_pods[pod_name]['kubes'][container['name']]
+                    if container['name'] in db_pods[pod_id]['kubes']:
+                        container['kubes'] = db_pods[pod_id]['kubes'][container['name']]
             res.append(current_state)
     return res
 

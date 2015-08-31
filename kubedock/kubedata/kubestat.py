@@ -15,29 +15,27 @@ from ..utils import get_api_url
 
 class KubeUnitResolver(object):
     def __init__(self):
-        self._names = []
+        self._ids = []
         self._containers = {}
 
     def by_unit(self, uuid):
         unit = db.session.query(Pod).get(uuid)
         if unit is None:
             return self._containers
-        self._names.append(unit.name)
+        self._ids.append(unit.id)
         self._get_containers()
         return self._containers
 
-
-
     def all(self):
         data = db.session.query(Pod).all()
-        self._names.extend([i.name for i in data])
+        self._ids.extend([i.id for i in data])
         self._get_containers()
         return self._containers
 
     def by_user(self, username=None):
         data = db.session.query(Pod).join(Pod.owner).filter_by(
-            username=User.username).values(Pod.name)
-        self._names.extend([i[0] for i in data])
+            username=User.username).values(Pod.id)
+        self._ids.extend([i[0] for i in data])
         self._get_containers()
         return self._containers
 
@@ -54,7 +52,7 @@ class KubeUnitResolver(object):
         ip_patt = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
         for item in self._data['items']:
             try:
-                if item['metadata']['labels']['name'] not in self._names:
+                if item['metadata']['labels']['kuberdock-pod-uid'] not in self._ids:
                     continue
                 host = item['spec']['nodeName']
                 if ip_patt.match(host):
@@ -62,7 +60,10 @@ class KubeUnitResolver(object):
                 if host not in self._containers:
                     self._containers[host] = []
                 for c in item['spec']['containers']:
-                    self._containers[host].append((c['name'], item['metadata']['name'], item['metadata']['labels']['name']))
+                    self._containers[host].append((
+                        c['name'], item['metadata']['name'],
+                        item['metadata']['labels']['kuberdock-pod-uid']
+                    ))
             except KeyError:
                 continue
             except socket.herror:

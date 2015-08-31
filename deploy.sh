@@ -234,7 +234,7 @@ if [ "$ISAMAZON" = true ];then
         log_it echo "Either AWS ACCESS KEY ID or AWS SECRET ACCESS KEY missing. Exit"
         exit 1
     fi
-    
+
     if [ -z "$ROUTE_TABLE_ID" ];then
         INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
         INSTANCE_DATA=$(aws ec2 describe-instances --region=$REGION --instance-id $INSTANCE_ID)
@@ -243,7 +243,7 @@ if [ "$ISAMAZON" = true ];then
         ROUTE_TABLES=$(aws ec2 describe-route-tables --region=$REGION)
         ROUTE_TABLE_ID=$(echo "$ROUTE_TABLES"|get_route_table_id $VPC_ID $SUBNET_ID)
     fi
-    
+
 else
     while true;do
         read -p "Do you have ceph (yes/no)? [no]: " HAS_CEPH
@@ -845,7 +845,8 @@ do_cleanup()
 
     log_it echo "Remove dirs..."
     for i in /var/run/kubernetes /etc/kubernetes /var/run/flannel ~/.etcd-ca \
-             /var/opt/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd; do
+             /var/opt/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd
+             /etc/etcd/etcd.conf /var/lib/etcd; do
         rm -rf $i
     done
 

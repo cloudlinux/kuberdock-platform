@@ -239,12 +239,11 @@ def put_item(user_id):
         else:
             data['role'] = db.session.query(Role).filter_by(rolename='User').first()
     if 'package' in data:
-        package = data.pop('package', 'basic')
+        package = data['package']
         p = db.session.query(Package).filter_by(name=package).first()
-        if p is not None:
-            data['package'] = p
-        else:
-            data['package'] = db.session.query(Package).filter_by(name='basic').first()
+        if p is None:
+            p = db.session.query(Package).filter_by(name='Standard package').first()
+        data['package'] = p
     u.update(data)
     u.save()
     return jsonify({'status': 'OK'})

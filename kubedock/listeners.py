@@ -10,7 +10,7 @@ from .core import db
 from .pods.models import ContainerState, Pod
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .tasks import fix_pods_timeline_heavy
-from .utils import modify_node_ips, get_api_url, set_limit
+from .utils import modify_node_ips, get_api_url, set_limit, unregistered_pod_warning
 
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -110,6 +110,61 @@ def process_endpoints_event(data, app):
         pass
 
 
+def update_containers_state(event_type, pod_id, containers):
+    if Pod.query.get(pod_id) is None:
+        unregistered_pod_warning(pod_id)
+        return
+
+    for container in containers:
+        container_name = container['name']
+        kubes = container.get('kubes', 1)
+        for state in container['state'].values():
+            start = state.get('startedAt')
+            if start is None:
+                continue
+            start = datetime.datetime.strptime(start, DATETIME_FORMAT)
+            end = state.get('finishedAt')
+            cs = ContainerState.query.filter_by(
+                pod_id=pod_id,
+                container_name=container_name,
+                kubes=kubes,
+                start_time=start,
+            ).first()
+            if end is not None:
+                end = datetime.datetime.strptime(end, DATETIME_FORMAT)
+            elif event_type == 'DELETED':
+                end = datetime.datetime.utcnow().replace(microsecond=0)
+            if cs:
+                cs.end_time = end
+            else:
+                cs = ContainerState(
+                    pod_id=pod_id,
+                    container_name=container_name,
+                    kubes=kubes,
+                    start_time=start,
+                    end_time=end,
+                )
+                db.session.add(cs)
+            try:
+                prev_cs = ContainerState.query.filter(
+                    ContainerState.pod_id == pod_id,
+                    ContainerState.container_name == container_name,
+                    ContainerState.start_time < start,
+                    db.or_(ContainerState.end_time > start,
+                           ContainerState.end_time.is_(None)),
+                ).one()
+            except MultipleResultsFound:
+                fix_pods_timeline_heavy.delay()
+            except NoResultFound:
+                pass
+            else:
+                prev_cs.end_time = start
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
 def process_pods_event(data, app):
     if data is None:
         return
@@ -120,57 +175,10 @@ def process_pods_event(data, app):
     pod_id = pod['metadata']['labels']['kuberdock-pod-uid']
 
     if event_type in ('MODIFIED', 'DELETED'):
-
-        # container state
-        with app.app_context():
-            for container in pod['status'].get('containerStatuses', []):
-                container_name = container['name']
-                kubes = container.get('kubes', 1)
-                for state in container['state'].values():
-                    start = state.get('startedAt')
-                    if start is None:
-                        continue
-                    start = datetime.datetime.strptime(start, DATETIME_FORMAT)
-                    end = state.get('finishedAt')
-                    cs = ContainerState.query.filter_by(
-                        pod_id=pod_id,
-                        container_name=container_name,
-                        kubes=kubes,
-                        start_time=start,
-                    ).first()
-                    if end is not None:
-                        end = datetime.datetime.strptime(end, DATETIME_FORMAT)
-                    elif event_type == 'DELETED':
-                        end = datetime.datetime.utcnow().replace(microsecond=0)
-                    if cs:
-                        cs.end_time = end
-                    else:
-                        cs = ContainerState(
-                            pod_id=pod_id,
-                            container_name=container_name,
-                            kubes=kubes,
-                            start_time=start,
-                            end_time=end,
-                        )
-                        db.session.add(cs)
-                    try:
-                        prev_cs = ContainerState.query.filter(
-                            ContainerState.pod_id == pod_id,
-                            ContainerState.container_name == container_name,
-                            ContainerState.start_time < start,
-                            db.or_(ContainerState.end_time > start,
-                                   ContainerState.end_time.is_(None)),
-                        ).one()
-                    except MultipleResultsFound:
-                        fix_pods_timeline_heavy.delay()
-                    except NoResultFound:
-                        pass
-                    else:
-                        prev_cs.end_time = start
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
+        containers = pod['status'].get('containerStatuses', [])
+        if containers:
+            with app.app_context():
+                update_containers_state(event_type, pod_id, containers)
 
     if event_type == 'MODIFIED':
         # fs limits

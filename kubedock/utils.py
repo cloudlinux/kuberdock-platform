@@ -257,6 +257,7 @@ def get_security_group(conn, name='kuberdock-elb-default'):
             return [sg.id]
     return []
 
+
 def create_security_group(conn, vpc_id, name='kuberdock-elb-default'):
     """
     Creates security group in given VPC
@@ -508,6 +509,11 @@ def modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app=None):
     return result
 
 
+def unregistered_pod_warning(pod_id):
+    current_app.logger.warn('Pod with id {0} is not registered in Kuberdock '
+                            'database, but was found in kubernetes.'.format(pod_id))
+
+
 def set_limit(host, pod_id, containers, app):
     ssh, errors = ssh_connect(host)
     if errors:
@@ -523,7 +529,7 @@ def set_limit(host, pod_id, containers, app):
         pod = Pod.query.filter_by(id=pod_id).first()
 
         if pod is None:
-            print('Error: pod {0} not found in database'.format(pod_id))
+            unregistered_pod_warning(pod_id)
             return False
 
         config = json.loads(pod.config)

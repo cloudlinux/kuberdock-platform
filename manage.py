@@ -27,7 +27,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 class Creator(Command):
     option_list = (Option('password'),)
-    
+
     def run(self, password):
         db.drop_all()
         db.create_all()
@@ -40,7 +40,7 @@ class Creator(Command):
                                   start_time=now, end_time=now)
         db.session.add(last_upd)
         db.session.commit()
-        
+
         # Create default packages and kubes
         # Package and Kube with id=0 are default
         # end must be undeletable (always present with id=0) for fallback
@@ -53,22 +53,16 @@ class Creator(Command):
         k3 = Kube(name='High memory', cpu=.01, cpu_units='Cores',
                   memory=256, memory_units='MB', disk_space=512,
                   disk_space_units='MB', total_traffic=0)
-        
-        p1 = Package(id=0, name='basic', first_deposit=0, currency='USD', period='hour', prefix='$', suffix=' USD')
-        p2 = Package(id=1, name='professional', first_deposit=1, currency='USD', period='hour', prefix='$', suffix=' USD')
-        p3 = Package(id=2, name='enterprise', first_deposit=2, currency='USD', period='hour', prefix='$', suffix=' USD')
+
+        p1 = Package(id=1, name='Standard package', first_deposit=0, currency='USD',
+                     period='hour', prefix='$', suffix=' USD')
 
         PackageKube(packages=p1, kubes=k1, kube_price=0)
         PackageKube(packages=p1, kubes=k2, kube_price=0)
         PackageKube(packages=p1, kubes=k3, kube_price=0)
-        PackageKube(packages=p2, kubes=k1, kube_price=0)
-        PackageKube(packages=p2, kubes=k2, kube_price=1)
-        PackageKube(packages=p3, kubes=k1, kube_price=0)
-        PackageKube(packages=p3, kubes=k2, kube_price=1)
-        PackageKube(packages=p3, kubes=k3, kube_price=2)
 
         db.session.commit()
-        
+
         add_permissions()
 
         # Create all roles with users that has same name and password as role_name.
@@ -82,7 +76,7 @@ class Creator(Command):
         #                         role=role, package=p, active=True)
         #         db.session.add(u)
         # db.session.commit()
-        
+
         # Special user for convenience to type and login
         r = Role.filter_by(rolename='Admin').first()
         u = User.filter_by(username='admin').first()
@@ -98,7 +92,7 @@ class Creator(Command):
                              active=True)
             db.session.add(ku)
         db.session.commit()
-        
+
         generate_menu()
 
         # Fix packages id next val

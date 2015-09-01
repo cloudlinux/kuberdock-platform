@@ -1,69 +1,42 @@
 from ..helper import KubeQuery, PrintOut
+from ..api_common import (PODAPI_PATH, IMAGES_PATH)
 
-class Image(KubeQuery, PrintOut, object):
+class Image(object):
 
     def __init__(self, data=None, **kw):
-        if data is None:
-            data = {}
-        super(Image, self).__setattr__('_data', data)
-        for attr, value in kw.items():
-            super(Image, self).__setattr__(attr, value)
-
-    def __getattr__(self, name):
-        if name == '_INDENT':
-            return 4
-        return self._data.get(name)
-
-    def __setattr__(self, name, value):
-        self._data[name] = value
-
-    # Not used
-    def _conf_port(self, name, attr, index):
-        if 'ports' not in self._data:
-            self._data['ports'] = [{name: attr}]
-        else:
-            if not len(self._data['ports']):
-                self._data['ports'].append({name: attr})
-            else:
-                try:
-                    self._data['ports'][index].update({name: attr})
-                except IndexError:
-                    self._data['ports'].append({name: attr})
-
-    def set_container_port(self, port, index=0):
-        self._conf_port('containerPort', port, index)
-
-    def set_host_port(self, port, index=0):
-        self._conf_port('hostPort', port, index)
-
-    def set_protocol(self, proto, index=0):
-        self._conf_port('protocol', proto, index)
-
-    def set_public(self, public, index=0):
-        self._conf_port('isPublic', public, index)
+        self.as_json = kw.get('json', False)
+        self.data = data or {}
+        self.query = KubeQuery(jsonify_errors=self.as_json, **kw)
+        for attr, value in kw.iteritems():
+            setattr(self, attr, value)
 
     def _get_registry(self):
-        if self.registry.startswith('http'):
-            return self.registry
-        return 'http://' + self.registry
+        registry = self.data.get('registry', '')
+        if registry.startswith('http'):
+            return registry
+        return 'http://' + registry
 
     def search(self):
-        payload={
+        payload = {
             'url': self._get_registry(),
-            'searchkey': self.search_string,
-            'page': self.page}
-        data = self._unwrap(self._get('/api/images/search', payload))
-        self._list(data)
+            'searchkey': self.data.get('search_string', ''),
+            'page': self.data.get('page', 0)
+        }
+        data = self.query.unwrap(self.query.get(IMAGES_PATH + 'search', payload))
+        printout = PrintOut(as_json=self.as_json, fields=None)
+        printout.show_list(data)
 
     def ps(self):
-        super(Image, self).__setattr__('_FIELDS', (('image', 32),))
-        data = self._unwrap(self._get('/api/podapi'))[0]
+        data = self.query.unwrap(self.query.get(PODAPI_PATH))[0]
         containers = data.get('containers', [])
-        self._list(containers)
+        printout = PrintOut(as_json=self.as_json, fields=(('image', 32),))
+        printout.show_list(containers)
 
     def get(self):
         try:
-            data = self._unwrap(self._post('/api/images/new', {'image': self.image}))
+            data = self.query.unwrap(self.query.post(
+                IMAGES_PATH + 'new', {'image': self.data.get('image', '')}))
         except (AttributeError, TypeError):
             data = {'volumeMounts': [], 'command': [], 'env': [], 'ports': []}
-        self._show(data)
+        printout = PrintOut(as_json=self.as_json)
+        printout.show(data)

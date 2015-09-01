@@ -1,0 +1,3 @@
+# Additional packages for development & testing
+mock==1.3.0
+responses==0.4.0

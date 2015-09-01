@@ -1,23 +1,23 @@
 import ipaddress
 
-from ..pods.models import IPPool, PodIP
+from ..pods.models import IPPool, PodIP, ip_network
 from ..api import APIError
 
 class IpAddrPool(object):
 
-    def get(self, net=None):
+    def get(self, net=None, page=None):
         if net is None:
-            return [p.to_dict() for p in IPPool.all()]
+            return [p.to_dict(page=page) for p in IPPool.all()]
         rv = IPPool.filter_by(network=net).first()
         if rv is not None:
-            return rv.to_dict()
+            return rv.to_dict(page=page)
 
     def get_free(self):
         return IPPool.get_free_host()
 
     def create(self, data):
         try:
-            network = ipaddress.ip_network(data.get('network'))
+            network = ip_network(data.get('network'))
             if IPPool.filter_by(network=str(network)).first():
                 raise APIError('Network {0} already exists'.format(str(network)))
             autoblock = map(str, self._parse_autoblock(data.get('autoblock')))
@@ -59,7 +59,7 @@ class IpAddrPool(object):
             } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
     def delete(self, network):
-        network = str(ipaddress.ip_network(network))
+        network = str(ip_network(network))
         if not IPPool.filter_by(network=network).first():
             raise APIError("Network '{0}' does not exist".format(network))
         pods_count = PodIP.filter_by(network=network).count()

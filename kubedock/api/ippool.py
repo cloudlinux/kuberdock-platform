@@ -17,7 +17,8 @@ def get_ippool(network=None):
     params = KubeUtils._get_params()
     if 'free-only' in params:
         return IpAddrPool().get_free()
-    return IpAddrPool().get(network)
+    page = int(params.get('page', 1))
+    return IpAddrPool().get(network, page)
 
 
 # @ippool.route('/getFreeHost', methods=['GET'], strict_slashes=False)

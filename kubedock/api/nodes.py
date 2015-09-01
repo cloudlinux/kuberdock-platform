@@ -458,12 +458,14 @@ def delete_item(node_id):
     cursor = db.session.query(Node)
     m = cursor.get(node_id)
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
-    logs_pod_name = get_kuberdock_logs_pod_name(m.hostname)
-    logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name,
-                                               owner=ku).first()
-    if logs_pod:
-        PodCollection(ku).delete(logs_pod.id, force=True)
     if m:
+
+        logs_pod_name = get_kuberdock_logs_pod_name(m.hostname)
+        logs_pod = db.session.query(Pod).filter_by(name=logs_pod_name,
+                                                   owner=ku).first()
+        if logs_pod:
+            PodCollection(ku).delete(logs_pod.id, force=True)
+
         nodes_data = cursor.values(Node.ip, Node.hostname)
         nodes = dict(i for i in nodes_data if i[0] != m.ip).keys()
         db.session.delete(m)
@@ -526,6 +528,8 @@ def handle_nodes(func, **kw):
     env.user = 'root'
     env.skip_bad_hosts = True
     nodes = kw.pop('nodes', [])
+    if not nodes:
+        return {}
     with settings(warn_only=True):
         return execute(func, hosts=nodes, **kw)
 

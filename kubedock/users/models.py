@@ -81,6 +81,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return get_user_last_activity(self.id)
 
     def pods_to_dict(self, exclude=None):
+        if exclude is None:
+            exclude = []
         states = lambda x: dict(
             pod_id=x.pod_id,
             container_name=x.container_name,
@@ -100,7 +102,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 status=p.status,
                 kubes=p.kubes,
                 containers_count=p.containers_count,
-                states=[states(state) for state in p.states]
+                states=[states(state) for state in p.states] if 'states' not in exclude else []
             ) for p in self.pods if not p.is_deleted
         ]
 
@@ -116,7 +118,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         self.settings = json.dumps(data)
         self.save()
 
-    def to_dict(self, for_profile=False, full=False):
+    def to_dict(self, for_profile=False, full=False, exclude=None):
         if for_profile and full:
             raise RuntimeWarning('Serialize user for profile or full, not both')
         if for_profile:
@@ -131,7 +133,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
             # add all extra fields
             last_activity = self.last_activity
             last_login = self.last_login
-            pods = self.pods_to_dict()
+            pods = self.pods_to_dict(exclude)
             containers_count = sum([p['containers_count'] for p in pods])
             data['pods'] = pods
             data['pods_count'] = len(pods)

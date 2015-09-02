@@ -7,7 +7,6 @@ import sys
 import json
 import argparse
 import requests
-import sqlalchemy.orm.exc
 import subprocess
 from datetime import datetime
 from importlib import import_module
@@ -86,10 +85,7 @@ def set_schedulable(node_id, value, upd=None):
           ". You can try later to set mode again manually with {1} on|off"\
           .format(try_times, CLI_COMMANDS.set_node_schedulable)
     if upd:
-        try:
-            upd.print_log(msg)
-        except sqlalchemy.orm.exc.DetachedInstanceError:
-            pass
+        upd.print_log(msg)
     else:
         print msg
     return False
@@ -159,27 +155,20 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
     :return: Boolean, True if all nodes upgraded, False if one or more failed.
     """
     if helpers.set_evicting_timeout('99m0s'):
-        try:
-            db_upd.print_log("Can't set pods evicting interval.")
-        except sqlalchemy.orm.exc.DetachedInstanceError:
-            pass
+        db_upd.print_log("Can't set pods evicting interval.")
         return False
 
     successful = True
-    #if db_upd.status == UPDATE_STATUSES.nodes_failed:
-    #    nodes = db.session.query(Node).filter(
-    #        or_(Node.upgrade_status == UPDATE_STATUSES.failed,
-    #            Node.upgrade_status == UPDATE_STATUSES.failed_downgrade)).all()
-    #else:
-    #    nodes = db.session.query(Node).all()
-    nodes = db.session.query(Node).all()
+    if db_upd.status == UPDATE_STATUSES.nodes_failed:
+        nodes = db.session.query(Node).filter(
+            or_(Node.upgrade_status == UPDATE_STATUSES.failed,
+                Node.upgrade_status == UPDATE_STATUSES.failed_downgrade)).all()
+    else:
+        nodes = db.session.query(Node).all()
 
-    #db_upd.status == UPDATE_STATUSES.nodes_started
-    try:
-        db_upd.print_log('Started nodes upgrade. {0} nodes will be upgraded...'
+    db_upd.status == UPDATE_STATUSES.nodes_started
+    db_upd.print_log('Started nodes upgrade. {0} nodes will be upgraded...'
                      .format(len(nodes)))
-    except sqlalchemy.orm.exc.DetachedInstanceError:
-        pass
     for node in nodes:
         if not set_schedulable(node.hostname, False, db_upd):
             successful = False
@@ -187,65 +176,43 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
                 node.upgrade_status = UPDATE_STATUSES.failed
             db.session.add(node)
             db.session.commit()
-            try:
-                db_upd.print_log('Failed to make node {0} unschedulable. Skip node.'
+            db_upd.print_log('Failed to make node {0} unschedulable. Skip node.'
                              .format(node.hostname))
-            except sqlalchemy.orm.exc.DetachedInstanceError:
-                pass
             continue
 
         env.host_string = node.hostname
         node.upgrade_status = UPDATE_STATUSES.started
-        try:
-            db_upd.print_log('Upgrading {0} ...'.format(node.hostname))
-        except sqlalchemy.orm.exc.DetachedInstanceError:
-            pass
+        db_upd.print_log('Upgrading {0} ...'.format(node.hostname))
         try:
             upgrade_node(db_upd, with_testing, env)
         except Exception as e:
             successful = False
             node.upgrade_status = UPDATE_STATUSES.failed
-            try:
-                db_upd.print_log('Exception "{0}" during upgrade node {1}. {2}'
+            db_upd.print_log('Exception "{0}" during upgrade node {1}. {2}'
                              .format(e.__class__.__name__, node.hostname, e))
-            except sqlalchemy.orm.exc.DetachedInstanceError:
-                pass
             try:
                 downgrade_node(db_upd, with_testing, env, e)
             except Exception as e:
                 node.upgrade_status = UPDATE_STATUSES.failed_downgrade
-                try:
-                    db_upd.print_log(
-                        'Exception "{0}" during downgrade node {1}. {2}'
-                        .format(e.__class__.__name__, node.hostname, e))
-                except sqlalchemy.orm.exc.DetachedInstanceError:
-                    pass
+                db_upd.print_log(
+                    'Exception "{0}" during downgrade node {1}. {2}'
+                    .format(e.__class__.__name__, node.hostname, e))
             else:
                 # Check here if new master is compatible with old nodes
                 # set_schedulable(node.hostname, True, db_upd)
-                try:
-                    db_upd.print_log('Node {0} successfully downgraded'
+                db_upd.print_log('Node {0} successfully downgraded'
                                  .format(node.hostname))
-                except sqlalchemy.orm.exc.DetachedInstanceError:
-                    pass
         else:
             set_schedulable(node.hostname, True, db_upd)
             node.upgrade_status = UPDATE_STATUSES.applied
-            try:
-                db_upd.print_log('Node {0} successfully upgraded'
+            db_upd.print_log('Node {0} successfully upgraded'
                              .format(node.hostname))
-            except sqlalchemy.orm.exc.DetachedInstanceError:
-                pass
-
         finally:
             db.session.add(node)
             db.session.commit()
 
     if helpers.set_evicting_timeout('5m0s'):
-        try:
-            db_upd.print_log("Can't bring back old pods evicting interval.")
-        except sqlalchemy.orm.exc.DetachedInstanceError:
-            pass
+        db_upd.print_log("Can't bring back old pods evicting interval.")
     return successful
 
 
@@ -253,44 +220,32 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
     """
     :return: True if success else False
     """
-    #if db_upd.status == UPDATE_STATUSES.nodes_failed:
-    #    # only nodes upgrade needed case
-    #    return True
-    #db_upd.status = UPDATE_STATUSES.started
-    try:
-        db_upd.print_log('Started master upgrade...')
-    except sqlalchemy.orm.exc.DetachedInstanceError:
-        pass
+    if db_upd.status == UPDATE_STATUSES.nodes_failed:
+        # only nodes upgrade needed case
+        return True
+    db_upd.status = UPDATE_STATUSES.started
+    db_upd.print_log('Started master upgrade...')
     try:
         # TODO return boolean whether this upgrade is compatible with
         # not upgraded nodes. For now - always is.
         upgrade_func(db_upd, with_testing)
     except Exception as e:
-        #db_upd.status = UPDATE_STATUSES.failed
-        try:
-            db_upd.print_log('Error in update script '
+        db_upd.status = UPDATE_STATUSES.failed
+        db_upd.print_log('Error in update script '
                          '{0}. {1}. Starting downgrade...'
                          .format(db_upd.fname, e.__repr__()))
-        except sqlalchemy.orm.exc.DetachedInstanceError:
-            pass
         try:
             downgrade_func(db_upd, with_testing, e)
         except Exception as e:
-            #db_upd.status = UPDATE_STATUSES.failed_downgrade
-            try:
-                db_upd.print_log('Error downgrading script {0}. {1}'
+            db_upd.status = UPDATE_STATUSES.failed_downgrade
+            db_upd.print_log('Error downgrading script {0}. {1}'
                              .format(db_upd.fname, e.__repr__()))
-                db_upd.print_log(FAILED_MESSAGE)
-            except sqlalchemy.orm.exc.DetachedInstanceError:
-                pass
+            db_upd.print_log(FAILED_MESSAGE)
         else:
             helpers.restart_service(settings.KUBERDOCK_SERVICE)
-            try:
-                db_upd.print_log(SUCCESSFUL_DOWNGRADE_MESSAGE)
-            except sqlalchemy.orm.exc.DetachedInstanceError:
-                pass
+            db_upd.print_log(SUCCESSFUL_DOWNGRADE_MESSAGE)
         return False
-    #db_upd.status = UPDATE_STATUSES.master_applied
+    db_upd.status = UPDATE_STATUSES.master_applied
     return True
 
 
@@ -323,30 +278,16 @@ def do_cycle_updates(with_testing=False):
                                  db_upd, with_testing):
                     is_failed = False
                     db_upd.status = UPDATE_STATUSES.applied
-                    try:
-                        db_upd.print_log('{0} successfully applied. '
+                    db_upd.print_log('{0} successfully applied. '
                                      'All nodes are upgraded'.format(upd))
-                    except sqlalchemy.orm.exc.DetachedInstanceError:
-                        new_db_upd = Updates.query.get(upd)
-                        if new_db_upd:
-                            new_db_upd.print_log('{0} successfully applied'.format(upd))
                 else:   # not successful
                     db_upd.status = UPDATE_STATUSES.nodes_failed
-                    try:
-                        db_upd.print_log("{0} failed. Unable to upgrade some nodes"
+                    db_upd.print_log("{0} failed. Unable to upgrade some nodes"
                                      .format(upd))
-                    except sqlalchemy.orm.exc.DetachedInstanceError:
-                        pass
             else:
                 is_failed = False
                 db_upd.status = UPDATE_STATUSES.applied
-                try:
-                    db_upd.print_log('{0} successfully applied'.format(upd))
-                except sqlalchemy.orm.exc.DetachedInstanceError:
-                    db_upd = Updates.query.get(upd)
-                    if db_upd:
-                        db_upd.status = UPDATE_STATUSES.applied
-                        db_upd.print_log('{0} successfully applied'.format(upd))
+                db_upd.print_log('{0} successfully applied'.format(upd))
         db_upd.end_time = datetime.utcnow()
         db.session.commit()
     if is_failed:

@@ -439,7 +439,11 @@ if __name__ == '__main__':
             do_cycle_updates(args.use_testing)
             if not args.local:
                 print 'Restarting upgrade script to check next new package...'
-                os.execv(__file__, sys.argv)
+                # TODO Remove this workaround after few releases
+                if os.path.exists(__file__):
+                    os.execv(__file__, sys.argv)
+                else:
+                    os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade.py'), sys.argv)
             sys.exit(0)     # if local install case
         if args.command == CLI_COMMANDS.resume_upgrade:
             helpers.set_maintenance(True)
@@ -475,8 +479,13 @@ if __name__ == '__main__':
                         # Now, after successfully upgraded package:
                         open(settings.UPDATES_RELOAD_LOCK_FILE, 'a').close()
                         print 'Restarting this script from new package...'
-                        os.execv(__file__,
-                                 sys.argv + [CLI_COMMANDS.after_reload])
+                        # TODO Remove this workaround after few releases
+                        if os.path.exists(__file__):
+                            os.execv(__file__,
+                                     sys.argv + [CLI_COMMANDS.after_reload])
+                        else:
+                            os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade.py'),
+                                     sys.argv + [CLI_COMMANDS.after_reload])
                 else:
                     print 'Stop upgrading.'
                     sys.exit(0)

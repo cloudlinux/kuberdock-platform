@@ -706,8 +706,8 @@ fi
 if [ "$HAS_CEPH" = yes ];then
 cat > $KUBERDOCK_DIR/kubedock/ceph_settings.py << EOF
 CEPH=True
-MONITORS=$MONITORS
-KEYRING_PATH=$KEYRING_PATH
+MONITORS='$MONITORS'
+KEYRING_PATH='$KEYRING_PATH'
 EOF
 mv /tmp/ceph_tmp_config/ceph.* $KUBERDOCK_DIR/conf || /bin/true
 rm -rf /tmp/ceph_tmp_config || /bin/true

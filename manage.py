@@ -54,7 +54,7 @@ class Creator(Command):
                   memory=256, memory_units='MB', disk_space=512,
                   disk_space_units='MB', total_traffic=0)
 
-        p1 = Package(id=1, name='Standard package', first_deposit=0, currency='USD',
+        p1 = Package(id=0, name='Standard package', first_deposit=0, currency='USD',
                      period='hour', prefix='$', suffix=' USD')
 
         PackageKube(packages=p1, kubes=k1, kube_price=0)
@@ -96,7 +96,7 @@ class Creator(Command):
         generate_menu()
 
         # Fix packages id next val
-        db.engine.execute("SELECT setval('packages_id_seq', (SELECT MAX(id) FROM packages))")
+        db.engine.execute("SELECT setval('packages_id_seq', 1, false)")
 
         stamp()
 

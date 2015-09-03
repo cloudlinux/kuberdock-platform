@@ -230,19 +230,21 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
                         _.each(data.get('containers'), function(c){
                             if (c.hasOwnProperty('persistentDrives')) { delete c.persistentDrives; }
-                            c.volumeMounts = _.filter(c.volumeMounts, function(v){
-                                return v.isPersistent;
-                            });
                             _.each(c.volumeMounts, function(v){
-                                var entry = {name: v.name, persistentDisk: v.persistentDisk};
-                                var used = _.filter(data.attributes.persistentDrives,
-                                    function(i){return i.pdName === v.persistentDisk.pdName});
-                                if (used.length) {
-                                    used[0].used = true;
+                                if (v.isPersistent) {
+                                    var entry = {name: v.name, persistentDisk: v.persistentDisk};
+                                    var used = _.filter(data.attributes.persistentDrives,
+                                        function(i){return i.pdName === v.persistentDisk.pdName});
+                                    if (used.length) {
+                                        used[0].used = true;
+                                    }
+                                    delete v.persistentDisk;
                                 }
-                                data.get('volumes').push(entry);
-                                delete v.persistentDisk;
+                                else {
+                                    var entry = {name: v.name, localStorage: true};
+                                }
                                 delete v.isPersistent;
+                                data.get('volumes').push(entry);
                             });
                         });
                         if (hasPublic(data.get('containers'))) {

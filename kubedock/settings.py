@@ -47,7 +47,7 @@ INFLUXDB_DATABASE = 'cadvisor'
 
 PD_SEPARATOR = '__SEP__'
 PORTS_TO_RESTRICT = [9200]
-
+NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
 CELERYBEAT_SCHEDULE = {
     'event-stream': {
         'task': 'kubedock.tasks.check_events',

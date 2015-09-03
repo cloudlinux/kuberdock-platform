@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import shlex
 from uuid import uuid4
 from flask import current_app
@@ -8,7 +9,8 @@ from .ippool import IpAddrPool
 
 from .pstorage import CephStorage, AmazonStorage
 from ..billing import kubes_to_limits
-from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, AWS, CEPH
+from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, \
+                        AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
@@ -90,44 +92,55 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
             return
-
         for volume in self.volumes:
+            if 'persistentDisk' in volume:
+                self._handle_persistent_storage(volume, owner)
+            elif 'localStorage' in volume:
+                self._handle_local_storage(volume)
+
+    @staticmethod
+    def _handle_persistent_storage(volume, owner):
+        pd = volume.pop('persistentDisk')
+        device = '{0}{1}{2}'.format(
+            pd.get('pdName'), PD_SEPARATOR, owner.username)
+        size = pd.get('pdSize')
+        if CEPH:
+            volume['rbd'] = {
+                'image': device,
+                'keyring': '/etc/ceph/ceph.client.admin.keyring',
+                'fsType': 'ext4',
+                'user': 'admin',
+                'pool': 'rbd'
+            }
+            if size is not None:
+                volume['rbd']['size'] = size
             try:
-                pd = volume.pop('persistentDisk')
-                device = '{0}{1}{2}'.format(
-                    pd.get('pdName'), PD_SEPARATOR, owner.username)
-                size = pd.get('pdSize')
-                if CEPH:
-                    volume['rbd'] = {
-                        'image': device,
-                        'keyring': '/etc/ceph/ceph.client.admin.keyring',
-                        'fsType': 'ext4',
-                        'user': 'admin',
-                        'pool': 'rbd'
-                    }
-                    if size is not None:
-                        volume['rbd']['size'] = size
-                    try:
-                        volume['rbd']['monitors'] = monitors
-                    except NameError:  # will happen in the first iteration
-                        cs = CephStorage()
-                        monitors = cs.get_monitors()  # really slow operation
-                        volume['rbd']['monitors'] = monitors
-                elif AWS:
-                    try:
-                        from ..settings import AVAILABILITY_ZONE
-                    except ImportError:
-                        return
-                    #volumeID: aws://<availability-zone>/<volume-id>
-                    volume['awsElasticBlockStore'] = {
-                        'volumeID': 'aws://{0}/'.format(AVAILABILITY_ZONE),
-                        'fsType': 'ext4',
-                        'drive': device
-                    }
-                    if size is not None:
-                        volume['awsElasticBlockStore']['size'] = size
-            except KeyError:
-                continue
+                volume['rbd']['monitors'] = monitors
+            except NameError:  # will happen in the first iteration
+                cs = CephStorage()
+                monitors = cs.get_monitors()  # really slow operation
+                volume['rbd']['monitors'] = monitors
+        elif AWS:
+            try:
+                from ..settings import AVAILABILITY_ZONE
+            except ImportError:
+                return
+            #volumeID: aws://<availability-zone>/<volume-id>
+            volume['awsElasticBlockStore'] = {
+                'volumeID': 'aws://{0}/'.format(AVAILABILITY_ZONE),
+                'fsType': 'ext4',
+                'drive': device
+            }
+            if size is not None:
+                volume['awsElasticBlockStore']['size'] = size
+
+    def _handle_local_storage(self, volume):
+        volume.pop('localStorage')
+        volume['hostPath'] = {
+            'path': os.path.join(NODE_LOCAL_STORAGE_PREFIX, self.id, volume['name'])
+        }
+
+
 
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)

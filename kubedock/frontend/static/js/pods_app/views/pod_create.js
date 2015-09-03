@@ -3,7 +3,9 @@ define(['pods_app/app',
         'tpl!pods_app/templates/breadcrumb_header.tpl',
         'tpl!pods_app/templates/wizard_image_collection_item.tpl',
         'tpl!pods_app/templates/wizard_get_image.tpl',
-        'tpl!pods_app/templates/wizard_set_container_ports.tpl',
+//        'tpl!pods_app/templates/wizard_set_container_ports.tpl',
+        'tpl!pods_app/templates/wizard_set_container_pending_basic_settings.tpl',
+        'tpl!pods_app/templates/wizard_set_container_settled_basic_settings.tpl',
         'tpl!pods_app/templates/wizard_set_container_env.tpl',
         'tpl!pods_app/templates/wizard_set_container_logs.tpl',
         'tpl!pods_app/templates/wizard_set_container_stats.tpl',
@@ -17,7 +19,9 @@ define(['pods_app/app',
                 breadcrumbHeaderTpl,
                 wizardImageCollectionItemTpl,
                 wizardGetImageTpl,
-                wizardSetContainerPortsTpl,
+//                wizardSetContainerPortsTpl,
+                wizardSetContainerPendingBasicSettingsTpl,
+                wizardSetContainerSettledBasicSettingsTpl,
                 wizardSetContainerEnvTpl,
                 wizardSetContainerLogsTpl,
                 wizardSetContainerStatsTpl,
@@ -273,9 +277,18 @@ define(['pods_app/app',
         });
 
         NewItem.WizardPortsSubView = Backbone.Marionette.ItemView.extend({
-            template: wizardSetContainerPortsTpl,
             tagName: 'div',
-
+            getTemplate: function(){
+                return this.model.has('parentID')
+                    ? wizardSetContainerSettledBasicSettingsTpl
+                    : wizardSetContainerPendingBasicSettingsTpl;
+            },
+            className: function(){
+                return this.model.has('parentID') ? '' : 'container';
+            },
+            id: function(){
+                return this.model.has('parentID') ? 'container-page' : 'add-image';
+            },
 
             ui: {
                 ieditable      : '.ieditable',
@@ -345,7 +358,6 @@ define(['pods_app/app',
                 }
 
                 return {
-                    isPending: !this.model.has('parentID'),
                     hasPersistent: this.model.has('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
                     ip: this.model.get('ip'),

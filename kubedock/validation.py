@@ -117,6 +117,10 @@ new_pod_scheme = {
                         }
                     }
                 },
+                'localStorage': {
+                    'type': 'boolean',
+                    'nullable': True,
+                },
                 'emptyDir': {
                     'type': 'dict',
                     'nullable': True

@@ -11,7 +11,8 @@ from kubedock import settings
 from kubedock.sessions import SessionData
 
 # For convenience to use in update scripts:
-from flask.ext.migrate import upgrade as upgradedb
+from flask.ext.migrate import upgrade as upgrade_db
+from flask.ext.migrate import downgrade as downgrade_db
 
 
 class UpgradeError(Exception):

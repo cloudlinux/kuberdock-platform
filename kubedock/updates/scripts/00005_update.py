@@ -1,5 +1,5 @@
 import json
-from kubedock.api import create_app
+from kubedock.updates import helpers
 from kubedock.kapi.helpers import KubeQuery
 
 
@@ -60,22 +60,21 @@ def _replace_labels(replace_map, old_label, new_label):
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    print 'upgrade routine has been called'
-    app = create_app()
-    with app.app_context():
-        from kubedock.pods.models import Pod
+    from kubedock.pods.models import Pod
+    upd.print_log('Changing pods name label to UUID')
 
-        name_to_id_map = {(pod.name, pod.namespace): pod.id
-                          for pod in Pod.query.all()}
-        _replace_labels(name_to_id_map, 'name', 'kuberdock-pod-uid')
+    name_to_id_map = {(pod.name, pod.namespace): pod.id
+                      for pod in Pod.query.all()}
+    _replace_labels(name_to_id_map, 'name', 'kuberdock-pod-uid')
+
+    # to force reload of browser pages and update front-end assets
+    helpers.close_all_sessions()
 
 
 def downgrade(upd, with_testing,  exception, *args, **kwargs):
-    print 'downgrade routine has been called'
-    app = create_app()
-    with app.app_context():
-        from kubedock.pods.models import Pod
+    from kubedock.pods.models import Pod
+    upd.print_log('Change back pods name label')
 
-        id_to_name_map = {(pod.id, pod.namespace): pod.name
-                          for pod in Pod.query.all()}
-        _replace_labels(id_to_name_map, 'kuberdock-pod-uid', 'name')
+    id_to_name_map = {(pod.id, pod.namespace): pod.name
+                      for pod in Pod.query.all()}
+    _replace_labels(id_to_name_map, 'kuberdock-pod-uid', 'name')

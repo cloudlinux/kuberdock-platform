@@ -1,6 +1,5 @@
 import json
-import datetime
-import re
+from datetime import datetime, timedelta
 from flask import Blueprint, request, current_app, jsonify
 
 from .. import tasks
@@ -20,7 +19,7 @@ def _get_docker_file(image, tag=None):
     query = db.session.query(DockerfileCache).get(image)
     #current_app.logger.debug(query)
     if query is not None:
-        if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
+        if (datetime.now() - query.time_stamp) < timedelta(days=1):
             data = query.data
     if not data:
         result = tasks.get_dockerfile.delay(image, tag)
@@ -30,10 +29,10 @@ def _get_docker_file(image, tag=None):
         # current_app.logger.debug(out)
         if query is None:
             db.session.add(DockerfileCache(image=image, data=data,
-                                           time_stamp=datetime.datetime.now()))
+                                           time_stamp=datetime.now()))
         else:
             query.data = data
-            query.time_stamp = datetime.datetime.now()
+            query.time_stamp = datetime.now()
         db.session.commit()
     parent = data.pop('parent', {})
     if parent:
@@ -81,7 +80,7 @@ def get_list_by_keyword():
     query_key = '{0}?{1}'.format(repo_url.rstrip('/'), search_key)
     query = db.session.query(ImageCache).get(query_key)
     if query is not None:
-        if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
+        if (datetime.now() - query.time_stamp) < timedelta(days=1):
             return jsonify({'status': 'OK', 'data': query.data})
     result = tasks.get_container_images.delay(search_key, url=repo_url)
     rv = result.wait()
@@ -90,10 +89,10 @@ def get_list_by_keyword():
     data = json.loads(rv)['results']
     if query is None:
         db.session.add(ImageCache(query=query_key, data=data,
-                                  time_stamp=datetime.datetime.now()))
+                                  time_stamp=datetime.now()))
     else:
         query.data = data
-        query.time_stamp = datetime.datetime.now()
+        query.time_stamp = datetime.now()
     db.session.commit()
     return jsonify({'status': 'OK', 'data': data})
 
@@ -111,7 +110,7 @@ def search_image():
     query_key = '{0}?{1}:{2}'.format(repo_url.rstrip('/'), search_key, page)
     query = db.session.query(ImageCache).get(query_key)
     if query is not None:
-        if (datetime.datetime.now() - query.time_stamp).seconds < 86400:    # 1 day
+        if (datetime.now() - query.time_stamp) < timedelta(days=1):
             return jsonify({'status': 'OK', 'data': query.data['results'],
                             'num_pages': query.data['num_pages'],
                             'page': page})
@@ -123,10 +122,10 @@ def search_image():
     data = json.loads(rv)#['results']
     if query is None:
         db.session.add(ImageCache(query=query_key, data=data,
-                                  time_stamp=datetime.datetime.now()))
+                                  time_stamp=datetime.now()))
     else:
         query.data = data
-        query.time_stamp = datetime.datetime.now()
+        query.time_stamp = datetime.now()
     db.session.commit()
     return jsonify({'status': 'OK', 'data': data['results'],
                     'num_pages': data['num_pages'], 'page': page})

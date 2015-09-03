@@ -2,6 +2,7 @@ import json
 import ipaddress
 import random
 import string
+import types
 from sqlalchemy.dialects import postgresql
 from flask import current_app
 from ..core import db
@@ -110,6 +111,42 @@ class DockerfileCache(db.Model):
             self.image, self.data, self.time_stamp)
 
 
+def _page(page, pages):
+    if page is None or page < 1:
+        page = 1
+    elif page > pages:
+        page = pages
+    return page
+
+
+def _ip_network_hosts(obj, page=None):
+    pages = obj.pages()
+    page = _page(page, pages)
+    net_ip = obj.network_address + (page - 1) * 2 ** obj.page_bits
+    net_pl = obj.max_prefixlen - obj.page_bits if pages > 1 else obj.prefixlen
+    network = ipaddress.ip_network(u'{0}/{1}'.format(net_ip, net_pl))
+    return network.hosts()
+
+
+def _ip_network_iterpages(obj):
+    return xrange(1, obj.pages() + 1)
+
+
+def _ip_network_pages(obj):
+    suf_len = obj.max_prefixlen - obj.prefixlen
+    pages = 2 ** (suf_len - obj.page_bits) if suf_len > obj.page_bits else 1
+    return pages
+
+
+def ip_network(network):
+    ip_net_obj = ipaddress.ip_network(network)
+    ip_net_obj.page_bits = 8
+    ip_net_obj.hosts = types.MethodType(_ip_network_hosts, ip_net_obj)
+    ip_net_obj.iterpages = types.MethodType(_ip_network_iterpages, ip_net_obj)
+    ip_net_obj.pages = types.MethodType(_ip_network_pages, ip_net_obj)
+    return ip_net_obj
+
+
 class IPPool(BaseModelMixin, db.Model):
     __tablename__ = 'ippool'
 
@@ -119,6 +156,9 @@ class IPPool(BaseModelMixin, db.Model):
 
     def __repr__(self):
         return self.network
+
+    def iterpages(self):
+        return ip_network(self.network).iterpages()
 
     def get_blocked_list(self, as_int=None):
         blocked_list = []
@@ -157,7 +197,7 @@ class IPPool(BaseModelMixin, db.Model):
         self.blocked_list = json.dumps(blocked_list)
         self.save()
 
-    def hosts(self, as_int=None, exclude=None, allowed=None):
+    def hosts(self, as_int=None, exclude=None, allowed=None, page=None):
         """
         Return IPv4Network object or list of IPs (long) or list of IPs (string)
         :param as_int: Return list of IPs (long)
@@ -167,8 +207,8 @@ class IPPool(BaseModelMixin, db.Model):
         network = self.network
         if not self.ipv6 and network.find('/') < 0:
             network = u'{0}/32'.format(network)
-        network = ipaddress.ip_network(unicode(network))
-        hosts = list(network.hosts()) or [network.network_address]
+        network = ip_network(unicode(network))
+        hosts = list(network.hosts(page=page)) or [network.network_address]
         if exclude:
             if isinstance(exclude, (basestring, int)):
                 hosts = [h for h in hosts if int(h) != int(exclude)]
@@ -179,22 +219,21 @@ class IPPool(BaseModelMixin, db.Model):
             hosts = [int(h) for h in hosts]
         else:
             hosts = [str(h) for h in hosts]
-        hosts.sort()
         return hosts
 
-    def free_hosts(self, as_int=None):
+    def free_hosts(self, as_int=None, page=None):
         ip_list = [pod.ip_address
                    for pod in PodIP.filter_by(network=self.network)]
         ip_list = list(set(ip_list) | set(self.get_blocked_list(as_int=True)))
-        _hosts = self.hosts(as_int=as_int, exclude=ip_list)
+        _hosts = self.hosts(as_int=as_int, exclude=ip_list, page=page)
         return _hosts
 
-    def free_hosts_and_busy(self, as_int=None):
+    def free_hosts_and_busy(self, as_int=None, page=None):
         pods = PodIP.filter_by(network=self.network)
         allocated_ips = {int(pod): pod.get_pod() for pod in pods}
         data = []
         blocked_list = self.get_blocked_list(as_int=True)
-        hosts = self.hosts(as_int=True)
+        hosts = self.hosts(as_int=True, page=page)
         for ip in hosts:
             pod = allocated_ips.get(ip)
             status = 'blocked' \
@@ -202,36 +241,45 @@ class IPPool(BaseModelMixin, db.Model):
             if not as_int:
                 ip = str(ipaddress.ip_address(ip))
             data.append((ip, pod, status))
-        data.sort()
         return data
 
     @property
     def is_free(self):
-        return len(self.free_hosts(as_int=True)) > 0
+        for page in self.iterpages():
+            if len(self.free_hosts(as_int=True, page=page)) > 0:
+                return True
+        return False
 
     def get_first_free_host(self, as_int=None):
-        free_hosts = self.free_hosts(as_int=as_int)
-        if free_hosts:
-            return free_hosts[0]
+        for page in self.iterpages():
+            free_hosts = self.free_hosts(as_int=as_int, page=page)
+            if free_hosts:
+                return free_hosts[0]
         return None
 
     @classmethod
     def get_network_by_ip(cls, ip_address):
         ip_address = ipaddress.ip_address(ip_address)
         for net in cls.all():
-            if ip_address in ipaddress.ip_network(net.network).hosts():
-                return net
+            network = ip_network(net.network)
+            for page in network.iterpages():
+                if ip_address in network.hosts(page=page):
+                    return net
         return None
 
-    def to_dict(self, include=None, exclude=None):
-        free_hosts_and_busy = self.free_hosts_and_busy()
+    def to_dict(self, include=None, exclude=None, page=None):
+        free_hosts_and_busy = self.free_hosts_and_busy(page=page)
+        pages = ip_network(self.network).pages()
+        page = _page(page, pages)
         data = dict(
             id=self.network,
             network=self.network,
             ipv6=self.ipv6,
-            free_hosts=self.free_hosts(),
+            free_hosts=self.free_hosts(page=page),
             blocked_list=self.get_blocked_list(),
-            allocation=free_hosts_and_busy
+            allocation=free_hosts_and_busy,
+            page=page,
+            pages=pages,
         )
         return data
 

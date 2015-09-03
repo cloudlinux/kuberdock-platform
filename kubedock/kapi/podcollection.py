@@ -70,11 +70,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod = self.get_by_id(pod_id)
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
-        if hasattr(pod, 'sid'):
-            rv = self._del([pod.kind, pod.sid], ns=pod.namespace)
-            self._raise_if_failure(rv, "Could not remove a pod")
-            if pod.replicationController:
-                self._stop_cluster(pod)
+        self._stop_pod(pod)
+
         service_name = pod.get_config('service')
         if service_name:
             service = self._get(['services', service_name], ns=pod.namespace)
@@ -90,6 +87,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     self._raise("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
             rv = self._del(['services', service_name], ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a service")
+
         if hasattr(pod, 'public_ip'):
             pod._free_ip()
         rv = self._drop_namespace(pod.namespace)
@@ -206,24 +204,29 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod._forge_dockers()
                 self._collection[pod.id, namespace] = pod
             else:
-                self._collection[db_pod.id, namespace].name = db_pod.name
+                pod = self._collection[db_pod.id, namespace]
+                pod.name = db_pod.name
                 # TODO if remove _is_related then add podIP attribute here
-                # self._collection[db_pod.id, namespace].service = json.loads(db_pod.config).get('service')
-                self._collection[db_pod.id, namespace].kube_type = db_pod_config.get('kube_type')
-                a = self._collection[db_pod.id, namespace].containers
+                # pod.service = json.loads(db_pod.config).get('service')
+                pod.kube_type = db_pod_config.get('kube_type')
+
+                if db_pod_config.get('public_ip'):
+                    pod.public_ip = db_pod_config['public_ip']
+
+                a = pod.containers
                 b = db_pod_config.get('containers')
-                self._collection[db_pod.id, namespace].containers = self.merge_lists(a, b, 'name')
+                pod.containers = self.merge_lists(a, b, 'name')
 
             if db_pod_config.get('public_aws'):
-                self._collection[db_pod.id, namespace].public_aws = db_pod_config['public_aws']
+                pod.public_aws = db_pod_config['public_aws']
 
-            if not hasattr(self._collection[db_pod.id, namespace], 'owner'):
-                self._collection[db_pod.id, namespace].owner = db_pod.owner.username
+            if not hasattr(pod, 'owner'):
+                pod.owner = db_pod.owner.username
 
-            if not hasattr(self._collection[db_pod.id, namespace], 'status'):
-                self._collection[db_pod.id, namespace].status = 'stopped'
+            if not hasattr(pod, 'status'):
+                pod.status = 'stopped'
 
-            for container in self._collection[db_pod.id, namespace].containers:
+            for container in pod.containers:
                 container.pop('resources', None)
                 container['limits'] = repr_limits(container['kubes'], db_pod_config['kube_type'])
 

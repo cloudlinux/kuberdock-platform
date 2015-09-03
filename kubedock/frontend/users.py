@@ -27,7 +27,7 @@ def index(**kwargs):
     roles = Role.all()
     return render_template(
         'users/index.html', roles=roles,
-        users_collection=api_users.get_full_users_collection(),
+        users_collection=[u.to_dict(full=True, exclude=['states']) for u in User.all()],
         online_users_collection=User.get_online_collection(),
         user_activity=current_user.user_activity(),
         kube_types={k.id: k.name for k in Kube.query.all()},

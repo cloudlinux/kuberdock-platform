@@ -180,6 +180,14 @@ new_pod_scheme = {
                         'empty': False
                     }
                 },
+                'args': {
+                    'type': 'list',
+                    # 'minlength': 1,
+                    'schema': {
+                        'type': 'string',
+                        'empty': False
+                    }
+                },
                 'kubes': {'type': 'integer', 'min': 1},
                 'image': container_image_name_scheme,
                 'parentID': {

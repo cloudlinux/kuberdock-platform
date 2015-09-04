@@ -152,7 +152,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         );
                     if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
                     if (!model_data.hasOwnProperty('workingDir')) model_data['workingDir'] = undefined;
-                    if (!model_data.hasOwnProperty('command')) model_data['command'] = [];
+                    if (!model_data.hasOwnProperty('args')) model_data['args'] = [];
                     if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
                     if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
 
@@ -342,7 +342,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         name += _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
                         var contents = {
                             image: image, name: name, workingDir: null,
-                            ports: [], volumeMounts: [], env: [], command: [], kubes: 1,
+                            ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
                             terminationMessagePath: null, url: url
                         };
                         if (model.has('persistentDrives')) {

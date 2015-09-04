@@ -544,7 +544,7 @@ define(['pods_app/app',
                 var that = this,
                     disks = [];
 
-                this.ui.input_command.val(this.filterCommand(this.model.get('command')));
+                this.ui.input_command.val(this.filterCommand(this.model.get('args')));
 
                 if (this.model.has('persistentDrives')) {
                     disks = _.map(this.model.get('persistentDrives'), function(i){

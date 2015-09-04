@@ -17,10 +17,10 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def __init__(self, data=None):
         if data is not None:
             for c in data['containers']:
-                if len(c['command']) == 1:
-                    # it seems the command has been changed
+                if len(c.get('args', [])) == 1:
+                    # it seems the args has been changed
                     # or may be its length is only 1 item
-                    c['command'] = self._parse_cmd_string(c['command'][0])
+                    c['args'] = self._parse_cmd_string(c['args'][0])
             for k, v in data.items():
                 setattr(self, k, v)
 

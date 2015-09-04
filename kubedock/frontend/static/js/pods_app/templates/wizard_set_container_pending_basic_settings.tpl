@@ -15,7 +15,7 @@
             On autoterminate
         </label> -->
         <div class="entrypoint">
-            <label>Entrypoint:</label>
+            <label>Command:</label>
             <div class="row fields">
                 <div class="col-xs-6">
                     <input class="command" type="text" value="" placeholder="command to start">

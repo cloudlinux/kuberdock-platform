@@ -137,12 +137,13 @@ class DockerfileParser(object):
         self._parse(line)
 
     def get(self):
-        command = []
-        command.extend(self.entry_point)
-        command.extend(self.command)
+        #command = []
+        #command.extend(self.entry_point)
+        #command.extend(self.command)
         result = {
             'parent': self.parent,
-            'command': command,
+            'args': self.command,
+            'command': self.entry_point,
             'workingDir': self.workging_dir,
             'ports': list(self.ports),
             'volumeMounts': list(self.volumes),

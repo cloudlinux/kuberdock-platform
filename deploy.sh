@@ -156,12 +156,15 @@ function get_route_table_id {
 do_deploy()
 {
 
-if [ "$ISAMAZON" = true ] && [ -z "$ROUTE_TABLE_ID" ];then
-    echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
-    exit 1
+#if [ "$ISAMAZON" = true ] && [ -z "$ROUTE_TABLE_ID" ];then
+#    echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
+#    exit 1
+#fi
+if [ "$ISAMAZON" = true ];then
+    log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND"
+else
+    log_it echo "Flannel backend will be set to \"aws-vpc\""
 fi
-
-log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND"
 
 # Get number of interfaces up
 IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)
@@ -219,6 +222,34 @@ fi
 # Just a workaround for compatibility
 NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
+#1 Add kubernetes repo
+cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
+[kube]
+name=kube
+baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
+enabled=0
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF
+
+
+#1.1 Add kubernetes testing repo
+cat > /etc/yum.repos.d/kube-cloudlinux-testing.repo << EOF
+[kube-testing]
+name=kube-testing
+baseurl=http://repo.cloudlinux.com/kubernetes-testing/x86_64/
+enabled=0
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF
+
+#2 Import some keys
+do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+do_and_log rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+yum_wrapper -y install epel-release
+
+
+# Do some preliminaries for aws/non-aws setups
 HAS_CEPH=no
 
 if [ "$ISAMAZON" = true ];then
@@ -236,6 +267,7 @@ if [ "$ISAMAZON" = true ];then
     fi
 
     if [ -z "$ROUTE_TABLE_ID" ];then
+        yum_wrapper install aws-cli -y
         INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
         INSTANCE_DATA=$(aws ec2 describe-instances --region=$REGION --instance-id $INSTANCE_ID)
         VPC_ID=$(echo "$INSTANCE_DATA"|get_vpc_id)
@@ -290,34 +322,6 @@ else
         log_it echo 'We modify your /etc/nsswitch.conf to include "myhostname" at "hosts:" line'
     fi
 fi
-
-
-#1 Add kubernetes repo
-cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
-[kube]
-name=kube
-baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
-enabled=0
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF
-
-
-#1.1 Add kubernetes testing repo
-cat > /etc/yum.repos.d/kube-cloudlinux-testing.repo << EOF
-[kube-testing]
-name=kube-testing
-baseurl=http://repo.cloudlinux.com/kubernetes-testing/x86_64/
-enabled=0
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF
-
-
-#2 Import some keys
-do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-do_and_log rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-yum_wrapper -y install epel-release
 
 
 CLUSTER_NETWORK=$(get_network $MASTER_IP)

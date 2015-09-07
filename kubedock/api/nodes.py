@@ -485,8 +485,9 @@ def delete_item(node_id):
     return jsonify({'status': 'OK'})
 
 
+@nodes.route('/checkhost/', methods=['GET'])
 @nodes.route('/checkhost/<hostname>', methods=['GET'])
-def check_host(hostname):
+def check_host(hostname=''):
     check_hostname(hostname)
     return jsonify({'status': 'OK'})
 

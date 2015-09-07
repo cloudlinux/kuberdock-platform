@@ -49,10 +49,6 @@ PD_SEPARATOR = '__SEP__'
 PORTS_TO_RESTRICT = [9200]
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
 CELERYBEAT_SCHEDULE = {
-    'event-stream': {
-        'task': 'kubedock.tasks.check_events',
-        'schedule': timedelta(seconds=5),
-    },
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)

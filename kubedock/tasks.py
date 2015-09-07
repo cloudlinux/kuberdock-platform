@@ -307,62 +307,6 @@ def parse_pods_statuses(data):
     return res
 
 
-def parse_nodes_statuses(items):
-    res = []
-    if not items:
-        return res
-    for item in items:
-        try:
-            conditions = item['status']['conditions']
-            for cond in conditions:
-                res.append(cond.get('type', ''))
-        except KeyError:
-            res.append('')
-    return res
-
-
-@celery.task()
-def check_events():
-    redis = ConnectionPool.get_connection()
-
-    lock = redis.get('events_lock')
-    if not lock:
-        redis.setex('events_lock', 30 + 1, 'true')
-    else:
-        return
-
-    nodes_list = redis.get('cached_nodes')
-    if not nodes_list:
-        nodes_list = get_all_nodes()
-        nodes_list = parse_nodes_statuses(nodes_list)
-        redis.set('cached_nodes', json.dumps(nodes_list))
-        send_event('pull_nodes_state', 'ping')
-    else:
-        temp = get_all_nodes()
-        temp = parse_nodes_statuses(temp)
-        if temp != json.loads(nodes_list):
-            redis.set('cached_nodes', json.dumps(temp))
-            send_event('pull_nodes_state', 'ping')
-
-    pods_list = redis.get('cached_pods')
-    if not pods_list:
-        pods_list = requests.get(get_api_url('pods', namespace=False)).json()
-        pods_list = parse_pods_statuses(pods_list)
-        redis.set('cached_pods', json.dumps(pods_list))
-        send_event('pull_pods_state', 'ping')
-    else:
-        pods_list = json.loads(pods_list)
-        temp = requests.get(get_api_url('pods', namespace=False)).json()
-        # Little hack to convert all str to unicode for easy comparing
-        temp = json.loads(json.dumps(parse_pods_statuses(temp)))
-        if temp != pods_list:
-            pods_list = temp
-            redis.set('cached_pods', json.dumps(pods_list))
-            send_event('pull_pods_state', 'ping')
-
-    redis.delete('events_lock')
-
-
 @celery.task()
 def pull_hourly_stats():
     try:

@@ -139,7 +139,9 @@ def get_api_url(*args, **kwargs):
         url = url.replace('/' + api_version,
                           '/{0}/namespaces/{1}'.format(api_version, namespace),
                           1)
-    return url + '?watch=true' if kwargs.get('watch') else url
+    if kwargs.get('watch'):
+        url = url.replace('http', 'ws') + '?watch=true'
+    return url
 
 
 # separate function because set_roles_loader decorator don't return function. Lib bug.

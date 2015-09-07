@@ -52,6 +52,7 @@ else:
     if uwsgi.worker_id() == 1:
         g = gevent.spawn(listeners.listen_endpoints, back_app)
         h = gevent.spawn(listeners.listen_pods, back_app)
+        f = gevent.spawn(listeners.listen_nodes, back_app)
 
 if __name__ == "__main__":
 
@@ -59,6 +60,7 @@ if __name__ == "__main__":
     if os.environ.get('WERKZEUG_RUN_MAIN'):
         g = gevent.spawn(listeners.listen_endpoints, back_app)
         h = gevent.spawn(listeners.listen_pods, back_app)
+        f = gevent.spawn(listeners.listen_nodes, back_app)
 
     @run_with_reloader
     def run_server():

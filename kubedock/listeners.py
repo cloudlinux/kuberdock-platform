@@ -6,11 +6,12 @@ import requests
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from websocket import create_connection, WebSocketException
 
-from .core import db
+from .core import db, ConnectionPool
 from .pods.models import ContainerState, Pod
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .tasks import fix_pods_timeline_heavy
-from .utils import modify_node_ips, get_api_url, set_limit, unregistered_pod_warning
+from .utils import (modify_node_ips, get_api_url, set_limit,
+                    unregistered_pod_warning, send_event)
 
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -165,6 +166,34 @@ def update_containers_state(event_type, pod_id, containers):
         db.session.rollback()
 
 
+def get_pod_state(pod):
+    res = [pod['status']['phase']]
+    for container in pod['status'].get('containerStatuses', []):
+        res.append(container.get('ready'))
+    return json.dumps(res)
+
+
+def send_pod_status_update(pod, pod_id, event_type, app):
+    key_ = 'pod_state_' + pod_id
+    with app.app_context():
+        redis = ConnectionPool.get_connection()
+        prev_state = redis.get(key_)
+        if not prev_state:
+            redis.set(key_, get_pod_state(pod))
+        else:
+            current = get_pod_state(pod)
+            deleted = event_type == 'DELETED'
+            if prev_state != current or deleted:
+                redis.set(key_, 'DELETED' if deleted else current)
+                db_pod = Pod.query.get(pod_id)
+                if not db_pod:
+                    unregistered_pod_warning(pod_id)
+                    return
+                owner = db_pod.owner.id
+                send_event('pull_pods_state', 'ping')   # common for admins
+                send_event('pull_pods_state', 'ping', channel='user_%s' % owner)
+
+
 def process_pods_event(data, app):
     if data is None:
         return
@@ -173,6 +202,8 @@ def process_pods_event(data, app):
     event_type = data['type']
     pod = data['object']
     pod_id = pod['metadata']['labels']['kuberdock-pod-uid']
+
+    send_pod_status_update(pod, pod_id, event_type, app)
 
     if event_type in ('MODIFIED', 'DELETED'):
         containers = pod['status'].get('containerStatuses', [])
@@ -193,6 +224,38 @@ def process_pods_event(data, app):
                 containers[container_name] = container_id
         if containers:
             set_limit(host, pod_id, containers, app)
+
+
+def get_node_state(node):
+    res = []
+    try:
+        conditions = node['status']['conditions']
+        for cond in conditions:
+            res.append(cond.get('type', ''))
+            res.append(cond.get('status', ''))
+    except KeyError:
+        res.append('')
+    return json.dumps(res)
+
+
+def process_nodes_event(data, app):
+    if data is None:
+        return
+    event_type = data['type']
+    node = data['object']
+    key_ = 'node_state_' + node['metadata']['name']
+
+    with app.app_context():
+        redis = ConnectionPool.get_connection()
+        prev_state = redis.get(key_)
+        if not prev_state:
+            redis.set(key_, get_node_state(node))
+        else:
+            current = get_node_state(node)
+            deleted = event_type == 'DELETED'
+            if prev_state != current or deleted:
+                redis.set(key_, 'DELETED' if deleted else current)
+                send_event('pull_nodes_state', 'ping')   # common ch for admins
 
 
 def listen_fabric(url, func, verbose=1):
@@ -227,13 +290,19 @@ def listen_fabric(url, func, verbose=1):
 
 
 listen_pods = listen_fabric(
-    get_api_url('pods', namespace=False, watch=True).replace('http', 'ws'),
+    get_api_url('pods', namespace=False, watch=True),
     process_pods_event,
     PODS_VERBOSE_LOG
 )
 
 listen_endpoints = listen_fabric(
-    get_api_url('endpoints', namespace=False, watch=True).replace('http', 'ws'),
+    get_api_url('endpoints', namespace=False, watch=True),
     process_endpoints_event,
     SERVICES_VERBOSE_LOG
+)
+
+listen_nodes = listen_fabric(
+    get_api_url('nodes', namespace=False, watch=True),
+    process_nodes_event,
+    0
 )

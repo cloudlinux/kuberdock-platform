@@ -14,8 +14,9 @@ from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit, s
 from ..utils import maintenance_protected
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
-from ..settings import NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS, \
-                        CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT
+from ..settings import (NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS,
+                        CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT,
+                        SSH_KEY_FILENAME)
 from ..kapi.podcollection import PodCollection
 from ..tasks import add_node_to_k8s
 from . import APIError
@@ -528,6 +529,7 @@ def process_rule(**kw):
 def handle_nodes(func, **kw):
     env.user = 'root'
     env.skip_bad_hosts = True
+    env.key_filename = SSH_KEY_FILENAME
     nodes = kw.pop('nodes', [])
     if not nodes:
         return {}

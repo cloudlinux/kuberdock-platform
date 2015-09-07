@@ -67,7 +67,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def verify_token(self, token):
         return self.token is not None and self.token == token
 
-    def is_administrator(self):     # TODO remove this, prefer normal permission check
+    def is_administrator(self):
         if self.role.rolename == 'Admin':
             return True
         else:

@@ -300,6 +300,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
                         _.each(data.get('containers'), function(container){
+                            delete container.origEnv;
                             delete container.url;
                         });
                         data.unset('lastAddedImage', {silent: true});

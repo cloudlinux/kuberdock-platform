@@ -47,7 +47,7 @@ class Kube(db.Model):
     memory_units = db.Column(db.String(3), default='MB', nullable=False)
     disk_space = db.Column(db.Integer, default=0, nullable=False)
     disk_space_units = db.Column(db.String(3), default='MB', nullable=False)
-    total_traffic = db.Column(db.Integer, default=0, nullable=False)
+    included_traffic = db.Column(db.Integer, default=0, nullable=False)
     nodes = db.relationship('Node', backref='kube')
     pods = db.relationship('Pod', backref='kube')
 

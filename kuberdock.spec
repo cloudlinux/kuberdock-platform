@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 34%{?dist}.cloudlinux
+Release: 35%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -158,6 +158,31 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Sep 07 2015 Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-35
+- small changes in deploy.sh, --cleanup section
+- Fix missing \ in deploy.sh
+- kubedock/api/nodes.py small bugfixes
+- AC-899: Add IP-pool pagination
+- AC-890: remove default packages, except "basic"; rename "basic" to "Standard package"; small bugfix
+- AC-871: Node's page=>Reinstall button doesn't work
+- Fixed update system with fixed updates
+- First part of renaming kuberdock_upgrade.py utility
+- small changes in manage.py createdb (Standard package id)
+- bugfix in api/images (caching was broken)
+- AC-790 Sometimes users page doesn't displayed
+- AC-835: persistent local storage
+- deploy.sh bugfix (added quotes around exportable variables)
+- deploy.sh small fixes (added installation of aws-cli for aws setup)
+- AC-792: node name validation - 404
+- AC-593 Billing API, changes for kube requests
+- AC-974: In final step kubeType and kubeQuantity dropdowns always kept the same value (first). Fixed.
+- AC-781: when ENTRYPOINT and CMD mixed to one field some hard-predictable bugs occur. For instance, mariadb failed to run. Resolved
+- Send SSE events per user and to common channel for admins. Fixed node status handling. Faster pods/nodes status updates (removed polling kubernetes).
+- AC-804: User validation + tests
+- AC-803: username has been taken;
+- AC-844: username validation;
+- AC-798: XSS through username field
+
 * Mon Aug 31 2015 Michael Bagrov <mbagrov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-34
 - AC-906: CEPH-client installation procedure simplification
 - AC-881 Display package payment type

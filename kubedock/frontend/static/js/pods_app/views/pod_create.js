@@ -949,9 +949,21 @@ define(['pods_app/app',
             template: wizardSetContainerCompleteTpl,
             tagName: 'div',
 
-            templateHelpers: function() {
+            initialize: function(){
                 this.package = this.getUserPackage();
+                var num = 1;
+                    // kubeTypes is taken from index.html
+                    kube_id = Math.min.apply(null, _.map(kubeTypes, function(t){return t.id})),
+                    kube_price = this.getKubePrice(kube_id),
+                    kube = _.find(kubeTypes, function(t){return t.id===kube_id});
+                this.container_price = this.getFormattedPrice(kube_price * num);
+                this.cpu_data = kube ? kube.cpu + ' ' + kube.cpu_units : '0 Cores';
+                if(!this.model.has('kube_type')){
+                    this.model.attributes['kube_type'] = kube_id;
+                }
+            },
 
+            templateHelpers: function() {
                 var isPublic = isPerSorage = false,
                     containers = this.model.get('containers');
 
@@ -1000,7 +1012,7 @@ define(['pods_app/app',
                 'click .cluster'         : 'toggleCluster',
                 'click .node'            : 'toggleNode',
                 'change .replicas'       : 'changeReplicas',
-                'change .kube_type'      : 'changeKubeType',
+                'change @ui.kubeTypes'   : 'changeKubeType',
                 'change .kube-quantity'  : 'changeKubeQuantity',
                 'change @ui.policy'      : 'changePolicy',
                 'click @ui.editPolicy'   : 'editPolicy',
@@ -1063,12 +1075,13 @@ define(['pods_app/app',
                 this.total_price = this.getFormattedPrice(_.reduce(containers,
                     function(sum, c) { return sum + kube_price * c.kubes; }, 0));
                 this.render();
-                this.ui.kubeTypes.val(kube_id);
-                this.ui.kubeQuantity.val(num);
+                this.ui.kubeTypes.selectpicker('val', kube_id);
+                this.ui.kubeQuantity.selectpicker('val', num);
                 $('.kube-quantity button span').text(num);
             },
 
             changeKubeType: function(evt){
+                console.log('change kube type');
                 this.model.set('kube_type', parseInt(evt.target.value));
                 evt.stopPropagation();
                 var kube_id = parseInt(evt.target.value),
@@ -1078,6 +1091,7 @@ define(['pods_app/app',
                         return k.id === kube_id
                     }),
                     kube_price = this.getKubePrice(kube_id);
+                console.log(kube_id, kube_price);
                 this.model.set('kube_type', kube_id);
                 if (kube_data.length === 0) {
                     this.cpu_data = '0 Cores';
@@ -1092,8 +1106,8 @@ define(['pods_app/app',
                 this.total_price = this.getFormattedPrice(_.reduce(containers,
                     function(sum, c) { return sum + kube_price * c.kubes; }, 0));
                 this.render();
-                this.ui.kubeTypes.val(kube_id);
-                this.ui.kubeQuantity.val(num);
+                this.ui.kubeTypes.selectpicker('val', kube_id);
+                this.ui.kubeQuantity.selectpicker('val', num);
                 $('.kube-quantity button span').text(num);
             },
 
@@ -1109,11 +1123,9 @@ define(['pods_app/app',
             },
 
             getKubePrice: function(kubeId) {
-                var packageId = this.package.id;
                 var packageKube = _.find(packageKubes, function(p) {
-                    return p.package_id == packageId && p.kube_id == kubeId;
-                });
-
+                    return p.package_id === this.pid && p.kube_id === kubeId;
+                }, {pid: this.package.id});
                 return packageKube ? packageKube.kube_price : 0;
             },
 
@@ -1129,29 +1141,6 @@ define(['pods_app/app',
             },
 
             onRender: function() {
-                if(!this.model.get('kube_type')) this.model.set('kube_type', parseInt(kubeTypes[0].id));
-                if(!this.container_price) this.ui.kubeQuantity.trigger('change');
-                if(!this.cpu_data) this.ui.kubeTypes.trigger('change');
-
-                var that = this;
-                this.ui.ieditable.editable({
-                    type: 'text',
-                    mode: 'inline',
-                    inputclass: 'shortfield',
-                    success: function(response, newValue) {
-                        var item = $(this);
-                        if (item.hasClass('volume')) {
-                            var index = item.closest('tr').index();
-                            that.model.get('volumes')[index]['source'] = {hostDir: {path: newValue}};
-                        }
-                        else if (item.hasClass('port')) {
-                            that.model.set('port', parseInt(newValue));
-                        }
-                        else {
-                            console.log('oops!');
-                        }
-                    }
-                });
                 this.ui.selectpicker.selectpicker();
             },
 

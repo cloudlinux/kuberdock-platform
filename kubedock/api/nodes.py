@@ -6,6 +6,7 @@ import math
 import operator
 import socket
 import os
+import yaml
 from .. import tasks
 from ..models import Node, User, Pod
 from ..core import db
@@ -105,7 +106,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     }
 
 
-def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
+def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip, token):
     return {
         "name": name,
         "clusterIP": None,
@@ -133,7 +134,7 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
             {
                 "command": ["./run.sh"],
                 "kubes": kubes,
-                "image": "kuberdock/fluentd:1.0",
+                "image": "kuberdock/fluentd:1.1",
                 "name": "fluentd",
                 "env": [
                     {
@@ -166,12 +167,16 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip):
             {
                 "command": ["/elasticsearch/run.sh"],
                 "kubes": kubes,
-                "image": "kuberdock/elasticsearch:1.0",
+                "image": "kuberdock/elasticsearch:1.1",
                 "name": "elasticsearch",
                 "env": [
                     {
                         "name": "MASTER",
                         "value": master_ip
+                    },
+                    {
+                        "name": "TOKEN",
+                        "value": token
                     }
                 ],
                 "ports": [
@@ -370,8 +375,15 @@ def add_node(data, do_deploy=True, with_testing=False):
             ))
         ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
         logs_podname = get_kuberdock_logs_pod_name(data['hostname'])
+        with open('/etc/kubernetes/configfile_for_nodes') as node_configfile:
+            node_config = yaml.load(node_configfile.read())
+        for user in node_config['users']:
+            token = user['user']['token']
+            if user['name'] == 'kubelet':
+                break
         logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
-                                                kube.id, logs_kubes, MASTER_IP)
+                                                kube.id, logs_kubes, MASTER_IP,
+                                                token)
         check_new_pod_data(logs_config)
         logs_pod = PodCollection(ku).add(logs_config)
         PodCollection(ku).update(logs_pod['id'], {'command': 'start'})

@@ -10,7 +10,6 @@ def parser(subs):
                                     dest="action")
     
     search = action.add_parser('search')
-    ps = action.add_parser('ps')
     search.add_argument('search_string', help="Search string")
     search.add_argument('-p', '--page', default=0, type=int, help="Page to display")
     search.add_argument('-R', '--registry', help="Registry to search in. By default dockerhub is used")

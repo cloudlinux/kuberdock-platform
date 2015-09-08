@@ -12,9 +12,18 @@ import subprocess
 
 from ..image.image import Image
 from ..helper import KubeQuery, PrintOut
+from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
+    IMAGES_PATH, PRICING_PATH)
 
 
-class KubeCtl(KubeQuery, PrintOut, object):
+# Some common error messages
+ERR_NO_SUCH_ITEM = "No such item"
+ERR_INVALID_KUBE_TYPE = "Valid kube type must be set. "\
+                        "Run 'kuberdock kubes' to get available kube types"
+ERR_SPECIFY_IMAGE_OPTION = "You must specify an image with option "\
+                           "'-C|--container'"
+
+class KubeCtl(object):
     """
     Class for managing KuberDock entities
     """
@@ -23,41 +32,54 @@ class KubeCtl(KubeQuery, PrintOut, object):
         """
         Constructor
         """
-        for key, val in args.items():
+        self._args = args
+        self.as_json = args.get('json', False)
+        self.query = KubeQuery(jsonify_errors=self.as_json, **args)
+        for key, val in args.iteritems():
             setattr(self, key, val)
+
+    def _get_pod(self):
+        data = self.query.unwrap(self.query.get(PODAPI_PATH))
+        item = [i for i in data if i['name'] == self.name]
+        if item:
+            return item[0]
 
     def get(self):
         """
         Gets a list of user pods and prints either all or one
         """
-        self._WANTS_HEADER = True
-        self._FIELDS = (('name', 32), ('images', 32), ('labels', 64), ('status', 10))
-        data = self._unwrap(self._get('/api/podapi/'))
+        printout = PrintOut(
+            wants_header=True,
+            fields=(('name', 32), ('images', 32),
+                    ('labels', 64), ('status', 10)),
+            as_json=self.as_json)
+        data = self.query.unwrap(self.query.get(PODAPI_PATH))
         if hasattr(self, 'name'):
-            self._list([self._transform(i) for i in data if i['name'] == self.name])
+            printout.show_list([self._transform(i) for i in data if i['name'] == self.name])
         else:
-            self._list([self._transform(i) for i in data])
+            printout.show_list([self._transform(i) for i in data])
 
     def describe(self):
         """
         Gets a list of user pods, filter out one of them by name and prints it
         """
-        data = self._unwrap(self._get('/api/podapi/'))
-        try:
-            self._show([i for i in data if i['name'] == self.name][0])
-        except IndexError:
-            print "No such item"
+        pod = self._get_pod()
+        if pod:
+            printout = PrintOut(as_json=self.as_json)
+            printout.show(pod)
+        else:
+            raise SystemExit(ERR_NO_SUCH_ITEM)
 
     def delete(self):
         """
-        Gets a list of user pods, filter out one of them by name and prints it
+        Gets a list of user pods, filter out one of them by name and deletes it.
         """
-        data = self._unwrap(self._get('/api/podapi/'))
+        data = self.query.unwrap(self.query.get(PODAPI_PATH))
         try:
             item = [i for i in data if i['name'] == self.name][0]
-            self._del('/api/podapi/' + item['id'])
+            self.query.delete(PODAPI_PATH + item['id'])
         except (IndexError, KeyError):
-            print "No such item"
+            raise SystemExit(ERR_NO_SUCH_ITEM)
         self._set_delayed()
 
     def postprocess(self):
@@ -66,7 +88,7 @@ class KubeCtl(KubeQuery, PrintOut, object):
         if not hasattr(self, 'uid'):
             raise SystemExit('User UID is expected')
 
-        data = self._unwrap(self._get('/api/podapi/'))
+        data = self.query.unwrap(self.query.get(PODAPI_PATH))
         pod = [i for i in data if i['name'] == self.name]
         if pod:
             service_ip = pod[0].get('podIP')
@@ -111,16 +133,41 @@ class KubeCtl(KubeQuery, PrintOut, object):
 
     @staticmethod
     def _transform(data):
+        """ Converts json data of a pod to dict with fields "name", "status",
+        "labels", "images".
+        We expect here a dict with fields:
+            {
+              "name": name of the pod,
+              "status": status of the pod,
+              "labels": dict for some labels, for example {"name": "mypod"},
+              "containers": list of containers in the pod, each container is
+                 a dict, here we're extracting only "image" field - name
+                 of image in the container
+            }
+        Name and status will be returned as is, labels will be joined to
+        one string. Image names of container also will be joined to one string.
+
+        """
         ready = ['name', 'status']
-        out = dict([(k, v) for k, v in data.items() if k in ready])
-        out['labels'] = ','.join(
-            ['{0}={1}'.format(k, v) for k, v in data.get('labels', {}).items()])
-        out['images'] = ','.join(
-            [i.get('image', 'imageless') for i in data.get('containers', [])])
+        out = {k: data.get(k, '???') for k in ready}
+        out['labels'] = u','.join(
+            [u'{0}={1}'.format(k, v)
+             for k, v in data.get('labels', {}).iteritems()]
+        )
+        out['images'] = u','.join(
+            [i.get('image', 'imageless') for i in data.get('containers', [])]
+        )
         return out
 
     def _set_delayed(self):
-        data = self._get('/api/auth/token')
+        """Delayed change of iptables rules (postprocess method).
+        After deleting/creation of pod we should change iptables rules, but
+        we don't know if the operation actually have been performed. So, wait
+        for 2 minutes and call postprocess method as superuser (via suid
+        binary 'suidwrap').
+
+        """
+        data = self.query.get(AUTH_TOKEN_PATH)
         try:
             fmt = """echo /usr/libexec/suidwrap '"{0}"' {1} |at now + 2 minute > /dev/null 2>&1"""
             subprocess.check_call([fmt.format(data['token'], self.name)], shell=True)
@@ -136,11 +183,17 @@ class KuberDock(KubeCtl):
     EXT = '.kube'
 
     def __init__(self, **args):
-        """Constructor"""
+        """Creates empty parameters for container configuration.
+        TODO: separate field sets of cli parameters and container configuration
+        """
         # First we need to load possibly saved configuration for a new pod
         # and only after loading apply data
         self.containers = []
         self.volumes = []
+        # Container configs path
+        self._kube_path = None
+        # pending container path
+        self._data_path = None
         self._load(args)
         super(KuberDock, self).__init__(**args)
 
@@ -148,9 +201,10 @@ class KuberDock(KubeCtl):
         self.set()
 
     def set(self):
+        """Creates or updates temporary pod configuration on the local host"""
         if hasattr(self, 'image'):
             i = self._get_image()
-            i.kubes = int(self.kubes)
+            i.data['kubes'] = int(self.kubes)
 
         if self.delete is None:
             self._save()
@@ -166,14 +220,10 @@ class KuberDock(KubeCtl):
         kubes = self._get_kubes()
         try:
             data['kube_type'] = int(kubes[data['kube_type']])
-        except KeyError:
-            raise SystemExit("Valid kube type must be set. "
-                             "Run 'kuberdock kubes' to get available kube types")
-        except (ValueError, TypeError):
-            raise SystemExit("Invalid kube type. "
-                             "Run 'kuberdock kubes' to get available kube types")
+        except (KeyError, ValueError, TypeError):
+            raise SystemExit(ERR_INVALID_KUBE_TYPE)
         try:
-            res = self._post('/api/podapi/', json.dumps(data), True)
+            res = self.query.post(PODAPI_PATH, json.dumps(data), True)
             if res.get('status') != 'error':
                 self._clear()
             else:
@@ -183,15 +233,16 @@ class KuberDock(KubeCtl):
 
     def list(self):
         """
-        Lists all pending containers
+        Lists all pending pods
         """
         names = []
+        printout = PrintOut(as_json=self.as_json)
         try:
             for f in os.listdir(self._kube_path):
                 if not f.endswith(self.EXT):
                     continue
                 names.append(f[:f.index(self.EXT)])
-            self._list([{'name': base64.b64decode(i)} for i in names])
+            printout.show_list([{'name': base64.b64decode(i)} for i in names])
         except OSError:
             pass
 
@@ -199,10 +250,11 @@ class KuberDock(KubeCtl):
         """
         Returns list of user kubes
         """
-        self._WANTS_HEADER = True
-        self._FIELDS = (('id', 12), ('name', 32))
+        printout = PrintOut(wants_header=True,
+                            fields=(('id', 12), ('name', 32)),
+                            as_json=self.as_json)
         data = self._get_kubes()
-        self._list([{'name': k, 'id': v} for k, v in data.items()])
+        printout.show_list([{'name': k, 'id': v} for k, v in data.iteritems()])
 
     def drives(self):
         """
@@ -216,15 +268,18 @@ class KuberDock(KubeCtl):
         """
         Returns list of user persistent drives
         """
-        self._WANTS_HEADER = True
-        self._FIELDS = (('id', 48), ('name', 32), ('size', 12), ('in_use', 12))
-        self._list(self._get_drives())
+        printout = PrintOut(
+            wants_header=True,
+            fields=(('id', 48), ('name', 32), ('size', 12), ('in_use', 12)),
+            as_json=self.as_json
+        )
+        printout.show_list(self._get_drives())
 
     def add_drive(self):
         """
         Creates a persistent drive for a user
         """
-        self._post('/api/pstorage', {'name': self.name, 'size': self.size})
+        self.query.post(PSTORAGE_PATH, {'name': self.name, 'size': self.size})
 
     def delete_drive(self):
         """
@@ -234,30 +289,41 @@ class KuberDock(KubeCtl):
         filtered = [d for d in drives if d.get('name') == self.name]
         if not filtered:
             raise SystemExit('No such drive')
-        self._del('/api/pstorage/' + filtered[0]['id'])
+        self.query.delete(PSTORAGE_PATH + filtered[0]['id'])
 
     def start(self):
-        self._FIELDS = (('status', 32),)
+        """Starts a pod with specified name"""
+        printout = PrintOut(
+            fields=(('status', 32),),
+            as_json=self.as_json
+        )
         pod = self._get_pod()
+        if not pod:
+            raise SystemExit('Pod "{}" not found'.format(self.name))
+        command = {}
         if pod['status'] == 'stopped':
-            pod['command'] = 'start'
-        res = self._unwrap(self._put('/api/podapi/'+pod['id'], json.dumps(pod)))
-        if self.json:
-            self._print_json(res)
-        else:
-            self._print(res)
+            # Is this correct? In previous version was pod['command'] = 'stop',
+            # But API for start/stop takes only 'command' parameter from request
+            # body
+            command['command'] = 'start'
+        res = self.query.unwrap(self.query.put(PODAPI_PATH + pod['id'],
+                                              json.dumps(command)))
+        printout.show(res)
         self._set_delayed()
 
     def stop(self):
-        self._FIELDS = (('status', 32),)
+        """Stops a pod with specified name"""
+        printout = PrintOut(
+            fields=(('status', 32),),
+            as_json=self.as_json
+        )
         pod = self._get_pod()
+        command = {}
         if pod['status'] in ['running', 'pending']:
-            pod['command'] = 'stop'
-        res = self._unwrap(self._put('/api/podapi/'+pod['id'], json.dumps(pod)))
-        if self.json:
-            self._print_json(res)
-        else:
-            self._print(res)
+            command['command'] = 'stop'
+        res = self.query.unwrap(self.query.put(PODAPI_PATH + pod['id'],
+                                          json.dumps(command)))
+        printout.show_list(res)
 
     def forget(self):
         """
@@ -268,18 +334,24 @@ class KuberDock(KubeCtl):
         return self._forget_all()
 
     def search(self):
-        image = Image(vars(self))
+        """Searches for images with specified name. Optionally there may be
+        defined url for a registry where the search should be performed.
+        """
+        image = Image(vars(self), **self._args)
         image.search()
 
     def image_info(self):
-        image = Image(vars(self))
+        """Prints out information about image specified in 'image' parameter"""
+        image = Image(vars(self), **self._args)
         image.get()
 
     def describe(self):
+        """Describes pending pod."""
         if not os.path.exists(self._data_path):
-            raise SystemExit("No such item")
+            raise SystemExit(ERR_NO_SUCH_ITEM)
+        printout = PrintOut(as_json=self.as_json, fields=None)
         data = self._prepare()
-        self._show(data)
+        printout.show(data)
 
     def _forget_all(self):
         """
@@ -301,11 +373,6 @@ class KuberDock(KubeCtl):
         if self._data_path:
             os.unlink(self._data_path)
 
-    def _get_pod(self):
-        data = self._unwrap(self._get('/api/podapi/'))
-        item = [i for i in data if i['name'] == self.name]
-        if item:
-            return item[0]
 
     def _load(self, args):
         """
@@ -325,7 +392,7 @@ class KuberDock(KubeCtl):
         """
         Saves current container as JSON file
         """
-        if not hasattr(self, '_data_path') or self._data_path is None:
+        if self._data_path is None:
             raise SystemExit("No data path. No place to save to")
 
         # Trying to create the folder for storing configs.
@@ -341,20 +408,25 @@ class KuberDock(KubeCtl):
             json.dump(self._prepare(), o)
 
     def _prepare(self, final=False):
-        valid = set(['name', 'containers', 'volumes', 'service', 'replicationController',
-                     'replicas', 'set_public_ip', 'kube_type', 'restartPolicy', 'public_ip'])
+        valid = set([
+            'name', 'containers', 'volumes', 'service', 'replicationController',
+            'replicas', 'set_public_ip', 'kube_type', 'restartPolicy',
+            'public_ip'
+        ])
         self.replicationController = True
         self._prepare_volumes(final)
         self._prepare_ports()
         self._prepare_env()
-        data = dict(filter((lambda x: x[0] in valid), vars(self).items()))
+        data = {key: value for key, value in vars(self).iteritems()
+                if key in valid}
 
         return data
 
     def _prepare_volumes(self, final=False):
         """
         Makes names for volumeMount entries and populate 'volumes' with them
-        :param data: dict -> data to process
+        Prepares 'volumeMounts' fields in items of self.containers list,
+        also prepares self.volumes list.
         """
         for c in self.containers:
             if c.get('volumeMounts') is None:
@@ -376,11 +448,15 @@ class KuberDock(KubeCtl):
                 if not hasattr(self, 'mount_path'):
                     raise SystemExit('"--mount-path" option is expected')
 
-                curr = filter((lambda i: i['name'] == self.persistent_drive), self._get_drives())
+                curr = filter((lambda i: i['name'] == self.persistent_drive),
+                              self._get_drives())
                 if not curr and not hasattr(self, 'size'):
-                    raise SystemExit('Drive not found. To set a new drive option "--size" is expected')
+                    raise SystemExit(
+                        'Drive not found. To set a new drive option '
+                        '"--size" is expected')
 
-                mount_paths = [i for i in c['volumeMounts'] if i['mountPath'] == self.mount_path]
+                mount_paths = [i for i in c['volumeMounts']
+                               if i['mountPath'] == self.mount_path]
                 if mount_paths:
                     mount_path = mount_paths[0]
                 else:
@@ -391,7 +467,8 @@ class KuberDock(KubeCtl):
                     mount_path['name'] = self._generate_image_name(
                         self.mount_path.lstrip('/').replace('/', '-'))
 
-                vols = [v for v in self.volumes if v.get('name') == mount_path['name']]
+                vols = [v for v in self.volumes
+                        if v.get('name') == mount_path['name']]
                 if vols:
                     vol = vols[0]
                 else:
@@ -401,16 +478,35 @@ class KuberDock(KubeCtl):
                     'pdName': self.persistent_drive,
                     'pdSize': getattr(self, 'size', None)}
 
+
     def _prepare_ports(self):
         """Checks if all necessary port entry data are set"""
         if not hasattr(self, 'container_port'):
             return
         if not hasattr(self, 'image'):
-            raise SystemExit("You must specify an image with option '-C|--contaiter'")
+            # 'image' is defined by --container option
+            raise SystemExit(ERR_SPECIFY_IMAGE_OPTION)
 
-        patt = re.compile("^(?P<public>\+)?(?P<container_port>\d+)\:?(?P<host_port>\d+)?\:?(?P<protocol>tcp|udp)?$")
+        # We are expecting here
+        # something like +1234:567:tcp
+        #                ^is public flag (optional)
+        #                 ^container port
+        #                      ^host port (optional)
+        #                          ^protocol (tcp|udp) (optional)
+        patt = re.compile(
+            "^(?P<public>\+)?(?P<container_port>\d+)\:?(?P<host_port>\d+)?\:?"\
+            "(?P<protocol>tcp|udp)?$"
+        )
         ports = []
-        is_public_ip = []
+        is_public_ip = False
+
+        min_port = 1
+        max_port = 2**16
+
+        right_format_error_message = \
+            "Wrong port format. "\
+            "Example: +453:54:udp where '+' is a public IP, "\
+            "453 - container port, 54 - pod port, 'udp' - protocol (tcp or udp)"
 
         for p in getattr(self, 'container_port').strip().split(','):
             m = patt.match(p)
@@ -420,9 +516,15 @@ class KuberDock(KubeCtl):
                 host_port = m.group('host_port')
                 host_port = int(host_port) if host_port else container_port
                 protocol = m.group('protocol') if m.group('protocol') else 'tcp'
+                if any([container_port < min_port,
+                        container_port >= max_port,
+                        host_port < min_port,
+                        host_port >= max_port,
+                        protocol not in ('tcp', 'udp')]):
+                    raise SystemExit(right_format_error_message)
 
-                if public is True:
-                    is_public_ip.append(public)
+                if public:
+                    is_public_ip = True
                 ports.append({
                     'isPublic': public,
                     'containerPort': container_port,
@@ -430,18 +532,14 @@ class KuberDock(KubeCtl):
                     'protocol': protocol,
                 })
             else:
-                raise SystemExit("Wrong port format. Example: +453:54:udp where '+' is a public IP, "
-                                 "453 - container port, 54 - pod port, 'udp' - protocol (tcp or udp)")
+                raise SystemExit(right_format_error_message)
 
         for c in self.containers:
             if c['image'] != self.image:
                 continue
             c['ports'] = ports
 
-        if True in is_public_ip:
-            self.set_public_ip = True
-        else:
-            self.set_public_ip = False
+        self.set_public_ip = is_public_ip
 
     def _prepare_env(self):
         """
@@ -450,13 +548,16 @@ class KuberDock(KubeCtl):
         if not hasattr(self, 'env'):
             return
         if not hasattr(self, 'image'):
-            raise SystemExit("You must specify an image with option '-C|--container'")
+            raise SystemExit(ERR_SPECIFY_IMAGE_OPTION)
         for c in self.containers:
             if c['image'] != self.image:
                 continue
-            existing = map(operator.itemgetter('name'), c['env'])
+            if 'env' not in c:
+                c['env'] = []
+            existing = {item['name'] for item in c['env']}
             data_to_add = [dict(zip(['name', 'value'], item.strip().split(':')))
-                        for item in self.env.strip().split(',') if len(item.split(':')) == 2]
+                        for item in self.env.strip().split(',')
+                        if len(item.split(':')) == 2]
             for i in c['env']:
                 for j in data_to_add:
                     if i['name'] == j['name']:
@@ -468,7 +569,7 @@ class KuberDock(KubeCtl):
         """
         Container configs are kept in a user homedir. Get the path to it
         """
-        if hasattr(self, '_kube_path'):
+        if self._kube_path is not None:
             return
         uid = os.geteuid()
         homedir = pwd.getpwuid(uid).pw_dir
@@ -479,7 +580,7 @@ class KuberDock(KubeCtl):
         Get the path of a pending container config
         :param name: string -> name of pening pod
         """
-        if hasattr(self, '_data_path'):
+        if self._data_path is not None:
             return
         self._resolve_containers_directory()
         encoded_name = base64.urlsafe_b64encode(name) + self.EXT
@@ -493,13 +594,13 @@ class KuberDock(KubeCtl):
         """
         for item in self.containers:
             if item.get('image') == self.image:
-                return Image(item)     # return once configured image
+                return Image(item, **self._args)   # return once configured image
 
         _n = self._generate_image_name(self.image)    # new image
         image = {'image': self.image, 'name': _n}
         try:
-            pulled = self._unwrap(
-                self._post('/api/images/new', {'image': self.image}))
+            pulled = self.query.unwrap(
+                self.query.post(IMAGES_PATH + 'new', {'image': self.image}))
         except (AttributeError, TypeError):
             pulled = {}
 
@@ -507,17 +608,23 @@ class KuberDock(KubeCtl):
             pulled['volumeMounts'] = [{'mountPath': x}
                 for x in pulled['volumeMounts']]
         if 'ports' in pulled:
-            pulled['ports'] = [{'isPublic': False, 'containerPort': x.get('number'), 'hostPort': x.get('number'),
-                                'protocol': x.get('protocol')} for x in pulled['ports']]
+            pulled['ports'] = [
+                {
+                    'isPublic': False,
+                    'containerPort': x.get('number'),
+                    'hostPort': x.get('number'),
+                    'protocol': x.get('protocol')
+                } for x in pulled['ports']
+            ]
         image.update(pulled)
         self.containers.append(image)
-        return Image(image)
+        return Image(image, **self._args)
 
     @staticmethod
     def _generate_image_name(name, length=10):
         random_sample = ''.join(random.sample(string.digits, length))
         try:
-            return name[name.index('/')+1:] + random_sample
+            return name[name.index('/') + 1:] + random_sample
         except ValueError:
             return name + random_sample
 
@@ -525,13 +632,13 @@ class KuberDock(KubeCtl):
         """
         Gets user kubes info from backend
         """
-        return self._unwrap(self._get('/api/pricing/userpackage'))
+        return self.query.unwrap(self.query.get(PRICING_PATH + 'userpackage'))
 
     def _get_drives(self):
         """
         Gets user drives info from backend
         """
-        return self._unwrap(self._get('/api/pstorage'))
+        return self.query.unwrap(self.query.get(PSTORAGE_PATH))
 
     def _clear(self):
         """Deletes pending pod file"""

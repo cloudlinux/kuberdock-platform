@@ -624,6 +624,11 @@ define(['pods_app/app',
                 'change @ui.nameField' : 'validation',
             },
 
+            initialize: function(options){
+                var model = options.model;
+                if (!model.has('origEnv'))
+                    model.set('origEnv', _.map(model.get('env'), _.clone));
+            },
 
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
@@ -686,11 +691,8 @@ define(['pods_app/app',
             },
 
             resetFielsdsValue: function(){
-                var env = this.model.get('env');
-
-                env.forEach(function(item, i){
-                    env[i] = {name: null, value: null}
-                })
+                var origEnvClone = _.map(this.model.get('origEnv'), _.clone);
+                this.model.set('env', origEnvClone);
                 this.render();
             },
 

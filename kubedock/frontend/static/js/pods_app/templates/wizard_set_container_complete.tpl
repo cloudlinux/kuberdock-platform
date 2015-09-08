@@ -121,7 +121,7 @@
     </div>
     <div class="buttons pull-right">
         <button class="prev-step gray">Back</button>
-        <button class="add-more blue">Add more container</button>
+        <button class="add-more blue">Add more containers</button>
         <button class="save-container">Save</button>
     </div>
 </div>

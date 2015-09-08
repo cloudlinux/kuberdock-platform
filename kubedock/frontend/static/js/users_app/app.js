@@ -273,7 +273,6 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             activity: function(){
-                console.log('activity');
                 App.router.navigate('/activity/', {trigger: true});
             }
         });
@@ -370,7 +369,6 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             getUsersActivities: function(){
-                console.log(1);
                 if(!this.ui.username.data('ready')) return;
                 var that = this;
                 that.ui.tbody.empty();
@@ -393,6 +391,9 @@ define(['marionette', 'paginator', 'utils'],
 
             ui: {
                 'username'        : 'input#username',
+                'first_name'      : 'input#firstname',
+                'last_name'       : 'input#lastname',
+                'middle_initials' : 'input#middle_initials',
                 'password'        : 'input#password',
                 'password_again'  : 'input#password-again',
                 'email'           : 'input#email',
@@ -441,12 +442,15 @@ define(['marionette', 'paginator', 'utils'],
                     break;
                 default:
                     App.Data.users.create({
-                        'username' : this.ui.username.val(),
-                        'password' : this.ui.password.val(),
-                        'email'    : this.ui.email.val(),
-                        'active'   : (this.ui.user_status.val() == 1 ? true : false),
-                        'rolename' : this.ui.role_select.val(),
-                        'package'  : this.ui.package_select.val()
+                        'username'        : this.ui.username.val(),
+                        'first_name'      : this.ui.first_name.val(),
+                        'last_name'       : this.ui.last_name.val(),
+                        'middle_initials' : this.ui.middle_initials.val(),
+                        'password'        : this.ui.password.val(),
+                        'email'           : this.ui.email.val(),
+                        'active'          : (this.ui.user_status.val() == 1 ? true : false),
+                        'rolename'        : this.ui.role_select.val(),
+                        'package'         : this.ui.package_select.val(),
                     }, {
                         wait: true,
                         success: function(){
@@ -691,6 +695,9 @@ define(['marionette', 'paginator', 'utils'],
 
             onRender: function(){
                 this.ui.username.val(this.model.get('username'));
+                this.ui.first_name.val(this.model.get('first_name'));
+                this.ui.last_name.val(this.model.get('last_name'));
+                this.ui.middle_initials.val(this.model.get('middle_initials'))
                 this.ui.email.val(this.model.get('email'));
                 this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
                 this.ui.role_select.val(this.model.get('rolename'));
@@ -702,11 +709,14 @@ define(['marionette', 'paginator', 'utils'],
             onSave: function(){
                 // temp validation
                 var data = {
-                    'username' : this.ui.username.val(),
-                    'email'    : this.ui.email.val(),
-                    'active'   : (this.ui.user_status.val() == 1 ? true : false),
-                    'rolename' : this.ui.role_select.val(),
-                    'package'  : this.ui.package_select.val()
+                    'username'        : this.ui.username.val(),
+                    'email'           : this.ui.email.val(),
+                    'active'          : (this.ui.user_status.val() == 1 ? true : false),
+                    'rolename'        : this.ui.role_select.val(),
+                    'package'         : this.ui.package_select.val(),
+                    'first_name'      : this.ui.first_name.val(),
+                    'last_name'       : this.ui.last_name.val(),
+                    'middle_initials' : this.ui.middle_initials.val()
                 };
                 var pattern = /^([a-z0-9_\.-])+@[a-z0-9-]+\.([a-z]{2,4}\.)?[a-z]{2,4}$/i;
 

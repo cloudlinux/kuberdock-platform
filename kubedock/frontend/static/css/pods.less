@@ -247,6 +247,11 @@
                             background-color: #f5544d;
                         }
                     }
+                    &.terminated{
+                        &:before{
+                            background-color: #C3C3C3;
+                        }
+                    }
                     &.pending, &.waiting{
                         padding-left: 29px;
                         &:before{
@@ -258,12 +263,6 @@
                             height: 18px;
                             position: absolute;
                             background: url('../img/pending.gif') 0 0 no-repeat;
-                        }
-                    }
-                    &.termination{
-                        &:before{
-                            border: 1px solid #7c7c7c;
-                            background-color: #bbbfc3;
                         }
                     }
                 }
@@ -476,7 +475,7 @@
         &:before{
             top: 4px;
             height: 16px;
-            background: url('../img/stats-data-icon.png') 0 -16px no-repeat;
+            background: url('../img/stats-data-icon.png') 0 -17px no-repeat;
         }
         &:hover{
             &:before{

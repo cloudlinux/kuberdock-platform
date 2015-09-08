@@ -70,13 +70,12 @@
                     <li>
                         <div id="users-page">Users</div>
                     </li>
-                    <li class="active">
-                        <% if (typeof username !== "undefined") { %>
-                            <%= username %>
-                        <% } else { %>
-                            New User
-                        <% } %>
-                    </li>
+                    <% if (typeof username !== "undefined") { %>
+                        <li><%= username %></li>
+                        <li class="active">Edit user</li>
+                    <% } else { %>
+                        <li class="active">New User</li>
+                    <% } %>
                 </ul>
             </div>
         </div>
@@ -90,9 +89,21 @@
                             <input type="text" name="username" class="form-control" id="username">
                         </div>
                         <div class="form-group">
+                            <label for="firstname">First name</label>
+                            <input type="text" name="firstname" class="form-control" id="firstname">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastname">Last name</label>
+                            <input type="text" name="lastname" class="form-control" id="lastname">
+                        </div>
+                        <div class="form-group">
+                            <label for="middle_initials">Middle initials</label>
+                            <input type="text" name="middle_initials" class="form-control" id="middle_initials">
+                        </div>
+                        <div class="form-group">
                             <label for="password">Password</label>
-                            <input type="password" class="form-control" id="password" name="password">
-                            <input type="password" class="form-control" id="password-again" name="password-again">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+                            <input type="password" class="form-control" id="password-again" name="password-again" placeholder="Repeat password">
                         </div>
                         <div class="form-group">
                             <label for="email">E-mail</label>
@@ -227,18 +238,20 @@
                         <div class="tab-content col-xs-12 no-padding-right">
                             <div class="tab-pane fade in active" id="userGeneralTab">
                                 <div class="col-xs-2 col-offset-1 user"></div>
-                                <div class="col-xs-8">
-                                    <div>Name: <%- first_name %> <%- last_name %></div>
+                                <div class="col-xs-4">
+                                    <div>Username: <%- username %></div>
                                     <div>Registered: <%- join_date %></div>
-                                    <div>Last login: <%- last_login %></div>
-                                    <div>Last activity: <%- last_activity %></div>
+                                    <div>Last login: <%- last_login ? last_login : 'never'%></div>
+                                    <div>Last activity: <%- last_activity ? last_activity : 'never' %></div>
                                     <div>Package: <%- package %></div>
                                 </div>
-                                <!-- <div class="col-xs-2 col-offset-1 info"></div>
-                                <div class="col-xs-3">
-                                    <div>Kubes: 220</div>
-                                    <div>Plan: Basic</div>
-                                </div> -->
+                                <div class="col-xs-2 col-offset-1 info"></div>
+                                <div class="col-xs-4">
+                                    <div>First name: <%- first_name ? first_name : 'not specified'%></div>
+                                    <div>Last name: <%- last_name ? last_name : 'not specified'%></div>
+                                    <div><%- middle_initials ? 'Middle initials: ' + middle_initials : '' %></div>
+                                </div>
+
                                 <div class="col-xs-12">
                                     <table id="user-profile-general-table" class="table">
                                         <thead>

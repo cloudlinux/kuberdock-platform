@@ -219,7 +219,12 @@ define(['pods_app/app',
                     footer: {
                         buttonOk: function(){
                             var items = that.collection.fullCollection.filter(function(i){return i.is_checked});
-                            for (i in items) {items[i].destroy({wait: true})}
+                            for (i in items) {items[i].destroy({
+                                wait: true,
+                                error: function(model, response){
+                                    utils.notifyWindow(response);
+                                }
+                            })}
                             that.collection.fullCollection.checkedNumber = 0;
                             that.collection.fullCollection.allChecked = false;
                             that.render();
@@ -227,13 +232,11 @@ define(['pods_app/app',
                         buttonCancel: true
                    }
                });
-
             },
 
             runPods: function(evt){
                 evt.stopPropagation();
                 this.sendCommand('start');
-
             },
 
             stopPods: function(evt){
@@ -243,8 +246,13 @@ define(['pods_app/app',
 
             sendCommand: function(command){
                 var items = this.collection.fullCollection.filter(function(i){return i.is_checked});
+
                 for (i in items) {
-                    items[i].save({command: command}, {wait: true});
+                    items[i].save({command: command}, {
+                        error: function(model, response){
+                            utils.notifyWindow(response);
+                        }
+                    });
                     items[i].is_checked = false;
                     this.collection.fullCollection.checkedNumber--;
                 }

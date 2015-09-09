@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from fabric.api import run, settings, env
+from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
 import boto.ec2
 import math
@@ -506,7 +506,10 @@ def check_host(hostname=''):
 
 
 def poll():
-    devices = dict.fromkeys(run('rbd ls').split(), None)
+    rv = run('rbd ls')
+    if rv.return_code != 0:
+        return {}
+    devices = dict.fromkeys(rv.split(), None)
     mapped_list = [i.strip().split() for i in run('rbd showmapped').splitlines()]
     # Maybe we'll want mounted later
     # mounted_list = run('mount | grep /dev/rbd')
@@ -545,7 +548,7 @@ def handle_nodes(func, **kw):
     nodes = kw.pop('nodes', [])
     if not nodes:
         return {}
-    with settings(warn_only=True):
+    with settings(hide('running', 'warnings', 'stdout', 'stderr'), warn_only=True):
         return execute(func, hosts=nodes, **kw)
 
 

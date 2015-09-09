@@ -80,7 +80,7 @@ PERMISSIONS = (
     ("nodes", "TrialUser", "edit", False),
     ("nodes", "TrialUser", "delete", False),
     ("nodes", "TrialUser", "redeploy", False),
-    ("pods", "TrialUser", "create", False),
+    ("pods", "TrialUser", "create", True),
     ("pods", "TrialUser", "get", True),
     ("pods", "TrialUser", "edit", True),
     ("pods", "TrialUser", "delete", True),

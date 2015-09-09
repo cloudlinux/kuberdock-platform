@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 from .models import Menu, MenuItem, Page
 
@@ -76,7 +77,8 @@ def generate_menu():
             if _children:
                 create_children(_children, menu_item, menu)
 
-    for menu in MENUS:
+    menus = deepcopy(MENUS)
+    for menu in menus:
         items = menu.pop('items')
         menu = Menu.create(**menu)
         menu.save()

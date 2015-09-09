@@ -10,6 +10,7 @@ from ..rbac import check_permission
 from ..rbac.models import Role
 from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..users.models import User, UserActivity
+from ..pods.models import Pod
 from ..validation import UserValidator
 from ..users.signals import (
     user_logged_in_by_another, user_logged_out_by_another)
@@ -246,6 +247,15 @@ def put_item(user_id):
         p = db.session.query(Package).filter_by(name=package).first()
         if p is None:
             p = db.session.query(Package).filter_by(name='Standard package').first()
+
+        old_package, new_package = u.package, p
+        kubes_in_old_only = (set(kube.kube_id for kube in old_package.kubes) -
+                             set(kube.kube_id for kube in new_package.kubes))
+        if kubes_in_old_only:
+            if u.pods.filter(Pod.kube_id.in_(kubes_in_old_only)).first() is not None:
+                raise APIError('New package doesn\'t have kube_types of some '
+                               'of user\'s pods')
+
         data['package'] = p
     u.update(data)
     try:

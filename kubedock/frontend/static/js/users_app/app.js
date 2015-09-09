@@ -754,6 +754,9 @@ define(['marionette', 'paginator', 'utils'],
                                 globalPosition: 'bottom left',
                                 className: 'success'
                             });
+                        },
+                        error: function(model){
+                            model.set(model.previousAttributes());
                         }
                     });
                 }

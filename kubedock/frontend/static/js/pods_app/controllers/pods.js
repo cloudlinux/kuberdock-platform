@@ -214,7 +214,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     var model = new App.Data.Pod({name: "Unnamed-1", containers: [], volumes: []}),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout();
 
-                    var processRequest = function(data){
+                    var processRequest = function(data, backup){
                         var hasPublic = function(containers){
                             for (var i in containers) {
                                 for (var j in containers[i].ports) {
@@ -259,8 +259,13 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 Pods.navigate('pods');
                                 that.showPods();
                             },
-                            error: function(model, response, options, data){
+                            error: function(model, response, options, data_){
                                 console.log('error applying data');
+                                if (backup !== undefined) {
+                                    _.each(data.attributes['containers'], function(c, i) {
+                                        _.extend(c, this.backup[i]);
+                                    }, {backup: backup});
+                                }
                                 var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
                                 $.notify(body, {
                                     autoHideDelay: 5000,
@@ -299,14 +304,16 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         }
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
+                        var backup = [];
                         _.each(data.get('containers'), function(container){
+                            backup.push({url: container.url, origEnv: container.origEnv});
                             delete container.origEnv;
                             delete container.url;
                         });
                         data.unset('lastAddedImage', {silent: true});
                         data.unset('lastAddedImageNameId', {silent: true});
                         data.set({'save_only': true}, {silent: true});
-                        processRequest(data);
+                        processRequest(data, backup);
                     });
                     that.listenTo(wizardLayout, 'pod:run', function(data){
                         data.set({'save_only': false}, {silent: true});

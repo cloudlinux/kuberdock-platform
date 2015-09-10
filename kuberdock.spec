@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 35%{?dist}.cloudlinux
+Release: 35.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -159,6 +159,19 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Thu Sep 10 2015 Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-35.1
+- AC-665: reset values button (add container, third step - envvars)
+- AC-969: Update logging containers
+- AC-831: fix grammar mistake
+- AC-866: Add text to breadcrumbs in user edit page
+- AC-821, AC-805: Add new fields to user create/edit page, some design fix in user page & ippool page
+- AC-614 Fixed trial user can't create pods
+- AC-1003: user package change; bugfix; api tests
+- AC-724: Add notifocation to bulk operation in mainenance mode
+- Added update script for clearing dockerfile cache
+- Small bugfix related to not all nodes are ceph-aware when polled for ceph-volumes
+- AC-896: On pod save error returns stripped attributes
+
 * Mon Sep 07 2015 Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.2-35
 - small changes in deploy.sh, --cleanup section
 - Fix missing \ in deploy.sh

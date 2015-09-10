@@ -35,7 +35,7 @@ download-or-bust() {
 install-salt() {
   local salt_mode="$1"
 
-  if dpkg -s salt-minion &>/dev/null; then
+  if dpkg -s salt-node &>/dev/null; then
     echo "== SaltStack already installed, skipping install step =="
     return
   fi
@@ -57,7 +57,7 @@ install-salt() {
   if [[ "${salt_mode}" == "master" ]]; then
     DEBS+=( salt-master_2014.1.13+ds-1~bpo70+1_all.deb )
   fi
-  DEBS+=( salt-minion_2014.1.13+ds-1~bpo70+1_all.deb )
+  DEBS+=( salt-node_2014.1.13+ds-1~bpo70+1_all.deb )
   URL_BASE="https://storage.googleapis.com/kubernetes-release/salt"
 
   for deb in "${DEBS[@]}"; do

@@ -15,10 +15,10 @@
 # limitations under the License.
 
 # Prepopulate the name of the Master
-mkdir -p /etc/salt/minion.d
-echo "master: $SALT_MASTER" > /etc/salt/minion.d/master.conf
+mkdir -p /etc/salt/node.d
+echo "master: $SALT_MASTER" > /etc/salt/node.d/master.conf
 
-cat <<EOF >/etc/salt/minion.d/grains.conf
+cat <<EOF >/etc/salt/node.d/grains.conf
 grains:
   roles:
     - kubernetes-master
@@ -27,31 +27,31 @@ grains:
 EOF
 
 if [[ -n "${DOCKER_OPTS}" ]]; then
-  cat <<EOF >>/etc/salt/minion.d/grains.conf
+  cat <<EOF >>/etc/salt/node.d/grains.conf
   docker_opts: '$(echo "$DOCKER_OPTS" | sed -e "s/'/''/g")'
 EOF
 fi
 
 if [[ -n "${DOCKER_ROOT}" ]]; then
-  cat <<EOF >>/etc/salt/minion.d/grains.conf
+  cat <<EOF >>/etc/salt/node.d/grains.conf
   docker_root: '$(echo "$DOCKER_ROOT" | sed -e "s/'/''/g")'
 EOF
 fi
 
-# Auto accept all keys from minions that try to join
+# Auto accept all keys from nodes that try to join
 mkdir -p /etc/salt/master.d
 cat <<EOF >/etc/salt/master.d/auto-accept.conf
 auto_accept: True
 EOF
 
 cat <<EOF >/etc/salt/master.d/reactor.conf
-# React to new minions starting by running highstate on them.
+# React to new nodes starting by running highstate on them.
 reactor:
-  - 'salt/minion/*/start':
+  - 'salt/node/*/start':
     - /srv/reactor/highstate-new.sls
 EOF
 
 install-salt master
 
 service salt-master start
-service salt-minion start
+service salt-node start

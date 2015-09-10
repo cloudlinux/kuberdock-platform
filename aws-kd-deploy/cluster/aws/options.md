@@ -27,25 +27,25 @@ It is not a bad idea to set AWS_S3_BUCKET to something more human friendly.
 
 AWS_S3_REGION is useful for people that want to control their data location, because of regulatory restrictions for example.
 
-**MASTER_SIZE**, **MINION_SIZE**
+**MASTER_SIZE**, **NODE_SIZE**
 
-The instance type to use for creating the master/minion.  Defaults to t1.micro.
+The instance type to use for creating the master/node.  Defaults to t1.micro.
 
 For production usage, we recommend bigger instances, for example:
 
 ```
 export MASTER_SIZE=c4.large
-export MINION_SIZE=r3.large
+export NODE_SIZE=r3.large
 ```
 
-**KUBE_ENABLE_MINION_PUBLIC_IP**
+**KUBE_ENABLE_NODE_PUBLIC_IP**
 
-Should a public IP automatically assigned to the minions? "true" or "false"  
+Should a public IP automatically assigned to the nodes? "true" or "false"  
 Defaults to: "true"
 
 Please note: Do not set this to "false" unless you...
 
-- ... already configured a NAT instance in the kubernetes VPC that will enable internet access for the new minions
+- ... already configured a NAT instance in the kubernetes VPC that will enable internet access for the new nodes
 - ... already configured a route for "0.0.0.0/0" to this NAT instance
 - ... already configured a route for "YOUR_IP/32" to an AWS internet gateway (for the master instance to reach your
   client directly during setup)

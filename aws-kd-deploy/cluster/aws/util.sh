@@ -114,20 +114,20 @@ function detect-master () {
   echo "Using master: $KUBE_MASTER (external IP: $KUBE_MASTER_IP)"
 }
 
-function detect-minions () {
-  KUBE_MINION_IP_ADDRESSES=()
-  for (( i=0; i<${#MINION_NAMES[@]}; i++)); do
-    local minion_ip
-    if [[ "${ENABLE_MINION_PUBLIC_IP}" == "true" ]]; then
-      minion_ip=$(get_instance_public_ip ${MINION_NAMES[$i]})
+function detect-nodes () {
+  KUBE_NODE_IP_ADDRESSES=()
+  for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
+    local node_ip
+    if [[ "${ENABLE_NODE_PUBLIC_IP}" == "true" ]]; then
+      node_ip=$(get_instance_public_ip ${NODE_NAMES[$i]})
     else
-      minion_ip=$(get_instance_private_ip ${MINION_NAMES[$i]})
+      node_ip=$(get_instance_private_ip ${NODE_NAMES[$i]})
     fi
-    echo "Found ${MINION_NAMES[$i]} at ${minion_ip}"
-    KUBE_MINION_IP_ADDRESSES+=("${minion_ip}")
+    echo "Found ${NODE_NAMES[$i]} at ${node_ip}"
+    KUBE_NODE_IP_ADDRESSES+=("${node_ip}")
   done
-  if [[ -z "$KUBE_MINION_IP_ADDRESSES" ]]; then
-    echo "Could not detect Kubernetes minion nodes.  Make sure you've launched a cluster with 'kube-up.sh'"
+  if [[ -z "$KUBE_NODE_IP_ADDRESSES" ]]; then
+    echo "Could not detect Kubernetes node nodes.  Make sure you've launched a cluster with 'kube-up.sh'"
     exit 1
   fi
 }
@@ -286,9 +286,9 @@ function ensure-iam-profiles {
     echo "Creating master IAM profile: ${IAM_PROFILE_MASTER}"
     create-iam-profile ${IAM_PROFILE_MASTER}
   }
-  aws iam get-instance-profile --instance-profile-name ${IAM_PROFILE_MINION} || {
-    echo "Creating minion IAM profile: ${IAM_PROFILE_MINION}"
-    create-iam-profile ${IAM_PROFILE_MINION}
+  aws iam get-instance-profile --instance-profile-name ${IAM_PROFILE_NODE} || {
+    echo "Creating node IAM profile: ${IAM_PROFILE_NODE}"
+    create-iam-profile ${IAM_PROFILE_NODE}
   }
 }
 
@@ -360,7 +360,7 @@ function kube-up {
   get-tokens
 
   detect-image
-  detect-minion-image
+  detect-node-image
 
   ensure-temp-dir
 
@@ -487,47 +487,47 @@ function kube-up {
     sleep 10
   done
 
-  MINION_IDS=()
-  for (( i=0; i<${#MINION_NAMES[@]}; i++)); do
-    echo "Starting Minion (${MINION_NAMES[$i]})"
-    generate-minion-user-data $i > "${KUBE_TEMP}/minion-user-data-${i}"
+  NODE_IDS=()
+  for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
+    echo "Starting Node (${NODE_NAMES[$i]})"
+    generate-node-user-data $i > "${KUBE_TEMP}/node-user-data-${i}"
 
     local public_ip_option
-    if [[ "${ENABLE_MINION_PUBLIC_IP}" == "true" ]]; then
+    if [[ "${ENABLE_NODE_PUBLIC_IP}" == "true" ]]; then
       public_ip_option="--associate-public-ip-address"
     else
       public_ip_option="--no-associate-public-ip-address"
     fi
 
-    minion_id=$($AWS_CMD run-instances \
-      --image-id $KUBE_MINION_IMAGE \
-      --iam-instance-profile Name=$IAM_PROFILE_MINION \
-      --instance-type $MINION_SIZE \
+    node_id=$($AWS_CMD run-instances \
+      --image-id $KUBE_NODE_IMAGE \
+      --iam-instance-profile Name=$IAM_PROFILE_NODE \
+      --instance-type $NODE_SIZE \
       --subnet-id $SUBNET_ID \
       --private-ip-address $INTERNAL_IP_BASE.1${i} \
       --key-name kubernetes \
       --security-group-ids $SEC_GROUP_ID \
       ${public_ip_option} \
-      --user-data "file://${KUBE_TEMP}/minion-user-data-${i}" | json_val '["Instances"][0]["InstanceId"]')
+      --user-data "file://${KUBE_TEMP}/node-user-data-${i}" | json_val '["Instances"][0]["InstanceId"]')
 
-    add-tag $minion_id Name ${MINION_NAMES[$i]}
-    add-tag $minion_id Role $MINION_TAG
-    add-tag $minion_id KubernetesCluster ${CLUSTER_ID}
+    add-tag $node_id Name ${NODE_NAMES[$i]}
+    add-tag $node_id Role $NODE_TAG
+    add-tag $node_id KubernetesCluster ${CLUSTER_ID}
 
-    MINION_IDS[$i]=$minion_id
+    NODE_IDS[$i]=$node_id
   done
 
-  # Add routes to minions
-  for (( i=0; i<${#MINION_NAMES[@]}; i++)); do
+  # Add routes to nodes
+  for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
     # We are not able to add a route to the instance until that instance is in "running" state.
     # This is quite an ugly solution to this problem. In Bash 4 we could use assoc. arrays to do this for
     # all instances at once but we can't be sure we are running Bash 4.
-    minion_id=${MINION_IDS[$i]}
-    wait-for-instance-running $minion_id
-    echo "Minion ${MINION_NAMES[$i]} running"
+    node_id=${NODE_IDS[$i]}
+    wait-for-instance-running $node_id
+    echo "Node ${NODE_NAMES[$i]} running"
     sleep 10
-    $AWS_CMD modify-instance-attribute --instance-id $minion_id --source-dest-check '{"Value": false}' > $LOG
-    $AWS_CMD create-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block ${MINION_IP_RANGES[$i]} --instance-id $minion_id > $LOG
+    $AWS_CMD modify-instance-attribute --instance-id $node_id --source-dest-check '{"Value": false}' > $LOG
+    $AWS_CMD create-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block ${NODE_IP_RANGES[$i]} --instance-id $node_id > $LOG
   done
 
   FAIL=0
@@ -558,17 +558,17 @@ function kube-up {
   echo "Kubernetes cluster created."
 
     detect-master > $LOG
-    detect-minions > $LOG
+    detect-nodes > $LOG
 
   # Basic sanity checking
   local rc # Capture return code without exiting because of errexit bash option
-  for (( i=0; i<${#MINION_NAMES[@]}; i++)); do
-  MINION_HOSTNAME=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" hostname -f)
-	scp -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -r ${KUBE_ROOT}/kuberdock-files ${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}:/home/${EC2_USER}/
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" "stty raw -echo; sudo cp /home/${EC2_USER}/kuberdock-files/* /  | cat" < <(cat) 2>"$LOG"
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" "stty raw -echo; sudo mkdir -p /var/lib/kuberdock/scripts | cat" < <(cat) 2>"$LOG"
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MINION_IP_ADDRESSES[$i]}" "sudo AWS=True CUR_MASTER_KUBERNETES=${CUR_MASTER_KUBERNETES} MASTER_IP=${MASTER_INTERNAL_IP} bash /node_install.sh | cat" < <(cat) 2>"$LOG"
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" python /var/opt/kuberdock/manage.py add_node --hostname=${MINION_HOSTNAME} --kube-type=0 2>"$LOG"
+  for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
+  NODE_HOSTNAME=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" hostname -f)
+	scp -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -r ${KUBE_ROOT}/kuberdock-files ${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}:/home/${EC2_USER}/
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "stty raw -echo; sudo cp /home/${EC2_USER}/kuberdock-files/* /  | cat" < <(cat) 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "stty raw -echo; sudo mkdir -p /var/lib/kuberdock/scripts | cat" < <(cat) 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo AWS=True CUR_MASTER_KUBERNETES=${CUR_MASTER_KUBERNETES} MASTER_IP=${MASTER_INTERNAL_IP} bash /node_install.sh | cat" < <(cat) 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" python /var/opt/kuberdock/manage.py add_node --hostname=${NODE_HOSTNAME} --kube-type=0 2>"$LOG"
   done
 
   rm -rf ${KUBE_ROOT}/kuberdock-files
@@ -775,29 +775,29 @@ function get-tokens() {
 }
 #!/bin/bash
 
-function detect-minion-image() {
-  if [[ -z "${KUBE_MINION_IMAGE=-}" ]]; then
+function detect-node-image() {
+  if [[ -z "${KUBE_NODE_IMAGE=-}" ]]; then
     detect-image
-    KUBE_MINION_IMAGE=$AWS_IMAGE
+    KUBE_NODE_IMAGE=$AWS_IMAGE
   fi
 }
 
-function generate-minion-user-data {
+function generate-node-user-data {
   i=$1
   # We pipe this to the ami as a startup script in the user-data field.  Requires a compatible ami
   echo "#! /bin/bash"
   echo "SALT_MASTER='${MASTER_INTERNAL_IP}'"
-  echo "MINION_IP_RANGE='${MINION_IP_RANGES[$i]}'"
+  echo "NODE_IP_RANGE='${NODE_IP_RANGES[$i]}'"
   echo "DOCKER_OPTS='${EXTRA_DOCKER_OPTS:-}'"
 }
 
-function check-minion() {
-  local minion_name=$1
-  local minion_ip=$2
+function check-node() {
+  local node_name=$1
+  local node_ip=$2
 
-  local output=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" ${EC2_USER}@$minion_ip sudo docker ps -a 2>/dev/null)
+  local output=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" ${EC2_USER}@$node_ip sudo docker ps -a 2>/dev/null)
   if [[ -z "${output}" ]]; then
-    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" ${EC2_USER}@$minion_ip sudo service docker start > $LOG 2>&1
+    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" ${EC2_USER}@$node_ip sudo service docker start > $LOG 2>&1
     echo "not working yet"
   else
     echo "working"

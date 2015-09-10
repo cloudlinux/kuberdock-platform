@@ -15,18 +15,18 @@
 # limitations under the License.
 
 # Prepopulate the name of the Master
-mkdir -p /etc/salt/minion.d
-echo "master: $SALT_MASTER" > /etc/salt/minion.d/master.conf
+mkdir -p /etc/salt/node.d
+echo "master: $SALT_MASTER" > /etc/salt/node.d/master.conf
 
-# Turn on debugging for salt-minion
-# echo "DAEMON_ARGS=\"\$DAEMON_ARGS --log-file-level=debug\"" > /etc/default/salt-minion
+# Turn on debugging for salt-node
+# echo "DAEMON_ARGS=\"\$DAEMON_ARGS --log-file-level=debug\"" > /etc/default/salt-node
 
-# Our minions will have a pool role to distinguish them from the master.
-cat <<EOF >/etc/salt/minion.d/grains.conf
+# Our nodes will have a pool role to distinguish them from the master.
+cat <<EOF >/etc/salt/node.d/grains.conf
 grains:
   roles:
     - kubernetes-pool
-  cbr-cidr: $MINION_IP_RANGE
+  cbr-cidr: $NODE_IP_RANGE
   cloud: aws
 EOF
 
@@ -38,23 +38,23 @@ if [[ -z "${HOSTNAME_OVERRIDE}" ]]; then
 fi
 
 if [[ -n "${HOSTNAME_OVERRIDE}" ]]; then
-  cat <<EOF >>/etc/salt/minion.d/grains.conf
+  cat <<EOF >>/etc/salt/node.d/grains.conf
   hostname_override: "${HOSTNAME_OVERRIDE}"
 EOF
 fi
 
 if [[ -n "${DOCKER_OPTS}" ]]; then
-  cat <<EOF >>/etc/salt/minion.d/grains.conf
+  cat <<EOF >>/etc/salt/node.d/grains.conf
   docker_opts: '$(echo "$DOCKER_OPTS" | sed -e "s/'/''/g")'
 EOF
 fi
 
 if [[ -n "${DOCKER_ROOT}" ]]; then
-  cat <<EOF >>/etc/salt/minion.d/grains.conf
+  cat <<EOF >>/etc/salt/node.d/grains.conf
   docker_root: '$(echo "$DOCKER_ROOT" | sed -e "s/'/''/g")'
 EOF
 fi
 
 install-salt
 
-service salt-minion start
+service salt-node start

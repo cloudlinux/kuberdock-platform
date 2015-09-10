@@ -3,7 +3,6 @@ define(['pods_app/app',
         'tpl!pods_app/templates/breadcrumb_header.tpl',
         'tpl!pods_app/templates/wizard_image_collection_item.tpl',
         'tpl!pods_app/templates/wizard_get_image.tpl',
-//        'tpl!pods_app/templates/wizard_set_container_ports.tpl',
         'tpl!pods_app/templates/wizard_set_container_pending_basic_settings.tpl',
         'tpl!pods_app/templates/wizard_set_container_settled_basic_settings.tpl',
         'tpl!pods_app/templates/wizard_set_container_env.tpl',
@@ -19,7 +18,6 @@ define(['pods_app/app',
                 breadcrumbHeaderTpl,
                 wizardImageCollectionItemTpl,
                 wizardGetImageTpl,
-//                wizardSetContainerPortsTpl,
                 wizardSetContainerPendingBasicSettingsTpl,
                 wizardSetContainerSettledBasicSettingsTpl,
                 wizardSetContainerEnvTpl,
@@ -118,6 +116,7 @@ define(['pods_app/app',
                 var that = this;
                 this.ui.peditable.editable({
                     type: 'text',
+                    mode: 'inline',
                     success: function(response, newValue) {
                         that.model.set({name: newValue});
                         $.notify('New pod name "' + newValue + '" saved', {
@@ -137,8 +136,7 @@ define(['pods_app/app',
                             return 'The maximum length of the Pod name must be less than 64 characters'
                         }
                         if (model) {
-                            return 'Pod with name "' + newValue +
-                                '" already exists. Try another name.'
+                            return 'Pod with name "' + newValue + '" already exists. Try another name.'
                         }
                     }
                 });
@@ -278,6 +276,7 @@ define(['pods_app/app',
 
         NewItem.WizardPortsSubView = Backbone.Marionette.ItemView.extend({
             tagName: 'div',
+
             getTemplate: function(){
                 return this.model.has('parentID')
                     ? wizardSetContainerSettledBasicSettingsTpl
@@ -297,6 +296,7 @@ define(['pods_app/app',
                 addPort        : '.add-port',
                 addDrive       : '.add-drive',
                 nextStep       : '.next-step',
+                prevStep       : '.prev-step',
                 persistent     : '.persistent',
                 addVolume      : '.add-volume',
                 removePort     : '.remove-port',
@@ -311,6 +311,7 @@ define(['pods_app/app',
 
             events: {
                 'click @ui.nextStep'       : 'goNext',
+                'click @ui.prevStep'       : 'goBack',
                 'click @ui.addPort'        : 'addItem',
                 'click @ui.addDrive'       : 'addDrive',
                 'click @ui.addVolume'      : 'addVolume',
@@ -540,6 +541,10 @@ define(['pods_app/app',
                 }
             },
 
+            goBack: function(){
+                this.trigger('step:getimage', this);
+            },
+
             onRender: function(){
                 var that = this,
                     disks = [];
@@ -649,7 +654,7 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     podName: model !== undefined ? model.get('name') : '',
-                    };
+                };
             },
 
             triggers: {

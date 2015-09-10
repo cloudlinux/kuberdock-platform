@@ -52,8 +52,16 @@
                     </div>
                 </div>
                 <div class="col-xs-12 no-padding">
+                    <label>Ports:</label>
                     <table id="ports-table" class="table">
-                        <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Published</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Container port</th>
+                                <th>Protocol</th>
+                                <th>Pod port</th>
+                                <th>Published</th>
+                            </tr>
+                        </thead>
                         <tbody>
                         <% if (ports.length != 0) { %>
                             <% _.each(ports, function(p){ %>
@@ -68,7 +76,7 @@
                             <% }) %>
                         <% } else { %>
                             <tr>
-                                <td colspan="4" class="text-center">Ports not specified</td>
+                                <td colspan="4" class="text-center disabled-color-text">Ports not specified</td>
                             </tr>
                         <% } %>
                         </tbody>
@@ -94,27 +102,15 @@
                                                     </span>
                                                 </td>
                                                 <% if (v.readOnly){ %>
-                                                <td>
-                                                    no
-                                                    <!-- <label class="custom">
-                                                        <input checked type="checkbox"/>
-                                                        <span></span>
-                                                    </label> -->
-                                                </td>
+                                                <td>no</td>
                                                 <% } else { %>
-                                                <td>
-                                                    yes
-                                                    <!-- <label class="custom">
-                                                        <input type="checkbox"/>
-                                                        <span></span>
-                                                    </label> -->
-                                                </td>
+                                                <td>yes</td>
                                                 <% } %>
                                             </tr>
                                         <% }) %>
                                         <% } else { %>
                                             <tr>
-                                                <td colspan="2" class="text-center">Volumes not specified</td>
+                                                <td colspan="2" class="text-center disabled-color-text">Volumes not specified</td>
                                             </tr>
                                         <% } %>
                                     </tbody>

@@ -436,6 +436,7 @@ for PORT in $(echo $PORTS|tr "," "\n");do
 done
 
 for PORT in $(echo $PORTS|tr "," "\n");do
+    iptables -C INPUT -p tcp -s $MASTER_IP --dport $PORT -j ACCEPT > /dev/null 2>&1 || iptables -I INPUT -p tcp -s $MASTER_IP --dport $PORT -j ACCEPT
     for IP in $(echo $IPS|tr "," "\n");do
         iptables -C INPUT -p tcp -s $IP --dport $PORT -j ACCEPT > /dev/null 2>&1 || iptables -I INPUT -p tcp -s $IP --dport $PORT -j ACCEPT
     done

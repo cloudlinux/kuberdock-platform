@@ -314,7 +314,7 @@ define(['marionette', 'paginator', 'utils'],
                             that.ui.tbody.empty();
                             if(rs.data.length == 0){
                                 that.ui.tbody.append($('<tr>').append(
-                                    '<td colspan="5" align="center">Nothing found</td>'
+                                    '<td colspan="5" align="center" class="disabled-color-text">Nothing found</td>'
                                 ));
                             } else {
                                 $.each(rs.data, function (i, itm) {

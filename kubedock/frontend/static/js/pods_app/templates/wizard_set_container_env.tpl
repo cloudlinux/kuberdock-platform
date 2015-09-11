@@ -10,38 +10,38 @@
         </div>
         <div id="details_content" class="col-sm-9 set-up-image clearfix no-padding">
             <div id="tab-content" class="environment clearfix">
-                <div class="row">
-                    <label class="pull-left">
-                        Adding: <%- image %>
-                    </label>
+                <div class="image-name-wrapper">
+                    <%- image %>
                     <a class="pull-right" href="<%- url %>" target="blank">Learn more about variables for this image</a>
                 </div>
                 <% if (env.length != 0){ %>
                 <div class="row no-padding">
-                    <table class="environment-set-up">
-                        <thead>
-                            <tr class="col-sm-12 no-padding">
-                                <th>Name</th>
-                                <th>Value</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% _.each(env, function(e, index){ %>
-                            <tr class="col-sm-12 no-padding">
-                                <td class="col-sm-4 no-padding">
-                                    <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="eg. Variable_name">
-                                </td>
-                                <td  class="col-sm-4 col-sm-offset-2 no-padding">
-                                    <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="eg. Some_value_0-9">
-                                </td>
-                                <td>
-                                    <div class="remove-env"></div>
-                                </td>
-                            </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
+                    <div class="col-md-12">
+                        <table class="environment-set-up">
+                            <thead>
+                                <tr class="col-sm-12 no-padding">
+                                    <th>Name</th>
+                                    <th>Value</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% _.each(env, function(e, index){ %>
+                                <tr class="col-sm-12 no-padding">
+                                    <td class="col-sm-4 no-padding">
+                                        <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="eg. Variable_name">
+                                    </td>
+                                    <td  class="col-sm-4 col-sm-offset-2 no-padding">
+                                        <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="eg. Some_value_0-9">
+                                    </td>
+                                    <td>
+                                        <div class="remove-env"></div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <% } %>
                 <div class="col-sm-12 no-padding">
@@ -134,7 +134,7 @@
                                 <% }) %>
                             <% } else { %>
                                 <tr>
-                                    <td colspan="2" class="text-center">Variables not specified</td>
+                                    <td colspan="2" class="text-center disabled-color-text">Variables not specified</td>
                                 </tr>
                             <% } %>
                             </tbody>

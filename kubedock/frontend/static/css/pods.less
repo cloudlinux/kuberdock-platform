@@ -115,7 +115,7 @@
                         max-width: 12px;
                     }
                 }
-                &.index{
+                &.index, &.disabled-color-text{
                     color: #b1b9c0;
                 }
                 a, span, button{
@@ -714,13 +714,11 @@
         &.set-up-image{
             #tab-content{
                 margin-bottom: 0px;
-                padding-left: 45px;
                 border-bottom: 1px solid #e5e5e5;
                 &.clearfix{
                     margin-bottom: 0;
                 }
                 &.complete{
-                    padding-left: 45px;
                     padding-right: 10px;
                     .left{
                         margin-bottom: 29px;
@@ -852,6 +850,19 @@
                         }
                     }
                 }
+                .image-name-wrapper{
+                    .clearfix;
+                    display: block;
+                    font-size: 20px;
+                    font-weight: 400;
+                    line-height: 20px;
+                    margin-bottom: 30px;
+                    padding-bottom: 18px;
+                    border-bottom: 1px solid #DDD;
+                    a{
+                        font-size: 13px;
+                    }
+                }
                 .policy, .kube-type-wrapper{
                     position: relative;
                     select{
@@ -932,11 +943,14 @@
                     #ports-table, #volumes-table{
                         tr{
                             td{
+                                &:last-child{
+                                    padding-right: 24px;
+                                }
                                 span{
                                     &.remove-port, &.remove-volume{
                                         top: 2px;
                                         left: 7px;
-                                        width: 20px;
+                                        width: 15px;
                                         height: 17px;
                                         font-size: 0;
                                         display: inline-block;
@@ -994,12 +1008,12 @@
                         .box-shadow(none);
                         outline: 0;
                         &.add-port, &.add-volume{
-                            position: relative;
-                            margin-bottom: 35px;
-                            background: transparent;
                             border: none;
                             color: #3297ed;
                             padding-left: 35px;
+                            position: relative;
+                            margin-bottom: 40px;
+                            background: transparent;
                             &:before{
                                 top: 2px;
                                 left: 10px;
@@ -1035,7 +1049,7 @@
                     }
                 }
                 .entrypoint{
-                    margin-bottom: 35px;
+                    margin-bottom: 40px;
                     .entrypoint-info{
                         height: 52px;
                         max-width: 200px;
@@ -1118,13 +1132,14 @@
                             }
                         }
                         .remove-env{
-                            width: 40px;
-                            height: 50px;
-                            margin: auto;
+                            width: 15px;
+                            height: 17px;
+                            margin-left: 10px;
                             display: inline-block;
-                            background: url('../img/remove-line.png') center no-repeat;
+                            background: url('../img/recycling.png') 0 0 no-repeat;
                             &:hover{
                                 cursor: pointer;
+                                background-position: 0 -18px;
                             }
                         }
                     }
@@ -1176,7 +1191,7 @@
                             font-size: 15px;
                             margin-bottom: 0;
                             font-family: @regular;
-                            background-color: #466eb1;
+                            background-color: #2490EA;;
                         }
                     }
                 }
@@ -1201,6 +1216,7 @@
                     background-color: #f8f8f8;
                 }
                 #search-image-field{
+                    font-size: 13px;
                     border-right: 0;
                     background-color: #fff;
                 }
@@ -1212,7 +1228,7 @@
                         border: none;
                         font-size: 0;
                         color: transparent;
-                        background: #466eb1 url('../img/search-ico-big.png') center center no-repeat;
+                        background: #2490EA url('../img/search-ico-big.png') center center no-repeat;
                     }
                 }
             }
@@ -1266,16 +1282,16 @@
                             font-size: 13px;
                         }
                         .like{
-                            padding: 0;
                             border: none;
+                            float: right;
                             color: #000000;
+                            min-width: 80px;
                             font-size: 15px;
-                            margin-left: 25px;
-                            text-align: center;
+                            text-align: left;
                             position: relative;
                             padding-left: 30px;
-                            background-color: transparent;
                             font-family: @regular;
+                            background-color: transparent;
                             &:before{
                                 left: 0;
                                 content: '';
@@ -1289,16 +1305,18 @@
                             }
                         }
                         .add-item{
+                            .border-radius(2px);
                             padding: 0;
                             color: #fff;
                             width: 100px;
+                            float: right;
                             height: 37px;
                             font-size: 15px;
                             margin-top: 13px;
                             border: 1px solid;
                             text-align: center;
-                            border-color: #466eb1;
-                            background-color: #466eb1;
+                            border-color: #2490EA;
+                            background-color: #2490EA;
                             font-family: @regular;
                         }
                     }
@@ -1351,6 +1369,7 @@
         }
     }
     .description{
+        font-size: 12px;
         line-height: 78px;
     }
 }
@@ -1506,13 +1525,14 @@
                 }
             }
             .container-logs{
-                background: black;
                 color: white;
                 padding: 1em;
                 height: 38em;
                 overflow: auto;
                 font-size: 10pt;
                 line-height: 1em;
+                background: #000;
+                margin-bottom: 30px;
                 p{
                     margin: 0 0 6px;
                 }
@@ -1520,12 +1540,37 @@
         }
         .status-line{
             span{
-                color: #3197ee;
-                margin-left: 25px;
-                font-weight: normal;
+                color: #4e5665;
+                font-size: 13px;
+                margin-left: 20px;
+                vertical-align: top;
+                display: inline-block;
+                position: relative;
+                text-transform: capitalize;
+                padding-left: 25px;
+                &:before{
+                    .border-radius(0);
+                    .box-sizing(padding-box);
+                    content: '';
+                    left: 2px;
+                    width: 20px;
+                    height: 17px;
+                    position: absolute;
+                }
                 &:hover{
                     cursor: pointer;
-                    color: #1d1d1d;
+                    color: #3197ee;
+                }
+                &#startContainer{
+                    &:before{
+                        top: 5px;
+                        background: url('../img/start.png') 0 0 no-repeat;
+                    }
+                    &:hover{
+                        &:before{
+                            background-position: 0 -18px;
+                        }
+                    }
                 }
             }
         }

@@ -336,16 +336,16 @@
         position: relative;
         padding-left: 45px;
         margin-bottom: 0px;
-        font-family: @bold;
+        font-family: @regular;
         border-bottom: 1px solid #e5e5e5;
         &:before{
             .border-radius(50%);
+            left: 20px;
             content: '';
             width: 13px;
             height: 13px;
-            position: absolute;
-            left: 20px;
             bottom: 20px;
+            position: absolute;
         }
         &.running{
             &:before{
@@ -363,8 +363,8 @@
             &:before{
                 .border-radius(0);
                 left: 13px;
-                content: '';
                 width: 22px;
+                content: '';
                 bottom: 16px;
                 height: 22px;
                 position: absolute;

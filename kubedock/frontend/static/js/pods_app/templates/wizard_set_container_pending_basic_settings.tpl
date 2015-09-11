@@ -8,12 +8,7 @@
 </div>
 <div id="details_content" class="col-sm-9 set-up-image no-padding">
     <div id="tab-content">
-        <label>Adding: <%- image %></label>
-        <!-- <label class="custom">
-            <input type="checkbox"/>
-            <span></span>
-            On autoterminate
-        </label> -->
+        <div class="image-name-wrapper"><%- image %></div>
         <div class="entrypoint">
             <label>Command:</label>
             <div class="row fields">
@@ -52,7 +47,7 @@
                             <% }) %>
                         <% } else { %>
                              <tr>
-                                <td colspan="4" class="text-center">To add port click on a button below</td>
+                                <td colspan="4" class="text-center disabled-color-text">To add port click on a button below</td>
                             </tr>
                         <% } %>
                         </tbody>
@@ -70,12 +65,7 @@
                 <div class="col-xs-12">
                     <table class="table" id="volumes-table">
                         <thead>
-                            <tr>
-                                <th>Container path</th>
-                                <th>Persistent</th>
-                                <th>Name</th>
-                                <th>GB</th>
-                            </tr>
+                            <tr><th>Container path</th><th>Persistent</th><th>Name</th><th>GB</th></tr>
                         </thead>
                         <tbody>
                         <% if (volumeMounts.length != 0){ %>
@@ -136,7 +126,7 @@
                             <% }) %>
                         <% } else { %>
                             <tr>
-                                <td colspan="4" class="text-center">To add volume click on a button below</td>
+                                <td colspan="4" class="text-center disabled-color-text">To add volume click on a button below</td>
                             </tr>
                         <% } %>
                         </tbody>
@@ -150,11 +140,9 @@
     </div>
 </div>
 <div class="col-xs-9 no-padding col-xs-offset-3">
-    <span class="description pull-left">
-        * Public IP will require additional payment
-    </span>
+    <span class="description pull-left">* Public IP will require additional payment</span>
     <span class="buttons pull-right">
-        <a href="/#pods" class="">Cancel</a>
+        <button class="prev-step">Back</button>
         <button class="next-step">Next</button>
     </span>
 </div>

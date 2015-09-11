@@ -144,7 +144,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)
-        volumes = getattr(self, 'volumes', [])
         if self.replicationController:
             config = {
                 "kind": "ReplicationController",
@@ -169,8 +168,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                             }
                         },
                         "spec": {
-                            "volumes": volumes,
-                            "containers": [self._prepare_container(c, kube_type, volumes)
+                            "volumes": getattr(self, 'volumes', []),
+                            "containers": [self._prepare_container(c, kube_type)
                                            for c in self.containers],
                             "nodeSelector": {
                                 "kuberdock-kube-type": "type_{0}".format(kube_type)
@@ -193,9 +192,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     }
                 },
                 "spec": {
-                    "volumes": volumes,
+                    "volumes": getattr(self, 'volumes', []),
                     "containers": [
-                        self._prepare_container(c, kube_type, volumes)
+                        self._prepare_container(c, kube_type)
                             for c in self.containers],
                     "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
                     "nodeSelector": {
@@ -221,12 +220,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             except KeyError:
                 continue
 
-    def _prepare_container(self, data, kube_type=0, volumes=None):
+    def _prepare_container(self, data, kube_type=0):
         if not data.get('name'):
             data['name'] = self._make_name_from_image(data.get('image', ''))
-
-        if volumes is None:
-            volumes = []
 
         try:
             kubes = int(data.pop('kubes'))
@@ -245,24 +241,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if self.owner != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
-
-        if self._has_rbd(data.get('volumeMounts', []), volumes):
-            data['securityContext'] = {'privileged': True}
         return data
-
-    @staticmethod
-    def _has_rbd(volume_mounts, volumes):
-        """
-        Returns true if one of volumeMounts has a correspondent one in
-        volumes of type 'rbd'
-        :param volume_mounts: list -> list of mount dicts
-        :param volumes: list -> list of volume dicts
-        :return: bool
-        """
-        return any([[i for i in
-            [v for v in volumes if v.get('name')==vm.get('name')]
-                if 'rbd' in i] for vm in volume_mounts])
-
 
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)

@@ -41,7 +41,6 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
         "kube_type": 0,
         "replicationController": True,
         "node": None,
-        "save_only": True,
         "restartPolicy": "Always",
         "volumes": [],
         "containers": [
@@ -114,7 +113,6 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip, token):
         "kube_type": kube_type,
         "replicationController": True,
         "node": node,
-        "save_only": True,
         "restartPolicy": "Always",
         "volumes": [
             {

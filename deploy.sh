@@ -163,7 +163,7 @@ do_deploy()
 if [ "$ISAMAZON" = true ];then
     log_it echo "Flannel backend will be set to \"aws-vpc\""
 else
-    log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND
+    log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND"
 fi
 
 # Get number of interfaces up

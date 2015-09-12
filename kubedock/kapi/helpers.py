@@ -1,7 +1,6 @@
 import ipaddress
 import json
 import random
-import re
 import requests
 import string
 from .. import signals
@@ -135,13 +134,18 @@ class ModelQuery(object):
             ip = self.public_ip
         signals.allocate_ip_address.send([pod_id, ip])
 
-    def _free_ip(self, ip=None):
+    def _free_ip(self, ip=None, pod_id=None):
         if hasattr(self, 'public_ip'):
             ip = self.public_ip
         if ip is not None:
-            podip = PodIP.filter_by(
-                ip_address=int(ipaddress.ip_address(ip)))
-            pod = podip.first().pod
+            podip = PodIP.filter_by(ip_address=int(ipaddress.ip_address(ip)))
+            if pod_id is not None:  # free ip only if it's attached to this pod
+                podip = podip.filter_by(pod_id=pod_id)
+            podip = podip.first()
+            if podip is None:
+                return
+
+            pod = podip.pod
             pod_config = json.loads(pod.config)
             pod_config.pop('public_ip', None)
             for container in pod_config['containers']:

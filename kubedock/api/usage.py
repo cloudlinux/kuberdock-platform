@@ -1,13 +1,9 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
-from ..billing import Package
-from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token
+from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..users import User
-from ..pods import Pod
-from ..stats import StatWrap5Min
 from . import APIError
 from collections import defaultdict
 import time
@@ -19,52 +15,42 @@ usage = Blueprint('usage', __name__, url_prefix='/usage')
 @usage.route('/', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
+@KubeUtils.jsonwrap
 def get_total_usage():
-    data = {}
-    users = db.session.query(User).all()
-    for user in users:
-        if user.username not in data:
-            data[user.username] = []
-        for pod in user.pods:
-            entry = unfold_entry(pod)
-            data[user.username].append(entry)
-    return jsonify({'status': 'OK', 'data': data})
+    return {user.username: get_user_usage(user) for user in User.query}
+
 
 @usage.route('/<login>', methods=['GET'])
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
+@KubeUtils.jsonwrap
 def get_usage(login):
-    #start = request.args.get('start', None)
-    #end = request.args.get('end', None)
-    #period = db.session.query(User).filter(User.username==login).first().package.period
-    user = db.session.query(User).filter(User.username==login).first()
+    user = User.query.filter_by(username=login).first()
     if user is None:
         raise APIError('User with username {0} does not exist'.format(login))
-    data = []
-    for pod in user.pods:
-        entry = unfold_entry(pod)
-        data.append(entry)
-    return jsonify({'status': 'OK', 'data': data})
+    return get_user_usage(user)
 
 
-def unfold_entry(row):
+def get_pod_usage(pod):
     time_ = defaultdict(list)
-    for state in row.states:
+    for state in pod.states:
         start = to_timestamp(state.start_time)
         end = (int(time.time()) if state.end_time is None else
                to_timestamp(state.end_time))
-        time_[state.container_name].append({
-            'kubes': state.kubes,
-            'start': start,
-            'end': end,
-            })
-    return {
-        'id': row.id,
-        'name': row.name,
-        'kubes': row.kubes,
-        'kube_id': row.kube_id,
-        'time': time_,
-        }
+        time_[state.container_name].append({'kubes': state.kubes,
+                                            'start': start, 'end': end})
+    return {'id': pod.id,
+            'name': pod.name,
+            'kubes': pod.kubes,
+            'kube_id': pod.kube_id,
+            'time': time_}
+
+
+def get_user_usage(user):
+    return {'pods_usage': map(get_pod_usage, user.pods),
+            'ip_usage': [ip_state.to_dict() for ip_state in user.ip_states],
+            'pd_usage': [pd_state.to_dict(exclude=['user_id'])
+                         for pd_state in user.pd_states]}
 
 
 def to_timestamp(date):

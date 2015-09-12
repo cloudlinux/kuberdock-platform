@@ -14,6 +14,8 @@ from StringIO import StringIO
 from ..core import db
 from ..nodes.models import Node
 from ..pods.models import Pod
+from ..users.models import User
+from ..usage.models import PersistentDiskState
 from ..settings import PD_SEPARATOR, SSH_KEY_FILENAME
 from ..utils import APIError
 
@@ -134,6 +136,37 @@ class PersistentStorage(object):
             self._drives = [d for d in self._drives
                 if d['id'] != drive_id]
         return rv
+
+    @staticmethod
+    def start_stat(size, name=None, user=None, sys_drive_name=None):
+        """
+        Start counting usage statistics.
+
+        You need to provide `name` and `user` or `sys_drive_name`
+        :param size: int -> size in GB
+        :param name: string -> user's drive name
+        :param user: object -> user object
+        :param sys_drive_name: string -> system drive name
+        """
+        if name is None or user is None:
+            name, username = sys_drive_name.rsplit(PD_SEPARATOR, 1)
+            user = User.query.filter_by(username=username).one()
+        PersistentDiskState.start(user.id, name, size)
+
+    @staticmethod
+    def end_stat(name=None, user=None, sys_drive_name=None):
+        """
+        Finish counting usage statistics.
+
+        You need to provide `name` and `user` or `sys_drive_name`
+        :param name: string -> user's drive name
+        :param user: object -> user object
+        :param sys_drive_name: string -> system drive name
+        """
+        if name is None or user is None:
+            PersistentDiskState.end(sys_drive_name=sys_drive_name)
+            return
+        PersistentDiskState.end(user.id, name)
 
     def _get_pod_drives(self):
         """
@@ -350,6 +383,8 @@ class CephStorage(PersistentStorage):
             with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                           warn_only=True):
                 rv = run('rbd create {0} --size={1}'.format(name, mb_size))
+                if rv.return_code == 0:
+                    self.start_stat(size, sys_drive_name=name)
                 return rv.return_code
 
     @staticmethod
@@ -379,6 +414,7 @@ class CephStorage(PersistentStorage):
             for name, data in raw_drives[node].items():
                 hashed = md5(name).hexdigest()
                 if hashed == drive_id:
+                    self.end_stat(sys_drive_name=name)
                     if data['in_use']:
                         return
                     with settings(host_string=node):
@@ -398,6 +434,7 @@ class CephStorage(PersistentStorage):
         for node in raw_drives:
             for name, data in raw_drives[node].items():
                 if name == drive_name:
+                    self.end_stat(sys_drive_name=drive_name)
                     if data['in_use']:
                         return
                     with settings(host_string=node):
@@ -482,6 +519,7 @@ class AmazonStorage(PersistentStorage):
             while vol.status != 'available':
                 time.sleep(1)
                 vol.update()
+            self.start_stat(size, sys_drive_name=name)
             return 0
 
     def _get_raw_drives(self):
@@ -539,6 +577,7 @@ class AmazonStorage(PersistentStorage):
         for vol in raw_drives:
             name = vol.tags.get('Name', 'Nameless')
             if md5(name).hexdigest() == drive_id:
+                self.end_stat(sys_drive_name=name)
                 return 0 if vol.delete() else 1
 
     def _delete(self, drive_name):
@@ -552,6 +591,7 @@ class AmazonStorage(PersistentStorage):
         for vol in raw_drives:
             name = vol.tags.get('Name', 'Nameless')
             if name == drive_name:
+                self.end_stat(sys_drive_name=drive_name)
                 return 0 if vol.delete() else 1
 
     def _makefs(self, drive_name, fs='ext4'):

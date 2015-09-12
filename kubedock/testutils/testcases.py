@@ -1,5 +1,6 @@
 import unittest
 import base64
+from datetime import timedelta
 from json import dumps as json_dumps
 
 from flask_testing import TestCase as FlaskBaseTestCase
@@ -30,7 +31,7 @@ class DBTestCase(FlaskTestCase):
                                '{2}'.format(DB_USER, DB_PASSWORD, DB_NAME))
 
     def create_app(self):
-        create_app(self)
+        return create_app(self)
 
     def setUp(self):
         db.reflect()
@@ -44,10 +45,13 @@ class DBTestCase(FlaskTestCase):
 class APITestCase(DBTestCase):
     def create_app(self):
         from kubedock.api import create_app
-        return create_app(self)
+        return create_app(self, fake_sessions=True)
 
     def setUp(self):
         super(APITestCase, self).setUp()
+        from kubedock import sessions
+        self.app.session_interface = sessions.ManagedSessionInterface(
+            sessions.DataBaseSessionManager(self.SECRET_KEY), [], timedelta(days=1))
         fixtures.initial_fixtures()
 
         from kubedock.rbac import acl

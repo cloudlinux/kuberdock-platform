@@ -89,7 +89,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             self._raise_if_failure(rv, "Could not remove a service")
 
         if hasattr(pod, 'public_ip'):
-            pod._free_ip()
+            pod._free_ip(pod_id=pod_id)
         rv = self._drop_namespace(pod.namespace)
         # current_app.logger.debug(rv)
         self._mark_pod_as_deleted(pod_id)

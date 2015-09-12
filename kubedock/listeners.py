@@ -7,7 +7,8 @@ from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from websocket import create_connection, WebSocketException
 
 from .core import db, ConnectionPool
-from .pods.models import ContainerState, Pod
+from .pods.models import Pod
+from .usage.models import ContainerState
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .tasks import fix_pods_timeline_heavy
 from .utils import (modify_node_ips, get_api_url, set_limit,

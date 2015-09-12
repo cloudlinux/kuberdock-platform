@@ -126,10 +126,6 @@ create_user_schema = {
         'required': True,
     },
 }
-update_user_schema = {}
-for field, schema in create_user_schema.iteritems():
-    update_user_schema[field] = schema.copy()
-    update_user_schema[field].pop('required', None)
 
 
 new_pod_schema = {
@@ -392,9 +388,27 @@ class V(cerberus.Validator):
     implement any new here.
     """
     # TODO: add readable error messages for regexps in old schemas
+    type_map = {str: 'string',
+                int: 'integer',
+                float: 'float',
+                bool: 'boolean',
+                dict: 'dict',
+                list: 'list',
+                # None: 'string'  # you can use `None` to set the default type
+                set: 'set'}
 
-    def _api_validation(self, data, schema):
-        if not self.validate(data, schema):
+    def validate_schema(self, schema):
+        """
+        Little hack to allow us to use sandard python types (or anything at all)
+        for type validation. Just map it to some string in self.type_map
+        """
+        for value in schema.itervalues():
+            if value.get('type') in self.type_map:
+                value['type'] = self.type_map[value.get('type')]
+        return super(V, self).validate_schema(schema)
+
+    def _api_validation(self, data, schema, **kwargs):
+        if not self.validate(data, schema, **kwargs):
             raise APIError(self.errors)
 
     def _validate_regex(self, re_obj, field, value):
@@ -566,4 +580,4 @@ class UserValidator(V):
         data = deepcopy(data)
         data['_id'] = user_id  # needed for _validate_unique_case_insensitive
         self.allow_unknown = True
-        self._api_validation(data, update_user_schema)
+        self._api_validation(data, create_user_schema, update=True)

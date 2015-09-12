@@ -8,10 +8,10 @@ from flask import current_app
 from ..core import db
 from ..models_mixin import BaseModelMixin
 from .. import signals
-from ..billing.models import Package
+from ..usage.models import IpState
 
 
-class Pod(db.Model):
+class Pod(BaseModelMixin, db.Model):
     __tablename__ = 'pods'
     __table_args__ = (db.UniqueConstraint('name', 'owner_id'),)
 
@@ -21,7 +21,6 @@ class Pod(db.Model):
     kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
     config = db.Column(db.Text)
     status = db.Column(db.String(length=32), default='unknown')
-    states = db.relationship('ContainerState', backref='pod')
 
     def __repr__(self):
         return "<Pod(id='%s', name='%s', owner_id='%s', kubes='%s', config='%s', status='%s')>" % (
@@ -74,18 +73,6 @@ class Pod(db.Model):
             config = json.loads(self.config),
             status = self.status)
 
-
-class ContainerState(db.Model):
-    __tablename__ = 'container_states'
-    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), primary_key=True, nullable=False)
-    container_name = db.Column(db.String(length=255), primary_key=True, nullable=False)
-    kubes = db.Column(db.Integer, primary_key=True, nullable=False, default=1)
-    start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
-    end_time = db.Column(db.DateTime, nullable=True)
-
-    def __repr__(self):
-        return "<ContainerState(pod_id='%s', container_name='%s', kubes='%s', start_time='%s', end_time='%s')>" % (
-            self.pod_id, self.container_name, self.kubes, self.start_time, self.end_time)
 
 class ImageCache(db.Model):
     __tablename__ = 'image_cache'
@@ -313,6 +300,14 @@ class PodIP(BaseModelMixin, db.Model):
 
     def __int__(self):
         return self.ip_address
+
+    def save(self):
+        IpState.start(self.pod_id, self.ip_address)
+        return super(PodIP, self).save()
+
+    def delete(self):
+        IpState.end(self.pod_id, self.ip_address)
+        return super(PodIP, self).delete()
 
     @classmethod
     def allocate_ip_address(cls, pid, ip_address=None):

@@ -31,7 +31,7 @@ NUM_NODES=${NUM_NODES:-2}
 # Because regions are globally named, we want to create in a single region; default to us-east-1
 AWS_S3_REGION=${AWS_S3_REGION:-us-east-1}
 
-INSTANCE_PREFIX="${KUBE_AWS_INSTANCE_PREFIX:-kubernetes}"
+INSTANCE_PREFIX="${KUBE_AWS_INSTANCE_PREFIX:-kuberdock}"
 CLUSTER_ID=${INSTANCE_PREFIX}
 AWS_SSH_KEY=${AWS_SSH_KEY:-$HOME/.ssh/kube_aws_rsa}
 IAM_PROFILE_MASTER="kubernetes-master"

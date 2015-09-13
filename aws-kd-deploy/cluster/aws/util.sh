@@ -548,12 +548,12 @@ function kube-up {
 
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" mkdir /home/${EC2_USER}/kuberdock-files  2>"$LOG"
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" cp /var/opt/kuberdock/{node_install.sh,pd.sh} /etc/pki/etcd/ca.crt /etc/pki/etcd/etcd-client.crt /etc/pki/etcd/etcd-client.key /home/${EC2_USER}/kuberdock-files 2>"$LOG"
-    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo cp /etc/kubernetes/kubelet_token.dat /home/${EC2_USER}/kuberdock-files/  | cat" < <(cat) 2>"$LOG"
-    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo chown ${EC2_USER} /home/${EC2_USER}/kuberdock-files/kubelet_token.dat  | cat" < <(cat) 2>"$LOG"
+    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" "sudo cp /var/lib/nginx/.ssh/id_rsa.pub /home/${EC2_USER}/kuberdock-files" 2>"$LOG"
+    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" "sudo chown ${EC2_USER} /home/${EC2_USER}/kuberdock-files/*" < <(cat) 2>"$LOG"
 
-    scp -r  -i "${AWS_SSH_KEY}"  ${EC2_USER}@${KUBE_MASTER_IP}:/home/${EC2_USER}/kuberdock-files ${KUBE_ROOT}
+    scp -q -r -i "${AWS_SSH_KEY}"  ${EC2_USER}@${KUBE_MASTER_IP}:/home/${EC2_USER}/kuberdock-files ${KUBE_ROOT}
 
-    CUR_MASTER_KUBERNETES=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${EC2_USER}@${KUBE_MASTER_IP}" rpm -q kubernetes)
+    CUR_MASTER_KUBERNETES=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${EC2_USER}@${KUBE_MASTER_IP}" rpm -q kubernetes-master --qf "%{version}-%{release}")
 
   echo "Kubernetes cluster created."
 
@@ -564,11 +564,14 @@ function kube-up {
   local rc # Capture return code without exiting because of errexit bash option
   for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
   NODE_HOSTNAME=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" hostname -f)
-	scp -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -r ${KUBE_ROOT}/kuberdock-files ${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}:/home/${EC2_USER}/
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "stty raw -echo; sudo cp /home/${EC2_USER}/kuberdock-files/* /  | cat" < <(cat) 2>"$LOG"
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "stty raw -echo; sudo mkdir -p /var/lib/kuberdock/scripts | cat" < <(cat) 2>"$LOG"
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo AWS=True CUR_MASTER_KUBERNETES=${CUR_MASTER_KUBERNETES} MASTER_IP=${MASTER_INTERNAL_IP} bash /node_install.sh | cat" < <(cat) 2>"$LOG"
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" python /var/opt/kuberdock/manage.py add_node --hostname=${NODE_HOSTNAME} --kube-type=0 2>"$LOG"
+	echo "Configuring node ${NODE_HOSTNAME}"
+	scp -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -q -r ${KUBE_ROOT}/kuberdock-files ${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}:/home/${EC2_USER}/
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo cp /home/${EC2_USER}/kuberdock-files/* /" < <(cat) 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo mkdir -p /var/lib/kuberdock/scripts" < <(cat) 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo cp /id_rsa.pub /root/.ssh/authorized_keys" < <(cat) 2>"$LOG"
+	echo "Adding node"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" "python /var/opt/kuberdock/manage.py add_node --hostname=${NODE_HOSTNAME} --kube-type=0 --do-deploy" < <(cat) 2>"$LOG"
+
   done
 
   rm -rf ${KUBE_ROOT}/kuberdock-files

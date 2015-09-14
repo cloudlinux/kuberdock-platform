@@ -59,11 +59,11 @@ define(['pods_app/app',
             getImage: function(data){
                 this.trigger('step:getimage', data);
             },
-            imageSelected: function(image, url){
-                this.trigger('image:selected', image, url);
+            imageSelected: function(image, url, imageName){
+                this.trigger('image:selected', image, url, imageName);
             },
-            portConf: function(data){
-                this.trigger('step:portconf', data.model);
+            portConf: function(data, imageName){
+                this.trigger('step:portconf', data.model, imageName);
             },
             volConf: function(data){
                 this.trigger('step:volconf', data.model);
@@ -371,17 +371,8 @@ define(['pods_app/app',
                 };
             },
 
-            initialize: function(options){
-                var image = options.model.get('lastAddedImage');
-                if (image === undefined) {
-                    this.model = options.model
-                } else {
-                    this.model = new App.Data.Image(_.last(options.model.get('containers')));
-                }
-                if (!this.model.has('volumeMounts')) {
-                    this.model.set({'volumeMounts': []});
-                }
-                this.modelOptions = options;
+            initialize: function(options) {
+                this.containers = options.containers;
             },
 
             addItem: function(evt){
@@ -507,8 +498,7 @@ define(['pods_app/app',
                     uniqueContainerPorts = [],
                     podContainersHostPorts = [],
                     uniqueContainerHostPorts = [],
-                    vm = this.model.get('volumeMounts'),
-                    containers = this.modelOptions.model.get('containers');
+                    vm = this.model.get('volumeMounts');
 
                 /* mountPath check */
                 for (var i=0; i<vm.length; i++) {
@@ -521,8 +511,7 @@ define(['pods_app/app',
                 };
 
                 /* check ports */
-                _.each(containers, function(container){
-                    _.filter(container.ports, function(item){return item});
+                _.each(this.containers, function(container){
                     _.each(container.ports, function(item){
                         var port = parseInt(item.containerPort,10),
                             hostPort = parseInt(item.hostPort,10);
@@ -640,7 +629,8 @@ define(['pods_app/app',
 
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
-                    kubeType;
+                    kubeType,
+                    url = this.model.url;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -654,6 +644,7 @@ define(['pods_app/app',
                     hasPersistent: this.model.has('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
                     ip: this.model.get('ip'),
+                    url: url,
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     podName: model !== undefined ? model.get('name') : '',
@@ -699,8 +690,7 @@ define(['pods_app/app',
             },
 
             resetFielsdsValue: function(){
-                var origEnvClone = _.map(this.model.get('origEnv'), _.clone);
-                this.model.set('env', origEnvClone);
+                this.model.set('env', _.map(this.model.origEnv, _.clone));
                 this.render();
             },
 
@@ -961,13 +951,15 @@ define(['pods_app/app',
 
             initialize: function(){
                 this.package = this.getUserPackage();
-                var num = 1;
+                var num = 1,
                     // kubeTypes is taken from index.html
                     kube_id = Math.min.apply(null, _.map(kubeTypes, function(t){return t.id})),
                     kube_price = this.getKubePrice(kube_id),
                     kube = _.find(kubeTypes, function(t){return t.id===kube_id});
                 this.container_price = this.getFormattedPrice(kube_price * num);
                 this.cpu_data = kube ? kube.cpu + ' ' + kube.cpu_units : '0 Cores';
+                this.ram_data = kube ? kube.memory + ' ' + kube.memory_units : '0 MB';
+                this.hdd_data = kube ? kube.disk_space + ' ' + kube.disk_space_units : '0 MB';
                 if(!this.model.has('kube_type')){
                     this.model.attributes['kube_type'] = kube_id;
                 }
@@ -1019,6 +1011,7 @@ define(['pods_app/app',
 
             events: {
                 'click .delete-item'     : 'deleteItem',
+                'click .edit-item'       : 'editItem',
                 'click .cluster'         : 'toggleCluster',
                 'click .node'            : 'toggleNode',
                 'change .replicas'       : 'changeReplicas',
@@ -1046,6 +1039,15 @@ define(['pods_app/app',
                 this.render();
             },
 
+            editItem: function(evt){
+                evt.stopPropagation();
+                var tgt = evt.target,
+                    containerId = $(tgt).closest('tr').children('td:first').attr('id'),
+                    image = _.find(this.model.get('containers'), function(c){return c.name === containerId}).image,
+                    url = this.model.containerUrls[image];
+                this.trigger('image:selected', image, url, containerId);
+            },
+            
             toggleCluster: function(evt){
                 evt.stopPropagation();
                 if (this.model.get('replicationController')) {

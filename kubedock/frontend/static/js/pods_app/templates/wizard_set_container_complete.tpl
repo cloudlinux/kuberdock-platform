@@ -1,4 +1,4 @@
-<div class="container" id="add-image" image_name_id="<%- image_name_id %>">
+<div class="container" id="add-image">
     <div class="col-md-3 sidebar no-padding">
         <ul class="nav nav-sidebar">
             <li role="presentation" class="success">Choose image</li>
@@ -88,7 +88,7 @@
                                  <td><%- container_price %> / <%- package.period %></td>
                                  <td>
                                      <button class="delete-item pull-right">&nbsp;</button>
-                                     <!-- <button class="edit-item">&nbsp;</button> -->
+                                     <button class="edit-item">&nbsp;</button>
                                  </td>
                             </tr>
                         <% }) %>

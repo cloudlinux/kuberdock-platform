@@ -539,9 +539,11 @@ class TestPodCollection(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         self.pods = [{'id': 1, 'name': 'Unnamed-1', 'namespace': 'Unnamed-1-namespace-md5',
-                      'owner': 'user', 'containers': ''},
+                      'owner': 'user', 'containers': '',
+                      'replicationController': True},
                      {'id': 2, 'name': 'Unnamed-2', 'namespace': 'Unnamed-2-namespace-md5',
-                      'owner': 'user', 'containers': ''}]
+                      'owner': 'user', 'containers': '',
+                      'replicationController': True}]
         U = type('User', (), {'username': 'user'})
 
         self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')

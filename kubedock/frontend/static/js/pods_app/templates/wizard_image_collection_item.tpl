@@ -1,3 +1,4 @@
+<!-- not used this template must be from index.html -->
 <div class="item-header">
     <div class="item-status">
         <span class="glyphicon glyphicon-globe"></span>

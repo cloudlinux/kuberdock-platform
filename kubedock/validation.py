@@ -142,15 +142,12 @@ new_pod_schema = {
     'kube_type': {'type': 'integer', 'min': 0, 'required': True},
     'replicationController': {'type': 'boolean'},
     'node': {'type': 'string', 'nullable': True},
-    'save_only': {'type': 'boolean'},
-    'freeHost': {'type': 'string', 'required': False, 'nullable': True},
-    'set_public_ip': {'type': 'boolean', 'required': False},
+    'set_public_ip': {'type': 'boolean', 'required': False},    # TODO remove
     'public_ip': {'type': 'ipv4', 'required': False},
     'restartPolicy': {
         'type': 'string', 'required': True,
-        'restart_polices': ['Always', 'OnFailure', 'Never']
+        'allowed': ['Always', 'OnFailure', 'Never']
     },
-   # 'namespace': {'type': 'string', 'required': True},
     'volumes': {
         'type': 'list',
         'schema': {
@@ -493,12 +490,6 @@ class V(cerberus.Validator):
                 self._error(field,
                             "Can't be resolved. "
                             "Check /etc/hosts file for correct Node records")
-
-    def _validate_restart_polices(self, polices, field, value):
-        #if (len(value.keys()) != 1) or (value.keys()[0] not in polices):
-        if value not in polices:
-            self._error(field,
-                        'Restart Policy should be only one of %s' % polices)
 
 
 def check_int_id(id):

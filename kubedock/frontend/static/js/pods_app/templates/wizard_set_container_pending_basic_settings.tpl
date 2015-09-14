@@ -3,7 +3,7 @@
         <li role="presentation" class="success">Choose image</li>
         <li role="presentation" class="active">Set up image</li>
         <li role="presentation">Environment variables</li>
-        <li role="presentation">Final</li>
+        <li role="presentation">Final setup</li>
     </ul>
 </div>
 <div id="details_content" class="col-sm-9 set-up-image no-padding">

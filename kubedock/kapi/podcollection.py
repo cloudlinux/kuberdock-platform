@@ -228,7 +228,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
             for container in pod.containers:
                 container.pop('resources', None)
-                container['limits'] = repr_limits(container['kubes'], db_pod_config['kube_type'])
+                container['limits'] = repr_limits(container['kubes'],
+                                                  db_pod_config['kube_type'])
 
     def _run_service(self, pod):
         ports = []

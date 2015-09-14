@@ -4,7 +4,7 @@
             <li role="presentation" class="success">Choose image</li>
             <li role="presentation" class="success">Set up image</li>
             <li role="presentation" class="success">Environment variables</li>
-            <li role="presentation" class="active">Final</li>
+            <li role="presentation" class="active">Final setup</li>
         </ul>
     </div>
     <div id="details_content" class="col-sm-9 set-up-image no-padding">

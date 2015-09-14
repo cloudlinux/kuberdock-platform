@@ -16,6 +16,8 @@
 
 # AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
 # AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+TESTING="no"
+
 EC2_USER=${EC2_USER:-centos}
 DEPLOY_SH=${DEPLOY_SH:-http://repo.cloudlinux.com/kubernetes/deploy.sh}
 

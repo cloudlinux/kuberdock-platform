@@ -312,11 +312,9 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         });
                         data.unset('lastAddedImage', {silent: true});
                         data.unset('lastAddedImageNameId', {silent: true});
-                        data.set({'save_only': true}, {silent: true});
                         processRequest(data, backup);
                     });
                     that.listenTo(wizardLayout, 'pod:run', function(data){
-                        data.set({'save_only': false}, {silent: true});
                         processRequest(data);
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(data){

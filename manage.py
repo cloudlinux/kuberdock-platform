@@ -34,11 +34,13 @@ class Creator(Command):
 
         now = datetime.utcnow()
         now.replace(tzinfo=pytz.utc)
-        last_upd = Updates.create(fname=get_available_updates()[-1],
-                                  status=UPDATE_STATUSES.applied,
-                                  log='Applied at createdb stage.',
-                                  start_time=now, end_time=now)
-        db.session.add(last_upd)
+        available_updates = get_available_updates()
+        if available_updates:
+            last_upd = Updates.create(fname=available_updates[-1],
+                                      status=UPDATE_STATUSES.applied,
+                                      log='Applied at createdb stage.',
+                                      start_time=now, end_time=now)
+            db.session.add(last_upd)
         db.session.commit()
 
         # Create default packages and kubes

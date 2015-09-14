@@ -5,6 +5,7 @@ import json
 import random
 import re
 import socket
+import datetime
 
 from collections import namedtuple
 from flask import current_app, request, jsonify, g
@@ -695,3 +696,40 @@ def from_binunit(value, unit='Byte', precision=None, rtype=None):
         else:
             rtype = float
     return rtype(result)
+
+
+def parse_datetime_str(instr):
+    """Converts given string to datetime object.
+    Incoming string is expected to be in subset of ISO 8601 format.
+    Understands the following dates:
+        "2000-01-20"
+        "2000-01-20 12:34:56"
+        "2000-01-20T12:34:56"
+        "2000-01-20T12:34:56Z"
+    """
+    DATE_FMT = '%Y-%m-%d'
+    TIME_FMT = '%H:%M:%S'
+    dt_re = re.compile(r'^\d{4}-\d{2}-\d{2}(T|\s\d{2}:\d{2}:\d{2}Z?)?$')
+    match = dt_re.match(instr)
+    if not match:
+        return None
+    if match.groups(0):
+        try:
+            return datetime.datetime.strptime(instr, DATE_FMT + ' ' + TIME_FMT)
+        except ValueError:
+            pass
+        try:
+            return datetime.datetime.strptime(instr, DATE_FMT + 'T' + TIME_FMT)
+        except ValueError:
+            pass
+        try:
+            return datetime.datetime.strptime(
+                instr, DATE_FMT + 'T' + TIME_FMT + 'Z')
+        except ValueError:
+            pass
+    else:
+        try:
+            return datetime.datetime.strptime(instr, DATE_FMT)
+        except ValueError:
+            pass
+    return None

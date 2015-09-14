@@ -1,4 +1,6 @@
 websocket-client
+boto==2.38
+elasticsearch==1.6.0
 Cerberus==0.8
 Flask==0.10.1
 Flask-Assets==0.10
@@ -39,6 +41,7 @@ redis==2.10.3
 requests==2.4.3
 simple-rbac==0.1.1
 sse==1.2
+urllib3==1.6.0
 webassets==0.10.1
 wsgiref==0.1.2
 fabric==1.10.2

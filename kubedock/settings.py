@@ -45,8 +45,11 @@ INFLUXDB_USER = 'root'
 INFLUXDB_PASSWORD = 'root'
 INFLUXDB_DATABASE = 'cadvisor'
 
+# Port to access elasticsearch via rest api
+ELASTICSEARCH_REST_PORT = 9200
+
 PD_SEPARATOR = '__SEP__'
-PORTS_TO_RESTRICT = [9200]
+PORTS_TO_RESTRICT = [ELASTICSEARCH_REST_PORT]
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
 CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {

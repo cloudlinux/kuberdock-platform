@@ -63,6 +63,7 @@ Requires: python-flask-migrate >= 1.4.0
 Requires: python-flask-script
 Requires: python-bitmath
 Requires: python-websocket-client >= 0.32.0
+Requires: python-elasticsearch >= 1.6.0
 Requires: PyYAML
 
 # AutoReq: 0

@@ -35,10 +35,11 @@ def create_app(settings_override=None, fake_sessions=False):
     from .auth import auth
     from .pstorage import pstorage
     from .predefined_apps import predefined_apps
+    from .logs import logs
 
     for bp in (images, stream, nodes, stats, users, notifications,
                static_pages, usage, pricing, ippool, settings, podapi, auth,
-               pstorage, predefined_apps):
+               pstorage, predefined_apps, logs):
         app.register_blueprint(bp)
 
     #app.json_encoder = JSONEncoder

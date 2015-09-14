@@ -119,6 +119,7 @@ def update_containers_state(event_type, pod_id, containers):
 
     for container in containers:
         container_name = container['name']
+        docker_id = container['containerID']
         kubes = container.get('kubes', 1)
         for state in container['state'].values():
             start = state.get('startedAt')
@@ -126,11 +127,12 @@ def update_containers_state(event_type, pod_id, containers):
                 continue
             start = datetime.datetime.strptime(start, DATETIME_FORMAT)
             end = state.get('finishedAt')
-            cs = ContainerState.query.filter_by(
-                pod_id=pod_id,
-                container_name=container_name,
-                kubes=kubes,
-                start_time=start,
+            cs = ContainerState.query.filter(
+                ContainerState.pod_id == pod_id,
+                ContainerState.container_name == container_name,
+                ContainerState.docker_id == docker_id,
+                ContainerState.kubes == kubes,
+                ContainerState.start_time == start,
             ).first()
             if end is not None:
                 end = datetime.datetime.strptime(end, DATETIME_FORMAT)
@@ -142,6 +144,7 @@ def update_containers_state(event_type, pod_id, containers):
                 cs = ContainerState(
                     pod_id=pod_id,
                     container_name=container_name,
+                    docker_id=docker_id,
                     kubes=kubes,
                     start_time=start,
                     end_time=end,

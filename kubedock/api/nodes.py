@@ -17,7 +17,7 @@ from ..validation import check_int_id, check_node_data, check_hostname, check_ne
 from ..billing import Kube, kubes_to_limits
 from ..settings import (NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS,
                         CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT,
-                        SSH_KEY_FILENAME)
+                        SSH_KEY_FILENAME, ELASTICSEARCH_REST_PORT)
 from ..kapi.podcollection import PodCollection
 from ..tasks import add_node_to_k8s
 from . import APIError
@@ -181,8 +181,8 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip, token):
                     {
                         "isPublic": False,
                         "protocol": "TCP",
-                        "containerPort": 9200,
-                        "hostPort": 9200
+                        "containerPort": ELASTICSEARCH_REST_PORT,
+                        "hostPort": ELASTICSEARCH_REST_PORT
                     },
                     {
                         "isPublic": False,

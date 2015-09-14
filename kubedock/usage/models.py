@@ -15,17 +15,21 @@ class ContainerState(db.Model):
     __tablename__ = 'container_states'
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
                        primary_key=True, nullable=False)
-    container_name = db.Column(db.String(length=255), primary_key=True, nullable=False)
+    container_name = db.Column(db.String(length=255), primary_key=True,
+                               nullable=False)
+    docker_id = db.Column(db.String(length=80), primary_key=True,
+                          nullable=False, server_default='unknown')
     kubes = db.Column(db.Integer, primary_key=True, nullable=False, default=1)
     start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
-    pod = db.relationship('Pod', backref='states')
 
     def __repr__(self):
-        return ("<ContainerState(pod_id='{0}', container_name='{1}', kubes='{2}', "
-                "start='{3}', end='{4}')>".format(self.pod_id, self.container_name,
-                                                  self.kubes, self.start_time,
-                                                  self.end_time))
+        return ("<ContainerState(pod_id={}, container_name={}, "
+                "docker_id={}, kubes={}, start_time={}, "
+                "end_time={})>".format(
+                    self.pod_id, self.container_name,
+                    self.docker_id, self.kubes, self.start_time,
+                    self.end_time))
 
 
 class IpState(BaseModelMixin, db.Model):

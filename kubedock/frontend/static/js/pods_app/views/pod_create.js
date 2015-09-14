@@ -143,15 +143,17 @@ define(['pods_app/app',
             }
         });
 
-        NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
+       NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
             template: wizardImageCollectionItemTpl,
             tagName: 'div',
             className: 'item',
 
+            /* not used */
             events: {
                 'click .add-item'  : 'addItem',
             },
 
+            /* not used */
             addItem: function(evt){
                 evt.stopPropagation();
                 // it is used?
@@ -179,16 +181,17 @@ define(['pods_app/app',
                 'click .search-image'              : 'onSearchClick',
                 'keypress #search-image-field'     : 'onInputKeypress',
                 'click #search-image-default-repo' : 'onChangeRepoURL',
-                'click @ui.buttonNext'             : 'nextStep',
+                'click @ui.buttonNext'             : 'nextStep', /* not used */
                 'change @ui.select'                : 'selectChanche'
             },
 
+            /* not used */
             childEvents: {
                 'image:selected' : 'childImageSelected'
             },
 
             ui: {
-                buttonNext      : '.nextStep',
+                buttonNext      : '.nextStep', /* not used */
                 repo_url_repr   : 'span#search-image-default-repo',
                 input           : 'input#search-image-field',
                 spinner         : '#data-collection',
@@ -259,8 +262,8 @@ define(['pods_app/app',
                 this.ui.input.focus();
             },
 
+            /* not used */
             nextStep : function(evt){
-                // it is used?
                 this.trigger('image:selected', this.ui.buttonNext.data('name'));
             },
 
@@ -268,8 +271,8 @@ define(['pods_app/app',
                 this.trigger('pager:clear');
             },
 
+            /* not used */
             childImageSelected: function(data){
-                // it is used?
                 this.trigger('image:selected', data.model.get('name'));
             }
         });

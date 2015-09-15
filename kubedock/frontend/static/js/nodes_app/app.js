@@ -282,6 +282,14 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                                 className: 'success',
                             });
                         },
+                        error: function(model, response){
+                            $.notify(response.responseJSON.data, {
+                                autoHideDelay: 5000,
+                                clickToHide: true,
+                                globalPosition: 'bottom left',
+                                className: 'error',
+                            });
+                        }
                     });
                 }
             },
@@ -361,8 +369,10 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             },
 
             saveNode: function () {
+                var that = this;
+                console.log(this.model);
                 this.model.save(undefined, {
-                    wait: true,
+                    wait: false,
                     success: function(){
                         App.router.navigate('/', {trigger: true})
                     },

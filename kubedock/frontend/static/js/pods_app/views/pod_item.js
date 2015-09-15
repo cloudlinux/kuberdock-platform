@@ -38,6 +38,14 @@ define(['pods_app/app',
                 contents : '#layout-contents'
             },
 
+            ui: {
+                podsList     : '.podsList',
+            },
+
+            events: {
+                'click @ui.podsList' : 'showPodsList',
+            },
+
             initialize: function(){
                 var that = this;
                 this.listenTo(this.controls, 'show', function(view){
@@ -48,9 +56,14 @@ define(['pods_app/app',
             showPodStats: function(data){
                 this.trigger('display:pod:stats', data);
             },
+
             showPodList: function(data){
                 this.trigger('display:pod:list', data);
             },
+
+            showPodsList: function(){
+                Pods.navigate('pods', {trigger: true});
+            }
         });
 
         Item.PageHeader = Backbone.Marionette.ItemView.extend({

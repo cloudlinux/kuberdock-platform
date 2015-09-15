@@ -48,6 +48,6 @@
         </div>
     </div>
     <div class="buttons pull-right">
-        <a href="/#pods" class="gray">Cancel</a>
+        <button class="gray podsList">Cancel</button>
     </div>
 </div>

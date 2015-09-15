@@ -210,15 +210,21 @@ define(['pods_app/app',
 
             removePods: function(evt){
                 evt.stopPropagation();
-                var that = this;
+                var body;
+                    that = this,
+                    items = that.collection.fullCollection.filter(function(i){return i.is_checked});
+                if (items.length > 1){
+                    body = "Are you sure want to delete selected pods?"
+                } else {
+                    body = "Are you sure want to delete selected pod?"
+                }
                 utils.modalDialogDelete({
                     title: "Delete",
-                    body: "Are you sure want to delete selected pods?",
+                    body: body,
                     small: true,
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            var items = that.collection.fullCollection.filter(function(i){return i.is_checked});
                             for (i in items) {items[i].destroy({
                                 wait: true,
                                 error: function(model, response){

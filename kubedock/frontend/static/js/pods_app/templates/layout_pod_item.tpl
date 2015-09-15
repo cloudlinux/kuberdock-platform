@@ -2,7 +2,7 @@
     <div class="container breadcrumbs" id="breadcrumbs">
         <ul class="breadcrumb">
             <li>
-                <a href="/#pods">Pods</a>
+                <span class="podsList">Pods</span>
             </li>
             <li id="masthead-title" class="active"></li>
         </ul>

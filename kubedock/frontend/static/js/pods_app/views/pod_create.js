@@ -109,7 +109,12 @@ define(['pods_app/app',
             },
 
             ui: {
-                peditable: '.peditable'
+                podsList     : '.podsList',
+                peditable    : '.peditable',
+            },
+
+            events: {
+                'click @ui.podsList' : 'showPodsList',
             },
 
             onRender: function(){
@@ -140,6 +145,10 @@ define(['pods_app/app',
                         }
                     }
                 });
+            },
+
+            showPodsList: function(){
+                Pods.navigate('pods', {trigger: true});
             }
         });
 
@@ -182,7 +191,8 @@ define(['pods_app/app',
                 'keypress #search-image-field'     : 'onInputKeypress',
                 'click #search-image-default-repo' : 'onChangeRepoURL',
                 'click @ui.buttonNext'             : 'nextStep', /* not used */
-                'change @ui.select'                : 'selectChanche'
+                'change @ui.select'                : 'selectChanche',
+                'click @ui.podsList'               : 'showPodsList'
             },
 
             /* not used */
@@ -197,7 +207,8 @@ define(['pods_app/app',
                 spinner         : '#data-collection',
                 searchControl   : '.search-control',
                 loginForm       : '.login-user',
-                select          : '.image-source'
+                select          : '.image-source',
+                podsList        : '.podsList'
             },
 
             onRender: function(){
@@ -269,6 +280,10 @@ define(['pods_app/app',
 
             onBeforeDestroy: function(){
                 this.trigger('pager:clear');
+            },
+
+            showPodsList: function(){
+                Pods.navigate('pods', {trigger: true});
             },
 
             /* not used */
@@ -1031,12 +1046,28 @@ define(['pods_app/app',
 
             deleteItem: function(evt){
                 evt.stopPropagation();
-                var name = $(evt.target).closest('tr').children('td:first').attr('id');
-                this.model.attributes.containers = _.filter(this.model.get('containers'),
-                function(i){ return i.name !== this.name }, {name: name});
-                delete this.container_price;
-                delete this.cpu_data;
-                this.render();
+                var name = $(evt.target).closest('tr').children('td:first').attr('id'),
+                    containers = this.model.get('containers');
+                if (containers.length >= 2) {
+                    this.model.attributes.containers = _.filter(this.model.get('containers'),
+                    function(i){ return i.name !== this.name }, {name: name});
+                    delete this.container_price;
+                    delete this.cpu_data;
+                    this.render();
+                } else {
+                    utils.modalDialogDelete({
+                    title: "Delete",
+                    body: "After deleting the last container, you will go back to the main page. Delete this container?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            Pods.navigate('pods', {trigger: true});
+                        },
+                        buttonCancel: true
+                   }
+               });
+                }
             },
 
             editItem: function(evt){

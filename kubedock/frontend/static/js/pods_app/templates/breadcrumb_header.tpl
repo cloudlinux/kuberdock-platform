@@ -2,11 +2,9 @@
     <div class="container breadcrumbs" id="breadcrumbs">
         <ul class="breadcrumb">
             <li>
-                <a href="/#pods">Pods</a>
+                <span class="podsList">Pods</span>
             </li>
-            <li>
-                <a href="/#newpod">Add container</a>
-            </li>
+            <li>Add container</li>
             <li class="active">
                 <span class="peditable"><%-name %></span>
             </li>

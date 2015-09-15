@@ -206,6 +206,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
             },
 
             createPod: function(){
+                "use strict";
                 var that = this;
                 require(['pods_app/utils',
                          'pods_app/views/pod_create',
@@ -213,8 +214,10 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                          'pods_app/views/loading'], function(utils){
                     var model = new App.Data.Pod({name: "Unnamed-1", containers: [], volumes: []}),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout();
-
-                    var processRequest = function(data, backup){
+                    model.containerUrls = {};
+                    model.origEnv = {};
+                    
+                    var processRequest = function(data){
                         var hasPublic = function(containers){
                             for (var i in containers) {
                                 for (var j in containers[i].ports) {
@@ -238,21 +241,23 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                     if (used.length) {
                                         used[0].used = true;
                                     }
-                                    delete v.persistentDisk;
                                 }
                                 else {
                                     var entry = {name: v.name, localStorage: true};
                                 }
                                 delete v.isPersistent;
+                                delete v.persistentDisk;
                                 data.get('volumes').push(entry);
                             });
                         });
+                        
                         if (hasPublic(data.get('containers'))) {
                             data.attributes['set_public_ip'] = true;
                         }
                         else {
                             data.attributes['set_public_ip'] = false;
                         }
+                        
                         WorkFlow.getCollection().fullCollection.create(data.attributes, {
                             wait: true,
                             success: function(){
@@ -261,11 +266,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             },
                             error: function(model, response, options, data_){
                                 console.log('error applying data');
-                                if (backup !== undefined) {
-                                    _.each(data.attributes['containers'], function(c, i) {
-                                        _.extend(c, this.backup[i]);
-                                    }, {backup: backup});
-                                }
                                 var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
                                 $.notify(body, {
                                     autoHideDelay: 5000,
@@ -289,80 +289,92 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     that.listenTo(wizardLayout, 'step:getimage', function(data){
                         wizardLayout.steps.show(new App.Views.NewItem.GetImageView());
                     });
-                    that.listenTo(wizardLayout, 'step:portconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data}));
+                    that.listenTo(wizardLayout, 'step:portconf', function(data, imageName){
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data, imageName: imageName}));
                     });
                     that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        if (data.has('containers')) { // the pod model, not a container one
-                            //console.log(_.last(model.get('containers')));
-                            wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({
-                                model: new App.Data.Image(_.last(model.get('containers')))
-                            }));
+                        var containerModel = data.has('containers')
+                                ? new App.Data.Image(_.last(model.get('containers')))
+                                : data,
+                            image = containerModel.get('image');
+                        if (!(containerModel.get('image') in model.origEnv)) {
+                            model.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
                         }
-                        else {
-                            wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({model: data}));
+                        if (!containerModel.hasOwnProperty('url')) {
+                            containerModel.url = model.containerUrls[image];
                         }
+                        containerModel.origEnv = _.map(model.origEnv[image], _.clone);
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({
+                            model: containerModel
+                        }));
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
-                        var backup = [];
-                        _.each(data.get('containers'), function(container){
-                            backup.push({url: container.url, origEnv: container.origEnv});
-                            delete container.origEnv;
-                            delete container.url;
-                        });
-                        data.unset('lastAddedImage', {silent: true});
-                        data.unset('lastAddedImageNameId', {silent: true});
-                        processRequest(data, backup);
-                    });
-                    that.listenTo(wizardLayout, 'pod:run', function(data){
                         processRequest(data);
                     });
-                    that.listenTo(wizardLayout, 'step:complete', function(data){
-
-                        // strip persistentDrives from a container if any
-                        if (data.attributes.hasOwnProperty('persistentDrives')) {
-                            if (!model.has('persistentDrives')) {
-                                model.attributes['persistentDrives'] = data.attributes.persistentDrives;
-                            }
+                    that.listenTo(wizardLayout, 'step:complete', function(containerModel){
+                        if (containerModel.hasOwnProperty('persistentDrives')) {
+                            model.persistentDrives = containerModel.persistentDrives;
                         }
-
-                        // Here we populate a pod model container
-                        var container = _.last(model.get('containers'));
-                        _.each(data.attributes, function(value, key, obj){
-                            this.container[key] = value;
-                        }, {container: container});
-
+                        model.containerUrls[containerModel.attributes.image] = containerModel.url;
+                        if (containerModel.hasOwnProperty('origEnv')) {
+                            model.origEnv[containerModel.get('image')] = containerModel.origEnv;
+                        }
+                        var container = _.find(model.get('containers'), function(c){
+                            return c.name === containerModel.get('name');
+                        });
+                        if (container === undefined) {
+                            container = {};
+                            model.get('containers').push(container);
+                        }
+                        _.extendOwn(container, containerModel.attributes);
                         wizardLayout.steps.show(new App.Views.NewItem.WizardCompleteSubView({
                             model: model
                         }));
                     });
-                    that.listenTo(wizardLayout, 'image:selected', function(image, url){
-                        var that = this,
-                            slash = image.indexOf('/'),
-                            name = (slash >= 0) ? image.substring(slash+1) : image,
-                            rqst = $.ajax({
+                    that.listenTo(wizardLayout, 'image:selected', function(image, url, imageName){
+                        if (imageName !== undefined) {
+                            var container = _.find(model.get('containers'), function(c){
+                                return imageName === c.name
+                            });
+                            var containerModel = new App.Data.Image(container);
+                            containerModel.url = url;
+                            wizardLayout.steps.show(
+                                new App.Views.NewItem.WizardPortsSubView({
+                                    model: containerModel,
+                                    containers: model.get('containers'),
+                                    volumes: model.get('volumes')
+                            }));
+                        }
+                        else {
+                            var rqst = $.ajax({
                                 type: 'POST',
                                 url: '/api/images/new',
                                 data: {image: image}
                             });
-                        name += _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
-                        var contents = {
-                            image: image, name: name, workingDir: null,
-                            ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
-                            terminationMessagePath: null, url: url
-                        };
-                        if (model.has('persistentDrives')) {
-                            contents['persistentDrives'] = model.get('persistentDrives');
+                            rqst.done(function(data){
+                                var slash = image.indexOf('/'),
+                                    name = (slash >= 0) ? image.substring(slash+1) : image;
+                                if (data.hasOwnProperty('data')) { data = data['data']; }
+                                name += _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
+                                var contents = {
+                                    image: image, name: name, workingDir: null,
+                                    ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
+                                    terminationMessagePath: null
+                                };
+                                model.fillContainer(contents, data);
+                                var containerModel = new App.Data.Image(contents);
+                                if (model.hasOwnProperty('persistentDrives')) {
+                                    containerModel.persistentDrives = model.persistentDrives;
+                                }
+                                containerModel.url = url;
+                                wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({
+                                    model: containerModel,
+                                    containers: model.get('containers'),
+                                    volumes: model.get('volumes')
+                                }));
+                            });
+                            wizardLayout.steps.show(new App.Views.Loading.LoadingView());
                         }
-                        model.get('containers').push(contents);
-                        model.set('lastAddedImage', image);
-                        model.set('lastAddedImageNameId', contents.name);
-                        rqst.done(function(data){
-                            if (data.hasOwnProperty('data')) { data = data['data']; }
-                            model.fillContainer(contents, data);
-                            wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: model}));
-                        });
-                        wizardLayout.steps.show(new App.Views.Loading.LoadingView());
                     });
                     App.contents.show(wizardLayout);
                 });

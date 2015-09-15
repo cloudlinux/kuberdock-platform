@@ -3,7 +3,7 @@ requirejs.config({
     urlArgs: "bust=" + (new Date()).getTime(),
     paths: {
         jquery                 : "lib/jquery",
-        underscore             : "lib/underscore",
+        underscore             : "lib/underscore-min",
         backbone               : "lib/backbone",
         marionette             : "lib/backbone.marionette.min",
         bootstrap              : "lib/bootstrap",

@@ -77,7 +77,7 @@ def set_schedulable(node_id, value, upd=None):
             node = requests.get(url).json()
             node['spec']['unschedulable'] = not value
             res = requests.put(url, data=json.dumps(node))
-        except (requests.RequestException, ValueError):
+        except (requests.RequestException, ValueError, KeyError):
             continue
         if res.ok:
             return True

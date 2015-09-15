@@ -1,6 +1,6 @@
 websocket-client
 boto==2.38
-elasticsearch==1.6.0
+elasticsearch>=1.0
 Cerberus==0.8
 Flask==0.10.1
 Flask-Assets==0.10

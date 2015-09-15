@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 35.1%{?dist}.cloudlinux
+Release: 36%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -63,7 +63,7 @@ Requires: python-flask-migrate >= 1.4.0
 Requires: python-flask-script
 Requires: python-bitmath
 Requires: python-websocket-client >= 0.32.0
-Requires: python-elasticsearch >= 1.6.0
+Requires: python-elasticsearch >= 1.0
 Requires: PyYAML
 
 # AutoReq: 0
@@ -160,6 +160,23 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Tue Sep 15 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-36
+- Renamed minion to node
+- Fix missing " in deploy.sh
+- Small first part of api cleanup
+- Fixed pod collection tests.
+- Added privileged mode for rbd-backed pods. Added updates script to enable privileged mode
+- AC-849: Allow master to access ElasticSearch on nodes
+- add node creation to AWS-deploy scripts
+- AC-822: Rename final step in add pod; small slyles fixes in podpage
+- add testing option to aws-deploy scripts
+- AC-1028: Added ability to edit pending containers
+- AC-599: usage statistics for IP and PD; tests; bugfix
+- AC-1000: predefined apps template api
+- AC-972, AC-1026, AC-1040, AC-1053
+- AC-636: added docker_id to container_state. added API methods to select logs from elasticsearch
+- Explicit kuberdock restart even if no new upgrade scripts found and applied
+
 * Thu Sep 10 2015 Alex Tishin <atishin@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-35.1
 - AC-665: reset values button (add container, third step - envvars)
 - AC-969: Update logging containers

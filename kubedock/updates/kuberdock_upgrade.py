@@ -259,9 +259,13 @@ def do_cycle_updates(with_testing=False):
         to_apply = to_apply[to_apply.index(last[-1])+1:]
     is_failed = False
     if not to_apply:
-        print 'There is no new upgrade scripts to apply. ' \
-              'Maintenance mode is now disabled.'
+        # This is unnecessary, change timestamp of kuberdock.ini triggers
+        # uwsgi to reload kuberdock, but to be sure:
+        helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
+        print 'There is no new upgrade scripts to apply. ' \
+              'Kuberdock has been restarted.' \
+              'Maintenance mode is now disabled.'
         return is_failed
 
     for upd in to_apply:

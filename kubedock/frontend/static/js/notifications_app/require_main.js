@@ -5,7 +5,7 @@ requirejs.config({
     paths: {
         backbone: 'lib/backbone',
         jquery: 'lib/jquery',
-        underscore: 'lib/underscore',
+        underscore: 'lib/underscore-min',
         marionette: 'lib/backbone.marionette',
         bootstrap: 'lib/bootstrap',
         paginator: 'lib/backbone.paginator',

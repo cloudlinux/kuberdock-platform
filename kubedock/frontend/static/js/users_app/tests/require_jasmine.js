@@ -7,7 +7,7 @@ requirejs.config({
         bootstrap            : "/static/js/lib/bootstrap",
         paginator            : '/static/js/lib/backbone.paginator',
         jquery               : "/static/js/lib/jquery",
-        underscore           : "/static/js/lib/underscore",
+        underscore           : "/static/js/lib/underscore-min",
         text                 : "/static/js/lib/text",
         tpl                  : "/static/js/lib/underscore-tpl",
         "bootstrap-editable" : "/static/js/lib/bootstrap-editable.min",

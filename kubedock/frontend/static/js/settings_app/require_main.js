@@ -6,7 +6,7 @@ requirejs.config({
         backbone               : 'lib/backbone',
         jquery                 : 'lib/jquery',
         'jquery-ui'            : 'lib/jquery-ui',
-        underscore             : 'lib/underscore',
+        underscore             : 'lib/underscore-min',
         marionette             : 'lib/backbone.marionette',
         bootstrap              : 'lib/bootstrap',
         'bootstrap3-typeahead' : 'lib/bootstrap3-typeahead.min',

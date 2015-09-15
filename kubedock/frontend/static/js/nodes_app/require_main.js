@@ -9,7 +9,7 @@ requirejs.config({
         'jquery-ui'            : 'lib/jquery-ui',
         "jquery-spin"          : "lib/jquery.spin",
         spin                   : "lib/spin.min",
-        underscore             : 'lib/underscore',
+        underscore             : 'lib/underscore-min',
         marionette             : 'lib/backbone.marionette',
         bootstrap              : 'lib/bootstrap',
         'bootstrap3-typeahead' : 'lib/bootstrap3-typeahead.min',

@@ -7,7 +7,7 @@ requirejs.config({
         jquery: 'lib/jquery',
         'jquery-ui': 'lib/jquery-ui',
         cookie: 'lib/jquery.cookie',
-        underscore: 'lib/underscore',
+        underscore: 'lib/underscore-min',
         marionette: 'lib/backbone.marionette',
         bootstrap: 'lib/bootstrap',
         paginator: 'lib/backbone.paginator',

@@ -22,7 +22,7 @@ class PodsAPI(KubeUtils, MethodView):
     def post(self):
         user = self._get_current_user()
         params = self._get_params()
-        check_new_pod_data(params)
+        check_new_pod_data(params, user)
         return PodCollection(user).add(params)
 
     @maintenance_protected

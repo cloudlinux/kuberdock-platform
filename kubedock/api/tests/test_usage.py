@@ -23,7 +23,8 @@ usage_per_user_schema = {
                 'name': {'type': str, 'required': True, 'empty': False},
                 'time': {
                     'type': dict, 'required': True,
-                    'keyschema': {
+                    'propertyschema': {'type': str, 'empty': False},
+                    'valueschema': {
                         'type': list, 'required': True,
                         'schema': {
                             'type': dict, 'required': True,
@@ -60,8 +61,9 @@ class UsageResponseValidator(V):
     get_list_schema = {
         'status': {'type': str, 'required': True, 'allowed': ['OK', 'error']},
         'data': {'type': dict, 'required': True,
-                 'keyschema': {'type': dict, 'required': True,
-                               'schema': usage_per_user_schema}}}
+                 'propertyschema': {'type': str, 'empty': False},
+                 'valueschema': {'type': dict, 'required': True,
+                                 'schema': usage_per_user_schema}}}
 
     def validate_get(self, data):
         return self.validate(data, self.get_schema)

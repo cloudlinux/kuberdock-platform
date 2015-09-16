@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import unittest
 import mock
@@ -18,7 +19,25 @@ class APIError(Exception):
 api_mock.APIError = APIError
 
 from kubedock.users.models import User
-from ..validation import UserValidator
+from ..validation import V, UserValidator
+
+
+class TestV(unittest.TestCase):
+    def test_validate_internal_only(self):
+        """Allow field only if user is kuberdock-internal"""
+        data = {'some_field': 3}
+        schema = {'some_field': {'type': 'integer', 'internal_only': True}}
+        errors = {'some_field': 'not allowed'}
+
+        validator = V(user='test_user')
+        self.assertFalse(validator.validate(data, schema))
+        self.assertEqual(validator.errors, errors)
+        validator = V()
+        self.assertFalse(validator.validate(data, schema))
+        self.assertEqual(validator.errors, errors)
+        validator = V(user='kuberdock-internal')
+        self.assertTrue(validator.validate(data, schema))
+        self.assertEqual(validator.errors, {})
 
 
 class TestUserCreateValidation(unittest.TestCase):
@@ -205,8 +224,7 @@ class TestUserEditValidation(TestUserCreateValidation):
     def setUp(self):
         super(TestUserEditValidation, self).setUp()
 
-        validator = UserValidator().validate_user_update
-        self.validator = lambda data: validator(data, 1)  # add user_id
+        self.validator = UserValidator(id=1).validate_user_update
 
     def assertRequired(self, *args, **kwargs):  # partial update allowed
         pass

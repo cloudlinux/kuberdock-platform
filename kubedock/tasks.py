@@ -5,6 +5,7 @@ import re
 import requests
 import subprocess
 import time
+import urlparse
 
 from collections import OrderedDict
 from datetime import datetime
@@ -34,21 +35,10 @@ from .kapi.podcollection import PodCollection
 celery = make_celery()
 
 
-def search_image(term, url=None, page=None):
-    page = page or 1
-    if url is None:
-        url = 'https://registry.hub.docker.com/v1/search'
-    else:
-        if not url.rstrip('/').endswith('v1/search'):
-            url = '{0}/v1/search'.format(url.rstrip('/'))
-    data = {'q': term, 'n': 10, 'page': page}
-    r = requests.get(url, params=data)
-    return r.text
-
-
-@celery.task()
-def get_container_images(term, url=None, page=None):
-    return search_image(term, url, page)
+def search_image(term, url='https://registry.hub.docker.com', page=1, page_size=10):
+    url = urlparse.urlsplit(url)._replace(path='/v2/search/repositories').geturl()
+    params = {'query': term, 'page_size': page_size, 'page': page}
+    return requests.get(url, params=params).json()
 
 
 def get_pods_nodelay(pod_id=None, namespace=None):

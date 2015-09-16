@@ -367,7 +367,7 @@ class TestKuberDock(unittest.TestCase):
         }
         kd = container.KuberDock(search_string='name', registry='', page=0)
         kd.search()
-        get_mock.assert_called_once_with(image.IMAGES_PATH + 'search',
+        get_mock.assert_called_once_with(image.IMAGES_PATH,
             {'url': 'http://', 'searchkey': 'name', 'page': 0})
         showlist_mock.assert_called_once_with(get_mock.return_value['data'])
 

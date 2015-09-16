@@ -1,6 +1,4 @@
-import json
 import re
-
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from functools import wraps
@@ -20,7 +18,7 @@ images = Blueprint('images', __name__, url_prefix='/images')
 def _get_docker_file(image, tag=None):
     data = {}
     query = db.session.query(DockerfileCache).get(image)
-    #current_app.logger.debug(query)
+    # current_app.logger.debug(query)
     if query is not None:
         if (datetime.now() - query.time_stamp) < timedelta(days=1):
             data = query.data
@@ -68,25 +66,21 @@ def _merge_parent(current, parent):
 
 
 def headerize(func):
-    """
-    The decorator adds header links to response for paginator
-    """
+    """The decorator adds header links to response for paginator"""
     @wraps(func)
     def wrapper(*args, **kwargs):
         data = func(*args, **kwargs)
         resp = jsonify(data)
-        fmt='<{base}?page={page}&per_page={per_page}>; rel="{rel}"'
-        links=[
-            {'page':data['page']-1, 'rel':'prev'},
-            {'page':data['page']+1,'rel':'next'},
-            {'page':1,'rel':'first'},
-            {'page':data['num_pages'], 'rel':'last'}]
-        header = ', '.join(fmt.format(
-                base=request.base_url,
-                page=i['page'],
-                per_page=data['per_page'],
-                rel=i['rel'])
-                    for i in links)
+        fmt = '<{base}?page={page}&per_page={per_page}>; rel="{rel}"'
+        links = [{'page': data['page'] - 1, 'rel':'prev'},
+                 {'page': data['page'] + 1, 'rel':'next'},
+                 {'page': 1, 'rel': 'first'},
+                 {'page': data['num_pages'], 'rel':'last'}]
+        header = ', '.join(fmt.format(base=request.base_url,
+                                      page=i['page'],
+                                      per_page=data['per_page'],
+                                      rel=i['rel'])
+                           for i in links)
         resp.headers.extend({'Link': header})
         return resp
     return wrapper
@@ -111,8 +105,18 @@ def search_image(patt=re.compile(r'https?://')):
         return {'status': 'OK', 'data': query.data['results'],
                 'num_pages': query.data['num_pages'], 'page': page, 'per_page': per_page}
 
-    rv = tasks.search_image(search_key, url=repo_url, page=page)
-    data = json.loads(rv)
+    data = tasks.search_image(search_key, url=repo_url, page=page)
+    data = {
+        'num_pages': data['count'] // per_page + bool(data['count'] % per_page),
+        'results': [{
+            'is_automated': image['is_automated'],
+            'star_count': image['star_count'],
+            'description': image['short_description'],
+            'name': image['repo_name'],
+            'is_official': image['is_offical'],
+            'pull_count': image['pull_count'],
+        } for image in data['results']]
+    }
     if query is None:
         db.session.add(ImageCache(query=query_key, data=data,
                                   time_stamp=datetime.now()))

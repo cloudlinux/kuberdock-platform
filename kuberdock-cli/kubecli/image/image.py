@@ -22,7 +22,7 @@ class Image(object):
             'searchkey': self.data.get('search_string', ''),
             'page': self.data.get('page', 0)
         }
-        data = self.query.unwrap(self.query.get(IMAGES_PATH + 'search', payload))
+        data = self.query.unwrap(self.query.get(IMAGES_PATH, payload))
         printout = PrintOut(as_json=self.as_json, fields=None)
         printout.show_list(data)
 

@@ -45,7 +45,7 @@
                             <div>Image tag: <%- image %></div>
                             <div>Kube type: <%- kube_type.name %></div>
                             <div>Restart policy: <%- restart_policy %></div>
-                            <div>Kube QTY: <%- kubes %></div>
+                            <div>Kubes: <%- kubes %></div>
                         </div>
                         <div class="col-xs-6 servers">
                             <div>CPU: <%- kube_type.cpu * kubes %> <%- kube_type.cpu_units %></div>

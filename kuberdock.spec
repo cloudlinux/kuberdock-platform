@@ -1,7 +1,7 @@
 Version: 0.2
 Name: kuberdock
 Summary: KuberDock
-Release: 36%{?dist}.cloudlinux
+Release: 36.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,6 +160,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Sep 16 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-36.1
+- use old usage api format, 'cause the new one needs changes in whmcs addon
+- AC-1072. Fixed deploy scripts
+- AC-1058: fix public & persistantDisk checkboxes view after creating pod
+- AC-1041: internal pods use localStorage; hostPath is allowed only for kuberdock-internal
+- AC-1065: Getting images list and picking one are completely rewritten
+- Fixed going back from a pending pod ports-volumes pages
+
 * Tue Sep 15 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-36
 - Renamed minion to node
 - Fix missing " in deploy.sh

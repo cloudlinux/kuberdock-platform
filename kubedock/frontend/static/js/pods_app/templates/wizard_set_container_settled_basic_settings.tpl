@@ -43,7 +43,7 @@
                         <div>Image tag: <%- image %></div>
                         <div>Kube type: <%- kube_type.name %></div>
                         <div>Restart policy: <%- restart_policy %></div>
-                        <div>Kube QTY: <%- kubes %></div>
+                        <div>Kubes: <%- kubes %></div>
                     </div>
                     <div class="col-xs-6 servers">
                         <div>CPU: <%- kube_type.cpu * kubes %> <%- kube_type.cpu_units %></div>
@@ -69,9 +69,7 @@
                                     <td class="containerPort"><%- p.containerPort ? p.containerPort : 'none'%></td>
                                     <td class="containerProtocol"><%- p.protocol ? p.protocol : 'none' %></td>
                                     <td class="hostPort"><%- p.hostPort ? p.hostPort : 'none'%></td>
-                                    <td>
-                                        yes
-                                    </td>
+                                    <td><%- p.isPublic ? 'yes' : 'no' %></td>
                                 </tr>
                             <% }) %>
                         <% } else { %>
@@ -96,23 +94,15 @@
                                     <% if (volumeMounts.length != 0) { %>
                                         <% _.each(volumeMounts, function(v){ %>
                                             <tr>
-                                                <td>
-                                                    <span>
-                                                        <%- v.mountPath %>
-                                                    </span>
-                                                </td>
-                                                <% if (v.readOnly){ %>
-                                                <td>no</td>
-                                                <% } else { %>
-                                                <td>yes</td>
-                                                <% } %>
+                                                <td><%- v.mountPath %></td>
+                                                <td><%- v.name ? 'yes' : 'no' %></td>
                                             </tr>
                                         <% }) %>
-                                        <% } else { %>
-                                            <tr>
-                                                <td colspan="2" class="text-center disabled-color-text">Volumes not specified</td>
-                                            </tr>
-                                        <% } %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="2" class="text-center disabled-color-text">Volumes not specified</td>
+                                        </tr>
+                                    <% } %>
                                     </tbody>
                                 </table>
                             </div>

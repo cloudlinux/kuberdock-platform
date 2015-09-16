@@ -216,7 +216,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         wizardLayout = new App.Views.NewItem.PodWizardLayout();
                     model.containerUrls = {};
                     model.origEnv = {};
-                    
+
                     var processRequest = function(data){
                         var hasPublic = function(containers){
                             for (var i in containers) {
@@ -250,14 +250,14 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 data.get('volumes').push(entry);
                             });
                         });
-                        
+
                         if (hasPublic(data.get('containers'))) {
                             data.attributes['set_public_ip'] = true;
                         }
                         else {
                             data.attributes['set_public_ip'] = false;
                         }
-                        
+
                         WorkFlow.getCollection().fullCollection.create(data.attributes, {
                             wait: true,
                             success: function(){

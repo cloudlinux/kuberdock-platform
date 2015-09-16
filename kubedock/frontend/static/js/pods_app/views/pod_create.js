@@ -1072,7 +1072,7 @@ define(['pods_app/app',
                     url = this.model.containerUrls[image];
                 this.trigger('image:selected', image, url, containerId);
             },
-            
+
             toggleCluster: function(evt){
                 evt.stopPropagation();
                 if (this.model.get('replicationController')) {

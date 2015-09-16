@@ -300,7 +300,6 @@ define(['pods_app/app',
 
             events: {
                 'click @ui.nextStep'       : 'goNext',
-                'click @ui.prevStep'       : 'goBack',
                 'click @ui.addPort'        : 'addItem',
                 'click @ui.addDrive'       : 'addDrive',
                 'click @ui.addVolume'      : 'addVolume',
@@ -314,13 +313,7 @@ define(['pods_app/app',
             },
 
             triggers: {
-                'click .complete'        : 'step:complete',
-                'click .go-to-volumes'   : 'step:volconf',
-                'click .go-to-envs'      : 'step:envconf',
-                'click .go-to-resources' : 'step:resconf',
-                'click .go-to-other'     : 'step:otherconf',
-                'click .go-to-stats'     : 'step:statsconf',
-                'click .go-to-logs'      : 'step:logsconf',
+                'click @ui.prevStep'        : 'step:getimage',
             },
 
             changePolicy: function(evt){
@@ -517,10 +510,6 @@ define(['pods_app/app',
                 } else {
                     this.trigger('step:envconf', this);
                 }
-            },
-
-            goBack: function(){
-                this.trigger('step:getimage', this);
             },
 
             onRender: function(){

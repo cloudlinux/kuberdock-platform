@@ -79,7 +79,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     var _containerCollection = model.get('containers');
                     _.each(_containerCollection, function(i){
                             i.parentID = this.parentID;
-                            //i.kubes = this.kubes;
                         }, {parentID: id, kubes: model.get('kubes')});
                     containerCollection = new Backbone.Collection(_containerCollection);
 
@@ -88,8 +87,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     });
 
                     var infoPanel = new App.Views.Item.InfoPanel({
-                        //childView: App.Views.Item.InfoPanelItem,
-                        //childViewContainer: "tbody",
                         collection: containerCollection
                     });
 
@@ -122,8 +119,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         }));
 
                         itemLayout.info.show(new App.Views.Item.InfoPanel({
-                            //childView: App.Views.InfoPanelItem,
-                            //childViewContainer: "tbody",
                             collection: containerCollection
                         }));
                     });
@@ -156,11 +151,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
                     if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
 
-                    //this.listenTo(wizardLayout, 'show', function(){
-                    //    wizardLayout.steps.show(new App.Views.WizardPortsSubView({
-                    //        model: new App.Data.Image(model_data)
-                    //    }));
-                    //});
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardLogsSubView({
                             model: new App.Data.Image(model_data)
@@ -312,11 +302,14 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                         });
                     });
+                    that.listenTo(wizardLayout, 'step:getimage', function(){
+                        wizardLayout.steps.show(new App.Views.NewItem.GetImageView({
+                            collection: new App.Data.ImageCollection(imageTempCollection.fullCollection.models),
+                            registryURL: registryURL
+                        }));
+                    });
                     that.listenTo(wizardLayout, 'clear:pager', function(){
                         wizardLayout.footer.empty();
-                    });
-                    that.listenTo(wizardLayout, 'step:getimage', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.GetImageView());
                     });
                     that.listenTo(wizardLayout, 'step:portconf', function(data, imageName){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data, imageName: imageName}));

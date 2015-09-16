@@ -70,6 +70,8 @@ class UsageResponseValidator(V):
         return self.validate(data, self.get_list_schema)
 
 
+@unittest.skip('New usage api is disabled, \'cause in kuberdock v36 don\'t have '
+               'whmcs addon adapted for the new api.')  # TODO: unskip
 class UsageTestCase(APITestCase):
     """Tests for /api/usage endpoint"""
     url = '/usage'

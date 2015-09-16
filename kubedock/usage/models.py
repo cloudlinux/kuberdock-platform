@@ -22,6 +22,7 @@ class ContainerState(db.Model):
     kubes = db.Column(db.Integer, primary_key=True, nullable=False, default=1)
     start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
+    user = db.relationship('Pod', backref='states')
 
     def __repr__(self):
         return ("<ContainerState(pod_id={}, container_name={}, "

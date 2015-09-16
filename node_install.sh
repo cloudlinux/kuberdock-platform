@@ -1,6 +1,9 @@
 #!/bin/bash
 # install kubernetes components on Node host
 
+# IMPORTANT: each package must be installed with separate command because of
+# yum incorrect error handling!
+
 KUBERNETES_CONF_DIR=/etc/kubernetes
 EXIT_MESSAGE="Installation error."
 
@@ -113,7 +116,11 @@ fi
 
 # 2. install components
 echo "Installing kubernetes..."
-yum_wrapper -y install ${CUR_MASTER_KUBERNETES} flannel-0.5.1 cadvisor docker
+yum_wrapper -y install ${CUR_MASTER_KUBERNETES}
+check_status
+yum_wrapper -y install flannel-0.5.1
+check_status
+yum_wrapper -y install cadvisor
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
@@ -460,7 +467,14 @@ check_status
 
 # 11. install kernel
 echo "Installing new kernel..."
-yum_wrapper -y install kernel kernel-tools kernel-tools-libs kernel-headers
+yum_wrapper -y install kernel
+check_status
+yum_wrapper -y install kernel-tools
+check_status
+yum_wrapper -y install kernel-tools-libs
+check_status
+yum_wrapper -y install kernel-headers
+check_status
 
 # 12. reboot
 echo "Your node has to be rebooted. Performing now..."

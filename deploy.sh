@@ -14,6 +14,10 @@ if [ $USER != "root" ]; then
 fi
 
 
+# IMPORTANT: each package must be installed with separate command because of
+# yum incorrect error handling!
+
+
 # Parse args
 
 
@@ -372,7 +376,9 @@ fi
 
 # 3 Install ntp, we need correct time for node logs
 # for now, etcd-ca and bridge-utils needed during deploy only
-yum_wrapper install -y ntp etcd-ca bridge-utils
+yum_wrapper install -y ntp
+yum_wrapper install -y etcd-ca
+yum_wrapper install -y bridge-utils
 do_and_log systemctl daemon-reload
 log_it ntpd -gq
 do_and_log systemctl restart ntpd

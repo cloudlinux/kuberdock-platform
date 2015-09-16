@@ -1,4 +1,3 @@
-import base64
 import json
 import os
 import shlex
@@ -135,12 +134,14 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 volume['awsElasticBlockStore']['size'] = size
 
     def _handle_local_storage(self, volume):
-        volume.pop('localStorage')
-        volume['hostPath'] = {
-            'path': os.path.join(NODE_LOCAL_STORAGE_PREFIX, self.id, volume['name'])
-        }
-
-
+        local_storage = volume.pop('localStorage')
+        if not local_storage:
+            return
+        if isinstance(local_storage, dict) and 'path' in local_storage:
+            path = local_storage['path']
+        else:
+            path = os.path.join(NODE_LOCAL_STORAGE_PREFIX, self.id, volume['name'])
+        volume['hostPath'] = {'path': path}
 
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)

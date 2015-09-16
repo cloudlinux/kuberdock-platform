@@ -234,7 +234,7 @@ def put_item(user_id):
     data = request.json
     if data is None:
         data = request.form.to_dict()
-    UserValidator().validate_user_update(data, user_id)
+    UserValidator(id=user_id).validate_user_update(data)
     if 'rolename' in data:
         rolename = data.pop('rolename', 'User')
         r = db.session.query(Role).filter_by(rolename=rolename).first()
@@ -276,7 +276,7 @@ def edit_self():
     data = request.json
     if data is None:
         data = request.form.to_dict()
-    UserValidator().validate_user_update(data, user.id)
+    UserValidator(id=user.id).validate_user_update(data)
     db_user.update(data, for_profile=True)
 
     try:

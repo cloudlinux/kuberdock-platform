@@ -117,15 +117,13 @@ def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip, token):
         "volumes": [
             {
                 "name": "docker-containers",
-                "hostPath": {
-                    "path": "/var/lib/docker/containers"
-                }
+                # path is allowed only for kuberdock-internal
+                "localStorage": {"path": "/var/lib/kuberdock/storage"}
             },
             {
                 "name": "es-persistent-storage",
-                "hostPath": {
-                    "path": "/var/lib/elasticsearch"
-                }
+                # path is allowed only for kuberdock-internal
+                "localStorage": {"path": "/var/lib/elasticsearch"},
             }
         ],
         "containers": [
@@ -382,7 +380,7 @@ def add_node(data, do_deploy=True, with_testing=False):
         logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
                                                 kube.id, logs_kubes, MASTER_IP,
                                                 token)
-        check_new_pod_data(logs_config)
+        check_new_pod_data(logs_config, ku)
         logs_pod = PodCollection(ku).add(logs_config)
         PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
 
@@ -390,7 +388,7 @@ def add_node(data, do_deploy=True, with_testing=False):
                                                   owner=ku).first()
         if not dns_pod:
             dns_config = get_dns_pod_config()
-            check_new_pod_data(dns_config)
+            check_new_pod_data(dns_config, ku)
             dns_pod = PodCollection(ku).add(dns_config)
             PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 

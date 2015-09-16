@@ -9,6 +9,7 @@ from sqlalchemy import func
 from .api import APIError
 from .billing import Kube
 from .users.models import User
+from .settings import KUBERDOCK_INTERNAL_USER
 
 
 """
@@ -155,21 +156,6 @@ new_pod_schema = {
                     'empty': False,
                     'maxlength': 255,
                 },
-                'hostPath': {
-                    'type': 'dict',
-                    'nullable': True,
-                    'schema': {
-                        'path': {
-                            'type': 'string',
-                            'required': False,
-                            'nullable': True,
-                            'empty': False,
-                            'maxlength': PATH_LENGTH,
-                            # TODO validate that dir exists on node
-                            # 'dirExist': True
-                        }
-                    }
-                },
                 'persistentDisk': {
                     'type': 'dict',
                     'nullable': True,
@@ -188,8 +174,26 @@ new_pod_schema = {
                     }
                 },
                 'localStorage': {
-                    'type': 'boolean',
                     'nullable': True,
+                    'anyof': [
+                        {'type': 'boolean'},
+                        {
+                            'type': 'dict',
+                            'schema': {
+                                'path': {
+                                    'type': 'string',
+                                    'required': False,
+                                    'nullable': False,
+                                    'empty': False,
+                                    'maxlength': PATH_LENGTH,
+                                    # allowed only for kuberdock-internal
+                                    'internal_only': True,
+                                    # TODO validate that dir exists on node
+                                    # 'dirExist': True
+                                }
+                            }
+                        }
+                    ]
                 },
                 'emptyDir': {
                     'type': 'dict',
@@ -397,6 +401,10 @@ class V(cerberus.Validator):
                 # None: 'string'  # you can use `None` to set the default type
                 set: 'set'}
 
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.get('user')
+        super(V, self).__init__(*args, **kwargs)
+
     def validate_schema(self, schema):
         """
         Little hack to allow us to use sandard python types (or anything at all)
@@ -473,16 +481,9 @@ class V(cerberus.Validator):
                 pass
         self._error(field, 'invalid email address (domain part)')
 
-    def _validate_unique_case_insensitive(self, model_field, field, value):
-        model = model_field.class_
-
-        taken_query = model.query.filter(
-            func.lower(model_field) == func.lower(value)
-        )
-        if self.document.get('_id') is not None:  # in case of update
-            taken_query = taken_query.filter(model.id != self.document['_id'])
-        if taken_query.first() is not None:
-            self._error(field, 'has already been taken')
+    def _validate_internal_only(self, internal_only, field, value):
+        if internal_only and self.user != KUBERDOCK_INTERNAL_USER:
+            self._error(field, 'not allowed')
 
     def _validate_type_ipv4(self, field, value):
         try:
@@ -563,8 +564,8 @@ def check_change_pod_data(data):
         raise APIError(validator.errors)
 
 
-def check_new_pod_data(data):
-    validator = V()
+def check_new_pod_data(data, user=None):
+    validator = V(user=user.username)
     if not validator.validate(data, new_pod_schema):
         raise APIError(validator.errors)
     kube_type = data.get('kube_type', 0)
@@ -573,11 +574,24 @@ def check_new_pod_data(data):
 
 class UserValidator(V):
     """Validator for user api"""
+
+    def __init__(self, *args, **kwargs):
+        self.id = kwargs.get('id')
+        super(UserValidator, self).__init__(*args, **kwargs)
+
+    def _validate_unique_case_insensitive(self, model_field, field, value):
+        model = model_field.class_
+
+        taken_query = model.query.filter(
+            func.lower(model_field) == func.lower(value)
+        )
+        if self.id is not None:  # in case of update
+            taken_query = taken_query.filter(model.id != self.id)
+        if taken_query.first() is not None:
+            self._error(field, 'has already been taken')
+
     def validate_user_create(self, data):
         self._api_validation(data, create_user_schema)
 
-    def validate_user_update(self, data, user_id):
-        data = deepcopy(data)
-        data['_id'] = user_id  # needed for _validate_unique_case_insensitive
-        self.allow_unknown = True
+    def validate_user_update(self, data):
         self._api_validation(data, create_user_schema, update=True)

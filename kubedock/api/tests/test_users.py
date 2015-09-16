@@ -54,7 +54,6 @@ class UserFullTestCase(APITestCase):
         data = dict(password='new_password', email='new_email@test.test',
                     active=(not self.user.active), first_name='fn', last_name='ln',
                     middle_initials='mi', rolename='Admin',
-                    suspended=(not self.user.suspended),
                     package=new_package.name)
 
         # update

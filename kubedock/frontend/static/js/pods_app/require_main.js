@@ -15,8 +15,6 @@ requirejs.config({
         "bootstrap-editable"   : "lib/bootstrap-editable.min",
         jqplot                 : "lib/jquery.jqplot.min",
         "jqplot-axis-renderer" : "lib/jqplot.dateAxisRenderer.min",
-        "scroll-model"         : "lib/scroll-model",
-        "scroll-view"          : "lib/scroll-view",
         notify                 : "lib/notify.min",
         moment                 : "lib/moment.min",
         "moment-timezone"      : "lib/moment-timezone-with-data.min",

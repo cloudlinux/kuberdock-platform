@@ -1,15 +1,17 @@
-<!-- not used this template must be from index.html -->
-<div class="item-header">
-    <div class="item-status">
-        <span class="glyphicon glyphicon-globe"></span>
+<div class="col-xs-12 no-padding">
+    <div class="col-xs-10 no-padding">
+        <div class="item-header-title"><%= name || 'nameless' %></div>
+        <div class="item-body-info">
+            <%= description || 'No description' %>
+        </div>
+        <% if (description && name) { %>
+            <div class="more">
+                <a href="<%- url %>" target="blank">more...</a>
+            </div>
+        <% } %>
     </div>
-    <div class="item-header-title"><%= name || 'nameless' %></div>
-    <div class="item-header-controls">
-        <span class="glyphicon glyphicon-plus add-item el-control"></span>
-    </div>
-</div>
-<div class="item-body">
-    <div class="item-body-info">
-        <%= description || 'No description' %>
+    <div class="col-xs-2 no-padding">
+        <button class="like"><%= star_count %></button>
+        <button class="add-item">Select</button>
     </div>
 </div>

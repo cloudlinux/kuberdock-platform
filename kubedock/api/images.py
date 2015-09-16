@@ -1,17 +1,20 @@
 import json
+import re
+
 from datetime import datetime, timedelta
-from flask import Blueprint, request, current_app, jsonify
+from flask import Blueprint, request, jsonify
+from functools import wraps
 
 from .. import tasks
 from ..core import db
 from ..dockerfile import DockerfileParser
 from ..models import ImageCache, DockerfileCache
 from ..validation import check_container_image_name
+from ..settings import DEFAULT_IMAGES_URL
+from ..utils import login_required_or_basic_or_token
 
 
 images = Blueprint('images', __name__, url_prefix='/images')
-
-DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 
 
 def _get_docker_file(image, tag=None):
@@ -64,62 +67,52 @@ def _merge_parent(current, parent):
     return current
 
 
+def headerize(func):
+    """
+    The decorator adds header links to response for paginator
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        data = func(*args, **kwargs)
+        resp = jsonify(data)
+        fmt='<{base}?page={page}&per_page={per_page}>; rel="{rel}"'
+        links=[
+            {'page':data['page']-1, 'rel':'prev'},
+            {'page':data['page']+1,'rel':'next'},
+            {'page':1,'rel':'first'},
+            {'page':data['num_pages'], 'rel':'last'}]
+        header = ', '.join(fmt.format(
+                base=request.base_url,
+                page=i['page'],
+                per_page=data['per_page'],
+                rel=i['rel'])
+                    for i in links)
+        resp.headers.extend({'Link': header})
+        return resp
+    return wrapper
+
+
 @images.route('/', methods=['GET'])
-def get_list_by_keyword():
-    repo_url = request.args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
+@headerize
+@login_required_or_basic_or_token
+def search_image(patt=re.compile(r'https?://')):
     search_key = request.args.get('searchkey', 'none')
-
-    # parse search string
-    if search_key.startswith('http://') or search_key.startswith('https://'):
-        protocol = 'http://' if search_key.startswith('http://') else 'https://'
-        host, urn = search_key.lstrip(protocol).split('/', 1)
-        search_key = '/'.join(urn.split('/')[-2:])
-        repo_url = protocol + host
+    repo_url = request.args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+    repo_url = repo_url if patt.match(repo_url) else 'https://' + repo_url
 
     check_container_image_name(search_key)
-    query_key = '{0}?{1}'.format(repo_url.rstrip('/'), search_key)
+    query_key = '{0}?{1}:{2}'.format(repo_url, search_key, page)
     query = db.session.query(ImageCache).get(query_key)
-    if query is not None:
-        if (datetime.now() - query.time_stamp) < timedelta(days=1):
-            return jsonify({'status': 'OK', 'data': query.data})
-    result = tasks.get_container_images.delay(search_key, url=repo_url)
-    rv = result.wait()
-    # if you want to search an image directly without celery:
-    # rv = tasks.search_image(search_key, url=repo_url)
-    data = json.loads(rv)['results']
-    if query is None:
-        db.session.add(ImageCache(query=query_key, data=data,
-                                  time_stamp=datetime.now()))
-    else:
-        query.data = data
-        query.time_stamp = datetime.now()
-    db.session.commit()
-    return jsonify({'status': 'OK', 'data': data})
 
+    # if query is saved in DB and it's not older than 1 day return it
+    if query is not None and (datetime.now() - query.time_stamp) < timedelta(days=1):
+        return {'status': 'OK', 'data': query.data['results'],
+                'num_pages': query.data['num_pages'], 'page': page, 'per_page': per_page}
 
-@images.route('/search', methods=['GET'])
-def search_image():
-    repo_url = request.args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
-    repo_url = 'https://{0}'.format(
-        repo_url.lstrip('http://').lstrip('https://'))
-    search_key = request.args.get('searchkey', 'none')
-    page = int(request.args.get('page', 0)) + 1
-
-    # current_app.logger.debug((search_key, repo_url))
-    check_container_image_name(search_key)
-    query_key = '{0}?{1}:{2}'.format(repo_url.rstrip('/'), search_key, page)
-    query = db.session.query(ImageCache).get(query_key)
-    if query is not None:
-        if (datetime.now() - query.time_stamp) < timedelta(days=1):
-            return jsonify({'status': 'OK', 'data': query.data['results'],
-                            'num_pages': query.data['num_pages'],
-                            'page': page})
-    #result = tasks.get_container_images.delay(
-    #    search_key, url=repo_url, page=page)
-    #rv = result.wait()
-    # if you want to search an image directly without celery:
     rv = tasks.search_image(search_key, url=repo_url, page=page)
-    data = json.loads(rv)#['results']
+    data = json.loads(rv)
     if query is None:
         db.session.add(ImageCache(query=query_key, data=data,
                                   time_stamp=datetime.now()))
@@ -127,11 +120,12 @@ def search_image():
         query.data = data
         query.time_stamp = datetime.now()
     db.session.commit()
-    return jsonify({'status': 'OK', 'data': data['results'],
-                    'num_pages': data['num_pages'], 'page': page})
+    return {'status': 'OK', 'data': data['results'],
+            'num_pages': data['num_pages'], 'page': page, 'per_page': per_page}
 
 
 @images.route('/new', methods=['POST'])
+@login_required_or_basic_or_token
 def get_dockerfile_data():
     image = request.form.get('image')
     if image is None and request.json is not None:

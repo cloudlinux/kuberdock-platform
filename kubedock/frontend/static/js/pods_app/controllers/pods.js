@@ -213,6 +213,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                          'pods_app/views/paginator',
                          'pods_app/views/loading'], function(utils){
                     var model = new App.Data.Pod({name: "Unnamed-1", containers: [], volumes: []}),
+                        registryURL = 'registry.hub.docker.com',
+                        imageTempCollection = new App.Data.ImagePageableCollection(),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout();
                     model.containerUrls = {};
                     model.origEnv = {};
@@ -278,10 +280,37 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.header.show(new App.Views.NewItem.PodHeaderView({model: model}));
-                        wizardLayout.steps.show(new App.Views.NewItem.GetImageView());
+                        wizardLayout.steps.show(new App.Views.NewItem.GetImageView({collection: new App.Data.ImageCollection()}));
                     });
-                    that.listenTo(wizardLayout, 'image:fetched', function(data){
-                        wizardLayout.footer.show(new App.Views.Paginator.PaginatorView({view: data}));
+                    that.listenTo(wizardLayout, 'image:searchsubmit', function(query){
+                        var imageCollection = new App.Data.ImageCollection();
+                        imageTempCollection.fullCollection.reset();
+                        imageTempCollection.getFirstPage({
+                            wait: true,
+                            data: {searchkey: query, url: registryURL},
+                            success: function(collection, response, opts){
+                                collection.each(function(m){imageCollection.add(m)});
+                                wizardLayout.steps.show(new App.Views.NewItem.GetImageView({
+                                    registryURL: registryURL,
+                                    collection: imageCollection,
+                                    query: query
+                                }));
+                            }
+                        });
+                    });
+                    that.listenTo(wizardLayout, 'image:getnextpage', function(currentCollection, query){
+                        imageTempCollection.getNextPage({
+                            wait: true,
+                            data: {searchkey: query, url: registryURL},
+                            success: function(collection, response, opts){
+                                collection.each(function(m){currentCollection.add(m)});
+                                wizardLayout.steps.show(new App.Views.NewItem.GetImageView({
+                                    registryURL: registryURL,
+                                    collection: currentCollection,
+                                    query: query
+                                }));
+                            }
+                        });
                     });
                     that.listenTo(wizardLayout, 'clear:pager', function(){
                         wizardLayout.footer.empty();

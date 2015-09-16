@@ -11,7 +11,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/pod_item_graph.tpl',
         'tpl!pods_app/templates/wizard_set_container_complete.tpl',
         'pods_app/utils',
-        'scroll-model', 'scroll-view', 'bootstrap', 'bootstrap-editable', 'jqplot',
+        'bootstrap', 'bootstrap-editable', 'jqplot',
         'jqplot-axis-renderer', 'numeral', 'selectpicker'],
        function(Pods,
                 layoutWizardTpl,
@@ -47,7 +47,8 @@ define(['pods_app/app',
                     that.listenTo(view, 'image:fetched', that.imageFetched);
                     that.listenTo(view, 'pager:clear', that.clearPager);
                     that.listenTo(view, 'pod:save', that.podSave);
-                    that.listenTo(view, 'pod:run', that.podRun);
+                    that.listenTo(view, 'image:searchsubmit', that.imageSearchSubmit);
+                    that.listenTo(view, 'image:getnextpage', that.imageGetNextPage);
                 });
             },
             regions: {
@@ -95,8 +96,11 @@ define(['pods_app/app',
             podSave: function(data){
                 this.trigger('pod:save', data.model);
             },
-            podRun: function(data){
-                this.trigger('pod:run', data.model);
+            imageSearchSubmit: function(data){
+                this.trigger('image:searchsubmit', data);
+            },
+            imageGetNextPage: function(collection, query){
+                this.trigger('image:getnextpage', collection, query);
             }
         });
 
@@ -157,20 +161,24 @@ define(['pods_app/app',
             tagName: 'div',
             className: 'item',
 
-            /* not used */
-            events: {
-                'click .add-item'  : 'addItem',
+            triggers: {
+                'click .add-item': 'image:selected'
             },
 
-            /* not used */
-            addItem: function(evt){
-                evt.stopPropagation();
-                // it is used?
-                this.trigger('image:selected');
+            initialize: function(options){
+                this.imageURL = 'http://'
+                    + options.registryURL + '/'
+                    + (this.model.get('is_official') ? '_' : 'u') + '/'
+                    + this.model.get('name');
+            },
+            templateHelpers: function(){
+                var imageURL = this.imageURL;
+                return {
+                    url: imageURL
+                }
             }
         });
 
-        var imageSearchURL = 'registry.hub.docker.com';
         NewItem.GetImageView = Backbone.Marionette.CompositeView.extend({
             template: wizardGetImageTpl,
             childView: NewItem.ImageListItemView,
@@ -178,117 +186,80 @@ define(['pods_app/app',
             tagName: 'div',
 
             initialize: function(options){
-                this.collection = new App.Data.ImageCollection();
-                this.listenTo(this.collection, 'reset', this.render);
+                this.registryURL = options.registryURL;
+                this.query = options.query;
             },
 
-            triggers: {
-                'click .next-step' : 'step:next'
+            templateHelpers: function(){
+                var showPaginator = this.collection.length ? true : false;
+                return {
+                    showPaginator: showPaginator
+                }
             },
 
             events: {
-                'click .search-image'              : 'onSearchClick',
-                'keypress #search-image-field'     : 'onInputKeypress',
-                'click #search-image-default-repo' : 'onChangeRepoURL',
-                'click @ui.buttonNext'             : 'nextStep', /* not used */
-                'change @ui.select'                : 'selectChanche',
-                'click @ui.podsList'               : 'showPodsList'
+                'click .search-image'           : 'onSearchClick',
+                'keypress #search-image-field'  : 'onInputKeypress',
+                'click .btn-more'               : 'loadNextPage',
+                'click .podsList'               : 'showPodsList'
             },
 
-            /* not used */
             childEvents: {
                 'image:selected' : 'childImageSelected'
             },
 
             ui: {
-                buttonNext      : '.nextStep', /* not used */
-                repo_url_repr   : 'span#search-image-default-repo',
                 input           : 'input#search-image-field',
-                spinner         : '#data-collection',
-                searchControl   : '.search-control',
-                loginForm       : '.login-user',
-                select          : '.image-source',
-                podsList        : '.podsList'
+                loader          : 'div#load-control',
+                searchControl   : 'div.search-control'
             },
 
-            onRender: function(){
-                var that = this;
-                this.ui.repo_url_repr.editable({
-                    type: 'text',
-                    title: 'Change repository url',
-                    success: function(response, newValue) {
-                        imageSearchURL = newValue;
-                        that.ui.repo_url_repr.text(imageSearchURL);
-                    }
-                });
+            appendLoader: function(){
+                var loader = $('<div class="state load-state"></div>');
+                loader.append($('<span class="small-loader"></span>'))
+                    .append($('<span>Loading...</span>'));
+                this.ui.searchControl.empty().append(loader);
             },
 
             onInputKeypress: function(evt){
                 evt.stopPropagation();
                 if (evt.which === 13) { // 'Enter' key
-                    this.fetchCollection(this.ui.input.val().trim());
+                    this.appendLoader();
+                    this.trigger('image:searchsubmit', this.ui.input.val().trim());
                 }
             },
 
             onSearchClick: function(evt){
                 evt.stopPropagation();
-                this.ui.searchControl.show();
-                this.fetchCollection(this.ui.input.val().trim());
-
-            },
-            selectChanche: function(evt){
-                var index = this.ui.select.find('option:selected').index();
-                if (index == 1){
-                    this.ui.loginForm.slideDown();
-                } else {
-                    this.ui.loginForm.slideUp();
-                }
-            },
-
-            fetchCollection: function(query){
-                var that = this;
-                var options = {
-                    columnsSelector: "#data-collection",
-                    itemTemplateSelector: "#image-collection-item-template",
-                    itemClasses: "item",
-                    dataUrl: "/api/images/search",
-                    disableAutoscroll: true,
-                    requestData: {searchkey: query, url: imageSearchURL},
-                    onAddItem: function(count, $col, $item, data){
-                        $item.find('.add-item').on('click', function() {
-                            that.trigger('image:selected', data.name, data.url);
-                        });
-                        return $item;
-                    }
-                };
-                var scrollModel = new ScrollModel({options: options});
-                new ScrollView({
-                    el: $("#search-results-scroll"),
-                    model: scrollModel,
-                    options: options
-                });
+                this.appendLoader();
+                this.trigger('image:searchsubmit', this.ui.input.val().trim());
             },
 
             onShow: function(){
                 this.ui.input.focus();
             },
 
-            /* not used */
-            nextStep : function(evt){
-                this.trigger('image:selected', this.ui.buttonNext.data('name'));
-            },
-
-            onBeforeDestroy: function(){
-                this.trigger('pager:clear');
-            },
-
             showPodsList: function(){
                 Pods.navigate('pods', {trigger: true});
             },
 
-            /* not used */
+            childViewOptions: function(){
+                var registryURL = this.registryURL;
+                return {
+                    registryURL: registryURL
+                }
+            },
+
             childImageSelected: function(data){
-                this.trigger('image:selected', data.model.get('name'));
+                this.trigger('image:selected', data.model.get('name'), data.imageURL);
+            },
+
+            loadNextPage: function(){
+                this.ui.loader.removeClass('btn-more').empty()
+                    .append($('<span class="small-loader"></span>'))
+                    .append($('<span>Loading...</span>'))
+                    .addClass('state load-state');
+                this.trigger('image:getnextpage', this.collection, this.query);
             }
         });
 

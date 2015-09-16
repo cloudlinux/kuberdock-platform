@@ -84,11 +84,17 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
             }
         });
 
-        Data.ImageCollection = Backbone.PageableCollection.extend({
+        Data.ImageCollection = Backbone.Collection.extend({
+            url: '/api/images/',
+            model: Data.Image,
+            parse: unwrapper
+        });
+
+        Data.ImagePageableCollection = Backbone.PageableCollection.extend({
             url: '/api/images/',
             model: Data.Image,
             parse: unwrapper,
-            mode: 'client',
+            mode: 'infinite',
             state: {
                 pageSize: 10
             }

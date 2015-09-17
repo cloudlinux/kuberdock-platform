@@ -565,7 +565,7 @@ def check_change_pod_data(data):
 
 
 def check_new_pod_data(data, user=None):
-    validator = V(user=user.username)
+    validator = V(user=None if user is None else user.username)
     if not validator.validate(data, new_pod_schema):
         raise APIError(validator.errors)
     kube_type = data.get('kube_type', 0)

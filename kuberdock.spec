@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 1.1%{?dist}.cloudlinux
+Release: 1.2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,6 +160,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Fri Sep 18 2015 Igor Savenko <bliss@cloudlinux.com> 0.3-1.2
+- Updated deploy scripts
+
 * Thu Sep 17 2015 Igor Savenko <bliss@cloudlinux.com> 0.3-1.1
 - CEPH PD bugfixes
 - Returned pod_create.js triggers

@@ -313,7 +313,14 @@ define(['pods_app/app',
             },
 
             triggers: {
-                'click @ui.prevStep'        : 'step:getimage',
+                'click @ui.prevStep'     : 'step:getimage',
+                'click .complete'        : 'step:complete',
+                'click .go-to-volumes'   : 'step:volconf',
+                'click .go-to-envs'      : 'step:envconf',
+                'click .go-to-resources' : 'step:resconf',
+                'click .go-to-other'     : 'step:otherconf',
+                'click .go-to-stats'     : 'step:statsconf',
+                'click .go-to-logs'      : 'step:logsconf',
             },
 
             changePolicy: function(evt){

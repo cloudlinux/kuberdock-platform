@@ -268,7 +268,10 @@ class CephStorage(PersistentStorage):
             return
         fo = StringIO(conf)
         cp = ConfigParser()
-        cp.readfp(fo)
+        try:
+            cp.readfp(fo)
+        except Exception:
+            raise APIError("Cannot get CEPH monitors")
         if not cp.has_option('global', 'mon_host'):
             return ['127.0.0.1']
         return [i.strip() for i in cp.get('global', 'mon_host').split(',')]

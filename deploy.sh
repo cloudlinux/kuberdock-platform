@@ -1,6 +1,7 @@
 #!/bin/bash
 
 KUBERDOCK_DIR=/var/opt/kuberdock
+KUBERDOCK_LIB_DIR=/var/lib/kuberdock
 KUBERNETES_CONF_DIR=/etc/kubernetes
 KUBERDOCK_MAIN_CONFIG=/etc/sysconfig/kuberdock/kuberdock.conf
 KNOWN_TOKENS_FILE="$KUBERNETES_CONF_DIR/known_tokens.csv"
@@ -719,7 +720,9 @@ CEPH=True
 MONITORS='$MONITORS'
 KEYRING_PATH='$KEYRING_PATH'
 EOF
-mv /tmp/ceph_tmp_config/ceph.* $KUBERDOCK_DIR/conf || /bin/true
+
+[ -d $KUBERDOCK_LIB_DIR/conf ] || mkdir $KUBERDOCK_LIB_DIR/conf
+mv /tmp/ceph_tmp_config/ceph.* $KUBERDOCK_LIB_DIR/conf || /bin/true
 rm -rf /tmp/ceph_tmp_config || /bin/true
 fi
 

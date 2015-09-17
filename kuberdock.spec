@@ -1,7 +1,7 @@
-Version: 0.2
+Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 36.1%{?dist}.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,6 +160,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Thu Sep 17 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-1
+- AC-1066: docker registry v2 search
+- AC-852: front-end email validation fix
+- Added check before adding node that kuberdock has correct settings file.
+- assets.py: removed obsoletes
+- AC-1048 create container with persistent storage bugfix
+- AC-1064: Added workaround for persistentDrives to be kept
+
 * Wed Sep 16 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-36.1
 - use old usage api format, 'cause the new one needs changes in whmcs addon
 - AC-1072. Fixed deploy scripts

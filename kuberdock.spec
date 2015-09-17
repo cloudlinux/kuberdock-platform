@@ -20,7 +20,7 @@ Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
-Requires: python-cerberus >= 0.7.2
+Requires: python-cerberus >= 0.9.1
 Requires: python-flask >= 0.10.1
 Requires: python-flask-assets >= 0.10
 Requires: python-flask-influxdb >= 0.1

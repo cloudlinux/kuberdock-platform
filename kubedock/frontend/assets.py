@@ -14,7 +14,7 @@ less_css = Bundle(
 
 vendor_js = Bundle(
     'js/lib/jquery.js',
-    'js/lib/underscore.js',
+    'js/lib/underscore-min.js',
     'js/lib/backbone.js',
     'js/lib/backbone.marionette.js',
     'js/lib/bootstrap.js',
@@ -25,8 +25,6 @@ vendor_js = Bundle(
     'js/lib/jquery.jqplot.min.js',
     'js/lib/jqplot.dateAxisRenderer.min.js',
     'js/lib/bootstrap-select.min.js',
-    'js/lib/scroll-model.js',
-    'js/lib/scroll-view.js',
     'js/lib/notify.min.js',
     'js/lib/moment.min.js',
     'js/lib/moment-timezone-with-data.min.js',

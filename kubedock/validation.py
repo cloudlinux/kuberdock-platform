@@ -9,7 +9,7 @@ from sqlalchemy import func
 from .api import APIError
 from .billing import Kube
 from .users.models import User
-from .settings import KUBERDOCK_INTERNAL_USER
+from .settings import KUBERDOCK_INTERNAL_USER, AWS, CEPH
 
 
 """
@@ -159,6 +159,7 @@ new_pod_schema = {
                 'persistentDisk': {
                     'type': 'dict',
                     'nullable': True,
+                    'pd_backend_required': True,
                     'schema': {
                         'pdName': {
                             'type': 'string'
@@ -484,6 +485,10 @@ class V(cerberus.Validator):
     def _validate_internal_only(self, internal_only, field, value):
         if internal_only and self.user != KUBERDOCK_INTERNAL_USER:
             self._error(field, 'not allowed')
+
+    def _validate_pd_backend_required(self, pd_backend_required, field, value):
+        if pd_backend_required and not (AWS or CEPH):
+            self._error(field, 'persistent storage backend wasn\'t configured')
 
     def _validate_type_ipv4(self, field, value):
         try:

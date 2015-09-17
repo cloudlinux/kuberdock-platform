@@ -156,7 +156,7 @@ define(['pods_app/app',
             }
         });
 
-       NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
+        NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
             template: wizardImageCollectionItemTpl,
             tagName: 'div',
             className: 'item',
@@ -479,11 +479,19 @@ define(['pods_app/app',
                     uniqueContainerHostPorts = [],
                     vm = this.model.get('volumeMounts');
 
-                /* mountPath check */
+                /* mountPath and persistent disk check */
                 for (var i=0; i<vm.length; i++) {
                     if (!vm[i].mountPath) {
                         utils.modelError('Mount path must be set!');
                         return;
+                    }
+                    if (vm[i].isPersistent) {
+                        var pd = vm[i].persistentDisk;
+                        if (!pd.hasOwnProperty('pdSize') ||
+                            !pd.hasOwnProperty('pdName') || !pd.pdName) {
+                            utils.modelError('Persistent disk must be set!');
+                            return;
+                        }
                     }
                     var itemName = vm[i].mountPath.charAt(0) === '/' ? vm[i].mountPath.substring(1) : vm[i].mountPath;
                     vm[i].name = itemName.replace(new RegExp('/','g'), '-') + _.map(_.range(10), function(i){return _.random(1, 10);}).join('');

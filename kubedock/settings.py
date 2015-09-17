@@ -29,6 +29,7 @@ REDIS_PORT = '6379'
 CELERY_BROKER_URL = 'redis://localhost:6379',
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 
+# Also used in yaml api version check
 KUBE_API_VERSION = 'v1'
 KUBE_MASTER_URL = 'http://localhost:8080/api/'
 
@@ -71,6 +72,7 @@ MAINTENANCE_LOCK_FILE = '/var/lib/kuberdock/maintenance.lock'
 UPDATES_RELOAD_LOCK_FILE = '/var/lib/kuberdock/updates-reload.lock'
 UPDATES_PATH = '/var/opt/kuberdock/kubedock/updates/scripts'
 KUBERDOCK_SERVICE = 'emperor.uwsgi'
+KUBERDOCK_SETTINGS_FILE = '/etc/sysconfig/kuberdock/kuberdock.conf'
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'
@@ -83,7 +85,7 @@ NODE_INSTALL_TIMEOUT_SEC = 30*60    # 30 min
 
 import ConfigParser
 cp = ConfigParser.ConfigParser()
-if cp.read('/etc/sysconfig/kuberdock/kuberdock.conf'):
+if cp.read(KUBERDOCK_SETTINGS_FILE):
     if cp.has_section('main'):
         if cp.has_option('main', 'DB_USER'):
             DB_USER = cp.get('main', 'DB_USER')

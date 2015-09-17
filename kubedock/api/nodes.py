@@ -17,7 +17,8 @@ from ..validation import check_int_id, check_node_data, check_hostname, check_ne
 from ..billing import Kube, kubes_to_limits
 from ..settings import (NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS,
                         CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT,
-                        SSH_KEY_FILENAME, ELASTICSEARCH_REST_PORT)
+                        SSH_KEY_FILENAME, ELASTICSEARCH_REST_PORT,
+                        KUBERDOCK_SETTINGS_FILE)
 from ..kapi.podcollection import PodCollection
 from ..tasks import add_node_to_k8s
 from . import APIError
@@ -359,8 +360,13 @@ def add_node(data, do_deploy=True, with_testing=False):
     cursor = db.session.query(Node)
     m = cursor.filter_by(hostname=data['hostname']).first()
     if not m:
+        if not MASTER_IP:
+            raise APIError('There is no MASTER_IP specified in {0}.'
+                           'Check that file has not been renamed by package '
+                           'manager to .rpmsave or similar'
+                           .format(KUBERDOCK_SETTINGS_FILE))
         kube = Kube.query.get(data.get('kube_type', 0))
-        ip=socket.gethostbyname(data['hostname'])
+        ip = socket.gethostbyname(data['hostname'])
         m = Node(ip=ip, hostname=data['hostname'], kube=kube, state='pending')
         logs_kubes = 1
         node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']

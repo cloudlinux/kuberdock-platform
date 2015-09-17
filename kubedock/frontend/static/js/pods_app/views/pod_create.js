@@ -156,7 +156,7 @@ define(['pods_app/app',
             }
         });
 
-        NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
+       NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
             template: wizardImageCollectionItemTpl,
             tagName: 'div',
             className: 'item',
@@ -341,7 +341,7 @@ define(['pods_app/app',
                 }
 
                 return {
-                    hasPersistent: this.model.has('persistentDrives'),
+                    hasPersistent: this.model.hasOwnProperty('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
@@ -373,7 +373,7 @@ define(['pods_app/app',
                     var cells = tgt.closest('div').children('span'),
                         pdName = cells.eq(0).children('input').first().val().trim(),
                         pdSize = parseInt(cells.eq(1).children('input').first().val().trim());
-                    this.model.get('persistentDrives').push({pdName: pdName, pdSize: pdSize});
+                    this.model.persistentDrives.push({pdName: pdName, pdSize: pdSize});
                     this.persistentDefault = pdName;
                     if (this.hasOwnProperty('currentIndex')) {
                         this.model.get('volumeMounts')[this.currentIndex].persistentDisk = {pdName: pdName, pdSize: pdSize};
@@ -414,9 +414,10 @@ define(['pods_app/app',
                     index = tgt.closest('tr').index(),
                     row = this.model.get('volumeMounts')[index],
                     that = this;
+
                 if (row.isPersistent) {
                     row.isPersistent = false;
-                    to_be_released = _.filter(this.model.get('persistentDrives'), function(d){
+                    to_be_released = _.filter(this.model.persistentDrives, function(d){
                     if (row.hasOwnProperty('persistentDisk')) {
                         return row.persistentDisk.pdName === d.pdName;
                     }
@@ -426,13 +427,13 @@ define(['pods_app/app',
                     this.render();
                 }
                 else {
-                    if (!this.model.has('persistentDrives')) {
+                    if (!this.model.hasOwnProperty('persistentDrives')) {
                         var rqst = $.ajax({
                             type: 'GET',
                             url: '/api/nodes/lookup'
                         });
                         rqst.done(function(rs){
-                            that.model.set({persistentDrives: _.map(rs['data'], function(i){return {pdName: i, pdSize: null}})});
+                            that.model.persistentDrives = _.map(rs['data'], function(i){return {pdName: i, pdSize: null}});
                             row.isPersistent = true;
                             row.persistentDisk = {pdName: null};
                             that.render();
@@ -460,7 +461,7 @@ define(['pods_app/app',
                 var tgt = $(evt.target),
                     index = tgt.closest('tr').index(),
                     volumes = this.model.get('volumeMounts');
-                to_be_released = _.filter(this.model.get('persistentDrives'), function(d){
+                to_be_released = _.filter(this.model.persistentDrives, function(d){
                     if (volumes[index].hasOwnProperty('persistentDisk')) {
                         return volumes[index].persistentDisk.pdName === d.pdName;
                     }
@@ -485,6 +486,14 @@ define(['pods_app/app',
                         utils.modelError('Mount path must be set!');
                         return;
                     }
+                    if (!vm[i].name) {
+                        var itemName = vm[i].mountPath.charAt(0) === '/'
+                            ? vm[i].mountPath.substring(1)
+                            : vm[i].mountPath;
+                        vm[i].name = itemName.replace(new RegExp('/','g'), '-')
+                            + _.map(_.range(10),
+                                    function(i){return _.random(1, 10)}).join('');
+                    }
                     if (vm[i].isPersistent) {
                         var pd = vm[i].persistentDisk;
                         if (!pd.hasOwnProperty('pdSize') ||
@@ -493,8 +502,6 @@ define(['pods_app/app',
                             return;
                         }
                     }
-                    var itemName = vm[i].mountPath.charAt(0) === '/' ? vm[i].mountPath.substring(1) : vm[i].mountPath;
-                    vm[i].name = itemName.replace(new RegExp('/','g'), '-') + _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
                 };
 
                 /* check ports */
@@ -513,9 +520,11 @@ define(['pods_app/app',
 
                 if (podContainersPorts.length != uniqueContainerPorts.length){
                     utils.modelError('You have a duplicate container port in ' + this.model.get('name') + ' container!');
-                }  else if (podContainersHostPorts.length != uniqueContainerHostPorts.length){
+                }
+                else if (podContainersHostPorts.length != uniqueContainerHostPorts.length){
                     utils.modelError('You have a duplicate pod port in ' + this.model.get('name') + ' container!');
-                } else {
+                }
+                else {
                     this.trigger('step:envconf', this);
                 }
             },
@@ -526,8 +535,8 @@ define(['pods_app/app',
 
                 this.ui.input_command.val(this.filterCommand(this.model.get('args')));
 
-                if (this.model.has('persistentDrives')) {
-                    disks = _.map(this.model.get('persistentDrives'), function(i){
+                if (this.model.hasOwnProperty('persistentDrives')) {
+                    disks = _.map(this.model.persistentDrives, function(i){
                         var item = {value: i.pdName, text: i.pdName};
                         if (i.hasOwnProperty('used')) { item.disabled = true; }
                         return item;
@@ -568,7 +577,7 @@ define(['pods_app/app',
                     success: function(response, newValue) {
                         var index = $(this).closest('tr').index(),
                             entry = that.model.get('volumeMounts')[index],
-                            pEntry = _.filter(that.model.get('persistentDrives'), function(i){ return i.pdName === newValue; })[0];
+                            pEntry = _.filter(that.model.persistentDrives, function(i){ return i.pdName === newValue; })[0];
                         entry['persistentDisk'] = pEntry;
                         pEntry['used'] = true;
                     }
@@ -1086,7 +1095,6 @@ define(['pods_app/app',
             },
 
             changeKubeType: function(evt){
-                console.log('change kube type');
                 this.model.set('kube_type', parseInt(evt.target.value));
                 evt.stopPropagation();
                 var kube_id = parseInt(evt.target.value),
@@ -1096,7 +1104,6 @@ define(['pods_app/app',
                         return k.id === kube_id
                     }),
                     kube_price = this.getKubePrice(kube_id);
-                console.log(kube_id, kube_price);
                 this.model.set('kube_type', kube_id);
                 if (kube_data.length === 0) {
                     this.cpu_data = '0 Cores';

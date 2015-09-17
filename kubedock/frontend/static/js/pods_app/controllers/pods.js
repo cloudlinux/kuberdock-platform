@@ -221,11 +221,13 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                             return false;
                         };
-
+                        var pdBackup = {};
+                        var volumeNames = {};
                         if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
                         _.each(data.get('containers'), function(c){
                             if (c.hasOwnProperty('persistentDrives')) { delete c.persistentDrives; }
                             _.each(c.volumeMounts, function(v){
+                                volumeNames[v.name] = true;
                                 if (v.isPersistent) {
                                     var entry = {name: v.name, persistentDisk: v.persistentDisk};
                                     var used = _.filter(data.attributes.persistentDrives,
@@ -233,14 +235,24 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                     if (used.length) {
                                         used[0].used = true;
                                     }
+                                    pdBackup[v.name] = _.clone(v.persistentDisk);
                                 }
                                 else {
                                     var entry = {name: v.name, localStorage: true};
                                 }
                                 delete v.isPersistent;
                                 delete v.persistentDisk;
-                                data.get('volumes').push(entry);
+                                var filtered = _.filter(data.get('volumes'), function(vi){
+                                    return vi.name === entry.name;
+                                });
+                                if (filtered.length === 0) {
+                                    data.get('volumes').push(entry);
+                                }
                             });
+                        });
+
+                        data.attributes.volumes = _.filter(data.attributes.volumes, function(v){
+                            return _.has(volumeNames, v.name);
                         });
 
                         if (hasPublic(data.get('containers'))) {
@@ -256,8 +268,18 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 Pods.navigate('pods');
                                 that.showPods();
                             },
-                            error: function(model, response, options, data_){
+                            error: function(model, response, options){
                                 console.log('error applying data');
+                                _.each(_.pairs(pdBackup), function(p){
+                                    _.each(model.get('containers'), function(c){
+                                        _.each(c['volumeMounts'], function(v){
+                                            if (v.name === p[0]) {
+                                                v.persistentDisk = _.clone(p[1]);
+                                                v.isPersistent = true;
+                                            }
+                                        });
+                                    });
+                                });
                                 var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
                                 $.notify(body, {
                                     autoHideDelay: 5000,
@@ -360,6 +382,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             });
                             var containerModel = new App.Data.Image(container);
                             containerModel.url = url;
+                            containerModel.persistentDrives = model.persistentDrives;
                             wizardLayout.steps.show(
                                 new App.Views.NewItem.WizardPortsSubView({
                                     model: containerModel,

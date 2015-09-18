@@ -116,13 +116,33 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             blockUser: function(){
-                this.model.save({active: false}, {});
-                this.render();
+                var that = this;
+                this.model.save(
+                    {
+                        active: false
+                    },
+                    {
+                        wait: true,
+                        patch: true,
+                        success: function(){
+                            that.render();
+                        }
+                    });
             },
 
             activatedUser: function(){
-                this.model.save({active: true}, {});
-                this.render();
+                var that = this;
+                this.model.save(
+                    {
+                        active: true
+                    },
+                    {
+                        wait: true,
+                        patch: true,
+                        success: function(){
+                            that.render();
+                        }
+                    });
             },
 
             profileUser_btn: function(){

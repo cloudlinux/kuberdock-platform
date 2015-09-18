@@ -76,7 +76,7 @@ Kuberdock
 %setup -n %{name}-%{version}
 
 %build
-# TODO nodes app still not on require.js, change here when merge all apps in one
+# TODO change here when merge all apps to patch only one require config
 start='urlArgs: "bust="'
 replace='(new Date()).getTime()'
 replace_with=$(date +"%s")

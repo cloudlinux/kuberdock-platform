@@ -15,7 +15,19 @@ from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, 
 class Pod(KubeQuery, ModelQuery, Utilities):
     def __init__(self, data=None):
         if data is not None:
+
+            # Regardless of restartPolicy we should create RC
+            # TODO we need to clean up all non RC pods code and remove this
+            # param at all
+            self.replicationController = True
+
             for c in data['containers']:
+
+                # At least one kube per container expected so we can make it
+                # defaults to 1 if not set
+                if 'kubes' not in c:
+                    c['kubes'] = 1
+
                 if len(c.get('args', [])) == 1:
                     # it seems the args has been changed
                     # or may be its length is only 1 item
@@ -78,7 +90,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         return pod
 
     def as_dict(self):
-        return dict([(k, v) for k, v in vars(self).items()])
+        return dict([(k, v) for k, v in vars(self).items()
+                    if k not in ('volumes', 'namespace')])
 
     def as_json(self):
         return json.dumps(self.as_dict())
@@ -251,7 +264,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             data['securityContext'] = {'privileged': True}
         return data
 
-
     @staticmethod
     def _has_rbd(volume_mounts, volumes):
         """
@@ -262,8 +274,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         :return: bool
         """
         return any([[i for i in
-            [v for v in volumes if v.get('name')==vm.get('name')]
-                if 'rbd' in i] for vm in volume_mounts])
+                   [v for v in volumes if v.get('name') == vm.get('name')]
+                   if 'rbd' in i] for vm in volume_mounts])
 
 
     def _parse_cmd_string(self, cmd_string):

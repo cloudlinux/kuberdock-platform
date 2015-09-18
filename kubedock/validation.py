@@ -12,6 +12,8 @@ from .users.models import User
 from .settings import KUBERDOCK_INTERNAL_USER, AWS, CEPH
 
 
+SUPPORTED_VOLUME_TYPES = ['persistentDisk', 'localStorage']
+
 """
 This schemas it's just a shortcut variables for convenience and reusability
 """
@@ -80,11 +82,17 @@ username_regex = {
     'regex': re.compile(r'^[A-Z0-9](?:[A-Z0-9_-]{0,23}[A-Z0-9])?$', re.IGNORECASE),
     'message': 'only letters of Latin alphabet, numbers, hyphen and underscore are allowed'
 }
-name_schema = {'type': 'string',
-               'nullable': True,
-               'maxlength': 25,
-               'regex': {'regex': re.compile(r'^[A-Z]{,25}$', re.IGNORECASE),
-                         'message': 'only letters of Latin alphabet are allowed'}}
+
+name_schema = {
+    'type': 'string',
+    'nullable': True,
+    'maxlength': 25,
+    'regex': {
+        'regex': re.compile(r'^[A-Z]{,25}$', re.IGNORECASE),
+        'message': 'only letters of Latin alphabet are allowed'
+    }
+}
+
 create_user_schema = {
     'username': {
         'type': 'string',
@@ -131,16 +139,21 @@ create_user_schema = {
 
 new_pod_schema = {
     'name': pod_name_schema,
-    'clusterIP': {                                   # ignore, read-only
+    'clusterIP': {
         'type': 'ipv4',
-        'nullable': True
+        'nullable': True,
+        'internal_only': True,
     },
-    'replicas': {'type': 'integer', 'min': 0},
+    'replicas': {'type': 'integer', 'min': 0, 'max': 1},
     'kube_type': {'type': 'integer', 'min': 0, 'required': True},
-    'replicationController': {'type': 'boolean'},
-    'node': {'type': 'string', 'nullable': True},
+    'replicationController': {'type': 'boolean'},   # TODO remove
+    'node': {
+        'type': 'string',
+        'nullable': True,
+        'internal_only': True,
+    },
     'set_public_ip': {'type': 'boolean', 'required': False},    # TODO remove
-    'public_ip': {'type': 'ipv4', 'required': False},
+    'public_ip': {'type': 'ipv4', 'required': False},           # TODO remove
     'restartPolicy': {
         'type': 'string', 'required': True,
         'allowed': ['Always', 'OnFailure', 'Never']
@@ -151,10 +164,10 @@ new_pod_schema = {
             'type': 'dict',
             'schema': {
                 'name': {
-                    # TODO this name must be unique, per what?
                     'type': 'string',
                     'empty': False,
                     'maxlength': 255,
+                    'volume_type_required': True,
                 },
                 'persistentDisk': {
                     'type': 'dict',
@@ -189,51 +202,50 @@ new_pod_schema = {
                                     'maxlength': PATH_LENGTH,
                                     # allowed only for kuberdock-internal
                                     'internal_only': True,
-                                    # TODO validate that dir exists on node
-                                    # 'dirExist': True
                                 }
                             }
                         }
                     ]
                 },
-                'emptyDir': {
-                    'type': 'dict',
-                    'nullable': True
-                },
-                'scriptableDisk': {
-                    'type': 'dict',
-                    'nullable': True
-                },
-                'awsElasticBlockStore': {
-                    'type': 'dict',
-                    'nullable': True
-                },
-                'gitRepo': {
-                    'type': 'dict',
-                    'nullable': True
-                },
-                'glusterfs': {
-                    'type': 'dict',
-                    'nullable': True
-                },
-                'iscsi': {
-                    'type': 'dict',
-                    'nullable': True
-                },
-                'nfs': {
-                    'type': 'dict',
-                    'nullable': True
-                },
-                'secret': {
-                    'type': 'dict',
-                    'nullable': True
-                }
+                # 'emptyDir': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
+                # 'scriptableDisk': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
+                # 'awsElasticBlockStore': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
+                # 'gitRepo': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
+                # 'glusterfs': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
+                # 'iscsi': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
+                # 'nfs': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
+                # 'secret': {
+                #     'type': 'dict',
+                #     'nullable': True
+                # },
             },
         }
     },
     'containers': {
         'type': 'list',
         'minlength': 1,
+        'required': True,
         'schema': {
             'type': 'dict',
             'schema': {
@@ -299,7 +311,7 @@ new_pod_schema = {
                             'isPublic': {'type': 'boolean'},
                             'protocol': {
                                 'type': 'string',
-                                'maxlength': 255
+                                'allowed': ['TCP', 'tcp', 'UDP', 'udp'],
                             },
                         }
                     }
@@ -313,9 +325,12 @@ new_pod_schema = {
                                 'type': 'string',
                                 'maxlength': PATH_LENGTH,
                             },
-                            'name': {'type': 'string'},    # TODO depend volumes
-                            'readOnly': {'type': 'boolean'}
-                        }
+                            'name': {
+                                'type': 'string',
+                                'has_volume': True,
+                            },
+                            'readOnly': {'type': 'boolean'}     # TODO remove
+                        },
                     }
                 },
                 'workingDir': {
@@ -374,8 +389,6 @@ change_pod_schema.update({
         'type': 'dict',
         'required': False
     },
-    # service params
-    'price': {'type': 'strnum', 'empty': True, 'required': False},
     'kubes': {'type': 'strnum', 'empty': True, 'required': False},
 })
 change_pod_schema['containers']['schema']['schema']['volumeMounts']\
@@ -510,6 +523,32 @@ class V(cerberus.Validator):
                 self._error(field,
                             "Can't be resolved. "
                             "Check /etc/hosts file for correct Node records")
+
+    def _validate_has_volume(self, has_volume, field, value):
+        # Used in volumeMounts
+        if has_volume:
+            if not self.document.get('volumes'):
+                self._error(field,
+                            'Volume is needed, but no volumes are described')
+                return
+            vol_names = [v.get('name', '') for v in self.document['volumes']]
+            if value not in vol_names:
+                self._error(
+                    field,
+                    'Volume "{0}" is not defined in volumes list'.format(value))
+
+    def _validate_volume_type_required(self, vtr, field, value):
+        # Used in volumes list
+        if vtr:
+            for vol in self.document['volumes']:
+                if vol.keys() == ['name']:
+                    self._error(field,
+                        'Volume type is required for volume "{0}"'.format(value))
+                    return
+                for k in vol.keys():
+                    if k not in SUPPORTED_VOLUME_TYPES + ['name']:
+                        self._error(field,
+                                    'Unsupported volume type "{0}"'.format(k))
 
 
 def check_int_id(id):

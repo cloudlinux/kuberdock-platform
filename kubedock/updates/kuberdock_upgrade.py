@@ -264,7 +264,7 @@ def do_cycle_updates(with_testing=False):
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
         print 'There is no new upgrade scripts to apply. ' \
-              'Kuberdock has been restarted.' \
+              'Kuberdock has been restarted. ' \
               'Maintenance mode is now disabled.'
         return is_failed
 

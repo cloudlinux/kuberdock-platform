@@ -301,7 +301,7 @@ else
             scp $CEPH_USER@$CEPH_ADMIN_HOST:/etc/ceph/ceph.* /tmp/ceph_tmp_config
             #FROM_CEPH_ADMIN=$(ssh $CEPH_USER@$CEPH_ADMIN_HOST "grep mon_host /etc/ceph/ceph.conf | cut -d ' ' -f 3; ls /etc/ceph | grep keyring;")
             #if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please consider populating $KUBERDOCK_DIR/kubedock/ceph_settings.py manually"; fi
-            if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please consider populating $KUBERDOCK_DIR/config manually"; fi
+            if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please try again"; exit; fi
             FROM_CEPH_ADMIN=$(grep mon_host /tmp/ceph_tmp_config/ceph.conf | cut -d ' ' -f 3; ls /tmp/ceph_tmp_config | grep keyring;)
             MONITORS=$(echo $FROM_CEPH_ADMIN | cut -f 1 -d " ")
             KEYRING_PATH=/etc/ceph/$(echo $FROM_CEPH_ADMIN | cut -f 2 -d " ")

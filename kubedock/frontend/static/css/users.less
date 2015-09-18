@@ -42,19 +42,19 @@
             &:hover{
                 background-color: #f5fafe;
                 span{
-                    &#deleteUser{
+                    &.deleteUser{
                         background: url('../img/recycling.png') 0 0 no-repeat;
                         &:hover{
                             background-position: 0 -18px;
                         }
                     }
-                    &#blockUser{
+                    &.blockUser{
                         background: url('../img/block-user-ico.png') 0 0 no-repeat;
                         &:hover{
                             background-position: 0 -16px;
                         }
                     }
-                    &#activeteUser{
+                    &.activeteUser{
                         background: url('../img/activate-user-ico.png') 0 0 no-repeat;
                         &:hover{
                             background-position: 0 -15px;
@@ -77,7 +77,7 @@
                     color: #b1b9c0;
                 }
                 span{
-                    &#deleteUser, &#blockUser, &#activeteUser{
+                    &.deleteUser, &.blockUser, &.activeteUser{
                         top: 3px;
                         position: relative;
                         margin-right: 10px;
@@ -86,15 +86,15 @@
                             cursor: pointer;
                         }
                     }
-                    &#deleteUser{
+                    &.deleteUser{
                         width: 16px;
                         height: 17px;
                     }
-                    &#blockUser{
+                    &.blockUser{
                         width: 16px;
                         height: 15px;
                     }
-                    &#activeteUser{
+                    &.activeteUser{
                         width: 19px;
                         height: 15px;
                     }

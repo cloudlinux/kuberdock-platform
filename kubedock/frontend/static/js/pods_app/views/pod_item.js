@@ -173,7 +173,6 @@ define(['pods_app/app',
                 this.checked = false;
                 App.navigate('poditem/' + this.model.get('parentID') + '/' + this.model.get('name') , {trigger: true});
             },
-
         });
 
         Item.InfoPanel = Backbone.Marionette.CompositeView.extend({
@@ -189,9 +188,9 @@ define(['pods_app/app',
             },
 
             events: {
-                'click .stop-checked'        : 'stopItems',
-                'click .start-checked'       : 'startItems',
-                'click @ui.checkAllItems'    : 'checkAllItems',
+                'click .stop-checked'     : 'stopItems',
+                'click .start-checked'    : 'startItems',
+                'click @ui.checkAllItems' : 'checkAllItems',
             },
 
             childEvents: {

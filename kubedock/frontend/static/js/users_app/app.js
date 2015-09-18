@@ -74,10 +74,10 @@ define(['marionette', 'paginator', 'utils'],
             tagName: 'tr',
 
             ui: {
-                'remove_user'    : '#deleteUser',
-                'block_user'     : '#blockUser',
-                'activated_user' : '#activeteUser',
-                'profileUser'    : '#profileUser'
+                'remove_user'    : '.deleteUser',
+                'block_user'     : '.blockUser',
+                'activated_user' : '.activeteUser',
+                'profileUser'    : '.profileUser'
             },
 
             events: {
@@ -158,7 +158,7 @@ define(['marionette', 'paginator', 'utils'],
             template: '#online-user-item-template',
             tagName: 'tr',
             ui: {
-                'userActivityHistory' : "button#userActivityHistory"
+                'userActivityHistory' : "button.userActivityHistory"
             },
 
             events: {

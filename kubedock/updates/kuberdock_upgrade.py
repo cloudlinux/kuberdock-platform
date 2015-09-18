@@ -275,8 +275,7 @@ def do_cycle_updates(with_testing=False):
         if not db_upd:
             break
 
-        if upgrade_master(upgrade_func, downgrade_func, db_upd,
-                          with_testing):
+        if upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
             if upgrade_node_func:
                 if upgrade_nodes(upgrade_node_func, downgrade_node_func,
                                  db_upd, with_testing):
@@ -292,6 +291,10 @@ def do_cycle_updates(with_testing=False):
                 is_failed = False
                 db_upd.status = UPDATE_STATUSES.applied
                 db_upd.print_log('{0} successfully applied'.format(upd))
+        else:
+            db_upd.end_time = datetime.utcnow()
+            db.session.commit()
+            break
         db_upd.end_time = datetime.utcnow()
         db.session.commit()
     if is_failed:

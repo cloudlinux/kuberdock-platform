@@ -30,7 +30,6 @@ def get_ippool(network=None):
 
 @ippool.route('/userstat', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
-@check_permission('get', 'ippool')
 @KubeUtils.jsonwrap
 def get_user_address():
     user = KubeUtils._get_current_user()

@@ -1,7 +1,7 @@
 from .models import Resource, Role, Permission
 
 
-RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages", 
+RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages",
              "notifications")
 
 ROLES = (
@@ -56,10 +56,10 @@ PERMISSIONS = (
     ("pods", "User", "edit", True),
     ("pods", "User", "delete", True),
     ("ippool", "User", "create", False),
-    ("ippool", "User", "get", True),
+    ("ippool", "User", "get", False),
     ("ippool", "User", "edit", False),
     ("ippool", "User", "delete", False),
-    ("ippool", "User", "view", True),
+    ("ippool", "User", "view", False),
     ("static_pages", "User", "create", False),
     ("static_pages", "User", "get", False),
     ("static_pages", "User", "edit", False),
@@ -85,10 +85,10 @@ PERMISSIONS = (
     ("pods", "TrialUser", "edit", True),
     ("pods", "TrialUser", "delete", True),
     ("ippool", "TrialUser", "create", False),
-    ("ippool", "TrialUser", "get", True),
+    ("ippool", "TrialUser", "get", False),
     ("ippool", "TrialUser", "edit", False),
     ("ippool", "TrialUser", "delete", False),
-    ("ippool", "TrialUser", "view", True),
+    ("ippool", "TrialUser", "view", False),
     ("static_pages", "TrialUser", "create", False),
     ("static_pages", "TrialUser", "get", False),
     ("static_pages", "TrialUser", "edit", False),

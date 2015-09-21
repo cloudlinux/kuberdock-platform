@@ -121,7 +121,7 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 tgt.prop('checked', !tgt.prop('checked'));
                 this.trigger('item:clicked');
-            },
+            }
         });
 
         List.PodCollection = Backbone.Marionette.CompositeView.extend({

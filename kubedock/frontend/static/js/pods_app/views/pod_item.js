@@ -264,10 +264,6 @@ define(['pods_app/app',
             tagName: 'div',
             className: 'pod-controls',
 
-            modelEvents: {
-                'change' : 'onModelChange'
-            },
-
             events: {
                 'click .stats-btn'     : 'statsItem',
                 'click .list-btn'      : 'listItem',
@@ -331,8 +327,8 @@ define(['pods_app/app',
                 item.save({command: 'start'}, {
                     wait: true,
                     success: function(model, response, options){
-                        that.render();
                         preloader.hide();
+                        that.render();
                     },
                     error: function(model, response, options, data){
                         preloader.hide();
@@ -351,8 +347,8 @@ define(['pods_app/app',
                 item.save({command: 'stop'}, {
                     wait: true,
                     success: function(model, response, options){
-                        that.render();
                         preloader.hide();
+                        that.render();
                     },
                     error: function(model, response, options, data){
                         preloader.hide();
@@ -378,8 +374,8 @@ define(['pods_app/app',
                                 wait: true,
                                 success: function(){
                                     var col = App.WorkFlow.getCollection();
-                                    col.remove(item);
                                     preloader.hide();
+                                    col.remove(item);
                                     window.location.href = '/#pods';
                                 },
                                 error: function(model, response, options, data){
@@ -391,10 +387,6 @@ define(['pods_app/app',
                         buttonCancel: true
                     }
                 });
-            },
-
-            onModelChange: function(){
-                this.render();
             },
 
             getKubeById: function() {

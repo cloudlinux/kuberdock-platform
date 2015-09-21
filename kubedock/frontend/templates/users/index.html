@@ -84,10 +84,12 @@
                 <div class="row">
                     <div class="col-md-3"></div>
                     <div id="user-controls" class="col-md-9">
-                        <div class="form-group">
-                            <label for="username">Username</label>
-                            <input type="text" name="username" class="form-control" id="username">
-                        </div>
+                        <% if (typeof username == "undefined") { %>
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input type="text" name="username" class="form-control" id="username">
+                            </div>
+                        <% } %>
                         <div class="form-group">
                             <label for="firstname">First name</label>
                             <input type="text" name="firstname" class="form-control" id="firstname">

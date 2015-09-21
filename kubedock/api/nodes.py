@@ -106,15 +106,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     }
 
 
-def get_kuberdock_logs_config(node, name, kube_type,
-                              collector_kubes, storage_kubes, master_ip, token):
-
-    # Give 2/3 of elastic kubes limits to elastic heap. It's recommended do not
-    # give all memory to the heap, and leave some to Lucene.
-    es_memory_limit = kubes_to_limits(
-        storage_kubes, kube_type
-    )['resources']['limits']['memory']
-    es_heap_limit = (es_memory_limit * 2) / 3
+def get_kuberdock_logs_config(node, name, kube_type, kubes, master_ip, token):
     return {
         "name": name,
         "clusterIP": None,
@@ -138,7 +130,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
         "containers": [
             {
                 "command": ["./run.sh"],
-                "kubes": collector_kubes,
+                "kubes": kubes,
                 "image": "kuberdock/fluentd:1.1",
                 "name": "fluentd",
                 "env": [
@@ -171,8 +163,8 @@ def get_kuberdock_logs_config(node, name, kube_type,
             },
             {
                 "command": ["/elasticsearch/run.sh"],
-                "kubes": storage_kubes,
-                "image": "kuberdock/elasticsearch:1.2",
+                "kubes": kubes,
+                "image": "kuberdock/elasticsearch:1.1",
                 "name": "elasticsearch",
                 "env": [
                     {
@@ -182,14 +174,6 @@ def get_kuberdock_logs_config(node, name, kube_type,
                     {
                         "name": "TOKEN",
                         "value": token
-                    },
-                    {
-                        "name": "NODENAME",
-                        "value": node
-                    },
-                    {
-                        "name": "ES_HEAP_SIZE",
-                        "value": "{}m".format(es_heap_limit / (1024 * 1024))
                     }
                 ],
                 "ports": [
@@ -385,21 +369,12 @@ def add_node(data, do_deploy=True, with_testing=False):
         ip = socket.gethostbyname(data['hostname'])
         m = Node(ip=ip, hostname=data['hostname'], kube=kube, state='pending')
         logs_kubes = 1
-        logcollector_kubes = logs_kubes
-        logstorage_kubes = logs_kubes
         node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
         logs_memory_limit = node_resources['limits']['memory']
         if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
             logs_kubes = int(math.ceil(
                 float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
             ))
-
-        if logs_kubes > 1:
-            # allocate total log cubes to log collector and to log
-            # storage/search containers as 1 : 3
-            total_kubes = logs_kubes * 2
-            logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
-            logstorage_kubes = total_kubes - logcollector_kubes
         ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
         logs_podname = get_kuberdock_logs_pod_name(data['hostname'])
         with open('/etc/kubernetes/configfile_for_nodes') as node_configfile:
@@ -409,10 +384,7 @@ def add_node(data, do_deploy=True, with_testing=False):
             if user['name'] == 'kubelet':
                 break
         logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
-                                                kube.id,
-                                                logcollector_kubes,
-                                                logstorage_kubes,
-                                                MASTER_IP,
+                                                kube.id, logs_kubes, MASTER_IP,
                                                 token)
         check_new_pod_data(logs_config, ku)
         logs_pod = PodCollection(ku).add(logs_config)

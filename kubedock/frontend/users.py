@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, session, current_app, redirect, fl
 from flask.ext.login import login_user, logout_user, current_user, login_required
 
 from ..api import users as api_users
+from ..rbac import check_permission
 from ..rbac.models import Role
 from ..billing import Kube, Package
 from ..users.models import User
@@ -21,6 +22,7 @@ def mark_current_user_online():
 
 @users.route('/')
 @users.route('/<path:p>/', endpoint='other')
+@check_permission('get', 'users')
 @login_required
 def index(**kwargs):
     """Returns the index page."""
@@ -37,6 +39,7 @@ def index(**kwargs):
 
 @users.route('/online/')
 @users.route('/online/<path:p>/', endpoint='online_other')
+@check_permission('get', 'users')
 @login_required
 def online_users(**kwargs):
     return index(**kwargs)

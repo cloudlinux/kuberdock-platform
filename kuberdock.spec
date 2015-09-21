@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 1.2%{?dist}.cloudlinux
+Release: 1.3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,8 +160,22 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Sep 21 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-1.3
+- AC-987 Yaml api. Many validation improvemens. Small fixes
+- AC-1087: A change of status brings an error
+- add style email to userPage & add stop icon to container page
+- user update: ignore unknown fields
+- AC-1052: fixes for elasticsearch containers - added some env vars, ES image replaced with new one, changed resources for log containers
+- AC-1081: forbid user to see info about other users and global ip-pool
+- Part of renaming kuberdock_upgrade.py to kuberdock-upgrade
+- Fixed 00007_update.py for new validation logic.
+
 * Fri Sep 18 2015 Igor Savenko <bliss@cloudlinux.com> 0.3-1.2
 - Updated deploy scripts
+- deploy.sh bugfix (extra quotation)
+- Hot bug fix for upgrade system
+- Deploy.sh: Wrong CEPH credentials should break the installation process
+- Hide username field from user edit template
 
 * Thu Sep 17 2015 Igor Savenko <bliss@cloudlinux.com> 0.3-1.1
 - CEPH PD bugfixes

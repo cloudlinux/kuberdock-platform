@@ -32,7 +32,6 @@ from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, \
                         NODE_INSTALL_TIMEOUT_SEC, PORTS_TO_RESTRICT
 from .kapi.podcollection import PodCollection
 
-
 celery = make_celery()
 
 
@@ -89,46 +88,6 @@ def update_replica_nodelay(item, diff):
 def delete_service_nodelay(item, namespace=None):
     r = requests.delete(get_api_url('services', item, namespace=namespace))
     return r.json()
-
-
-@celery.task()
-def get_dockerfile(name, tag=None):
-    if '/' not in name:
-        return get_dockerfile_official(name, tag)
-    url = 'https://hub.docker.com/v2/repositories/{0}/dockerfile/'.format(name)
-    r = requests.get(url)
-    try:
-        return r.json()['contents']
-    except (JSONDecodeError, KeyError):
-        return ''
-
-
-info_pattern = re.compile('^(?P<tag>\S+):\s+(?:\S+://)?(?P<url>\S+?)'
-                          '(?:@(?P<commit>\S*?))?(?:\s+(?P<dir>\S+?))?$')
-
-
-def get_dockerfile_official(name, tag=None):
-    if not tag:
-        tag = 'latest'
-    info_url = ('https://github.com/docker-library/official-images/'
-                'raw/master/library/{0}'.format(name))
-    r_info = requests.get(info_url)
-    docker_url = ''
-    for line in r_info.text.splitlines():
-        info_match = info_pattern.match(line)
-        if info_match:
-            info = info_match.groupdict()
-            if info.get('tag') == tag:
-                docker_url = ('https://{0}/raw/{1}{2}/Dockerfile'.format(
-                    info['url'],
-                    info.get('commit', 'master'),
-                    '/{0}'.format(info['dir']) if info['dir'] else '',
-                ))
-                break
-    if docker_url:
-        r_docker = requests.get(docker_url)
-        return r_docker.text
-    return ''
 
 
 def get_all_nodes():

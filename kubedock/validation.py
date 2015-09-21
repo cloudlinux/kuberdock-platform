@@ -29,6 +29,25 @@ container_image_name_schema = {
     'regex': container_image_name,
 }
 
+image_request_schema = {
+    'image': {'type': str, 'empty': False, 'required': True,
+              'regex': {'regex': r'^[a-zA-Z0-9][a-zA-Z0-9_\.-]*(?<![\._-])',
+                        'message': 'invalid image name'}},
+    'tag': {'type': str, 'empty': False, 'required': False},
+    'auth': {
+        'type': dict,
+        'required': False,
+        'nullable': True,
+        'schema': {
+            'username': {'type': str, 'empty': False, 'required': True},
+            'password': {'type': str, 'empty': False, 'required': True}
+        },
+    },
+    'registry': {'type': str, 'empty': False, 'required': False, 'nullable': True,
+                 'regex': {'regex': r'(https?://)?(.+?)(:\d{1,5})?',  # TODO: domain/ip check
+                           'message': 'registry address must be in format '
+                                      '[http[s]://]<domain-or-ip>[:port]'}}
+}
 
 # http://stackoverflow.com/questions/1418423/the-hostname-regex
 hostname_regex = re.compile(r"^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?"
@@ -135,6 +154,14 @@ create_user_schema = {
 }
 
 
+args_list_schema = {'type': 'list', 'schema': {'type': 'string', 'empty': False}}
+env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
+    'name': {'type': 'string', 'required': True, 'empty': False, 'maxlength': 255},
+    'value': {'type': 'string', 'required': True},
+}}}
+path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
+protocol_schema = {'type': 'string', 'required': True,
+                   'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
 new_pod_schema = {
     'name': pod_name_schema,
     'clusterIP': {
@@ -257,22 +284,8 @@ new_pod_schema = {
                     'type': 'dict',
                     'required': False
                 },
-                'command': {
-                    'type': 'list',
-                    # 'minlength': 1,
-                    'schema': {
-                        'type': 'string',
-                        'empty': False
-                    }
-                },
-                'args': {
-                    'type': 'list',
-                    # 'minlength': 1,
-                    'schema': {
-                        'type': 'string',
-                        'empty': False
-                    }
-                },
+                'command': args_list_schema,
+                'args': args_list_schema,
                 'kubes': {'type': 'integer', 'min': 1},
                 'image': container_image_name_schema,
                 'parentID': {
@@ -284,33 +297,17 @@ new_pod_schema = {
                     'empty': False,
                     'maxlength': 255
                 },
-                'env': {
-                    'type': 'list',
-                    'schema': {
-                        'type': 'dict',
-                        'schema': {
-                            'name': {
-                                'type': 'string',
-                                'maxlength': 255,
-                                'empty': False,
-                                # 'regex': ''     # maybe needed
-                            },
-                            'value': {'type': 'string'},
-                        },
-                    }
-                },
+                'env': env_schema,
                 'ports': {
                     'type': 'list',
                     'schema': {
                         'type': 'dict',
                         'schema': {
-                            'containerPort': port_schema,
-                            'hostPort': nullable_port_schema,  # TODO nullable?
+                            'containerPort': dict(port_schema, required=True),
+                            # null if not public
+                            'hostPort': dict(port_schema, nullable=True),
                             'isPublic': {'type': 'boolean'},
-                            'protocol': {
-                                'type': 'string',
-                                'allowed': ['TCP', 'tcp', 'UDP', 'udp'],
-                            },
+                            'protocol': protocol_schema,
                         }
                     }
                 },
@@ -331,15 +328,23 @@ new_pod_schema = {
                         },
                     }
                 },
-                'workingDir': {
-                    'type': 'string',
-                    'maxlength': PATH_LENGTH,
-                },
+                'workingDir': path_schema,
                 "terminationMessagePath": {
                     'type': 'string',
                     'maxlength': PATH_LENGTH,
                     'nullable': True
                 }
+            }
+        }
+    },
+    'secrets': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'username': {'type': 'string', 'required': True, 'empty': False},
+                'password': {'type': 'string', 'required': True, 'empty': False},
+                'registry': {'type': 'string', 'nullable': True},
             }
         }
     }
@@ -593,6 +598,10 @@ def check_container_image_name(searchkey):
         raise APIError(validator.errors)
 
 
+def check_image_request(params):
+    V()._api_validation(params, image_request_schema)
+
+
 def check_node_data(data):
     validator = V(allow_unknown=True)
     if not validator.validate(data, {
@@ -683,7 +692,6 @@ class UserValidator(V):
 
         if not self.username_regex['regex'].match(value):
             self._error(field, self.username_regex['message'])
-
 
 
 def convert_extbools(data, schema):

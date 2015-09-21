@@ -13,7 +13,7 @@ import subprocess
 from ..image.image import Image
 from ..helper import KubeQuery, PrintOut
 from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
-    IMAGES_PATH, PRICING_PATH)
+    IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH)
 
 
 # Some common error messages
@@ -81,6 +81,17 @@ class KubeCtl(object):
         except (IndexError, KeyError):
             raise SystemExit(ERR_NO_SUCH_ITEM)
         self._set_delayed()
+
+    def create(self):
+        """Creates user pod by yaml specification."""
+        yaml_content = self.filename.read()
+        if not yaml_content:
+            raise SystemExit('Empty file content')
+        # API expects yaml file as a string in json structure:
+        # {"data": yaml_as_a_string}
+        answer = self.query.post(POD_CREATE_API_PATH, {'data': yaml_content})
+        if answer and answer.get('status', None) != 'OK':
+            raise SystemExit('Failed To create pod: {}'.format(str(answer)))
 
     def postprocess(self):
         if os.geteuid() != 0:

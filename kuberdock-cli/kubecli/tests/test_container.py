@@ -90,6 +90,18 @@ class TestKubeCtl(unittest.TestCase):
             kctl.delete()
         self.assertEqual(err.exception.message, container.ERR_NO_SUCH_ITEM)
 
+    @mock.patch.object(container.KubeQuery, 'post')
+    def test_create(self, post_mock):
+        """Test for KubeCtl.create method."""
+
+        with tempfile.TemporaryFile(mode='w+') as f:
+            f.write('one\n')
+            f.write('two')
+            f.seek(0)
+            kctl = container.KubeCtl(json=False, filename=f)
+            kctl.create()
+        post_mock.assert_called_once_with(container.POD_CREATE_API_PATH,
+                {'data': 'one\ntwo'})
 
 class TestKuberDock(unittest.TestCase):
     """Tests for container.KuberDock class"""

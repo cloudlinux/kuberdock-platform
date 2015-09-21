@@ -1,3 +1,5 @@
+import argparse
+
 from ..helper import make_config
 from .container import KubeCtl
 
@@ -44,6 +46,27 @@ def parser(subs):
     delete_pods = delete_resource.add_parser('pods')
     delete_pod.add_argument('name', help=resource_help)
     delete_pods.add_argument('name', help=resource_help)
+
+    create = action.add_parser(
+        'create', help="Create template or pod from yaml file")
+    # At the moment we accept only commands for creating of user's pods
+    # from YAML specs.
+    # Also there will be needed a command to create "predefined apps",
+    # so here we require to explicitly defined target. It allows us to add
+    # new targets without breaking user's pods creation.
+    create_resource = create.add_subparsers(
+        help="Resource",
+        title="Target resource",
+        description="Valid resources for targets",
+        dest="resource")
+    create_pod = create_resource.add_parser(
+        'pod', help="Create and run user's pod from yaml file"
+    )
+    create_pod.add_argument(
+        '-f', '--filename',
+        type=argparse.FileType('r'),
+        required=True,
+        help="YAML file path or '-' to pass file content via stdin")
 
     post = action.add_parser('postprocess')
     post.add_argument('name', help="Container name")

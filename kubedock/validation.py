@@ -636,6 +636,11 @@ class UserValidator(V):
 
     def validate_user_create(self, data):
         self._api_validation(data, create_user_schema)
+        return data
 
     def validate_user_update(self, data):
         self._api_validation(data, create_user_schema, update=True)
+        if self.allow_unknown:  # filter unknown
+            return {key: value for key, value in data.iteritems()
+                    if key in create_user_schema}
+        return data

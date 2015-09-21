@@ -35,7 +35,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
                 MASTER_IP,
                 token,
             )
-            check_new_pod_data(logs_config)
+            check_new_pod_data(logs_config, user=ki)
             logs_pod = PodCollection(ki).add(logs_config)
             PodCollection(ki).update(logs_pod['id'], {'command': 'start'})
 

@@ -450,7 +450,7 @@ if __name__ == '__main__':
                 if os.path.exists(__file__):
                     os.execv(__file__, sys.argv)
                 else:
-                    os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade.py'), sys.argv)
+                    os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade'), sys.argv)
             sys.exit(0)     # if local install case
         if args.command == CLI_COMMANDS.resume_upgrade:
             helpers.set_maintenance(True)
@@ -491,7 +491,7 @@ if __name__ == '__main__':
                             os.execv(__file__,
                                      sys.argv + [CLI_COMMANDS.after_reload])
                         else:
-                            os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade.py'),
+                            os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade'),
                                      sys.argv + [CLI_COMMANDS.after_reload])
                 else:
                     print 'Stop upgrading.'

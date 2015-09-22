@@ -263,9 +263,11 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             },
 
             complete: function () {
-                var that = this;
-                var val = this.state.get('hostname');
+                var that = this,
+                    preloader = $('#page-preloader'),
+                    val = this.state.get('hostname');
                 if (val !== '') {
+                    preloader.show();
                     App.Data.nodes.create({
                         hostname: val,
                         status: 'pending',
@@ -274,6 +276,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     }, {
                         wait: true,
                         success: function(){
+                            preloader.hide();
                             App.router.navigate('/', {trigger: true});
                             $.notify("Added node successfully", {
                                 autoHideDelay: 5000,
@@ -283,6 +286,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                             });
                         },
                         error: function(model, response){
+                            preloader.hide();
                             $.notify(response.responseJSON.data, {
                                 autoHideDelay: 5000,
                                 clickToHide: true,
@@ -339,16 +343,14 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                 'nodes_page' : 'div#nodes-page',
                 'redeploy'   : 'button#redeploy_node',
                 'delete'     : 'button#delete_node',
-                'addBtn'     : 'button#node-add-btn',
                 'tabItem'    : 'ul.nav li'
             },
 
             events: {
                 'click @ui.tabItem'    : 'changeTab',
-                'click @ui.addBtn'     : 'saveNode',
                 'click @ui.nodes_page' : 'breadcrumbClick',
                 'click @ui.redeploy'   : 'redeployNode',
-                'click @ui.delete'     : 'deleteNode',
+                'click @ui.delete'     : 'deleteNode'
             },
 
             initialize: function (options) {
@@ -366,20 +368,6 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                 else if (tgt.hasClass('nodeMonitoringTab')) App.router.navigate(url_ + '/monitoring/', {trigger: true});
                 else if (tgt.hasClass('nodeTimelinesTab')) App.router.navigate(url_ + '/timelines/', {trigger: true});
                 else if (tgt.hasClass('nodeConfigurationTab')) App.router.navigate(url_ + '/configuration/', {trigger: true});
-            },
-
-            saveNode: function () {
-                var that = this;
-                console.log(this.model);
-                this.model.save(undefined, {
-                    wait: false,
-                    success: function(){
-                        App.router.navigate('/', {trigger: true})
-                    },
-                    error: function() {
-                        utils.modelError('Error while updating! Maybe some fields required.');
-                    }
-                });
             },
 
             redeployNode: function() {

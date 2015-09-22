@@ -376,7 +376,7 @@ define(['pods_app/app',
                                     var col = App.WorkFlow.getCollection();
                                     preloader.hide();
                                     col.remove(item);
-                                    window.location.href = '/#pods';
+                                    Pods.navigate('pods', {trigger: true});
                                 },
                                 error: function(model, response, options, data){
                                     preloader.hide();

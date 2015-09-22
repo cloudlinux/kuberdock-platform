@@ -32,7 +32,7 @@ def unit_stat():
 
     cpu = {'title': 'CPU', 'ylabel': '%', 'lines': 1, 'points': []}
     mem = {'title': 'Memory', 'ylabel': 'MB', 'lines': 1, 'points': []}
-    net = {'title': 'Network Usage', 'ylabel': 'bps', 'lines': 2, 'points': []}
+    net = {'title': 'Network', 'ylabel': 'bps', 'lines': 2, 'points': []}
 
     for record in sorted(data, key=operator.itemgetter(0)):
         timetick = datetime.datetime.fromtimestamp(record[0]).strftime("%H:%M")

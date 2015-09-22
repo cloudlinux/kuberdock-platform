@@ -490,7 +490,8 @@ define(['pods_app/app',
                 /* mountPath and persistent disk check */
                 for (var i=0; i<vm.length; i++) {
                     if (!vm[i].mountPath) {
-                        utils.modelError('Mount path must be set!');
+                        utils.notifyWindow('Mount path must be set!');
+
                         return;
                     }
                     if (!vm[i].name) {
@@ -505,7 +506,7 @@ define(['pods_app/app',
                         var pd = vm[i].persistentDisk;
                         if (!pd.hasOwnProperty('pdSize') ||
                             !pd.hasOwnProperty('pdName') || !pd.pdName) {
-                            utils.modelError('Persistent disk must be set!');
+                            utils.notifyWindow('Persistent disk must be set!');
                             return;
                         }
                     }
@@ -526,10 +527,10 @@ define(['pods_app/app',
                 uniqueContainerHostPorts = _.uniq(podContainersHostPorts);
 
                 if (podContainersPorts.length != uniqueContainerPorts.length){
-                    utils.modelError('You have a duplicate container port in ' + this.model.get('name') + ' container!');
+                    utils.notifyWindow('You have a duplicate container port in ' + this.model.get('name') + ' container!');
                 }
                 else if (podContainersHostPorts.length != uniqueContainerHostPorts.length){
-                    utils.modelError('You have a duplicate pod port in ' + this.model.get('name') + ' container!');
+                    utils.notifyWindow('You have a duplicate pod port in ' + this.model.get('name') + ' container!');
                 }
                 else {
                     this.trigger('step:envconf', this);

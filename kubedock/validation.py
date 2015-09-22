@@ -95,12 +95,11 @@ name_schema = {
 
 create_user_schema = {
     'username': {
-        'type': 'string',
+        'type': ['string', 'email'],
         'required': True,
         'empty': False,
         'unique_case_insensitive': User.username,
-        'maxlength': 25,
-        'regex': username_regex,
+        'maxlength': 50,
     },
     'email': {
         'type': 'email',
@@ -131,8 +130,12 @@ create_user_schema = {
         'maxlength': 64,
     },
     'active': {
-        'type': 'boolean',
+        'type': 'extbool',
         'required': True,
+    },
+    'suspended': {
+        'type': 'extbool',
+        'required': False,
     },
 }
 
@@ -404,6 +407,8 @@ class V(cerberus.Validator):
     """
     This class is for all custom and our app-specific validators and types,
     implement any new here.
+    Additionally supports type 'extbool' - extended bool, value may be a boolean
+    or one of ('true', 'false', '1', '0')
     """
     # TODO: add readable error messages for regexps in old schemas
     type_map = {str: 'string',
@@ -425,8 +430,16 @@ class V(cerberus.Validator):
         for type validation. Just map it to some string in self.type_map
         """
         for value in schema.itervalues():
-            if value.get('type') in self.type_map:
-                value['type'] = self.type_map[value.get('type')]
+            vtype = value.get('type')
+            if not vtype:
+                continue
+            if isinstance(vtype, (list, tuple)):
+                value['type'] = [
+                    self.type_map.get(typeentry, typeentry)
+                    for typeentry in vtype
+                ]
+            else:
+                value['type'] = self.type_map.get(vtype, vtype)
         return super(V, self).validate_schema(schema)
 
     def _api_validation(self, data, schema, **kwargs):
@@ -550,6 +563,20 @@ class V(cerberus.Validator):
                         self._error(field,
                                     'Unsupported volume type "{0}"'.format(k))
 
+    def _validate_type_extbool(self, field, value):
+        """Validate 'extended bool' it may be bool, string with values
+        ('0', '1', 'true', 'false')
+
+        """
+        if not isinstance(value, (bool, str, unicode)):
+            self._error(field, u'Invalid type. Must be bool or string')
+        if isinstance(value, (str, unicode)):
+            valid_values = ['true', 'false', '0', '1']
+            if value.lower() not in valid_values:
+                self._error(field,
+                            u'Invalid value "{}". Must be one of: {}'.format(
+                                value, valid_values))
+
 
 def check_int_id(id):
     try:
@@ -636,11 +663,34 @@ class UserValidator(V):
 
     def validate_user_create(self, data):
         self._api_validation(data, create_user_schema)
+        data = convert_extbools(data, create_user_schema)
         return data
 
     def validate_user_update(self, data):
         self._api_validation(data, create_user_schema, update=True)
+        data = convert_extbools(data, create_user_schema)
         if self.allow_unknown:  # filter unknown
             return {key: value for key, value in data.iteritems()
                     if key in create_user_schema}
         return data
+
+
+def convert_extbools(data, schema):
+    """Converts values of extbool field types in data dict to booleans.
+    Returns data dict with converted values
+    """
+    for field, desc in schema.iteritems():
+        if field not in data:
+            continue
+        fieldtype = desc.get('type')
+        if fieldtype != 'extbool':
+            continue
+        value = data[field]
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, (str, unicode)):
+            if value.lower() in ('true', '1'):
+                data[field] = True
+                continue
+        data[field] = False
+    return data

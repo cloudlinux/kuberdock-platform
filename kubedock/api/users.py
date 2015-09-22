@@ -203,12 +203,12 @@ def create_item():
     if data is None:
         data = request.form.to_dict()
     try:
-        UserValidator().validate_user_create(data)
+        data = UserValidator().validate_user_create(data)
         rolename = data.pop('rolename', 'User')
         package = data.pop('package', 'basic')
         r = Role.filter_by(rolename=rolename).first()
         p = get_pricing(package)
-        temp = dict(filter((lambda t: t[1] != ''), data.items()))
+        temp = {key: value for key, value in data.iteritems() if value != ''}
         u = User(**temp)
         u.role = r
         u.package = p

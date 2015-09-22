@@ -62,16 +62,6 @@ define({
         return modal;
     },
 
-    /* Now we have another notification window (notify Window), this must to be deleted in future */
-    modelError: function(b, t){
-        this.modalDialog({
-            title: t ? t : 'Error',
-            body: typeof b == "string" ? b : b.responseJSON ? b.responseJSON.data || JSON.stringify(b.responseJSON): b.responseText,
-            show: true,
-            buttonCancel: false,
-        })
-    },
-
     notifyWindow: function(b, t){
         var err = typeof b == "string" ? b : b.responseJSON ? b.responseJSON.data || JSON.stringify(b.responseJSON): b.responseText;
         $.notify(err, {

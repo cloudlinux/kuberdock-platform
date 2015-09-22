@@ -12,7 +12,6 @@
 <td class="index"><%- index %></td>
 <td>
     <span class="poditem-page-btn" title="Edit <%- name %> pod" ><%- name %></span>
-    <!--<a href="/#pods/<%- id %>" title="Edit <%- name %> pod" class="editPod" >&nbsp;</a>-->
 </td>
 <td>
     <% if (replicationController){ %>

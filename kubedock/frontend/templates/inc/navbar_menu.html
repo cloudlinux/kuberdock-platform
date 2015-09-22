@@ -22,7 +22,8 @@
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    {% for item in items %}<li class="dropdown">
+                    {% for item in items %}
+                    <li class="dropdown">
                         {% with children=item.get_children() %}
                         {% include 'inc/navbar_menu_item.html' %}
                         {% endwith %}

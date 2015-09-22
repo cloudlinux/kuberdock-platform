@@ -176,15 +176,6 @@ define(function () {
         return modal;
     };
 
-    this.modelError = function(b, t){
-        this.modalDialog({
-            title: t ? t : 'Error',
-            body: typeof b == "string" ? b : b.responseJSON ? JSON.stringify(b.responseJSON): b.responseText,
-            show: true,
-            buttonCancel: false
-        });
-    };
-
     this.dateYYYYMMDD = function(date, sep){
         if(!date) date = new Date();
         if(!sep) sep = '-';

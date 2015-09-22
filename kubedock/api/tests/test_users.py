@@ -44,6 +44,21 @@ class UserFullTestCase(APITestCase):
         self.assert200(response)  # only Admin has permission
         self.assertDictContainsSubset(data, response.json['data'])
 
+        # check conversion of extended boolean fields
+        data['username'] += '1'
+        data['email'] = '1' + data['email']
+        data['active'] = 'TrUe'
+        response = self.open(method='POST', json=data, auth=self.adminauth)
+        self.assert200(response)  # active is valid
+        self.assertEqual(response.json['data']['active'], True)
+
+        data['username'] += '1'
+        data['email'] = '1' + data['email']
+        data['suspended'] = '1'
+        response = self.open(method='POST', json=data, auth=self.adminauth)
+        self.assert200(response)  # suspended is valid
+        self.assertEqual(response.json['data']['suspended'], True)
+
     # @unittest.skip('')
     def test_put(self):
         new_package = Package(id=1, name='New package', first_deposit=0,

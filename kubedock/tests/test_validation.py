@@ -99,6 +99,7 @@ class TestUserCreateValidation(unittest.TestCase):
             'a',
             'w-n_c-m12345',
             'a' * 25,
+            'test@example.com'
         ]
 
         invalid_usernames = [

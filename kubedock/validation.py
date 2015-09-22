@@ -78,11 +78,6 @@ nullable_port_schema = deepcopy(port_schema)
 nullable_port_schema['nullable'] = True
 
 
-username_regex = {
-    'regex': re.compile(r'^[A-Z0-9](?:[A-Z0-9_-]{0,23}[A-Z0-9])?$', re.IGNORECASE),
-    'message': 'only letters of Latin alphabet, numbers, hyphen and underscore are allowed'
-}
-
 name_schema = {
     'type': 'string',
     'nullable': True,
@@ -95,7 +90,7 @@ name_schema = {
 
 create_user_schema = {
     'username': {
-        'type': ['string', 'email'],
+        'type': ['username', 'email'],
         'required': True,
         'empty': False,
         'unique_case_insensitive': User.username,
@@ -646,6 +641,14 @@ def check_new_pod_data(data, user=None):
 class UserValidator(V):
     """Validator for user api"""
 
+    username_regex = {
+        'regex': re.compile(r'^[A-Z0-9](?:[A-Z0-9_-]{0,23}[A-Z0-9])?$',
+                            re.IGNORECASE),
+        'message': 'only letters of Latin alphabet, numbers, '\
+                   'hyphen and underscore are allowed'
+    }
+
+
     def __init__(self, *args, **kwargs):
         self.id = kwargs.get('id')
         super(UserValidator, self).__init__(*args, **kwargs)
@@ -673,6 +676,14 @@ class UserValidator(V):
             return {key: value for key, value in data.iteritems()
                     if key in create_user_schema}
         return data
+
+    def _validate_type_username(self, field, value):
+        """Validates username by username_regex"""
+        super(V, self)._validate_type_string(field, value)
+
+        if not self.username_regex['regex'].match(value):
+            self._error(field, self.username_regex['message'])
+
 
 
 def convert_extbools(data, schema):

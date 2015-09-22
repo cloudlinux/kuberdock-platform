@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 1.3%{?dist}.cloudlinux
+Release: 1.4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,6 +160,13 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Tue Sep 22 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-1.4
+- AC-1089: user creation api - now supports 'true' 'false' '0' '1' in boolean fields, supports field 'suspended', supports emails in username
+- AC-984: Change error notification in podCreate steps & add preloader in nodeCreate step
+- AC-1089: user creation api - fixed dropped username validation
+- AC-841: Add notification if image name == 0 to firts step in create pode page
+- AC-1052: fixes for elasticsearch containers - added some env vars, ES image replaced with new one, changed resources for log containers (revert)
+
 * Mon Sep 21 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-1.3
 - AC-987 Yaml api. Many validation improvemens. Small fixes
 - AC-1087: A change of status brings an error

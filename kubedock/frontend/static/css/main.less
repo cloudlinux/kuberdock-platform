@@ -984,7 +984,7 @@ body{
     @import "settings.less";
 
     /* edit form */
-    .ieditable{
+    .ieditable, .iveditable{
         &:hover{
             cursor: pointer;
         }
@@ -1005,7 +1005,7 @@ body{
                     padding: 0 !important;
                     height: initial !important;
                     .editable-input{
-                        input{
+                        input, select{
                             &.form-control{
                                 .border-radius(0);
                                 &:focus{
@@ -1014,6 +1014,8 @@ body{
                                     border-color: #2490EA;
                                 }
                             }
+                        }
+                        input{
                             &.input-sm{
                                 padding-right: 10px !important;
                             }

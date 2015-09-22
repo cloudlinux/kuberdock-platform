@@ -175,9 +175,11 @@
                         font-family: @regular;
                         margin-bottom: 0 !important;
                         &.add-drive{
+                            .border-radius(2px);
                             color: #fff;
                             border-color: #2490EA;
                             background-color: #2490EA;
+                            text-transform: capitalize;
                         }
                     }
                     .add-drive-cancel{
@@ -202,12 +204,17 @@
                             background-position: 0 -5px;
                         }
                     }
+                    &.mountPath{
+                        margin-right: 10px;
+                    }
                     + .editable-container{
                         button{
                            margin-bottom: 0 !important;
                         }
                         + .add-drive{
                             margin-top: 8px;
+                            margin-left: 5px;
+                            vertical-align: middle;
                         }
                     }
                     &.add-drive{
@@ -215,9 +222,8 @@
                         height: 15px;
                         font-size: 0;
                         color: #3297ed;
-                        margin-top: 3px;
-                        margin-left: 15px;
                         display: inline-block;
+                        vertical-align: bottom;
                         background: url('../img/add-port-plus.png') 0 0 no-repeat;
                         &:hover{
                             cursor: pointer;
@@ -1185,6 +1191,7 @@
                             }
                         }
                         &.reset-button{
+                            .border-radius(2px);
                             height: 37px;
                             color: #ffffff;
                             padding: 0 30px;

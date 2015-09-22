@@ -302,7 +302,7 @@ define(['pods_app/app',
                 persistent     : '.persistent',
                 addVolume      : '.add-volume',
                 removePort     : '.remove-port',
-                'public'         : 'input.public',
+                publicIp       : 'input.public',
                 input_command  : 'input.command',
                 removeVolume   : '.remove-volume',
                 restartPolicy  : '.restart-policy',
@@ -316,13 +316,13 @@ define(['pods_app/app',
                 'click @ui.addPort'        : 'addItem',
                 'click @ui.addDrive'       : 'addDrive',
                 'click @ui.addVolume'      : 'addVolume',
-                'click @ui.public'         : 'togglePublic',
+                'click @ui.publicIp'       : 'togglePublic',
                 'click @ui.addDriveCancel' : 'cancelAddDrive',
                 'click @ui.removePort'     : 'removePortEntry',
                 'click @ui.persistent'     : 'togglePersistent',
                 'click @ui.removeVolume'   : 'removeVolumeEntry',
                 'change @ui.restartPolicy' : 'changePolicy',
-                'change @ui.input_command' : 'changeCommand',
+                'change @ui.input_command' : 'changeCommand'
             },
 
             triggers: {
@@ -503,7 +503,7 @@ define(['pods_app/app',
                 /* mountPath and persistent disk check */
                 for (var i=0; i<vm.length; i++) {
                     if (!vm[i].mountPath) {
-                        utils.notifyWindow('Mount path must be set!');
+                        utils.notifyWindow('Container path must be set!');
 
                         return;
                     }
@@ -519,7 +519,7 @@ define(['pods_app/app',
                         var pd = vm[i].persistentDisk;
                         if (!pd.hasOwnProperty('pdSize') ||
                             !pd.hasOwnProperty('pdName') || !pd.pdName) {
-                            utils.notifyWindow('Persistent disk must be set!');
+                            utils.notifyWindow('Persistent options must be set!');
                             return;
                         }
                     }
@@ -585,6 +585,7 @@ define(['pods_app/app',
                     value: 'tcp',
                     source: [{value: 'tcp', text: 'tcp'}, {value: 'udp', text: 'udp'}],
                     mode: 'inline',
+                    showbuttons: false,
                     success: function(response, newValue) {
                         var index = $(this).closest('tr').index();
                         that.model.get('ports')[index]['protocol'] = newValue;
@@ -595,12 +596,14 @@ define(['pods_app/app',
                     value: null,
                     source: disks,
                     mode: 'inline',
+                    showbuttons: false,
                     success: function(response, newValue) {
                         var index = $(this).closest('tr').index(),
                             entry = that.model.get('volumeMounts')[index],
                             pEntry = _.filter(that.model.persistentDrives, function(i){ return i.pdName === newValue; })[0];
                         entry['persistentDisk'] = pEntry;
                         pEntry['used'] = true;
+                        that.render();
                     }
                 });
             },
@@ -681,8 +684,7 @@ define(['pods_app/app',
                 var valName = this.ui.nameField.val();
 
                 if (!/^[a-zA-Z][a-zA-Z0-9-_\.]/.test(valName)){
-                    alert('First symbol must be letter');
-                    this.ui.nameField.val('');
+                    utils.notifyWindow('First symbol in variables name must be letter');
                     return false;
                 };
             },
@@ -782,7 +784,6 @@ define(['pods_app/app',
                 'click .go-to-other'     : 'onOtherClick',
                 'click .go-to-logs'      : 'onLogsClick'
             },
-
 
             templateHelpers: function(){
                 var parentID = this.containerModel.get('parentID'),
@@ -991,20 +992,20 @@ define(['pods_app/app',
                 })
 
                 return {
-                    isPublic : isPublic,
-                    isPerSorage : isPerSorage,
-                    cpu_data: this.cpu_data,
-                    ram_data: this.ram_data,
-                    hdd_data: this.hdd_data,
-                    container_price: this.container_price,
-                    total_price: this.total_price,
-                    kube_types: kubeTypes,
-                    restart_policies: {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
-                    restart_policy: this.model.get('restartPolicy'),
-                    image_name_id: this.model.get('lastAddedImageNameId'),
-                    package: this.package,
-                    price_ip: this.getFormattedPrice(this.package.price_ip),
-                    price_pstorage: this.getFormattedPrice(this.package.price_pstorage)
+                    isPublic         : isPublic,
+                    isPerSorage      : isPerSorage,
+                    cpu_data         : this.cpu_data,
+                    ram_data         : this.ram_data,
+                    hdd_data         : this.hdd_data,
+                    container_price  : this.container_price,
+                    total_price      : this.total_price,
+                    kube_types       : kubeTypes,
+                    restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
+                    restart_policy   : this.model.get('restartPolicy'),
+                    image_name_id    : this.model.get('lastAddedImageNameId'),
+                    package          : this.package,
+                    price_ip         : this.getFormattedPrice(this.package.price_ip),
+                    price_pstorage   : this.getFormattedPrice(this.package.price_pstorage)
                 };
             },
 

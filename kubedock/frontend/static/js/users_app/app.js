@@ -731,7 +731,6 @@ define(['marionette', 'paginator', 'utils'],
             onSave: function(){
                 // temp validation
                 var data = {
-                    'username'        : this.ui.username.val(),
                     'email'           : this.ui.email.val(),
                     'active'          : (this.ui.user_status.val() == 1 ? true : false),
                     'rolename'        : this.ui.role_select.val(),
@@ -744,10 +743,6 @@ define(['marionette', 'paginator', 'utils'],
 
                 switch (true)
                 {
-                case this.ui.username.val() == '':
-                    this.ui.username.notify("empty username");
-                    this.ui.username.addClass('error');
-                    break;
                 case this.ui.password.val() !== this.ui.password_again.val():
                     this.ui.password.addClass('error');
                     this.ui.password_again.addClass('error');

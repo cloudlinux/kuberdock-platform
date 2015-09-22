@@ -99,7 +99,7 @@
                                     </td>
                                     <td>
                                         <% if (hasPersistent){ %>
-                                            <span class="iveditable mountPath"><%- v.persistentDisk.pdName %></span>
+                                            <span class="iveditable mountPath"><%- v.persistentDisk.pdName ? v.persistentDisk.pdName : 'none' %></span>
                                             <% if (!showPersistentAdd){ %>
                                                 <span class="add-drive" title="Add new drive"></span>
                                             <% } %>
@@ -108,6 +108,11 @@
                                         <% } %>
                                     </td>
                                     <td>
+                                        <% if (hasPersistent){ %>
+                                            <%= v.persistentDisk.pdSize ? v.persistentDisk.pdSize : 'none' %>
+                                        <% } else { %>
+                                            none
+                                        <% } %>
                                         <span class="remove-volume pull-right"></span>
                                     </td>
                                     <% } else { %>

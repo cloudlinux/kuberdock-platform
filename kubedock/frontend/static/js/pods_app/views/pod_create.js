@@ -197,21 +197,24 @@ define(['pods_app/app',
                 }
             },
 
+            ui: {
+                moreImage         : '.btn-more',
+                podsList          : '.podsList',
+                searchImageButton : '.search-image',
+                loader            : 'div#load-control',
+                searchControl     : 'div.search-control',
+                input             : 'input#search-image-field'
+            },
+
             events: {
-                'click .search-image'           : 'onSearchClick',
-                'keypress #search-image-field'  : 'onInputKeypress',
-                'click .btn-more'               : 'loadNextPage',
-                'click .podsList'               : 'showPodsList'
+                'click @ui.moreImage'         : 'loadNextPage',
+                'click @ui.podsList'          : 'showPodsList',
+                'click @ui.searchImageButton' : 'onSearchClick',
+                'keypress @ui.input'          : 'onInputKeypress'
             },
 
             childEvents: {
                 'image:selected' : 'childImageSelected'
-            },
-
-            ui: {
-                input           : 'input#search-image-field',
-                loader          : 'div#load-control',
-                searchControl   : 'div.search-control'
             },
 
             appendLoader: function(){
@@ -224,15 +227,25 @@ define(['pods_app/app',
             onInputKeypress: function(evt){
                 evt.stopPropagation();
                 if (evt.which === 13) { // 'Enter' key
-                    this.appendLoader();
-                    this.trigger('image:searchsubmit', this.ui.input.val().trim());
+                    if (this.ui.input.val().length !== 0){
+                        this.appendLoader();
+                        this.trigger('image:searchsubmit', this.ui.input.val().trim());
+                    } else {
+                        this.ui.input.focus();
+                        utils.notifyWindow('First enter name image or part of image name to search');
+                    }
                 }
             },
 
             onSearchClick: function(evt){
                 evt.stopPropagation();
-                this.appendLoader();
-                this.trigger('image:searchsubmit', this.ui.input.val().trim());
+                if (this.ui.input.val().length !== 0){
+                    this.appendLoader();
+                    this.trigger('image:searchsubmit', this.ui.input.val().trim());
+                } else {
+                    this.ui.input.focus();
+                    utils.notifyWindow('First enter name image or part of image name to search');
+                }
             },
 
             onShow: function(){

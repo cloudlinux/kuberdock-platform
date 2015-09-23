@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 1.4%{?dist}.cloudlinux
+Release: 1.5%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -14,7 +14,7 @@ Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
 Requires: etcd == 2.0.9
-Requires: kubernetes-master == 1:1.0.1
+Requires: kubernetes-master == 1:1.0.3
 Requires: flannel == 0.5.1
 Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:
@@ -160,6 +160,11 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Wed Sep 23 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-1.5
+- AC-1079 Forbid admins to create pods
+- logs bugfix, container create bugfix
+- Small frontend fixes
+
 * Tue Sep 22 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-1.4
 - AC-1089: user creation api - now supports 'true' 'false' '0' '1' in boolean fields, supports field 'suspended', supports emails in username
 - AC-984: Change error notification in podCreate steps & add preloader in nodeCreate step

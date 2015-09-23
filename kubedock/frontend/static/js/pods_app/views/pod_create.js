@@ -755,7 +755,12 @@ define(['pods_app/app',
                         points[i].push([record[0], record[i+1]])
                     }
                 });
-                this.ui.chart.jqplot(points, options);
+                try {
+                    this.ui.chart.jqplot(points, options);
+                }
+                catch(e){
+                    console.log('Cannot display graph');
+                }
             }
         });
 

@@ -278,7 +278,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                         success: function(){
                             preloader.hide();
                             App.router.navigate('/', {trigger: true});
-                            $.notify("Added node successfully", {
+                            $.notify('Node "' + val + '" successfully added', {
                                 autoHideDelay: 5000,
                                 clickToHide: true,
                                 globalPosition: 'bottom left',

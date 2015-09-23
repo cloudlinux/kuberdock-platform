@@ -439,7 +439,9 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             onSave: function(){
-                var pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
+                var that = this,
+                    username = this.ui.username.val(),
+                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
                 switch (true)
                 {
@@ -462,7 +464,7 @@ define(['marionette', 'paginator', 'utils'],
                     break;
                 default:
                     App.Data.users.create({
-                        'username'        : this.ui.username.val(),
+                        'username'        : username,
                         'first_name'      : this.ui.first_name.val(),
                         'last_name'       : this.ui.last_name.val(),
                         'middle_initials' : this.ui.middle_initials.val(),
@@ -475,7 +477,7 @@ define(['marionette', 'paginator', 'utils'],
                         wait: true,
                         success: function(){
                             App.router.navigate('/', {trigger: true})
-                            $.notify( "User created successfully", {
+                            $.notify('User "' + username + '" created successfully', {
                                 autoHideDelay: 4000,
                                 globalPosition: 'bottom left',
                                 className: 'success'

@@ -345,7 +345,7 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var cmd = $(evt.target).val();
                 if (cmd != '') {
-                    this.model.set('command', [cmd])
+                    this.model.set('args', [cmd])
                 }
             },
 

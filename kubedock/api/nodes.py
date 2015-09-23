@@ -127,7 +127,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
             {
                 "name": "docker-containers",
                 # path is allowed only for kuberdock-internal
-                "localStorage": {"path": "/var/lib/kuberdock/storage"}
+                "localStorage": {"path": "/var/lib/docker/containers"}
             },
             {
                 "name": "es-persistent-storage",

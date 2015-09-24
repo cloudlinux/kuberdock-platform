@@ -12,8 +12,8 @@ ippool = Blueprint('ippool', __name__, url_prefix='/ippool')
 
 @ippool.route('/', strict_slashes=False)
 @ippool.route('/<path:net>', strict_slashes=False)
-@check_permission('view', 'ippool')
 @login_required
+@check_permission('view', 'ippool')
 def index(net=None):
     """Returns the index page."""
     networks_collection = IpAddrPool().get(net)

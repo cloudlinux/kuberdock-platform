@@ -22,8 +22,8 @@ def mark_current_user_online():
 
 @users.route('/')
 @users.route('/<path:p>/', endpoint='other')
-@check_permission('get', 'users')
 @login_required
+@check_permission('get', 'users')
 def index(**kwargs):
     """Returns the index page."""
     roles = Role.all()
@@ -39,8 +39,8 @@ def index(**kwargs):
 
 @users.route('/online/')
 @users.route('/online/<path:p>/', endpoint='online_other')
-@check_permission('get', 'users')
 @login_required
+@check_permission('get', 'users')
 def online_users(**kwargs):
     return index(**kwargs)
 

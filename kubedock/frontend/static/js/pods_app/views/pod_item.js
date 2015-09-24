@@ -93,15 +93,16 @@ define(['pods_app/app',
                 'start'            : '.start-btn',
                 'stop'             : '.stop-btn',
                 'delete'           : '.terminate-btn',
-                'containerPageBtn' : '.container-page-btn'
+                'containerPageBtn' : '.container-page-btn',
+                'checkbox'         : 'input[type="checkbox"]'
             },
 
             events: {
-                'click @ui.start'            : 'startItem',
-                'click @ui.stop'             : 'stopItem',
-                'click @ui.delete'           : 'deleteItem',
-                'click @ui.containerPageBtn' : 'containerPage',
-                'click'                      : 'checkItem',
+                'click @ui.start'              : 'startItem',
+                'click @ui.stop'               : 'stopItem',
+                'click @ui.delete'             : 'deleteItem',
+                'click @ui.containerPageBtn'   : 'containerPage',
+                'click @ui.checkbox'           : 'checkItem'
             },
 
             command: function(evt, cmd){

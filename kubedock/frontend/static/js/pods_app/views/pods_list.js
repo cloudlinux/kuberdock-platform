@@ -41,7 +41,9 @@ define(['pods_app/app',
         List.PodListItem = Backbone.Marionette.ItemView.extend({
             template    : podListItemTpl,
             tagName     : 'tr',
-            className   : 'pod-item',
+            className   : function(){
+                return this.model.is_checked ? 'pod-item checked' : 'pod-item';
+            },
 
             initialize: function(options){
                 this.index = options.childIndex;

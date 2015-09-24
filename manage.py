@@ -2,6 +2,7 @@ import os
 import pytz
 import logging
 from datetime import datetime
+import uuid
 
 from kubedock.api import create_app
 from kubedock.api.nodes import add_node
@@ -88,10 +89,14 @@ class Creator(Command):
             db.session.add(u)
         kr = Role.filter_by(rolename='User').first()
         ku = User.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
+        ku_passwd = uuid.uuid4().hex
         if ku is None:
-            ku = User.create(username=KUBERDOCK_INTERNAL_USER, password='', role=kr,
+            ku = User.create(username=KUBERDOCK_INTERNAL_USER,
+                             password=ku_passwd, role=kr,
                              package=p1, first_name='KuberDock Internal',
                              active=True)
+            # generate token immediately, to use it in node creation
+            ku.get_token()
             db.session.add(ku)
         db.session.commit()
 

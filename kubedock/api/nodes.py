@@ -6,7 +6,6 @@ import math
 import operator
 import socket
 import os
-import yaml
 from .. import tasks
 from ..models import Node, User, Pod
 from ..core import db
@@ -107,7 +106,8 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
 
 
 def get_kuberdock_logs_config(node, name, kube_type,
-                              collector_kubes, storage_kubes, master_ip, token):
+                              collector_kubes, storage_kubes, master_ip,
+                              internal_ku_token):
 
     # Give 2/3 of elastic kubes limits to elastic heap. It's recommended do not
     # give all memory to the heap, and leave some to Lucene.
@@ -139,7 +139,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
             {
                 "command": ["./run.sh"],
                 "kubes": collector_kubes,
-                "image": "kuberdock/fluentd:1.1",
+                "image": "kuberdock/fluentd:1.3",
                 "name": "fluentd",
                 "env": [
                     {
@@ -172,7 +172,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
             {
                 "command": ["/elasticsearch/run.sh"],
                 "kubes": storage_kubes,
-                "image": "kuberdock/elasticsearch:1.2",
+                "image": "kuberdock/elasticsearch:1.3",
                 "name": "elasticsearch",
                 "env": [
                     {
@@ -181,7 +181,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
                     },
                     {
                         "name": "TOKEN",
-                        "value": token
+                        "value": internal_ku_token
                     },
                     {
                         "name": "NODENAME",
@@ -402,18 +402,13 @@ def add_node(data, do_deploy=True, with_testing=False):
             logstorage_kubes = total_kubes - logcollector_kubes
         ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
         logs_podname = get_kuberdock_logs_pod_name(data['hostname'])
-        with open('/etc/kubernetes/configfile_for_nodes') as node_configfile:
-            node_config = yaml.load(node_configfile.read())
-        for user in node_config['users']:
-            token = user['user']['token']
-            if user['name'] == 'kubelet':
-                break
+        internal_ku_token = ku.get_token()
         logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
                                                 kube.id,
                                                 logcollector_kubes,
                                                 logstorage_kubes,
                                                 MASTER_IP,
-                                                token)
+                                                internal_ku_token)
         check_new_pod_data(logs_config, ku)
         logs_pod = PodCollection(ku).add(logs_config)
         PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
@@ -433,9 +428,10 @@ def add_node(data, do_deploy=True, with_testing=False):
             pass
 
         nodes_data = cursor.values(Node.ip, Node.hostname)
-        nodes = dict(i for i in nodes_data if i[0] != ip).keys()
+        nodes_ = dict(i for i in nodes_data if i[0] != ip).keys()
         if do_deploy:
-            tasks.add_new_node.delay(m.hostname, kube.id, m, with_testing, nodes)
+            tasks.add_new_node.delay(m.hostname, kube.id, m, with_testing,
+                                     nodes_)
         else:
             err = add_node_to_k8s(m.hostname, kube.id)
             if err:
@@ -448,7 +444,7 @@ def add_node(data, do_deploy=True, with_testing=False):
                 db.session.commit()
 
         for port in PORTS_TO_RESTRICT:
-            handle_nodes(process_rule, nodes=nodes, action='insert',
+            handle_nodes(process_rule, nodes=nodes_, action='insert',
                          port=port, target='ACCEPT', source=ip)
         data.update({'id': m.id})
         send_event('pull_nodes_state', 'ping')
@@ -510,11 +506,11 @@ def delete_item(node_id):
             PodCollection(ku).delete(logs_pod.id, force=True)
 
         nodes_data = cursor.values(Node.ip, Node.hostname)
-        nodes = dict(i for i in nodes_data if i[0] != m.ip).keys()
+        nodes_ = dict(i for i in nodes_data if i[0] != m.ip).keys()
         db.session.delete(m)
         db.session.commit()
         for port in PORTS_TO_RESTRICT:
-            handle_nodes(process_rule, nodes=nodes, action='delete',
+            handle_nodes(process_rule, nodes=nodes_, action='delete',
                 port=port, target='ACCEPT', source=m.ip, append_reject=False)
         res = tasks.remove_node_by_host(m.hostname)
         if res['status'] == 'Failure':
@@ -575,18 +571,18 @@ def handle_nodes(func, **kw):
     env.user = 'root'
     env.skip_bad_hosts = True
     env.key_filename = SSH_KEY_FILENAME
-    nodes = kw.pop('nodes', [])
-    if not nodes:
+    nodes_ = kw.pop('nodes', [])
+    if not nodes_:
         return {}
     with settings(hide('running', 'warnings', 'stdout', 'stderr'), warn_only=True):
-        return execute(func, hosts=nodes, **kw)
+        return execute(func, hosts=nodes_, **kw)
 
 
 def get_ceph_volumes():
     drives = []
-    nodes = dict([(k, v)
+    nodes_ = dict([(k, v)
         for k, v in db.session.query(Node).values(Node.ip, Node.hostname)]).keys()
-    data = handle_nodes(poll, nodes=nodes)
+    data = handle_nodes(poll, nodes=nodes_)
     sets = [set(filter((lambda x: x[1] is None), i.items())) for i in data.values()]
     intersection = map(operator.itemgetter(0), sets[0].intersection(*sets[1:]))
     username = KubeUtils._get_current_user().username

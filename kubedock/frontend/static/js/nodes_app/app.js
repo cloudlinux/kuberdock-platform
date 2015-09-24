@@ -471,22 +471,22 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     var year = today.getUTCFullYear();
                     var month = today.getUTCMonth() + 1;
                     var day = today.getUTCDate();
-                    var index = 'syslog-' + year + '.' +
-                        ('0' + month).slice(-2) +'.' +
-                        ('0' + day).slice(-2);
+                    var dt = year + '-' + ('0' + month).slice(-2) +'-' +
+                             ('0' + day).slice(-2);
                     var hostname = this.model.get('hostname');
                     var host = hostname.split('.')[0];
                     var size = 100;
-                    var url = '/logs/' + ip + '/' + index +
-                        '/_search?q=host:("' + hostname + '" OR "' + host + '")' +
-                        '&size=' + size + '&sort=@timestamp:desc';
+                    var url = '/api/logs/node/' + ip + '/' + dt +
+                        '?hostname=' + hostname + '&hostname=' + host +
+                        '&size=' + size;
                     $.ajax({
                         url: url,
                         dataType : 'json',
+                        type: 'GET',
                         context: this,
                         success: function(data) {
-                            var lines = _.map(data['hits']['hits'], function(line) {
-                                return line['_source'];
+                            var lines = _.map(data.data.hits, function(line) {
+                                return line._source;
                             });
                             lines.reverse();
                             this.model.set('logs', lines);

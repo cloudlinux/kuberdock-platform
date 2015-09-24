@@ -891,19 +891,19 @@ define(['pods_app/app',
                     var parent_id = this.model.get('parentID'),
                         parent_model = App.WorkFlow.getCollection().fullCollection.get(parent_id),
                         node = parent_model.get('host'),
-                        index = 'docker-*',
                         container_id = this.model.get('containerID'),
                         size = 100,
-                        url = '/logs/' + node + '/' + index +
-                            '/_search?q=container_id:"' + container_id + '"' +
-                            '&size=' + size + '&sort=@timestamp:desc';
+                        url = '/api/logs/container/' + node +
+                              '/' + container_id +
+                              '?size=' + size;
                     $.ajax({
                         url: url,
                         dataType : 'json',
+                        type: 'GET',
                         context: this,
-                        success: function(data) {
-                            var lines = _.map(data['hits']['hits'], function(line) {
-                                return line['_source'];
+                        success: function(data){
+                            var lines = _.map(data.data.hits, function(line) {
+                                return line._source;
                             });
                             lines.reverse();
                             this.model.set('logs', lines);

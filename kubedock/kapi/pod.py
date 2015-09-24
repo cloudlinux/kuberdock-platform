@@ -81,9 +81,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         pod_item['state'] = state
                         pod_item['startedAt'] = startedAt.get('startedAt')
                         container_id = pod_item.get('containerID', container['name'])
+                        pod_item['containerID'] = _del_docker_prefix(container_id)
                         image_id = pod_item.get('imageID', container['image'])
-                        pod_item['containerID'] = container_id.strip('docker://')
-                        pod_item['imageID'] = image_id.strip('docker://')
+                        pod_item['imageID'] = _del_docker_prefix(image_id)
                         container.update(pod_item)
         else:
             pod._forge_dockers(status=pod.status)
@@ -310,3 +310,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def __repr__(self):
         name = getattr(self, 'name', '').encode('ascii', 'replace')
         return "<Pod ('id':{0}, 'name':{1})>".format(self.id, name)
+
+
+def _del_docker_prefix(value):
+    """Removes 'docker://' from container or image id returned from kubernetes
+    API.
+
+    """
+    if not value:
+        return value
+    return value.split('docker://')[-1]

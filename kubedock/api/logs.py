@@ -52,7 +52,7 @@ def api_get_node_logs(host, date):
     except (TypeError, ValueError):
         size = 100
     date = parse_datetime_str(date)
-    hostname = request.args.get('hostname')
+    hostname = request.args.getlist('hostname')
     return jsonify(es_logs.get_node_logs(host, date, size, hostname))
 
 

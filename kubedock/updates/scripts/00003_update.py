@@ -1,31 +1,15 @@
-import os
-
 from kubedock.updates import helpers
 from fabric.api import run
-from alembic import command
-from alembic.config import Config
 
-base, _ = os.path.split(os.path.dirname(__file__))
-
-location = os.path.join(base, 'kdmigrations')
-conffile = os.path.join(location, 'alembic.ini')
-
-acfg=Config(conffile)
-acfg.set_main_option('script_location',location)
-
-from kubedock.api import create_app
 
 def upgrade(upd, with_testing, *args, **kwargs):
     helpers.install_package('kuberdock', with_testing)
-    app = create_app()
-    with app.app_context():
-        command.upgrade(acfg, 'head')
+    helpers.upgrade_db(revision='head')
+
 
 def downgrade(upd, with_testing,  exception, *args, **kwargs):
     pass
-    #app = create_app()
-    #with app.app_context():
-    #    command.downgrade(acfg,'base')
+
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
     # do not output to stdout because of unicode decoding exception
@@ -36,5 +20,6 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     run("sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=overlay' /etc/sysconfig/docker-storage")
     run("reboot")
 
+
 def downgrade_node(upd, with_testing, env,  exception, *args, **kwargs):
-   pass
+    pass

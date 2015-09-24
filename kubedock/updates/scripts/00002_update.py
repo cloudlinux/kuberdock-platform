@@ -74,7 +74,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     run("""sed -i '/^KUBE_MASTER/ {s|http://|https://|}' /etc/kubernetes/config""")
     run("""sed -i '/^KUBE_MASTER/ {s|7080|6443|}' /etc/kubernetes/config""")
     run("""sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile"|}' /etc/kubernetes/proxy""")
-    service, res = helpers.restart_node_kubenetes(with_enable=True)
+    service, res = helpers.restart_node_kubernetes(with_enable=True)
     if service != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))

@@ -112,7 +112,7 @@ def restart_master_kubernetes(with_enable=False):
     return 0, 0
 
 
-def restart_node_kubenetes(with_docker=False, with_enable=False):
+def restart_node_kubernetes(with_docker=False, with_enable=False):
     """
     :return: Tuple: service on which restart was error or 0, + fabric res
     """

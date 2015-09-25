@@ -253,9 +253,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             events:{
                 'click @ui.node_cancel_btn'   : 'cancel',
                 'click @ui.node_add_btn'      : 'complete',
-                'click @ui.node_name'         : 'removeExtraClass',
                 'change @ui.node_type_select' : 'change_kube_type',
-                'change @ui.node_name'        : 'validateStep',
             },
 
             change_kube_type: function(evt) {
@@ -265,8 +263,28 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             complete: function () {
                 var that = this,
                     preloader = $('#page-preloader'),
-                    val = this.state.get('hostname');
-                if (val !== '') {
+                    val = this.ui.node_name.val(),
+                    pattern =  /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;
+
+                switch (true)
+                {
+                case !val:
+                    $.notify('Enter valid hostname', {
+                        autoHideDelay: 5000,
+                        globalPosition: 'bottom left',
+                        className: 'error'
+                    });
+                    this.ui.node_name.focus();
+                    break;
+                case val && !pattern.test(val):
+                    $.notify('Hostname can t start with symbols like ".", "#", "%" or "/"', {
+                        autoHideDelay: 5000,
+                        globalPosition: 'bottom left',
+                        className: 'error'
+                    });
+                    this.ui.node_name.focus();
+                    break;
+                default:
                     preloader.show();
                     App.Data.nodes.create({
                         hostname: val,
@@ -287,34 +305,17 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                         },
                         error: function(model, response){
                             preloader.hide();
-                            $.notify(response.responseJSON.data, {
-                                autoHideDelay: 5000,
-                                clickToHide: true,
-                                globalPosition: 'bottom left',
-                                className: 'error',
-                            });
+                            if (response.status == 409) {
+                                $.notify('Node "' + val + '" already exists', {
+                                    autoHideDelay: 5000,
+                                    clickToHide: true,
+                                    globalPosition: 'bottom left',
+                                    className: 'error',
+                                });
+                            }
                         }
                     });
                 }
-            },
-
-            validateStep: function (evt) {
-                var val = evt.target.value;
-                if (val !== '') {
-                    var that = this;
-                    this.ui.spinner.spin({color: '#437A9E'});
-                    Backbone.ajax({ url:"/api/nodes/checkhost/" + val, async: false }).done(function (data) {
-                        that.state.set('hostname', val);
-                    }).error(function(resp) {
-                        that.state.set('hostname', '');
-                        that.ui.node_name.addClass('error');
-                    });
-                    that.ui.spinner.spin(false);
-                }
-            },
-
-            removeExtraClass: function(){
-                this.ui.node_name.hasClass('error') ? this.ui.node_name.removeClass('error') : '';
             },
 
             cancel: function () {

@@ -32,6 +32,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
                 pod['name'],
                 pod['kube_type'],
                 pod['containers'][0]['kubes'],
+                pod['containers'][1]['kubes'],
                 MASTER_IP,
                 token,
             )

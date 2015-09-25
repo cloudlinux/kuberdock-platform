@@ -10,6 +10,7 @@ from .pstorage import CephStorage, AmazonStorage
 from ..billing import kubes_to_limits
 from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, \
                         AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX
+from ..utils import POD_STATUSES
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
@@ -62,7 +63,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.namespace  = metadata.get('namespace')
         pod.replicationController = False
         pod.replicas   = 1
-        pod.status     = status.get('phase', 'pending').lower()
+        pod.status     = status.get('phase', POD_STATUSES.pending).lower()
         pod.host       = spec.get('nodeName')
         pod.kube_type  = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
         pod.node       = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
@@ -71,7 +72,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.containers = spec.get('containers', [])
         pod.restartPolicy = spec.get('restartPolicy')
 
-        if pod.status == 'running':
+        if pod.status == POD_STATUSES.running:
             for pod_item in status.get('containerStatuses', []):
                 if pod_item['name'] == 'POD':
                     continue
@@ -288,6 +289,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         except ValueError:
             self._raise('Incorrect cmd string')
 
+    # TODO remove - we always use replicas
     @property
     def kind(self):
         if getattr(self, 'replicationController', False):

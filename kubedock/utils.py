@@ -37,6 +37,16 @@ class UPDATE_STATUSES:
     nodes_failed = 'nodes failed'
 
 
+class POD_STATUSES:
+    """
+    Possible pods statuses
+    """
+    running = 'running'
+    stopped = 'stopped'
+    pending = 'pending'
+
+
+
 def login_required_or_basic_or_token(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):

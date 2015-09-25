@@ -3,7 +3,8 @@ from uuid import uuid4
 from flask import current_app
 
 from ..billing import repr_limits
-from ..utils import modify_node_ips, run_ssh_command, send_event, APIError
+from ..utils import (modify_node_ips, run_ssh_command, send_event, APIError,
+                     POD_STATUSES)
 from .pod import Pod
 from .pstorage import CephStorage, AmazonStorage
 from .helpers import KubeQuery, ModelQuery, Utilities
@@ -224,7 +225,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.owner = db_pod.owner.username
 
             if not hasattr(pod, 'status'):
-                pod.status = 'stopped'
+                pod.status = POD_STATUSES.stopped
 
             for container in pod.containers:
                 container.pop('resources', None)
@@ -283,36 +284,42 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
-        self._make_namespace(pod.namespace)
-        db_config = pod.get_config()
-        if not db_config.get('service'):
-            for c in pod.containers:
-                if len(c.get('ports', [])) > 0:
-                    service_rv = self._run_service(pod)
-                    self._raise_if_failure(service_rv, "Could not start a service")
-                    db_config['service'] = service_rv['metadata']['name']
-                    break
+        if pod.status == POD_STATUSES.stopped:
+            self._make_namespace(pod.namespace)
+            db_config = pod.get_config()
+            if not db_config.get('service'):
+                for c in pod.containers:
+                    if len(c.get('ports', [])) > 0:
+                        service_rv = self._run_service(pod)
+                        self._raise_if_failure(service_rv, "Could not start a service")
+                        db_config['service'] = service_rv['metadata']['name']
+                        break
 
-        self._process_persistent_volumes(pod, db_config.get('volumes', []))
+            self._process_persistent_volumes(pod, db_config.get('volumes', []))
 
-        self.replace_config(pod, db_config)
+            self.replace_config(pod, db_config)
 
-        config = pod.prepare()
-        rv = self._post([pod.kind], json.dumps(config), rest=True,
-                        ns=pod.namespace)
-        self._raise_if_failure(rv, "Could not start '{0}' pod".format(
-            pod.name.encode('ascii', 'replace')))
-        return {'status': 'pending'}
+            config = pod.prepare()
+            rv = self._post([pod.kind], json.dumps(config), rest=True,
+                            ns=pod.namespace)
+            self._raise_if_failure(rv, "Could not start '{0}' pod".format(
+                pod.name.encode('ascii', 'replace')))
+            return {'status': POD_STATUSES.pending}
+        else:
+            raise APIError("Pod is not stopped, we can't run it")
 
     def _stop_pod(self, pod, data=None):
-        pod.status = 'stopped'
-        if hasattr(pod, 'sid'):
-            rv = self._del([pod.kind, pod.sid], ns=pod.namespace)
-            if pod.replicationController:
-                self._stop_cluster(pod)
-            self._raise_if_failure(rv, "Could not stop a pod")
-            #return rv
-            return {'status': 'stopped'}
+        if pod.status != POD_STATUSES.stopped:
+            pod.status = POD_STATUSES.stopped
+            if hasattr(pod, 'sid'):
+                rv = self._del([pod.kind, pod.sid], ns=pod.namespace)
+                if pod.replicationController:
+                    self._stop_cluster(pod)
+                self._raise_if_failure(rv, "Could not stop a pod")
+                #return rv
+                return {'status': POD_STATUSES.stopped}
+        else:
+            raise APIError('Pod is already stopped')
 
     def _stop_cluster(self, pod):
         """ Delete all replicas of the pod """

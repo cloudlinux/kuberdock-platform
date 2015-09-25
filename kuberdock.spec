@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 1.5%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,6 +160,14 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Thu Sep 24 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-2
+- AC-884: Show PD size in table
+- AC-1088: remove deprecated packages
+- added upgrade script to kubernetes-1.0.3
+- AC-1088: remove deprecated packages
+- fix users and ippool
+- Fixed very old update script
+
 * Wed Sep 23 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-1.5
 - AC-1079 Forbid admins to create pods
 - logs bugfix, container create bugfix

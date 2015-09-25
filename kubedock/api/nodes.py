@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
+from functools import wraps
+from datetime import datetime
 import boto.ec2
 import math
 import operator
@@ -8,6 +10,7 @@ import socket
 import os
 from .. import tasks
 from ..models import Node, User, Pod
+from ..nodes.models import NodeMissedAction
 from ..core import db
 from ..rbac import check_permission
 from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit, send_event
@@ -17,7 +20,7 @@ from ..billing import Kube, kubes_to_limits
 from ..settings import (NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS,
                         CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT,
                         SSH_KEY_FILENAME, ELASTICSEARCH_REST_PORT,
-                        KUBERDOCK_SETTINGS_FILE)
+                        KUBERDOCK_SETTINGS_FILE, ERROR_TOKEN)
 from ..kapi.podcollection import PodCollection
 from ..tasks import add_node_to_k8s
 from . import APIError
@@ -27,6 +30,33 @@ nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
 
 
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
+
+
+def save_failed(token):
+    """
+    Decorator getting strings starting with token and saving'em to DB
+    """
+    def outer(func):
+        @wraps(func)
+        def inner(*args, **kw):
+            data = func(*args, **kw)
+            failed = [n for n in data.items()
+                if isinstance(n[1], basestring) and n[1].startswith(token)]
+            if not failed:
+                return data
+            time_stamp = datetime.now()
+            try:
+                for i in failed:
+                    db.session.add(NodeMissedAction(
+                        host=i[0],
+                        command=i[1].replace(token, '', 1),
+                        time_stamp=time_stamp))
+                db.session.commit()
+            except Exception:
+                pass
+            return data
+        return inner
+    return outer
 
 
 def get_kuberdock_logs_pod_name(node):
@@ -560,13 +590,22 @@ def process_rule(**kw):
            '{conj} iptables -{action} INPUT -p tcp --dport {port}'
            '{source} -j {target}')
 
-    run(cmd.format(**kw))
-    if append_reject:
-        run(cmd.format(
-            action='A', port=kw['port'], source='', target='REJECT', conj='||'))
-    run('/sbin/service iptables save')
+    try:
+        run(cmd.format(**kw))
+        if append_reject:
+            run(cmd.format(
+                action='A', port=kw['port'], source='', target='REJECT', conj='||'))
+        run('/sbin/service iptables save')
+    except Exception:
+        message = ERROR_TOKEN + cmd.format(**kw) + ';'
+        if append_reject:
+            message += (cmd.format(
+                action='A', port=kw['port'], source='', target='REJECT', conj='||') + ';')
+        message += '/sbin/service iptables save'
+        return message
 
 
+@save_failed(token=ERROR_TOKEN)
 def handle_nodes(func, **kw):
     env.user = 'root'
     env.skip_bad_hosts = True

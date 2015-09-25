@@ -51,12 +51,17 @@ ELASTICSEARCH_REST_PORT = 9200
 
 PD_SEPARATOR = '__SEP__'
 PORTS_TO_RESTRICT = [ELASTICSEARCH_REST_PORT]
+ERROR_TOKEN = 'ERROR:'
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
 DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)
+    },
+    'process-missed-actions': {
+        'task': 'kubedock.tasks.process_missed_actions',
+        'schedule': timedelta(minutes=10)
     },
     'fix-pods-timeline': {
         'task': 'kubedock.tasks.fix_pods_timeline',

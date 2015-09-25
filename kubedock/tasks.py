@@ -8,7 +8,7 @@ import time
 import urlparse
 
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.util import strtobool
 
 # requests .json() errors handling workaround.
@@ -27,6 +27,7 @@ from .utils import update_dict, get_api_url, send_event, send_logs
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User
+from .nodes.models import NodeMissedAction
 from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, \
                         NODE_INSTALL_TIMEOUT_SEC, PORTS_TO_RESTRICT
 from .kapi.podcollection import PodCollection
@@ -311,6 +312,23 @@ def pull_hourly_stats():
         if entry['time_window'] in existing_windows:
             continue
         db.session.add(StatWrap5Min(**entry))
+    db.session.commit()
+
+
+@celery.task()
+def process_missed_actions():
+    actions = db.session.query(NodeMissedAction).filter(
+        NodeMissedAction.time_stamp > (datetime.now()-timedelta(minutes=35))
+        ).order_by(NodeMissedAction.time_stamp)
+    for action in actions:
+        ssh, error_message = ssh_connect(action.host)
+        if error_message:
+            continue
+        i, o, e = ssh.exec_command(action.command)
+        if o.channel.recv_exit_status() != 0:
+            continue
+        db.session.delete(action)
+        ssh.close()
     db.session.commit()
 
 

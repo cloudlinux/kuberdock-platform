@@ -92,7 +92,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def as_dict(self):
         return dict([(k, v) for k, v in vars(self).items()
-                    if k not in ('volumes', 'namespace')])
+                    if k not in ('volumes', 'namespace', 'secrets')])
 
     def as_json(self):
         return json.dumps(self.as_dict())
@@ -160,6 +160,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def prepare(self):
         kube_type = getattr(self, 'kube_type', 0)
         volumes = getattr(self, 'volumes', [])
+        secrets = getattr(self, 'secrets', [])
         if self.replicationController:
             config = {
                 "kind": "ReplicationController",
@@ -190,6 +191,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                             "nodeSelector": {
                                 "kuberdock-kube-type": "type_{0}".format(kube_type)
                             },
+                            "imagePullSecrets": [{"name": secret}
+                                                 for secret in secrets]
                         }
                     }
                 }
@@ -209,13 +212,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 },
                 "spec": {
                     "volumes": volumes,
-                    "containers": [
-                        self._prepare_container(c, kube_type, volumes)
-                            for c in self.containers],
+                    "containers": [self._prepare_container(c, kube_type, volumes)
+                                   for c in self.containers],
                     "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
                     "nodeSelector": {
                         "kuberdock-kube-type": "type_{0}".format(kube_type)
                     },
+                    "imagePullSecrets": [{"name": secret} for secret in secrets]
                 }
             }
             pod_config = config

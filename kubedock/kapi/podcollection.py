@@ -1,5 +1,6 @@
 import json
 from uuid import uuid4
+from base64 import urlsafe_b64encode as b64encode
 from flask import current_app
 
 from ..billing import repr_limits
@@ -8,7 +9,8 @@ from ..utils import (modify_node_ips, run_ssh_command, send_event, APIError,
 from .pod import Pod
 from .pstorage import CephStorage, AmazonStorage
 from .helpers import KubeQuery, ModelQuery, Utilities
-from ..settings import KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION
+from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
+                        DEFAULT_REGISTRY)
 
 
 def get_user_namespaces(user):
@@ -24,6 +26,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._merge()
 
     def add(self, params):
+        secrets = params.pop('secrets', [])
         self._check_trial(params)
         params['id'] = str(uuid4())
         params['namespace'] = params['id']
@@ -34,6 +37,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod._forge_dockers()
         if hasattr(pod, 'public_ip') and pod.public_ip:
             pod._allocate_ip()
+        self._make_namespace(pod.namespace)
+        pod.secrets = [self._make_secret(pod.namespace, **secret)
+                       for secret in secrets]
         return pod.as_dict()
 
     def get(self, as_json=True):
@@ -106,6 +112,26 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                             ns=False)
             # TODO where raise ?
             # current_app.logger.debug(rv)
+
+    def _make_secret(self, namespace, username=None, password=None,
+                     registry=DEFAULT_REGISTRY):
+        if registry == DEFAULT_REGISTRY:  # only index.docker.io allowes to use
+            registry = 'https://index.docker.io/v1/'  # image name without registry
+        auth = b64encode('{0}:{1}'.format(username, password))
+        secret = b64encode('{{"{0}": {{"auth": "{1}", "email": "a@a.a" }}}}'
+                           .format(registry, auth))
+
+        name = str(uuid4())
+        config = {'apiVersion': KUBE_API_VERSION,
+                  'kind': 'Secret',
+                  'metadata': {'name': name, 'namespace': namespace},
+                  'data': {'.dockercfg': secret},
+                  'type': 'kubernetes.io/dockercfg'}
+
+        rv = self._post(['secrets'], json.dumps(config), rest=True, ns=namespace)
+        if rv['kind'] == 'Status' and rv['status'] == 'Failure':
+            raise APIError(rv['message'])
+        return name
 
     def _get_namespace(self, namespace):
         data = self._get(ns=namespace)

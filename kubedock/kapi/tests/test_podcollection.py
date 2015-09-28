@@ -736,7 +736,8 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
             'compose_persistent': mock.Mock(),
             '_forge_dockers': mock.Mock(),
             '_allocate_ip': mock.Mock(),
-            'as_dict': mock.Mock()
+            'as_dict': mock.Mock(),
+            'namespace': 'n'
         })
 
         self.user = U()
@@ -758,7 +759,7 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
     @mock.patch.object(PodCollection, '_check_trial')
     def test_pod_create_called(self, check_trial_, uuid4_, create_, save_pod_):
         uuid4_.return_value = self.namespace
-        create_.return_value(self.pod)
+        create_.return_value = self.pod()
         self.pod_collection.add(self.params)
         create_.assert_called_once_with({
             'id': uuid4_.return_value,

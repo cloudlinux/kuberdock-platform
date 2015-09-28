@@ -63,36 +63,61 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     App.contents.show(listLayout);
                 });
             },
-
+            
             showPodItem: function(id){
                 var that = this;
                 require(['pods_app/views/pod_item',
                          'pods_app/views/paginator'], function(){
                     var itemLayout = new App.Views.Item.PodItemLayout(),
-                        model = WorkFlow.getCollection().fullCollection.get(id);
-
+                        model = WorkFlow.getCollection().fullCollection.get(id),
+                        graphsOn = false;
+            
                     if (model === undefined) {
                         Pods.navigate('pods');
                         that.showPods();
                         return;
                     }
-                    var _containerCollection = model.get('containers');
-                    _.each(_containerCollection, function(i){
-                            i.parentID = this.parentID;
-                        }, {parentID: id, kubes: model.get('kubes')});
-                    containerCollection = new Backbone.Collection(_containerCollection);
 
+                    var containerCollection = new Backbone.Collection(
+                        _.each(model.get('containers'), function(i){
+                            i.parentID = this.parentID;
+                        }, {parentID: id}));
+            
                     var masthead = new App.Views.Item.PageHeader({
                         model: new Backbone.Model({name: model.get('name')})
                     });
-
+            
                     var infoPanel = new App.Views.Item.InfoPanel({
                         collection: containerCollection
                     });
-
+            
+                    that.listenTo(WorkFlow.getCollection(), 'pods:collection:fetched', function(){
+                        try {
+                            var model = WorkFlow.getCollection().fullCollection.get(id);
+                            if (typeof itemLayout.controls === 'undefined' || typeof model === 'undefined') {
+                                return;
+                            }
+                            itemLayout.controls.show(new App.Views.Item.ControlsPanel({
+                                graphs: graphsOn,
+                                model: model,
+                            }));
+                            if (!graphsOn) {
+                                itemLayout.info.show(new App.Views.Item.InfoPanel({
+                                    collection: new Backbone.Collection(
+                                        _.each(model.get('containers'), function(i){
+                                            i.parentID = this.parentID;
+                                        }, {parentID: id}))
+                                }));
+                            }
+                        } catch(e) {
+                            console.log(e)
+                        }
+                    });
+                    
                     that.listenTo(itemLayout, 'display:pod:stats', function(data){
                         var statCollection = new App.Data.StatsCollection(),
                             that = this;
+                        graphsOn = true;
                         statCollection.fetch({
                             data: {unit: data.get('id')},
                             reset: true,
@@ -110,19 +135,19 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                         })
                     });
-
+            
                     that.listenTo(itemLayout, 'display:pod:list', function(data){
-
+                        graphsOn = false;
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
                             graphs: false,
                             model: model
                         }));
-
+            
                         itemLayout.info.show(new App.Views.Item.InfoPanel({
                             collection: containerCollection
                         }));
                     });
-
+            
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.masthead.show(masthead);
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
@@ -436,7 +461,11 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
             } else {
                 var source = new EventSource("/api/stream");
                 source.addEventListener('pull_pods_state', function () {
-                    WorkFlow.getCollection().fetch();
+                    WorkFlow.getCollection().fetch({
+                        success: function(collection, response, opts){
+                            collection.trigger('pods:collection:fetched');
+                        }
+                    });
                 }, false);
                 source.onerror = function () {
                     console.log("SSE Error");

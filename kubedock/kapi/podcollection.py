@@ -28,18 +28,17 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def add(self, params):
         secrets = params.pop('secrets', [])
         self._check_trial(params)
-        params['id'] = str(uuid4())
-        params['namespace'] = params['id']
+        params['namespace'] = params['id'] = str(uuid4())
         params['owner'] = self.owner
         pod = Pod.create(params)
         pod.compose_persistent(self.owner)
+        self._make_namespace(pod.namespace)
+        pod.secrets = [self._make_secret(pod.namespace, **secret)
+                       for secret in secrets]
         self._save_pod(pod)
         pod._forge_dockers()
         if hasattr(pod, 'public_ip') and pod.public_ip:
             pod._allocate_ip()
-        self._make_namespace(pod.namespace)
-        pod.secrets = [self._make_secret(pod.namespace, **secret)
-                       for secret in secrets]
         return pod.as_dict()
 
     def get(self, as_json=True):

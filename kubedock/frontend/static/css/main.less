@@ -240,6 +240,7 @@ body{
                     }
                     .editable-container{
                         &.editable-inline{
+                            vertical-align: inherit;
                             input{
                                 &.form-control{
                                     height: 36px;
@@ -249,7 +250,7 @@ body{
                                 }
                             }
                             .editable-buttons{
-                                top: 6px;
+                                top: 14px;
                                 right: 6px;
                                 margin-left: 0;
                                 position: absolute;
@@ -319,7 +320,7 @@ body{
                     }
                 }
             }
-            .control-group{
+            > .control-group{
                 .clearfix;
                 float: right;
                 height: 34px;
@@ -593,12 +594,13 @@ body{
         font-size: 0;
         margin: 20px 0;
         button, a{
-            margin-right: 10px;
             height: 37px;
             padding: 0 31px;
             font-size: 13px;
+            min-width: 105px;
             border: 1px solid;
             text-align: center;
+            margin-right: 10px;
             font-family: @regular;
             &:hover{
                 cursor: pointer;
@@ -617,6 +619,9 @@ body{
                 color: #fff;
                 border-color: #2490EA;
                 background-color: #2490EA;
+            }
+            &:last-child{
+                margin-right: 0;
             }
             &.gray{
                 .border-radius(2px);
@@ -817,12 +822,16 @@ body{
                     border: none;
                     padding: 15px 20px;
                     background-color: #f5fafe;
+                    .btn + .btn{
+                        margin-left: 0;
+                    }
                     button{
-                        .border-radius(0);
+                        .border-radius(2px);
                         outline: 0;
                         height: 37px;
                         padding: 0 31px;
                         font-size: 13px;
+                        min-width: 105px;
                         border: 1px solid;
                         text-align: center;
                         margin-right: 10px;
@@ -835,20 +844,17 @@ body{
                             cursor: default;
                         }
                         &:first-child{
-                            .border-radius(2px);
                             color: #1d1d1d;
                             border-color: #ebebeb;
                             background-color: #fcfcfc;
                         }
                         &:last-child, &.blue{
-                            .border-radius(2px);
                             color: #fff;
                             margin-right: 0;
                             border-color: #2490EA;
                             background-color: #2490EA;
                         }
                         &.gray{
-                            .border-radius(2px);
                             color: #1d1d1d;
                             border-color: #ebebeb;
                             background-color: #fcfcfc;
@@ -995,6 +1001,44 @@ body{
         display: block;
         max-width: initial;
         position: absolute;
+    }
+    table{
+       .editable-container{
+            &.editable-inline{
+                .form-inline{
+                    .control-group{
+                        .editable-input{
+                            input{
+                                &.form-control{
+                                    height: 36px;
+                                    border: none;
+                                    position: relative;
+                                    padding-right: 95px !important;
+                                    border: 1px solid #2490E9;
+                                }
+                            }
+                        }
+                        .editable-buttons{
+                            top: 6px;
+                            right: 6px;
+                            margin-left: 0;
+                            position: absolute;
+                            .editable-submit{
+                                .border-radius(2);
+                                .box-shadow (0px 2px 4px 0px rgba(0, 0, 0, 0.35)) !important;
+                                padding: 0;
+                                width: 77px;
+                                color: #fff;
+                                border: none;
+                                height: 25px;
+                                background: #2c99f1;
+                                border-color: #2c99f1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     .editable-container{
         &.editable-inline{
@@ -1172,15 +1216,21 @@ body{
                         border-left: 3px solid transparent;
                         &:hover{
                             color: #3197ee;
+                            font-weight: normal;
                             border-color: #3197ee;
                             background-color: #f5fafe;
                         }
                     }
                     &.selected{
                         a{
-                            color: #3197ee;
-                            border-color: #3197ee;
-                            background-color: #f5fafe;
+                            font-weight: bold;
+                            background-color: #fff;
+                            &:hover{
+                                color: #3197ee;
+                                font-weight: normal;
+                                border-color: #3197ee;
+                                background-color: #f5fafe;
+                            }
                         }
                     }
                     &.disabled{

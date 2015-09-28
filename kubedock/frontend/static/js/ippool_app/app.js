@@ -43,8 +43,8 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 evt.stopPropagation()
                 var that = this;
                 utils.modalDialogDelete({
-                    title: 'Delete network',
-                    body: "Do you really want to delete network '" +
+                    title: 'Delete subnet',
+                    body: "Do you really want to delete subnet '" +
                         this.model.get('network') + "'?",
                     small: true,
                     show: true,

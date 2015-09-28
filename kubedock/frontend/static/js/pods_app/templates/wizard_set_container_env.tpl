@@ -45,7 +45,7 @@
                 </div>
                 <% } %>
                 <div class="col-sm-12 no-padding">
-                    <button type="button" class="add-env">Add field</button>
+                    <button type="button" class="add-env">Add fields</button>
                 </div>
                 <% if (env.length != 0){ %>
                 <div class="col-sm-12 no-padding reset">
@@ -134,7 +134,7 @@
                                 <% }) %>
                             <% } else { %>
                                 <tr>
-                                    <td colspan="2" class="text-center disabled-color-text">Variables not specified</td>
+                                    <td colspan="2" class="text-center disabled-color-text">Variables are not specified</td>
                                 </tr>
                             <% } %>
                             </tbody>

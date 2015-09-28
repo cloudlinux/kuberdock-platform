@@ -74,7 +74,7 @@
                             <% }) %>
                         <% } else { %>
                             <tr>
-                                <td colspan="4" class="text-center disabled-color-text">Ports not specified</td>
+                                <td colspan="4" class="text-center disabled-color-text">Ports are not specified</td>
                             </tr>
                         <% } %>
                         </tbody>
@@ -100,7 +100,7 @@
                                         <% }) %>
                                     <% } else { %>
                                         <tr>
-                                            <td colspan="2" class="text-center disabled-color-text">Volumes not specified</td>
+                                            <td colspan="2" class="text-center disabled-color-text">Volumes are not specified</td>
                                         </tr>
                                     <% } %>
                                     </tbody>

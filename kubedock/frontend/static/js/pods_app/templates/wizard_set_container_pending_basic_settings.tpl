@@ -91,7 +91,7 @@
                                                     <input type="text" class="pd-size" placeholder="persistent-drive-size">
                                                 </span>
                                                 <span>
-                                                    <button class="add-drive" title="Add new drive">add</button>
+                                                    <button class="add-drive" title="Add new drive">Add</button>
                                                     <span class="add-drive-cancel"></span>
                                                </span>
                                             </div>

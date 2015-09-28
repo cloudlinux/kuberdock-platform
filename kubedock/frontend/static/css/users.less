@@ -21,6 +21,7 @@
                 border-bottom: none;
                 font-family: @regular;
                 vertical-align: middle;
+                background-color: #F8F8F8;
                 &:first-child{
                     padding-left: 24px;
                 }
@@ -85,6 +86,14 @@
                         &:hover{
                             cursor: pointer;
                         }
+                    }
+                    &.active{
+                        min-width: 69px;
+                        display: inline-block;
+                    }
+                    &.locked{
+                        min-width: 65px;
+                        display: inline-block;
                     }
                     &.deleteUser{
                         width: 16px;

@@ -23,7 +23,7 @@
         </div>
         -->
         <div class="col-md-11 no-padding">
-            <input type="text" id="search-image-field" class="form-control" placeholder="Enter image or part of image name to search">
+            <input type="text" id="search-image-field" class="form-control" placeholder="Enter image name or part of image name">
         </div>
         <div class="col-md-1 no-padding search-image-inner">
             <button class="search-image" type="button"></button>

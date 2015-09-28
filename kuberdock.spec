@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 2.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,6 +160,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 
 %changelog
+* Mon Sep 28 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.3-2.1
+- Hot fix for update
+
 * Thu Sep 24 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-2
 - AC-884: Show PD size in table
 - AC-1088: remove deprecated packages

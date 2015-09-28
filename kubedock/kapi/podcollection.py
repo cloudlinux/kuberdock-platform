@@ -77,7 +77,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod = self.get_by_id(pod_id)
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
-        self._stop_pod(pod)
+        self._stop_pod(pod, raise_=False)
 
         service_name = pod.get_config('service')
         if service_name:
@@ -334,7 +334,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         else:
             raise APIError("Pod is not stopped, we can't run it")
 
-    def _stop_pod(self, pod, data=None):
+    def _stop_pod(self, pod, data=None, raise_=True):
         if pod.status != POD_STATUSES.stopped:
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
@@ -344,7 +344,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._raise_if_failure(rv, "Could not stop a pod")
                 #return rv
                 return {'status': POD_STATUSES.stopped}
-        else:
+        elif raise_:
             raise APIError('Pod is already stopped')
 
     def _stop_cluster(self, pod):

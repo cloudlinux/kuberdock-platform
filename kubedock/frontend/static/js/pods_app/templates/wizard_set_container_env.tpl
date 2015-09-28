@@ -29,10 +29,10 @@
                                 <% _.each(env, function(e, index){ %>
                                 <tr class="col-sm-12 no-padding">
                                     <td class="col-sm-4 no-padding">
-                                        <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="eg. Variable_name">
+                                        <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="Enter variabl name">
                                     </td>
                                     <td  class="col-sm-4 col-sm-offset-2 no-padding">
-                                        <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="eg. Some_value_0-9">
+                                        <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="Enter value">
                                     </td>
                                     <td>
                                         <div class="remove-env"></div>

@@ -13,7 +13,7 @@
             <label>Command:</label>
             <div class="row fields">
                 <div class="col-xs-6">
-                    <input class="command" type="text" value="" placeholder="command to start">
+                    <input class="command" type="text" value="" placeholder="Сommand to start">
                 </div>
             </div>
         </div>

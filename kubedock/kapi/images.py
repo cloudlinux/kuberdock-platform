@@ -2,7 +2,7 @@
 import json
 import re
 import requests
-import urlparse
+from urlparse import urlparse, parse_qsl
 from collections import Mapping
 from datetime import datetime, timedelta
 from urllib import urlencode
@@ -18,14 +18,21 @@ class DockerAuth(requests.auth.AuthBase):
     _bearer_pat = re.compile(r'bearer ', flags=re.IGNORECASE)
 
     def __init__(self, username=None, password=None):
+        """
+        Usage:
+        DockerAuth('my-username', 'my-password')
+        DockerAuth(username='my-username', password='my-password')
+        DockerAuth(['my-username', 'my-password'])
+        DockerAuth(), DockerAuth(None), DockerAuth(None, None)  # without credentials
+        """
         if hasattr(username, '__iter__') and password is None:  # got one iterable
             username, password = username
         self.username, self.password = username, password
         self.num_401_calls = 0
 
     def get_token(self, chal):
-        url = urlparse.urlparse(chal.pop('realm'))
-        query = urlencode(dict(urlparse.parse_qsl(url.query), **chal))
+        url = urlparse(chal.pop('realm'))
+        query = urlencode(dict(parse_qsl(url.query), **chal))
         url = url._replace(query=query).geturl()
         auth = None if self.username is None else (self.username, self.password)
         return requests.get(url, auth=auth).json().get('token')
@@ -65,7 +72,7 @@ class DockerAuth(requests.auth.AuthBase):
 
 
 def get_url(base, *path):
-    return urlparse.urlparse(base)._replace(path='/'.join(path)).geturl()
+    return urlparse(base)._replace(path='/'.join(path)).geturl()
 
 
 def request_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTRY):
@@ -103,7 +110,7 @@ def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY):
         raw_config['ExposedPorts'] = []
 
     if registry != DEFAULT_REGISTRY:
-        image = '{0}/{1}'.format(urlparse.urlparse(registry).netloc, image)
+        image = '{0}/{1}'.format(urlparse(registry).netloc, image)
     if tag != 'latest':
         image = '{0}:{1}'.format(image, tag)
 
@@ -123,7 +130,7 @@ def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY):
     return config
 
 
-def get_container_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTRY):
+def get_container_config(image, auth=None):
     """
     Get container config from cache or registry
 
@@ -133,8 +140,8 @@ def get_container_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTR
         {'username': <username>, <password>: <password>}
     :param registry: registry address
     """
-    if not urlparse.urlparse(registry).scheme:
-        registry = 'https://{0}'.format(registry)
+    registry, repo, tag = parse_image_name(image)
+    registry = complement_registry(registry)
     if registry == DEFAULT_REGISTRY and '/' not in repo:
         repo = 'library/{0}'.format(repo)  # official dockerhub image
     if isinstance(auth, Mapping):
@@ -162,3 +169,56 @@ def get_container_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTR
             cached_config.time_stamp = datetime.utcnow()
         db.session.commit()
     return data
+
+
+def complement_registry(registry):
+    if not urlparse(registry).scheme:
+        registry = 'https://{0}'.format(registry.rstrip('/'))
+    return registry
+
+
+def parse_image_name(image):
+    """Find registry, repo and tag in image name"""
+    registry, repo, tag = DEFAULT_REGISTRY, image, 'latest'
+    parts = repo.split('/', 1)
+    if '.' in parts[0] and len(parts) == 2:
+        registry, repo = parts
+    if ':' in repo:
+        repo, tag = repo.rsplit(':', 1)
+    if '/' not in repo and registry == DEFAULT_REGISTRY:
+        repo = 'library/{0}'.format(repo)
+    return registry, repo, tag
+
+
+def check_images_availability(images, secrets=()):
+    defaults = {'registry': DEFAULT_REGISTRY, 'v2': True, 'auth': None}
+    secrets = [dict(
+        defaults, auth=(secret['username'], secret['password']),
+        registry=complement_registry(secret.get('registry') or DEFAULT_REGISTRY)
+    ) for secret in secrets]
+
+    for image in images:
+        registry, repo, tag = parse_image_name(image)
+        registry = complement_registry(registry)
+
+        s = requests.Session()
+        s.verify = False  # FIXME: private registries with self-signed certs
+
+        # iterate over all secrets + one try without auth
+        for secret in secrets + [dict(defaults, registry=registry)]:
+            if urlparse(secret['registry']).netloc != urlparse(registry).netloc:
+                continue
+
+            if secret['v2']:  # try V2 API
+                url = get_url(registry, 'v2', repo, 'manifests', tag)
+                response = s.get(url, auth=DockerAuth(secret['auth']))
+                if response.status_code == 200:
+                    break
+                secret['v2'] = response.headers.get(
+                    'docker-distribution-api-version') == 'registry/2.0'
+            if not secret['v2']:
+                url = get_url(registry, 'v1/repositories', repo, 'tags', tag)
+                if s.get(url, auth=secret['auth']).status_code == 200:
+                    break
+        else:  # loop finished without breaks
+            raise APIError('image {0} is not available'.format(image))

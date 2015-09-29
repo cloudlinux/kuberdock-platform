@@ -9,6 +9,7 @@ import random
 import re
 import string
 import subprocess
+import warnings
 
 from ..image.image import Image
 from ..helper import KubeQuery, PrintOut
@@ -40,9 +41,16 @@ class KubeCtl(object):
 
     def _get_pod(self):
         data = self.query.unwrap(self.query.get(PODAPI_PATH))
-        item = [i for i in data if i['name'] == self.name]
-        if item:
-            return item[0]
+        with warnings.catch_warnings(): # Restore default behaviour on __exit__
+            # make warnings to raise the exception
+            warnings.simplefilter('error', UnicodeWarning)
+            for i in data:
+                try:
+                    if i['name'] == self.name:
+                        return i
+                except UnicodeWarning:
+                    if i['name'].encode('UTF-8') == self.name:
+                        return i
 
     def get(self):
         """

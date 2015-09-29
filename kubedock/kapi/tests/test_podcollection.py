@@ -370,9 +370,6 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
 
         mark_.assert_called_once_with(uuid)
 
-    def tearDown(self):
-        self.app = None
-
 
 class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
 
@@ -412,9 +409,6 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
             '"{\\"assigned-public-ip\\": \\"127.0.0.1\\"}"}}}' % {'id': pod_id}
         post_.assert_called_once_with(['services'], expected_service_conf,
                                       ns='n', rest=True)
-
-    def tearDown(self):
-        self.pod_collection = None
 
 
 class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
@@ -458,9 +452,6 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
         self.pod_collection._get_namespace.assert_called_once_with(self.test_ns)
         post_.assert_called_once_with(['namespaces'], ns_conf, rest=True,
                                       ns=False)
-
-    def tearDown(self):
-        self.pod_collection = None
 
 
 class TestPodCollectionGetNamespaces(unittest.TestCase, TestCaseMixin):
@@ -529,9 +520,6 @@ class TestPodCollectionGetNamespaces(unittest.TestCase, TestCaseMixin):
 
         del_.assert_called_once_with(['namespaces', test_ns], ns=False)
 
-    def tearDown(self):
-        self.pod_collection = None
-
 
 class TestPodCollection(unittest.TestCase, TestCaseMixin):
 
@@ -571,9 +559,6 @@ class TestPodCollection(unittest.TestCase, TestCaseMixin):
     def test_collection_get_by_id_if_id_not_exist(self, raise_):
         self.pod_collection.get_by_id(3)
         self.assertTrue(raise_.called)
-
-    def tearDown(self):
-        self.app = None
 
 
 class TestPodCollectionStartPod(unittest.TestCase, TestCaseMixin):
@@ -688,9 +673,6 @@ class TestPodCollectionStartPod(unittest.TestCase, TestCaseMixin):
             ns=self.test_pod.namespace)
         self.assertEquals(res, {'status': POD_STATUSES.pending})
 
-    def tearDown(self):
-        self.pod_collection = None
-
 
 class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
 
@@ -721,14 +703,13 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         self.assertEquals(rif.called, True)
         self.assertEquals(res, {'status': POD_STATUSES.stopped})
 
-    def tearDown(self):
-        self.pod_collection = None
 
-
+@mock.patch.object(Pod, 'create')
 class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
-        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge',
+                          '_save_pod', '_check_trial')
 
         U = type('User', (), {'username': 'user', 'is_trial': lambda s: True})
 
@@ -742,22 +723,48 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
 
         self.user = U()
         self.name = 'nginx'
-        self.params = {'name': self.name}
+        self.params = {'name': self.name, 'containers': ()}
         self.namespace = 'n'
         self.pod_collection = PodCollection(self.user)
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_check_trial_called(self, check_trial_, create_, save_pod_):
-        self.pod_collection.add(self.params)
-        check_trial_.assert_called_once_with(self.params)
+    @mock.patch('kubedock.kapi.podcollection.check_images_availability')
+    def test_check_images_availability_called(self, check_, create_):
+        create_.return_value = pod = self.pod()
+        pod.secrets = [{'username': 'test_user', 'password': 'test_password'},
+                       {'username': 'test_user2', 'password': 'test_password2',
+                        'registry': 'quay.io'}]
+        params = dict(self.params, containers=[
+            {'image': 'wncm/test_image:4'},
+            {'image': 'quay.io/wncm/test_image'}
+        ])
+        self.pod_collection.add(params)
+        check_.assert_called_once_with(['wncm/test_image:4', 'quay.io/wncm/test_image'],
+                                       pod.secrets)
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
+    @mock.patch.object(PodCollection, '_make_namespace')
+    def test_make_namespace_called(self, make_namespace_, create_):
+        create_.return_value = self.pod()
+        self.pod_collection.add(self.params)
+        make_namespace_.assert_called_once_with(self.namespace)
+
+    @mock.patch.object(PodCollection, '_make_secret')
+    def test_make_secret_called(self, make_secret_, create_):
+        create_.return_value = self.pod()
+        secrets = [{'username': 'test_user', 'password': 'test_password'},
+                   {'username': 'test_user2', 'password': 'test_password2',
+                    'registry': 'quay.io'}]
+        params = dict(self.params, secrets=secrets)
+
+        self.pod_collection.add(params)
+        make_secret_.assert_has_calls([mock.call(self.namespace, **secrets[0]),
+                                       mock.call(self.namespace, **secrets[1])])
+
+    def test_check_trial_called(self, create_):
+        self.pod_collection.add(self.params)
+        self.pod_collection._check_trial.assert_called_once_with(self.params)
+
     @mock.patch('kubedock.kapi.podcollection.uuid4')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_pod_create_called(self, check_trial_, uuid4_, create_, save_pod_):
+    def test_pod_create_called(self, uuid4_, create_):
         uuid4_.return_value = self.namespace
         create_.return_value = self.pod()
         self.pod_collection.add(self.params)
@@ -765,69 +772,44 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
             'id': uuid4_.return_value,
             'name': self.name,
             'namespace': self.namespace,
+            'containers': (),
             'owner': self.user
         })
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_pod_compose_persistent_called(self, check_trial_, create_, save_pod_):
+    def test_pod_compose_persistent_called(self, create_):
         pod_ = self.pod()
         create_.return_value = pod_
         self.pod_collection.add(self.params)
         pod_.compose_persistent.assert_called_once_with(self.user)
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_save_pod_called(self, check_trial_, create_, save_pod_):
+    def test_save_pod_called(self, create_):
         self.pod_collection.add(self.params)
-        self.assertTrue(save_pod_.called)
+        self.assertTrue(self.pod_collection._save_pod.called)
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_pod_forge_dockers_called(self, check_trial_, create_, save_pod_):
+    def test_pod_forge_dockers_called(self, create_):
         pod_ = self.pod()
         create_.return_value = pod_
         self.pod_collection.add(self.params)
         self.assertTrue(pod_._forge_dockers.called)
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_pod_allocate_ip_not_called(self, check_trial_, create_, save_pod_):
+    def test_pod_allocate_ip_not_called(self, create_):
         pod_ = self.pod()
         create_.return_value = pod_
         self.pod_collection.add(self.params)
         self.assertFalse(pod_._allocate_ip.called)
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_pod_allocate_ip_called(self, check_trial_, create_, save_pod_):
+    def test_pod_allocate_ip_called(self, create_):
         pod_ = self.pod()
         pod_.public_ip = True
         create_.return_value = pod_
         self.pod_collection.add(self.params)
         self.assertTrue(pod_._allocate_ip.called)
 
-    @mock.patch.object(PodCollection, '_save_pod')
-    @mock.patch.object(Pod, 'create')
-    @mock.patch.object(PodCollection, '_check_trial')
-    def test_pod_as_dict_called(self, check_trial_, create_, save_pod_):
+    def test_pod_as_dict_called(self, create_):
         pod_ = self.pod()
         create_.return_value = pod_
         self.pod_collection.add(self.params)
         self.assertTrue(pod_.as_dict.called)
-
-    def tearDown(self):
-        self.pod = None
-        self.user = None
-        self.name = None
-        self.params = None
-        self.namespace = None
-        self.pod_collection = None
 
 
 class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):

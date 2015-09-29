@@ -7,6 +7,7 @@ from ..billing import repr_limits
 from ..utils import (modify_node_ips, run_ssh_command, send_event, APIError,
                      POD_STATUSES)
 from .pod import Pod
+from .images import check_images_availability
 from .pstorage import CephStorage, AmazonStorage
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
@@ -25,9 +26,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._get_pods(namespaces)
         self._merge()
 
-    def add(self, params):
+    def add(self, params):  # TODO: celery
         secrets = params.pop('secrets', [])
         self._check_trial(params)
+        check_images_availability(
+            [container['image'] for container in params['containers']], secrets)
+
         params['namespace'] = params['id'] = str(uuid4())
         params['owner'] = self.owner
         pod = Pod.create(params)

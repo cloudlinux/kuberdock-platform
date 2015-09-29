@@ -476,8 +476,9 @@ if __name__ == '__main__':
                     helpers.set_maintenance(True)
                     # use new_kuberdocks[0] instead because of execv:
                     for pkg in new_kuberdocks:
-                        err = helpers.install_package(pkg, args.use_testing,
-                                                      args.reinstall)
+                        err = helpers.install_package(
+                            pkg, args.use_testing,
+                            action='reinstall' if args.reinstall else 'install')
                         if err:
                             print >> sys.stderr,\
                                 "Update package to {0} has failed.".format(pkg)

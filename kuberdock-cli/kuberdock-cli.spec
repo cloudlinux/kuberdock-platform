@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 20%{?dist}.cloudlinux
+Release: 21%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,7 +54,10 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
-* Tue Sep 09 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com> 0.1-20
+* Tue Sep 29 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com> 0.1-21
+- AC-988: added cli command to create and run pods from yaml files
+
+* Tue Sep 08 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com> 0.1-20
 - AC-551 kcli: unit tests added with minor refactoring of kcli code
 
 * Wed Aug 26 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.1-19

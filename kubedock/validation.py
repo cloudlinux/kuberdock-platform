@@ -160,8 +160,7 @@ env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
     'value': {'type': 'string', 'required': True},
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
-protocol_schema = {'type': 'string', 'required': True,
-                   'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
+protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
 new_pod_schema = {
     'name': pod_name_schema,
     'clusterIP': {

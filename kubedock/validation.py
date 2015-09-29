@@ -9,7 +9,8 @@ from sqlalchemy import func
 from .api import APIError
 from .billing import Kube
 from .users.models import User
-from .settings import KUBERDOCK_INTERNAL_USER, AWS, CEPH
+from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
+                       MAX_KUBES_PER_CONTAINER)
 
 
 SUPPORTED_VOLUME_TYPES = ['persistentDisk', 'localStorage']
@@ -160,8 +161,7 @@ env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
     'value': {'type': 'string', 'required': True},
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
-protocol_schema = {'type': 'string', 'required': True,
-                   'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
+protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
 new_pod_schema = {
     'name': pod_name_schema,
     'clusterIP': {
@@ -286,7 +286,9 @@ new_pod_schema = {
                 },
                 'command': args_list_schema,
                 'args': args_list_schema,
-                'kubes': {'type': 'integer', 'min': 1},
+                'kubes': {'type': 'integer',
+                          'min': 1,
+                          'max': MAX_KUBES_PER_CONTAINER},
                 'image': container_image_name_schema,
                 'parentID': {
                     'type': 'string',

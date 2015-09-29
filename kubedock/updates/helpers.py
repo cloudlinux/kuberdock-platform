@@ -54,12 +54,11 @@ def _make_yum_opts(pkg, testing=False, action='install', noprogress=False):
     return opts
 
 
-def install_package(pkg, testing=False, reinstall=False):
+def install_package(pkg, testing=False, action='install'):
     """
     :return: exit code
     """
-    return subprocess.call(
-        _make_yum_opts(pkg, testing, 'reinstall' if reinstall else 'install'))
+    return subprocess.call(_make_yum_opts(pkg, testing, action=action))
 
 
 def remote_install(pkg, testing=False, action='install'):

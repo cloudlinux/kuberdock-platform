@@ -29,7 +29,7 @@
             <button class="search-image" type="button"></button>
         </div>
     </div>
-    <div class="login-user row">
+    <!-- <div class="login-user row">
         <div class="col-md-6">
             <label>Enter username</label>
             <input type="text">
@@ -38,7 +38,7 @@
             <label>Create password</label>
             <input type="text">
         </div>
-    </div>
+    </div> -->
     <div id="search-results-scroll">
         <div id="data-collection"></div>
         <div class="search-control">

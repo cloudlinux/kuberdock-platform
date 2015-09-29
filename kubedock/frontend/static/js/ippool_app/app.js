@@ -44,7 +44,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 var that = this;
                 utils.modalDialogDelete({
                     title: 'Delete subnet',
-                    body: "Do you really want to delete subnet '" +
+                    body: "Are you sure want to delete subnet '" +
                         this.model.get('network') + "'?",
                     small: true,
                     show: true,
@@ -132,7 +132,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                     if(itm[0] == ip) {
                         utils.modalDialog({
                             title: 'Unbind IP-address',
-                            body: "Do you really want to unbind IP-address?",
+                            body: "Are you sure want to unbind IP '" + ip + "' address?",
                             small: true,
                             show: true,
                             footer: {

@@ -553,7 +553,7 @@ define(['marionette', 'paginator', 'utils'],
                 var that = this;
                 utils.modalDialog({
                     title: "Authorize by " + this.model.get('username'),
-                    body: "Are you sure you want to authorize by user '" +
+                    body: "Are you sure want to authorize by user '" +
                         this.model.get('username') + "'?",
                     small: true,
                     show: true,
@@ -579,7 +579,7 @@ define(['marionette', 'paginator', 'utils'],
                 var that = this;
                 utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
-                    body: "Are you sure you want to delete user '" +
+                    body: "Are you sure want to delete user '" +
                         this.model.get('username') + "'?",
                     small: true,
                     show: true,
@@ -681,7 +681,7 @@ define(['marionette', 'paginator', 'utils'],
                 var that = this;
                 utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
-                    body: "Are you sure you want to delete user '" +
+                    body: "Are you sure want to delete user '" +
                         this.model.get('username') + "'?",
                     small: true,
                     show: true,

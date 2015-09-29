@@ -65,8 +65,9 @@ class TestImages(unittest.TestCase):
 
     # @unittest.skip('')
     def test_get_container_config_private_dockerhub_repo(self):
-        self.validate(get_container_config('wncm/mynginx', auth=('wncm', 'mfhhh94kw02z')))
-        self.validate(get_container_config('wncm/mynginx', 'latest',
+        self.validate(get_container_config('wncm/test_private',
+                                           auth=('wncm', 'mfhhh94kw02z')))
+        self.validate(get_container_config('wncm/test_private', 'latest',
                                            auth={'username': 'wncm',
                                                  'password': 'mfhhh94kw02z'}))
 

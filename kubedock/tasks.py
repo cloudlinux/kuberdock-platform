@@ -324,6 +324,7 @@ def user_lock_event(target, value, oldvalue, initiator):
         value = bool(strtobool(value))
     if value != oldvalue and not value:
         user_lock_task.delay(target)
+        target.logout()
 
 
 @db.event.listens_for(User.suspended, 'set')

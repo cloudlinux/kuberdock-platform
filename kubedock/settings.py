@@ -15,6 +15,8 @@ DB_NAME = 'kuberdock'
 # Test whether it solves db bugs:
 SQLALCHEMY_POOL_SIZE = 10
 
+MAX_KUBES_PER_CONTAINER = 10
+
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 #SQLALCHEMY_ECHO=True
 SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')

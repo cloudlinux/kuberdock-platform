@@ -245,6 +245,25 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def kubes(self):
         return sum([pod.kubes for pod in self.pods if not pod.is_deleted])
 
+    def logout(self):
+        for session in SessionData.query.all():
+            randval, hmac_digest, data = session.data
+            try:
+                user_id = int(data.get('user_id'))
+            except (TypeError, ValueError):
+                continue
+            if user_id == self.id:
+                new_data = data.copy()
+                new_data.pop('user_id')
+                new_data.pop('_fresh', None)
+                # TODO: Uncomment after "Remember me" will be implemented
+                # new_data['remember'] = 'clear'
+                session.data = randval, hmac_digest, new_data
+
+        db.session.commit()
+
+        user_logged_out.send(self.id)
+
     def __repr__(self):
         return "<User(username='{0}', email='{1}')>".format(self.username, self.email)
 
@@ -343,8 +362,8 @@ class SessionData(db.Model):
         self.time_stamp = datetime.datetime.now()
 
     def __repr__(self):
-        return "<SessionData(session_id='%s', data='%s', time_stamp='%s')>" % (
-            self.session_id, self.data, self.time_stamp)
+        return "<SessionData(id='%s', data='%s', time_stamp='%s')>" % (
+            self.id, self.data, self.time_stamp)
 
 
 #####################

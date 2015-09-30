@@ -42,7 +42,7 @@ def get_user_package():
     user = db.session.query(User).filter_by(username=user.username).first()
     if user is None:
         raise APIError('No such user', 404)
-    current_app.logger.debug(user.package.kubes)
+    # current_app.logger.debug(user.package.kubes)
     return jsonify({
         'status': 'OK',
         'data': dict([(k.kubes.name, k.kubes.id) for k in user.package.kubes])})

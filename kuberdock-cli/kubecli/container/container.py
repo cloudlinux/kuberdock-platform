@@ -20,7 +20,7 @@ from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
 # Some common error messages
 ERR_NO_SUCH_ITEM = "No such item"
 ERR_INVALID_KUBE_TYPE = "Valid kube type must be set. "\
-                        "Run 'kuberdock kubes' to get available kube types"
+                        "Run 'kuberdock kube-types' to get available kube types"
 ERR_SPECIFY_IMAGE_OPTION = "You must specify an image with option "\
                            "'-C|--container'"
 
@@ -236,9 +236,9 @@ class KuberDock(KubeCtl):
         Sends POST request to KuberDock to save configured container
         """
         data = self._prepare(final=True)
-        kubes = self._get_kubes()
+        kube_types = self._get_kube_types()
         try:
-            data['kube_type'] = int(kubes[data['kube_type']])
+            data['kube_type'] = int(kube_types[data['kube_type']])
         except (KeyError, ValueError, TypeError):
             raise SystemExit(ERR_INVALID_KUBE_TYPE)
         try:
@@ -265,14 +265,14 @@ class KuberDock(KubeCtl):
         except OSError:
             pass
 
-    def kubes(self):
+    def kube_types(self):
         """
-        Returns list of user kubes
+        Return list of available kube types
         """
         printout = PrintOut(wants_header=True,
                             fields=(('id', 12), ('name', 32)),
                             as_json=self.as_json)
-        data = self._get_kubes()
+        data = self._get_kube_types()
         printout.show_list([{'name': k, 'id': v} for k, v in data.iteritems()])
 
     def drives(self):
@@ -647,9 +647,9 @@ class KuberDock(KubeCtl):
         except ValueError:
             return name + random_sample
 
-    def _get_kubes(self):
+    def _get_kube_types(self):
         """
-        Gets user kubes info from backend
+        Get available kube types from backend
         """
         return self.query.unwrap(self.query.get(PRICING_PATH + 'userpackage'))
 

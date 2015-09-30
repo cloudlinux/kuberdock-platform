@@ -25,7 +25,7 @@ PODAPI_GET_RESULT1 = {
     ]
 }
 
-GET_KUBES_RESPONSE = {
+GET_KUBE_TYPES_RESPONSE = {
     "data": {
         "High CPU": 1,
         "High memory": 2,
@@ -93,7 +93,7 @@ class TestKubeCtl(unittest.TestCase):
     @mock.patch.object(container.KubeQuery, 'post')
     def test_create(self, post_mock):
         """Test for KubeCtl.create method."""
-
+        post_mock.return_value = {'status': 'OK'}
         with tempfile.TemporaryFile(mode='w+') as f:
             f.write('one\n')
             f.write('two')
@@ -239,7 +239,7 @@ class TestKuberDock(unittest.TestCase):
         # response for saving of pod
         post_mock.return_value = {'status': 'OK'}
         # response for getting kube types
-        get_mock.return_value = GET_KUBES_RESPONSE
+        get_mock.return_value = GET_KUBE_TYPES_RESPONSE
         kd = container.KuberDock(name=name)
         kd.save()
         # ensure temporary data file was deleted after saving
@@ -259,14 +259,14 @@ class TestKuberDock(unittest.TestCase):
 
     @mock.patch.object(container.PrintOut, 'show_list')
     @mock.patch.object(container.KubeQuery, 'get')
-    def test_kubes(self, get_mock, showlist_mock):
-        """Test for KuberDock.kubes method."""
-        get_mock.return_value = GET_KUBES_RESPONSE
+    def test_kube_types(self, get_mock, showlist_mock):
+        """Test for KuberDock.kube_types method."""
+        get_mock.return_value = GET_KUBE_TYPES_RESPONSE
         kd = container.KuberDock()
-        kd.kubes()
+        kd.kube_types()
         showlist_mock.assert_called_once_with(
             [{'name': name, 'id': value}
-             for name, value in GET_KUBES_RESPONSE['data'].iteritems()]
+             for name, value in GET_KUBE_TYPES_RESPONSE['data'].iteritems()]
         )
 
     @mock.patch.object(container.PrintOut, 'show_list')

@@ -64,8 +64,8 @@ def parser(subs):
     action.add_parser('list')
     #c_list = action.add_parser('list')
 
-    #c_kubes = action.add_parser('kubes')
-    action.add_parser('kubes')
+    #c_kubes = action.add_parser('kube-types')
+    action.add_parser('kube-types')
 
     c_drive = action.add_parser('drives')
     pdrive = c_drive.add_subparsers(help="Persistent Drive Action", title="Drive actions", description="Valid actions for persistent drives", dest="pdaction")
@@ -83,4 +83,4 @@ def parser(subs):
 def wrapper(data):
     args = make_config(data)
     container = KuberDock(**args)
-    getattr(container, args.get('action', 'get'), 'get')()
+    getattr(container, args.get('action', 'get').replace('-', '_'), 'get')()

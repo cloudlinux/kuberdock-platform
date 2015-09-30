@@ -45,17 +45,12 @@ define(['pods_app/app',
                 return this.model.is_checked ? 'pod-item checked' : 'pod-item';
             },
 
-            initialize: function(options){
-                this.index = options.childIndex;
-            },
-
             templateHelpers: function(){
                 var kubes = _.reduce(this.model.get('containers'), function(memo, c) {
                         return memo + c.kubes
                     }, 0),
                     checked = this.model.is_checked ? true : false;
                 return {
-                    index: this.index+1,
                     kubes: kubes,
                     checked: checked
                 }
@@ -189,12 +184,6 @@ define(['pods_app/app',
                     this.collection.fullCollection.each(function(m){m.is_checked = true;});
                 }
                 this.render();
-            },
-
-            childViewOptions: function(model, index){
-                return {
-                    childIndex: index
-                };
             },
 
             childEvents: {

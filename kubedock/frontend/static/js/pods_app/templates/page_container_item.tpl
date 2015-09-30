@@ -1,5 +1,4 @@
 <td class="checkboxes"><label class="custom"><input type="checkbox"><span></span></label></td>
-<td class="index"><%- index %></td>
 <td><span class="container-page-btn"><%- image %></span></td>
 <td><span class="<%- state %>"><%- state %></span></td>
 <td><span><%- kubes ? kubes : 'unknown' %></span></td>

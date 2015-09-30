@@ -2,7 +2,6 @@
 <thead>
     <tr class="main-table-head">
         <th class="checkboxes"><label class="custom"><input type="checkbox"><span></span></label></th>
-        <th>#</th>
         <th>Image name <!--<b class="caret"></b>--></th>
         <th>Status<!-- <b class="caret"></b>--></th>
         <th>Kube quantity <!--<b class="caret"></b>--></th>

@@ -83,7 +83,6 @@ define(['pods_app/app',
                 var kubes = this.model.get('kubes');
                 var startedAt = this.model.get('startedAt');
                 return {
-                    index: modelIndex + 1,
                     kubes: kubes ? kubes : 0,
                     startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' : localizeDatetime(startedAt, userSettings.timezone)
                 }

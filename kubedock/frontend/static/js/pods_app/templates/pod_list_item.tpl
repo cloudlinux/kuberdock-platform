@@ -9,7 +9,6 @@
         <span></span>
     </label>
 </td>
-<td class="index"><%- index %></td>
 <td>
     <span class="poditem-page-btn" title="Edit <%- name %> pod" ><%- name %></span>
 </td>

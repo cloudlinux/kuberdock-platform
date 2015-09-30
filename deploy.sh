@@ -98,7 +98,7 @@ ISAMAZON=false
 check_amazon()
 {
     log_it echo "Checking AWS..."
-    if [[ ! -z $(curl --connect-timeout 1 -s http://169.254.169.254/latest/) ]];then
+    if [ -f /sys/hypervisor/uuid ] && [ `head -c 3 /sys/hypervisor/uuid` == ec2 ];then
       ISAMAZON=true
       log_it echo "Looks like we are on AWS."
     else

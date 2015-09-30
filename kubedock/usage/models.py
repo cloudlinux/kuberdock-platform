@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy.dialects import postgresql
 from ..core import db
 from ..models_mixin import BaseModelMixin
-from ..settings import PD_SEPARATOR
+from ..kapi import pd_utils
 from ..users.models import User
 
 
@@ -89,9 +89,10 @@ class PersistentDiskState(BaseModelMixin, db.Model):
     def end(cls, user_id=None, pd_name=None, sys_drive_name=None):
         query = cls.query.filter_by(end_time=None)
         if user_id is None or pd_name is None:
-            pd_name, username = sys_drive_name.rsplit(PD_SEPARATOR, 1)
-            query = query.filter_by(pd_name=pd_name).join(User).filter(
-                User.username == username)
+            pd_name, user = pd_utils.get_drive_and_user(sys_drive_name)
+            if not user:
+                return
+            query = query.filter_by(pd_name=pd_name, user_id=User.id)
         else:
             query = query.filter_by(pd_name=pd_name, user_id=user_id)
         query.update({'end_time': datetime.utcnow()})

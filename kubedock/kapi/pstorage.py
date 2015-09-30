@@ -16,7 +16,8 @@ from ..nodes.models import Node
 from ..pods.models import Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..settings import PD_SEPARATOR, SSH_KEY_FILENAME
+from ..settings import SSH_KEY_FILENAME
+from . import pd_utils
 from ..utils import APIError
 
 
@@ -92,7 +93,7 @@ class PersistentStorage(object):
         :params size: int -> drive size in GB
         :param user: object -> user object
         """
-        drive_name = '{0}{1}{2}'.format(name, PD_SEPARATOR, user.username)
+        drive_name = pd_utils.compose_pdname(name, user)
         rv_code = self._create_drive(drive_name, size)
         if rv_code == 0:
             data = {
@@ -111,8 +112,12 @@ class PersistentStorage(object):
         :param name: string -> drive name
         :param user: object -> user object
         """
-        drive_name = '{0}{1}{2}'.format(name, PD_SEPARATOR, user.username)
+        drive_name = pd_utils.compose_pdname(name, user)
         rv = self._delete(drive_name)
+        if rv is None:
+            # drive name not found, try to delete by legacy name
+            drive_name = pd_utils.compose_pdname_legacy(name, user)
+            rv = self._delete(drive_name)
         if rv == 0 and hasattr(self, '_drives'):
             self._drives = [d for d in self._drives
                 if d['name'] != name and d['owner'] != user.username]
@@ -123,7 +128,7 @@ class PersistentStorage(object):
         Creates a filesystem on the device
         :param fs: string -> fs type by default ext4
         """
-        drive_name = '{0}{1}{2}'.format(drive, PD_SEPARATOR, user.username)
+        drive_name = pd_utils.compose_pdname(drive, user)
         self._makefs(drive_name, fs)
 
     def delete_by_id(self, drive_id):
@@ -149,8 +154,7 @@ class PersistentStorage(object):
         :param sys_drive_name: string -> system drive name
         """
         if name is None or user is None:
-            name, username = sys_drive_name.rsplit(PD_SEPARATOR, 1)
-            user = User.query.filter_by(username=username).one()
+            name, user = pd_utils.get_drive_and_user(sys_drive_name)
         PersistentDiskState.start(user.id, name, size)
 
     @staticmethod
@@ -177,7 +181,7 @@ class PersistentStorage(object):
         if hasattr(self, '_drives_from_db'):
             return self._drives_from_db
         self._drives_from_db = {}
-        pods = db.session.query(Pod).filter(Pod.status!='deleted')
+        pods = db.session.query(Pod).filter(Pod.status != 'deleted')
         for pod in pods:
             try:
                 drive_names = self._find_persistent(json.loads(pod.config))
@@ -205,11 +209,16 @@ class PersistentStorage(object):
         """
         If list of drives has mapped ones add pod it mounted to info
         """
-        if not any(map(itemgetter('in_use'), self._drives)):
+        if not any(drive.get('in_use') for drive in self._drives):
             return
         names = self._get_pod_drives()
-        for d in filter(itemgetter('in_use'), self._drives):
-            name = '{0}{1}{2}'.format(d['name'], PD_SEPARATOR, d['owner'])
+        for d in self._drives:
+            if not d.get('in_use'):
+                continue
+            user = User.query.filter_by(username=d['owner']).first()
+            if not user:
+                continue
+            name = pd_utils.compose_pdname(d['name'], user)
             d['pod'] = names.get(name)
 
     def _get_drives(self):
@@ -464,12 +473,12 @@ class CephStorage(PersistentStorage):
         drives = {}
         for node in raw_drives: # iterate by node ip addresses or names
             for item in raw_drives[node]:   # iterate by drive names
-                try:
-                    drive, user = item.rsplit(PD_SEPARATOR, 1)
-                except ValueError:  # drive name does not contain separator. Skip it
+                drive, user = pd_utils.get_drive_and_user(item)
+                if not user:
+                    # drive name does not contain separator. Skip it
                     continue
                 entry = {'name'  : drive,
-                         'owner' : user,
+                         'owner' : user.username,
                          'size'  : int(raw_drives[node][item]['size'] / 1073741824),
                          'id'    : md5(item).hexdigest(),
                          'in_use': raw_drives[node][item]['in_use']}
@@ -556,13 +565,12 @@ class AmazonStorage(PersistentStorage):
         self._drives = []
         raw_drives = self._get_raw_drives()
         for vol in raw_drives:
-            try:
-                item = vol.tags.get('Name', 'Nameless')
-                drive, user = item.rsplit(PD_SEPARATOR, 1)
-            except ValueError:
+            item = vol.tags.get('Name', 'Nameless')
+            drive, user = pd_utils.get_drive_and_user(item)
+            if not user:
                 continue
             entry = {'name'  : drive,
-                     'owner' : user,
+                     'owner' : user.username,
                      'size'  : vol.size,
                      'id'    : md5(item).hexdigest(),
                      'in_use': True if vol.status == 'in_use' else False}

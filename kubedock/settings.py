@@ -51,7 +51,10 @@ INFLUXDB_DATABASE = 'cadvisor'
 # Port to access elasticsearch via rest api
 ELASTICSEARCH_REST_PORT = 9200
 
-PD_SEPARATOR = '__SEP__'
+# separator for persisnet drive name - username after separator (LEGACY)
+PD_SEPARATOR_USERNAME = '__SEP__'
+# separator for persisnet drive name - user id after separator
+PD_SEPARATOR_USERID = '__SEPID__'
 PORTS_TO_RESTRICT = [ELASTICSEARCH_REST_PORT]
 ERROR_TOKEN = 'ERROR:'
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'

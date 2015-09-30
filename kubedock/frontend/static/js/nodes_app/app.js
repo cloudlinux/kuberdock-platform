@@ -497,11 +497,16 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                         },
                         statusCode: {
                             404: function(xhr) {
-                                $.notify('Log not founded', {
+                                $.notify('Log not found', {
                                     autoHideDelay: 5000,
                                     globalPosition: 'bottom left',
                                     className: 'error'
                                 });
+                            },
+                            200: function(xhr){
+                                if (xhr.data.hits.length == 0){
+                                    this.ui.textarea.append('<p>Nothing to show because containers log is empty.</p');
+                                }
                             }
                         }
                     });

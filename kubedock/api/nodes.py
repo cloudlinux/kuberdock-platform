@@ -17,10 +17,11 @@ from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit, s
 from ..utils import maintenance_protected
 from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
 from ..billing import Kube, kubes_to_limits
-from ..settings import (NODE_INSTALL_LOG_FILE, MASTER_IP, PD_SEPARATOR, AWS,
+from ..settings import (NODE_INSTALL_LOG_FILE, MASTER_IP, AWS,
                         CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT,
                         SSH_KEY_FILENAME, ELASTICSEARCH_REST_PORT,
                         KUBERDOCK_SETTINGS_FILE, ERROR_TOKEN)
+from ..kapi import pd_utils
 from ..kapi.podcollection import PodCollection
 from ..tasks import add_node_to_k8s
 from . import APIError
@@ -624,13 +625,12 @@ def get_ceph_volumes():
     data = handle_nodes(poll, nodes=nodes_)
     sets = [set(filter((lambda x: x[1] is None), i.items())) for i in data.values()]
     intersection = map(operator.itemgetter(0), sets[0].intersection(*sets[1:]))
-    username = KubeUtils._get_current_user().username
+    userid = KubeUtils._get_current_user().id
     for item in intersection:
-        try:
-            drive, user = item.rsplit(PD_SEPARATOR, 1)
-        except ValueError:
+        drive, user = pd_utils.get_drive_and_user(item)
+        if not user:
             continue
-        if user == username:
+        if user.id == userid:
             drives.append(drive)
     return drives
 
@@ -641,18 +641,17 @@ def get_aws_volumes():
         from ..settings import REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
     except ImportError:
         return drives
-    username = KubeUtils._get_current_user().username
+    userid = KubeUtils._get_current_user().id
     conn = boto.ec2.connect_to_region(
         REGION,
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
     for vol in conn.get_all_volumes():
-        try:
-            item = vol.tags.get('Name', 'Nameless')
-            drive, user = item.rsplit(PD_SEPARATOR, 1)
-        except ValueError:
+        item = vol.tags.get('Name', 'Nameless')
+        drive, user = pd_utils.get_drive_and_user(item)
+        if not user:
             continue
-        if user == username and vol.status == 'available':
+        if userid == user.id and vol.status == 'available':
             drives.append(drive)
     return drives
 

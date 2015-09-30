@@ -8,9 +8,11 @@ from .ippool import IpAddrPool
 
 from .pstorage import CephStorage, AmazonStorage
 from ..billing import kubes_to_limits
-from ..settings import KUBE_API_VERSION, PD_SEPARATOR, KUBERDOCK_INTERNAL_USER, \
+from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
                         AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
+from . import pd_utils
+from ..pods.models import Pod as PodModel
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
@@ -102,6 +104,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             return
         self.id = str(uuid4())
 
+
     def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
             return
@@ -114,8 +117,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     @staticmethod
     def _handle_persistent_storage(volume, owner):
         pd = volume.pop('persistentDisk')
-        device = '{0}{1}{2}'.format(
-            pd.get('pdName'), PD_SEPARATOR, owner.username)
+        pdname = pd.get('pdName')
+        device = _get_pd_device(pdname, owner)
         size = pd.get('pdSize')
         if CEPH:
             volume['rbd'] = {
@@ -325,3 +328,15 @@ def _del_docker_prefix(value):
     if not value:
         return value
     return value.split('docker://')[-1]
+
+
+def _get_pd_device(pdname, owner):
+    """Returns persistent drive name for a user and PD name.
+    Also handles backward compatitbility with old drive names where drive names
+    were composed with user name
+    """
+    user_drives = PodModel.get_user_persistent_drives(owner.id)
+    legacy_device = pd_utils.compose_pdname_legacy(pdname, owner)
+    if legacy_device in user_drives:
+        return legacy_device
+    return pd_utils.compose_pdname(pdname, owner)

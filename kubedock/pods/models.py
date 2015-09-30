@@ -73,6 +73,27 @@ class Pod(BaseModelMixin, db.Model):
             config = json.loads(self.config),
             status = self.status)
 
+    @classmethod
+    def get_user_persistent_drives(cls, user_id):
+        """Extracts existent persistent drives for a user."""
+        pods = cls.query.filter(cls.status != 'deleted',
+                                cls.owner_id == user_id)
+        drive_names = set()
+        for pod in pods:
+            try:
+                config = json.loads(pod.config)
+            except (TypeError, ValueError):
+                continue
+            volumes = config.get('volumes', None)
+            if not volumes:
+                continue
+            for volume in volumes:
+                if 'rbd' in volume:
+                    drive_names.add(volume['rbd']['image'])
+                elif 'awsElasticBlockStore' in volume:
+                    drive_names.add(volume['awsElasticBlockStore']['drive'])
+        return drive_names
+
 
 class ImageCache(db.Model):
     __tablename__ = 'image_cache'

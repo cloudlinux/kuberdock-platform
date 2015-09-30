@@ -308,17 +308,22 @@ def do_cycle_updates(with_testing=False):
     return is_failed
 
 
-def get_kuberdocks_toinstall(testing=False):
-    """
-    :param testing: boolean to enable testing repo during check
-    :return: sorted list of kuberdock packages that newer then installed one.
-    """
+def prepare_repos(testing):
     yb = yum.YumBase()
     yb.conf.cache = 0
     yb.repos.enableRepo('kube')
     if testing:
         yb.repos.enableRepo('kube-testing')
     yb.cleanMetadata()  # only after enabling repos to clean them too!
+    return yb
+
+
+def get_kuberdocks_toinstall(testing=False):
+    """
+    :param testing: boolean to enable testing repo during check
+    :return: sorted list of kuberdock packages that newer then installed one.
+    """
+    yb = prepare_repos(testing)
 
     try:
         installed_kuberdock = list(
@@ -465,6 +470,8 @@ if __name__ == '__main__':
                                        '--nodeps',
                                        '--test',
                                        args.local])
+                # To clean up repo cache:
+                ybase = prepare_repos(args.use_testing)
                 new_kuberdocks = [] if res and not args.reinstall else [args.local]
             else:
                 new_kuberdocks = get_kuberdocks_toinstall(args.use_testing)

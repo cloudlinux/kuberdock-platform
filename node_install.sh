@@ -24,7 +24,7 @@ check_status()
 
 if [[ $(getenforce) != 'Enforcing' ]];then
     echo "Seems like SELinux is disabled on this node."\
-    "You should enable it (may require to reboot node) and restart node "
+    "You should enable it (may require to reboot node) and restart node "\
     "installation again"
     echo $EXIT_MESSAGE
     exit 3

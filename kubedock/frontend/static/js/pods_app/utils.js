@@ -64,7 +64,7 @@ define({
     notifyWindow: function(b, t){
         var err = typeof b == "string" ? b : b.responseJSON ? b.responseJSON.data || JSON.stringify(b.responseJSON): b.responseText;
         if (b && b.status == 401){
-            location.reload();
+            window.location = '/logout'
         } else {
             $.notify(err,{
                 autoHideDelay: 5000,

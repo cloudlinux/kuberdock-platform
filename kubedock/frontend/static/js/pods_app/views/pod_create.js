@@ -142,10 +142,12 @@ define(['pods_app/app',
                             }
                         );
                         if (newValue.length > 64){
-                            return 'The maximum length of the Pod name must be less than 64 characters'
+                            utils.notifyWindow('The maximum length of the Pod name must be less than 64 characters');
+                            return ' ';
                         }
                         if (model) {
-                            return 'Pod with name "' + newValue + '" already exists. Try another name.'
+                            utils.notifyWindow('Pod with name "' + newValue + '" already exists. Try another name.');
+                            return ' ';
                         }
                     }
                 });

@@ -866,15 +866,6 @@ body{
     }
     /* end modal */
 
-    #page-preloader {
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: none;
-        z-index: 100500;
-        position: fixed;
-    }
     #page-preloader{
         top: 0;
         left: 0;
@@ -883,9 +874,10 @@ body{
         width: 60px;
         height: 60px;
         margin: auto;
-        z-index: 999;
-        position: absolute;
-        background: url('../img/preloader.gif') 0 0 no-repeat;
+        display: none;
+        z-index: 100500;
+        position: fixed;
+        background: url('../img/preloader.gif') center no-repeat;
     }
 
     /* alert messages */

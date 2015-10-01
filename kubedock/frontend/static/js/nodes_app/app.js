@@ -269,19 +269,11 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                 switch (true)
                 {
                 case !val:
-                    $.notify('Enter valid hostname', {
-                        autoHideDelay: 5000,
-                        globalPosition: 'bottom left',
-                        className: 'error'
-                    });
+                    utils.notifyWindow('Enter valid hostname');
                     this.ui.node_name.focus();
                     break;
                 case val && !pattern.test(val):
-                    $.notify('Hostname can t start with symbols like ".", "#", "%" or "/"', {
-                        autoHideDelay: 5000,
-                        globalPosition: 'bottom left',
-                        className: 'error'
-                    });
+                    utils.notifyWindow('Hostname can t start with symbols like ".", "#", "%" or "/"');
                     this.ui.node_name.focus();
                     break;
                 default:
@@ -306,12 +298,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                         error: function(model, response){
                             preloader.hide();
                             if (response.status == 409) {
-                                $.notify('Node "' + val + '" already exists', {
-                                    autoHideDelay: 5000,
-                                    clickToHide: true,
-                                    globalPosition: 'bottom left',
-                                    className: 'error',
-                                });
+                                utils.notifyWindow('Node "' + val + '" already exists');
                             }
                         }
                     });
@@ -497,11 +484,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                         },
                         statusCode: {
                             404: function(xhr) {
-                                $.notify('Log not found', {
-                                    autoHideDelay: 5000,
-                                    globalPosition: 'bottom left',
-                                    className: 'error'
-                                });
+                                utils.notifyWindow('Log not found');
                             },
                             200: function(xhr){
                                 if (xhr.data.hits.length == 0){

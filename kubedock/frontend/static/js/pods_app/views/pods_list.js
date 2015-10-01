@@ -190,6 +190,12 @@ define(['pods_app/app',
                 this.render();
             },
 
+            childViewOptions: function(model, index){
+                return {
+                    childIndex: index
+                };
+            },
+
             childEvents: {
                 'item:clicked': function(view){
                     var model = this.collection.at(view.index);

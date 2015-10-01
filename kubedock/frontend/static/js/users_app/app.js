@@ -116,18 +116,35 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             blockUser: function(){
-                var that = this;
-                this.model.save(
-                    {
-                        active: false
-                    },
-                    {
-                        wait: true,
-                        patch: true,
-                        success: function(){
-                            that.render();
-                        }
-                    });
+                var that = this,
+                    preloader = $('#page-preloader');
+                utils.modalDialog({
+                    title: "Block " + this.model.get('username'),
+                    body: "Are you sure want to block user '" +
+                        this.model.get('username') + "'?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            preloader.show();
+                            that.model.save({
+                                active: false
+                            },{
+                                wait: true,
+                                patch: true,
+                                success: function(){
+                                    preloader.hide();
+                                    that.render();
+                                },
+                                error: function(model, response){
+                                    preloader.hide();
+                                    utils.notifyWindow(response.statusText);
+                                }
+                            });
+                        },
+                        buttonCancel: true
+                    }
+                });
             },
 
             activatedUser: function(){
@@ -440,29 +457,35 @@ define(['marionette', 'paginator', 'utils'],
 
             onSave: function(){
                 var that = this,
+                    preloader = $('#page-preloader'),
                     username = this.ui.username.val(),
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
                 switch (true)
                 {
                 case this.ui.username.val() == '':
+                    utils.scrollTo(this.ui.username);
                     this.ui.username.notify("empty username");
                     this.ui.username.addClass('error');
                     break;
                 case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
+                    utils.scrollTo(this.ui.password);
                     this.ui.password.addClass('error');
                     this.ui.password_again.addClass('error');
                     this.ui.password_again.notify("empty password or don't match");
                     break;
                 case this.ui.email.val() == '':
+                    utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
                     this.ui.email.notify("empty E-mail");
                     break;
                 case this.ui.email.val() != '' && !pattern.test(this.ui.email.val()):
+                    utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
                     this.ui.email.notify("E-mail must be correct");
                     break;
                 default:
+                    preloader.show();
                     App.Data.users.create({
                         'username'        : username,
                         'first_name'      : this.ui.first_name.val(),
@@ -476,12 +499,17 @@ define(['marionette', 'paginator', 'utils'],
                     }, {
                         wait: true,
                         success: function(){
+                            preloader.hide();
                             App.router.navigate('/', {trigger: true})
                             $.notify('User "' + username + '" created successfully', {
                                 autoHideDelay: 4000,
                                 globalPosition: 'bottom left',
                                 className: 'success'
                             });
+                        },
+                        error: function(model, response){
+                            preloader.hide();
+                            utils.notifyWindow(response.statusText);
                         }
                     });
                 }

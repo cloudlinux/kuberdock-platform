@@ -914,11 +914,7 @@ define(['pods_app/app',
                         },
                         statusCode: {
                             404: function(xhr) {
-                                $.notify('Log not found', {
-                                    autoHideDelay: 5000,
-                                    globalPosition: 'bottom left',
-                                    className: 'error'
-                                });
+                                utils.notifyWindow('Log not found');
                             },
                             200: function(xhr){
                                 if (xhr.data.hits.length == 0){

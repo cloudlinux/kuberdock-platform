@@ -63,7 +63,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     App.contents.show(listLayout);
                 });
             },
-            
+
             showPodItem: function(id){
                 var that = this;
                 require(['pods_app/views/pod_item',
@@ -71,7 +71,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     var itemLayout = new App.Views.Item.PodItemLayout(),
                         model = WorkFlow.getCollection().fullCollection.get(id),
                         graphsOn = false;
-            
+
                     if (model === undefined) {
                         Pods.navigate('pods');
                         that.showPods();
@@ -82,15 +82,15 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         _.each(model.get('containers'), function(i){
                             i.parentID = this.parentID;
                         }, {parentID: id}));
-            
+
                     var masthead = new App.Views.Item.PageHeader({
                         model: new Backbone.Model({name: model.get('name')})
                     });
-            
+
                     var infoPanel = new App.Views.Item.InfoPanel({
                         collection: containerCollection
                     });
-            
+
                     that.listenTo(WorkFlow.getCollection(), 'pods:collection:fetched', function(){
                         try {
                             var model = WorkFlow.getCollection().fullCollection.get(id);
@@ -113,7 +113,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             console.log(e)
                         }
                     });
-                    
+
                     that.listenTo(itemLayout, 'display:pod:stats', function(data){
                         var statCollection = new App.Data.StatsCollection(),
                             that = this;
@@ -135,19 +135,19 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }
                         })
                     });
-            
+
                     that.listenTo(itemLayout, 'display:pod:list', function(data){
                         graphsOn = false;
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({
                             graphs: false,
                             model: model
                         }));
-            
+
                         itemLayout.info.show(new App.Views.Item.InfoPanel({
                             collection: containerCollection
                         }));
                     });
-            
+
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.masthead.show(masthead);
                         itemLayout.controls.show(new App.Views.Item.ControlsPanel({

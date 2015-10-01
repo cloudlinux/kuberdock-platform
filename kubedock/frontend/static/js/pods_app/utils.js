@@ -1,5 +1,4 @@
 define({
-
     modalDialog: function(options){
         var modal = $('.modal'),
         modalDialog = modal.find('.modal-dialog');
@@ -64,11 +63,15 @@ define({
 
     notifyWindow: function(b, t){
         var err = typeof b == "string" ? b : b.responseJSON ? b.responseJSON.data || JSON.stringify(b.responseJSON): b.responseText;
-        $.notify(err, {
-            autoHideDelay: 5000,
-            clickToHide: true,
-            globalPosition: 'bottom left',
-            className: 'error',
-        });
+        if (b && b.status == 401){
+            location.reload();
+        } else {
+            $.notify(err,{
+                autoHideDelay: 5000,
+                clickToHide: true,
+                globalPosition: 'bottom left',
+                className: 'error',
+            });
+        }
     }
 });

@@ -186,5 +186,23 @@ define(function () {
         return D.join(sep);
     };
 
+    this.notifyWindow = function(b, t){
+        var err = typeof b == "string" ? b : b.responseJSON ? b.responseJSON.data || JSON.stringify(b.responseJSON): b.responseText;
+        $.notify(err,{
+            autoHideDelay: 5000,
+            clickToHide: true,
+            globalPosition: 'bottom left',
+            className: 'error',
+        });
+    }
+
+    this.scrollTo = function(a, b){
+        el = a.offset().top;
+        $('html, body').animate({
+            scrollTop: el-50
+        }, 500);
+    }
+
+
     return this;
 });

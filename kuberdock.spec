@@ -155,7 +155,7 @@ fi
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %config %{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
 %config %{_sysconfdir}/nginx/conf.d/shared-etcd.conf
-%config %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
+%config(noreplace) %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock_upgrade.py
 

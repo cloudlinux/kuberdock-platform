@@ -1,8 +1,5 @@
 import base64
-#import datetime
 import json
-#import logging
-import operator
 import os
 import pwd
 import random
@@ -14,7 +11,7 @@ import warnings
 from ..image.image import Image
 from ..helper import KubeQuery, PrintOut
 from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
-    IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH)
+    IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH, PREDEFINED_APPS_PATH)
 
 
 # Some common error messages
@@ -23,6 +20,216 @@ ERR_INVALID_KUBE_TYPE = "Valid kube type must be set. "\
                         "Run 'kuberdock kube-types' to get available kube types"
 ERR_SPECIFY_IMAGE_OPTION = "You must specify an image with option "\
                            "'-C|--container'"
+
+class ResourceCommon(object):
+    """Helper class for all resource objects.
+    Stores common resource parameters.
+    """
+    def __init__(self, ctl, printout=False, as_json=False):
+        """
+        :param ctl: Controller object, must provide 'query' attribute
+        :param printout: flag to switch output mode
+        :param as_json: flag - perform output as json dump
+
+        """
+        self.ctl = ctl
+        self.as_json = as_json
+        self.printout_flag = printout
+
+    def query(self):
+        """Returns query object (KubeQuery)"""
+        return self.ctl.query
+
+    def printout(self, data):
+        """Prints out data if appropriate flag was set."""
+        if self.printout_flag:
+            prn = PrintOut(as_json=self.as_json)
+            prn.show(data)
+
+
+class PodResource(object):
+    def __init__(self, ctl, printout=False,
+                 name=None, filename=None, json=False, **_):
+        self.name = name
+        self.fin = filename
+        self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
+
+    def _find_pod_by_name(self, data):
+        with warnings.catch_warnings(): # Restore default behaviour on __exit__
+            # make warnings to raise the exception
+            warnings.simplefilter('error', UnicodeWarning)
+            for i in data:
+                try:
+                    if i['name'] == self.name:
+                        return i
+                except UnicodeWarning:
+                    if i['name'].encode('UTF-8') == self.name:
+                        return i
+    def _get(self):
+        query = self.resource.query()
+        data = query.unwrap(query.get(PODAPI_PATH))
+        if self.name:
+            data = self._find_pod_by_name(data)
+        return data
+
+    def get(self):
+        data = self._get()
+        if self.resource.printout_flag:
+            self.printout_pods(data)
+        return data
+
+    def delete(self):
+        pod = self._get()
+        if pod is None:
+            raise SystemExit('No such item')
+        pod_id = str(pod['id'])
+        query = self.resource.query()
+        print "DELETE: {}".format(PODAPI_PATH + pod_id)
+        query.delete(PODAPI_PATH + pod_id)
+        self.resource.printout("Deleted: {}".format(pod_id))
+        self.resource.ctl._set_delayed()
+
+    def create(self):
+        yaml_content = self.fin.read()
+        if not yaml_content:
+            raise SystemExit('Empty file content')
+        # API expects yaml file as a string in json structure:
+        # {"data": yaml_as_a_string}
+        query = self.resource.query()
+        answer = query.post(POD_CREATE_API_PATH, {'data': yaml_content})
+        if answer and answer.get('status', None) != 'OK':
+            raise SystemExit(u'Failed To create pod: {}'.format(str(answer)))
+        data = query.unwrap(answer)
+        self.resource.printout(data)
+        return data
+
+    @staticmethod
+    def _transform(data):
+        """ Converts json data of a pod to dict with fields "name", "status",
+        "labels", "images".
+        We expect here a dict with fields:
+            {
+              "name": name of the pod,
+              "status": status of the pod,
+              "labels": dict for some labels, for example {"name": "mypod"},
+              "containers": list of containers in the pod, each container is
+                 a dict, here we're extracting only "image" field - name
+                 of image in the container
+            }
+        Name and status will be returned as is, labels will be joined to
+        one string. Image names of container also will be joined to one string.
+
+        """
+        ready = ['name', 'status']
+        out = {k: data.get(k, '???') for k in ready}
+        out['labels'] = u','.join(
+            [u'{0}={1}'.format(k, v)
+             for k, v in data.get('labels', {}).iteritems()]
+        )
+        out['images'] = u','.join(
+            [i.get('image', 'imageless') for i in data.get('containers', [])]
+        )
+        return out
+
+    def printout_pods(self, data):
+        printout = PrintOut(
+            wants_header=True,
+            fields=(('name', 32), ('images', 32),
+                    ('labels', 64), ('status', 10)),
+            as_json=self.resource.as_json)
+        data = data or []
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        printout.show_list([self._transform(i) for i in data])
+
+
+class TemplateResource(object):
+    def __init__(self, ctl, id=None, filename=None, json=False,
+                 printout=False, **_):
+        self.app_id = id
+        self.fin = filename
+        self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
+
+    def get(self):
+        query = self.resource.query()
+        if not self.app_id:
+            raise SystemExit(u'Application id is not specified')
+        answer = query.get(PREDEFINED_APPS_PATH + str(self.app_id))
+        if answer.get('status', None) != 'OK':
+            raise SystemExit(
+                u'Application template not found for id = {}'.format(
+                    self.app_id)
+            )
+        data = query.unwrap(answer)
+        self.resource.printout(data)
+        return data
+
+    def create(self):
+        yaml_content = self.fin.read()
+        if not yaml_content:
+            raise SystemExit('Empty file content')
+        query = self.resource.query()
+        answer = query.post(PREDEFINED_APPS_PATH, {'template': yaml_content})
+        if answer.get('status', None) != 'OK':
+            raise SystemExit(u'Failed To create pod: {}'.format(str(answer)))
+        data = query.unwrap(answer)
+        self.resource.printout(data)
+        return data
+
+    def delete(self):
+        if not self.app_id:
+            raise SystemExit('Empty template identifier')
+        query = self.resource.query()
+        answer = query.delete(PREDEFINED_APPS_PATH + str(self.app_id))
+        if answer.get('status') != 'OK':
+            raise SystemExit(u'Failed to delete app template {}: {}'.format(
+                self.app_id, str(answer)))
+        self.resource.printout(
+            "Application template has been deleted, id = {}".format(self.app_id)
+        )
+
+    def update(self):
+        if not self.app_id:
+            raise SystemExit('Empty template identifier')
+        yaml_content = self.fin.read()
+        if not yaml_content:
+            raise SystemExit('Empty file content')
+        query = self.resource.query()
+        answer = query.put(
+            PREDEFINED_APPS_PATH + str(self.app_id),
+            {'template': yaml_content}
+        )
+        if answer and answer.get('status', None) != 'OK':
+            raise SystemExit(u'Failed To create pod: {}'.format(str(answer)))
+        data = query.unwrap(answer)
+        self.resource.printout(data)
+        return data
+
+
+class TemplatesResource(object):
+    def __init__(self, ctl, page=None, printout=False, json=json, **_):
+        self.page = page
+        self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
+
+    def get(self):
+        query = self.resource.query()
+        if self.page is None:
+            answer = query.get(PREDEFINED_APPS_PATH)
+        else:
+            answer = query.get(PREDEFINED_APPS_PATH, {"page": self.page})
+        if answer.get('status') != 'OK':
+            raise SystemExit('Failed to get list of predefined apps templates')
+        data = query.unwrap(answer)
+        self.resource.printout(data)
+        return data
+
+
+RESOURCE_MAP = {
+    'pod': PodResource,
+    'pods': PodResource,
+    'template': TemplateResource,
+    'templates': TemplatesResource
+}
 
 class KubeCtl(object):
     """
@@ -56,25 +263,22 @@ class KubeCtl(object):
         """
         Gets a list of user pods and prints either all or one
         """
-        printout = PrintOut(
-            wants_header=True,
-            fields=(('name', 32), ('images', 32),
-                    ('labels', 64), ('status', 10)),
-            as_json=self.as_json)
-        data = self.query.unwrap(self.query.get(PODAPI_PATH))
-        if hasattr(self, 'name'):
-            printout.show_list([self._transform(i) for i in data if i['name'] == self.name])
-        else:
-            printout.show_list([self._transform(i) for i in data])
+        resource = self._get_resource(True)
+        if not resource:
+            raise SystemExit('Unknown resource')
+        resource.get()
 
     def describe(self):
         """
         Gets a list of user pods, filter out one of them by name and prints it
         """
-        pod = self._get_pod()
-        if pod:
+        resource = self._get_resource(False)
+        if not resource:
+            raise SystemExit('Unknown resource')
+        data = resource.get()
+        if data:
             printout = PrintOut(as_json=self.as_json)
-            printout.show(pod)
+            printout.show(data)
         else:
             raise SystemExit(ERR_NO_SUCH_ITEM)
 
@@ -82,24 +286,24 @@ class KubeCtl(object):
         """
         Gets a list of user pods, filter out one of them by name and deletes it.
         """
-        data = self.query.unwrap(self.query.get(PODAPI_PATH))
-        try:
-            item = [i for i in data if i['name'] == self.name][0]
-            self.query.delete(PODAPI_PATH + item['id'])
-        except (IndexError, KeyError):
-            raise SystemExit(ERR_NO_SUCH_ITEM)
-        self._set_delayed()
+        resource = self._get_resource(True)
+        if not resource:
+            raise SystemExit('Unknown resource')
+        resource.delete()
 
     def create(self):
-        """Creates user pod by yaml specification."""
-        yaml_content = self.filename.read()
-        if not yaml_content:
-            raise SystemExit('Empty file content')
-        # API expects yaml file as a string in json structure:
-        # {"data": yaml_as_a_string}
-        answer = self.query.post(POD_CREATE_API_PATH, {'data': yaml_content})
-        if answer and answer.get('status', None) != 'OK':
-            raise SystemExit('Failed To create pod: {}'.format(str(answer)))
+        """Creates resource"""
+        resource = self._get_resource(True)
+        if not resource:
+            raise SystemExit('Unknown resource')
+        resource.create()
+
+    def update(self):
+        """Updates resource"""
+        resource = self._get_resource(True)
+        if not resource:
+            raise SystemExit('Unknown resource')
+        resource.update()
 
     def postprocess(self):
         if os.geteuid() != 0:
@@ -150,33 +354,11 @@ class KubeCtl(object):
                         print "Could not delete rule for uid {0} ({1})".format(
                             self.uid, fields[5])
 
-    @staticmethod
-    def _transform(data):
-        """ Converts json data of a pod to dict with fields "name", "status",
-        "labels", "images".
-        We expect here a dict with fields:
-            {
-              "name": name of the pod,
-              "status": status of the pod,
-              "labels": dict for some labels, for example {"name": "mypod"},
-              "containers": list of containers in the pod, each container is
-                 a dict, here we're extracting only "image" field - name
-                 of image in the container
-            }
-        Name and status will be returned as is, labels will be joined to
-        one string. Image names of container also will be joined to one string.
-
-        """
-        ready = ['name', 'status']
-        out = {k: data.get(k, '???') for k in ready}
-        out['labels'] = u','.join(
-            [u'{0}={1}'.format(k, v)
-             for k, v in data.get('labels', {}).iteritems()]
-        )
-        out['images'] = u','.join(
-            [i.get('image', 'imageless') for i in data.get('containers', [])]
-        )
-        return out
+    def _get_resource(self, printout):
+        resource_cls = RESOURCE_MAP.get(self._args['resource'])
+        if not resource_cls:
+            return None
+        return resource_cls(self, printout=printout, **self._args)
 
     def _set_delayed(self):
         """Delayed change of iptables rules (postprocess method).
@@ -198,7 +380,9 @@ class KuberDock(KubeCtl):
     """
     Class for creating KuberDock entities
     """
-    KUBEDIR = '.kube_containers'    #default directory for storing container configs
+    # default directory for storing container configs
+    KUBEDIR = '.kube_containers'
+    # file extension to store container config
     EXT = '.kube'
 
     def __init__(self, **args):

@@ -89,15 +89,16 @@ class KubeQuery(object):
                                'Accept': 'text/plain'}
         return self._run('post', res, args)
 
-    def put(self, res, data):
+    def put(self, res, data, rest=False):
         """Performs PUT query to resource specified in 'res' argument
         :param res: resource to PUT request
         :param data: optional PUT data
         """
         args = self._compose_args()
         args['data'] = data
-        args['headers'] = {'Content-type': 'application/json',
-                           'Accept': 'text/plain'}
+        if rest:
+            args['headers'] = {'Content-type': 'application/json',
+                            'Accept': 'text/plain'}
         return self._run('put', res, args)
 
     def delete(self, res):

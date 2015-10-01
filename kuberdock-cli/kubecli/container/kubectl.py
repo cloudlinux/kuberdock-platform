@@ -5,6 +5,9 @@ from .container import KubeCtl
 
 def parser(subs):
     resource_help = "A resource name to take action upon"
+    template_id_help = "Template identifier"
+    yaml_file_help = "YAML file path or '-' to pass file content via stdin"
+
     kubectl = subs.add_parser('kubectl')
     kubectl.set_defaults(call=wrapper)
     action = kubectl.add_subparsers(
@@ -23,6 +26,18 @@ def parser(subs):
     get_pods = get_resource.add_parser('pods')
     get_pod.add_argument('name', nargs='?', help=resource_help)
     get_pods.add_argument('name', nargs='?', help=resource_help)
+    get_template = get_resource.add_parser(
+        'template', help='Read template for predefined application'
+    )
+    get_template.add_argument(
+        '--id', required=True, help=template_id_help
+    )
+    get_templates = get_resource.add_parser(
+        'templates', help='Read all templates for predefined applications'
+    )
+    get_templates.add_argument(
+        '--page', required=False, help='Page number'
+    )
 
     desc = action.add_parser('describe')
     desc_resource = desc.add_subparsers(
@@ -46,9 +61,15 @@ def parser(subs):
     delete_pods = delete_resource.add_parser('pods')
     delete_pod.add_argument('name', help=resource_help)
     delete_pods.add_argument('name', help=resource_help)
+    delete_template = delete_resource.add_parser(
+        'template', help='Delete template of predefined application'
+    )
+    delete_template.add_argument(
+        '--id', required=True,
+        help=template_id_help
+    )
 
-    create = action.add_parser(
-        'create', help="Create template or pod from yaml file")
+    create = action.add_parser('create')
     # At the moment we accept only commands for creating of user's pods
     # from YAML specs.
     # Also there will be needed a command to create "predefined apps",
@@ -67,6 +88,36 @@ def parser(subs):
         type=argparse.FileType('r'),
         required=True,
         help="YAML file path or '-' to pass file content via stdin")
+    create_template = create_resource.add_parser(
+        'template',
+        help="Create and run predefined application template from yaml file"
+    )
+    create_template.add_argument(
+        '-f', '--filename',
+        type=argparse.FileType('r'),
+        required=True,
+        help=yaml_file_help
+    )
+
+    update = action.add_parser('update')
+    update_resource = update.add_subparsers(
+        help="Resource",
+        title="Target resource",
+        description="Valid resources for targets",
+        dest="resource")
+    update_template = update_resource.add_parser(
+        'template', help="Update exsiting template with new content from yaml"
+    )
+    update_template.add_argument(
+        '--id', required=True,
+        help=template_id_help
+    )
+    update_template.add_argument(
+        '-f', '--filename',
+        type=argparse.FileType('r'),
+        required=True,
+        help=yaml_file_help
+    )
 
     post = action.add_parser('postprocess')
     post.add_argument('name', help="Container name")

@@ -49,7 +49,7 @@ class TestKubeCtl(unittest.TestCase):
     def test_get(self, showlist_mock, get_mock):
         """Test for KubeCtl.get method."""
         get_mock.return_value = PODAPI_GET_RESULT1
-        kctl = container.KubeCtl(json=False)
+        kctl = container.KubeCtl(json=False, resource='pod')
         kctl.get()
         get_mock.assert_called_with(container.PODAPI_PATH)
         showlist_mock.assert_called_once_with([
@@ -64,11 +64,11 @@ class TestKubeCtl(unittest.TestCase):
         """Test for KubeCtl.describe method."""
         get_result = PODAPI_GET_RESULT1
         get_mock.return_value = get_result
-        kctl = container.KubeCtl(json=False, name='a')
+        kctl = container.KubeCtl(json=False, name='a', resource='pod')
         kctl.describe()
         show_mock.assert_called_once_with(get_result['data'][0])
         with self.assertRaises(SystemExit) as err:
-            kctl = container.KubeCtl(json=False, name='aaaa')
+            kctl = container.KubeCtl(json=False, name='aaaa', resource='pod')
             kctl.describe()
         self.assertEqual(err.exception.message, container.ERR_NO_SUCH_ITEM)
 
@@ -79,14 +79,14 @@ class TestKubeCtl(unittest.TestCase):
         """Test for KubeCtl.delete method."""
         get_result = PODAPI_GET_RESULT1
         get_mock.return_value = get_result
-        kctl = container.KubeCtl(json=False, name='a')
+        kctl = container.KubeCtl(json=False, name='a', resource='pod')
         kctl.delete()
         get_mock.assert_called_once_with(container.PODAPI_PATH)
         delete_mock.assert_called_once_with(
             container.PODAPI_PATH + get_result['data'][0]['id'])
         setdelayed_mock.assert_called_once_with()
         with self.assertRaises(SystemExit) as err:
-            kctl = container.KubeCtl(json=False, name='aaaa')
+            kctl = container.KubeCtl(json=False, name='aaaa', resource='pod')
             kctl.delete()
         self.assertEqual(err.exception.message, container.ERR_NO_SUCH_ITEM)
 
@@ -98,7 +98,7 @@ class TestKubeCtl(unittest.TestCase):
             f.write('one\n')
             f.write('two')
             f.seek(0)
-            kctl = container.KubeCtl(json=False, filename=f)
+            kctl = container.KubeCtl(json=False, filename=f, resource='pod')
             kctl.create()
         post_mock.assert_called_once_with(container.POD_CREATE_API_PATH,
                 {'data': 'one\ntwo'})

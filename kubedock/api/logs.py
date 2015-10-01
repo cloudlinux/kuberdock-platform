@@ -1,8 +1,12 @@
 """API for logs retreiving.
 """
 from flask import Blueprint, request, jsonify
+from flask.ext.login import current_user
 
-from ..utils import parse_datetime_str
+from ..api import PermissionDenied
+from ..rbac import check_permission
+from ..usage.models import ContainerState
+from ..utils import login_required_or_basic_or_token, parse_datetime_str
 from ..kapi import es_logs
 
 
@@ -10,6 +14,7 @@ logs = Blueprint('logs', __name__, url_prefix='/logs')
 
 
 @logs.route('/container/<host>/<containerid>', methods=['GET'])
+@login_required_or_basic_or_token
 def api_get_container_logs(host, containerid):
     """Return logs from specified host and container.
     Optional parameters (submitted via ?key=value&...):
@@ -27,6 +32,13 @@ def api_get_container_logs(host, containerid):
     TODO: add ordering parameter support.
 
     """
+    cs = ContainerState.query.filter(
+        ContainerState.pod.has(owner=current_user),
+        ContainerState.docker_id == containerid,
+    ).first()
+    if not cs:
+        raise PermissionDenied('Denied to {0}'.format(current_user.username))
+
     starttime = gettime_parameter(request.args, 'starttime')
     endtime = gettime_parameter(request.args, 'endtime')
     try:
@@ -39,6 +51,8 @@ def api_get_container_logs(host, containerid):
 
 
 @logs.route('/node/<host>/<date>', methods=['GET'])
+@login_required_or_basic_or_token
+@check_permission('get', 'nodes')
 def api_get_node_logs(host, date):
     """Extracts node's logs by query to node's elasticsearch.
     Optional parameters (submitted via ?key=value&...):

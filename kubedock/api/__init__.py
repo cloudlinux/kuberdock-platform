@@ -57,7 +57,7 @@ def on_app_error(e):
 
 def on_permission_denied(e):
     message = e.kwargs['message'] or 'Denied to {0}'.format(get_user_role())
-    return on_app_error(APIError('Error. {0}'.format(message), status_code=403))
+    return on_app_error(APIError(message, status_code=403))
 
 
 def on_404(e):

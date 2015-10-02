@@ -57,10 +57,16 @@ def dispatch_kind(docs):
             raise APIError(
                 'Not supported apiVersion. Must be {0}'.format(KUBE_API_VERSION))
         if kind == 'Pod':
+            if pod is not None:
+                raise APIError('Only one Pod per yaml is allowed')
             pod = doc
         elif kind == 'ReplicationController':
+            if rc is not None:
+                raise APIError('Only one ReplicationController per yaml is allowed')
             rc = doc
         elif kind == 'Service':
+            if service is not None:
+                raise APIError('Only one Service per yaml is allowed')
             service = doc
         else:
             raise APIError('Unsupported object kind')

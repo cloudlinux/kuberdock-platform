@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, render_template, redirect, request, url_for, flash, session)
-from flask.ext.login import login_user, logout_user, current_user
+from flask.ext.login import login_user, logout_user, current_user, login_required
 
 from ..users import User
 from ..users.signals import user_logged_in, user_logged_out
@@ -38,6 +38,7 @@ def login():
 
 
 @auth.route('/logout')
+@login_required
 def logout():
     user_logged_out.send(current_user.id)
     logout_user()

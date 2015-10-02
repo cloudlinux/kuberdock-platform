@@ -33,6 +33,7 @@ class CLI_COMMANDS:
     set_node_schedulable = 'set-node-schedulable'
     # not documented for user. It's for internal use only:
     after_reload = '--after-reload'
+    apply_one = 'apply-one'
 
 
 FAILED_MESSAGE = """\
@@ -49,6 +50,17 @@ to ensure that all works properly. \
 Use {0} {1} on|off to manually switch \
 cluster work mode (careful!)\
 """.format(os.path.basename(__file__), CLI_COMMANDS.set_maintenance)
+
+
+SUCCESSFUL_UPDATE_MESSAGE = """
+********************
+Kuberdock has been restarted.
+Maintenance mode is now disabled.
+Before update to next available version we STRONGLY RECOMMEND to check that \
+All nodes are healthy and finished reboot if they were rebooted. Also check \
+that kuberdock-internal pods are in "Running" state.
+********************
+"""
 
 
 def get_available_updates():
@@ -105,7 +117,7 @@ def load_update(upd):
     """
     try:
         module = import_module('scripts.' + upd.rsplit('.py')[0])
-    except ImportError as e:
+    except Exception as e:
         print >> sys.stderr, 'Error importing update script {0}. {1}'.format(
             upd, e.__repr__())
         return None, None, None, None, None
@@ -249,6 +261,45 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
     return True
 
 
+def run_script(upd, with_testing):
+    """
+    :param upd: update script file name
+    :param with_testing: bool enable testing or not
+    :return: True if successful else False
+    """
+    db_upd, upgrade_func, downgrade_func, upgrade_node_func,\
+        downgrade_node_func = load_update(upd)
+    if not db_upd:
+        print >> sys.stderr, "Failed to load upgrade script file"
+        return False
+
+    master_ok = upgrade_master(upgrade_func, downgrade_func, db_upd,
+                               with_testing)
+    if master_ok:
+        if upgrade_node_func:
+            nodes_ok = upgrade_nodes(upgrade_node_func, downgrade_node_func,
+                                     db_upd, with_testing)
+            if nodes_ok:
+                db_upd.status = UPDATE_STATUSES.applied
+                db_upd.print_log('{0} successfully applied. '
+                                 'All nodes are upgraded'.format(upd))
+                res = True
+            else:
+                db_upd.status = UPDATE_STATUSES.nodes_failed
+                db_upd.print_log("{0} failed. Unable to upgrade some nodes"
+                                 .format(upd))
+                res = False
+        else:
+            db_upd.status = UPDATE_STATUSES.applied
+            db_upd.print_log('{0} successfully applied'.format(upd))
+            res = True
+    else:
+        res = False
+    db_upd.end_time = datetime.utcnow()
+    db.session.commit()
+    return res
+
+
 def do_cycle_updates(with_testing=False):
     """
     :return: False if no errors or script name at which was error
@@ -256,55 +307,28 @@ def do_cycle_updates(with_testing=False):
     to_apply = get_available_updates()
     last = get_applied_updates()
     if last:
+        # Start from last failed update
         to_apply = to_apply[to_apply.index(last[-1])+1:]
-    is_failed = False
     if not to_apply:
-        # This is unnecessary, change timestamp of kuberdock.ini triggers
-        # uwsgi to reload kuberdock, but to be sure:
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
-        print 'There is no new upgrade scripts to apply. ' \
-              'Kuberdock has been restarted. ' \
-              'Maintenance mode is now disabled.'
-        return is_failed
+        print 'There is no new upgrade scripts to apply. ' + \
+              SUCCESSFUL_UPDATE_MESSAGE
+        return False
 
+    is_failed = False
     for upd in to_apply:
-        is_failed = upd
-        db_upd, upgrade_func, downgrade_func, upgrade_node_func,\
-            downgrade_node_func = load_update(upd)
-        if not db_upd:
+        if not run_script(upd, with_testing):
+            is_failed = upd
             break
 
-        if upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
-            if upgrade_node_func:
-                if upgrade_nodes(upgrade_node_func, downgrade_node_func,
-                                 db_upd, with_testing):
-                    is_failed = False
-                    db_upd.status = UPDATE_STATUSES.applied
-                    db_upd.print_log('{0} successfully applied. '
-                                     'All nodes are upgraded'.format(upd))
-                else:   # not successful
-                    db_upd.status = UPDATE_STATUSES.nodes_failed
-                    db_upd.print_log("{0} failed. Unable to upgrade some nodes"
-                                     .format(upd))
-            else:
-                is_failed = False
-                db_upd.status = UPDATE_STATUSES.applied
-                db_upd.print_log('{0} successfully applied'.format(upd))
-        else:
-            db_upd.end_time = datetime.utcnow()
-            db.session.commit()
-            break
-        db_upd.end_time = datetime.utcnow()
-        db.session.commit()
     if is_failed:
         print >> sys.stderr, "Update {0} has failed.".format(is_failed)
         sys.exit(2)
     else:
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
-        print 'All update scripts are applied. Kuberdock has been restarted. ' \
-              'Maintenance mode is now disabled.'
+        print 'All update scripts are applied. ' + SUCCESSFUL_UPDATE_MESSAGE
     return is_failed
 
 
@@ -393,6 +417,13 @@ def parse_cmdline():
         dest='node',
         help='Node hostname')
 
+    apply_one_cmd = subparsers.add_parser(
+        CLI_COMMANDS.apply_one,
+        help='Used to manually run specified upgrade script')
+    apply_one_cmd.add_argument(
+        dest='script_file',
+        help='Update script file name (without path)')
+
     # for default subparser
     if filter(lambda x: not x.startswith('__') and x in CLI_COMMANDS.__dict__.values(), sys.argv[1:]):
         return root_parser.parse_args()
@@ -461,6 +492,19 @@ if __name__ == '__main__':
             helpers.set_maintenance(True)
             do_cycle_updates(args.use_testing)
             sys.exit(0)
+
+        if args.command == CLI_COMMANDS.apply_one:
+            if not os.path.exists(os.path.join(settings.UPDATES_PATH,
+                                               args.script_file)):
+                print 'There is no such upgrade script in scripts directory'
+                sys.exit(0)
+            helpers.set_maintenance(True)
+            if run_script(args.script_file, args.use_testing):
+                helpers.restart_service(settings.KUBERDOCK_SERVICE)
+                helpers.set_maintenance(False)
+                print SUCCESSFUL_UPDATE_MESSAGE
+            sys.exit(0)
+
         if args.command == CLI_COMMANDS.upgrade:
             if args.use_testing:
                 print 'Testing repo enabled.'
@@ -477,7 +521,8 @@ if __name__ == '__main__':
                 new_kuberdocks = get_kuberdocks_toinstall(args.use_testing)
             if new_kuberdocks:
                 if not args.reinstall:
-                    print 'Newer kuberdock package is available.'
+                    print 'Newer kuberdock package is available: {0}'\
+                          .format(new_kuberdocks[0])
                 ans = raw_input('Do you want to upgrade it ? [y/n]:')
                 if ans in ('y', 'yes'):
                     helpers.set_maintenance(True)

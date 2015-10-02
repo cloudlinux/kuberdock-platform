@@ -28,12 +28,7 @@ class TestHelperKubeQuery(unittest.TestCase):
         responses.add(responses.GET, TEST_URL + path1,
                       body='{"error": "not found"}', status=404,
                       content_type='application/json')
-        with self.assertRaises(SystemExit) as err:
-            query.get(path1)
-        exc = err.exception
-        json_message = json.loads(exc.message)
-        self.assertEqual(json_message['status'], 'ERROR')
-        self.assertTrue(json_message['message'].startswith('404'))
+        self.assertRaises(SystemExit, query.get, path1)
 
         body = '{"data": [1,2,3]}'
         responses.add(responses.GET, TEST_URL + path2,

@@ -12,7 +12,7 @@
             <div id="tab-content" class="environment clearfix">
                 <div class="image-name-wrapper">
                     <%- image %>
-                    <a class="pull-right" href="<%- url %>" target="blank">Learn more about variables for this image</a>
+                    <a class="pull-right image-link" href="<%- url %>" target="blank">Learn more about variables for this image</a>
                 </div>
                 <% if (env.length != 0){ %>
                 <div class="row no-padding">
@@ -101,6 +101,7 @@
                     <% } %>
                     <!-- <span>Terminate</span> -->
                     <!-- <span>Redeploy</span> -->
+                    <!-- <a class="pull-right image-link" href="" target="blank">Learn more about variables for this image</a> -->
                 </div>
                 <div id="tab-content">
                     <div class="col-xs-10">

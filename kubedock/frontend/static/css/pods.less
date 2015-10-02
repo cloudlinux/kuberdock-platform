@@ -865,9 +865,6 @@
                     margin-bottom: 30px;
                     padding-bottom: 18px;
                     border-bottom: 1px solid #DDD;
-                    a{
-                        font-size: 13px;
-                    }
                 }
                 .policy, .kube-type-wrapper{
                     position: relative;
@@ -1546,6 +1543,7 @@
             }
         }
         .status-line{
+            .clearfix;
             span{
                 color: #4e5665;
                 font-size: 13px;
@@ -1589,6 +1587,30 @@
                             background-position: 0 -17px;
                         }
                     }
+                }
+            }
+        }
+        .image-link{
+            font-size: 13px;
+            padding-left: 25px;
+            position: relative;
+            &:before{
+                .transition(all 500ms ease);
+                top: 0;
+                left: 0;
+                bottom: 0;
+                content: '';
+                width: 17px;
+                height: 16px;
+                margin: auto;
+                position: absolute;
+                background: url('../img/image-link-icon.png') 0 0 no-repeat;
+            }
+            &:hover{
+                text-decoration: none;
+                &:before{
+                    .transition(all 500ms ease);
+                    left: 4px;
                 }
             }
         }

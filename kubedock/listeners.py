@@ -119,7 +119,7 @@ def update_containers_state(event_type, pod_id, containers):
 
     for container in containers:
         container_name = container['name']
-        docker_id = container['containerID']
+        docker_id = container['containerID'].split('docker://')[-1]
         kubes = container.get('kubes', 1)
         for state in container['state'].values():
             start = state.get('startedAt')

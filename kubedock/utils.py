@@ -53,22 +53,24 @@ def login_required_or_basic_or_token(func):
         if current_app.login_manager._login_disabled:
             return func(*args, **kwargs)
         if not current_user.is_authenticated():
+            authenticated_user = None
             if request.authorization is not None:
                 username = request.authorization.get('username', None)
                 passwd = request.authorization.get('password', None)
                 if username is not None and passwd is not None:
                     user = User.query.filter_by(username=username).first()
                     if user is not None and user.verify_password(passwd):
-                        g.user = user
-                        return func(*args, **kwargs)
-            token = request.args.get('token')
-            if token:
-                user = User.query.filter_by(token=token).first()
-                if user is not None:
-                    g.user = user
-                    return func(*args, **kwargs)
-            raise APIError('Not Authorized', status_code=401)
-            #return current_app.login_manager.unauthorized()
+                        authenticated_user = user
+            else:
+                token = request.args.get('token')
+                if token:
+                    authenticated_user = User.query.filter_by(token=token).first()
+
+            if authenticated_user is None:
+                raise APIError('Not Authorized', status_code=401)
+            if not authenticated_user.active:
+                raise APIError('User is in inactive status', status_code=403)
+            g.user = authenticated_user
         return func(*args, **kwargs)
     return decorated_view
 

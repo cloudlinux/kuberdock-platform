@@ -441,7 +441,7 @@ def add_node(data, do_deploy=True, with_testing=False):
                                                 MASTER_IP,
                                                 internal_ku_token)
         check_new_pod_data(logs_config, ku)
-        logs_pod = PodCollection(ku).add(logs_config)
+        logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
         PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
 
         dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
@@ -449,7 +449,7 @@ def add_node(data, do_deploy=True, with_testing=False):
         if not dns_pod:
             dns_config = get_dns_pod_config()
             check_new_pod_data(dns_config, ku)
-            dns_pod = PodCollection(ku).add(dns_config)
+            dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
             PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 
         try:

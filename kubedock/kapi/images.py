@@ -3,7 +3,7 @@ import json
 import re
 import requests
 from urlparse import urlparse, parse_qsl
-from collections import Mapping
+from collections import Mapping, defaultdict
 from datetime import datetime, timedelta
 from urllib import urlencode
 
@@ -31,11 +31,20 @@ class DockerAuth(requests.auth.AuthBase):
         self.num_401_calls = 0
 
     def get_token(self, chal):
+        """
+        Try to complete the challenge.
+
+        :param chal: challenge string
+        :returns: token or None
+        """
         url = urlparse(chal.pop('realm'))
         query = urlencode(dict(parse_qsl(url.query), **chal))
         url = url._replace(query=query).geturl()
         auth = None if self.username is None else (self.username, self.password)
-        return requests.get(url, auth=auth).json().get('token')
+        response = requests.get(url, auth=auth)
+        data = _json_or_none(response)
+        if isinstance(data, dict):
+            return data.get('token')
 
     def handle_401(self, response, **kwargs):
         s_auth = response.headers.get('www-authenticate')
@@ -71,35 +80,78 @@ class DockerAuth(requests.auth.AuthBase):
         return request
 
 
+def docker_auth_v1(session, registry, repo, auth):
+    """
+    Docker Registry v1 authentication (using both token and session)
+
+    :param session: requests.Session object
+    :param registry: full registry address (https://quay.io)
+    :param repo: repo name including "namespace" (library/nginx)
+    :param auth: (username, password) or None
+    :returns: True if auth was successful otherwise False
+    """
+    if registry == DEFAULT_REGISTRY:  # dockerhub have index on different host
+        registry = 'https://index.docker.io'
+    url = get_url(registry, 'v1/repositories', repo, 'images')
+    response = session.get(url, auth=auth, headers={'x-docker-token': 'true'})
+    if response.status_code != 200:
+        return False
+    token = response.headers.get('x-docker-token')
+    if token:
+        session.headers['authorization'] = 'Token {0}'.format(token)
+    return True
+
+
 def get_url(base, *path):
     return urlparse(base)._replace(path='/'.join(path)).geturl()
+
+
+def _json_or_none(response):
+    try:
+        return response.json()
+    except ValueError:
+        pass
 
 
 def request_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTRY):
     """
     Get container config from image manifest using Docker Registry API v2 or
     from image/json using Docker Registry API v1.
+
+    :param repo: repo name including "namespace" (library/nginx)
+    :param tag: image tag
+    :param auth: (username, password) or None
+    :param registry: full registry address (https://quay.io)
+    :returns: container config or None
     """
     s = requests.Session()
     s.verify = False  # FIXME: private registries with self-signed certs
 
     # try V2 API
     url = get_url(registry, 'v2', repo, 'manifests', tag)
-    response = s.get(url, auth=DockerAuth(auth))
-    if response.status_code == 200:
-        return json.loads(response.json()['history'][0]['v1Compatibility'])['config']
-    elif response.headers.get('docker-distribution-api-version') != 'registry/2.0':
-        # try V1 API
+    try:
+        v2_data = _json_or_none(s.get(url, auth=DockerAuth(auth)))
+        try:
+            return json.loads(v2_data['history'][0]['v1Compatibility'])['config']
+        except (ValueError, KeyError, TypeError):
+            pass
+    except requests.RequestException:
+        pass
+
+    # v2 API is not available or has some weird auth method. Let's try v1 API
+    try:
+        docker_auth_v1(s, registry, repo, auth)
         url = get_url(registry, 'v1/repositories', repo, 'tags', tag)
-        response = s.get(url, auth=auth)  # get image id for the tag
-        if response.status_code == 200:
-            image_id = response.json()
-            # get the right session cookie (otherwise "quay.io: namespace is missing" error)
-            s.get(get_url(registry, 'v1/repositories', repo, 'images'), auth=auth)
-            url = get_url(registry, 'v1/images', image_id, 'json')  # get image info
-            response = s.get(url, auth=auth)
-            if response.status_code == 200:
-                return response.json()['config']
+        image_id = _json_or_none(s.get(url, auth=auth))  # get image id for the tag
+        if image_id is not None:
+            url = get_url(registry, 'v1/images', image_id, 'json')
+            data = _json_or_none(s.get(url, auth=auth))  # get image info
+            try:
+                return data['config']
+            except (KeyError, TypeError):
+                pass
+    except requests.RequestException:
+        pass
 
 
 def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY):
@@ -118,7 +170,7 @@ def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY):
         'image': image,
         'command': ([] if raw_config.get('Entrypoint') is None else
                     raw_config['Entrypoint']),
-        'args': raw_config['Cmd'],
+        'args': [] if raw_config.get('Cmd') is None else raw_config['Cmd'],
         'env': [{'name': key, 'value': value} for key, value in
                 (line.split('=', 1) for line in raw_config['Env'])],
         'ports': [{'number': int(port), 'protocol': proto} for port, proto in
@@ -191,34 +243,51 @@ def parse_image_name(image):
 
 
 def check_images_availability(images, secrets=()):
-    defaults = {'registry': DEFAULT_REGISTRY, 'v2': True, 'auth': None}
-    secrets = [dict(
-        defaults, auth=(secret['username'], secret['password']),
-        registry=complement_registry(secret.get('registry') or DEFAULT_REGISTRY)
-    ) for secret in secrets]
+    """
+    Check if all images are available using provided credentials.
+
+    :param images: list of images
+    :param secrets: list of secrets
+    :raises APIError: if some image is not available
+    """
+    registries = defaultdict(lambda: {'v2_available': True, 'auth': [None]})
+    for secret in secrets:
+        registry = complement_registry(secret.get('registry', DEFAULT_REGISTRY))
+        registries[registry]['auth'].append((secret['username'], secret['password']))
 
     for image in images:
-        registry, repo, tag = parse_image_name(image)
-        registry = complement_registry(registry)
+        _check_image_availability(image, registries)
 
+
+def _check_image_availability(image, registries):
+    registry_url, repo, tag = parse_image_name(image)
+    registry_url = complement_registry(registry_url)
+    registry = registries[registry_url]
+
+    for auth in registry['auth']:
         s = requests.Session()
         s.verify = False  # FIXME: private registries with self-signed certs
 
-        # iterate over all secrets + one try without auth
-        for secret in secrets + [dict(defaults, registry=registry)]:
-            if urlparse(secret['registry']).netloc != urlparse(registry).netloc:
-                continue
+        # For now too many registries don't support
+        # Docker Registry v2 API, so we'll try v1 first.
+        try:
+            if docker_auth_v1(s, registry_url, repo, auth):
+                url = get_url(registry_url, 'v1/repositories', repo, 'tags', tag)
+                response = s.get(url, auth=auth)
+                if s.get(url, auth=auth).status_code == 200:
+                    return True
+        except requests.RequestException:
+            pass
 
-            if secret['v2']:  # try V2 API
-                url = get_url(registry, 'v2', repo, 'manifests', tag)
-                response = s.get(url, auth=DockerAuth(secret['auth']))
+        if registry['v2_available']:  # if v1 didn't work and v2 is available
+            url = get_url(registry_url, 'v2', repo, 'manifests', tag)
+            try:
+                response = s.get(url, auth=DockerAuth(auth))
                 if response.status_code == 200:
-                    break
-                secret['v2'] = response.headers.get(
+                    return True
+                # remember if v2 is not available at all
+                registry['v2_available'] = response.headers.get(
                     'docker-distribution-api-version') == 'registry/2.0'
-            if not secret['v2']:
-                url = get_url(registry, 'v1/repositories', repo, 'tags', tag)
-                if s.get(url, auth=secret['auth']).status_code == 200:
-                    break
-        else:  # loop finished without breaks
-            raise APIError('image {0} is not available'.format(image))
+            except requests.RequestException:
+                pass
+    raise APIError('image {0} is not available'.format(image))

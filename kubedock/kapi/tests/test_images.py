@@ -38,6 +38,11 @@ class TestGetContainerConfig(unittest.TestCase):
     def test_get_container_config_3rd_party_registry_public(self):
         self.validate(get_container_config('quay.io/sergey_gruntovsky/mynginx'))
 
+        self.validate(get_container_config('gcr.io/google_containers/etcd:2.0.9'))
+        self.validate(get_container_config('gcr.io/google_containers/kube2sky:1.11'))
+        self.validate(get_container_config(
+            'gcr.io/google_containers/skydns:2015-03-11-001'))
+
     # @unittest.skip('')
     def test_get_container_config_3rd_party_registry_public_auth(self):
         self.validate(get_container_config(
@@ -109,16 +114,23 @@ class TestMisc(unittest.TestCase):
 
 # @unittest.skip('')
 class TestCheckImagesAvailability(unittest.TestCase):
-    def test_default_registry(self):
+    def test_default_registry_public(self):
         check_images_availability(['nginx'])
-        # TODO: dockerhub too many failed login attempts for username or IP address
-        # check_images_availability(['nginx', 'wncm/test_private'], [
-        #     {'username': 'wncm', 'password': 'mfhhh94kw02z'}
-        # ])
-        # with self.assertRaises(APIError):
-        #     check_images_availability(['nginx', 'wncm/test_private'], [
-        #         {'username': 'wncm', 'password': 'wrong_password'}
-        #     ])
+
+    @unittest.skip('TODO: dockerhub too many failed login attempts')
+    def test_default_registry_private(self):
+        check_images_availability(['nginx', 'wncm/test_private'], [
+            {'username': 'wncm', 'password': 'mfhhh94kw02z'}
+        ])
+        with self.assertRaises(APIError):
+            check_images_availability(['nginx', 'wncm/test_private'], [
+                {'username': 'wncm', 'password': 'wrong_password'}
+            ])
+
+    def test_gcr(self):
+        check_images_availability(['gcr.io/google_containers/etcd:2.0.9',
+                                   'gcr.io/google_containers/kube2sky:1.11',
+                                   'gcr.io/google_containers/skydns:2015-03-11-001'])
 
     def test_quay(self):
         check_images_availability(['quay.io/quay/redis'])

@@ -59,7 +59,7 @@ def initial_fixtures():
 
 def user_fixtures():
     password = 'o3r2hdfe'
-    user = User(username='test_user', password=password,
+    user = User(username='test_user', password=password, active=True,
                 role_id=Role.filter_by(rolename='User').first().id,
                 package_id=0, email='mfkdeogn49ekj@test.test').save()
     return user, password
@@ -67,7 +67,7 @@ def user_fixtures():
 
 def admin_fixtures():
     password = 'mdld0oenbf'
-    user = User(username='test_admin', password=password,
+    user = User(username='test_admin', password=password, active=True,
                 role_id=Role.filter_by(rolename='Admin').first().id,
                 package_id=0, email='mdfldpnrfu3489e@test.test').save()
     return user, password

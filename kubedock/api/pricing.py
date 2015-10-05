@@ -210,7 +210,8 @@ class PackageKubesAPI(KubeUtils, MethodView):
         package = Package.query.get(package_id)
         if package is None:
             raise APIError('Package not found', 404)
-        return [kube.kubes.to_dict() for kube in package.kubes if kube.kubes is not None]
+        return [dict(kube.kubes.to_dict(), kube_price=kube.kube_price)
+                for kube in package.kubes if kube.kubes is not None]
 
     @check_permission('create', 'users')
     def post(self, package_id):

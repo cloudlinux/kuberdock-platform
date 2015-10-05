@@ -46,6 +46,35 @@ done
 
 # SOME HELPERS
 
+install_repos()
+{
+#1 Add kubernetes repo
+cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
+[kube]
+name=kube
+baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
+enabled=0
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF
+
+
+#1.1 Add kubernetes testing repo
+cat > /etc/yum.repos.d/kube-cloudlinux-testing.repo << EOF
+[kube-testing]
+name=kube-testing
+baseurl=http://repo.cloudlinux.com/kubernetes-testing/x86_64/
+enabled=0
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF
+
+#2 Import some keys
+do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+do_and_log rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+yum_wrapper -y install epel-release
+}
+
 do_and_log()
 # Log all output to LOG-file and screen, and stop script on error
 {
@@ -227,33 +256,6 @@ fi
 # Just a workaround for compatibility
 NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
-#1 Add kubernetes repo
-cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
-[kube]
-name=kube
-baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
-enabled=0
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF
-
-
-#1.1 Add kubernetes testing repo
-cat > /etc/yum.repos.d/kube-cloudlinux-testing.repo << EOF
-[kube-testing]
-name=kube-testing
-baseurl=http://repo.cloudlinux.com/kubernetes-testing/x86_64/
-enabled=0
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF
-
-#2 Import some keys
-do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-do_and_log rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-yum_wrapper -y install epel-release
-
-
 # Do some preliminaries for aws/non-aws setups
 HAS_CEPH=no
 
@@ -272,6 +274,7 @@ if [ "$ISAMAZON" = true ];then
     fi
 
     if [ -z "$ROUTE_TABLE_ID" ];then
+        install_repos
         yum_wrapper install aws-cli -y
         INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
         INSTANCE_DATA=$(aws ec2 describe-instances --region=$REGION --instance-id $INSTANCE_ID)
@@ -377,6 +380,7 @@ fi
 
 # 3 Install ntp, we need correct time for node logs
 # for now, etcd-ca and bridge-utils needed during deploy only
+install_repos
 yum_wrapper install -y ntp
 yum_wrapper install -y etcd-ca
 yum_wrapper install -y bridge-utils

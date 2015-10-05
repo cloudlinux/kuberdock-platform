@@ -118,6 +118,8 @@ def update_containers_state(event_type, pod_id, containers):
         return
 
     for container in containers:
+        if 'containerID' not in container:
+            continue
         container_name = container['name']
         docker_id = container['containerID'].split('docker://')[-1]
         kubes = container.get('kubes', 1)
@@ -224,7 +226,7 @@ def process_pods_event(data, app):
         for container in pod.get('containerStatuses', []):
             if 'containerID' in container:
                 container_name = container['name']
-                container_id = container['containerID'].partition('docker://')[2]
+                container_id = container['containerID'].split('docker://')[-1]
                 containers[container_name] = container_id
         if containers:
             set_limit(host, pod_id, containers, app)

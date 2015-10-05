@@ -247,7 +247,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
 
     def logout(self):
         for session in SessionData.query.all():
-            randval, hmac_digest, data = session.data
+            randval, hmac_digest, data = session.expand_data()
+            if not data:
+                continue
             try:
                 user_id = int(data.get('user_id'))
             except (TypeError, ValueError):
@@ -353,6 +355,7 @@ class UserActivity(BaseModelMixin, db.Model):
 class SessionData(db.Model):
     __tablename__ = 'session_data'
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
+    #: tuple of (randval, hmac_digest, data)
     data = db.Column(db.PickleType, nullable=True)
     time_stamp = db.Column(db.DateTime, nullable=False)
 
@@ -360,6 +363,10 @@ class SessionData(db.Model):
         self.id = id
         self.data = data
         self.time_stamp = datetime.datetime.now()
+
+    def expand_data(self):
+        """Returns tuple of (randval, hmac_digest, data)."""
+        return self.data or (None, None, None)
 
     def __repr__(self):
         return "<SessionData(id='%s', data='%s', time_stamp='%s')>" % (

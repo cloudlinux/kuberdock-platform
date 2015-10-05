@@ -23,7 +23,8 @@ except ImportError:
 
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
-from .utils import update_dict, get_api_url, send_event, send_logs
+from .utils import (
+    update_dict, get_api_url, send_event, send_logs, POD_STATUSES)
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User
@@ -309,7 +310,8 @@ def get_node_interface(data):
 def user_lock_task(user):
     pod_collection = PodCollection(user)
     for pod in pod_collection.get(as_json=False):
-        pod_collection.update(pod['id'], {'command': 'stop'})
+        if pod.get('status') != POD_STATUSES.stopped:
+            pod_collection.update(pod['id'], {'command': 'stop'})
         public_ip = (
             pod.get('public_ip') or                           # stopped pod
             pod.get('labels', {}).get('kuberdock-public-ip')  # running pod

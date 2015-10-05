@@ -21,7 +21,9 @@
                 <th class="name">Pod name<b class="caret"></th>
                 <th class="replicas">Replicated<b class="caret"></b></th>
                 <th class="status">Status<b class="caret"></b></th>
-                <th>Kube type (kubes quantity)<!--<b class="caret"></b>--></th>
+                <th>Kube type</th>
+                <th>Kubes quantity</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>

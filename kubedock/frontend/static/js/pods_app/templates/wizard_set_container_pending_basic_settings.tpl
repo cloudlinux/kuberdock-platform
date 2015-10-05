@@ -25,7 +25,14 @@
             <div class="row">
                 <div class="col-xs-12">
                     <table id="ports-table" class="table">
-                        <thead><tr><th>Container port</th><th>Protocol</th><th>Pod port</th><th>Public</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th class="col-md-5">Container port</th>
+                                <th class="col-md-3">Protocol</th>
+                                <th class="col-md-2">Pod port</th>
+                                <th class="col-md-2">Public</th>
+                            </tr>
+                        </thead>
                         <tbody>
                         <% if (ports.length != 0){ %>
                             <% _.each(ports, function(p){ %>
@@ -68,7 +75,12 @@
                 <div class="col-xs-12">
                     <table class="table" id="volumes-table">
                         <thead>
-                            <tr><th>Container path</th><th>Persistent</th><th>Name</th><th>GB</th></tr>
+                            <tr>
+                                <th class="col-md-5">Container path</th>
+                                <th class="col-md-3">Persistent</th>
+                                <th class="col-md-2">Name</th>
+                                <th class="col-md-2">GB</th>
+                            </tr>
                         </thead>
                         <tbody>
                         <% if (volumeMounts.length != 0){ %>

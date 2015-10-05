@@ -6,7 +6,7 @@
         </div>
         <% if (description && name) { %>
             <div class="more">
-                <a href="<%- url %>" target="blank">more...</a>
+                <a href="<%- url %>" target="blank">Learn more...</a>
             </div>
         <% } %>
     </div>

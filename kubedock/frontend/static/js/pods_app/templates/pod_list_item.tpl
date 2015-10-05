@@ -26,17 +26,18 @@
         <span class="stopped">stopped</span>
     <% } %>
 </td>
-<td>
-    <%- _.find(kubeTypes, function(e) { return e.id == kube_type; }).name %> (<%- kubes %>)
+<td><%- _.find(kubeTypes, function(e) { return e.id == kube_type; }).name %></td>
+<td><%- kubes %></td>
+<td class="actions">
     <% if (status) { %>
         <% if ( status == 'running') { %>
-            <span class="stop-btn pull-right" title="Stop <%- name %> pod">Stop</span>
+            <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } else if ( status == 'stopped' ) { %>
-            <span class="start-btn pull-right" title="Start <%- name %> pod">Start</span>
+            <span class="start-btn" title="Start <%- name %> pod">Start</span>
         <% } else if ( status == 'waiting' ) { %>
-            <span class="stop-btn pull-right" title="Stop <%- name %> pod">Stop</span>
+            <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } %>
     <% } else { %>
-        <span class="start-btn pull-right" title="Start <%- name %> pod">Start</span>
+        <span class="start-btn" title="Start <%- name %> pod">Start</span>
     <% } %>
 </td>

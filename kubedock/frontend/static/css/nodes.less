@@ -187,36 +187,11 @@
             .buttons{
                 button{
                     margin: 0;
-                    padding: 0;
-                    width: 100px;
                     float: right;
-                    height: 37px;
-                    font-size: 13px;
-                    border: 1px solid;
-                    text-align: center;
-                    font-family: @regular;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                    &:active{
-                        cursor: default;
-                    }
                 }
                 button + button{
                     margin-right: 10px;
                 }
-            }
-            #node-add-btn{
-                .border-radius(4px);
-                color: #fff;
-                border-color: #2490EA;
-                background-color: #2490EA;
-            }
-            #node-cancel-btn{
-                .border-radius(4px);
-                color: #1d1d1d;
-                border-color: #ebebeb;
-                background-color: #fcfcfc;
             }
             .col-lg-12{
                 margin: 30px 0 20px 0;
@@ -274,6 +249,7 @@
                     border: 1px solid #e5e5e5;
                 }
                 input{
+                    .placeholder(#b4b4b4);
                     &:focus{
                         .transition(color 500ms ease);
                         border-color: #188eed;

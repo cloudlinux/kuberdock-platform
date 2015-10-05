@@ -296,23 +296,20 @@
     </script>
 
     <script type="text/template" id="user-item-template">
-        <td>
-            <button class="profileUser" title="Show <%- username %> profile"><%- username %></button>
-            <span class="deleteUser" class="pull-right" title="Remove <%- username %>"></span>
-        </td>
+        <td><button class="profileUser" title="Show <%- username %> profile"><%- username %></button></td>
         <td><%- podsCount %></td>
         <td><%- containersCount %></td>
         <td><%- email ? email : 'No email' %></td>
         <td><%- package  %></td>
         <td><%- rolename  %></td>
+        <td><span class="<%- active ? 'Active' : 'Locked' %>"><%- active ? 'Active' : 'Locked' %></span></td>
         <td>
             <% if (active) { %>
-                <span class="active">Active</span>
-                <span class="pull-right blockUser" title="Lock user <%- username %>"></span>
+                <span class="blockUser" title="Lock user <%- username %>"></span>
             <% } else { %>
-                <span class="locked">Locked</span>
-                <span class="pull-right activeteUser" title="Activate <%- username %>"></span>
+                <span class="activeteUser" title="Activate user <%- username %>"></span>
             <% } %>
+            <span class="deleteUser" class="pull-right" title="Remove <%- username %>"></span>
         </td>
     </script>
 
@@ -398,9 +395,10 @@
                                        <th class="pods_count">Pods<span class="caret"></span></th>
                                        <th class="containers_count">Containers<span class="caret"></span></th>
                                        <th class="email">Email<span class="caret"></span></th>
-				       <th class="package">Package<span class="caret"></span></th>
+                                       <th class="package">Package<span class="caret"></span></th>
                                        <th class="rolename">Role<span class="caret"></span></th>
                                        <th class="active">Status<span class="caret"></span></th>
+                                       <th>Actions</span></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>

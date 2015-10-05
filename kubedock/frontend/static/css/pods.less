@@ -118,6 +118,12 @@
                 &.index, &.disabled-color-text{
                     color: #b1b9c0;
                 }
+                &.actions{
+                    .start-btn, .stop-btn{
+                        margin-right: 0;
+                        margin-left: -7px;
+                    }
+                }
                 a, span, button{
                     min-height: 12px;
                     vertical-align: top;
@@ -1233,8 +1239,10 @@
                 .image-source, #search-image-field{
                     .box-shadow(none);
                     .border-radius(0);
+                    .placeholder(#b4b4b4);
                     width: 100%;
                     height: 52px;
+                    padding: 0 20px;
                     vertical-align: top;
                     display: inline-block;
                     border: 1px solid #e5e5e5;
@@ -1307,8 +1315,25 @@
                             font-weight: normal;
                         }
                         .more{
-                            color: #3197ee;
-                            font-size: 13px;
+                            padding-top: 12px;
+                            a{
+                                color: #44aafc;
+                                font-size: 14px;
+                                position: relative;
+                                padding-left: 28px;
+                                &:before{
+                                    left: 0;
+                                    top: -2px;
+                                    width: 22px;
+                                    content: '';
+                                    height: 23px;
+                                    position: absolute;
+                                    background: url(../img/learn-more-ico.png) 0 0 no-repeat;
+                                }
+                                &:hover{
+                                    text-decoration: none;
+                                }
+                            }
                         }
                         .like{
                             border: none;

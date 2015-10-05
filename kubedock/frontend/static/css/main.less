@@ -279,7 +279,7 @@ body{
                             content: '';
                             top: 3px;
                             left: -25px;
-                            width: 20px;
+                            width: 17px;
                             height: 17px;
                             font-size: 0;
                             position: absolute;
@@ -525,6 +525,7 @@ body{
 
     /* details-node, sidebar-user */
     .sidebar{
+        .user-select(none);
         margin-bottom: 25px;
         .nav-sidebar{
             li{
@@ -554,12 +555,12 @@ body{
                 }
                 &:hover{
                     cursor: pointer;
-                    color: #1d1d1d;
+                    color: #4e5665;
                 }
                 &.active{
-                    color: #1d1d1d;
+                    color: #4e5665;
                     a{
-                        color: #1d1d1d;
+                        color: #4e5665;
                     }
                 }
                 &.general{
@@ -594,40 +595,40 @@ body{
         font-size: 0;
         margin: 20px 0;
         button, a{
+            .border-radius(2px);
+            .transition (all 300ms);
+            .box-shadow(0px 2px 4px 0px rgba(0, 0, 0, 0.35));
+            border: none;
             height: 37px;
             padding: 0 31px;
             font-size: 13px;
             min-width: 105px;
-            border: 1px solid;
+            line-height: 37px;
             text-align: center;
             margin-right: 10px;
             font-family: @regular;
+            text-transform: uppercase;
             &:hover{
+                .box-shadow(0 5px 11px 0 rgba(0, 0, 0, 0.18));
                 cursor: pointer;
             }
             &:active{
                 cursor: default;
             }
             &:first-child{
-                .border-radius(2px);
                 color: #1d1d1d;
                 background-color: #fcfcfc;
-                border-color: #ebebeb;
             }
             &:last-child, &.blue{
-                .border-radius(2px);
                 color: #fff;
-                border-color: #2490EA;
                 background-color: #2490EA;
             }
             &:last-child{
                 margin-right: 0;
             }
             &.gray{
-                .border-radius(2px);
                 color: #1d1d1d;
-                background-color: #fcfcfc;
-                border-color: #ebebeb;
+                background-color: #fff;
             }
         }
         a{
@@ -919,25 +920,24 @@ body{
             &:after{
                 .opacity(1);
                 top: 0;
-                width: 7px;
+                right: 0;
+                content: '';
                 color: #eee;
-                right: 16px;
-                content: 'x';
-                height: 14px;
-                font-size: 15px;
-                font-weight: 400;
-                line-height: 50px;
+                width: 52px;
+                height: 53px;
                 position: absolute;
+                background: url('../img/notify-cross.png') center no-repeat;
             }
             .notifyjs-bootstrap-base{
-                .border-radius(0);
-                .opacity(0.9);
+                .border-radius(2px);
+                .opacity(1);
                 border: 0;
                 color: #eee;
-                padding: 15px;
+                padding: 20px;
                 font-size: 13px;
+                line-height: 13px;
                 text-align: center;
-                padding-right: 40px;
+                padding-right: 53px;
                 background-image: none;
                 border-color: transparent;
                 span{

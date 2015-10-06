@@ -24,6 +24,12 @@
                 <th>Kube type (kubes quantity)<!--<b class="caret"></b>--></th>
             </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+            <% if(collectionLenght == 0){ %>
+                <tr>
+                    <td colspan="5" class="text-center disabled-color-text">You don't have any pods</td>
+                </tr>
+            <% } %>
+        </tbody>
     </table>
 </div>

@@ -369,6 +369,7 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     podName: model !== undefined ? model.get('name') : '',
+                    url: this.model.url
                 };
             },
 

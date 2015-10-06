@@ -151,7 +151,8 @@ define(['pods_app/app',
             templateHelpers: function(){
                 return {
                     allChecked: this.collection.fullCollection.allChecked ? true : false,
-                    checked: this.collection.fullCollection.checkedNumber
+                    checked: this.collection.fullCollection.checkedNumber,
+                    collectionLenght: this.collection.length
                 }
             },
 

@@ -454,7 +454,13 @@
                         <th class="status">Status<b class="caret"></b></th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody>
+                    <% if(totalNodes == 0){ %>
+                        <tr>
+                            <td colspan="5" class="text-center disabled-color-text">You don't have any nodes</td>
+                        </tr>
+                    <% } %>
+                </tbody>
             </table>
         </div>
     </script>

@@ -451,6 +451,31 @@
         }
     }
 }
+.image-link{
+    font-size: 13px;
+    padding-left: 25px;
+    position: relative;
+    text-decoration: none;
+    &:before{
+        .transition(all 300ms ease);
+        top: 0;
+        left: 0;
+        bottom: 0;
+        content: '';
+        width: 17px;
+        height: 16px;
+        margin: auto;
+        position: absolute;
+        background: url('../img/image-link-icon.png') 0 0 no-repeat;
+    }
+    &:hover{
+        text-decoration: none;
+        &:before{
+            .transition(all 300ms ease);
+            left: 2px;
+        }
+    }
+}
 #item-controls{
     margin-bottom: 0px;
     .start-btn, .stop-btn, .terminate-btn, .list-btn, .stats-btn{
@@ -1587,30 +1612,6 @@
                             background-position: 0 -17px;
                         }
                     }
-                }
-            }
-        }
-        .image-link{
-            font-size: 13px;
-            padding-left: 25px;
-            position: relative;
-            &:before{
-                .transition(all 500ms ease);
-                top: 0;
-                left: 0;
-                bottom: 0;
-                content: '';
-                width: 17px;
-                height: 16px;
-                margin: auto;
-                position: absolute;
-                background: url('../img/image-link-icon.png') 0 0 no-repeat;
-            }
-            &:hover{
-                text-decoration: none;
-                &:before{
-                    .transition(all 500ms ease);
-                    left: 4px;
                 }
             }
         }

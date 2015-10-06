@@ -8,7 +8,10 @@
 </div>
 <div id="details_content" class="col-sm-9 set-up-image no-padding">
     <div id="tab-content">
-        <div class="image-name-wrapper"><%- image %></div>
+        <div class="image-name-wrapper">
+            <%- image %>
+            <a class="pull-right image-link" href="<%- url %>" target="blank">Learn more about this image</a>
+        </div>
         <div class="entrypoint">
             <label>Command:</label>
             <div class="row fields">

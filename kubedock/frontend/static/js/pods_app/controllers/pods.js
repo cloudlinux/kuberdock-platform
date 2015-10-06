@@ -452,28 +452,37 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
         });
 
         WorkFlow.addInitializer(function(){
-            var controller = new WorkFlow.Controller();
+            var keepAliveTimer = null,
+                controller = new WorkFlow.Controller();
             new WorkFlow.Router({
                 controller: controller
             });
-            if (typeof(EventSource) === undefined) {
-                console.log('ERROR: EventSource is not supported by browser');
-            } else {
-                var source = new EventSource("/api/stream");
-                source.addEventListener('pull_pods_state', function () {
-                    WorkFlow.getCollection().fetch({
-                        success: function(collection, response, opts){
-                            collection.trigger('pods:collection:fetched');
-                        }
-                    });
-                }, false);
-                source.onerror = function () {
-                    console.log("SSE Error");
-                    // TODO Setup here timer to reconnect, maybe via location.reload
-                };
-            }
-        });
 
+            function timer(){
+                if(keepAliveTimer != null) clearTimeout(keepAliveTimer);
+                keepAliveTimer = setTimeout(eventHandler, 5 * 1000);
+            }
+
+            function eventHandler(){
+                if (typeof(EventSource) === undefined) {
+                    console.log('ERROR: EventSource is not supported by browser');
+                } else {
+                    var source = new EventSource("/api/stream");
+                    source.addEventListener('pull_pods_state', function(){
+                        WorkFlow.getCollection().fetch({
+                            success: function(collection, response, opts){
+                                collection.trigger('pods:collection:fetched');
+                            }
+                        });
+                    },false);
+                    source.onerror = function () {
+                        timer();
+                        console.log('SSE Error');
+                    };
+                }
+            }
+            eventHandler();
+        });
     });
 
     Pods.on('pods:list', function(){

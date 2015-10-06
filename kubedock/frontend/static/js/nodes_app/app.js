@@ -594,7 +594,8 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
         });
 
         NodesCRUD.addInitializer(function() {
-            var controller = new NodesCRUD.Controller();
+            var keepAliveTimer = null,
+                controller = new NodesCRUD.Controller();
 
             App.router = new Marionette.AppRouter({
                 controller: controller,
@@ -605,28 +606,35 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                 }
             });
 
-            if (typeof(EventSource) === undefined) {
-                console.log('ERROR: EventSource is not supported by browser');
-            } else {
-                var source = new EventSource("/api/stream");
-                source.addEventListener('pull_nodes_state', function (ev) {
-                    App.Data.nodes.fetch()
-                }, false);
-                source.addEventListener('install_logs', function (ev) {
-                    var decoded = JSON.parse(ev.data);
-                    // console.log(decoded);
-                    var node = App.Data.nodes.findWhere({'hostname': decoded.for_node});
-                    if (typeof node != 'undefined') {
-                        node.set('install_log', node.get('install_log') + decoded.data + '\n');
-                        App.vent.trigger('update_console_log');
-                    }
-                }, false);
-                source.onerror = function (e) {
-                    // without this handler, even empty, browser doesn't do reconnect
-                    console.log("SSE Error handler");
-                    // TODO Setup here timer to reconnect, maybe via location.reload
-                };
+            function timer(){
+                if(keepAliveTimer != null) clearTimeout(keepAliveTimer);
+                keepAliveTimer = setTimeout(eventHandler, 5 * 1000);
             }
+
+            function eventHandler(){
+                if (typeof(EventSource) === undefined) {
+                    console.log('ERROR: EventSource is not supported by browser');
+                } else {
+                    var source = new EventSource("/api/stream");
+                    source.addEventListener('pull_nodes_state', function (ev) {
+                        App.Data.nodes.fetch()
+                    }, false);
+                    source.addEventListener('install_logs', function (ev) {
+                        var decoded = JSON.parse(ev.data);
+                        // console.log(decoded);
+                        var node = App.Data.nodes.findWhere({'hostname': decoded.for_node});
+                        if (typeof node != 'undefined') {
+                            node.set('install_log', node.get('install_log') + decoded.data + '\n');
+                            App.vent.trigger('update_console_log');
+                        }
+                    }, false);
+                    source.onerror = function () {
+                        timer();
+                        console.log('SSE Error');
+                    };
+                }
+            }
+            eventHandler();
         });
 
     });

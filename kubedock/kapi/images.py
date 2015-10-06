@@ -4,13 +4,13 @@ import re
 import requests
 from urlparse import urlparse, parse_qsl
 from collections import Mapping, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from urllib import urlencode
 
 from ..core import db
 from ..pods.models import DockerfileCache
 from ..utils import APIError
-from ..settings import DEFAULT_REGISTRY
+from ..settings import DEFAULT_REGISTRY, DOCKER_IMG_CACHE_TIMEOUT
 
 
 class DockerAuth(requests.auth.AuthBase):
@@ -182,7 +182,7 @@ def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY):
     return config
 
 
-def get_container_config(image, auth=None):
+def get_container_config(image, auth=None, refresh_cache=False):
     """
     Get container config from cache or registry
 
@@ -199,27 +199,24 @@ def get_container_config(image, auth=None):
     if isinstance(auth, Mapping):
         auth = (auth.get('username'), auth.get('password'))
 
-    cache_enabled = registry == DEFAULT_REGISTRY and repo.startswith('library/')
-    if cache_enabled:  # for now, cache enabled only for official dockerhub repos
-        image_query = '{0}/{1}:{2}'.format(registry.rstrip('/'), repo, tag)
-        cached_config = DockerfileCache.query.get(image_query)
-        if (cached_config is not None and
-                (datetime.utcnow() - cached_config.time_stamp) < timedelta(days=1)):
-            return cached_config.data
+    image_query = '{0}/{1}:{2}'.format(registry.rstrip('/'), repo, tag)
+    cached_config = DockerfileCache.query.get(image_query)
+    if (not refresh_cache and cached_config is not None and
+            (datetime.utcnow() - cached_config.time_stamp) < DOCKER_IMG_CACHE_TIMEOUT):
+        return cached_config.data
 
     raw_config = request_config(repo, tag, auth, registry)
     if raw_config is None:
         raise APIError('Couldn\'t get the image')
     data = prepare_response(raw_config, repo, tag, registry)
 
-    if cache_enabled:
-        if cached_config is None:
-            db.session.add(DockerfileCache(image=image_query, data=data,
-                                           time_stamp=datetime.utcnow()))
-        else:
-            cached_config.data = data
-            cached_config.time_stamp = datetime.utcnow()
-        db.session.commit()
+    if cached_config is None:
+        db.session.add(DockerfileCache(image=image_query, data=data,
+                                       time_stamp=datetime.utcnow()))
+    else:
+        cached_config.data = data
+        cached_config.time_stamp = datetime.utcnow()
+    db.session.commit()
     return data
 
 
@@ -231,6 +228,7 @@ def complement_registry(registry):
 
 def parse_image_name(image):
     """Find registry, repo and tag in image name"""
+    # TODO: improve parsing, add hash
     registry, repo, tag = DEFAULT_REGISTRY, image, 'latest'
     parts = repo.split('/', 1)
     if '.' in parts[0] and len(parts) == 2:

@@ -60,6 +60,8 @@ ERROR_TOKEN = 'ERROR:'
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
 DEFAULT_REGISTRY = 'https://registry-1.docker.io/'
 DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
+DOCKER_IMG_CACHE_TIMEOUT = timedelta(hours=4)
+
 CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',

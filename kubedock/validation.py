@@ -428,7 +428,7 @@ kube_schema = {
     'memory_units': {'type': 'string', 'maxlength': 3, 'empty': False,
                      'allowed': ['MB']},
     'disk_space_units': {'type': 'string', 'maxlength': 3, 'empty': False,
-                         'allowed': ['MB']},
+                         'allowed': ['GB']},
 }
 
 packagekube_schema = {

@@ -223,7 +223,7 @@ def process_pods_event(data, app):
         if host is None:
             return
         containers = {}
-        for container in pod.get('containerStatuses', []):
+        for container in pod['status'].get('containerStatuses', []):
             if 'containerID' in container:
                 container_name = container['name']
                 container_id = container['containerID'].split('docker://')[-1]

@@ -553,7 +553,7 @@ def set_limit(host, pod_id, containers, app):
     limits = []
     for container in config['containers']:
         #disk_space = kube.disk_space * container['kubes']
-        space, unit = spaces.get(kube_type, (0, 'MB'))
+        space, unit = spaces.get(kube_type, (0, 'GB'))
         disk_space = space * container['kubes']
         disk_space_unit = unit[0].lower() if unit else ''
         if disk_space_unit not in ('', 'k', 'm', 'g', 't'):

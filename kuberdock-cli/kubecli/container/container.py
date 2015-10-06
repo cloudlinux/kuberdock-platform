@@ -84,9 +84,9 @@ class PodResource(object):
             raise SystemExit('No such item')
         pod_id = str(pod['id'])
         query = self.resource.query()
-        print "DELETE: {}".format(PODAPI_PATH + pod_id)
+        print "DELETE: {0}".format(PODAPI_PATH + pod_id)
         query.delete(PODAPI_PATH + pod_id)
-        self.resource.printout("Deleted: {}".format(pod_id))
+        self.resource.printout("Deleted: {0}".format(pod_id))
         self.resource.ctl._set_delayed()
 
     def create(self):
@@ -98,7 +98,7 @@ class PodResource(object):
         query = self.resource.query()
         answer = query.post(POD_CREATE_API_PATH, {'data': yaml_content})
         if answer and answer.get('status', None) != 'OK':
-            raise SystemExit(u'Failed To create pod: {}'.format(str(answer)))
+            raise SystemExit(u'Failed To create pod: {0}'.format(str(answer)))
         data = query.unwrap(answer)
         self.resource.printout(data)
         return data
@@ -121,7 +121,7 @@ class PodResource(object):
 
         """
         ready = ['name', 'status']
-        out = {k: data.get(k, '???') for k in ready}
+        out = dict((k, data.get(k, '???')) for k in ready)
         out['labels'] = u','.join(
             [u'{0}={1}'.format(k, v)
              for k, v in data.get('labels', {}).iteritems()]
@@ -157,7 +157,7 @@ class TemplateResource(object):
         answer = query.get(PREDEFINED_APPS_PATH + str(self.app_id))
         if answer.get('status', None) != 'OK':
             raise SystemExit(
-                u'Application template not found for id = {}'.format(
+                u'Application template not found for id = {0}'.format(
                     self.app_id)
             )
         data = query.unwrap(answer)
@@ -171,7 +171,7 @@ class TemplateResource(object):
         query = self.resource.query()
         answer = query.post(PREDEFINED_APPS_PATH, {'template': yaml_content})
         if answer.get('status', None) != 'OK':
-            raise SystemExit(u'Failed To create pod: {}'.format(str(answer)))
+            raise SystemExit(u'Failed To create pod: {0}'.format(str(answer)))
         data = query.unwrap(answer)
         self.resource.printout(data)
         return data
@@ -182,10 +182,10 @@ class TemplateResource(object):
         query = self.resource.query()
         answer = query.delete(PREDEFINED_APPS_PATH + str(self.app_id))
         if answer.get('status') != 'OK':
-            raise SystemExit(u'Failed to delete app template {}: {}'.format(
+            raise SystemExit(u'Failed to delete app template {0}: {1}'.format(
                 self.app_id, str(answer)))
         self.resource.printout(
-            "Application template has been deleted, id = {}".format(self.app_id)
+            "Application template has been deleted, id = {0}".format(self.app_id)
         )
 
     def update(self):
@@ -200,7 +200,7 @@ class TemplateResource(object):
             {'template': yaml_content}
         )
         if answer and answer.get('status', None) != 'OK':
-            raise SystemExit(u'Failed To create pod: {}'.format(str(answer)))
+            raise SystemExit(u'Failed To update pod: {0}'.format(str(answer)))
         data = query.unwrap(answer)
         self.resource.printout(data)
         return data
@@ -502,7 +502,7 @@ class KuberDock(KubeCtl):
         )
         pod = self._get_pod()
         if not pod:
-            raise SystemExit('Pod "{}" not found'.format(self.name))
+            raise SystemExit('Pod "{0}" not found'.format(self.name))
         command = {}
         if pod['status'] == 'stopped':
             # Is this correct? In previous version was pod['command'] = 'stop',
@@ -620,8 +620,8 @@ class KuberDock(KubeCtl):
         self._prepare_volumes(final)
         self._prepare_ports()
         self._prepare_env()
-        data = {key: value for key, value in vars(self).iteritems()
-                if key in valid}
+        data = dict((key, value) for key, value in vars(self).iteritems()
+                    if key in valid)
 
         return data
 
@@ -757,7 +757,7 @@ class KuberDock(KubeCtl):
                 continue
             if 'env' not in c:
                 c['env'] = []
-            existing = {item['name'] for item in c['env']}
+            existing = set(item['name'] for item in c['env'])
             data_to_add = [dict(zip(['name', 'value'], item.strip().split(':')))
                         for item in self.env.strip().split(',')
                         if len(item.split(':')) == 2]

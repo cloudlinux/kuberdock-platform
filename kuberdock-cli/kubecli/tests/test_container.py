@@ -67,10 +67,8 @@ class TestKubeCtl(unittest.TestCase):
         kctl = container.KubeCtl(json=False, name='a', resource='pod')
         kctl.describe()
         show_mock.assert_called_once_with(get_result['data'][0])
-        with self.assertRaises(SystemExit) as err:
-            kctl = container.KubeCtl(json=False, name='aaaa', resource='pod')
-            kctl.describe()
-        self.assertEqual(err.exception.message, container.ERR_NO_SUCH_ITEM)
+        kctl = container.KubeCtl(json=False, name='aaaa', resource='pod')
+        self.assertRaises(SystemExit, kctl.describe)
 
     @mock.patch.object(container.KubeCtl, '_set_delayed')
     @mock.patch.object(container.KubeQuery, 'get')
@@ -85,10 +83,8 @@ class TestKubeCtl(unittest.TestCase):
         delete_mock.assert_called_once_with(
             container.PODAPI_PATH + get_result['data'][0]['id'])
         setdelayed_mock.assert_called_once_with()
-        with self.assertRaises(SystemExit) as err:
-            kctl = container.KubeCtl(json=False, name='aaaa', resource='pod')
-            kctl.delete()
-        self.assertEqual(err.exception.message, container.ERR_NO_SUCH_ITEM)
+        kctl = container.KubeCtl(json=False, name='aaaa', resource='pod')
+        self.assertRaises(SystemExit, kctl.delete)
 
     @mock.patch.object(container.KubeQuery, 'post')
     def test_create(self, post_mock):
@@ -412,8 +408,7 @@ class TestKuberDock(unittest.TestCase):
         kd = container.KuberDock(name='tmp1')
         kd.describe()
         kd = container.KuberDock(name='tmp2')
-        with self.assertRaises(SystemExit):
-            kd.describe()
+        self.assertRaises(SystemExit, kd.describe)
 
 
 if __name__ == '__main__':

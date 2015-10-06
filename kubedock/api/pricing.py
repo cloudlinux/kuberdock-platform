@@ -87,8 +87,8 @@ class PackagesAPI(KubeUtils, MethodView):
         if package.users:
             raise APIError('You have users with this package')
         try:
-            db.session.delete(package)
             PackageKube.query.filter_by(package_id=package_id).delete()
+            db.session.delete(package)
             db.session.commit()
         except (IntegrityError, InvalidRequestError):
             raise APIError('could not delete package')
@@ -148,8 +148,8 @@ class KubesAPI(KubeUtils, MethodView):
         if kube.pods:
             raise APIError('Some pods use this kube type')
         try:
-            db.session.delete(kube)
             PackageKube.query.filter_by(kube_id=kube_id).delete()
+            db.session.delete(kube)
             db.session.commit()
         except (IntegrityError, InvalidRequestError):
             raise APIError('could not delete package')

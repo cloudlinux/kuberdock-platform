@@ -31,10 +31,7 @@ container_image_name_schema = {
 }
 
 image_request_schema = {
-    'image': {'type': str, 'empty': False, 'required': True,
-              'regex': {'regex': r'^[a-zA-Z0-9][a-zA-Z0-9_\.-]*(?<![\._-])',
-                        'message': 'invalid image name'}},
-    'tag': {'type': str, 'empty': False, 'required': False},
+    'image': {'type': str, 'empty': False, 'required': True},
     'auth': {
         'type': dict,
         'required': False,
@@ -44,10 +41,7 @@ image_request_schema = {
             'password': {'type': str, 'empty': False, 'required': True}
         },
     },
-    'registry': {'type': str, 'empty': False, 'required': False, 'nullable': True,
-                 'regex': {'regex': r'(https?://)?(.+?)(:\d{1,5})?',  # TODO: domain/ip check
-                           'message': 'registry address must be in format '
-                                      '[http[s]://]<domain-or-ip>[:port]'}}
+    'refresh_cache': {'coerce': bool},
 }
 
 # http://stackoverflow.com/questions/1418423/the-hostname-regex

@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from functools import wraps
 
@@ -7,7 +7,7 @@ from .. import tasks
 from ..core import db
 from ..models import ImageCache
 from ..validation import check_container_image_name, check_image_request
-from ..settings import DEFAULT_IMAGES_URL
+from ..settings import DEFAULT_IMAGES_URL, DOCKER_IMG_CACHE_TIMEOUT
 from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..kapi.images import get_container_config
 
@@ -44,6 +44,7 @@ def search_image(patt=re.compile(r'https?://')):
     repo_url = request.args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 10))
+    refresh_cache = request.args.get('refresh_cache', 'no').lower() in ('1', 'true')
     repo_url = repo_url if patt.match(repo_url) else 'https://' + repo_url
 
     check_container_image_name(search_key)
@@ -51,7 +52,8 @@ def search_image(patt=re.compile(r'https?://')):
     query = db.session.query(ImageCache).get(query_key)
 
     # if query is saved in DB and it's not older than 1 day return it
-    if query is not None and (datetime.now() - query.time_stamp) < timedelta(days=1):
+    if not refresh_cache and query is not None and \
+            (datetime.now() - query.time_stamp) < DOCKER_IMG_CACHE_TIMEOUT:
         return {'status': 'OK', 'data': query.data['results'],
                 'num_pages': query.data['num_pages'], 'page': page, 'per_page': per_page}
 

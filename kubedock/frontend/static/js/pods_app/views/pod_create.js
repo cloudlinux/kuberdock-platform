@@ -128,7 +128,7 @@ define(['pods_app/app',
                     mode: 'inline',
                     success: function(response, newValue) {
                         that.model.set({name: newValue});
-                        $.notify('New pod name "' + newValue + '" saved', {
+                        $.notify('New pod name "' + newValue + '" is saved', {
                             autoHideDelay: 5000,
                             clickToHide: true,
                             globalPosition: 'bottom left',
@@ -234,7 +234,7 @@ define(['pods_app/app',
                         this.trigger('image:searchsubmit', this.ui.input.val().trim());
                     } else {
                         this.ui.input.focus();
-                        utils.notifyWindow('First enter name image or part of image name to search');
+                        utils.notifyWindow('First enter image name or part of image name to search');
                     }
                 }
             },
@@ -246,7 +246,7 @@ define(['pods_app/app',
                     this.trigger('image:searchsubmit', this.ui.input.val().trim());
                 } else {
                     this.ui.input.focus();
-                    utils.notifyWindow('First enter name image or part of image name to search');
+                    utils.notifyWindow('First enter image name or part of image name to search');
                 }
             },
 

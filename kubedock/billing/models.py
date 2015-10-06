@@ -1,7 +1,7 @@
 from ..core import db
 
 # Package and Kube with id=0 are default
-# end must be undeletable (always present with id=0) for fallback
+# and must be undeletable (always present with id=0) for fallback
 
 
 class PackageKube(db.Model):
@@ -15,7 +15,8 @@ class PackageKube(db.Model):
     packages = db.relationship('Package', backref=db.backref('kubes_assocs'))
 
     def to_dict(self):
-        return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])
+        return {field: getattr(self, field)
+                for field in ('package_id', 'kube_id', 'kube_price')}
 
 
 class Package(db.Model):
@@ -25,8 +26,8 @@ class Package(db.Model):
     first_deposit = db.Column(db.Float, default=0.0, nullable=False)
     currency = db.Column(db.String(16), default="USD", nullable=False)
     period = db.Column(db.String(16), default="hour", nullable=False)
-    prefix = db.Column(db.String, nullable=True)
-    suffix = db.Column(db.String, nullable=True)
+    prefix = db.Column(db.String, default='', nullable=True)
+    suffix = db.Column(db.String, default='', nullable=True)
     price_ip = db.Column(db.Float, default=0.0, nullable=False)
     price_pstorage = db.Column(db.Float, default=0.0, nullable=False)
     price_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
@@ -34,7 +35,7 @@ class Package(db.Model):
     users = db.relationship("User", backref="package")
 
     def to_dict(self):
-        return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])
+        return {field: getattr(self, field) for field in self.__mapper__.columns.keys()}
 
 
 class Kube(db.Model):
@@ -55,7 +56,7 @@ class Kube(db.Model):
         return "<Kube(id='{0}', name='{1}')>".format(self.id, self.name)
 
     def to_dict(self):
-        return dict([(k, v) for k, v in vars(self).items() if not k.startswith('_')])
+        return {field: getattr(self, field) for field in self.__mapper__.columns.keys()}
 
 
 class ExtraTax(db.Model):

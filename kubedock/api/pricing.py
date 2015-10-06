@@ -1,287 +1,271 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, current_app
+from flask.views import MethodView
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
-from ..billing import Package
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token, KubeUtils
+from ..utils import login_required_or_basic_or_token, KubeUtils, register_api
 from ..users import User
-from ..pods import Pod
+from ..validation import check_pricing_api, package_schema, kube_schema, packagekube_schema
 from ..billing.models import Package, Kube, PackageKube
-from ..stats import StatWrap5Min
-from collections import defaultdict
-import time
-import datetime
-from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from . import APIError
 
 
 pricing = Blueprint('pricing', __name__, url_prefix='/pricing')
 
 # === PACKAGE ROUTINES ===
-@pricing.route('/packages', methods=['GET'], strict_slashes=False)
-@pricing.route('/packages/<package_id>', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
-@check_permission('get', 'users')
-def get_package(package_id=None):
-    if package_id is None:
-        return jsonify({
-            'status': 'OK',
-             'data': [p.to_dict() for p in db.session.query(Package).all()]})
-    data = db.session.query(Package).get(package_id)
-    if data is None:
-        raise APIError('Package not found', 404)
-    return jsonify({'status': 'OK', 'data': data.to_dict()})
 
 
 @pricing.route('/userpackage', methods=['GET'], strict_slashes=False)
+@KubeUtils.jsonwrap
 @login_required_or_basic_or_token
 @check_permission('get', 'pods')
 def get_user_package():
-    user=KubeUtils._get_current_user()
-    user = db.session.query(User).filter_by(username=user.username).first()
+    user = KubeUtils._get_current_user()
+    user = User.query.filter_by(username=user.username).first()
     if user is None:
         raise APIError('No such user', 404)
     # current_app.logger.debug(user.package.kubes)
-    return jsonify({
-        'status': 'OK',
-        'data': dict([(k.kubes.name, k.kubes.id) for k in user.package.kubes])})
+    return {k.kubes.name: k.kubes.id for k in user.package.kubes if k.kubes is not None}
 
 
-@pricing.route('/packages/<package_id>', methods=['PUT'])
-@login_required_or_basic_or_token
-@check_permission('edit', 'users')
-def update_package(package_id):
-    package = db.session.query(Package).get(package_id)
-    if package is None:
-        raise APIError('Package not found', 404)
-    params = request.json
-    if params is None:
-        params = request.form
-    for key in params.keys():
-        if hasattr(package, key):
-            setattr(package, key, params[key])
-    db.session.commit()
-    return jsonify({'status': 'OK'})
+class PackagesAPI(KubeUtils, MethodView):
+    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
+    @check_permission('get', 'users')
+    def get(self, package_id=None):
+        if package_id is None:
+            return [p.to_dict() for p in Package.query.all()]
+        data = Package.query.get(package_id)
+        if data is None:
+            raise APIError('Package not found', 404)
+        return data.to_dict()
 
-@pricing.route('/packages', methods=['POST'], strict_slashes=False)
-@login_required_or_basic_or_token
-@check_permission('create', 'users')
-def create_package():
-    data = {}
-    params = request.json
-    if params is None:
-        params = request.form
-    defaults = {'currency': 'USD', 'period': 'hour', 'first_deposit': 0.0, 'prefix': '', 'suffix': '', 'price_ip': 0.0,
-                'price_pstorage': 0.0, 'price_over_traffic': 0.0}
-    for attr in 'name', 'first_deposit', 'currency', 'period', 'prefix', 'suffix', 'price_ip', 'price_pstorage', \
-                'price_over_traffic':
-        data[attr] = params.get(attr, defaults.get(attr))
-        if data[attr] is None:
-            return jsonify({
-                'status': 'ERROR',
-                'message': "attribute '{0}' is expected to be set".format(attr,)
-            })
-    try:
-        package = Package(**data)
+    @check_permission('create', 'users')
+    def post(self):
+        params = check_pricing_api(self._get_params(), package_schema)
+        if Package.query.filter_by(name=params['name']).first() is not None:
+            raise APIError('Package with name \'{0}\' already exists'
+                           .format(params['name']))
+        package = Package(**params)
         db.session.add(package)
-        db.session.commit()
-        data['id'] = package.id
-    except (IntegrityError, InvalidRequestError), e:
-        db.session.rollback()
-        return jsonify({
-            'status': 'ERROR',
-            'message': "could not add package {0}: {1}!".format(data['name'], str(e))
-        })
-    return jsonify({'status': 'OK', 'data': data})
+        try:
+            db.session.commit()
+        except (IntegrityError, InvalidRequestError):
+            db.session.rollback()
+            raise APIError('could not create package')
+        return package.to_dict()
 
+    @check_permission('edit', 'users')
+    def put(self, package_id):
+        package = Package.query.get(package_id)
+        if package is None:
+            raise APIError('Package not found', 404)
+        params = check_pricing_api(self._get_params(), package_schema, update=True)
 
-@pricing.route('/packages/<package_id>', methods=['DELETE'])
-@login_required_or_basic_or_token
-@check_permission('delete', 'users')
-def delete_package(package_id):
-    package = db.session.query(Package).get(package_id)
-    if package is None:
-        raise APIError('Package not found', 404)
-    db.session.delete(package)
-    db.session.commit()
-    return jsonify({'status': 'OK'})
+        if 'name' in params:
+            duplicate = Package.query.filter(Package.name == params['name'],
+                                             Package.id != package_id).first()
+            if duplicate is not None:
+                raise APIError('Package with name \'{0}\' already exists'
+                               .format(params['name']))
+
+        for key, value in params.iteritems():
+            setattr(package, key, value)
+        try:
+            db.session.commit()
+        except (IntegrityError, InvalidRequestError):
+            db.session.rollback()
+            raise APIError('could not update package')
+        return package.to_dict()
+
+    @check_permission('delete', 'users')
+    def delete(self, package_id):
+        package = Package.query.get(package_id)
+        if package is None:
+            raise APIError('Package not found', 404)
+        if package.users:
+            raise APIError('You have users with this package')
+        try:
+            db.session.delete(package)
+            PackageKube.query.filter_by(package_id=package_id).delete()
+            db.session.commit()
+        except (IntegrityError, InvalidRequestError):
+            raise APIError('could not delete package')
+
+register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id', strict_slashes=False)
 
 
 # === KUBE ROUTINES ===
-@pricing.route('/kubes', methods=['GET'], strict_slashes=False)
-@pricing.route('/kubes/<int:kube_id>', methods=['GET'])
-@login_required_or_basic_or_token
-@check_permission('get', 'users')
-def get_kube(kube_id=None):
-    if kube_id is None:
-        data = [i.to_dict() for i in db.session.query(Kube).all()]
-    else:
-        item = db.session.query(Kube).get(kube_id)
+
+
+class KubesAPI(KubeUtils, MethodView):
+    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+
+    @check_permission('get', 'users')
+    def get(self, kube_id=None):
+        if kube_id is None:
+            return [i.to_dict() for i in Kube.query.all()]
+        item = Kube.query.get(kube_id)
         if item is None:
             raise APIError('Kube not found', 404)
-        data = item.to_dict()
-    return jsonify({'status': 'OK', 'data': data})
+        return item.to_dict()
 
+    @check_permission('create', 'users')
+    def post(self):
+        params = self._get_params()
+        return add_kube(params)
 
-@pricing.route('/kubes', methods=['POST'], strict_slashes=False)
-@login_required_or_basic_or_token
-@check_permission('create', 'users')
-def create_kube():
-    params = request.json
-    if params is None:
-        params = request.form
-    return jsonify(add_kube(params))
+    @check_permission('edit', 'users')
+    def put(self, kube_id):
+        kube = Kube.query.get(kube_id)
+        if kube is None:
+            raise APIError('Kube not found', 404)
+        data = check_pricing_api(self._get_params(), kube_schema, update=True)
+        if 'name' in data:
+            duplicate = Kube.query.filter(Kube.name == data['name'],
+                                          Kube.id != kube_id).first() is not None
+            if duplicate:
+                raise APIError('Kube with name \'{0}\' already exists'
+                               .format(data['name']))
+
+        for key, value in data.items():
+            setattr(kube, key, value)
+        try:
+            db.session.commit()
+        except (IntegrityError, InvalidRequestError):
+            db.session.rollback()
+            raise APIError('could not update kube')
+        return kube.to_dict()
+
+    @check_permission('delete', 'users')
+    def delete(self, kube_id):
+        kube = Kube.query.get(kube_id)
+        if kube is None:
+            raise APIError('Kube not found', 404)
+        if kube.nodes:
+            raise APIError('Some nodes use this kube type')
+        if kube.pods:
+            raise APIError('Some pods use this kube type')
+        try:
+            db.session.delete(kube)
+            PackageKube.query.filter_by(kube_id=kube_id).delete()
+            db.session.commit()
+        except (IntegrityError, InvalidRequestError):
+            raise APIError('could not delete package')
+
+register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id', strict_slashes=False)
 
 
 def add_kube(data):
-    attrs = {}
-    excluded = ['cpu_units'];
-    defaults = {'cpu': 0, 'cpu_units': 'Cores', 'memory': 0, 'memory_units': 'MB',
-                'disk_space': 0, 'disk_space_units': 'MB', 'included_traffic': 0, 'default': False}
-    for attr in ('name',  'cpu', 'cpu_units', 'memory', 'memory_units',
-                 'disk_space', 'disk_space_units', 'included_traffic'):
-        if attr in excluded:
-            attrs[attr] = defaults.get(attr)
-        else:
-            attrs[attr] = data.get(attr, defaults.get(attr))
-        if attrs[attr] is None:
-            return {
-                'status': 'ERROR',
-                'message': "attribute '{0}' is expected to be set".format(attr,)
-            }
+    data = check_pricing_api(data, kube_schema)
+    if Kube.query.filter_by(name=data['name']).first() is not None:
+        raise APIError('Kube type with name \'{0}\' already exists'
+                       .format(data['name']))
+
+    kube = Kube(**data)
+    db.session.add(kube)
     try:
-        kube = Kube(**attrs)
-        db.session.add(kube)
         db.session.commit()
-        attrs['id'] = kube.id
     except (IntegrityError, InvalidRequestError):
         db.session.rollback()
-        return {
-            'status': 'ERROR',
-            'message': "Kube '{0}' already exists!".format(data['name'],)
-        }
-    return {'status': 'OK', 'data': attrs}
-
-
-@pricing.route('/kubes/<int:kube_id>', methods=['PUT'])
-@login_required_or_basic_or_token
-@check_permission('edit', 'users')
-def update_kube(kube_id):
-    conv = {'cpu': float, 'memory': int}
-    item = db.session.query(Kube).get(kube_id)
-    if item is None:
-        raise APIError('Kube not found', 404)
-    if request.json is not None:
-        data = request.json
-    else:
-        data = request.form
-    for key, value in data.items():
-        if hasattr(item, key):
-            setattr(item, key, conv.get(key, str)(value))
-    db.session.commit()
-    return jsonify({'status': 'OK'})
-
-
-@pricing.route('/kubes/<int:kube_id>', methods=['DELETE'])
-@login_required_or_basic_or_token
-@check_permission('delete', 'users')
-def delete_kube(kube_id):
-    item = db.session.query(Kube).get(kube_id)
-    if item is None:
-        raise APIError('Kube not found', 404)
-    db.session.delete(item)
-    db.session.commit()
-    return jsonify({'status': 'OK'});
+        raise APIError('could not create package')
+    return kube.to_dict()
 
 
 # === PACKAGE KUBE ROUTINES ===
-@pricing.route('/packages/<int:package_id>/kubes-by-id', methods=['GET'], strict_slashes=False)
+
+
+@pricing.route('/packages/<int:package_id>/kubes-by-id', methods=['GET'],
+               strict_slashes=False)
+@KubeUtils.jsonwrap
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_package_kube_ids(package_id):
-    package = db.session.query(Package).get(package_id)
+    package = Package.query.get(package_id)
     if package is None:
         raise APIError('Package not found', 404)
-    kubes = []
-    for kube in package.kubes:
-        kubes.append(kube.kube_id)
-    return jsonify({'status': 'OK', 'data': kubes})
+    return [kube.kube_id for kube in package.kubes if kube.kubes is not None]
 
 
-@pricing.route('/packages/<int:package_id>/kubes-by-name', methods=['GET'], strict_slashes=False)
+@pricing.route('/packages/<int:package_id>/kubes-by-name', methods=['GET'],
+               strict_slashes=False)
+@KubeUtils.jsonwrap
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
 def get_package_kube_names(package_id):
-    package = db.session.query(Package).get(package_id)
+    package = Package.query.get(package_id)
     if package is None:
         raise APIError('Package not found', 404)
-    kubes = []
-    for kube in package.kubes:
-        kubes.append(kube.kubes.name)
-    return jsonify({'status': 'OK', 'data': kubes})
+    return [kube.kubes.name for kube in package.kubes if kube.kubes is not None]
 
 
-@pricing.route('/packages/<int:package_id>/kubes', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
-@check_permission('get', 'users')
-def get_package_kubes(package_id):
-    package = db.session.query(Package).get(package_id)
-    if package is None:
-        raise APIError('Package not found', 404)
-    kubes = []
-    for kube in package.kubes:
-        kubes.append(kube.kubes.to_dict())
-    return jsonify({'status': 'OK', 'data': kubes})
+class PackageKubesAPI(KubeUtils, MethodView):
+    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
+    @check_permission('get', 'users')
+    def get(self, package_id, kube_id=None):
+        if kube_id is not None:
+            raise APIError('Method not allowed', 405)
+        package = Package.query.get(package_id)
+        if package is None:
+            raise APIError('Package not found', 404)
+        return [kube.kubes.to_dict() for kube in package.kubes if kube.kubes is not None]
 
-@pricing.route('/packages/<int:package_id>/kubes', methods=['POST'], strict_slashes=False)
-@pricing.route('/packages/<int:package_id>/kubes/<int:kube_id>', methods=['PUT'])
-@login_required_or_basic_or_token
-@check_permission('edit', 'users')
-def add_kube_to_package(package_id, kube_id=None):
-    package = db.session.query(Package).get(package_id)
-    if package is None:
-        raise APIError('Package not found', 404)
-    params = request.json
-    if params is None:
-        params = request.form
-    if kube_id is None:
-        if 'id' not in params:
-            rv = add_kube(params)
-            if 'data' not in rv:
-                return jsonify(rv)
-            kube_id = rv['data']['id']
-        else:
+    @check_permission('create', 'users')
+    def post(self, package_id):
+        if Package.query.get(package_id) is None:
+            raise APIError('Package not found', 404)
+        params = self._get_params()
+        if 'id' in params:
+            params = check_pricing_api(params, packagekube_schema)
             kube_id = params['id']
-    kube = db.session.query(Kube).get(kube_id)
-    if kube is None:
-        raise APIError('Kube not found', 404)
+            if Kube.query.get(kube_id) is None:
+                raise APIError('Kube not found', 404)
+        else:
+            params = check_pricing_api(params, dict(kube_schema, **packagekube_schema))
+            kube_id = add_kube({key: value for key, value in params.iteritems()
+                                if key in kube_schema})['id']
 
+        return _add_kube_type_to_package(package_id, kube_id, params['kube_price'])
+
+    @check_permission('edit', 'users')
+    def put(self, package_id=None, kube_id=None):
+        if Package.query.get(package_id) is None:
+            raise APIError('Package not found', 404)
+        if Kube.query.get(kube_id) is None:
+            raise APIError('Kube not found', 404)
+        params = check_pricing_api(self._get_params(), packagekube_schema)
+
+        return _add_kube_type_to_package(package_id, kube_id, params['kube_price'])
+
+    @check_permission('delete', 'users')
+    def delete(self, package_id, kube_id):
+        package_kube = PackageKube.query.filter_by(package_id=package_id,
+                                                   kube_id=kube_id).first()
+        if package_kube is None:
+            raise APIError('Kube type is not in the package', 404)
+        db.session.delete(package_kube)
+        try:
+            db.session.commit()
+        except (IntegrityError, InvalidRequestError):
+            db.session.rollback()
+            raise APIError('could not remove kube type from package')
+
+register_api(pricing, PackageKubesAPI, 'packagekubes',
+             '/packages/<int:package_id>/kubes/', 'kube_id', strict_slashes=False)
+
+
+def _add_kube_type_to_package(package_id, kube_id, kube_price):
     package_kube = PackageKube.query.filter_by(package_id=package_id, kube_id=kube_id).first()
     if package_kube is None:
-        package_kube = PackageKube()
-    package_kube.kube_id = kube_id
-    for key in ['kube_price']:
-        if hasattr(package_kube, key):
-            setattr(package_kube, key, params[key])
-    package.kubes.append(package_kube)
-    db.session.commit()
-    return jsonify({'status': 'OK'})
+        package_kube = PackageKube(package_id=package_id, kube_id=kube_id)
+        db.session.add(package_kube)
+    package_kube.kube_price = kube_price
 
-
-@pricing.route('/packages/<int:package_id>/kubes/<int:kube_id>', methods=['DELETE'])
-@login_required_or_basic_or_token
-@check_permission('edit', 'users')
-def delete_kube_from_package(package_id, kube_id):
-    package = db.session.query(Package).get(package_id)
-    if package is None:
-        raise APIError('Package not found', 404)
-    kube = db.session.query(Kube).get(kube_id)
-    if kube is None:
-        raise APIError('Kube not found', 404)
-    package_kube = PackageKube.query.filter_by(package_id=package_id, kube_id=kube_id).first()
-    db.session.delete(package_kube)
-    db.session.commit()
-    return jsonify({'status': 'OK'})
+    try:
+        db.session.commit()
+    except (IntegrityError, InvalidRequestError):
+        db.session.rollback()
+        raise APIError('could not add kube type to package')
+    return package_kube.to_dict()

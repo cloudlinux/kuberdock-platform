@@ -402,6 +402,47 @@ change_pod_schema['containers']['schema']['schema']['volumeMounts']\
     'maxlength': PATH_LENGTH,
     'required': False
 }
+
+
+# billing
+
+positive_float_schema = {'coerce': float, 'min': 0}
+positive_integer_schema = {'coerce': int, 'min': 0}
+billing_name_schema = {'type': 'string', 'maxlength': 64,
+                       'required': True, 'empty': False}
+package_schema = {
+    'name': billing_name_schema,
+    'first_deposit': positive_float_schema,
+    'currency': {'type': 'string', 'maxlength': 16, 'empty': False},
+    'period': {'type': 'string', 'maxlength': 16, 'empty': False,
+               'allowed': ['hour', 'month', 'quarter', 'annuel']},
+    'prefix': {'type': 'string'},
+    'suffix': {'type': 'string'},
+    'price_ip': positive_float_schema,
+    'price_pstorage': positive_float_schema,
+    'price_over_traffic': positive_float_schema,
+}
+
+kube_schema = {
+    'name': billing_name_schema,
+    'cpu': positive_float_schema,
+    'memory': positive_integer_schema,
+    'disk_space': positive_integer_schema,
+    'included_traffic': positive_integer_schema,
+    'cpu_units': {'type': 'string', 'maxlength': 32, 'empty': False,
+                  'allowed': ['Cores']},
+    'memory_units': {'type': 'string', 'maxlength': 3, 'empty': False,
+                     'allowed': ['MB']},
+    'disk_space_units': {'type': 'string', 'maxlength': 3, 'empty': False,
+                         'allowed': ['MB']},
+}
+
+packagekube_schema = {
+    'kube_price': dict(positive_float_schema, required=True),
+    'id': positive_integer_schema
+}
+
+
 # ===================================================================
 
 
@@ -445,8 +486,10 @@ class V(cerberus.Validator):
         return super(V, self).validate_schema(schema)
 
     def _api_validation(self, data, schema, **kwargs):
-        if not self.validate(data, schema, **kwargs):
+        validated = self.validated(data, schema, **kwargs)
+        if validated is None:
             raise APIError(self.errors)
+        return validated
 
     def _validate_regex(self, re_obj, field, value):
         """
@@ -715,3 +758,9 @@ def convert_extbools(data, schema):
                 continue
         data[field] = False
     return data
+
+
+def check_pricing_api(data, schema, *args, **kwargs):
+    validated = V(allow_unknown=True)._api_validation(data, schema, *args, **kwargs)
+    # purge unknown
+    return {field: value for field, value in validated.iteritems() if field in schema}

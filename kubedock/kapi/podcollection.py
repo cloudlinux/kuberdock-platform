@@ -26,11 +26,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._get_pods(namespaces)
         self._merge()
 
-    def add(self, params):  # TODO: celery
+    def add(self, params, skip_check=False):  # TODO: celery
         secrets = params.pop('secrets', [])
-        self._check_trial(params)
-        check_images_availability(
-            [container['image'] for container in params['containers']], secrets)
+
+        if not skip_check:
+            self._check_trial(params)
+            check_images_availability(
+                [container['image'] for container in params['containers']], secrets)
 
         params['namespace'] = params['id'] = str(uuid4())
         params['owner'] = self.owner

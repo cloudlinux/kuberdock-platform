@@ -29,7 +29,7 @@
         <tbody>
             <% if(collectionLenght == 0){ %>
                 <tr>
-                    <td colspan="5" class="text-center disabled-color-text">You don't have any pods</td>
+                    <td colspan="7" class="text-center disabled-color-text">You don't have any pods</td>
                 </tr>
             <% } %>
         </tbody>

@@ -32,6 +32,8 @@ from .nodes.models import NodeMissedAction
 from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, \
                         NODE_INSTALL_TIMEOUT_SEC, PORTS_TO_RESTRICT
 from .kapi.podcollection import PodCollection
+from .kapi.collect import collect, send
+
 
 celery = make_celery()
 
@@ -290,6 +292,11 @@ def process_missed_actions():
         db.session.delete(action)
         ssh.close()
     db.session.commit()
+
+
+@celery.task()
+def send_stat():
+    send(collect())
 
 
 def get_node_interface(data):

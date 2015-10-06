@@ -48,7 +48,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return pod.as_dict()
 
     def get(self, as_json=True):
-        pods = [p.as_dict() for p in self._collection.values() if getattr(p, 'owner', '') == self.owner.username]
+        if self.owner is None:
+            pods = [p.as_dict() for p in self._collection.values()]
+        else:
+            pods = [p.as_dict() for p in self._collection.values() if getattr(p, 'owner', '') == self.owner.username]
         if as_json:
             return json.dumps(pods)
         return pods

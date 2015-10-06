@@ -62,6 +62,9 @@ DEFAULT_REGISTRY = 'https://registry-1.docker.io/'
 DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 DOCKER_IMG_CACHE_TIMEOUT = timedelta(hours=4)
 
+ID_PATH = '/var/lib/kuberdock/installation-id'
+STAT_URL = 'http://127.0.0.1/'
+
 CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',
@@ -74,7 +77,11 @@ CELERYBEAT_SCHEDULE = {
     'fix-pods-timeline': {
         'task': 'kubedock.tasks.fix_pods_timeline',
         'schedule': timedelta(minutes=5)
-    }
+    },
+    #'send-stat': {
+    #    'task': 'kubedock.tasks.send_stat',
+    #    'schedule': timedelta(minutes=1)
+    #}
 }
 
 ONLINE_LAST_MINUTES = 5

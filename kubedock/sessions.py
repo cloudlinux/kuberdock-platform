@@ -136,7 +136,7 @@ class DataBaseSessionManager(SessionManager):
         """Retrieve a managed session by session-id, checking the HMAC digest"""
         session = db.session.query(SessionData).get(sid)
         if session is not None:
-            randval, hmac_digest, data = session.data
+            randval, hmac_digest, data = session.expand_data()
         if not data:
             current_app.logger.debug('missing data?')
             return self.new_session()

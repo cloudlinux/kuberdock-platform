@@ -24,6 +24,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
 KUBERDOCK_INTERNAL_USER = 'kuberdock-internal'
 TRIAL_KUBES = 10
 
+EXTERNAL_UTILS_LANG = 'en_US.UTF-8'
+
 # redis configs
 REDIS_HOST = 'localhost'
 REDIS_PORT = '6379'

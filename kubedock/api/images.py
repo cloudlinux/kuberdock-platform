@@ -59,15 +59,15 @@ def search_image(patt=re.compile(r'https?://')):
 
     data = tasks.search_image(search_key, url=repo_url, page=page)
     data = {
-        'num_pages': data['count'] // per_page + bool(data['count'] % per_page),
+        'num_pages': data.get('count', 1) // per_page + bool(data.get('count', 1) % per_page),
         'results': [{
-            'is_automated': image['is_automated'],
-            'star_count': image['star_count'],
-            'description': image['short_description'],
-            'name': image['repo_name'],
-            'is_official': image['is_offical'],
-            'pull_count': image['pull_count'],
-        } for image in data['results']]
+            'is_automated': image.get('is_automated', False),
+            'star_count': image.get('star_count', 0),
+            'description': image.get('short_description', ''),
+            'name': image.get('repo_name', 'none'),
+            'is_official': image.get('is_official', False),
+            'pull_count': image.get('pull_count', 0),
+        } for image in data.get('results', [])]
     }
     if query is None:
         db.session.add(ImageCache(query=query_key, data=data,

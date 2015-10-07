@@ -44,9 +44,7 @@ def local(*args, **kwargs):
 
 
 def _make_yum_opts(pkg, testing=False, action='install', noprogress=False):
-    opts = ['yum', '--enablerepo=kube',
-            '-y',
-            action] + pkg.split()
+    opts = ['yum', '--enablerepo=kube', '-y', action] + pkg.split()
     if testing:
         opts[1] += ',kube-testing'
     if noprogress:
@@ -58,11 +56,14 @@ def install_package(pkg, testing=False, action='install'):
     """
     :return: exit code
     """
-    return subprocess.call(_make_yum_opts(pkg, testing, action=action))
+    return subprocess.call(
+        _make_yum_opts(pkg, testing, action=action),
+        env=dict(os.environ, LANG=settings.EXTERNAL_UTILS_LANG))
 
 
 def remote_install(pkg, testing=False, action='install'):
-    return run(' '.join(_make_yum_opts(pkg, testing, action, True)))
+    return run(' '.join(['LANG=' + settings.EXTERNAL_UTILS_LANG] +
+                        _make_yum_opts(pkg, testing, action, True)))
 
 
 def _set_param(text, var, param, value):

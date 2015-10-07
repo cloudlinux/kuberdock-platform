@@ -22,9 +22,9 @@ class Updates(BaseModelMixin, db.Model):
 
     def print_log(self, *msg):
         if len(msg) > 0:
-            m = map(str, msg)
-            print ' '.join(m)
-            self.log = ' '.join([(self.log or '')] + m + ['\n'])
+            m = [str(i).decode('utf-8') if isinstance(i, str) else unicode(i) for i in msg]
+            print u' '.join(m)
+            self.log = u' '.join([(self.log or u'')] + m + [u'\n'])
             self.save()
 
     def __repr__(self):

@@ -13,32 +13,36 @@
         <div>
     </div>
     <div class="clearfix">
-        <!--
-        <div class="col-md-3 no-padding">
-            <select class="image-source">
-                <option>Docker hub</option>
-                <option>Private images</option>
+        <div class="col-md-4 no-padding">
+            <select class="selectpicker image-source">
+                <option>Docker Hub</option>
+                <option>Docker Hub/private repo</option>
                 <option>Other registries</option>
             </select>
         </div>
-        -->
-        <div class="col-md-11 no-padding">
+        <div class="col-md-7 no-padding">
             <input type="text" id="search-image-field" class="form-control" placeholder="Enter image name or part of image name">
         </div>
         <div class="col-md-1 no-padding search-image-inner">
             <button class="search-image" type="button"></button>
         </div>
+        <div class="col-md-6 no-padding private">
+            <input type="text" id="private-image-field" class="form-control" placeholder="/namespace/image">
+        </div>
+        <div class="col-md-2 no-padding private search-image-inner">
+            <button class="select-image" type="button">SELECT</button>
+        </div>
     </div>
-    <!-- <div class="login-user row">
+    <div class="login-user row">
         <div class="col-md-6">
             <label>Enter username</label>
-            <input type="text">
+            <input type="text" id="username">
         </div>
         <div class="col-md-6">
-            <label>Create password</label>
-            <input type="text">
+            <label>Enter password</label>
+            <input type="password" id="password">
         </div>
-    </div> -->
+    </div>
     <div id="search-results-scroll">
         <div id="data-collection"></div>
         <div class="search-control">

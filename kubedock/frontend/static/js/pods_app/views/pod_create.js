@@ -200,23 +200,93 @@ define(['pods_app/app',
             },
 
             ui: {
-                moreImage         : '.btn-more',
+                username          : '#username',
                 podsList          : '.podsList',
+                password          : '#password',
+                moreImage         : '.btn-more',
+                privateWrapper    : '.private',
+                loginPrivateUres  : '.login-user',
+                selectImage       : '.select-image',
+                imageSource       : '.image-source',
+                selectpicker      : '.selectpicker',
                 searchImageButton : '.search-image',
                 loader            : 'div#load-control',
                 searchControl     : 'div.search-control',
+                privateField      : '#private-image-field',
                 input             : 'input#search-image-field'
             },
 
             events: {
+                'click @ui.selectImage'       : 'selectImage',
                 'click @ui.moreImage'         : 'loadNextPage',
                 'click @ui.podsList'          : 'showPodsList',
                 'click @ui.searchImageButton' : 'onSearchClick',
-                'keypress @ui.input'          : 'onInputKeypress'
+                'keypress @ui.input'          : 'onInputKeypress',
+                'change @ui.imageSource'      : 'imageSourceOnChange',
             },
 
             childEvents: {
                 'image:selected' : 'childImageSelected'
+            },
+
+            onRender: function(){
+                this.ui.selectpicker.selectpicker();
+            },
+
+            selectImage:function(){
+                var data,
+                    that = this,
+                    preloader = $('#page-preloader');
+
+                if (this.ui.password.val() || this.ui.username.val()){
+                    data = { image: this.ui.privateField.val(),
+                            auth: { password: this.ui.password.val(),
+                                    username: this.ui.username.val() }};
+                } else {
+                    data = { image: this.ui.privateField.val() };
+                }
+
+                data = JSON.stringify(data);
+
+                preloader.show();
+                $.ajax({
+                    type: 'POST',
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    url: '/api/images/new',
+                    data: data,
+                    success: function(data){
+                        console.log(data);
+                        preloader.hide();
+                    },
+                    error: function(data){
+                        preloader.hide();
+                        utils.notifyWindow(data.responseText)
+                    }
+                });
+            },
+
+            imageSourceOnChange: function(){
+                var val = this.ui.imageSource.val();
+                if (val == "Docker Hub"){
+                    console.log(1);
+                    this.ui.input.parent().show();
+                    this.ui.privateWrapper.hide();
+                    this.ui.loginPrivateUres.slideUp();
+                    this.ui.searchImageButton.parent().show();
+                } else if (val == "Other registries"){
+                    this.ui.input.parent().hide();
+                    this.ui.privateWrapper.show();
+                    this.ui.loginPrivateUres.slideDown();
+                    this.ui.searchImageButton.parent().hide();
+                    this.ui.privateField.attr('placeholder','[registry/]namespace/image');
+                } else {
+                    this.ui.input.parent().hide();
+                    this.ui.privateWrapper.show();
+                    this.ui.loginPrivateUres.slideDown();
+                    this.ui.searchImageButton.parent().hide();
+                    this.ui.privateField.attr('placeholder','namespace/image');
+                }
             },
 
             appendLoader: function(){

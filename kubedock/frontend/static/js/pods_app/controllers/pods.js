@@ -452,31 +452,28 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
         });
 
         WorkFlow.addInitializer(function(){
-            var keepAliveTimer = null,
-                controller = new WorkFlow.Controller();
+            var controller = new WorkFlow.Controller(),
+                source = new EventSource("/api/stream");
+
             new WorkFlow.Router({
                 controller: controller
             });
-
-            function timer(){
-                if(keepAliveTimer != null) clearTimeout(keepAliveTimer);
-                keepAliveTimer = setTimeout(eventHandler, 5 * 1000);
-            }
 
             function eventHandler(){
                 if (typeof(EventSource) === undefined) {
                     console.log('ERROR: EventSource is not supported by browser');
                 } else {
-                    var source = new EventSource("/api/stream");
+                    console.log('run');
                     source.addEventListener('pull_pods_state', function(){
                         WorkFlow.getCollection().fetch({
                             success: function(collection, response, opts){
                                 collection.trigger('pods:collection:fetched');
+                                console.log('fetched');
                             }
                         });
                     },false);
                     source.onerror = function () {
-                        timer();
+                        setTimeout(eventHandler, 5 * 1000)
                         console.log('SSE Error');
                     };
                 }

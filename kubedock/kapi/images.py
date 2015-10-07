@@ -143,7 +143,7 @@ def request_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTRY):
         docker_auth_v1(s, registry, repo, auth)
         url = get_url(registry, 'v1/repositories', repo, 'tags', tag)
         image_id = _json_or_none(s.get(url, auth=auth))  # get image id for the tag
-        if image_id is not None:
+        if isinstance(image_id, basestring):
             url = get_url(registry, 'v1/images', image_id, 'json')
             data = _json_or_none(s.get(url, auth=auth))  # get image info
             try:
@@ -154,7 +154,7 @@ def request_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTRY):
         pass
 
 
-def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY):
+def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY, auth=None):
     """Create api response using raw container config, image, tag and registry"""
     if not raw_config.get('Env'):
         raw_config['Env'] = []
@@ -179,6 +179,8 @@ def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY):
                          raw_config['Volumes'].keys()),
         'workingDir': raw_config['WorkingDir'],
     }
+    if auth is not None:
+        config['secret'] = {'username': auth[0], 'password': auth[1]}
     return config
 
 
@@ -208,7 +210,7 @@ def get_container_config(image, auth=None, refresh_cache=False):
     raw_config = request_config(repo, tag, auth, registry)
     if raw_config is None:
         raise APIError('Couldn\'t get the image')
-    data = prepare_response(raw_config, repo, tag, registry)
+    data = prepare_response(raw_config, repo, tag, registry, auth)
 
     if cached_config is None:
         db.session.add(DockerfileCache(image=image_query, data=data,
@@ -250,8 +252,9 @@ def check_images_availability(images, secrets=()):
     """
     registries = defaultdict(lambda: {'v2_available': True, 'auth': [None]})
     for secret in secrets:
-        registry = complement_registry(secret.get('registry', DEFAULT_REGISTRY))
-        registries[registry]['auth'].append((secret['username'], secret['password']))
+        username, password, registry = secret
+        registry = complement_registry(registry)
+        registries[registry]['auth'].append((username, password))
 
     for image in images:
         _check_image_availability(image, registries)

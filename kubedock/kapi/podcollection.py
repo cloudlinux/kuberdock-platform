@@ -7,7 +7,7 @@ from ..billing import repr_limits
 from ..utils import (modify_node_ips, run_ssh_command, send_event, APIError,
                      POD_STATUSES)
 from .pod import Pod
-from .images import check_images_availability
+from .images import check_images_availability, parse_image_name
 from .pstorage import CephStorage, AmazonStorage, NodeCommandError
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
@@ -27,7 +27,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._merge()
 
     def add(self, params, skip_check=False):  # TODO: celery
-        secrets = params.pop('secrets', [])
+        secrets = set()  # username, password, registry
+        for container in params['containers']:
+            secret = container.pop('secret', None)
+            if secret is not None:
+                secrets.add((secret['username'], secret['password'],
+                             parse_image_name(container['image'])[0]))
+        secrets = sorted(secrets)
 
         if not skip_check:
             self._check_trial(params)
@@ -39,7 +45,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod = Pod.create(params)
         pod.compose_persistent(self.owner)
         self._make_namespace(pod.namespace)
-        pod.secrets = [self._make_secret(pod.namespace, **secret)
+        pod.secrets = [self._make_secret(pod.namespace, *secret)
                        for secret in secrets]
         self._save_pod(pod)
         pod._forge_dockers()

@@ -25,6 +25,9 @@ schema = {
         'number': dict(port_schema, required=True), 'protocol': protocol_schema}}},
     'volumeMounts': {'type': list, 'required': True, 'schema': {'type': str}},
     'workingDir': path_schema,
+    'secret': {'type': dict, 'schema': {
+        'username': {'type': str, 'required': True, 'empty': False},
+        'password': {'type': str, 'required': True, 'empty': False}}},
 }
 
 
@@ -120,11 +123,11 @@ class TestCheckImagesAvailability(unittest.TestCase):
     @unittest.skip('TODO: dockerhub too many failed login attempts')
     def test_default_registry_private(self):
         check_images_availability(['nginx', 'wncm/test_private'], [
-            {'username': 'wncm', 'password': 'mfhhh94kw02z'}
+            ('wncm', 'mfhhh94kw02z', DEFAULT_REGISTRY)
         ])
         with self.assertRaises(APIError):
             check_images_availability(['nginx', 'wncm/test_private'], [
-                {'username': 'wncm', 'password': 'wrong_password'}
+                ('wncm', 'wrong_password', DEFAULT_REGISTRY)
             ])
 
     def test_gcr(self):
@@ -136,24 +139,23 @@ class TestCheckImagesAvailability(unittest.TestCase):
         check_images_availability(['quay.io/quay/redis'])
         check_images_availability(
             ['quay.io/quay/redis', 'quay.io/sergey_gruntovsky/test_private'],
-            [{'registry': 'quay.io',
-              'username': 'sergey_gruntovsky+kd_test_private',
-              'password': 'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY'}]
+            [('sergey_gruntovsky+kd_test_private',
+              'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY',
+              'quay.io')]
         )
 
         with self.assertRaises(APIError):
             check_images_availability(
                 ['quay.io/quay/redis', 'quay.io/sergey_gruntovsky/test_private'],
-                [{'username': 'sergey_gruntovsky+kd_test_private',
-                  'password': 'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY'}]
+                [('sergey_gruntovsky+kd_test_private',
+                  'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY',
+                  'wrong-registry.io')]
             )
 
         with self.assertRaises(APIError):
             check_images_availability(
                 ['quay.io/quay/redis', 'quay.io/sergey_gruntovsky/test_private'],
-                [{'registry': 'quay.io',
-                  'username': 'sergey_gruntovsky+kd_test_private',
-                  'password': 'wrong_password'}]
+                [('sergey_gruntovsky+kd_test_private', 'wrong_password', 'quay.io')]
             )
         with self.assertRaises(APIError):
             check_images_availability(['quay.io/quay/redis',

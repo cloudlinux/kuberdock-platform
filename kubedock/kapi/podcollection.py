@@ -8,7 +8,7 @@ from ..utils import (modify_node_ips, run_ssh_command, send_event, APIError,
                      POD_STATUSES)
 from .pod import Pod
 from .images import check_images_availability
-from .pstorage import CephStorage, AmazonStorage
+from .pstorage import CephStorage, AmazonStorage, NodeCommandError
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY)
@@ -401,7 +401,15 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 raise APIError("Got no drive name")
             if size is not None:
                 ps._create_drive(drive, size)
-            vid = ps._makefs(drive)
+            try:
+                vid = ps._makefs(drive)
+            except NodeCommandError:
+                msg = u"Failed to make FS for drive '{0}' because of failed "\
+                      u"node command".format(drive)
+                current_app.logger.exception(
+                    msg
+                )
+                raise APIError(msg)
             pod._update_volume_path(v['name'], vid)
 
     def _container_start(self, pod, data):

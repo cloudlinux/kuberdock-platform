@@ -8,7 +8,6 @@ from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
 from hashlib import md5
-from operator import itemgetter
 from StringIO import StringIO
 
 from ..core import db
@@ -19,6 +18,11 @@ from ..usage.models import PersistentDiskState
 from ..settings import SSH_KEY_FILENAME
 from . import pd_utils
 from ..utils import APIError
+
+
+class NodeCommandError(Exception):
+    """Exceptions during execution commands on nodes."""
+    pass
 
 
 class PersistentStorage(object):
@@ -319,9 +323,8 @@ class CephStorage(PersistentStorage):
                           warn_only=True):
                 rv = run('mkfs.{0} {1} > /dev/null 2>&1'.format(fs, device))
                 if rv.return_code != 0:
-                    raise type('NodeCommandError', (Exception,), {})(
+                    raise NodeCommandError(
                         'Node command returned non-zero status')
-
 
     def _is_mapped(self, drive):
         """
@@ -333,14 +336,15 @@ class CephStorage(PersistentStorage):
                           warn_only=True):
                 rv = run('rbd info {0} --format json'.format(drive))
                 if rv.return_code != 0:
-                    raise type('NodeCommandError', (Exception,), {})(
-                        'Node command returned non-zero status')
+                    raise NodeCommandError(
+                        'Node command returned non-zero status: '
+                        'failed to get info for rbd image')
                 try:
                     if json.loads(rv).get('watchers'):
                         return True
                     return False
                 except (ValueError, TypeError):
-                    raise type('NodeCommandError', (Exception,), {})(
+                    raise NodeCommandError(
                         'Node command returned unexpected result')
 
     def _map_drive(self, drive):
@@ -353,7 +357,7 @@ class CephStorage(PersistentStorage):
                           warn_only=True):
                 rv = run('rbd map {0}'.format(drive))
                 if rv.return_code != 0:
-                    raise type('NodeCommandError', (Exception,), {})(
+                    raise NodeCommandError(
                         'Could not map drive: non-zero status')
                 return rv
 
@@ -367,7 +371,7 @@ class CephStorage(PersistentStorage):
                           warn_only=True):
                 rv = run('rbd unmap {0}'.format(device))
                 if rv.return_code != 0:
-                    raise type('NodeCommandError', (Exception,), {})(
+                    raise NodeCommandError(
                         'Could not unmap drive: non-zero status')
 
     def _get_fs(self, device):

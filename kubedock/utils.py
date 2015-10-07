@@ -2,6 +2,7 @@ import bitmath
 import boto.ec2
 import boto.ec2.elb
 import json
+import os
 import random
 import re
 import socket
@@ -745,3 +746,17 @@ def parse_datetime_str(instr):
         except ValueError:
             pass
     return None
+
+
+LOCALTIME = '/etc/localtime'
+ZONEINFO = '/usr/share/zoneinfo'
+
+
+def get_timezone(default_tz=None):
+    if os.path.islink(LOCALTIME):
+        localtime = os.path.realpath(LOCALTIME)
+        if os.path.commonprefix((localtime, ZONEINFO)) == ZONEINFO:
+            return os.path.relpath(localtime, ZONEINFO)
+    if default_tz:
+        return default_tz
+    raise OSError('Time zone cannot be determined')

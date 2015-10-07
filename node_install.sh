@@ -42,6 +42,8 @@ yum_wrapper()
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
+echo "Set time zone to $TZ"
+timedatectl set-timezone "$TZ"
 echo "Using MASTER_IP=${MASTER_IP}"
 
 # Workaround for CentOS 7 minimal CD bug.

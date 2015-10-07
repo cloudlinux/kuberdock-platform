@@ -24,7 +24,9 @@ except ImportError:
 from .core import ConnectionPool, db, ssh_connect
 from .factory import make_celery
 from .utils import (
-    update_dict, get_api_url, send_event, send_logs, POD_STATUSES)
+    update_dict, get_api_url, send_event, send_logs, POD_STATUSES,
+    get_timezone,
+)
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User
@@ -153,6 +155,13 @@ def add_new_node(host, kube_type, db_node,
         current_master_kubernetes = current_master_kubernetes.replace(
             'master', 'node')
 
+        try:
+            timezone = get_timezone()
+        except OSError as e:
+            timezone = 'UTC'
+            error_message = '{0}. Using "{1}"'.format(e, timezone)
+            send_logs(host, error_message, log_file)
+
         if redeploy:
             send_logs(host, 'Redeploy.', log_file)
             send_logs(host, 'Remove node {0} from kubernetes...'.format(host),
@@ -185,7 +194,7 @@ def add_new_node(host, kube_type, db_node,
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
-                     'FLANNEL_IFACE={3} bash /node_install.sh{4}'
+                     'FLANNEL_IFACE={3} TZ={4} bash /node_install.sh{5}'
         # we pass ports and hosts to let the node know which hosts are allowed
         data_for_firewall = reduce(
             (lambda x, y: x + ' {0}'.format(','.join(y))),
@@ -195,6 +204,7 @@ def add_new_node(host, kube_type, db_node,
         i, o, e = ssh.exec_command(deploy_cmd.format(AWS,
                                                      current_master_kubernetes,
                                                      MASTER_IP, node_interface,
+                                                     timezone,
                                                      data_for_firewall))
         s_time = time.time()
         while not o.channel.exit_status_ready():

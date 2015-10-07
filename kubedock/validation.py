@@ -329,18 +329,15 @@ new_pod_schema = {
                     'type': 'string',
                     'maxlength': PATH_LENGTH,
                     'nullable': True
+                },
+                'secret': {
+                    'type': 'dict',
+                    'nullable': True,
+                    'schema': {
+                        'username': {'type': 'string', 'nullable': True},
+                        'password': {'type': 'string', 'nullable': True},
+                    }
                 }
-            }
-        }
-    },
-    'secrets': {
-        'type': 'list',
-        'schema': {
-            'type': 'dict',
-            'schema': {
-                'username': {'type': 'string', 'required': True, 'empty': False},
-                'password': {'type': 'string', 'required': True, 'empty': False},
-                'registry': {'type': 'string', 'nullable': True},
             }
         }
     }

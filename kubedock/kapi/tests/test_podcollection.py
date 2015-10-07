@@ -727,19 +727,20 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
         self.namespace = 'n'
         self.pod_collection = PodCollection(self.user)
 
+    @mock.patch.object(PodCollection, '_make_secret', mock.Mock())
     @mock.patch('kubedock.kapi.podcollection.check_images_availability')
     def test_check_images_availability_called(self, check_, create_):
-        create_.return_value = pod = self.pod()
-        pod.secrets = [{'username': 'test_user', 'password': 'test_password'},
-                       {'username': 'test_user2', 'password': 'test_password2',
-                        'registry': 'quay.io'}]
+        images = ['wncm/test_image:4', 'quay.io/wncm/test_image']
+        secrets = [('test_user', 'test_password', mock.ANY),
+                   ('test_user2', 'test_password2', 'quay.io')]
         params = dict(self.params, containers=[
-            {'image': 'wncm/test_image:4'},
-            {'image': 'quay.io/wncm/test_image'}
+            {'image': images[0], 'secret': {'username': secrets[0][0],
+                                            'password': secrets[0][1]}},
+            {'image': images[1], 'secret': {'username': secrets[1][0],
+                                            'password': secrets[1][1]}},
         ])
         self.pod_collection.add(params)
-        check_.assert_called_once_with(['wncm/test_image:4', 'quay.io/wncm/test_image'],
-                                       pod.secrets)
+        check_.assert_called_once_with(images, secrets)
 
     @mock.patch.object(PodCollection, '_make_namespace')
     def test_make_namespace_called(self, make_namespace_, create_):
@@ -750,14 +751,23 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
     @mock.patch.object(PodCollection, '_make_secret')
     def test_make_secret_called(self, make_secret_, create_):
         create_.return_value = self.pod()
-        secrets = [{'username': 'test_user', 'password': 'test_password'},
-                   {'username': 'test_user2', 'password': 'test_password2',
-                    'registry': 'quay.io'}]
-        params = dict(self.params, secrets=secrets)
+        secrets = [('test_user', 'test_password', mock.ANY),
+                   ('test_user2', 'test_password2', mock.ANY)]
+        containers = [{
+            'image': 'test/image',
+            'secret': {'username': secrets[0][0], 'password': secrets[0][1]}
+        }, {
+            'image': 'quay.io/test/image',
+            'secret': {'username': secrets[1][0], 'password': secrets[1][1]}
+        }, {
+            'image': 'test/no/secret'
+        }]
+        params = dict(self.params, containers=containers)
 
-        self.pod_collection.add(params)
-        make_secret_.assert_has_calls([mock.call(self.namespace, **secrets[0]),
-                                       mock.call(self.namespace, **secrets[1])])
+        self.pod_collection.add(params, skip_check=True)
+        make_secret_.assert_has_calls([mock.call(self.namespace, *secrets[0]),
+                                       mock.call(self.namespace, *secrets[1])],
+                                      any_order=True)
 
     def test_check_trial_called(self, create_):
         self.pod_collection.add(self.params)

@@ -171,7 +171,14 @@ sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile"|}' $K
 sed -i '/^KUBE_ALLOW_PRIV/ {s/--allow_privileged=false/--allow_privileged=true/}' $KUBERNETES_CONF_DIR/config
 check_status
 
-
+OLD_KUBELET_PATH=/usr/lib/systemd/system/kubelet.service
+NEW_KUBELET_PATH=/etc/systemd/system/kubelet.service
+if [ -e $OLD_KUBELET_PATH ];then
+    grep -q Type=idle $OLD_KUBELET_PATH
+    if [ $? -ne 0 ];then
+        cp -f $OLD_KUBELET_PATH $NEW_KUBELET_PATH && sed -i '/Requires=docker.service/a Type=idle' $NEW_KUBELET_PATH
+    fi
+fi
 
 # 6. configure Flannel
 cat > /etc/sysconfig/flanneld << EOF

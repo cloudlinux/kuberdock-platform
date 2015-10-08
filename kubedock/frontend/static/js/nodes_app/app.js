@@ -594,8 +594,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
         });
 
         NodesCRUD.addInitializer(function() {
-            var keepAliveTimer = null,
-                controller = new NodesCRUD.Controller();
+            var controller = new NodesCRUD.Controller();
 
             App.router = new Marionette.AppRouter({
                 controller: controller,
@@ -605,11 +604,6 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     'detailed/:id/:tab/': 'showDetailedNode'
                 }
             });
-
-            function timer(){
-                if(keepAliveTimer != null) clearTimeout(keepAliveTimer);
-                keepAliveTimer = setTimeout(eventHandler, 5 * 1000);
-            }
 
             function eventHandler(){
                 if (typeof(EventSource) === undefined) {
@@ -629,8 +623,8 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                         }
                     }, false);
                     source.onerror = function () {
-                        timer();
                         console.log('SSE Error');
+                        setTimeout(eventHandler, 5 * 1000);
                     };
                 }
             }

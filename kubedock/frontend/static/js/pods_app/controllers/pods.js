@@ -463,18 +463,16 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                 if (typeof(EventSource) === undefined) {
                     console.log('ERROR: EventSource is not supported by browser');
                 } else {
-                    console.log('run');
                     source.addEventListener('pull_pods_state', function(){
                         WorkFlow.getCollection().fetch({
                             success: function(collection, response, opts){
                                 collection.trigger('pods:collection:fetched');
-                                console.log('fetched');
                             }
                         });
                     },false);
                     source.onerror = function () {
-                        setTimeout(eventHandler, 5 * 1000)
                         console.log('SSE Error');
+                        setTimeout(eventHandler, 5 * 1000)
                     };
                 }
             }

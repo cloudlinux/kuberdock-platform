@@ -12,7 +12,7 @@ from .usage.models import ContainerState
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .tasks import fix_pods_timeline_heavy
 from .utils import (modify_node_ips, get_api_url, set_limit,
-                    unregistered_pod_warning, send_event)
+                    unregistered_pod_warning, send_event, pod_without_id_warning)
 
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -207,7 +207,12 @@ def process_pods_event(data, app):
         print 'POD EVENT', data
     event_type = data['type']
     pod = data['object']
-    pod_id = pod['metadata']['labels']['kuberdock-pod-uid']
+    pod_id = pod['metadata'].get('labels', {}).get('kuberdock-pod-uid')
+    if pod_id is None:
+        with app.app_context():
+            pod_without_id_warning(pod['metadata']['name'],
+                                   pod['metadata']['namespace'])
+        return
 
     send_pod_status_update(pod, pod_id, event_type, app)
 

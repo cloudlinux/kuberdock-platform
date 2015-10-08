@@ -239,6 +239,11 @@ def put_item(user_id):
         rolename = data.pop('rolename', 'User')
         r = db.session.query(Role).filter_by(rolename=rolename).first()
         if r is not None:
+            if r.rolename == 'Admin':
+                pods = [p for p in u.pods if not p.is_deleted]
+                if pods:
+                    raise APIError('User with the "{0}" role '
+                                   'cannot have any pods'.format(r.rolename))
             data['role'] = r
         else:
             data['role'] = db.session.query(Role).filter_by(rolename='User').first()

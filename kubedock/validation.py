@@ -268,6 +268,7 @@ new_pod_schema = {
         'schema': {
             'type': 'dict',
             'schema': {
+                'sourceUrl': {'type': 'string', 'required': False},
                 'capabilities': {'type': 'dict', 'required': False},
                 'imagePullPolicy': {
                     'type': 'string',

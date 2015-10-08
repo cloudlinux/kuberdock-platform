@@ -243,6 +243,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 continue
 
     def _prepare_container(self, data, kube_type=0, volumes=None):
+        # Strip non-kubernetes params
+        data.pop('sourceUrl', None)
+
         if not data.get('name'):
             data['name'] = self._make_name_from_image(data.get('image', ''))
 
@@ -262,6 +265,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
         for p in data.get('ports', []):
             p['protocol'] = p.get('protocol', 'TCP').upper()
+            p.pop('isPublic', None)     # Non-kubernetes param
 
         if self.owner != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):

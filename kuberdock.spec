@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -160,6 +160,48 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Thu Oct 08 2015 Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-3
+- AC-1113: various fixes for logs
+- AC-1036
+- AC-1126: Implemented rerunning failed node tasks
+- AC-924, AC-1121, AC-1044, AC-1103, AC-1083, AC-1086, AC-1057, AC-1019, AC-1013, AC-1027, AC-855, AC-814, AC-927, AC-861
+- AC-151: select image from private repo/registry; AC-1066: save/start; quay.io; small bugfix
+- bugfix: delete stopped pod -> pod is already stopped error
+- AC-796, AC-1158, AC-1152, AC-839, AC-926, AC-1151, AC-951
+- AC-854: pod status updates fixed
+- AC-1168 Added max kubes preference and validation
+- AC-1178: Add menu item Pods for the TrialUser; small fix in tests
+- AC-1168 Added max kubes preference and validation
+- AC-1179: check images availability before creating a pod; api improvements; tests
+- AC-1157: Log out locked user
+- AC-1105: username was replaced with user id in PD names
+- AC-628: Add information text if log is empty
+- AC-1190: Remove # from podlist & containerlist
+- deploy.sh: improved AWS checker
+- Fixed usgi autoreload of kuberdock
+- More robust validation for yaml
+- AC-1167: Enable logs API authorization
+- location fix in 401 error & notification position in podname validation
+- AC-1196: login_required for logout
+- AC-833: Add style to links
+- AC-1180. Added command to run specified upgrade script.
+- Fix listener respawn with 'containerID' key missing
+- AC-1211: Remove oblosete /logs/ section from nginx config
+- AC-1185: forbid locked users to perform any actions
+- AC-1206: fix on user blocking
+- AC-1111: deploy.sh, move fetching repositories after interactive section
+- AC-1210 Add kube price to API output
+- AC-1221: refresh cache
+- AC-1115: Add timer to eventhandler pod & node app
+- AC-1171: KuberDock stats ping back
+- AC-791: Disk space limits in GB
+- AC-1207: fix for unhandled exceptions from pstorage
+- AC-1228: Set master time zone on nodes
+- Add optional sourceUrl param to pod config
+- AC-1235: User with 'Admin' role shouldn't have pods
+- AC-1193 Introduce private imiges repo in kuberdock web
+- fix pod without kuberdock-pod-uid error
+
 * Thu Sep 24 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-2
 - AC-884: Show PD size in table
 - AC-1088: remove deprecated packages

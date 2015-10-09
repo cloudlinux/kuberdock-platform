@@ -13,6 +13,8 @@ def _set_limits():
     hosts = defaultdict(list)
     for user in User.query:
         for pod in PodCollection(user).get(as_json=False):
+            if 'host' not in pod:
+                continue
             for container in pod['containers']:
                 if 'containerID' not in container:
                     continue

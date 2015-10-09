@@ -3,9 +3,11 @@ import ipaddress
 import random
 import string
 import types
+from datetime import datetime
 from sqlalchemy.dialects import postgresql
 from flask import current_app
 from ..core import db
+from ..settings import DOCKER_IMG_CACHE_TIMEOUT
 from ..models_mixin import BaseModelMixin
 from .. import signals
 from ..usage.models import IpState
@@ -106,6 +108,10 @@ class ImageCache(db.Model):
         return "<ImageCache(query='%s', data='%s', time_stamp='%s'')>" % (
             self.query, self.data, self.time_stamp)
 
+    @property
+    def outdated(self):
+        return (datetime.utcnow() - self.time_stamp) > DOCKER_IMG_CACHE_TIMEOUT
+
 
 class DockerfileCache(db.Model):
     __tablename__ = 'dockerfile_cache'
@@ -117,6 +123,10 @@ class DockerfileCache(db.Model):
     def __repr__(self):
         return "<DockerfileCache(image='%s', data='%s', time_stamp='%s'')>" % (
             self.image, self.data, self.time_stamp)
+
+    @property
+    def outdated(self):
+        return (datetime.utcnow() - self.time_stamp) > DOCKER_IMG_CACHE_TIMEOUT
 
 
 def _page(page, pages):

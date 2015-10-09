@@ -7,7 +7,7 @@ from .. import tasks
 from ..core import db
 from ..models import ImageCache
 from ..validation import check_container_image_name, check_image_request
-from ..settings import DEFAULT_IMAGES_URL, DOCKER_IMG_CACHE_TIMEOUT
+from ..settings import DEFAULT_IMAGES_URL
 from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..kapi.images import get_container_config
 
@@ -52,8 +52,7 @@ def search_image(patt=re.compile(r'https?://')):
     query = db.session.query(ImageCache).get(query_key)
 
     # if query is saved in DB and it's not older than 1 day return it
-    if not refresh_cache and query is not None and \
-            (datetime.now() - query.time_stamp) < DOCKER_IMG_CACHE_TIMEOUT:
+    if not (refresh_cache or query is None or query.outdated):
         return {'status': 'OK', 'data': query.data['results'],
                 'num_pages': query.data['num_pages'], 'page': page, 'per_page': per_page}
 

@@ -60,8 +60,8 @@ define(['pods_app/app',
             getImage: function(data){
                 this.trigger('step:getimage', data);
             },
-            imageSelected: function(image, url, imageName){
-                this.trigger('image:selected', image, url, imageName);
+            imageSelected: function(image, url, imageName, auth){
+                this.trigger('image:selected', image, url, imageName, auth);
             },
             portConf: function(data, imageName){
                 this.trigger('step:portconf', data.model, imageName);
@@ -234,36 +234,13 @@ define(['pods_app/app',
             },
 
             selectImage:function(){
-                var data,
-                    that = this,
-                    preloader = $('#page-preloader');
-
-                if (this.ui.password.val() || this.ui.username.val()){
-                    data = { image: this.ui.privateField.val(),
-                            auth: { password: this.ui.password.val(),
-                                    username: this.ui.username.val() }};
-                } else {
-                    data = { image: this.ui.privateField.val() };
-                }
-
-                data = JSON.stringify(data);
-
-                preloader.show();
-                $.ajax({
-                    type: 'POST',
-                    dataType: 'json',
-                    contentType: "application/json; charset=utf-8",
-                    url: '/api/images/new',
-                    data: data,
-                    success: function(data){
-                        console.log(data);
-                        preloader.hide();
-                    },
-                    error: function(data){
-                        preloader.hide();
-                        utils.notifyWindow(data.responseText)
-                    }
-                });
+                var select = _.bind(this.trigger, this, 'image:selected',
+                                    this.ui.privateField.val(), null)
+                if (this.ui.password.val() || this.ui.username.val())
+                    select(undefined, {username: this.ui.username.val(),
+                                       password: this.ui.password.val()});
+                else
+                    select();
             },
 
             imageSourceOnChange: function(){

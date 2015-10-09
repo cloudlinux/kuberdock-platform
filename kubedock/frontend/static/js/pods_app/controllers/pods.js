@@ -400,7 +400,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             model: model
                         }));
                     });
-                    that.listenTo(wizardLayout, 'image:selected', function(image, url, imageName){
+                    that.listenTo(wizardLayout, 'image:selected', function(image, url, imageName, auth){
                         if (imageName !== undefined) {
                             var container = _.find(model.get('containers'), function(c){
                                 return imageName === c.name
@@ -416,16 +416,23 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             }));
                         }
                         else {
+                            utils.preloader.show();
                             var rqst = $.ajax({
                                 type: 'POST',
+                                dataType: 'json',
+                                contentType: 'application/json; charset=utf-8',
                                 url: '/api/images/new',
-                                data: {image: image}
+                                data: JSON.stringify({image: image, auth: auth})
                             });
-                            rqst.done(function(data){
-                                var slash = image.indexOf('/'),
-                                    name = (slash >= 0) ? image.substring(slash+1) : image;
+                            rqst.error(function(data){
+                                utils.preloader.hide();
+                                utils.notifyWindow(data);
+                            });
+                            rqst.success(function(data){
+                                utils.preloader.hide();
+                                var name = image.replace(/[^a-z0-9]+/gi, '-');
+                                name += _.random(Math.pow(36, 8)).toString(36);
                                 if (data.hasOwnProperty('data')) { data = data['data']; }
-                                name += _.map(_.range(10), function(i){return _.random(1, 10);}).join('');
                                 var contents = {
                                     image: image, name: name, workingDir: null,
                                     ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
@@ -443,7 +450,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                     volumes: model.get('volumes')
                                 }));
                             });
-                            wizardLayout.steps.show(new App.Views.Loading.LoadingView());
                         }
                     });
                     App.contents.show(wizardLayout);

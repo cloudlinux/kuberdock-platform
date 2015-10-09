@@ -73,5 +73,10 @@ define({
                 className: 'error',
             });
         }
+    },
+
+    preloader: {
+        show: function(){ $('#page-preloader').show(); },
+        hide: function(){ $('#page-preloader').hide(); }
     }
 });

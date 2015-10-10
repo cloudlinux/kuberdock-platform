@@ -223,16 +223,24 @@ define(['marionette', 'utils'], function (Marionette, utils) {
             tagName: 'tr'
         });
 
+        /* Public IPs Empty Views */
+        Views.PublicIPsEmptyView = Marionette.ItemView.extend({
+            template: '#publicIPs-item-empty-template',
+            tagName: 'tr'
+        });
+
         /* Public IPs Views */
         Views.PublicIPsView = Marionette.CompositeView.extend({
-            template: '#publicIPs-template',
-            childView: Views.PublicIPsItemView,
-            childViewContainer: 'tbody',
-            templateHelpers: function(){
-                return {
-                    collection : this.collection
-                }
-            }
+            template            : '#publicIPs-template',
+            childView           : Views.PublicIPsItemView,
+            emptyView           : Views.PublicIPsEmptyView,
+            childViewContainer  : 'tbody',
+        });
+
+        /* Persistent volumes empty view */
+        Views.PersistentVolumesEmptyView = Marionette.ItemView.extend({
+            template: '#persistent-volumes-empty-template',
+            tagName: 'tr',
         });
 
         /* Persistent volumes entry view */
@@ -262,14 +270,10 @@ define(['marionette', 'utils'], function (Marionette, utils) {
 
         /* Persistent volumes Views */
         Views.PersistentVolumesView = Marionette.CompositeView.extend({
-            template: '#persistent-volumes-template',
-            childView: Views.PersistentVolumesItemView,
-            childViewContainer: 'tbody',
-            templateHelpers: function(){
-                return {
-                    collection : this.collection
-                }
-            }
+            template           : '#persistent-volumes-template',
+            childView          : Views.PersistentVolumesItemView,
+            emptyView          : Views.PersistentVolumesEmptyView,
+            childViewContainer : 'tbody',
         });
 
         /* Profile edit volumes Views */

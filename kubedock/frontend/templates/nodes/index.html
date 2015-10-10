@@ -408,6 +408,10 @@
         </div>
     </script>
 
+    <script type="text/template" id="node-empty-template">
+        <td colspan="5" class="text-center disabled-color-text">You don't have any nodes</td>
+    </script>
+
     <script type="text/template" id="node-item-template">
         <td>
             <button id="detailedNode" title="<%- hostname %>">
@@ -441,7 +445,6 @@
             </div>
         </div>
         <div class="container">
-        <!--<div><strong>You have <%- totalNodes %> nodes</strong></div -->
             <table id="nodelist-table" class="table">
                 <thead>
                     <tr class="tablesorter-headerRow">
@@ -454,13 +457,7 @@
                         <th class="status">Status<b class="caret"></b></th>
                     </tr>
                 </thead>
-                <tbody>
-                    <% if(totalNodes == 0){ %>
-                        <tr>
-                            <td colspan="5" class="text-center disabled-color-text">You don't have any nodes</td>
-                        </tr>
-                    <% } %>
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </script>

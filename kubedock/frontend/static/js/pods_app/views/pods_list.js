@@ -1,10 +1,11 @@
 define(['pods_app/app',
         'tpl!pods_app/templates/layout_pod_list.tpl',
         'tpl!pods_app/templates/pod_list_item.tpl',
+        'tpl!pods_app/templates/pod_list_empty.tpl',
         'tpl!pods_app/templates/pod_list.tpl',
         'pods_app/utils',
         'bootstrap'],
-       function(Pods, layoutPodListTpl, podListItemTpl, podListTpl, utils){
+       function(Pods, layoutPodListTpl, podListItemTpl, podListEmptyTpl, podListTpl, utils){
 
     Pods.module('Views.List', function(List, App, Backbone, Marionette, $, _){
 
@@ -35,6 +36,11 @@ define(['pods_app/app',
                 list: '#layout-list',
                 pager: '#layout-footer'
             },
+        });
+
+        List.PodListEmpty = Backbone.Marionette.ItemView.extend({
+            template : podListEmptyTpl,
+            tagName  : 'tr',
         });
 
         // View for showing a single pod item as a container in pods list
@@ -130,6 +136,7 @@ define(['pods_app/app',
             childView           : List.PodListItem,
             tagName             : 'div',
             className           : 'container',
+            emptyView           : List.PodListEmpty,
             childViewContainer  : 'tbody',
 
             ui: {
@@ -151,8 +158,7 @@ define(['pods_app/app',
             templateHelpers: function(){
                 return {
                     allChecked: this.collection.fullCollection.allChecked ? true : false,
-                    checked: this.collection.fullCollection.checkedNumber,
-                    collectionLenght: this.collection.length
+                    checked: this.collection.fullCollection.checkedNumber
                 }
             },
 

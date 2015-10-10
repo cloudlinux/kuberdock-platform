@@ -20,6 +20,11 @@ define(['marionette', 'utils'], function (Marionette, utils) {
 
     IPPoolApp.module('Views', function(Views, App, Backbone, Marionette, $, _){
 
+        Views.NetworkEmpty = Backbone.Marionette.ItemView.extend({
+            template: '#network-empty-template',
+            tagName: 'tr',
+        });
+
         Views.NetworkItem = Backbone.Marionette.ItemView.extend({
             template: '#network-item-template',
             tagName: 'tr',
@@ -165,9 +170,10 @@ define(['marionette', 'utils'], function (Marionette, utils) {
         });
 
         Views.LeftView = Backbone.Marionette.CompositeView.extend({
-            template: '#ippool-left-template',
-            childView: Views.NetworkItem,
-            childViewContainer: "tbody.networks-list",
+            template           : '#ippool-left-template',
+            childView          : Views.NetworkItem,
+            emptyView          : Views.NetworkEmpty,
+            childViewContainer : "tbody.networks-list",
 
             initialize: function(){
                 if (this.collection.length != 0) {
@@ -242,7 +248,8 @@ define(['marionette', 'utils'], function (Marionette, utils) {
 
             onSave: function(){
                 // temp validation
-                var network = this.ui.network.val();
+                var that = this,
+                    network = this.ui.network.val();
                 if(network.length == 0 || network.split('.').length < 4){
                     this.ui.network.notify('Wrong IP-address');
                     return false;

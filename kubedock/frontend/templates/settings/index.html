@@ -224,6 +224,9 @@
         </div>
     </script>
 
+    <script type="text/template" id="publicIPs-item-empty-template">
+        <td class="text-center" colspan="2">Public IPs not specified</td>
+    </script>
      <!-- settingsPublicIPsTab template -->
     <script type="text/template" id="publicIPs-template">
         <div class="content-body clearfix" id="publicIPs-tab">
@@ -237,13 +240,7 @@
                                     <th>Pod Name</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <% if (collection.length == 0) { %>
-                                    <tr>
-                                        <td class="text-center" colspan="2">Public IPs not specified</td>
-                                    </tr>
-                                <% } %>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                         <div class="buttons clearfix">
                             <div class="description pull-left">* Unused Public IP billed as usual</div>
@@ -278,19 +275,17 @@
                                     <th>Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <% if (collection.length == 0) { %>
-                                    <tr>
-                                        <td class="text-center" colspan="3">Persistent volumes not specified</td>
-                                    </tr>
-                                <% } %>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
                 <div class="buttons clearfix"></div>
             </div>
         </div>
+    </script>
+
+    <script type="text/template" id="persistent-volumes-empty-template">
+        <td class="text-center" colspan="3">Persistent volumes not specified</td>
     </script>
 
     <script type="text/template" id="persistent-volumes-item-template">

@@ -3,9 +3,7 @@ from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
 from functools import wraps
 from datetime import datetime
-import boto.ec2
 import math
-import operator
 import socket
 import os
 from .. import tasks
@@ -562,22 +560,6 @@ def check_host(hostname=''):
     return jsonify({'status': 'OK'})
 
 
-def poll():
-    rv = run('rbd ls')
-    if rv.return_code != 0:
-        return {}
-    devices = dict.fromkeys(rv.split(), None)
-    mapped_list = [i.strip().split() for i in run('rbd showmapped').splitlines()]
-    # Maybe we'll want mounted later
-    # mounted_list = run('mount | grep /dev/rbd')
-    mapped = [dict(zip(mapped_list[0], i)) for i in mapped_list[1:]]
-    for i in mapped:
-        devices[i['image']] = dict(filter(
-            (lambda x: x[0] not in ['id', 'image', 'snap']),
-            i.items()))
-    return devices
-
-
 def process_rule(**kw):
     append_reject = kw.pop('append_reject', True)
     action = kw.pop('action', 'insert')
@@ -616,55 +598,6 @@ def handle_nodes(func, **kw):
         return {}
     with settings(hide('running', 'warnings', 'stdout', 'stderr'), warn_only=True):
         return execute(func, hosts=nodes_, **kw)
-
-
-def get_ceph_volumes():
-    drives = []
-    nodes_ = dict([(k, v)
-        for k, v in db.session.query(Node).values(Node.ip, Node.hostname)]).keys()
-    data = handle_nodes(poll, nodes=nodes_)
-    sets = [set(filter((lambda x: x[1] is None), i.items())) for i in data.values()]
-    intersection = map(operator.itemgetter(0), sets[0].intersection(*sets[1:]))
-    userid = KubeUtils._get_current_user().id
-    for item in intersection:
-        drive, user = pd_utils.get_drive_and_user(item)
-        if not user:
-            continue
-        if user.id == userid:
-            drives.append(drive)
-    return drives
-
-
-def get_aws_volumes():
-    drives = []
-    try:
-        from ..settings import REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-    except ImportError:
-        return drives
-    userid = KubeUtils._get_current_user().id
-    conn = boto.ec2.connect_to_region(
-        REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-    for vol in conn.get_all_volumes():
-        item = vol.tags.get('Name', 'Nameless')
-        drive, user = pd_utils.get_drive_and_user(item)
-        if not user:
-            continue
-        if userid == user.id and vol.status == 'available':
-            drives.append(drive)
-    return drives
-
-
-@nodes.route('/lookup', methods=['GET'])
-@login_required_or_basic_or_token
-@check_permission('get', 'pods')
-def pd_lookup():
-    if AWS:
-        return jsonify({'status': 'OK', 'data': get_aws_volumes()})
-    if CEPH:
-        return jsonify({'status': 'OK', 'data': get_ceph_volumes()})
-    return jsonify({'status': 'OK', 'data': []})
 
 
 @nodes.route('/redeploy/<node_id>', methods=['GET'])

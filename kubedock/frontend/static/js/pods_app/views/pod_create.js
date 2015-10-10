@@ -374,6 +374,23 @@ define(['pods_app/app',
                 'change @ui.input_command' : 'changeCommand'
             },
 
+            initialize: function(options) {
+                var that = this;
+                this.containers = options.containers;
+                this.volumes = options.volumes;
+                _.each(this.model.get('volumeMounts'), function(vm){
+                    if (!vm.name) {
+                        vm.name = that.generateName(vm.mountPath);
+                    }
+                    var item = _.find(this.volumes, function(v){
+                        return v.name === vm.name
+                    });
+                    if (item === undefined) {
+                        this.volumes.push({name: vm.name, localStorage: true})
+                    }
+                }, {volumes: this.volumes})
+            },
+
             triggers: {
                 'click @ui.prevStep'     : 'step:getimage',
                 'click .complete'        : 'step:complete',
@@ -401,6 +418,7 @@ define(['pods_app/app',
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
                     kubeType;
+
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -416,12 +434,9 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     podName: model !== undefined ? model.get('name') : '',
-                    url: this.model.url
+                    url: this.model.url,
+                    volumeEntries: this.composeVolumeEntries()
                 };
-            },
-
-            initialize: function(options) {
-                this.containers = options.containers;
             },
 
             addItem: function(evt){
@@ -432,7 +447,7 @@ define(['pods_app/app',
 
             addVolume: function(evt){
                 evt.stopPropagation();
-                this.model.get('volumeMounts').push({mountPath: null, readOnly: false, isPersistent: false});
+                this.model.get('volumeMounts').push({mountPath: null, readOnly: false});
                 this.render();
             },
 
@@ -443,10 +458,16 @@ define(['pods_app/app',
                     var cells = tgt.closest('div').children('span'),
                         pdName = cells.eq(0).children('input').first().val().trim(),
                         pdSize = parseInt(cells.eq(1).children('input').first().val().trim());
-                    this.model.persistentDrives.push({pdName: pdName, pdSize: pdSize});
-                    this.persistentDefault = pdName;
+                    if (!pdName || !pdSize) return;
                     if (this.hasOwnProperty('currentIndex')) {
-                        this.model.get('volumeMounts')[this.currentIndex].persistentDisk = {pdName: pdName, pdSize: pdSize};
+                        var vmEntry = this.model.get('volumeMounts')[this.currentIndex],
+                            vol = _.find(this.volumes, function(v){
+                                return v.name === vmEntry.name
+                            });
+                        if (_.has(vol, 'persistentDisk')) {
+                            this.releaseDrive(vol.persistentDisk.pdName);
+                        }
+                        vol['persistentDisk'] = {pdName: pdName, pdSize: pdSize};
                     }
                     delete this.showPersistentAdd;
                 }
@@ -455,6 +476,25 @@ define(['pods_app/app',
                     this.currentIndex = tgt.closest('tr').index();
                 }
                 this.render();
+            },
+
+            composeVolumeEntries: function(){
+                 /* we don't want to add additional fields to volumeMounts
+                  * that's why we produce temporary volumeEntries
+                  */
+                return _.map(this.model.get('volumeMounts'), function(vm){
+                    var item = _.find(this.volumes, function(v){return v.name === vm.name;});
+                    var rv = {mountPath: vm.mountPath};
+                    if (item === undefined) return _.extend(rv, {isPersistent: false});
+                    if ('persistentDisk' in item) {
+                        rv['isPersistent'] = true;
+                        rv['persistentDisk'] = _.clone(item.persistentDisk);
+                    }
+                    else {
+                        rv['isPersistent'] = false;
+                    }
+                    return rv;
+                }, {volumes: this.volumes});
             },
 
             cancelAddDrive: function(evt){
@@ -478,6 +518,12 @@ define(['pods_app/app',
                 this.render();
             },
 
+            generateName: function(path){
+                return path.replace(/^\//, '').replace(/\//g, '-')
+                    + _.map(_.range(10),
+                        function(i){return _.random(1, 10)}).join('');
+            },
+
             togglePersistent: function(evt){
                 evt.stopPropagation();
                 var tgt = $(evt.target),
@@ -485,35 +531,65 @@ define(['pods_app/app',
                     row = this.model.get('volumeMounts')[index],
                     that = this;
 
-                if (row.isPersistent) {
-                    row.isPersistent = false;
-                    to_be_released = _.filter(this.model.persistentDrives, function(d){
-                    if (row.hasOwnProperty('persistentDisk')) {
-                        return row.persistentDisk.pdName === d.pdName;
-                    }
-                    return false;
-                });
-                _.each(to_be_released, function(d){ delete d.used; });
-                    this.render();
+                this.toggleVolumeEntry(row);
+
+                if (!this.model.hasOwnProperty('persistentDrives')) {
+                    var pdCollection = new App.Data.PersistentStorageCollection();
+                        pdCollection.fetch({
+                            wait: true,
+                            data: {'free-only': true},
+                            success: function(collection, response, opts){
+                                that.model.persistentDrives = _.map(collection.models, function(m){
+                                    return that.transformKeys(m.attributes);
+                                });
+                                that.render();
+                            }
+                        });
                 }
                 else {
-                    if (!this.model.hasOwnProperty('persistentDrives')) {
-                        var rqst = $.ajax({
-                            type: 'GET',
-                            url: '/api/nodes/lookup'
-                        });
-                        rqst.done(function(rs){
-                            that.model.persistentDrives = _.map(rs['data'], function(i){return {pdName: i, pdSize: null}});
-                            row.isPersistent = true;
-                            row.persistentDisk = {pdName: null};
-                            that.render();
-                        });
-                    }
-                    else {
-                        row.isPersistent = true;
-                        row.persistentDisk = {pdName: null};
-                        that.render();
-                    }
+                    this.render();
+                }
+            },
+
+            toggleVolumeEntry: function(row){
+                var vItem = _.find(
+                        this.volumes,
+                        function(v){return v.name === row.name});
+                if (vItem === undefined) return;
+                if ('persistentDisk' in vItem) {
+                    this.releaseDrive(vItem.persistentDisk.pdName);
+                    delete vItem.persistentDisk;
+                    vItem.localStorage = true;
+                }
+                else if ('localStorage' in vItem) {
+                    delete vItem.localStorage;
+                    vItem.persistentDisk = {pdName: null, pdSize: null};
+                }
+            },
+
+            transformKeys: function(obj){
+                return _.object(
+                    _.map(
+                        _.pairs(
+                            _.pick(_.clone(obj), 'name', 'size')),
+                    function(i){
+                        return [
+                            'pd'
+                                + i[0].charAt(0).toUpperCase()
+                                + i[0].slice(1),
+                            i[1]
+                    ]}));
+            },
+
+            releaseDrive: function(name){
+                if (!name) return;
+                if (!this.model.hasOwnProperty('persistentDrives')) return;
+                var disk = _.find(this.model.persistentDrives, function(d){
+                    return d.pdName === name;
+                });
+                if (disk === undefined) return;
+                if (disk.hasOwnProperty('used')) {
+                    delete disk.used;
                 }
             },
 
@@ -626,10 +702,13 @@ define(['pods_app/app',
                             that.model.get('ports')[index][className] = parseInt(newValue);
                         }
                         else if (item.hasClass('mountPath')) {
-                            that.model.get('volumeMounts')[index]['mountPath'] = newValue;
+                            var mountEntry = that.model.get('volumeMounts')[index];
+                            mountEntry['mountPath'] = newValue;
+                            mountEntry['name'] = that.generateName(newValue);
                         }
                     }
                 });
+
                 this.ui.iseditable.editable({
                     type: 'select',
                     value: 'tcp',
@@ -641,6 +720,7 @@ define(['pods_app/app',
                         that.model.get('ports')[index]['protocol'] = newValue;
                     }
                 });
+
                 this.ui.iveditable.editable({
                     type: 'select',
                     value: null,
@@ -650,13 +730,17 @@ define(['pods_app/app',
                     success: function(response, newValue) {
                         var index = $(this).closest('tr').index(),
                             entry = that.model.get('volumeMounts')[index],
-                            pEntry = _.filter(that.model.persistentDrives, function(i){ return i.pdName === newValue; })[0];
-                        entry['persistentDisk'] = pEntry;
-                        pEntry['used'] = true;
-                        that.render();
+                            pEntry = _.find(that.model.persistentDrives, function(i){return i.pdName === newValue}),
+                            vol = _.find(that.volumes, function(v){return v.name === entry.name});
+                        if (vol) {
+                            vol['persistentDisk'] = _.clone(pEntry);
+                            pEntry['used'] = true;
+                            that.render();
+                        }
                     }
                 });
             },
+
             filterCommand: function(command) {
                 command = _.map(command, function(e) {
                     return e.indexOf(' ') > 0 ? '"' + e + '"': e;

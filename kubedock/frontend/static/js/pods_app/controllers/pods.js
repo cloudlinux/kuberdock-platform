@@ -234,87 +234,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     model.containerUrls = {};
                     model.origEnv = {};
 
-                    var processRequest = function(data){
-                        var hasPublic = function(containers){
-                            for (var i in containers) {
-                                for (var j in containers[i].ports) {
-                                    if (containers[i].ports[j].hasOwnProperty('isPublic')
-                                            && containers[i].ports[j].isPublic) {
-                                        return true;
-                                    }
-                                }
-                            }
-                            return false;
-                        };
-                        var pdBackup = {};
-                        var volumeNames = {};
-                        if (data.has('persistentDrives')) { delete data.attributes.persistentDrives; }
-                        _.each(data.get('containers'), function(c){
-                            if (c.hasOwnProperty('persistentDrives')) { delete c.persistentDrives; }
-                            _.each(c.volumeMounts, function(v){
-                                volumeNames[v.name] = true;
-                                if (v.isPersistent) {
-                                    var entry = {name: v.name, persistentDisk: v.persistentDisk};
-                                    var used = _.filter(data.attributes.persistentDrives,
-                                        function(i){return i.pdName === v.persistentDisk.pdName});
-                                    if (used.length) {
-                                        used[0].used = true;
-                                    }
-                                    pdBackup[v.name] = _.clone(v.persistentDisk);
-                                }
-                                else {
-                                    var entry = {name: v.name, localStorage: true};
-                                }
-                                delete v.isPersistent;
-                                delete v.persistentDisk;
-                                var filtered = _.filter(data.get('volumes'), function(vi){
-                                    return vi.name === entry.name;
-                                });
-                                if (filtered.length === 0) {
-                                    data.get('volumes').push(entry);
-                                }
-                            });
-                        });
-
-                        data.attributes.volumes = _.filter(data.attributes.volumes, function(v){
-                            return _.has(volumeNames, v.name);
-                        });
-
-                        if (hasPublic(data.get('containers'))) {
-                            data.attributes['set_public_ip'] = true;
-                        }
-                        else {
-                            data.attributes['set_public_ip'] = false;
-                        }
-
-                        WorkFlow.getCollection().fullCollection.create(data.attributes, {
-                            wait: true,
-                            success: function(){
-                                Pods.navigate('pods');
-                                that.showPods();
-                            },
-                            error: function(model, response, options){
-                                console.log('error applying data');
-                                _.each(_.pairs(pdBackup), function(p){
-                                    _.each(model.get('containers'), function(c){
-                                        _.each(c['volumeMounts'], function(v){
-                                            if (v.name === p[0]) {
-                                                v.persistentDisk = _.clone(p[1]);
-                                                v.isPersistent = true;
-                                            }
-                                        });
-                                    });
-                                });
-                                var body = response.responseJSON ? JSON.stringify(response.responseJSON.data) : response.responseText;
-                                $.notify(body, {
-                                    autoHideDelay: 5000,
-                                    globalPosition: 'bottom left',
-                                    className: 'error'
-                                });
-                            }
-                        });
-                    };
-
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.header.show(new App.Views.NewItem.PodHeaderView({model: model}));
                         wizardLayout.steps.show(new App.Views.NewItem.GetImageView({collection: new App.Data.ImageCollection()}));
@@ -358,8 +277,17 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     that.listenTo(wizardLayout, 'clear:pager', function(){
                         wizardLayout.footer.empty();
                     });
-                    that.listenTo(wizardLayout, 'step:portconf', function(data, imageName){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data, imageName: imageName}));
+                    that.listenTo(wizardLayout, 'step:portconf', function(data){
+                        var containerModel = data.has('containers')
+                                ? new App.Data.Image(_.last(model.get('containers')))
+                                : data;
+                        containerModel.persistentDrives = model.persistentDrives;
+                        wizardLayout.steps.show(
+                            new App.Views.NewItem.WizardPortsSubView({
+                                model: containerModel,
+                                containers: model.get('containers'),
+                                volumes: model.get('volumes')
+                            }));
                     });
                     that.listenTo(wizardLayout, 'step:envconf', function(data){
                         var containerModel = data.has('containers')
@@ -378,7 +306,30 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         }));
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
-                        processRequest(data);
+                        data.attributes['set_public_ip'] = _.any(
+                            _.flatten(_.pluck(data.get('containers'), 'ports')),
+                            function(p){return p['isPublic']});
+
+                        data.attributes['proposed_fail'] = true;
+
+                        WorkFlow.getCollection().fullCollection.create(data.attributes, {
+                            wait: true,
+                            success: function(){
+                                Pods.navigate('pods');
+                                that.showPods();
+                            },
+                            error: function(model, response, options){
+                                console.log('could not save data');
+                                var body = response.responseJSON
+                                    ? JSON.stringify(response.responseJSON.data)
+                                    : response.responseText;
+                                $.notify(body, {
+                                    autoHideDelay: 5000,
+                                    globalPosition: 'bottom left',
+                                    className: 'error'
+                                });
+                            }
+                        });
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(containerModel){
                         if (containerModel.hasOwnProperty('persistentDrives')) {

@@ -83,8 +83,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                        <% if (volumeMounts.length != 0){ %>
-                            <% _.each(volumeMounts, function(v){ %>
+                        <% if (volumeEntries.length != 0){ %>
+                            <% _.each(volumeEntries, function(v){ %>
                                 <tr>
                                     <td>
                                         <span class="ieditable mountPath">

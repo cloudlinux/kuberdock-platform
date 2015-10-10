@@ -45,7 +45,7 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
                 }
                 if (data.hasOwnProperty('volumeMounts')) {
                     _.each(data['volumeMounts'], function(m){
-                        container['volumeMounts'].push({name: null, mountPath: m, readOnly: false, isPersistent: false})
+                        container['volumeMounts'].push({name: null, mountPath: m, readOnly: false})
                     });
                 }
                 _.each(['workingDir', 'args', 'env', 'secret'], function(i){
@@ -105,6 +105,25 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
             model: Data.Stat,
             parse: unwrapper
         });
+
+        // TODO: Fixed code duplication by moving models from settings_app to a common file
+        Data.PersistentStorageModel = Backbone.Model.extend({
+            defaults: {
+                name   : 'Nameless',
+                size   : 0,
+                in_use : false,
+                pod    : ''
+            },
+            parse: unwrapper
+        });
+
+        // TODO: Fixed code duplication by moving models from settings_app to a common file
+        Data.PersistentStorageCollection = Backbone.Collection.extend({
+            url: '/api/pstorage',
+            model: Data.PersistentStorageModel,
+            parse: unwrapper
+        });
+
     });
 
     return Pods.Data;

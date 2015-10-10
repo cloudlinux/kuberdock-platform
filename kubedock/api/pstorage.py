@@ -21,9 +21,11 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         return ps.PersistentStorage
 
     def get(self, device_id):
-        #params = self._get_params()
+        params = self._get_params()
         user = self._get_current_user()
         cls = self._resolve_storage()
+        if params.get('free-only') == 'true':
+            return cls().get_user_unmapped_drives(user)
         return cls().get_by_user(user, device_id)
 
     def post(self):

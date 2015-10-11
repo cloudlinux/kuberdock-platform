@@ -46,7 +46,8 @@ define(['marionette', 'utils'], function (Marionette, utils) {
 
             deleteNetwork_btn: function(evt){
                 evt.stopPropagation()
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
                 utils.modalDialogDelete({
                     title: 'Delete subnet',
                     body: "Are you sure want to delete subnet '" +
@@ -55,7 +56,16 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            that.model.destroy({wait: true});
+                            preloader.show();
+                            that.model.destroy({
+                                wait: true,
+                                success: function(){
+                                    preloader.hide();
+                                },
+                                error: function(){
+                                    preloader.hide();
+                                }
+                            });
                         },
                         buttonCancel: true
                     }
@@ -249,6 +259,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
             onSave: function(){
                 // temp validation
                 var that = this,
+                    preloader = $('#page-preloader');
                     network = this.ui.network.val();
                 if(network.length == 0 || network.split('.').length < 4){
                     this.ui.network.notify('Wrong IP-address');
@@ -261,12 +272,18 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                     return false;
                 }
 
+                preloader.show();
                 App.Data.networks.create({
-                    'network': network, 'autoblock': this.ui.autoblock.val()
+                    'network': network,
+                    'autoblock': this.ui.autoblock.val()
                 }, {
                     wait: true,
                     success: function(){
+                        preloader.hide();
                         App.router.navigate('/', {trigger: true})
+                    },
+                    error:  function(){
+                        preloader.hide();
                     }
                 });
             },
@@ -316,7 +333,6 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                         model.checked = false;
                     }
                 });
-
             },
         });
     });

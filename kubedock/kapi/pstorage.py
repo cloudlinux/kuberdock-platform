@@ -30,7 +30,7 @@ class PersistentStorage(object):
     def __init__(self):
         env.user = 'root'
         env.skip_bad_hosts = True
-        #env.key_filename = SSH_KEY_FILENAME
+        env.key_filename = SSH_KEY_FILENAME
 
     def __getattr__(self, attr):
         if attr == '_first_node_ip':

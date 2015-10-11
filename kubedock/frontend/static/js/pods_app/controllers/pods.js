@@ -310,8 +310,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             _.flatten(_.pluck(data.get('containers'), 'ports')),
                             function(p){return p['isPublic']});
 
-                        data.attributes['proposed_fail'] = true;
-
                         WorkFlow.getCollection().fullCollection.create(data.attributes, {
                             wait: true,
                             success: function(){

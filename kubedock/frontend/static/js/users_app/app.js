@@ -340,13 +340,17 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             _getActivities: function(username, dateFrom, dateTo){
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
+
+                preloader.show();
                 $.ajax({
                     url: '/api/users/a/' + username,
                     data: {date_from: dateFrom, date_to: dateTo},
                     dataType: 'JSON',
                     success: function(rs){
                         console.log(rs)
+                        preloader.hide();
                         if(rs.data){
                             that.ui.tbody.empty();
                             if(rs.data.length == 0){
@@ -366,6 +370,9 @@ define(['marionette', 'paginator', 'utils'],
                                 })
                             }
                         }
+                    },
+                    error: function(){
+                        preloader.hide();
                     }
                 });
             },

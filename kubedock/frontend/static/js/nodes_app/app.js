@@ -66,6 +66,12 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             }
         });
 
+        //================= NodeEmpty =================//
+        Views.NodeEmpty = Backbone.Marionette.ItemView.extend({
+            template: '#node-empty-template',
+            tagName: 'tr'
+        });
+
         //================= NodeItem =================//
         Views.NodeItem = Backbone.Marionette.ItemView.extend({
             template: '#node-item-template',
@@ -100,6 +106,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
 
             deleteNode: function() {
                 var that = this,
+                    preloader = $('#page-preloader'),
                     name = that.model.get('hostname');
 
                 utils.modalDialogDelete({
@@ -109,8 +116,16 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     show: true,
                     footer: {
                         buttonOk: function() {
-                            that.model.destroy({wait: true});
-                            App.router.navigate('/', {trigger: true});
+                            preloader.show();
+                            that.model.destroy({
+                                wait: true,
+                                success: function(){
+                                    preloader.hide();
+                                },
+                                error: function(){
+                                    preloader.hide();
+                                }
+                            });
                         },
                         buttonCancel: true
                     }
@@ -132,10 +147,11 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
 
         //================= NodeList =================//
         Views.NodesListView = Backbone.Marionette.CompositeView.extend({
-            template: '#nodes-list-template',
-            collection: App.Data.nodes,
-            childView: Views.NodeItem,
-            childViewContainer: "tbody",
+            collection         : App.Data.nodes,
+            template           : '#nodes-list-template',
+            childView          : Views.NodeItem,
+            emptyView          : Views.NodeEmpty,
+            childViewContainer : "tbody",
 
             ui: {
                 'navSearch'   : '.nav-search',
@@ -202,12 +218,6 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
 
             closeSearch: function(){
                 this.ui.navSearch.removeClass('active');
-            },
-
-            templateHelpers: function(){
-                return {
-                    totalNodes: this.collection.fullCollection.length
-                }
             },
 
             addNode: function(){
@@ -380,6 +390,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
 
             deleteNode: function() {
                 var that = this,
+                    preloader = $('#page-preloader'),
                     name = that.model.get('hostname');
 
                 utils.modalDialogDelete({
@@ -389,8 +400,17 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            that.model.destroy({wait: true});
-                            App.router.navigate('/', {trigger: true})
+                            preloader.show();
+                            that.model.destroy({
+                                wait: true,
+                                success: function(){
+                                    preloader.hide();
+                                    App.router.navigate('/', {trigger: true})
+                                },
+                                error: function(){
+                                    preloader.hide();
+                                }
+                            });
                         },
                         buttonCancel: true
                     }

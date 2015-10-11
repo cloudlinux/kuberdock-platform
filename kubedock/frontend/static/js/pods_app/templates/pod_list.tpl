@@ -26,12 +26,6 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
-            <% if(collectionLenght == 0){ %>
-                <tr>
-                    <td colspan="7" class="text-center disabled-color-text">You don't have any pods</td>
-                </tr>
-            <% } %>
-        </tbody>
+        <tbody></tbody>
     </table>
 </div>

@@ -313,9 +313,11 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             _.flatten(_.pluck(data.get('containers'), 'ports')),
                             function(p){return p['isPublic']});
 
+                        utils.preloader.show();
                         WorkFlow.getCollection().fullCollection.create(data.attributes, {
                             wait: true,
                             success: function(){
+                                utils.preloader.hide();
                                 Pods.navigate('pods');
                                 that.showPods();
                             },
@@ -324,11 +326,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 var body = response.responseJSON
                                     ? JSON.stringify(response.responseJSON.data)
                                     : response.responseText;
-                                $.notify(body, {
-                                    autoHideDelay: 5000,
-                                    globalPosition: 'bottom left',
-                                    className: 'error'
-                                });
+                                utils.preloader.hide();
+                                utils.notifyWindow(body);
                             }
                         });
                     });

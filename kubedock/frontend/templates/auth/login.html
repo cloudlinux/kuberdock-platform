@@ -47,9 +47,15 @@
             {% if messages %}
                 {% for category, message in messages %}
                     {% if category == 'error' -%}
-                    <div class="alert alert-danger text-center">
-                        {{ message }}
-                        <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <div class="notifyjs-corner" style="bottom: 0px; left: 0px;">
+                        <div class="notifyjs-wrapper notifyjs-hidable">
+                            <div class="notifyjs-arrow"></div>
+                            <div class="notifyjs-container">
+                                <div class="notifyjs-bootstrap-base notifyjs-bootstrap-error">
+                                    <span data-notify-text="">{{ message }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {%- endif %}
                 {% endfor %}
@@ -69,7 +75,7 @@
                 var message = $(selector).alert();
                 window.setTimeout(function() { message.slideUp() }, delay);
             }
-            autoClosingMessage(".alert", 3000);
+            autoClosingMessage(".notifyjs-corner", 3000);
         </script>
     {% endblock %}
 </body>

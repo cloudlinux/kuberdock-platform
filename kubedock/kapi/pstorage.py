@@ -275,18 +275,25 @@ class CephStorage(PersistentStorage):
         Parse ceph config and return ceph monitors list
         :return: list -> list of ip addresses
         """
-        conf = self._get_client_config()
-        if not conf:
-            return
-        fo = StringIO(conf)
-        cp = ConfigParser()
         try:
-            cp.readfp(fo)
-        except Exception:
-            raise APIError("Cannot get CEPH monitors")
-        if not cp.has_option('global', 'mon_host'):
-            return ['127.0.0.1']
-        return [i.strip() for i in cp.get('global', 'mon_host').split(',')]
+            from ..settings import MONITORS
+            return [i.strip() for i in MONITORS.split(',')]
+        except ImportError:
+            # We have no monitor predefined configuration
+            conf = self._get_client_config()
+            if not conf:
+                return
+            fo = StringIO(conf)
+            cp = ConfigParser()
+            try:
+                cp.readfp(fo)
+            except Exception:
+                raise APIError("Cannot get CEPH monitors."
+                               " Make sure your CEPH cluster is available"
+                               " and KuberDock is configured to use CEPH")
+            if not cp.has_option('global', 'mon_host'):
+                return ['127.0.0.1']
+            return [i.strip() for i in cp.get('global', 'mon_host').split(',')]
 
     def _get_client_config(self):
         """

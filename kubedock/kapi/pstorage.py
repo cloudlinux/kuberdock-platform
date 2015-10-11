@@ -40,6 +40,9 @@ class PersistentStorage(object):
                     'Unable to get any node from database')
             self.__dict__['_first_node_ip'] = item.ip
             return item.ip
+        if attr == '_drives':
+            self.__dict__['_drives'] = self._get_drives()
+            return self.__dict__['_drives']
         raise AttributeError('No such attribute: {0}'.format(attr))
 
     def get(self, drive_id=None):
@@ -47,8 +50,6 @@ class PersistentStorage(object):
         Returns list of all persistent storage data
         :return: list -> list of dicts
         """
-        if not hasattr(self, '_drives'):
-            self._get_drives()
         self._bind_to_pod()
         if drive_id is None:
             return self._drives
@@ -62,8 +63,6 @@ class PersistentStorage(object):
         :param user: object -> user object got from SQLAlchemy
         :return: list -> list of dicts
         """
-        if not hasattr(self, '_drives'):
-            self._get_drives()
         self._bind_to_pod()
         # strip owner
         if device_id is None:
@@ -229,7 +228,7 @@ class PersistentStorage(object):
         """
         To be overwritten by child classes
         """
-        self._drives = []
+        return []
 
     def _create_drive(self, drive_name, size):
         """
@@ -471,8 +470,6 @@ class CephStorage(PersistentStorage):
             return execute(self._poll, hosts=nodes.keys())
 
     def _get_drives(self):
-        if hasattr(self, '_drives'):
-            return
         raw_drives = self._get_raw_drives()
         drives = {}
         for node in raw_drives: # iterate by node ip addresses or names
@@ -493,7 +490,7 @@ class CephStorage(PersistentStorage):
                     drives[item] = entry
                 elif item in drives and not drives[item]['in_use']:
                     drives[item].update(entry)
-        self._drives = drives.values()
+        return drives.values()
 
 
 class AmazonStorage(PersistentStorage):
@@ -564,9 +561,7 @@ class AmazonStorage(PersistentStorage):
         raise APIError("Drive not found")
 
     def _get_drives(self):
-        if hasattr(self, '_drives'):
-            return
-        self._drives = []
+        drives = []
         raw_drives = self._get_raw_drives()
         for vol in raw_drives:
             item = vol.tags.get('Name', 'Nameless')
@@ -581,7 +576,8 @@ class AmazonStorage(PersistentStorage):
             if vol.status == 'in_use':
                 entry['node'] = vol.attach_data.instance_id
                 entry['device'] = vol.attach_data.device
-            self._drives.append(entry)
+            drives.append(entry)
+        return drives
 
     def _delete_by_id(self, drive_id):
         """

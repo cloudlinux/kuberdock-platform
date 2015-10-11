@@ -97,7 +97,7 @@
                                             <input class="persistent" checked type="checkbox"/>
                                             <span></span>
                                         </label>
-                                        <% if (showPersistentAdd){ %>
+                                        <% if (showPersistentAdd && showPersistentAdd === v.name){ %>
                                             <div class="tooltip-wrapper">
                                                 <span>
                                                     <input type="text" class="pd-name" placeholder="persistent-drive-name">

@@ -183,7 +183,10 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                     });
 
                     that.listenTo(wizardLayout, 'step:portconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({model: data}));
+                        wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({
+                            model: data,
+                            volumes: parent_model.get('volumes')
+                        }));
                     });
                     that.listenTo(wizardLayout, 'step:volconf', function(data){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardVolumesSubView({model: data}));

@@ -70,8 +70,8 @@ define(['marionette', 'paginator', 'utils'],
         //======================================================================
 
         Views.UserItem = Backbone.Marionette.ItemView.extend({
-            template: '#user-item-template',
-            tagName: 'tr',
+            template : '#user-item-template',
+            tagName  : 'tr',
 
             ui: {
                 'remove_user'    : '.deleteUser',
@@ -98,7 +98,8 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             removeUser: function(){
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
                 utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
                     body: "Are you sure want to delete user '" +
@@ -107,8 +108,16 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            that.model.destroy();
-                            App.router.navigate('/', {trigger: true});
+                            preloader.show();
+                            that.model.destroy({
+                                wait:true,
+                                success: function(){
+                                    preloader.hide();
+                                },
+                                error: function(){
+                                    preloader.hide();
+                                }
+                            });
                         },
                         buttonCancel: true
                     }
@@ -149,11 +158,9 @@ define(['marionette', 'paginator', 'utils'],
 
             activatedUser: function(){
                 var that = this;
-                this.model.save(
-                    {
+                this.model.save({
                         active: true
-                    },
-                    {
+                    },{
                         wait: true,
                         patch: true,
                         success: function(){
@@ -172,8 +179,9 @@ define(['marionette', 'paginator', 'utils'],
         });
 
         Views.OnlineUserItem = Marionette.ItemView.extend({
-            template: '#online-user-item-template',
-            tagName: 'tr',
+            template : '#online-user-item-template',
+            tagName  : 'tr',
+
             ui: {
                 'userActivityHistory' : "button.userActivityHistory"
             },
@@ -188,14 +196,14 @@ define(['marionette', 'paginator', 'utils'],
         });
 
         Views.ActivityItem = Marionette.ItemView.extend({
-            template: '#activity-item-template',
-            tagName: 'tr'
+            template : '#activity-item-template',
+            tagName  : 'tr'
         });
 
         Views.UsersListView = Backbone.Marionette.CompositeView.extend({
-            template: '#users-list-template',
-            childView: Views.UserItem,
-            childViewContainer: "tbody",
+            template           : '#users-list-template',
+            childView          : Views.UserItem,
+            childViewContainer : "tbody",
 
             ui: {
                 'create_user'        : 'button#create_user',
@@ -291,9 +299,9 @@ define(['marionette', 'paginator', 'utils'],
         });
 
         Views.OnlineUsersListView = Marionette.CompositeView.extend({
-            template: '#online-users-list-template',
-            childView: Views.OnlineUserItem,
-            childViewContainer: "tbody",
+            template           : '#online-users-list-template',
+            childView          : Views.OnlineUserItem,
+            childViewContainer : "tbody",
 
             ui: {
                 'users_page'    : '.usersPage',
@@ -302,10 +310,10 @@ define(['marionette', 'paginator', 'utils'],
 
             events: {
                 'click @ui.activity_page' : 'activity',
-                'click @ui.users_page'    : 'usersPage'
+                'click @ui.users_page'    : 'back'
             },
 
-            usersPage: function(){
+            back: function(){
                 App.router.navigate('/', {trigger: true});
             },
 
@@ -315,9 +323,9 @@ define(['marionette', 'paginator', 'utils'],
         });
 
         Views.UsersActivityView = Marionette.CompositeView.extend({
-            template: '#users-activities-template',
-            childView: Views.ActivityItem,
-            childViewContainer: "tbody",
+            template           : '#users-activities-template',
+            childView          : Views.ActivityItem,
+            childViewContainer : "tbody",
         });
 
         Views.AllUsersActivitiesView = Backbone.Marionette.ItemView.extend({
@@ -336,7 +344,7 @@ define(['marionette', 'paginator', 'utils'],
                 'change input.user-activity' : 'getUsersActivities',
                 'change input#dateFrom'      : 'getUsersActivities',
                 'change input#dateTo'        : 'getUsersActivities',
-                'click @ui.users_page'       : 'usersPage'
+                'click @ui.users_page'       : 'back'
             },
 
             _getActivities: function(username, dateFrom, dateTo){
@@ -423,15 +431,14 @@ define(['marionette', 'paginator', 'utils'],
                 );
             },
 
-            usersPage: function(){
+            back: function(){
                App.router.navigate('/', {trigger: true});
             }
-
         });
 
         Views.UserCreateView = Backbone.Marionette.ItemView.extend({
-            template: '#user-create-template',
-            tagName: 'div',
+            template : '#user-create-template',
+            tagName  : 'div',
 
             ui: {
                 'username'        : 'input#username',
@@ -452,9 +459,9 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             events: {
-                'click @ui.users_page'      : 'breadcrumbClick',
+                'click @ui.users_page'      : 'back',
+                'click @ui.user_cancel_btn' : 'back',
                 'click @ui.user_add_btn'    : 'onSave',
-                'click @ui.user_cancel_btn' : 'cancel',
                 'focus @ui.input'           : 'removeError'
             },
 
@@ -527,41 +534,37 @@ define(['marionette', 'paginator', 'utils'],
                 if (target.hasClass('error')) target.removeClass('error');
             },
 
-            cancel: function(){
+            back: function(){
                App.router.navigate('/', {trigger: true});
             },
-
-            breadcrumbClick: function(){
-               App.router.navigate('/', {trigger: true});
-            }
         });
 
         Views.UserProfileViewLogHistory = Views.UserCreateView.extend({
-            template: '#user-profile-log-history-template',
-            tagName: 'div',
+            template : '#user-profile-log-history-template',
+            tagName  : 'div',
 
             ui: {
                 'generalTab'          : '.generalTab',
                 'users_page'          : 'div#users-page',
                 'delete_user_btn'     : 'button#delete_user',
-                'user_cancel_btn'     : 'button#user-cancel-btn',
                 'login_this_user_btn' : 'button#login_this_user',
                 'edit_user'           : 'button#edit_user',
-                'tb'                  : '#user-profile-logs-table tbody',
+                'tb'                  : '#user-profile-logs-table tbody'
             },
 
             events: {
                 'click @ui.generalTab'          : 'generalTab',
-                'click @ui.users_page'          : 'breadcrumbClick',
-                'click @ui.user_cancel_btn'     : 'cancel',
+                'click @ui.users_page'          : 'back',
                 'click @ui.delete_user_btn'     : 'delete_user',
                 'click @ui.login_this_user_btn' : 'login_this_user',
                 'click @ui.edit_user'           : 'edit_user'
             },
 
             onRender: function(e){
-                var that = this;
-                $('#page-preloader').show();
+                var that = this,
+                    preloader = $('#page-preloader');
+
+                preloader.show();
                 $.ajax({
                     url: '/api/users/logHistory',
                     data: {'uid': this.model.get('id')},
@@ -575,17 +578,18 @@ define(['marionette', 'paginator', 'utils'],
                                     '<td>' + itm[3] + '</td>'
                                 ))
                             });
-                            $('#page-preloader').hide();
+                            preloader.hide();
                         } else {
                             that.ui.tb.append($('<tr>').append('<td colspan="4" class="text-center">There is no login history for this user</td>'));
-                            $('#page-preloader').hide();
+                            preloader.hide();
                         }
                     }
                 });
             },
 
             login_this_user: function(){
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
                 utils.modalDialog({
                     title: "Authorize by " + this.model.get('username'),
                     body: "Are you sure want to authorize by user '" +
@@ -594,6 +598,7 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
+                            preloader.show();
                             $.ajax({
                                 url: '/api/users/loginA',
                                 type: 'POST',
@@ -602,6 +607,10 @@ define(['marionette', 'paginator', 'utils'],
                                 success: function(rs){
                                     if(rs.status == 'OK')
                                         window.location.href = '/';
+                                    preloader.hide();
+                                },
+                                error: function(){
+                                    preloader.hide();
                                 }
                             });
                         },
@@ -611,7 +620,8 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             delete_user: function(){
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
                 utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
                     body: "Are you sure want to delete user '" +
@@ -620,8 +630,17 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            that.model.destroy();
-                            App.router.navigate('/', {trigger: true});
+                            preloader.show();
+                            that.model.destroy({
+                                wait:true,
+                                success: function(){
+                                    preloader.hide();
+                                    App.router.navigate('/', {trigger: true});
+                                },
+                                error: function(){
+                                    preloader.hide();
+                                }
+                            });
                         },
                         buttonCancel: true
                     }
@@ -635,11 +654,15 @@ define(['marionette', 'paginator', 'utils'],
             generalTab: function(){
                 App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
             },
+
+            back: function(){
+                App.router.navigate('/', {trigger: true});
+            }
         });
 
         Views.UserProfileView = Backbone.Marionette.ItemView.extend({
-            template: '#user-profile-template',
-            tagName: 'div',
+            template : '#user-profile-template',
+            tagName  : 'div',
 
             ui: {
                 'users_page'          : 'div#users-page',
@@ -651,8 +674,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             events: {
-                'click @ui.users_page'          : 'breadcrumbClick',
-                'click @ui.user_cancel_btn'     : 'cancel',
+                'click @ui.users_page'          : 'back',
                 'click @ui.delete_user_btn'     : 'delete_user',
                 'click @ui.login_this_user_btn' : 'login_this_user',
                 'click @ui.edit_user'           : 'edit_user',
@@ -687,7 +709,8 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             login_this_user: function(){
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
                 utils.modalDialog({
                     title: "Authorize by " + this.model.get('username'),
                     body: "Are you sure want to authorize by user '" +
@@ -696,6 +719,7 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
+                            preloader.show();
                             $.ajax({
                                 url: '/api/users/loginA',
                                 type: 'POST',
@@ -704,6 +728,10 @@ define(['marionette', 'paginator', 'utils'],
                                 success: function(rs){
                                     if(rs.status == 'OK')
                                         window.location.href = '/';
+                                    preloader.hide();
+                                },
+                                error: function(){
+                                    preloader.hide();
                                 }
                             });
                         },
@@ -713,7 +741,8 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             delete_user: function(){
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
                 utils.modalDialogDelete({
                     title: "Delete " + this.model.get('username') + "?",
                     body: "Are you sure want to delete user '" +
@@ -722,8 +751,17 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            that.model.destroy();
-                            App.router.navigate('/', {trigger: true});
+                            preloader.show();
+                            that.model.destroy({
+                                wait:true,
+                                success: function(){
+                                    preloader.hide();
+                                    App.router.navigate('/', {trigger: true});
+                                },
+                                error: function(){
+                                    preloader.hide();
+                                }
+                            });
                         },
                         buttonCancel: true
                     }
@@ -734,22 +772,16 @@ define(['marionette', 'paginator', 'utils'],
                 App.router.navigate('/edit/' + this.model.id + '/', {trigger: true});
             },
 
-            cancel: function(){
-               App.router.navigate('/', {trigger: true});
-            },
-
-            breadcrumbClick: function(){
+            back: function(){
                App.router.navigate('/', {trigger: true});
             },
 
             logHistory: function(){
                App.router.navigate('/profile/' + this.model.id + '/logHistory/', {trigger: true});
             }
-
         });
 
         Views.UsersEditView = Views.UserCreateView.extend({     // inherit
-
             onRender: function(){
                 this.ui.username.val(this.model.get('username'));
                 this.ui.first_name.val(this.model.get('first_name'));
@@ -814,16 +846,16 @@ define(['marionette', 'paginator', 'utils'],
                 }
             },
 
-            cancel: function(){
+            back: function(){
                 App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
             },
         });
 
         Views.UsersLayout = Marionette.LayoutView.extend({
-            template: '#users-layout-template',
-            regions: {
-                main: 'div#main',
-                pager: 'div#pager'
+            template : '#users-layout-template',
+            regions  : {
+                main  : 'div#main',
+                pager : 'div#pager'
             }
         });
     });
@@ -833,11 +865,14 @@ define(['marionette', 'paginator', 'utils'],
 
         UsersCRUD.Controller = Marionette.Controller.extend({
             showOnlineUsers: function(){
-                var layout_view = new App.Views.UsersLayout();
-                var online_users_list_view = new App.Views.OnlineUsersListView({
-                    collection: App.Data.onlineUsers});
-                var user_list_pager = new App.Views.PaginatorView({
-                    view: online_users_list_view});
+                var layout_view = new App.Views.UsersLayout(),
+                    online_users_list_view = new App.Views.OnlineUsersListView({
+                        collection: App.Data.onlineUsers
+                    }),
+                    user_list_pager = new App.Views.PaginatorView({
+                        view: online_users_list_view
+                    });
+
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show(online_users_list_view);
                     layout_view.pager.show(user_list_pager);
@@ -845,17 +880,21 @@ define(['marionette', 'paginator', 'utils'],
                 App.contents.show(layout_view);
             },
             showUserActivity: function(user_id){
-                var layout_view = new App.Views.UsersLayout(),
-                    t = this;
+                var that = this,
+                    layout_view = new App.Views.UsersLayout();
+
                 $.ajax({
                     'url': '/api/users/a/' + user_id,
                     success: function(rs){
                         UsersApp.Data.activities = new UsersApp.Data.ActivitiesCollection(rs.data);
                         var activities_view = new App.Views.UsersActivityView({
-                            collection: UsersApp.Data.activities});
-                        var activities_list_pager = new App.Views.PaginatorView({
-                            view: activities_view});
-                        t.listenTo(layout_view, 'show', function(){
+                                collection: UsersApp.Data.activities
+                            }),
+                            activities_list_pager = new App.Views.PaginatorView({
+                                view: activities_view
+                            });
+
+                        that.listenTo(layout_view, 'show', function(){
                             layout_view.main.show(activities_view);
                             layout_view.pager.show(activities_list_pager);
                         });
@@ -864,30 +903,32 @@ define(['marionette', 'paginator', 'utils'],
                 });
             },
             showUsers: function(){
-                var layout_view = new App.Views.UsersLayout();
-                var users_list_view = new App.Views.UsersListView({
-                    collection: UsersApp.Data.users});
-                var user_list_pager = new App.Views.PaginatorView({
-                    view: users_list_view});
+                var layout_view = new App.Views.UsersLayout(),
+                    users_list_view = new App.Views.UsersListView({
+                        collection: UsersApp.Data.users
+                    }),
+                    user_list_pager = new App.Views.PaginatorView({
+                        view: users_list_view
+                    });
+
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show(users_list_view);
                     layout_view.pager.show(user_list_pager);
                 });
                 App.contents.show(layout_view);
             },
-
             showAllUsersActivity: function(){
-                var layout_view = new App.Views.UsersLayout();
-                var users_activities_view = new App.Views.AllUsersActivitiesView();
+                var layout_view = new App.Views.UsersLayout(),
+                    users_activities_view = new App.Views.AllUsersActivitiesView();
+
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show(users_activities_view);
                 });
                 App.contents.show(layout_view);
             },
-
             showCreateUser: function(){
-                var layout_view = new App.Views.UsersLayout();
-                var user_create_view = new App.Views.UserCreateView();
+                var layout_view = new App.Views.UsersLayout(),
+                    user_create_view = new App.Views.UserCreateView();
 
                 this.listenTo(layout_view, 'show', function(){
                     layout_view.main.show(user_create_view);
@@ -895,12 +936,12 @@ define(['marionette', 'paginator', 'utils'],
 
                 App.contents.show(layout_view);
             },
-
             showEditUser: function(user_id){
-                var layout_view = new App.Views.UsersLayout();
-                var user_edit_view = new App.Views.UsersEditView({
-                    model: App.Data.users.get(parseInt(user_id))
-                });
+                var layout_view = new App.Views.UsersLayout(),
+                    user_edit_view = new App.Views.UsersEditView({
+                        model: App.Data.users.get(parseInt(user_id))
+                    });
+
                 this.listenTo(layout_view, 'show', function () {
                     layout_view.main.show(user_edit_view);
                     $('#pager').hide();
@@ -909,26 +950,24 @@ define(['marionette', 'paginator', 'utils'],
                 });
                 App.contents.show(layout_view);
             },
-
             showProfileUser: function(user_id){
-                var layout_view = new App.Views.UsersLayout();
-                var user_model = App.Data.users.fullCollection.get(parseInt(user_id));
-                var user_profile_view = new App.Views.UserProfileView({
-                    model: user_model
-                });
+                var layout_view = new App.Views.UsersLayout(),
+                    user_model = App.Data.users.fullCollection.get(parseInt(user_id)),
+                    user_profile_view = new App.Views.UserProfileView({
+                        model: user_model
+                    });
 
                 this.listenTo(layout_view, 'show', function () {
                     layout_view.main.show(user_profile_view);
                 });
                 App.contents.show(layout_view);
             },
-
             showProfileUserLogHistory: function(user_id){
-                var layout_view = new App.Views.UsersLayout();
-                var user_model = App.Data.users.fullCollection.get(parseInt(user_id));
-                var user_profile_view_log_history = new App.Views.UserProfileViewLogHistory({
-                    model: user_model
-                });
+                var layout_view = new App.Views.UsersLayout(),
+                    user_model = App.Data.users.fullCollection.get(parseInt(user_id)),
+                    user_profile_view_log_history = new App.Views.UserProfileViewLogHistory({
+                        model: user_model
+                    });
 
                 this.listenTo(layout_view, 'show', function () {
                     layout_view.main.show(user_profile_view_log_history);

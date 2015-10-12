@@ -339,6 +339,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         if (containerModel.hasOwnProperty('origEnv')) {
                             model.origEnv[containerModel.get('image')] = containerModel.origEnv;
                         }
+                        model.last_edited_container = containerModel.get('name');
                         var container = _.find(model.get('containers'), function(c){
                             return c.name === containerModel.get('name');
                         });

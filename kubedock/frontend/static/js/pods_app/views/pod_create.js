@@ -1113,40 +1113,23 @@ define(['pods_app/app',
 
             initialize: function(){
                 this.package = this.getUserPackage();
-                var num = 1,
-                    // kubeTypes is taken from index.html
-                    kube_id = Math.min.apply(null, _.map(kubeTypes, function(t){return t.id})),
-                    kube_price = this.getKubePrice(kube_id),
-                    kube = _.find(kubeTypes, function(t){return t.id===kube_id});
-                this.container_price = this.getFormattedPrice(kube_price * num);
-                this.cpu_data = kube ? kube.cpu + ' ' + kube.cpu_units : '0 Cores';
-                this.ram_data = kube ? kube.memory + ' ' + kube.memory_units : '0 MB';
-                this.hdd_data = kube ? kube.disk_space + ' ' + kube.disk_space_units : '0 MB';
+                // kubeTypes is taken from index.html
+                var kube_id = _.min(_.pluck(kubeTypes, 'id'));
                 if(!this.model.has('kube_type')){
                     this.model.attributes['kube_type'] = kube_id;
                 }
+                this.recalcTotal();
             },
 
             templateHelpers: function() {
-                var isPublic = isPerSorage = false,
-                    containers = this.model.get('containers');
-
-                _.each(containers, function(container){
-                    _.each(container.ports, function(port){
-                        if (port.isPublic) isPublic = true
-                    })
-                    _.each(container.volumeMounts, function(volume){
-                        if (volume.isPersistent) isPerSorage = true
-                    })
-                })
 
                 return {
-                    isPublic         : isPublic,
-                    isPerSorage      : isPerSorage,
+                    isPublic         : this.isPublic,
+                    isPerSorage      : this.isPerSorage,
                     cpu_data         : this.cpu_data,
                     ram_data         : this.ram_data,
                     hdd_data         : this.hdd_data,
-                    container_price  : this.container_price,
+                    containerPrices  : this.containerPrices,
                     total_price      : this.total_price,
                     kube_types       : kubeTypes,
                     restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
@@ -1196,10 +1179,9 @@ define(['pods_app/app',
                 var name = $(evt.target).closest('tr').children('td:first').attr('id'),
                     containers = this.model.get('containers');
                 if (containers.length >= 2) {
-                    this.model.attributes.containers = _.filter(this.model.get('containers'),
+                    this.model.attributes.containers = _.filter(containers,
                     function(i){ return i.name !== this.name }, {name: name});
-                    delete this.container_price;
-                    delete this.cpu_data;
+                    this.recalcTotal();
                     this.render();
                 } else {
                     utils.modalDialogDelete({
@@ -1253,50 +1235,21 @@ define(['pods_app/app',
 
             changeKubeQuantity: function(evt){
                 evt.stopPropagation();
-                var num = parseInt(evt.target.value),
-                    kube_id = parseInt(this.ui.kubeTypes.find(':selected').val()),
-                    containers = this.model.get('containers'),
-                    image_name_id = this.ui.main.attr('image_name_id'),
-                    container = _.find(containers, function(c) { return c.name == image_name_id }),
-                    container = container ? container : _.last(containers),
-                    kube_price = this.getKubePrice(kube_id);
-                container.kubes = num;
-                this.container_price = this.getFormattedPrice(kube_price * num);
-                this.total_price = this.getFormattedPrice(_.reduce(containers,
-                    function(sum, c) { return sum + kube_price * c.kubes; }, 0));
+                var num = parseInt(evt.target.value);
+                this.getCurrentContainer().kubes = num;
+
+                this.recalcTotal();
                 this.render();
-                this.ui.kubeTypes.selectpicker('val', kube_id);
-                this.ui.kubeQuantity.selectpicker('val', num);
                 $('.kube-quantity button span').text(num);
             },
 
             changeKubeType: function(evt){
-                this.model.set('kube_type', parseInt(evt.target.value));
                 evt.stopPropagation();
-                var kube_id = parseInt(evt.target.value),
-                    num = parseInt(this.ui.kubeQuantity.find(':selected').text()),
-                    containers = this.model.get('containers'),
-                    kube_data = _.find(kubeTypes, function(k){
-                        return k.id === kube_id
-                    }),
-                    kube_price = this.getKubePrice(kube_id);
+                var kube_id = parseInt(evt.target.value);
                 this.model.set('kube_type', kube_id);
-                if (kube_data.length === 0) {
-                    this.cpu_data = '0 Cores';
-                    this.ram_data = '0 MB';
-                    this.hdd_data = '0 MB';
-                } else {
-                    this.cpu_data = kube_data.cpu + ' ' + kube_data.cpu_units;
-                    this.ram_data = kube_data.memory + ' ' + kube_data.memory_units;
-                    this.hdd_data = kube_data.disk_space + ' ' + kube_data.disk_space_units;
-                }
-                this.container_price = this.getFormattedPrice(kube_price * num);
-                this.total_price = this.getFormattedPrice(_.reduce(containers,
-                    function(sum, c) { return sum + kube_price * c.kubes; }, 0));
+
+                this.recalcTotal();
                 this.render();
-                this.ui.kubeTypes.selectpicker('val', kube_id);
-                this.ui.kubeQuantity.selectpicker('val', num);
-                $('.kube-quantity button span').text(num);
             },
 
             changePolicy: function(evt){
@@ -1328,8 +1281,48 @@ define(['pods_app/app',
                 return this.package.prefix + numeral(price).format(format) + this.package.suffix;
             },
 
+            recalcTotal: function() {
+                var kube_id = this.model.get('kube_type'),
+                    containers = this.model.get('containers'),
+                    volumes = this.model.get('volumes'),
+                    kube = _.findWhere(kubeTypes, {id: kube_id}),
+                    kube_price = this.getKubePrice(kube_id);
+
+                this.cpu_data = kube.cpu + ' ' + kube.cpu_units;
+                this.ram_data = kube.memory + ' ' + kube.memory_units;
+                this.hdd_data = kube.disk_space + ' ' + kube.disk_space_units;
+
+                var allPorts = _.flatten(_.pluck(containers, 'ports'), true),
+                    allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
+                    total_size = _.reduce(allPersistentVolumes,
+                        function(sum, v) { return sum + v.pdSize; }, 0);
+                this.isPublic = _.some(_.pluck(allPorts, 'isPublic'));
+                this.isPerSorage = !!allPersistentVolumes.length;
+
+                var rawContainerPrices = _.map(containers,
+                    function(c) { return kube_price * c.kubes; });
+                this.containerPrices = _.map(rawContainerPrices,
+                    function(price) { return this.getFormattedPrice(price); }, this);
+
+                var total_price = _.reduce(rawContainerPrices,
+                    function(sum, p) { return sum + p; });
+                if (this.isPublic)
+                    total_price += this.package.price_ip
+                if (this.isPerSorage)
+                    total_price += this.package.price_pstorage * total_size
+                this.total_price = this.getFormattedPrice(total_price)
+            },
+
+            getCurrentContainer: function() {
+                var containers = this.model.get('containers'),
+                    last_edited = _.findWhere(containers, {name: this.model.last_edited_container});
+                return last_edited || _.last(containers);
+            },
+
             onRender: function() {
                 this.ui.selectpicker.selectpicker();
+                this.ui.kubeQuantity.selectpicker('val', this.getCurrentContainer().kubes);
+                this.ui.kubeTypes.selectpicker('val', this.model.get('kube_type'));
             },
 
             editPolicy: function(){

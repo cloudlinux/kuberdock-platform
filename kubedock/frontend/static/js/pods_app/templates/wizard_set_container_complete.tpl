@@ -81,11 +81,11 @@
                        </tr>
                     </thead>
                     <tbody>
-                        <% _.each(containers, function(c){ %>
+                        <% _.each(containers, function(c, i){ %>
                             <tr class="added-containers">
                                  <td id="<%- c.name %>"><b><%- c.image %></b></td>
                                  <td><%- c.kubes %></td>
-                                 <td><%- container_price %> / <%- package.period %></td>
+                                 <td><%- containerPrices[i] %> / <%- package.period %></td>
                                  <td>
                                      <button class="delete-item pull-right">&nbsp;</button>
                                      <button class="edit-item">&nbsp;</button>
@@ -105,7 +105,7 @@
                                 <td><b>Persistent storage:</b></td>
                                 <td></td>
                                 <td colspan="2">
-                                    <span id="pstorage_price"><%- price_pstorage %> per 1 MB / <%- package.period %></span>
+                                    <span id="pstorage_price"><%- price_pstorage %> per 1 GB / <%- package.period %></span>
                                 </td>
                             </tr>
                         <% } %>

@@ -386,6 +386,23 @@ class PodIP(BaseModelMixin, db.Model):
         )
 
 
+class PrivateRegistryFailedLogin(BaseModelMixin, db.Model):
+    """Stores time for last failed login attempts to private registries.
+    It's a simple workaround to prevent blocking from a registry. It may occur
+    when we frequently tried to login to a registry with the same name, and all
+    attempts was failed. At the moment hub.docker.com blocks by name + IP if
+    there were simultaneous failed login attempts.
+    Just remember last failed login for name + registry here and do not allow
+    next login attempt before some pause.
+
+    """
+    __tablename__ = 'private_registry_failed_login'
+
+    login = db.Column(db.String(255), primary_key=True, nullable=False)
+    registry = db.Column(db.String(255), primary_key=True, nullable=False)
+    created = db.Column(db.DateTime, primary_key=True, nullable=False)
+
+
 ###############
 ### Signals ###
 @signals.allocate_ip_address.connect

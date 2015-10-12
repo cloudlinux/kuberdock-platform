@@ -1,4 +1,5 @@
 from ..core import db
+#from ..nodes.models import Node
 
 # Package and Kube with id=0 are default
 # and must be undeletable (always present with id=0) for fallback

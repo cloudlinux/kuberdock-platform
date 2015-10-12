@@ -8,6 +8,10 @@ License: CloudLinux Commercial License
 URL: http://www.cloudlinux.com
 Source0: %{name}-%{version}.tar.bz2
 
+BuildRequires: nodejs
+BuildRequires: nodejs-less
+BuildRequires: nodejs-clean-css
+
 Requires: nginx
 Requires: influxdb
 Requires: redis
@@ -84,6 +88,7 @@ sed -i "/$start/ {s/$replace/$replace_with/}" kubedock/frontend/static/js/*/requ
 
 %install
 rm -rf %{buildroot}
+python minimize.py
 %{__install} -d %{buildroot}%{_defaultdocdir}/%{name}-%{version}/
 mkdir -p %{buildroot}/var/opt/kuberdock
 mkdir -p %{buildroot}%{_sysconfdir}/uwsgi/vassals

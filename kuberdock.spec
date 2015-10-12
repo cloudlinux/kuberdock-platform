@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 3%{?dist}.cloudlinux
+Release: 4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,15 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Mon Oct 12 2015 Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-4
+- AC-1261: create pod with private image (frontend); disable cache for private repox
+- AC-1264: Fix 00026_update.py for pods that are not running
+- Add empty&templates Views to pods, nodes, ippool, publicIPs, Pers. Volumes
+- AC-1147: rewritten persistent volumes web-interface logic
+- Small refactoring users app & add preloaders to ippool app events
+- AC-1090 AC-1030 AC-1260 AC-1252 AC-1258 AC-1262 AC-1209 pod creation final step fixes
+- Added static files precompilation and compression
+
 * Thu Oct 08 2015 Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-3
 - AC-1113: various fixes for logs
 - AC-1036

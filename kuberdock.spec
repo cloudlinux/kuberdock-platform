@@ -19,7 +19,7 @@ Requires: postgresql-server
 Requires: fabric >= 1.10.2
 Requires: etcd == 2.0.9
 Requires: kubernetes-master == 1:1.0.3
-Requires: flannel == 0.5.1
+Requires: flannel == 0.5.3
 Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2

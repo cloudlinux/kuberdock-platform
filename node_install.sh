@@ -120,7 +120,7 @@ fi
 echo "Installing kubernetes..."
 yum_wrapper -y install ${CUR_MASTER_KUBERNETES}
 check_status
-yum_wrapper -y install flannel-0.5.1
+yum_wrapper -y install flannel-0.5.3
 check_status
 yum_wrapper -y install cadvisor
 check_status
@@ -484,6 +484,8 @@ check_status
 yum_wrapper -y install kernel-tools-libs
 check_status
 yum_wrapper -y install kernel-headers
+check_status
+yum_wrapper -y install kernel-devel
 check_status
 
 # 12. reboot

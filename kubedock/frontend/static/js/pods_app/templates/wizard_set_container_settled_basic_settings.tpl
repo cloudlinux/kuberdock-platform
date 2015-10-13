@@ -36,6 +36,7 @@
                 <% } %>
                 <!-- <span>Terminate</span> -->
                 <!-- <span>Redeploy</span> -->
+                <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
             </div>
             <div id="tab-content">
                 <div class="col-xs-10">

@@ -234,8 +234,13 @@ define(['pods_app/app',
             },
 
             selectImage:function(){
-                var select = _.bind(this.trigger, this, 'image:selected',
-                                    this.ui.privateField.val(), null)
+                var fieldValue = this.ui.privateField.val(),
+                    sourceUrl = this.ui.privateField.hasClass('private-registry')
+                        ? fieldValue
+                        : 'hub.docker.com/r/' + fieldValue.replace(/^\//, ''),
+                    select = _.bind(this.trigger, this, 'image:selected',
+                                fieldValue, sourceUrl);
+
                 if (this.ui.password.val() || this.ui.username.val())
                     select(undefined, {username: this.ui.username.val(),
                                        password: this.ui.password.val()});
@@ -257,12 +262,14 @@ define(['pods_app/app',
                     this.ui.loginPrivateUres.slideDown();
                     this.ui.searchImageButton.parent().hide();
                     this.ui.privateField.attr('placeholder','[registry/]namespace/image');
+                    this.ui.privateField.addClass('private-registry');
                 } else {
                     this.ui.input.parent().hide();
                     this.ui.privateWrapper.show();
                     this.ui.loginPrivateUres.slideDown();
                     this.ui.searchImageButton.parent().hide();
                     this.ui.privateField.attr('placeholder','namespace/image');
+                    this.ui.privateField.removeClass('private-registry');
                 }
             },
 
@@ -436,7 +443,6 @@ define(['pods_app/app',
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     podName: model !== undefined ? model.get('name') : '',
-                    url: this.model.url,
                     volumeEntries: this.composeVolumeEntries()
                 };
             },
@@ -778,8 +784,7 @@ define(['pods_app/app',
 
             templateHelpers: function(){
                 var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
-                    kubeType,
-                    url = this.model.url;
+                    kubeType;
                 if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
@@ -793,7 +798,6 @@ define(['pods_app/app',
                     hasPersistent: this.model.has('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
                     ip: this.model.get('ip'),
-                    url: url,
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     podName: model !== undefined ? model.get('name') : '',

@@ -234,7 +234,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         registryURL = 'registry.hub.docker.com',
                         imageTempCollection = new App.Data.ImagePageableCollection(),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout();
-                    model.containerUrls = {};
                     model.origEnv = {};
 
                     that.listenTo(wizardLayout, 'show', function(){
@@ -300,9 +299,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         if (!(containerModel.get('image') in model.origEnv)) {
                             model.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
                         }
-                        if (!containerModel.hasOwnProperty('url')) {
-                            containerModel.url = model.containerUrls[image];
-                        }
                         containerModel.origEnv = _.map(model.origEnv[image], _.clone);
                         wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({
                             model: containerModel
@@ -335,7 +331,6 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         if (containerModel.hasOwnProperty('persistentDrives')) {
                             model.persistentDrives = containerModel.persistentDrives;
                         }
-                        model.containerUrls[containerModel.attributes.image] = containerModel.url;
                         if (containerModel.hasOwnProperty('origEnv')) {
                             model.origEnv[containerModel.get('image')] = containerModel.origEnv;
                         }
@@ -358,7 +353,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 return imageName === c.name
                             });
                             var containerModel = new App.Data.Image(container);
-                            containerModel.url = url;
+                            containerModel.set('sourceUrl', url);
                             containerModel.persistentDrives = model.persistentDrives;
                             wizardLayout.steps.show(
                                 new App.Views.NewItem.WizardPortsSubView({
@@ -388,14 +383,13 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 var contents = {
                                     image: image, name: name, workingDir: null,
                                     ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
-                                    terminationMessagePath: null
+                                    terminationMessagePath: null, sourceUrl: url
                                 };
                                 model.fillContainer(contents, data);
                                 var containerModel = new App.Data.Image(contents);
                                 if (model.hasOwnProperty('persistentDrives')) {
                                     containerModel.persistentDrives = model.persistentDrives;
                                 }
-                                containerModel.url = url;
                                 wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({
                                     model: containerModel,
                                     containers: model.get('containers'),

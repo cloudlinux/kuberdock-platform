@@ -270,11 +270,13 @@ new_pod_schema = {
             'schema': {
                 'sourceUrl': {'type': 'string', 'required': False},
                 'capabilities': {'type': 'dict', 'required': False},
-                'imagePullPolicy': {
-                    'type': 'string',
-                    'allowed': ['PullAlways', 'PullIfNotPresent', 'IfNotPresent'],
-                    'required': False
-                },
+                # 1) right choices are 'Always', 'IfNotPresent', 'Never'
+                # 2) anyway we will overwrite it to "imagePullPolicy: Always"
+                # 'imagePullPolicy': {
+                #     'type': 'string',
+                #     'allowed': ['PullAlways', 'PullIfNotPresent', 'IfNotPresent'],
+                #     'required': False
+                # },
                 'limits': {
                     'type': 'dict',
                     'required': False

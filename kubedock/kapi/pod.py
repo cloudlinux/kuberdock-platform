@@ -273,6 +273,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
         if self._has_rbd(data.get('volumeMounts', []), volumes):
             data['securityContext'] = {'privileged': True}
+
+        data['imagePullPolicy'] = 'Always'
         return data
 
     @staticmethod

@@ -7,9 +7,11 @@ from flask.ext.login import current_user
 from ..core import db
 from ..rbac import check_permission, acl
 from ..rbac.models import Role, Resource, Permission
-from ..utils import login_required_or_basic_or_token, APIError
+from ..utils import (
+    login_required_or_basic_or_token, APIError, all_request_params)
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
+from ..system_settings.models import SystemSettings
 
 
 settings = Blueprint('settings', __name__, url_prefix='/settings')
@@ -72,6 +74,7 @@ def get_notifications():
 
 
 @settings.route('/notifications/<tid>', methods=['GET'])
+@login_required_or_basic_or_token
 @check_permission('get_notifications', 'settings')
 def get_template(tid):
     t = db.session.query(NotificationTemplate).get(id=tid).first()
@@ -81,6 +84,7 @@ def get_template(tid):
 
 
 @settings.route('/notifications', methods=['POST'])
+@login_required_or_basic_or_token
 @check_permission('create_notifications', 'settings')
 def create_template():
     data = request.json
@@ -101,6 +105,7 @@ def create_template():
 
 
 @settings.route('/notifications/<tid>', methods=['PUT'])
+@login_required_or_basic_or_token
 @check_permission('edit_notifications', 'settings')
 def put_template(tid):
     model = db.session.query(NotificationTemplate)
@@ -126,6 +131,7 @@ def put_template(tid):
 
 
 @settings.route('/<tid>', methods=['DELETE'])
+@login_required_or_basic_or_token
 @check_permission('delete_notifications', 'settings')
 def delete_template(tid):
     t = db.session.query(NotificationTemplate).get(tid)
@@ -142,6 +148,7 @@ def delete_template(tid):
 
 
 @settings.route('/timezone', methods=['GET'])
+@login_required_or_basic_or_token
 @check_permission('get_timezone', 'settings')
 def get_timezone():
     s = request.args.get('s', '')
@@ -158,6 +165,7 @@ def get_timezone():
 
 
 @settings.route('/timezone', methods=['PUT'])
+@login_required_or_basic_or_token
 @check_permission('set_timezone', 'settings')
 def set_timezone():
     tz = request.form.get('timezone')
@@ -166,3 +174,49 @@ def set_timezone():
         raise APIError('Unknown timezone')
     current_user.set_settings('timezone', tz)
     return jsonify({'status': 'OK', 'data': tz})
+
+
+@settings.route('/system', methods=['GET'])
+@login_required_or_basic_or_token
+@check_permission('read', 'system_settings')
+def get_all_settings():
+    return jsonify({
+        'status': 'OK',
+        'data': SystemSettings.get_all(as_dict=True)
+    })
+
+
+@settings.route('/system/<name>', methods=['GET'])
+@login_required_or_basic_or_token
+@check_permission('read', 'system_settings')
+def get_setting(name):
+    return jsonify({
+        'status': 'OK',
+        'data': SystemSettings.read_setting(name)
+    })
+
+
+@settings.route('/system/<name>', methods=['POST'])
+@login_required_or_basic_or_token
+@check_permission('write', 'system_settings')
+def save_setting(name):
+    params = all_request_params()
+    if not params or not 'value' in params:
+        raise APIError("Must be specified 'value' parameter in request")
+    value = params['value']
+    SystemSettings.save_setting(name, value)
+    return jsonify({
+        'status': 'OK',
+        'data': {name: value}
+    })
+
+
+@settings.route('/system/<name>', methods=['DELETE'])
+@login_required_or_basic_or_token
+@check_permission('delete', 'system_settings')
+def delete_setting(name):
+    SystemSettings.delete_setting(name)
+    return jsonify({
+        'status': 'OK',
+        'data': {}
+    })

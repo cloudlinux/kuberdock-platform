@@ -180,13 +180,28 @@
         <div id="settingsGeneralTab">
             <div class="content-body">
                 <div class="col-md-12 no-padding">
-                    <div class="col-xs-5 col-xs-offset-1 no-padding">
-                        <label>Timezone</label>
-                        <input type="text" name="timezone" id="timezone"
-                               value="{{ user_settings.timezone }}"
-                                placeholder="City, country or region"/>
+                    <div class="row">
+                      <div class="col-xs-5 col-xs-offset-1">
+                          <label>Timezone</label>
+                          <input type="text" name="timezone" id="timezone"
+                                value="{{ user_settings.timezone }}"
+                                  placeholder="City, country or region"/>
+                      </div>
+                      <div class="col-xs-5 image"></div>
                     </div>
-                    <div class="image no-padding col-xs-5 col-xs-offset-1"></div>
+                    <% if(administrator) { %>
+                      <div class="row">
+                        <div class="col-xs-6 col-xs-offset-1">
+                            <label>Billing system base link for predefined apps</label>
+                            <select value="WHMCS" disabled="true" size="1">
+                                <option value="WHMCS">WHMCS</option>
+                            </select>
+                            <input type="text" name="billingAppsLink" id="billingAppsLink"
+                                  value="{{ system_settings.billing_apps_link }}"
+                                  placeholder="Billing system base url"/>
+                        </div>
+                      </div>
+                    <% } %>
                 </div>
             </div>
             <div class="buttons pull-right">
@@ -356,6 +371,7 @@
     var notifications = {{ notifications|safe }};
     var eventsKeysList = {{ events_keys|safe }};
     var userSettings = {{ user_settings|tojson|safe }};
+    var systemSettings = {{ system_settings|tojson|safe }};
 
     var current_username = "{{current_user.username }}",
         administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;

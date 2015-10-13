@@ -2,7 +2,7 @@ from .models import Resource, Role, Permission
 
 
 RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages",
-             "notifications")
+             "notifications", "system_settings")
 
 ROLES = (
     "Admin",
@@ -40,6 +40,9 @@ PERMISSIONS = (
     ("notifications", "Admin", "get", True),
     ("notifications", "Admin", "edit", True),
     ("notifications", "Admin", "delete", True),
+    ("system_settings", "Admin", "read", True),
+    ("system_settings", "Admin", "write", True),
+    ("system_settings", "Admin", "delete", True),
     # User
     ("users", "User", "create", False),
     ("users", "User", "get", False),

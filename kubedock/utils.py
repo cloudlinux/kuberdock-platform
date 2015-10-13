@@ -602,6 +602,23 @@ def run_ssh_command(host, command):
     ssh.close()
     return exit_status, message
 
+
+def all_request_params():
+    #pretty ugly. Wants refactoring
+    params = {}
+    data = request.args.to_dict()
+    if data is not None:
+        params.update(data)
+    data = request.json
+    if data is not None:
+        params.update(data)
+    data = request.form.to_dict()
+    if data is not None:
+        params.update(data)
+    params.pop('token', None)  # remove auth token from params if exists
+    return params
+    
+
 class KubeUtils(object):
 
     @staticmethod
@@ -638,19 +655,7 @@ class KubeUtils(object):
 
     @staticmethod
     def _get_params():
-        #pretty ugly. Wants refactoring
-        params = {}
-        data = request.args.to_dict()
-        if data is not None:
-            params.update(data)
-        data = request.json
-        if data is not None:
-            params.update(data)
-        data = request.form.to_dict()
-        if data is not None:
-            params.update(data)
-        params.pop('token', None)  # remove auth token from params if exists
-        return params
+        return all_request_params()
 
 
 def register_api(bp, view, endpoint, url, pk='id', pk_type='string', **kwargs):

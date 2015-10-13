@@ -6,6 +6,9 @@ define(['marionette', 'utils'], function (Marionette, utils) {
         }
     });
 
+    /** default delay to hide popup notifications (ms) */
+    var defaultHideDelay = 4000;
+
     SettingsApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
         Data.CurrentUserModel = utils.BaseModel.extend({
@@ -64,7 +67,8 @@ define(['marionette', 'utils'], function (Marionette, utils) {
             template: '#general-settings-template',
 
             ui: {
-                'timezone': '#timezone'
+                'timezone': '#timezone',
+                'billingAppsLink': '#billingAppsLink'
             },
 
             events: {
@@ -90,7 +94,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
 
             submitSettings: function(){
                 var data = {
-                    timezone: this.ui.timezone.val()
+                    timezone: this.ui.timezone.val(),
                 };
                 $.ajax({
                     url: '/api/settings/timezone',
@@ -100,14 +104,33 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                     cache: false,
                     success: function(rs){
                         if(rs.status == 'OK')
-                            $.notify('Settings changed successfully', {
-                                autoHideDelay: 4000,
+                            $.notify('Timezone changed successfully', {
+                                autoHideDelay: defaultHideDelay,
                                 globalPosition: 'bottom left',
                                 className: 'success'
                         });
                     }
-                })
-
+                });
+                if (administrator) {
+                    data = {
+                        value: this.ui.billingAppsLink.val()
+                    };
+                    $.ajax({
+                        url: '/api/settings/system/billing_apps_link',
+                        dataType: 'JSON',
+                        data: data,
+                        type: 'POST',
+                        cache: false,
+                        success: function(rs){
+                            if(rs.status == 'OK')
+                                $.notify('Billing link changed successfully', {
+                                    autoHideDelay: defaultHideDelay,
+                                    globalPosition: 'bottom left',
+                                    className: 'success'
+                            });
+                        }
+                    });
+                }
             }
         });
 
@@ -377,7 +400,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                         that.model.in_edit = false;
                         that.render();
                         $.notify('Profile changed successfully', {
-                            autoHideDelay: 4000,
+                            autoHideDelay: defaultHideDelay,
                             globalPosition: 'bottom left',
                             className: 'success'
                         });

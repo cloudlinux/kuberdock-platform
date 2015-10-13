@@ -364,11 +364,13 @@ def get_nodes_collection():
 
 
 @nodes.route('/', methods=['GET'])
+@login_required_or_basic_or_token
 def get_list():
     return jsonify({'status': 'OK', 'data': get_nodes_collection()})
 
 
 @nodes.route('/<node_id>', methods=['GET'])
+@login_required_or_basic_or_token
 @check_permission('get', 'nodes')
 def get_one_node(node_id):
     check_int_id(node_id)
@@ -485,6 +487,7 @@ def add_node(data, do_deploy=True, with_testing=False):
 
 
 @nodes.route('/', methods=['POST'])
+@login_required_or_basic_or_token
 @check_permission('create', 'nodes')
 @maintenance_protected
 def create_item():
@@ -494,6 +497,7 @@ def create_item():
 
 
 @nodes.route('/<node_id>', methods=['PUT'])
+@login_required_or_basic_or_token
 @check_permission('edit', 'nodes')
 @maintenance_protected
 def put_item(node_id):
@@ -519,6 +523,7 @@ def put_item(node_id):
 
 
 @nodes.route('/<node_id>', methods=['DELETE'])
+@login_required_or_basic_or_token
 @check_permission('delete', 'nodes')
 @maintenance_protected
 def delete_item(node_id):
@@ -601,6 +606,7 @@ def handle_nodes(func, **kw):
 
 
 @nodes.route('/redeploy/<node_id>', methods=['GET'])
+@login_required_or_basic_or_token
 @check_permission('redeploy', 'nodes')
 @maintenance_protected
 def redeploy_item(node_id):

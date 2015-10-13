@@ -49,6 +49,9 @@ def dispatch_kind(docs):
         raise APIError("No objects found in data")
     pod, rc, service = None, None, None
     for doc in docs:
+        if not isinstance(doc, dict):
+            raise APIError('Document must describe an object, '
+                           'not just string or number')
         kind = doc.get('kind')
         if not kind:
             raise APIError('No object kind information')

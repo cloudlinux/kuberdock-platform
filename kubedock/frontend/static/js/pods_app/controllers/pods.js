@@ -404,14 +404,15 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
         });
 
         WorkFlow.addInitializer(function(){
-            var controller = new WorkFlow.Controller(),
-                source = new EventSource("/api/stream");
+            var controller = new WorkFlow.Controller();
 
             new WorkFlow.Router({
                 controller: controller
             });
 
             function eventHandler(){
+                var source = new EventSource("/api/stream");
+
                 if (typeof(EventSource) === undefined) {
                     console.log('ERROR: EventSource is not supported by browser');
                 } else {
@@ -423,7 +424,8 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                         });
                     },false);
                     source.onerror = function () {
-                        console.log('SSE Error');
+                        console.info('SSE Error');
+                        source.close();
                         setTimeout(eventHandler, 5 * 1000)
                     };
                 }

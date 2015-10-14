@@ -616,6 +616,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
         NodesCRUD.addInitializer(function() {
             var controller = new NodesCRUD.Controller();
 
+
             App.router = new Marionette.AppRouter({
                 controller: controller,
                 appRoutes: {
@@ -626,24 +627,26 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             });
 
             function eventHandler(){
+                var source = new EventSource("/api/stream");
                 if (typeof(EventSource) === undefined) {
                     console.log('ERROR: EventSource is not supported by browser');
                 } else {
-                    var source = new EventSource("/api/stream");
                     source.addEventListener('pull_nodes_state', function (ev) {
                         App.Data.nodes.fetch()
                     }, false);
+
                     source.addEventListener('install_logs', function (ev) {
-                        var decoded = JSON.parse(ev.data);
-                        // console.log(decoded);
-                        var node = App.Data.nodes.findWhere({'hostname': decoded.for_node});
+                        var decoded = JSON.parse(ev.data),
+                            node = App.Data.nodes.findWhere({'hostname': decoded.for_node});
+
                         if (typeof node != 'undefined') {
                             node.set('install_log', node.get('install_log') + decoded.data + '\n');
                             App.vent.trigger('update_console_log');
                         }
                     }, false);
                     source.onerror = function () {
-                        console.log('SSE Error');
+                        console.info('SSE Error');
+                        source.close();
                         setTimeout(eventHandler, 5 * 1000);
                     };
                 }

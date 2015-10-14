@@ -283,7 +283,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     this.ui.node_name.focus();
                     break;
                 case val && !pattern.test(val):
-                    utils.notifyWindow('Hostname can t start with symbols like ".", "#", "%" or "/"');
+                    utils.notifyWindow('Hostname can\'t start with symbols like ".", "#", "%" or "/"');
                     this.ui.node_name.focus();
                     break;
                 default:

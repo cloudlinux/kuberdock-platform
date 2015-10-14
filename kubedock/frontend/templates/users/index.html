@@ -5,9 +5,6 @@
 {% endblock %}
 
 {% block body %}
-    <style>
-    ul#users-list { list-style-type: none; }
-    </style>
     {% with items=MENU.navbar.get_items() %}
     {% include "inc/navbar_menu.html" %}
     {% endwith %}
@@ -302,7 +299,7 @@
         <td><%- email ? email : 'No email' %></td>
         <td><%- package  %></td>
         <td><%- rolename  %></td>
-        <td><span class="<%- active ? 'Active' : 'Locked' %>"><%- active ? 'Active' : 'Locked' %></span></td>
+        <td><span class="<%- active ? 'active' : 'locked' %>"><%- active ? 'Active' : 'Locked' %></span></td>
         <td>
             <% if (active) { %>
                 <span class="blockUser" title="Lock user <%- username %>"></span>

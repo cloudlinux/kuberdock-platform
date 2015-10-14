@@ -21,17 +21,21 @@ class PredefinedApps(object):
             raise APIError('Not found', status_code=404)
         return app.to_dict()
 
-    def create(self, template):
+    def create(self, name, template):
         if template is None:
             raise APIError('Template not specified')
-        app = PredefinedAppModel(user_id=self.user, template=template).save()
+        app = PredefinedAppModel(user_id=self.user, name=name, template=template)
+        app.save()
         return app.to_dict()
 
-    def update(self, app_id, template):
+    def update(self, app_id, name, template):
         app = self.apps.filter_by(id=app_id).first()
         if app is None:
             raise APIError('Not found', status_code=404)
-        app.template = template
+        if name is not None:
+            app.name = name
+        if template is not None:
+            app.template = template
         app.save()
         return app.to_dict()
 

@@ -24,20 +24,27 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     @maintenance_protected
     def post(self):
         user = self._get_current_user()
-        template = self._get_params().get('template')
+        params = self._get_params()
+        name = params.get('name')
+        if name is None:
+            raise APIError('template name not provided')
+        template = params.get('template')
         if template is None:
             template = request.files.to_dict().get('template')
             if template is None:
                 raise APIError('template not provided')
             template = template.stream.read()
-        return PredefinedApps(user).create(template=template)
+        return PredefinedApps(user).create(name=name, template=template)
 
     @KubeUtils.jsonwrap
     @maintenance_protected
     def put(self, app_id):
         user = self._get_current_user()
         params = self._get_params()
-        return PredefinedApps(user).update(app_id, template=params.get('template'))
+        name = params.get('name')
+        template = params.get('template')
+
+        return PredefinedApps(user).update(app_id, name=name, template=template)
 
     @KubeUtils.jsonwrap
     @maintenance_protected

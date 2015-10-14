@@ -144,7 +144,7 @@ def delete_template(tid):
 @settings.route('/timezone', methods=['GET'])
 @check_permission('get_timezone', 'settings')
 def get_timezone():
-    s = request.args.get('s')
+    s = request.args.get('s', '')
     timezones_list = []
     c = 0
     for tz in common_timezones:

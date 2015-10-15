@@ -1,14 +1,14 @@
 """Add system_settings table
 
 Revision ID: 589e137e4b7c
-Revises: 33b1e3a97fb8
+Revises: 299957c24510
 Create Date: 2015-10-14 11:12:58.242206
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '589e137e4b7c'
-down_revision = '33b1e3a97fb8'
+down_revision = '299957c24510'
 
 from alembic import op
 import sqlalchemy as sa

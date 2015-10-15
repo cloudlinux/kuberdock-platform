@@ -1,7 +1,7 @@
 """Add hash to PredefinedApp model
 
 Revision ID: 299957c24510
-Revises: 18f6b46d5b6c
+Revises: 33b1e3a97fb8
 Create Date: 2015-10-13 18:26:06.849909
 
 """

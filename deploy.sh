@@ -387,7 +387,7 @@ yum_wrapper install -y bridge-utils
 do_and_log systemctl daemon-reload
 log_it ntpd -gq
 do_and_log systemctl restart ntpd
-do_and_log systemctl enable ntpd
+do_and_log systemctl reenable ntpd
 do_and_log ntpq -p
 
 
@@ -513,13 +513,13 @@ EOF
 
 #7 Start as early as possible, because Flannel need it
 log_it echo 'Starting etcd...'
-do_and_log systemctl enable etcd
+do_and_log systemctl reenable etcd
 do_and_log systemctl restart etcd
 
 
 
 # Start early or curl connection refused
-do_and_log systemctl enable influxdb
+do_and_log systemctl reenable influxdb
 do_and_log systemctl restart influxdb
 
 
@@ -572,7 +572,7 @@ cp /usr/lib/systemd/system/postgresql.service /etc/systemd/system/postgresql.ser
 sed -i "/^ExecStart=/ {s/-t 300/-t 900/}" /etc/systemd/system/postgresql.service
 sed -i "/^TimeoutSec=/ {s/300/900/}" /etc/systemd/system/postgresql.service
 sed -i "/^After=/ {s/After=network.target/After=network.target\nBefore=emperor.uwsgi.service/}" /etc/systemd/system/postgresql.service
-do_and_log systemctl enable postgresql
+do_and_log systemctl reenable postgresql
 log_it postgresql-setup initdb  # may fail, if postgres data dir is not empty (it's ok)
 do_and_log systemctl restart postgresql
 do_and_log python $KUBERDOCK_DIR/postgresql_setup.py
@@ -585,7 +585,7 @@ do_and_log python manage.py createdb $ADMIN_PASSWORD
 
 
 #11. Start services
-do_and_log systemctl enable redis
+do_and_log systemctl reenable redis
 do_and_log systemctl restart redis
 
 
@@ -633,7 +633,7 @@ sed -i "/^\[Service\]/a Restart=always\nRestartSec=10" /etc/systemd/system/flann
 
 
 log_it echo "Starting flannel..."
-do_and_log systemctl enable flanneld
+do_and_log systemctl reenable flanneld
 do_and_log systemctl restart flanneld
 
 log_it echo "Adding bridge to flannel network..."
@@ -673,7 +673,7 @@ do_and_log ifup br0
 
 
 
-do_and_log systemctl enable dnsmasq
+do_and_log systemctl reenable dnsmasq
 do_and_log systemctl restart dnsmasq
 
 
@@ -692,7 +692,7 @@ fi
 #15. Starting kubernetes
 log_it echo "Starting kubernetes..."
 for i in kube-apiserver kube-controller-manager kube-scheduler;
-    do do_and_log systemctl enable $i;done
+    do do_and_log systemctl reenable $i;done
 for i in kube-apiserver kube-controller-manager kube-scheduler;
     do do_and_log systemctl restart $i;done
 
@@ -700,10 +700,10 @@ for i in kube-apiserver kube-controller-manager kube-scheduler;
 
 #16. Starting web-interface
 log_it echo "Starting kuberdock web-interface..."
-do_and_log systemctl enable emperor.uwsgi
+do_and_log systemctl reenable emperor.uwsgi
 do_and_log systemctl restart emperor.uwsgi
 
-do_and_log systemctl enable nginx
+do_and_log systemctl reenable nginx
 do_and_log systemctl restart nginx
 
 

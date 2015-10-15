@@ -106,6 +106,7 @@ systemctl reenable iptables
 yum_wrapper install -y ntp
 check_status
 systemctl daemon-reload
+systemctl restart ntpd
 check_status
 ntpd -gq
 systemctl reenable ntpd

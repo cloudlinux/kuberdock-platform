@@ -9,7 +9,7 @@ from ..models import ImageCache
 from ..validation import check_container_image_name, check_image_request
 from ..settings import DEFAULT_IMAGES_URL
 from ..utils import login_required_or_basic_or_token, KubeUtils
-from ..kapi.images import get_container_config
+from ..kapi.images import Image
 
 
 images = Blueprint('images', __name__, url_prefix='/images')
@@ -85,4 +85,4 @@ def search_image(patt=re.compile(r'https?://')):
 def get_dockerfile_data():
     params = KubeUtils._get_params()
     check_image_request(params)
-    return get_container_config(params.pop('image'), **params)
+    return Image(params.pop('image')).get_container_config(**params)

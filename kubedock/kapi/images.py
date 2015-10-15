@@ -3,7 +3,7 @@ import json
 import re
 import requests
 from urlparse import urlparse, parse_qsl
-from collections import Mapping, defaultdict
+from collections import Mapping, defaultdict, namedtuple
 from datetime import datetime
 from urllib import urlencode
 
@@ -18,11 +18,13 @@ from ..settings import DEFAULT_REGISTRY
 MIN_FAILED_LOGIN_PAUSE = 3
 
 DOCKERHUB_V1_INDEX = 'https://index.docker.io'
+DEFAULT_REGISTRY_HOST = urlparse(DEFAULT_REGISTRY).netloc
 
 
 class APIVersionError(Exception):
     """Helper exception to raise on invalid API version in a docker registry"""
     pass
+
 
 class DockerAuth(requests.auth.AuthBase):
     """Docker Registry v2 authentication + HTTP Basic Auth for private
@@ -188,227 +190,252 @@ def _json_or_none(response):
         pass
 
 
-def try_v2_request_config(repo, tag, auth, registry, just_check=False):
-    """Config request via V2 API
-    Get container config from image manifest using Docker Registry API v2
-
-    :param repo: repo name including "namespace" (library/nginx)
-    :param tag: image tag
-    :param auth: (username, password) or None
-    :param registry: full registry address (https://quay.io)
-    :param just_check: only check image availability, do not extract
-        configuration
-    :returns: container config (True if just_check=True) or None
-    :raise APIVersionError: for check requests - if registry doesn't support
-        api v2
-    """
-    s = requests.Session()
-    s.verify = False  # FIXME: private registries with self-signed certs
-
-    url = get_url(registry, 'v2', repo, 'manifests', tag)
-    try:
-        response = s.get(url, auth=DockerAuth(auth))
-        if just_check:
-            if response.status_code == 200:
-                return True
-            if response.headers.get('docker-distribution-api-version') !=\
-                    'registry/2.0':
-                raise APIVersionError()
-
-        v2_data = _json_or_none(response)
-        try:
-            return json.loads(
-                v2_data['history'][0]['v1Compatibility']
-            )['config']
-        except (ValueError, KeyError, TypeError):
-            pass
-    except requests.RequestException:
-        pass
-    return None
-
-
-def try_v1_request_config(repo, tag, auth, registry, just_check=False):
-    """Config request via V1 API
-    Get container config from image/json using Docker Registry API v1.
-
-    :param repo: repo name including "namespace" (library/nginx)
-    :param tag: image tag
-    :param auth: (username, password) or None
-    :param registry: full registry address (https://quay.io)
-    :param just_check: only check image availability, do not extract
-        configuration
-    :returns: container config (True if just_check=True) or None
-    """
-    s = requests.Session()
-    s.verify = False  # FIXME: private registries with self-signed certs
-    try:
-        docker_auth_v1(s, registry, repo, auth)
-        url = get_url(registry, 'v1/repositories', repo, 'tags', tag)
-        response = s.get(url)
-        if response.status_code == 200:
-            image_id = _json_or_none(response)
-            if not isinstance(image_id, basestring):
-                return None
-            if just_check:
-                return True
-            url = get_url(registry, 'v1/images', image_id, 'json')
-            data = _json_or_none(s.get(url))  # get image info
-            try:
-                return data['config']
-            except (KeyError, TypeError):
-                pass
-    except requests.RequestException:
-        pass
-    return None
-
-
-def request_config(repo, tag='latest', auth=None, registry=DEFAULT_REGISTRY):
-    """
-    Get container config from image manifest using Docker Registry API v2 or
-    from image/json using Docker Registry API v1.
-
-    :param repo: repo name including "namespace" (library/nginx)
-    :param tag: image tag
-    :param auth: (username, password) or None
-    :param registry: full registry address (https://quay.io)
-    :returns: container config or None
-    """
-    result = try_v2_request_config(repo, tag, auth, registry)
-    if result:
-        return result
-    return try_v1_request_config(repo, tag, auth, registry)
-
-
-def prepare_response(raw_config, image, tag, registry=DEFAULT_REGISTRY, auth=None):
-    """Create api response using raw container config, image, tag and registry.
-    """
-    if not raw_config.get('Env'):
-        raw_config['Env'] = []
-    if not raw_config.get('ExposedPorts'):
-        raw_config['ExposedPorts'] = []
-
-    if registry != DEFAULT_REGISTRY:
-        image = '{0}/{1}'.format(urlparse(registry).netloc, image)
-    if tag != 'latest':
-        image = '{0}:{1}'.format(image, tag)
-
-    config = {
-        'image': image,
-        'command': ([] if raw_config.get('Entrypoint') is None else
-                    raw_config['Entrypoint']),
-        'args': [] if raw_config.get('Cmd') is None else raw_config['Cmd'],
-        'env': [{'name': key, 'value': value} for key, value in
-                (line.split('=', 1) for line in raw_config['Env'])],
-        'ports': [{'number': int(port), 'protocol': proto} for port, proto in
-                  (line.split('/', 1) for line in raw_config['ExposedPorts'])],
-        'volumeMounts': ([] if raw_config.get('Volumes') is None else
-                         raw_config['Volumes'].keys()),
-        'workingDir': raw_config['WorkingDir'],
-    }
-    if auth is not None:
-        config['secret'] = {'username': auth[0], 'password': auth[1]}
-    return config
-
-
-def get_container_config(image, auth=None, refresh_cache=False):
-    """
-    Get container config from cache or registry
-
-    :param image: string represents image. May be in the following forms:
-        nginx[:tag] - for offical images with tag, or latest, if tag is omitted
-        username/nginx[:tag] - for public or private custom images on dockerhub
-        some.hub.com/username/nginx[:tag] - for public or private images on
-            3rd party registries
-    :param auth: authentication data. Accepts None, [<username>, <password>] or
-        {'username': <username>, <password>: <password>}
-    :return: dict which represents image configuration, received from a registry
-    """
-    registry, repo, tag = parse_image_name(image)
-    registry = complement_registry(registry)
-    if registry == DEFAULT_REGISTRY and '/' not in repo:
-        repo = 'library/{0}'.format(repo)  # official dockerhub image
-    if isinstance(auth, Mapping):
-        auth = (auth.get('username'), auth.get('password'))
-
-    cache_enabled = auth is None
-    if cache_enabled:
-        image_query = '{0}/{1}:{2}'.format(registry.rstrip('/'), repo, tag)
-        cached_config = DockerfileCache.query.get(image_query)
-        if not (refresh_cache or cached_config is None or cached_config.outdated):
-            return cached_config.data
-
-    raw_config = request_config(repo, tag, auth, registry)
-    if raw_config is None:
-        raise APIError('Couldn\'t get the image')
-    data = prepare_response(raw_config, repo, tag, registry, auth)
-
-    if cache_enabled:
-        if cached_config is None:
-            db.session.add(DockerfileCache(image=image_query, data=data,
-                                           time_stamp=datetime.utcnow()))
-        else:
-            cached_config.data = data
-            cached_config.time_stamp = datetime.utcnow()
-        db.session.commit()
-    return data
-
-
 def complement_registry(registry):
     if not urlparse(registry).scheme:
-        registry = 'https://{0}'.format(registry.rstrip('/'))
-    return registry
+        registry = 'https://{0}'.format(registry)
+    return registry.rstrip('/')
 
 
-def parse_image_name(image):
-    """Find registry, repo and tag in image name"""
-    # TODO: improve parsing, add hash
-    registry, repo, tag = DEFAULT_REGISTRY, image, 'latest'
-    parts = repo.split('/', 1)
-    if '.' in parts[0] and len(parts) == 2:
-        registry, repo = parts
-    if ':' in repo:
-        repo, tag = repo.rsplit(':', 1)
-    if '/' not in repo and registry == DEFAULT_REGISTRY:
-        repo = 'library/{0}'.format(repo)
-    return registry, repo, tag
-
-
-def check_images_availability(images, secrets=()):
+class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
     """
-    Check if all images are available using provided credentials.
-    Tries to check image availability wihout credentials and if it failed, will
-    try all specified crenedentials for the registry until successful result.
+    Represents parsed image url with common methods for Docker Registry API.
 
-    :param images: list of images
-    :param secrets: list of secrets
-    :raises APIError: if some image is not available
+    Instance attributes:
+        full_registry - registry url with schema and empty path, like "https://quay.io"
+        registry - registry host, like "quay.io"
+        repo - repository name, like "quay/redis"
+        tag - tag name, like "latest"
     """
-    registries = defaultdict(lambda: {'v2_available': True, 'auth': [None]})
-    for secret in secrets:
-        username, password, registry = secret
-        registry = complement_registry(registry)
-        registries[registry]['auth'].append((username, password))
+    # Image inherits from immutable type (namedtuple),
+    # so we use __new__ instead of __init__
+    def __new__(cls, image):
+        """
+        Parse image url or copy parsed Image object.
 
-    for image in images:
-        _check_image_availability(image, registries)
+        :param image: other Image object or image url string.
+            May be in the following forms:
+             - nginx[:tag] - for offical dockerhub images
+             - username/nginx[:tag] - for user's images on dockerhub
+             - some.hub.com/username/nginx[:tag] - for images on 3rd party registries
+            if tag is omitted, 'latest' will be used
+        """
+        if isinstance(image, Image):
+            return super(Image, cls).__new__(cls, *image)
+        else:  # `image` is image url in format [registry/]repo[:tag]
+            # TODO: improve parsing, add hash
+            full_registry, repo, tag = DEFAULT_REGISTRY, image, 'latest'
+            registry = DEFAULT_REGISTRY_HOST
+            parts = repo.split('/', 1)
+            if '.' in parts[0] and len(parts) == 2:
+                registry, repo = parts
+                full_registry = complement_registry(registry)
+            if ':' in repo:
+                repo, tag = repo.rsplit(':', 1)
+            if '/' not in repo and full_registry == DEFAULT_REGISTRY:
+                repo = 'library/{0}'.format(repo)
+            return super(Image, cls).__new__(cls, full_registry, registry, repo, tag)
 
+    def __str__(self):
+        full_registry, registry, repo, tag = self
+        if full_registry == DEFAULT_REGISTRY and repo.startswith('library/'):
+            repo = repo[len('library/'):]
 
-def _check_image_availability(image, registries):
-    registry_url, repo, tag = parse_image_name(image)
-    registry_url = complement_registry(registry_url)
-    registry = registries[registry_url]
+        url_format = '{repo}'
+        if tag != 'latest':
+            url_format += ':{tag}'
+        if full_registry != DEFAULT_REGISTRY:
+            url_format = '{registry}/' + url_format
+        return url_format.format(registry=registry, repo=repo, tag=tag)
 
-    for auth in registry['auth']:
-        # For now too many registries don't support
-        # Docker Registry v2 API, so we'll try v1 first.
-        if try_v1_request_config(repo, tag, auth, registry_url, True):
-            return True
+    def _v2_request_image_info(self, auth, just_check=False):
+        """Config request via V2 API
+        Get info about image from manifest using Docker Registry API v2
 
-        if registry['v2_available']:  # if v1 didn't work and v2 is available
-            try:
-                if try_v2_request_config(repo, tag, auth, registry_url, True):
+        :param auth: (username, password) or None
+        :param just_check: only check image availability, do not extract
+            configuration
+        :returns: full image info (True if just_check=True) or None
+        :raise APIVersionError: for check requests - if registry doesn't support
+            api v2
+        """
+        s = requests.Session()
+        s.verify = False  # FIXME: private registries with self-signed certs
+
+        url = get_url(self.full_registry, 'v2', self.repo, 'manifests', self.tag)
+        try:
+            response = s.get(url, auth=DockerAuth(auth))
+            if just_check:
+                if response.status_code == 200:
                     return True
-            except APIVersionError:
-                registry['v2_available'] = False
+                if response.headers.get('docker-distribution-api-version') !=\
+                        'registry/2.0':
+                    raise APIVersionError()
 
-    raise APIError('image {0} is not available'.format(image))
+            v2_data = _json_or_none(response)
+            try:
+                return json.loads(v2_data['history'][0]['v1Compatibility'])
+            except (ValueError, KeyError, TypeError):
+                pass
+        except requests.RequestException:
+            pass
+        return None
+
+    def _v1_request_image_info(self, auth, just_check=False):
+        """Config request via V1 API
+        Get info about image from image/json using Docker Registry API v1.
+
+        :param auth: (username, password) or None
+        :param just_check: only check image availability, do not extract
+            configuration
+        :returns: full image info (True if just_check=True) or None
+        """
+        registry, _, repo, tag = self
+        s = requests.Session()
+        s.verify = False  # FIXME: private registries with self-signed certs
+        try:
+            docker_auth_v1(s, registry, repo, auth)
+            url = get_url(registry, 'v1/repositories', repo, 'tags', tag)
+            response = s.get(url)
+            if response.status_code == 200:
+                image_id = _json_or_none(response)
+                if not isinstance(image_id, basestring):
+                    return None
+                if just_check:
+                    return True
+                url = get_url(registry, 'v1/images', image_id, 'json')
+                data = _json_or_none(s.get(url))  # get image info
+                try:
+                    return data
+                except (KeyError, TypeError):
+                    pass
+        except requests.RequestException:
+            pass
+        return None
+
+    def _request_image_info(self, auth=None):
+        """
+        Get info about image from image manifest using Docker Registry API v2 or
+        from image/json using Docker Registry API v1.
+
+        :param auth: (username, password) or None
+        :returns: full image info or None
+        """
+        return self._v2_request_image_info(auth) or self._v1_request_image_info(auth)
+
+    def _prepare_response(self, raw_config, auth=None):
+        """
+        Create api response using raw container config from docker registry.
+
+        :param raw_config: container config from docker registry
+        :param auth: (username, password) or None
+        :returns: simplified container config
+        """
+        if not raw_config.get('Env'):
+            raw_config['Env'] = []
+        if not raw_config.get('ExposedPorts'):
+            raw_config['ExposedPorts'] = []
+
+        config = {
+            'image': str(self),
+            'command': ([] if raw_config.get('Entrypoint') is None else
+                        raw_config['Entrypoint']),
+            'args': [] if raw_config.get('Cmd') is None else raw_config['Cmd'],
+            'env': [{'name': key, 'value': value} for key, value in
+                    (line.split('=', 1) for line in raw_config['Env'])],
+            'ports': [{'number': int(port), 'protocol': proto} for port, proto in
+                      (line.split('/', 1) for line in raw_config['ExposedPorts'])],
+            'volumeMounts': ([] if raw_config.get('Volumes') is None else
+                             raw_config['Volumes'].keys()),
+            'workingDir': raw_config['WorkingDir'],
+        }
+        if auth is not None:
+            config['secret'] = {'username': auth[0], 'password': auth[1]}
+        return config
+
+    def get_container_config(self, auth=None, refresh_cache=False):
+        """
+        Get container config from cache or registry
+
+        :param auth: authentication data. Accepts None, [<username>, <password>] or
+            {'username': <username>, <password>: <password>}
+        :param refresh_cache: if True, then refresh cache no matter what
+            timestamp does it have
+        :return: dict which represents image configuration
+        """
+        if isinstance(auth, Mapping):
+            auth = (auth.get('username'), auth.get('password'))
+
+        cache_enabled = auth is None
+        if cache_enabled:
+            cached_config = DockerfileCache.query.get(str(self))
+            if not (refresh_cache or cached_config is None or cached_config.outdated):
+                return cached_config.data
+
+        image_info = self._request_image_info(auth)
+        if image_info is None or 'config' not in image_info:
+            raise APIError('Couldn\'t get the image')
+        data = self._prepare_response(image_info['config'], auth)
+
+        if cache_enabled:
+            if cached_config is None:
+                db.session.add(DockerfileCache(image=str(self), data=data,
+                                               time_stamp=datetime.utcnow()))
+            else:
+                cached_config.data = data
+                cached_config.time_stamp = datetime.utcnow()
+            db.session.commit()
+        return data
+
+    def _check_availability(self, registries):
+        registry = registries[self.full_registry]
+
+        for auth in registry['auth']:
+            # For now too many registries don't support
+            # Docker Registry v2 API, so we'll try v1 first.
+            if self._v1_request_image_info(auth, True):
+                return True
+
+            if registry['v2_available']:  # if v1 didn't work and v2 is available
+                try:
+                    if self._v2_request_image_info(auth, True):
+                        return True
+                except APIVersionError:
+                    registry['v2_available'] = False
+
+        raise APIError('image {0} is not available'.format(self))
+
+    def get_id(self, secrets=()):
+        """
+        Get image id from registry.
+
+        :param secrets: list of secrets.
+            Each secret must be iterable (username, password, registry)
+        :returns: container config or None
+        """
+        auth_list = [(username, password)
+                     for username, password, registry in secrets
+                     if complement_registry(registry) == self.full_registry]
+        for auth in auth_list + [None]:
+            image_info = self._request_image_info(auth)
+            if image_info is not None and 'id' in image_info:
+                return image_info['id']
+
+    @classmethod
+    def check_images_availability(cls, images, secrets=()):
+        """
+        Check if all images are available using provided credentials.
+        Tries to check image availability wihout credentials and if it failed, will
+        try all specified crenedentials for the registry until successful result.
+
+        :param images: list of images
+        :param secrets: list of secrets
+            Each secret must be iterable (username, password, registry)
+        :raises APIError: if some image is not available
+        """
+        registries = defaultdict(lambda: {'v2_available': True, 'auth': [None]})
+        for username, password, registry in secrets:
+            registry = complement_registry(registry)
+            registries[registry]['auth'].append((username, password))
+
+        for image in images:
+            cls(image)._check_availability(registries)

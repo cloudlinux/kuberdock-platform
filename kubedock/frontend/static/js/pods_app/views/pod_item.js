@@ -84,7 +84,8 @@ define(['pods_app/app',
                 var startedAt = this.model.get('startedAt');
                 return {
                     kubes: kubes ? kubes : 0,
-                    startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' : localizeDatetime(startedAt, userSettings.timezone)
+                    startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' : localizeDatetime(startedAt, userSettings.timezone),
+                    updateIsAvailable: this.updateIsAvailable
                 }
             },
 
@@ -92,6 +93,8 @@ define(['pods_app/app',
                 'start'            : '.start-btn',
                 'stop'             : '.stop-btn',
                 'delete'           : '.terminate-btn',
+                'update'           : '.update-btn',
+                'checkForUpdate'   : '.check-for-update-btn',
                 'containerPageBtn' : '.container-page-btn',
                 'checkbox'         : 'input[type="checkbox"]'
             },
@@ -100,6 +103,8 @@ define(['pods_app/app',
                 'click @ui.start'              : 'startItem',
                 'click @ui.stop'               : 'stopItem',
                 'click @ui.delete'             : 'deleteItem',
+                'click @ui.update'             : 'updateItem',
+                'click @ui.checkForUpdate'     : 'checkForUpdate',
                 'click @ui.containerPageBtn'   : 'containerPage',
                 'click @ui.checkbox'           : 'checkItem'
             },
@@ -134,6 +139,58 @@ define(['pods_app/app',
 
             startItem: function(evt){
                 this.command(evt, 'start');
+            },
+
+            updateItem: function(evt){
+                console.log('updateItem: evt, this');
+                console.log(evt);
+                console.log(this);
+                utils.preloader.show();
+                var podID = this.model.get('parentID'),
+                    containerID = this.model.get('containerID'),
+                    that = this;
+                $.ajax({
+                    url: '/api/podapi/' + podID + '/' + containerID + '/update',
+                    type: 'POST',
+                    dataType: 'JSON',
+                    success: function(rs){
+                        console.log(rs);
+                        utils.preloader.hide();
+                        that.updateIsAvailable = undefined;
+                        that.render();
+                    },
+                    error: function(xhr){
+                        console.log(xhr);
+                        utils.preloader.hide();
+                        utils.notifyWindow(xhr);
+                    }
+                });
+            },
+
+            checkForUpdate: function(evt){
+                console.log('checkForUpdate: evt, this');
+                console.log(evt);
+                console.log(this);
+                utils.preloader.show();
+                var podID = this.model.get('parentID'),
+                    containerID = this.model.get('containerID'),
+                    that = this;
+                $.ajax({
+                    url: '/api/podapi/' + podID + '/' + containerID + '/update',
+                    type: 'GET',
+                    dataType: 'JSON',
+                    success: function(rs){
+                        console.log(rs);
+                        utils.preloader.hide();
+                        that.updateIsAvailable = rs.data;
+                        that.render();
+                    },
+                    error: function(xhr){
+                        console.log(xhr);
+                        utils.preloader.hide();
+                        utils.notifyWindow(xhr);
+                    }
+                });
             },
 
             stopItem: function(evt){

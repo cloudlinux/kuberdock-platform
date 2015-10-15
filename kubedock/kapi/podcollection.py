@@ -1,13 +1,13 @@
 import json
 from uuid import uuid4
-from base64 import urlsafe_b64encode as b64encode
+from base64 import urlsafe_b64encode, urlsafe_b64decode
 from flask import current_app
 
 from ..billing import repr_limits
 from ..utils import (modify_node_ips, run_ssh_command, send_event, APIError,
                      POD_STATUSES)
 from .pod import Pod
-from .images import check_images_availability, parse_image_name
+from .images import Image
 from .pstorage import CephStorage, AmazonStorage, NodeCommandError
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
@@ -32,12 +32,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             secret = container.pop('secret', None)
             if secret is not None:
                 secrets.add((secret['username'], secret['password'],
-                             parse_image_name(container['image'])[0]))
+                             Image(container['image']).registry))
         secrets = sorted(secrets)
 
         if not skip_check:
             self._check_trial(params)
-            check_images_availability(
+            Image.check_images_availability(
                 [container['image'] for container in params['containers']], secrets)
 
         params['namespace'] = params['id'] = str(uuid4())
@@ -115,6 +115,36 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # current_app.logger.debug(rv)
         self._mark_pod_as_deleted(pod_id)
 
+    def check_updates(self, pod_id, container_id):
+        """
+        Check if image in registry differs from image in kubernetes
+
+        :raise APIError: if pod not found or container not found in pod
+            or image not found in registry
+        """
+        pod = self.get_by_id(pod_id)
+        try:
+            container = (c for c in pod.containers
+                         if c['containerID'] == container_id).next()
+        except StopIteration:
+            raise APIError('Container with id {0} not found'.format(container_id))
+        image = container['image']
+        image_id = container['imageID']
+        image_id_in_registry = Image(image).get_id(self._get_secrets(pod))
+        if image_id_in_registry is None:
+            raise APIError('Image not found in registry')
+        return image_id != image_id_in_registry
+
+    def update_container(self, pod_id, container_id):
+        """
+        Update container image by restarting the pod.
+
+        :raise APIError: if pod not found or if pod is not running
+        """
+        pod = self.get_by_id(pod_id)
+        self._stop_pod(pod)
+        return self._start_pod(pod)
+
     def _make_namespace(self, namespace):
         data = self._get_namespace(namespace)
         if data is None:
@@ -131,9 +161,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                      registry=DEFAULT_REGISTRY):
         if registry == DEFAULT_REGISTRY:  # only index.docker.io allowes to use
             registry = 'https://index.docker.io/v1/'  # image name without registry
-        auth = b64encode('{0}:{1}'.format(username, password))
-        secret = b64encode('{{"{0}": {{"auth": "{1}", "email": "a@a.a" }}}}'
-                           .format(registry, auth))
+        auth = urlsafe_b64encode('{0}:{1}'.format(username, password))
+        secret = urlsafe_b64encode('{{"{0}": {{"auth": "{1}", "email": "a@a.a" }}}}'
+                                   .format(registry, auth))
 
         name = str(uuid4())
         config = {'apiVersion': KUBE_API_VERSION,
@@ -146,6 +176,24 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if rv['kind'] == 'Status' and rv['status'] == 'Failure':
             raise APIError(rv['message'])
         return name
+
+    def _get_secrets(self, pod):
+        """
+        Retrieve from kubernetes all secrets attached to the pod.
+
+        :param pod: pod
+        :returns: list of secrets. Each secret is a tuple (username, password, registry)
+        """
+        secrets = []
+        for secret in pod.secrets:
+            rv = self._get(['secrets', secret], ns=pod.namespace)
+            if rv['kind'] == 'Status':
+                raise APIError(rv['message'])
+            dockercfg = json.loads(urlsafe_b64decode(str(rv['data']['.dockercfg'])))
+            for registry, data in dockercfg.iteritems():
+                username, password = urlsafe_b64decode(str(data['auth'])).split(':', 1)
+                secrets.append((username, password, registry))
+        return secrets
 
     def _get_namespace(self, namespace):
         data = self._get(ns=namespace)
@@ -254,6 +302,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
 
+                pod.secrets = db_pod_config.get('secrets')
                 a = pod.containers
                 b = db_pod_config.get('containers')
                 pod.containers = self.merge_lists(a, b, 'name')

@@ -728,7 +728,7 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
         self.pod_collection = PodCollection(self.user)
 
     @mock.patch.object(PodCollection, '_make_secret', mock.Mock())
-    @mock.patch('kubedock.kapi.podcollection.check_images_availability')
+    @mock.patch.object(podcollection.Image, 'check_images_availability')
     def test_check_images_availability_called(self, check_, create_):
         images = ['wncm/test_image:4', 'quay.io/wncm/test_image']
         secrets = [('test_user', 'test_password', mock.ANY),
@@ -1306,6 +1306,151 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         pod = {'containers': [{'kubes': 2}, {'kubes': 4}]}
         PodCollection(self.user)._check_trial(pod)
         self.assertFalse(raise_mock.called)
+
+
+class TestPodCollectionGetSecrets(unittest.TestCase, TestCaseMixin):
+    def setUp(self):
+        # mock all these methods to prevent any accidental calls
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+
+        U = type('User', (), {'username': 'oergjh'})
+        self.pod_collection = PodCollection(U())
+
+    @mock.patch.object(PodCollection, '_get')
+    def test_get_secrets(self, get_mock):
+        """Get secrets from kubernetes"""
+        pod = fake_pod(id=str(uuid4()), secrets=('secret-1', 'secret-2'),
+                       namespace=str(uuid4()))
+        get_mock.return_value = {'kind': 'Secret', 'data': {
+            '.dockercfg': ('eyJxdWF5LmlvIjogeyJhdXRoIjogImRYTmxjbTVoYldVeE9uQmh'
+                           'jM04zYjNKa01RPT0iLCAiZW1haWwiOiAiYUBhLmEiIH19')
+        }}
+        username, password, registry = 'username1', 'password1', 'quay.io'
+
+        secrets = self.pod_collection._get_secrets(pod)
+
+        get_mock.assert_has_calls([
+            mock.call(['secrets', 'secret-1'], ns=pod.namespace),
+            mock.call(['secrets', 'secret-2'], ns=pod.namespace),
+        ])
+        self.assertEqual(secrets, [(username, password, registry)] * 2)
+
+    @mock.patch.object(PodCollection, '_get')
+    def test_secret_not_found(self, get_mock):
+        """
+        If secret was not found in kubernetes, PodCollection._get_secrets must
+        raise an APIError
+        """
+        pod = fake_pod(id=str(uuid4()), secrets=('secret-1', 'secret-2'),
+                       namespace=str(uuid4()))
+        get_mock.return_value = {'kind': 'Status', 'message': 'smth\'s wrong'}
+
+        with self.assertRaises(APIError):
+            self.pod_collection._get_secrets(pod)
+
+
+@mock.patch.object(PodCollection, 'get_by_id')
+class TestPodCollectionCheckUpdates(unittest.TestCase, TestCaseMixin):
+    def setUp(self):
+        # mock all these methods to prevent any accidental calls
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+
+        U = type('User', (), {'username': 'oergjh'})
+        self.pod_collection = PodCollection(U())
+
+    def test_pod_not_found(self, get_by_id_mock):
+        """If pod was not found, check_updates must raise an APIError"""
+        get_by_id_mock.side_effect = Exception
+        pod_id = str(uuid4())
+        container_id = 'dfghji765redcvbhut'
+        with self.assertRaises(Exception):
+            self.pod_collection.check_updates(pod_id, container_id)
+        get_by_id_mock.assert_called_once_with(pod_id)
+
+    def test_container_not_found(self, get_by_id_mock):
+        """
+        If container with this id was not found in the pod,
+        check_updates must raise an APIError
+        """
+        pod = fake_pod(id=str(uuid4()), containers=[
+            {'image': 'nginx', 'imageID': 'ceab6053', 'containerID': 'oduhrg94'}
+        ])
+        get_by_id_mock.return_value = pod
+
+        with self.assertRaises(APIError):
+            self.pod_collection.check_updates(pod.id, 'wrong_id')
+
+    @mock.patch.object(PodCollection, '_get_secrets')
+    @mock.patch.object(podcollection.Image, 'get_id', autospec=True)
+    def test_with_secrets(self, get_image_id_mock, get_secrets_mock, get_by_id_mock):
+        """Request secrets from kubernetes, format and pass to get_id"""
+        Image = podcollection.Image
+        image, image_id, container_id = 'nginx', 'ceab60537ad2d', 'oduhrg94her4'
+        pod = fake_pod(id=str(uuid4()), secrets=('secret-1', 'secret-2'), containers=[
+            {'image': image, 'imageID': image_id, 'containerID': container_id}
+        ])
+        secrets_full = (('user1', 'password', 'regist.ry'),
+                        ('user2', 'p-0', 'quay.io'))
+
+        get_by_id_mock.return_value = pod
+        get_secrets_mock.return_value = secrets_full
+        get_image_id_mock.return_value = image_id
+
+        self.pod_collection.check_updates(pod.id, container_id)
+
+        get_secrets_mock.assert_called_once_with(pod)
+        get_image_id_mock.assert_called_once_with(Image(image), secrets_full)
+
+    @mock.patch.object(podcollection.Image, 'get_id', autospec=True)
+    def test_check_updates(self, get_image_id_mock, get_by_id_mock):
+        """
+        check_updates must return True if image_id in registry != imageID in pod spec.
+        otherwise (if ids are equal) - return False.
+        Raise APIError if it couldn't get image_id from registry
+        """
+        Image = podcollection.Image
+        image, image_id, container_id = 'nginx', 'ceab60537ad2d', 'oduhrg94her4'
+        pod = fake_pod(id=str(uuid4()), secrets=(), containers=[
+            {'image': image, 'imageID': image_id, 'containerID': container_id}
+        ])
+        get_by_id_mock.return_value = pod
+
+        get_image_id_mock.return_value = None
+        with self.assertRaises(APIError):
+            self.pod_collection.check_updates(pod.id, container_id)
+        get_image_id_mock.assert_called_once_with(Image(image), [])
+
+        get_image_id_mock.reset_mock()
+        get_image_id_mock.return_value = image_id
+        self.assertFalse(self.pod_collection.check_updates(pod.id, container_id))
+        get_image_id_mock.assert_called_once_with(Image(image), [])
+
+        get_image_id_mock.reset_mock()
+        get_image_id_mock.return_value = 'new_id'
+        self.assertTrue(self.pod_collection.check_updates(pod.id, container_id))
+        get_image_id_mock.assert_called_once_with(Image(image), [])
+
+
+class TestPodCollectionUpdateContainer(unittest.TestCase, TestCaseMixin):
+    def setUp(self):
+        # mock all these methods to prevent any accidental calls
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+        U = type('User', (), {'username': 'oergjh'})
+        self.pod_collection = PodCollection(U())
+
+    @mock.patch.object(PodCollection, 'get_by_id')
+    @mock.patch.object(PodCollection, '_stop_pod')
+    @mock.patch.object(PodCollection, '_start_pod')
+    def test_update_container(self, start_pod_mock, stop_pod_mock, get_by_id_mock):
+        """update_container must restart pod"""
+        pod_id, container_id = str(uuid4()), str(uuid4())
+        pod = fake_pod(id=pod_id)
+        get_by_id_mock.return_value = pod
+
+        self.pod_collection.update_container(pod_id, container_id)
+        get_by_id_mock.assert_called_once_with(pod_id)
+        stop_pod_mock.assert_called_once_with(pod)
+        start_pod_mock.assert_called_once_with(pod)
 
 
 if __name__ == '__main__':

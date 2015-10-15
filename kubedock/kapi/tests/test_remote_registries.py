@@ -2,17 +2,10 @@
 Strongly depends on availability of hub.docker.com, quay.io, gcr.io.
 """
 import unittest
-import mock
-import sys
 
 import requests
 
-#sys.modules['kubedock.utils'] = mock.Mock()
-#sys.modules['kubedock.utils'].APIError = type('APIError', (Exception,), {})
-#from ..utils import APIError
-
-from ..images import (get_container_config, check_images_availability,
-                      complement_registry, parse_image_name, get_url, APIError)
+from ..images import Image, APIError
 from .. import images
 from ...settings import DEFAULT_REGISTRY
 from ...validation import (V, args_list_schema, env_schema, path_schema,
@@ -39,11 +32,26 @@ schema = {
 # pause.
 images.MIN_FAILED_LOGIN_PAUSE = 60
 
-# Account for private repos testing. Create a new one if this will failed on
-# hub.docker.com
-# TODO: collect all accounts here in constants
-TESTUNAME = 'wncm'
-TESTPASSWORD = 'mfhhh94kw02z'
+
+# Accounts for repos testing. Create a new ones if these will failed on
+
+# dockerhub account
+DOCKERHUB_AUTH = DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD = 'wncm', 'mfhhh94kw02z'
+DOCKERHUB_PRIVATE_REPO = '{0}/test_private'.format(DOCKERHUB_USERNAME)
+DOCKERHUB_PUBLIC_REPO = '{0}/mynginx4'.format(DOCKERHUB_USERNAME)
+# quay account
+QUAY_USERNAME = 'sergey_gruntovsky'
+QUAY_ROBOT_NAME = 'sergey_gruntovsky+kd_test_private'
+QUAY_ROBOT_PASSWORD = 'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY'
+QUAY_ROBOT_AUTH = QUAY_ROBOT_NAME, QUAY_ROBOT_PASSWORD
+QUAY_PRIVATE_REPO = 'quay.io/{0}/test_private'.format(QUAY_USERNAME)
+QUAY_PUBLIC_REPO = 'quay.io/{0}/mynginx'.format(QUAY_USERNAME)
+# own registry
+CUSTOM_URL = '45.55.52.203:5000'
+CUSTOM_USERNAME = 'wncm'
+CUSTOM_PASSWORD = 'p-0'
+CUSTOM_AUTH = CUSTOM_USERNAME, CUSTOM_PASSWORD
+CUSTOM_PRIVATE_REPO = '{0}/mynginx'.format(CUSTOM_URL)
 
 
 class TestGetContainerConfig(DBTestCase):
@@ -52,106 +60,58 @@ class TestGetContainerConfig(DBTestCase):
         if not validator.validate(data, schema):
             self.fail(validator.errors)
 
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_get_container_config_3rd_party_registry_public(self):
-        self.validate(get_container_config('quay.io/sergey_gruntovsky/mynginx'))
+        for image in (QUAY_PUBLIC_REPO,
+                      'gcr.io/google_containers/etcd:2.0.9',
+                      'gcr.io/google_containers/kube2sky:1.11',
+                      'gcr.io/google_containers/skydns:2015-03-11-001'):
+            self.validate(Image(image).get_container_config())
 
-        self.validate(get_container_config('gcr.io/google_containers/etcd:2.0.9'))
-        self.validate(get_container_config('gcr.io/google_containers/kube2sky:1.11'))
-        self.validate(get_container_config(
-            'gcr.io/google_containers/skydns:2015-03-11-001'))
-
-    #@unittest.skip('')
-    def test_get_container_config_3rd_party_registry_public_auth(self):
-        self.validate(get_container_config(
-            'quay.io/sergey_gruntovsky/mynginx',
-            auth=('sergey_gruntovsky+kdmynginx',
-                  'QH2XTHF2G3320EAD16A9WC1EV50X3UE3IP9PSFWK28JVW8OYQFI37J3AVV3KE3AZ')
-        ))
-
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_get_container_config_3rd_party_registry_private(self):
-        self.validate(get_container_config(
-            'quay.io/sergey_gruntovsky/test_private',
-            auth=('sergey_gruntovsky+kd_test_private',
-                  'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY')
-        ))
+        for image in (Image(QUAY_PRIVATE_REPO),
+                      Image(QUAY_PRIVATE_REPO + ':latest')):
+            self.validate(image.get_container_config(auth=QUAY_ROBOT_AUTH))
 
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_get_container_config_public_official(self):
-        self.validate(get_container_config('nginx'))
-        self.validate(get_container_config('nginx:1.9'))
-        self.validate(get_container_config('debian'))
+        for image_url in ('nginx', 'nginx:1.9', 'debian'):
+            self.validate(Image(image_url).get_container_config())
 
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_get_container_config_public(self):
-        self.validate(get_container_config(TESTUNAME + '/mynginx4'))
+        self.validate(Image(DOCKERHUB_PUBLIC_REPO).get_container_config())
+        self.validate(Image(DOCKERHUB_PUBLIC_REPO + ':latest').get_container_config())
 
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_get_container_config_private_dockerhub_repo(self):
-        self.validate(get_container_config(TESTUNAME + '/test_private',
-                                           auth=(TESTUNAME, TESTPASSWORD)))
-        self.validate(get_container_config(TESTUNAME + '/test_private:latest',
-                                           auth={'username': TESTUNAME,
-                                                 'password': TESTPASSWORD}))
+        for image in (Image(DOCKERHUB_PRIVATE_REPO),
+                      Image(DOCKERHUB_PRIVATE_REPO + ':latest')):
+            self.validate(image.get_container_config(auth=DOCKERHUB_AUTH))
 
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_get_container_config_private_registry(self):
-        # FIXME: what is it 45.55.52.203?
-        self.validate(get_container_config('45.55.52.203:5000/mynginx',
-                                           auth=(TESTUNAME, 'p-0')))
-
-
-class TestMisc(DBTestCase):
-    #@unittest.skip('')
-    def test_parse_image_name(self):
-        test_pairs = {
-            'nginx': (DEFAULT_REGISTRY, 'library/nginx', 'latest'),
-            TESTUNAME + '/test_private': (DEFAULT_REGISTRY, TESTUNAME + '/test_private', 'latest'),
-            TESTUNAME + '/test_private:4': (DEFAULT_REGISTRY, TESTUNAME + '/test_private', '4'),
-            'quay.io/sergey_gruntovsky/test_private:4':
-                ('quay.io', 'sergey_gruntovsky/test_private', '4'),
-            '45.55.52.203:5000/mynginx':
-                ('45.55.52.203:5000', 'mynginx', 'latest'),
-            '45.55.52.203:5000/mynginx:4':
-                ('45.55.52.203:5000', 'mynginx', '4')
-        }
-        for image_name, result in test_pairs.iteritems():
-            self.assertEqual(parse_image_name(image_name), result)
-
-    #@unittest.skip('')
-    def test_complement_registry(self):
-        test_pairs = {'quay.io': 'https://quay.io',
-                      'http://quay.io': 'http://quay.io',
-                      'https://quay.io': 'https://quay.io'}
-        for data, result in test_pairs.iteritems():
-            self.assertEqual(complement_registry(data), result)
-
-    #@unittest.skip('')
-    def test_get_url(self):
-        test_pairs = {('https://quay.io/', 'v1', 'aa', 'bb'): 'https://quay.io/v1/aa/bb'}
-        for data, result in test_pairs.iteritems():
-            self.assertEqual(get_url(*data), result)
+        for image in (Image(CUSTOM_PRIVATE_REPO),
+                      Image(CUSTOM_PRIVATE_REPO + ':latest')):
+            self.validate(image.get_container_config(auth=CUSTOM_AUTH))
 
 
 # @unittest.skip('')
 class TestCheckImagesAvailability(DBTestCase):
     def test_default_registry_public(self):
-        check_images_availability(['nginx'])
+        Image.check_images_availability(['nginx'])
 
-    #@unittest.skip('TODO: dockerhub too many failed login attempts')
+    # @unittest.skip('TODO: dockerhub too many failed login attempts')
     def test_default_registry_private(self):
-
-        # TODO: add valid account or replace registry server answer with
-        # some kind of mocks.
-        check_images_availability(['nginx', TESTUNAME + '/test_private'], [
-            (TESTUNAME, TESTPASSWORD, DEFAULT_REGISTRY)
+        Image.check_images_availability(['nginx', DOCKERHUB_PRIVATE_REPO], [
+            (DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD, DEFAULT_REGISTRY)
         ])
 
         # first failed login
         with self.assertRaises(APIError) as err:
-            check_images_availability(['nginx', TESTUNAME + '/test_private'], [
-                (TESTUNAME, 'wrong_password', DEFAULT_REGISTRY)
+            Image.check_images_availability(['nginx', DOCKERHUB_PRIVATE_REPO], [
+                (DOCKERHUB_USERNAME, 'wrong_password', DEFAULT_REGISTRY)
             ])
         self.assertTrue(err.exception.message.endswith('is not available'))
         failed_logins = images.PrivateRegistryFailedLogin.all()
@@ -161,8 +121,8 @@ class TestCheckImagesAvailability(DBTestCase):
         # second failed login
         with self.assertRaises(APIError) as err:
             # second call should return a message about waiting some seconds
-            check_images_availability(['nginx', TESTUNAME + '/test_private'], [
-                (TESTUNAME, 'wrong_password', DEFAULT_REGISTRY)
+            Image.check_images_availability(['nginx', DOCKERHUB_PRIVATE_REPO], [
+                (DOCKERHUB_USERNAME, 'wrong_password', DEFAULT_REGISTRY)
             ])
         self.assertEqual(err.exception.status_code,
                          requests.codes.too_many_requests)
@@ -170,44 +130,38 @@ class TestCheckImagesAvailability(DBTestCase):
         self.assertEqual(len(failed_logins), 1)
         failed2 = failed_logins[0]
         self.assertEqual(failed1, failed2)
-        self.assertEqual(failed1.login, TESTUNAME)
+        self.assertEqual(failed1.login, DOCKERHUB_USERNAME)
 
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_gcr(self):
-        check_images_availability(['gcr.io/google_containers/etcd:2.0.9',
-                                   'gcr.io/google_containers/kube2sky:1.11',
-                                   'gcr.io/google_containers/skydns:2015-03-11-001'])
+        Image.check_images_availability([
+            'gcr.io/google_containers/etcd:2.0.9',
+            'gcr.io/google_containers/kube2sky:1.11',
+            'gcr.io/google_containers/skydns:2015-03-11-001',
+        ])
 
-    #@unittest.skip('')
+    # @unittest.skip('')
     def test_quay(self):
-        check_images_availability(['quay.io/quay/redis'])
-        check_images_availability(
-            ['quay.io/quay/redis', 'quay.io/sergey_gruntovsky/test_private'],
-            [('sergey_gruntovsky+kd_test_private',
-              'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY',
-              'quay.io')]
+        Image.check_images_availability(['quay.io/quay/redis'])
+        Image.check_images_availability(
+            ['quay.io/quay/redis', QUAY_PRIVATE_REPO],
+            [(QUAY_ROBOT_NAME, QUAY_ROBOT_PASSWORD, 'quay.io')]
         )
 
         with self.assertRaises(APIError):
-            check_images_availability(
-                ['quay.io/quay/redis', 'quay.io/sergey_gruntovsky/test_private'],
-                [('sergey_gruntovsky+kd_test_private',
-                  'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY',
-                  'wrong_regitry.io')]
+            Image.check_images_availability(
+                ['quay.io/quay/redis', QUAY_PRIVATE_REPO],
+                [(QUAY_ROBOT_NAME, QUAY_ROBOT_PASSWORD, 'wrong_regitry.io')]
             )
 
         with self.assertRaises(APIError):
-            check_images_availability(
-                ['quay.io/quay/redis', 'quay.io/sergey_gruntovsky/test_private'],
-                [('sergey_gruntovsky+kd_test_private',
-                  'wrong_password',
-                  'quay.io')]
+            Image.check_images_availability(
+                ['quay.io/quay/redis', QUAY_PRIVATE_REPO],
+                [(QUAY_ROBOT_NAME, 'wrong_password', 'quay.io')]
             )
         with self.assertRaises(APIError):
-            check_images_availability(['quay.io/quay/redis',
-                                       'quay.io/sergey_gruntovsky/test_private'])
+            Image.check_images_availability(['quay.io/quay/redis', QUAY_PRIVATE_REPO])
 
 
 if __name__ == '__main__':
     unittest.main()
-

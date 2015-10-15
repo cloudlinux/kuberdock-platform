@@ -12,11 +12,23 @@ down_revision = '33b1e3a97fb8'
 
 from alembic import op
 import sqlalchemy as sa
+from hashlib import sha1
+from datetime import datetime
 
 
 def upgrade():
     op.add_column('predefined_apps', sa.Column('qualifier', sa.String(40),
-                  server_default='', nullable=False, index=True))
+                  nullable=True, index=True))
+
+    Pa = sa.Table('predefined_apps', sa.MetaData(), sa.Column('qualifier'))
+    session = sa.orm.Session(bind=op.get_bind())
+    for pa in session.query(Pa):
+        sha = sha1()
+        sha.update(str(datetime.now()))
+        pa.qualifier = sha.hexdigest()
+    session.commit()
+
+    op.alter_column('predefined_apps', 'qualifier', server_default='', nullable=False)
 
 
 def downgrade():

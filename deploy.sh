@@ -519,7 +519,7 @@ do_and_log systemctl restart etcd
 
 
 # Start early or curl connection refused
-do_and_log systemctl reenable influxdb
+do_and_log systemctl enable influxdb
 do_and_log systemctl restart influxdb
 
 

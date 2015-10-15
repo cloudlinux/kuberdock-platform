@@ -203,6 +203,5 @@ define(function () {
         }, 500);
     }
 
-
     return this;
 });

@@ -226,9 +226,6 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 'click span': 'editTemplate'
             },
 
-            onRender: function(){
-            },
-
             editTemplate: function(){
                 App.router.navigate('/notifications/edit/' + this.model.id + '/', {trigger: true});
             }
@@ -313,14 +310,16 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 'save'             : 'button#template-save-btn',
                 'back'             : 'button#template-back-btn',
                 'editBtn'          : '#template-edit-btn',
-                'deleteBtn'        : '#template-remove-btn'
+                'input'            : 'input',
+/*                'deleteBtn'        : '#template-remove-btn'*/
             },
 
             events: {
                 'click @ui.back'       : 'back',
                 'click @ui.save'       : 'onSave',
                 'click @ui.editBtn'    : 'editTemplate',
-                'click @ui.deleteBtn'  : 'deleteProfile',
+                'keyup @ui.input'      : 'changeValue',
+/*                'click @ui.deleteBtn'  : 'deleteProfile',*/
             },
 
             templateHelpers: function(){
@@ -340,6 +339,28 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 this.ui.email.val(this.model.get('email'));
             },
 
+            changeValue: function(){
+                var equal,
+                oldData = {
+                    'first_name'      : this.model.get('first_name'),
+                    'last_name'       : this.model.get('last_name'),
+                    'middle_initials' : this.model.get('middle_initials'),
+                    'email'           : this.model.get('email'),
+                    'password'        : '',
+                },
+                newData = {
+                    'first_name'      : this.ui.first_name.val(),
+                    'last_name'       : this.ui.last_name.val(),
+                    'middle_initials' : this.ui.middle_initials.val(),
+                    'email'           : this.ui.email.val(),
+                    'password'        : this.ui.password.val(),
+                };
+
+                equal = _.isEqual(oldData, newData)
+
+                equal === false ? this.ui.save.show() : this.ui.save.hide();
+            },
+
             back: function(){
                 this.model.in_edit = false;
                 this.render();
@@ -350,7 +371,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 this.render();
             },
 
-            deleteProfile: function(){
+/*            deleteProfile: function(){
                 var that = this;
                 utils.modalDialogDelete({
                     title: "Terminate account?",
@@ -370,7 +391,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                         buttonCancel: true
                     }
                 });
-            },
+            },*/
 
             onSave: function(){
                 var that = this,
@@ -386,7 +407,11 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 // temp validation
                 if (pass1 != '') {
                     if (pass1 != pass2) {
-                        alert("Passwords are not equal");
+                        $.notify('Passwords are not equal', {
+                            autoHideDelay: 5000,
+                            globalPosition: 'bottom left',
+                            className: 'error'
+                        });
                         return
                     }
                     data.password = pass1

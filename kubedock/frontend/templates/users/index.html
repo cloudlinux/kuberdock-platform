@@ -137,8 +137,13 @@
                         </div>
                     </div>
                     <div class="buttons pull-right">
-                        <button id="user-cancel-btn" class="" type="submit">Cancel</button>
-                        <button id="user-add-btn" class="" type="submit">Create</button>
+                        <button id="user-cancel-btn" type="submit">Cancel</button>
+                        <% if (typeof username !== "undefined") { %>
+                            <button id="user-add-btn" class="hideButton" type="submit">Create</button>
+                        <% } else { %>
+                            <button id="user-add-btn" type="submit">Create</button>
+                        <% } %>
+
                     </div>
                 </div>
             </div>

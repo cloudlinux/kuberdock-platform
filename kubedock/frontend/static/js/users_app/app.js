@@ -462,7 +462,9 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.users_page'      : 'back',
                 'click @ui.user_cancel_btn' : 'back',
                 'click @ui.user_add_btn'    : 'onSave',
-                'focus @ui.input'           : 'removeError'
+                'focus @ui.input'           : 'removeError',
+                'keyup @ui.input'           : 'changeValue',
+                'change @ui.selectpicker'   : 'changeValue'
             },
 
             onRender: function(){
@@ -471,15 +473,26 @@ define(['marionette', 'paginator', 'utils'],
 
             onSave: function(){
                 var that = this,
+                    users = App.Data.users.models,
+                    existsUsername = false,
                     preloader = $('#page-preloader'),
                     username = this.ui.username.val(),
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
+
+                _.each(users, function(user){
+                    if (user.get('username') == that.ui.username.val()) existsUsername = true;
+                });
 
                 switch (true)
                 {
                 case this.ui.username.val() == '':
                     utils.scrollTo(this.ui.username);
                     this.ui.username.notify("empty username");
+                    this.ui.username.addClass('error');
+                    break;
+                case existsUsername:
+                    utils.scrollTo(this.ui.username);
+                    this.ui.username.notify('Username "' + username + '" already exists');
                     this.ui.username.addClass('error');
                     break;
                 case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
@@ -783,7 +796,6 @@ define(['marionette', 'paginator', 'utils'],
 
         Views.UsersEditView = Views.UserCreateView.extend({     // inherit
             onRender: function(){
-                this.ui.username.val(this.model.get('username'));
                 this.ui.first_name.val(this.model.get('first_name'));
                 this.ui.last_name.val(this.model.get('last_name'));
                 this.ui.middle_initials.val(this.model.get('middle_initials'))
@@ -793,6 +805,33 @@ define(['marionette', 'paginator', 'utils'],
                 this.ui.package_select.val(this.model.get('package'));
                 this.ui.user_add_btn.html('Save');
                 this.ui.selectpicker.selectpicker();
+            },
+
+            changeValue: function(){
+                var equal,
+                oldData = {
+                    'email'           : this.model.get('email'),
+                    'active'          : this.model.get('active'),
+                    'rolename'        : this.model.get('rolename'),
+                    'package'         : this.model.get('package'),
+                    'first_name'      : this.model.get('first_name'),
+                    'last_name'       : this.model.get('last_name'),
+                    'middle_initials' : this.model.get('middle_initials'),
+                    'password'        : '',
+                },
+                newData = {
+                    'email'           : this.ui.email.val(),
+                    'active'          : (this.ui.user_status.val() == 1 ? true : false),
+                    'rolename'        : this.ui.role_select.val(),
+                    'package'         : this.ui.package_select.val(),
+                    'first_name'      : this.ui.first_name.val(),
+                    'last_name'       : this.ui.last_name.val(),
+                    'middle_initials' : this.ui.middle_initials.val(),
+                    'password'        : this.ui.password.val(),
+                };
+
+                equal = _.isEqual(oldData, newData)
+                equal === false ? this.ui.user_add_btn.show() : this.ui.user_add_btn.hide();
             },
 
             onSave: function(){

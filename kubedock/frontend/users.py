@@ -32,7 +32,7 @@ def index(**kwargs):
         users_collection=[u.to_dict(full=True, exclude=['states']) for u in User.all()],
         online_users_collection=User.get_online_collection(),
         user_activity=current_user.user_activity(),
-        kube_types={k.id: k.name for k in Kube.query.all()},
+        kube_types={k.id: k.name for k in Kube.public_kubes()},
         packages=[package.to_dict() for package in Package.query.all()]
     )
 

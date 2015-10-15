@@ -169,7 +169,7 @@ new_pod_schema = {
         'internal_only': True,
     },
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
-    'kube_type': {'type': 'integer', 'min': 0, 'required': True},
+    'kube_type': {'type': 'integer', 'required': True},
     'replicationController': {'type': 'boolean'},   # TODO remove
     'node': {
         'type': 'string',
@@ -630,8 +630,11 @@ def check_int_id(id):
 
 
 def check_kube_indb(kube_type):
-    if not Kube.query.get(kube_type):
+    kube = Kube.query.get(kube_type)
+    if not kube:
         raise APIError('No such kube_type: {0}'.format(kube_type))
+    if not kube.is_public():
+        raise APIError('Forbidden kube type: {0}'.format(kube_type))
 
 
 def check_container_image_name(searchkey):
@@ -655,7 +658,7 @@ def check_node_data(data):
         raise APIError(validator.errors)
     if is_ip(data['hostname']):
         raise APIError('Please add nodes by hostname, not by ip')
-    kube_type = data.get('kube_type', 0)
+    kube_type = data.get('kube_type', Kube.get_default_kube_type())
     check_kube_indb(kube_type)
 
 
@@ -687,8 +690,18 @@ def check_new_pod_data(data, user=None):
     validator = V(user=None if user is None else user.username)
     if not validator.validate(data, new_pod_schema):
         raise APIError(validator.errors)
-    kube_type = data.get('kube_type', 0)
+    kube_type = data.get('kube_type', Kube.get_default_kube_type())
     check_kube_indb(kube_type)
+
+
+def check_internal_pod_data(data, user=None):
+    validator = V(user=None if user is None else user.username)
+    if not validator.validate(data, new_pod_schema):
+        raise APIError(validator.errors)
+    kube_type = data.get('kube_type', Kube.get_default_kube_type())
+    if Kube.get_internal_service_kube_type() != kube_type:
+        raise APIError('Internal pod must be of type {0}'.format(
+            Kube.get_internal_service_kube_type()))
 
 
 class UserValidator(V):

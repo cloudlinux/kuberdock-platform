@@ -13,7 +13,8 @@ from ..core import db
 from ..rbac import check_permission
 from ..utils import login_required_or_basic_or_token, KubeUtils, from_binunit, send_event
 from ..utils import maintenance_protected
-from ..validation import check_int_id, check_node_data, check_hostname, check_new_pod_data
+from ..validation import (
+    check_int_id, check_node_data, check_hostname, check_internal_pod_data)
 from ..billing import Kube, kubes_to_limits
 from ..settings import (NODE_INSTALL_LOG_FILE, MASTER_IP, AWS,
                         CEPH, KUBERDOCK_INTERNAL_USER, PORTS_TO_RESTRICT,
@@ -67,7 +68,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
         "name": "kuberdock-dns",
         "clusterIP": ip,
         "replicas": 1,
-        "kube_type": 0,
+        "kube_type": Kube.get_internal_service_kube_type(),
         "replicationController": True,
         "node": None,
         "restartPolicy": "Always",
@@ -273,7 +274,7 @@ def get_nodes_collection():
     for host in kub_hosts:
         if host not in db_hosts:
             new_flag = True
-            default_kube = Kube.query.get(0)
+            default_kube = Kube.get_default_kube()
             try:
                 resolved_ip = socket.gethostbyname(host)
             except socket.error:
@@ -419,12 +420,14 @@ def add_node(data, do_deploy=True, with_testing=False):
         raise APIError('Looks like you are trying to add MASTER as NODE, '
                        'this kind of setups is not supported at this '
                        'moment')
-    kube = Kube.query.get(data.get('kube_type', 0))
+    kube = Kube.query.get(data.get('kube_type', Kube.get_default_kube_type()))
     m = Node(ip=ip, hostname=data['hostname'], kube=kube, state='pending')
     logs_kubes = 1
     logcollector_kubes = logs_kubes
     logstorage_kubes = logs_kubes
-    node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
+    node_resources = kubes_to_limits(
+        logs_kubes, Kube.get_internal_service_kube_type()
+    )['resources']
     logs_memory_limit = node_resources['limits']['memory']
     if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
         logs_kubes = int(math.ceil(
@@ -440,13 +443,15 @@ def add_node(data, do_deploy=True, with_testing=False):
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
     logs_podname = get_kuberdock_logs_pod_name(data['hostname'])
     internal_ku_token = ku.get_token()
-    logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
-                                            kube.id,
-                                            logcollector_kubes,
-                                            logstorage_kubes,
-                                            MASTER_IP,
-                                            internal_ku_token)
-    check_new_pod_data(logs_config, ku)
+    logs_config = get_kuberdock_logs_config(
+        data['hostname'], logs_podname,
+        Kube.get_internal_service_kube_type(),
+        logcollector_kubes,
+        logstorage_kubes,
+        MASTER_IP,
+        internal_ku_token
+    )
+    check_internal_pod_data(logs_config, ku)
     logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
     PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
 
@@ -454,7 +459,7 @@ def add_node(data, do_deploy=True, with_testing=False):
                                               owner=ku).first()
     if not dns_pod:
         dns_config = get_dns_pod_config()
-        check_new_pod_data(dns_config, ku)
+        check_internal_pod_data(dns_config, ku)
         dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
         PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 

@@ -3,6 +3,14 @@ from ..core import db
 
 # Package and Kube with id=0 are default
 # and must be undeletable (always present with id=0) for fallback
+DEFAULT_KUBE_TYPE = 0
+
+#: Special kube type for internal services
+INTERNAL_SERVICE_KUBE_TYPE = -1
+
+#: Special kube types for internal usage
+# Pods with these kube types must be excluded from billing.
+NOT_PUBLIC_KUBE_TYPES = {INTERNAL_SERVICE_KUBE_TYPE}
 
 
 class PackageKube(db.Model):
@@ -58,6 +66,35 @@ class Kube(db.Model):
 
     def to_dict(self):
         return {field: getattr(self, field) for field in self.__mapper__.columns.keys()}
+
+    @classmethod
+    def public_kubes(cls):
+        return cls.query.filter(
+            ~cls.id.in_(NOT_PUBLIC_KUBE_TYPES)
+        ).order_by(cls.id)
+
+    @staticmethod
+    def is_kube_editable(kube_id):
+        return kube_id not in NOT_PUBLIC_KUBE_TYPES
+
+    def is_public(self):
+        return self.id not in NOT_PUBLIC_KUBE_TYPES
+
+    @staticmethod
+    def get_default_kube_type():
+        return DEFAULT_KUBE_TYPE
+
+    @classmethod
+    def get_default_kube(cls):
+        return cls.query.filter(cls.id == cls.get_default_kube_type()).first()
+
+    @staticmethod
+    def get_internal_service_kube_type():
+        return INTERNAL_SERVICE_KUBE_TYPE
+
+    @staticmethod
+    def is_node_attachable_type(kube_type):
+        return kube_type != INTERNAL_SERVICE_KUBE_TYPE
 
 
 class ExtraTax(db.Model):

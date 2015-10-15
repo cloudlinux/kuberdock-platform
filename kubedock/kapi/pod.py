@@ -8,6 +8,7 @@ from .ippool import IpAddrPool
 
 from .pstorage import CephStorage, AmazonStorage
 from ..billing import kubes_to_limits
+from ..billing.models import Kube
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
                         AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
@@ -161,7 +162,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         volume['hostPath'] = {'path': path}
 
     def prepare(self):
-        kube_type = getattr(self, 'kube_type', 0)
+        kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
         if self.replicationController:
@@ -191,9 +192,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                             "volumes": volumes,
                             "containers": [self._prepare_container(c, kube_type, volumes)
                                            for c in self.containers],
-                            "nodeSelector": {
-                                "kuberdock-kube-type": "type_{0}".format(kube_type)
-                            },
                             "imagePullSecrets": [{"name": secret}
                                                  for secret in secrets]
                         }
@@ -218,13 +216,18 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     "containers": [self._prepare_container(c, kube_type, volumes)
                                    for c in self.containers],
                     "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
-                    "nodeSelector": {
-                        "kuberdock-kube-type": "type_{0}".format(kube_type)
-                    },
                     "imagePullSecrets": [{"name": secret} for secret in secrets]
                 }
             }
             pod_config = config
+        # Internal services may run on any nodes, do not care of kube type of
+        # the node. All other kube types must be binded to the appropriate nodes
+        if Kube.is_node_attachable_type(kube_type):
+            pod_config['spec']['nodeSelector'] = {
+                "kuberdock-kube-type": "type_{0}".format(kube_type)
+            }
+        else:
+            pod_config['spec']['nodeSelector'] = {}
         if hasattr(self, 'node') and self.node:
             pod_config['spec']['nodeSelector']['kuberdock-node-hostname'] = self.node
         if hasattr(self, 'public_ip'):
@@ -242,7 +245,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             except KeyError:
                 continue
 
-    def _prepare_container(self, data, kube_type=0, volumes=None):
+    def _prepare_container(self, data, kube_type=Kube.get_default_kube_type(),
+                           volumes=None):
         # Strip non-kubernetes params
         data.pop('sourceUrl', None)
 

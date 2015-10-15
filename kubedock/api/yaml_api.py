@@ -7,6 +7,7 @@ from kubedock.utils import (login_required_or_basic_or_token, KubeUtils,
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
 from kubedock.settings import KUBE_API_VERSION
+from kubedock.billing.models import Kube
 
 yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
 
@@ -87,12 +88,12 @@ def process_pod(pod, rc, service):
         pod_name = rc.get('metadata', {}).get('name', '')
         rc_spec = rc.get('spec', {})
         spec_body = rc_spec.get('template', {}).get('spec', {})
-        kube_type = rc_spec.get('kube_type', 0)
+        kube_type = rc_spec.get('kube_type', Kube.get_default_kube_type())
         replicas = rc_spec.get('replicas', 1)
     else:
         pod_name = pod.get('metadata', {}).get('name', '')
         spec_body = pod.get('spec', {})
-        kube_type = spec_body.get('kube_type', 0)
+        kube_type = spec_body.get('kube_type', Kube.get_default_kube_type())
         replicas = spec_body.get('replicas', 1)
 
     new_pod = {

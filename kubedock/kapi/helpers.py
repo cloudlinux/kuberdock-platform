@@ -11,6 +11,7 @@ from ..pods.models import Pod, PodIP
 from ..billing.models import Kube
 from ..api import APIError
 from ..utils import get_api_url, POD_STATUSES
+from ..settings import KUBERDOCK_INTERNAL_USER
 
 from flask import current_app
 
@@ -155,12 +156,15 @@ class ModelQuery(object):
             podip.delete()
 
     def _save_pod(self, obj):
-        kube_type = getattr(obj, 'kube_type', 0)
+        kube_type = getattr(obj, 'kube_type', Kube.get_default_kube_type())
         pod = Pod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
                   status=POD_STATUSES.stopped)
         kube = db.session.query(Kube).get(kube_type)
         if kube is None:
             kube = db.session.query(Kube).get(0)
+        if not kube.is_public():
+            if not self.owner or self.owner.username != KUBERDOCK_INTERNAL_USER:
+                raise APIError('Forbidden kube type for a pods')
         pod.kube = kube
         pod.owner = self.owner
         try:

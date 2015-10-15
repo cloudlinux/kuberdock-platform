@@ -105,7 +105,7 @@ class KubesAPI(KubeUtils, MethodView):
     @check_permission('get', 'users')
     def get(self, kube_id=None):
         if kube_id is None:
-            return [i.to_dict() for i in Kube.query.all()]
+            return [i.to_dict() for i in Kube.public_kubes()]
         item = Kube.query.get(kube_id)
         if item is None:
             raise APIError('Kube not found', 404)
@@ -121,6 +121,8 @@ class KubesAPI(KubeUtils, MethodView):
         kube = Kube.query.get(kube_id)
         if kube is None:
             raise APIError('Kube not found', 404)
+        if not Kube.is_kube_editable(kube_id):
+            raise APIError('Kube type is not editable', 403)
         data = check_pricing_api(self._get_params(), kube_schema, update=True)
         if 'name' in data:
             duplicate = Kube.query.filter(Kube.name == data['name'],
@@ -143,6 +145,8 @@ class KubesAPI(KubeUtils, MethodView):
         kube = Kube.query.get(kube_id)
         if kube is None:
             raise APIError('Kube not found', 404)
+        if not Kube.is_kube_editable(kube_id):
+            raise APIError('Kube type is not editable', 403)
         if kube.nodes:
             raise APIError('Some nodes use this kube type')
         if kube.pods:
@@ -221,8 +225,12 @@ class PackageKubesAPI(KubeUtils, MethodView):
         if 'id' in params:
             params = check_pricing_api(params, packagekube_schema)
             kube_id = params['id']
-            if Kube.query.get(kube_id) is None:
+            kube = Kube.query.get(kube_id)
+            if kube is None:
                 raise APIError('Kube not found', 404)
+            if not kube.is_public():
+                raise APIError(
+                    'Kube type is not allowed to use it in packages', 403)
         else:
             params = check_pricing_api(params, dict(kube_schema, **packagekube_schema))
             kube_id = add_kube({key: value for key, value in params.iteritems()
@@ -234,8 +242,12 @@ class PackageKubesAPI(KubeUtils, MethodView):
     def put(self, package_id=None, kube_id=None):
         if Package.query.get(package_id) is None:
             raise APIError('Package not found', 404)
-        if Kube.query.get(kube_id) is None:
+        kube = Kube.query.get(kube_id)
+        if kube is None:
             raise APIError('Kube not found', 404)
+        if not kube.is_public():
+            raise APIError(
+                'Kube type is not allowed to use it in packages', 403)
         params = check_pricing_api(self._get_params(), packagekube_schema)
 
         return _add_kube_type_to_package(package_id, kube_id, params['kube_price'])

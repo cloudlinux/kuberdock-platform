@@ -786,7 +786,8 @@ define(['pods_app/app',
                 input      : '.change-input',
                 addItem    : '.add-env',
                 removeItem : '.remove-env',
-                nameField  : '.name',
+                nameField  : 'input.name',
+                next       : '.next-step',
             },
 
             events: {
@@ -794,13 +795,24 @@ define(['pods_app/app',
                 'click @ui.removeItem' : 'removeItem',
                 'click @ui.reset'      : 'resetFielsdsValue',
                 'change @ui.input'     : 'onChangeInput',
-                'change @ui.nameField' : 'validation',
+                'click @ui.next'      : 'finalStep'
+            },
+
+            triggers: {
+                'click .prev-step'       : 'step:volconf',
+                'click .go-to-ports'     : 'step:portconf',
+                'click .go-to-volumes'   : 'step:volconf',
+                'click .go-to-resources' : 'step:resconf',
+                'click .go-to-other'     : 'step:otherconf',
+                'click .go-to-stats'     : 'step:statsconf',
+                'click .go-to-logs'      : 'step:logsconf',
             },
 
             templateHelpers: function(){
-                var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
-                    kubeType;
-                if (model !== undefined){
+                var kubeType,
+                    model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID'));
+
+                if (!model){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
                         if(parseInt(kube.id) == parseInt(kube_id))
@@ -816,20 +828,22 @@ define(['pods_app/app',
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
-                    podName: model !== undefined ? model.get('name') : '',
+                    podName: !model ? model.get('name') : ''
                 };
             },
 
-            triggers: {
-                'click .complete'        : 'step:complete',
-                'click .next-step'       : 'step:complete',
-                'click .prev-step'       : 'step:volconf',
-                'click .go-to-ports'     : 'step:portconf',
-                'click .go-to-volumes'   : 'step:volconf',
-                'click .go-to-resources' : 'step:resconf',
-                'click .go-to-other'     : 'step:otherconf',
-                'click .go-to-stats'     : 'step:statsconf',
-                'click .go-to-logs'      : 'step:logsconf',
+            finalStep: function(){
+                console.log(this);
+                var success = true,
+                    pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]/;
+
+                _.each(this.ui.nameField, function(field){
+                    if (!pattern.test(field.value)) success = false
+                })
+
+                !success ?
+                utils.notifyWindow('First symbol in variables name must be letter') :
+                this.trigger('step:complete', this);
             },
 
             addItem: function(evt){
@@ -839,14 +853,7 @@ define(['pods_app/app',
                 this.render();
             },
 
-            validation: function(){
-                var valName = this.ui.nameField.val();
 
-                if (!/^[a-zA-Z][a-zA-Z0-9-_\.]/.test(valName)){
-                    utils.notifyWindow('First symbol in variables name must be letter');
-                    return false;
-                };
-            },
             removeItem: function(evt){
                 var env = this.model.get('env'),
                     item = $(evt.target);

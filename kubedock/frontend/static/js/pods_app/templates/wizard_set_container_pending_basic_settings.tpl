@@ -162,7 +162,7 @@
 <div class="col-xs-9 no-padding col-xs-offset-3">
     <span class="description pull-left">* Public IP will require additional payment</span>
     <span class="buttons pull-right">
-        <button class="prev-step">Back</button>
+        <button class="prev-step gray">Back</button>
         <button class="next-step">Next</button>
     </span>
 </div>

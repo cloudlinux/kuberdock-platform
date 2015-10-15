@@ -57,7 +57,7 @@
     </div>
     <div class="container">
         <div class="buttons pull-right ">
-            <button class="go-to-ports">Back</button>
+            <button class="go-to-ports gray">Back</button>
             <button class="next-step">Next</button>
         </div>
     </div>

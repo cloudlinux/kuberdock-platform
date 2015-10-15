@@ -4,8 +4,10 @@
 <td><span><%- kubes ? kubes : 'unknown' %></span></td>
 <td>
     <span><%- startedAt ? startedAt : '' %></span>
+</td>
+<td class="actions">
     <% if (state == 'running' )  { %>
-        <span class="stop-btn pull-right" title="Stop <%- image %> container">Stop</span>
+        <span class="stop-btn" title="Stop <%- image %> container">Stop</span>
         <!-- AC-1279 -->
         <!--
         <% if (updateIsAvailable === undefined) { %>
@@ -17,7 +19,7 @@
         <% } %>
          -->
     <%} else if (state == 'stopped' ) { %>
-        <span class="start-btn pull-right" title="Stop <%- image %> container">Start</span>
+        <span class="start-btn" title="Start <%- image %> container">Start</span>
     <% } %>
     <!-- <span class="terminate-btn pull-right" title="Delete <%- image %> container">Delete</span> -->
 </td>

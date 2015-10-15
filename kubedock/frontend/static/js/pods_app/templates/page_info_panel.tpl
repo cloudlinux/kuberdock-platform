@@ -6,6 +6,7 @@
         <th>Status<!-- <b class="caret"></b>--></th>
         <th>Kube quantity <!--<b class="caret"></b>--></th>
         <th>Deployed <!--<b class="caret"></b>--></th>
+        <th>Actions</th>
     </tr>
     <tr class="containersControl">
         <th colspan="6"><span class="count"></span><!-- <span class="stopContainers">Stop</span> --></th>

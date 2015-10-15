@@ -11,6 +11,7 @@ response_validator = V({
     'data': {'type': dict, 'required': True, 'schema': {
         'id': {'type': int, 'required': True},
         'user_id': {'type': int, 'required': True},
+        'name': {'type': str, 'required': True},
         'template': {'type': str, 'required': True}}}})
 
 
@@ -22,17 +23,21 @@ class PredefinedAppsTestCase(APITestCase):
         super(PredefinedAppsTestCase, self).setUp()
         self.admin, admin_password = fixtures.admin_fixtures()
         self.adminauth = (self.admin.username, admin_password)
+        self.name = 'test yaml app'
         self.template = 'test yaml app template'
 
     # @unittest.skip('')
     def test_get(self):
-        self.open(method='POST', json={'template': self.template}, auth=self.adminauth)
+        self.open(method='POST',
+                  json={'name': self.name, 'template': self.template},
+                  auth=self.adminauth)
         # get list
         response = self.open(auth=self.adminauth)
         self.assert200(response)
         response_validator.validate(response.json)
         predefined_app = response.json['data'][0]
         self.assertEqual(predefined_app['user_id'], self.admin.id)
+        self.assertEqual(predefined_app['name'], self.name)
         self.assertEqual(predefined_app['template'], self.template)
 
         # get by id
@@ -52,12 +57,14 @@ class PredefinedAppsTestCase(APITestCase):
     # @unittest.skip('')
     def test_post_as_json(self):
         # post as json
-        response = self.open(method='POST', json={'template': self.template},
+        response = self.open(method='POST',
+                             json={'name': self.name, 'template': self.template},
                              auth=self.adminauth)
         self.assert200(response)
         response_validator.validate(response.json)
         predefined_app = response.json['data']
         self.assertEqual(predefined_app['user_id'], self.admin.id)
+        self.assertEqual(predefined_app['name'], self.name)
         self.assertEqual(predefined_app['template'], self.template)
 
     # @unittest.skip('')
@@ -66,22 +73,26 @@ class PredefinedAppsTestCase(APITestCase):
         response = self.open(
             method='POST', auth=self.adminauth,
             content_type='multipart/form-data', buffered=True,
-            data={'template': (StringIO(self.template), 'my_app.yaml')}
+            data={'name': self.name,
+                  'template': (StringIO(self.template), 'my_app.yaml')}
         )
         self.assert200(response)
         response_validator.validate(response.json)
         predefined_app = response.json['data']
         self.assertEqual(predefined_app['user_id'], self.admin.id)
+        self.assertEqual(predefined_app['name'], self.name)
         self.assertEqual(predefined_app['template'], self.template)
 
     # @unittest.skip('')
     def test_put(self):
         predefined_app = self.open(
-            method='POST', json={'template': self.template}, auth=self.adminauth
+            method='POST', json={'name': self.name, 'template': self.template},
+            auth=self.adminauth
         ).json['data']
 
         # update template
-        new_app = {'template': 'updated yaml template'}
+        new_app = {'name': 'updated yaml template name',
+                   'template': 'updated yaml template'}
         url = '{0}/{1}'.format(self.url, predefined_app['id'])
         response = self.open(url, method='PUT', json=new_app, auth=self.adminauth)
         self.assert200(response)
@@ -94,7 +105,8 @@ class PredefinedAppsTestCase(APITestCase):
     # @unittest.skip('')
     def test_delete(self):
         predefined_app = self.open(
-            method='POST', json={'template': self.template}, auth=self.adminauth
+            method='POST', json={'name': self.name, 'template': self.template},
+            auth=self.adminauth
         ).json['data']
 
         # update template

@@ -175,6 +175,7 @@ def add_new_node(host, kube_type, db_node,
 
         send_logs(host, 'Connecting to {0} with ssh with user "root" ...'
                   .format(host), log_file)
+        # If we want to got reed of color codes in output we have to use vt220
         ssh, error_message = ssh_connect(host)
         if error_message:
             send_logs(host, error_message, log_file)
@@ -201,16 +202,17 @@ def add_new_node(host, kube_type, db_node,
                 [map(str, l) for l in PORTS_TO_RESTRICT, nodes if l], '')
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
-        i, o, e = ssh.exec_command(deploy_cmd.format(AWS,
-                                                     current_master_kubernetes,
-                                                     MASTER_IP, node_interface,
-                                                     timezone,
-                                                     data_for_firewall))
+        i, o, e = ssh.exec_command(
+            deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
+                              node_interface, timezone, data_for_firewall),
+            get_pty=True)
         s_time = time.time()
         while not o.channel.exit_status_ready():
-            if o.channel.recv_ready():
-                for line in o.channel.recv(1024).split('\n'):
+            data = o.channel.recv(1024)
+            while data:
+                for line in data.split('\n'):
                     send_logs(host, line, log_file)
+                data = o.channel.recv(1024)
             if (time.time() - s_time) > NODE_INSTALL_TIMEOUT_SEC:
                 err = 'Timeout during install. Installation has failed.'
                 send_logs(host, err, log_file)
@@ -224,10 +226,11 @@ def add_new_node(host, kube_type, db_node,
         s = o.channel.recv_exit_status()
         ssh.exec_command('rm /node_install.sh')
         if s != 0:
-            res = 'Installation script error. Exit status: {0}. Error: {1}'\
-                .format(s, e.read())
+            res = 'Installation script error. Exit status: {0}.'.format(s)
             send_logs(host, res, log_file)
         else:
+            send_logs(host, 'Rebooting node...', log_file)
+            ssh.exec_command('reboot')
             err = add_node_to_k8s(host, kube_type)
             if err:
                 send_logs(host, 'ERROR adding node.', log_file)
@@ -236,10 +239,20 @@ def add_new_node(host, kube_type, db_node,
                 send_logs(host, 'Adding Node completed successful.',
                           log_file)
                 send_logs(host, '===================================', log_file)
+                send_logs(host, '*** During reboot node may have status '
+                                '"troubles" and it will be changed '
+                                'automatically right after node reboot, '
+                                'when kubelet.service posts live status to '
+                                "master(if all works fine) and it's usually "
+                                'takes few minutes ***', log_file)
         ssh.close()
         db_node.state = 'completed'
         db.session.add(db_node)
         db.session.commit()
+        if s != 0:
+            # Until node has been rebooted we try to delay update
+            # status on front. So we update it only in error case
+            send_event('pull_nodes_state', 'ping')  # after db_node commit only
 
 
 def parse_pods_statuses(data):

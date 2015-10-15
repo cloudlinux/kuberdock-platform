@@ -10,6 +10,9 @@ EXIT_MESSAGE="Installation error."
 PORTS=$1
 IPS=$2
 
+echo "Set locale to en_US.UTF-8"
+export LANG=en_US.UTF-8
+
 # SOME HELPERS
 
 check_status()
@@ -25,8 +28,7 @@ check_status()
 if [[ $(getenforce) != 'Enforcing' ]];then
     echo "Seems like SELinux is disabled on this node."\
     "You should enable it (may require to reboot node) and restart node "\
-    "installation again"
-    echo $EXIT_MESSAGE
+    "installation again."
     exit 3
 fi
 
@@ -40,8 +42,6 @@ yum_wrapper()
     fi
 }
 
-echo "Set locale to en_US.UTF-8"
-export LANG=en_US.UTF-8
 echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
 echo "Using MASTER_IP=${MASTER_IP}"
@@ -100,7 +100,7 @@ if [ $? != 0 ];then
     yum_wrapper install -y iptables-services
     check_status
 fi
-systemctl enable iptables
+systemctl reenable iptables
 
 # 1.2 Install ntp, we need correct time for node logs
 yum_wrapper install -y ntp
@@ -108,7 +108,7 @@ check_status
 systemctl daemon-reload
 check_status
 ntpd -gq
-systemctl enable ntpd
+systemctl reenable ntpd
 check_status
 ntpq -p
 if [ $? -ne 0 ];then
@@ -226,7 +226,7 @@ EOF
 
 echo "Enabling Flanneld ..."
 rm -f /run/flannel/docker 2>/dev/null
-systemctl enable flanneld
+systemctl reenable flanneld
 check_status
 
 
@@ -255,7 +255,7 @@ systemctl mask docker-storage-setup
 sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=overlay' /etc/sysconfig/docker-storage
 
 echo 'Enabling docker...'
-systemctl enable docker
+systemctl reenable docker
 check_status
 
 # 9. prepare things for logging pod
@@ -464,15 +464,16 @@ done
 
 # 10. enable services
 echo "Enabling services..."
-systemctl enable kubelet
+systemctl daemon-reload
+systemctl reenable kubelet
 check_status
-systemctl enable kube-proxy
+systemctl reenable kube-proxy
 check_status
 
 CADVISOR_CONF=/etc/sysconfig/cadvisor
 sed -i "/^CADVISOR_STORAGE_DRIVER/ {s/\"\"/\"influxdb\"/}" $CADVISOR_CONF
 sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/${MASTER_IP}/}" $CADVISOR_CONF
-systemctl enable cadvisor
+systemctl reenable cadvisor
 check_status
 
 # 11. install kernel
@@ -488,10 +489,6 @@ check_status
 yum_wrapper -y install kernel-devel
 check_status
 
-# 12. reboot
-echo "Your node has to be rebooted. Performing now..."
-sleep 1
-
-sleep 10 && systemctl reboot &
+# 12. Reboot will be executed in python function
 
 exit 0

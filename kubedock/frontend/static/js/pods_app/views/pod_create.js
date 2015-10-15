@@ -435,6 +435,7 @@ define(['pods_app/app',
                 }
 
                 return {
+                    sourceUrl: this.model.get('sourceUrl'),
                     hasPersistent: this.model.hasOwnProperty('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd')
                         ? this.showPersistentAdd
@@ -794,6 +795,7 @@ define(['pods_app/app',
                 }
 
                 return {
+                    sourceUrl: this.model.get('sourceUrl'),
                     isPending: !this.model.has('parentID'),
                     hasPersistent: this.model.has('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd'),
@@ -1012,6 +1014,7 @@ define(['pods_app/app',
                     });
                 }
                 return {
+                    sourceUrl: this.model.get('sourceUrl'),
                     isPending: !this.model.has('parentID'),
                     podName: model !== undefined ? model.get('name') : '',
                     kube_type: kubeType,

@@ -13,7 +13,11 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     decorators = [login_required_or_basic_or_token]
 
     def get(self, app_id=None):
-        app = PredefinedApps(self._get_current_user()).get(app_id)
+        user = self._get_current_user()
+        if user.is_administrator():
+            app = PredefinedApps().get(app_id)
+        else:
+            app = PredefinedApps(user).get(app_id)
 
         file_only = self._get_params().get('file-only', False)
         if app_id is not None and file_only:

@@ -30,9 +30,10 @@ def create_app(settings_override=None, fake_sessions=False):
     from .static_pages import static_pages
     from .ippool import ippool
     from .settings import settings
+    from .predefined_apps import predefined_apps
 
     for bp in main, auth, nodes, users, notifications, static_pages, ippool, \
-            settings:
+            settings, predefined_apps:
         app.register_blueprint(bp)
 
     app.errorhandler(PermissionDenied)(on_permission_denied)

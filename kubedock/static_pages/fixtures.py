@@ -10,6 +10,8 @@ MENUS = [
             dict(name="Pods", path="/", ordering=0, roles=json.dumps(["User", "TrialUser"])),
             dict(name="Nodes", path="/nodes/", ordering=1,
                  roles=json.dumps(["Admin"])),
+            dict(name="Predefined Applications", path="/predefined-apps/", ordering=2,
+                 roles=json.dumps(["Admin"])),
             # dict(name="Users", path="/users/", ordering=2,
             #      roles=json.dumps(["Admin"])),
             # dict(

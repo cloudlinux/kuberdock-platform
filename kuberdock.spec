@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 5%{?dist}.cloudlinux
+Release: 5.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Oct 16 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.3-5.1
+- Hotfix add container bug on env step
+
 * Fri Oct 16 2015 Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5
 - AC-833: added links for images
 - AC-1278 set imagePullPolicy=Always to all containers

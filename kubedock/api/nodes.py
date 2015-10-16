@@ -406,84 +406,86 @@ def get_one_node(node_id):
 def add_node(data, do_deploy=True, with_testing=False):
     cursor = db.session.query(Node)
     m = cursor.filter_by(hostname=data['hostname']).first()
-    if not m:
-        if not MASTER_IP:
-            raise APIError('There is no MASTER_IP specified in {0}.'
-                           'Check that file has not been renamed by package '
-                           'manager to .rpmsave or similar'
-                           .format(KUBERDOCK_SETTINGS_FILE))
-        kube = Kube.query.get(data.get('kube_type', 0))
-        ip = socket.gethostbyname(data['hostname'])
-        m = Node(ip=ip, hostname=data['hostname'], kube=kube, state='pending')
-        logs_kubes = 1
-        logcollector_kubes = logs_kubes
-        logstorage_kubes = logs_kubes
-        node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
-        logs_memory_limit = node_resources['limits']['memory']
-        if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
-            logs_kubes = int(math.ceil(
-                float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
-            ))
+    if m is not None:
+        raise APIError('Conflict, Node with hostname "{0}" already exists'
+                       .format(m.hostname), status_code=409)
+    if not MASTER_IP:
+        raise APIError('There is no MASTER_IP specified in {0}.'
+                       'Check that file has not been renamed by package '
+                       'manager to .rpmsave or similar'
+                       .format(KUBERDOCK_SETTINGS_FILE))
+    ip = socket.gethostbyname(data['hostname'])
+    if ip == MASTER_IP:
+        raise APIError('Looks like you are trying to add MASTER as NODE, '
+                       'this kind of setups is not supported at this '
+                       'moment')
+    kube = Kube.query.get(data.get('kube_type', 0))
+    m = Node(ip=ip, hostname=data['hostname'], kube=kube, state='pending')
+    logs_kubes = 1
+    logcollector_kubes = logs_kubes
+    logstorage_kubes = logs_kubes
+    node_resources = kubes_to_limits(logs_kubes, kube.id)['resources']
+    logs_memory_limit = node_resources['limits']['memory']
+    if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
+        logs_kubes = int(math.ceil(
+            float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
+        ))
 
-        if logs_kubes > 1:
-            # allocate total log cubes to log collector and to log
-            # storage/search containers as 1 : 3
-            total_kubes = logs_kubes * 2
-            logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
-            logstorage_kubes = total_kubes - logcollector_kubes
-        ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
-        logs_podname = get_kuberdock_logs_pod_name(data['hostname'])
-        internal_ku_token = ku.get_token()
-        logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
-                                                kube.id,
-                                                logcollector_kubes,
-                                                logstorage_kubes,
-                                                MASTER_IP,
-                                                internal_ku_token)
-        check_new_pod_data(logs_config, ku)
-        logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
-        PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
+    if logs_kubes > 1:
+        # allocate total log cubes to log collector and to log
+        # storage/search containers as 1 : 3
+        total_kubes = logs_kubes * 2
+        logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
+        logstorage_kubes = total_kubes - logcollector_kubes
+    ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
+    logs_podname = get_kuberdock_logs_pod_name(data['hostname'])
+    internal_ku_token = ku.get_token()
+    logs_config = get_kuberdock_logs_config(data['hostname'], logs_podname,
+                                            kube.id,
+                                            logcollector_kubes,
+                                            logstorage_kubes,
+                                            MASTER_IP,
+                                            internal_ku_token)
+    check_new_pod_data(logs_config, ku)
+    logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
+    PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
 
-        dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
-                                                  owner=ku).first()
-        if not dns_pod:
-            dns_config = get_dns_pod_config()
-            check_new_pod_data(dns_config, ku)
-            dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
-            PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
+    dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
+                                              owner=ku).first()
+    if not dns_pod:
+        dns_config = get_dns_pod_config()
+        check_new_pod_data(dns_config, ku)
+        dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
+        PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 
-        try:
-            # clear old log before it pulled by SSE event
-            os.remove(NODE_INSTALL_LOG_FILE.format(m.hostname))
-        except OSError:
-            pass
+    try:
+        # clear old log before it pulled by SSE event
+        os.remove(NODE_INSTALL_LOG_FILE.format(m.hostname))
+    except OSError:
+        pass
 
-        nodes_data = cursor.values(Node.ip, Node.hostname)
-        nodes_ = dict(i for i in nodes_data if i[0] != ip).keys()
-        if do_deploy:
-            tasks.add_new_node.delay(m.hostname, kube.id, m, with_testing,
-                                     nodes_)
-        else:
-            err = add_node_to_k8s(m.hostname, kube.id)
-            if err:
-                raise APIError('Error during adding node to k8s. {0}'
-                               .format(err))
-            else:
-                # TODO write all possible states to class
-                m.state = 'completed'
-                db.session.add(m)
-                db.session.commit()
-
-        for port in PORTS_TO_RESTRICT:
-            handle_nodes(process_rule, nodes=nodes_, action='insert',
-                         port=port, target='ACCEPT', source=ip)
-        data.update({'id': m.id})
-        send_event('pull_nodes_state', 'ping')
-        return jsonify({'status': 'OK', 'data': data})
+    nodes_data = cursor.values(Node.ip, Node.hostname)
+    nodes_ = dict(i for i in nodes_data if i[0] != ip).keys()
+    if do_deploy:
+        tasks.add_new_node.delay(m.hostname, kube.id, m, with_testing,
+                                 nodes_)
     else:
-        raise APIError(
-            'Conflict, Node with hostname "{0}" already exists'
-            .format(m.hostname), status_code=409)
+        err = add_node_to_k8s(m.hostname, kube.id)
+        if err:
+            raise APIError('Error during adding node to k8s. {0}'
+                           .format(err))
+        else:
+            # TODO write all possible states to class
+            m.state = 'completed'
+            db.session.add(m)
+            db.session.commit()
+
+    for port in PORTS_TO_RESTRICT:
+        handle_nodes(process_rule, nodes=nodes_, action='insert',
+                     port=port, target='ACCEPT', source=ip)
+    data.update({'id': m.id})
+    send_event('pull_nodes_state', 'ping')
+    return jsonify({'status': 'OK', 'data': data})
 
 
 @nodes.route('/', methods=['POST'])

@@ -812,7 +812,7 @@ define(['pods_app/app',
                 var kubeType,
                     model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID'));
 
-                if (!model){
+                if (model !== undefined){
                     kube_id = model.get('kube_type');
                     _.each(kubeTypes, function(kube){
                         if(parseInt(kube.id) == parseInt(kube_id))
@@ -828,7 +828,7 @@ define(['pods_app/app',
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
-                    podName: !model ? model.get('name') : ''
+                    podName: model !== undefined ? model.get('name') : ''
                 };
             },
 

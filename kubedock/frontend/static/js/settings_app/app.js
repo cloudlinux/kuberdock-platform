@@ -315,7 +315,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 'back'             : 'button#template-back-btn',
                 'editBtn'          : '#template-edit-btn',
                 'input'            : 'input',
-/*                'deleteBtn'        : '#template-remove-btn'*/
+                /*'deleteBtn'        : '#template-remove-btn'*/
             },
 
             events: {
@@ -323,7 +323,8 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 'click @ui.save'       : 'onSave',
                 'click @ui.editBtn'    : 'editTemplate',
                 'keyup @ui.input'      : 'changeValue',
-/*                'click @ui.deleteBtn'  : 'deleteProfile',*/
+                'focus @ui.input'      : 'removeError',
+                /*'click @ui.deleteBtn'  : 'deleteProfile',*/
             },
 
             templateHelpers: function(){
@@ -375,7 +376,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 this.render();
             },
 
-/*            deleteProfile: function(){
+            /*deleteProfile: function(){
                 var that = this;
                 utils.modalDialogDelete({
                     title: "Terminate account?",
@@ -397,6 +398,11 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 });
             },*/
 
+            removeError: function(evt){
+                var target = $(evt.target);
+                if (target.hasClass('error')) target.removeClass('error');
+            },
+
             onSave: function(){
                 var that = this,
                     data = {
@@ -404,28 +410,35 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                         'last_name': this.ui.last_name.val(),
                         'middle_initials': this.ui.middle_initials.val(),
                         'email': this.ui.email.val()
-                    };
+                    },
+                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
-                pass1 = this.ui.password.val();
-                pass2 = this.ui.password_again.val();
-                // temp validation
-                if (pass1 != '') {
-                    if (pass1 != pass2) {
-                        $.notify('Passwords are not equal', {
-                            autoHideDelay: 5000,
-                            globalPosition: 'bottom left',
-                            className: 'error'
-                        });
-                        return
-                    }
-                    data.password = pass1
+                if (data.email == '') {
+                    utils.scrollTo(this.ui.email);
+                    this.ui.email.addClass('error');
+                    this.ui.email.notify("empty E-mail");
+                    return
+                } else if (!pattern.test(data.email)) {
+                    utils.scrollTo(this.ui.email);
+                    this.ui.email.addClass('error');
+                    this.ui.email.notify("E-mail must be correct");
+                    return
                 }
-
+                if (this.ui.password.val() !== this.ui.password_again.val()) {
+                    utils.scrollTo(this.ui.password);
+                    this.ui.password.addClass('error');
+                    this.ui.password_again.addClass('error');
+                    this.ui.password_again.notify("passwords don't match");
+                    return
+                }
+                if (this.ui.password.val())  // update only if specified
+                    data.password = this.ui.password.val();
                 this.model.set(data);
 
-                this.model.save(undefined, {
+                this.model.save(this.model.changedAttributes(), {
                     wait: true,
-                    success: function(){
+                    patch: true,
+                    success: function(model){
                         that.model.in_edit = false;
                         that.render();
                         $.notify('Profile changed successfully', {
@@ -433,6 +446,9 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                             globalPosition: 'bottom left',
                             className: 'success'
                         });
+                    },
+                    error: function(model){
+                        model.set(model.previousAttributes());
                     }
                 });
             }

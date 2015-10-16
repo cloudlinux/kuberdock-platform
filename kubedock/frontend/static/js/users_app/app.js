@@ -850,15 +850,18 @@ define(['marionette', 'paginator', 'utils'],
                 switch (true)
                 {
                 case this.ui.password.val() !== this.ui.password_again.val():
+                    utils.scrollTo(this.ui.password);
                     this.ui.password.addClass('error');
                     this.ui.password_again.addClass('error');
                     this.ui.password_again.notify("passwords don't match");
                     break;
                 case this.ui.email.val() == '':
+                    utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
                     this.ui.email.notify("empty E-mail");
                     break;
                 case this.ui.email.val() != '' && !pattern.test(this.ui.email.val()):
+                    utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
                     this.ui.email.notify("E-mail must be correct");
                     break;

@@ -36,9 +36,9 @@ fi
 yum_wrapper()
 {
     if [ -z "$WITH_TESTING" ];then
-        yum --enablerepo=kube $@
+        yum -d 1 --enablerepo=kube $@
     else
-        yum --enablerepo=kube,kube-testing $@
+        yum -d 1 --enablerepo=kube,kube-testing $@
     fi
 }
 

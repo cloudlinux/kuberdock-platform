@@ -1,4 +1,4 @@
-define(['marionette', 'utils'], function (Marionette, utils) {
+define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
 
     var SettingsApp = new Marionette.Application({
         regions: {
@@ -67,8 +67,9 @@ define(['marionette', 'utils'], function (Marionette, utils) {
             template: '#general-settings-template',
 
             ui: {
-                'timezone': '#timezone',
-                'billingAppsLink': '#billingAppsLink'
+                'timezone'        : '#timezone',
+                'billingAppsLink' : '#billingAppsLink',
+                'selectpicker'    : '.selectpicker'
             },
 
             events: {
@@ -77,6 +78,9 @@ define(['marionette', 'utils'], function (Marionette, utils) {
 
             onRender: function(){
                 var that = this;
+
+                this.ui.selectpicker.selectpicker();
+
                 this.ui.timezone.typeahead({
                     autoSelect: false,
                     source: function(query, process){

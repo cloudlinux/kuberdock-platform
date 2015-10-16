@@ -18,7 +18,8 @@ requirejs.config({
         notify                 : 'lib/notify.min',
         mask                   : 'lib/jquery.mask',
         utils                  : 'utils',
-        dde                    : 'lib/dropdowns-enhancement'
+        dde                    : 'lib/dropdowns-enhancement',
+        selectpicker           : 'lib/bootstrap-select.min',
     },
     shim: {
         jquery: {
@@ -61,10 +62,13 @@ requirejs.config({
         },
         'moment-timezone': {
             deps: ['moment']
+        },
+        selectpicker: {
+            deps: ['jquery', 'bootstrap']
         }
     }
 });
-require(['jquery', 'settings_app/app', 'moment', 'notify', 'jquery-ui', 'bootstrap3-typeahead', 'moment-timezone'],
+require(['jquery', 'settings_app/app', 'moment', 'notify', 'jquery-ui', 'bootstrap3-typeahead', 'moment-timezone', 'selectpicker'],
 function(jQuery, SettingsApp, moment){
     SettingsApp.Data.permissions = new SettingsApp.Data.PermissionsCollection(permissions);
     SettingsApp.Data.notifications = new SettingsApp.Data.NotificationsCollection(notifications);

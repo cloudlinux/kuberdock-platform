@@ -222,6 +222,9 @@ define(['pods_app/app',
                 'click @ui.podsList'          : 'showPodsList',
                 'click @ui.searchImageButton' : 'onSearchClick',
                 'keypress @ui.input'          : 'onInputKeypress',
+                'keypress @ui.privateField'   : 'selectImageByEnterKey',
+                'keypress @ui.username'       : 'selectImageByEnterKey',
+                'keypress @ui.password'       : 'selectImageByEnterKey',
                 'change @ui.imageSource'      : 'imageSourceOnChange',
             },
 
@@ -233,19 +236,30 @@ define(['pods_app/app',
                 this.ui.selectpicker.selectpicker();
             },
 
-            selectImage:function(){
+            selectImageByEnterKey: function(evt){
+                if (evt.which === 13) {  // 'Enter' key
+                    evt.stopPropagation();
+                    this.selectImage();
+                }
+            },
+
+            selectImage: function(){
                 var fieldValue = this.ui.privateField.val(),
                     sourceUrl = this.ui.privateField.hasClass('private-registry')
                         ? fieldValue
                         : 'hub.docker.com/r/' + fieldValue.replace(/^\//, ''),
                     select = _.bind(this.trigger, this, 'image:selected',
-                                fieldValue, sourceUrl);
+                                    fieldValue, sourceUrl);
 
-                if (this.ui.password.val() || this.ui.username.val())
+                if (fieldValue.length === 0) {
+                    this.ui.privateField.focus();
+                    utils.notifyWindow('Please, enter image url');
+                } else if (this.ui.password.val() && this.ui.username.val()) {
                     select(undefined, {username: this.ui.username.val(),
                                        password: this.ui.password.val()});
-                else
+                } else {
                     select();
+                }
             },
 
             imageSourceOnChange: function(){

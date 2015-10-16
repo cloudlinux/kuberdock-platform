@@ -62,7 +62,10 @@ define({
     },
 
     notifyWindow: function(b, t){
-        var err = typeof b == "string" ? b : b.responseJSON ? b.responseJSON.data || JSON.stringify(b.responseJSON): b.responseText;
+        var err = typeof b == "string" ? b :
+                  !(b.responseJSON && b.responseJSON.data) ? b.responseText :
+                  typeof b.responseJSON.data == 'string' ? b.responseJSON.data :
+                  JSON.stringify(b.responseJSON.data);
         if (b && b.status == 401){
             window.location = '/logout'
         } else {

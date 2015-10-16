@@ -30,15 +30,20 @@ container_image_name_schema = {
     'regex': container_image_name,
 }
 
+ascii_string = {
+    'type': str, 'regex': {
+        'regex': re.compile(ur'^[\u0000-\u007f]*$'),  # ascii range
+        'message': 'must be an ascii string'}}
+
 image_request_schema = {
-    'image': {'type': str, 'empty': False, 'required': True},
+    'image': dict(ascii_string, empty=False, required=True),
     'auth': {
         'type': dict,
         'required': False,
         'nullable': True,
         'schema': {
-            'username': {'type': str, 'empty': False, 'required': True},
-            'password': {'type': str, 'empty': False, 'required': True}
+            'username': dict(ascii_string, empty=False, required=True),
+            'password': dict(ascii_string, empty=False, required=True)
         },
     },
     'refresh_cache': {'coerce': bool},
@@ -503,9 +508,9 @@ class V(cerberus.Validator):
         if not isinstance(value, basestring):
             return
 
-        message = 'value "{value}" does not match regex "{regex}"'
+        message = u'value "{value}" does not match regex "{regex}"'
         if isinstance(re_obj, dict):
-            message = re_obj['message']
+            message = re_obj['message'].decode('utf-8')
             re_obj = re_obj['regex']
 
         if isinstance(re_obj, basestring):

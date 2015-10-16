@@ -2,8 +2,8 @@
     <table id="podlist-table" class="table">
         <thead>
             <tr>
-                <th>name</th>
-                <th>hash</th>
+                <th>Name</th>
+                <th>Hash</th>
                 <th></th>
                 <th></th>
             </tr>

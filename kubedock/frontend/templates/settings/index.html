@@ -186,22 +186,18 @@
                           <input type="text" name="timezone" id="timezone"
                                 value="{{ user_settings.timezone }}"
                                   placeholder="City, country or region"/>
-                      </div>
-                      <div class="col-xs-5 image"></div>
-                    </div>
-                    <% if(administrator) { %>
-                      <div class="row">
-                        <div class="col-xs-6 col-xs-offset-1">
+                        <% if(administrator) { %>
                             <label>Billing system base link for predefined apps</label>
-                            <select value="WHMCS" disabled="true" size="1">
+                            <select class="selectpicker" value="WHMCS" disabled="true" size="1">
                                 <option value="WHMCS">WHMCS</option>
                             </select>
                             <input type="text" name="billingAppsLink" id="billingAppsLink"
                                   value="{{ system_settings.billing_apps_link }}"
                                   placeholder="Billing system base url"/>
-                        </div>
+                        <% } %>
                       </div>
-                    <% } %>
+                      <div class="col-xs-5 image"></div>
+                    </div>
                 </div>
             </div>
             <div class="buttons pull-right">

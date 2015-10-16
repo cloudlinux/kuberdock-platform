@@ -524,6 +524,10 @@ if __name__ == '__main__':
                     print 'Newer kuberdock package is available: {0}'\
                           .format(new_kuberdocks[0])
                 ans = raw_input('Do you want to upgrade it ? [y/n]:')
+                while ans not in ('y', 'yes', 'n', 'no',):
+                    print 'Only y/yes or n/no answers accepted, ' \
+                          'please try again'
+                    ans = raw_input('Do you want to upgrade it ? [y/n]:')
                 if ans in ('y', 'yes'):
                     helpers.set_maintenance(True)
                     # use new_kuberdocks[0] instead because of execv:

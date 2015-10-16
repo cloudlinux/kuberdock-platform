@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 4%{?dist}.cloudlinux
+Release: 5%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,39 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Oct 16 2015 Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5
+- AC-833: added links for images
+- AC-1278 set imagePullPolicy=Always to all containers
+- AC-1183: added pause to login to private registry after failed login. Rework on images and unit tests
+- Updated flannel to 0.5.3 + install kernel-devel on nodes
+- Yaml api must reject strings or numbers as documents
+- AC-1267: Add hash to PredefinedApp model
+- AC-1269: fix gramatic mistake
+- AC-1156: fix users control in userslist table
+- AC-956: hide extra search icon
+- Add check empty for timezone api
+- Fixed SSE events
+- AC-1267: Add 'name' to PredefinedApp model
+- fix sourceUrl error in templates
+- Output stdout and stderr throu pty. Now both channels can be seen.
+  Reboot node from python, not from script.
+  Fix systemd enable issue. Added auto status update in error case.
+  Added message about node status during reboot.
+- AC-1266: added system-wide settings api
+- AC-1279: update container api; image api refactoring; bugfix
+- AC-1183: added pause to login to private registry after failed login. Rework on images and unit tests
+- Fix ntpd deploy error on nodes
+- AC-1300: Use upgrade_node for setting FS quotas in 00026_update.py
+- Fixed migration scripts sequence conflict
+- AC-1263: Add error notify if username already exist
+- AC-1226: hide add button if fields value not change in user edit template & profile edit template
+- fix pods menu item for TrialUser in fixtures
+- AC-1247: implemented predefined apps web-interface CRUD
+- AC-1256, AC-1299, select image validation, bugfix
+- Accept only allowed answers in kuberdock upgrade
+- Forbid to add master as node
+- Add validation to env step
+
 * Mon Oct 12 2015 Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-4
 - AC-1261: create pod with private image (frontend); disable cache for private repox
 - AC-1264: Fix 00026_update.py for pods that are not running

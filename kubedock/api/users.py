@@ -234,7 +234,7 @@ def put_item(user_id):
     data = request.json
     if data is None:
         data = request.form.to_dict()
-    data = UserValidator(id=user_id, allow_unknown=True).validate_user_update(data)
+    data = UserValidator(id=u.id, allow_unknown=True).validate_user_update(data)
     if 'rolename' in data:
         rolename = data.pop('rolename', 'User')
         r = db.session.query(Role).filter_by(rolename=rolename).first()

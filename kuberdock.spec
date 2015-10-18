@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 5.1%{?dist}.cloudlinux
+Release: 5.2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,7 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Sun Oct 18 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5.2
 * Fri Oct 16 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5.1
 - Hotfix add container bug on env step
 - Add style to AC-1266

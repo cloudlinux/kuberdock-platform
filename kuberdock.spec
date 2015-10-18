@@ -166,6 +166,11 @@ fi
 
 %changelog
 * Sun Oct 18 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5.2
+- AC-1244: Added kube type for internal services
+- bugfix: sourceUrl; container page start/stop, status, container update; private images; tests
+- AC-1280: Add style & icons to update container buttons
+- AC-1248: implemented styleless page without any authorization.
+
 * Fri Oct 16 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5.1
 - Hotfix add container bug on env step
 - Add style to AC-1266

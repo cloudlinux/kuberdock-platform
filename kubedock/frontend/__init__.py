@@ -20,7 +20,7 @@ def create_app(settings_override=None, fake_sessions=False):
             sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
             skip_paths, datetime.timedelta(days=1))
     assets.init_app(app)
-    
+
     # registering blueprings
     from .main import main
     from .auth import auth
@@ -31,14 +31,15 @@ def create_app(settings_override=None, fake_sessions=False):
     from .ippool import ippool
     from .settings import settings
     from .predefined_apps import predefined_apps
+    from .apps import apps
 
     for bp in main, auth, nodes, users, notifications, static_pages, ippool, \
-            settings, predefined_apps:
+            settings, predefined_apps, apps:
         app.register_blueprint(bp)
 
     app.errorhandler(PermissionDenied)(on_permission_denied)
     app.errorhandler(APIError)(on_app_error)
-    
+
     if not app.debug:
         for e in [500, 404]:
             app.errorhandler(e)(handle_error)

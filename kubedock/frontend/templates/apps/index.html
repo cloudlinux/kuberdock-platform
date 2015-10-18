@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{{ name }}</title>
+        <meta charset="utf8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
+{#
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.jqplot.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-select.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdowns-enhancement.min.css') }}">
+            
+        <link rel="stylesheet/less" type="text/css" href="{{ url_for('static', filename='css/main.less') }}">
+            
+        <script src="{{ url_for('static', filename='js/lib/less.min.js') }}" type="text/javascript"></script>
+#}
+    <style type="text/css">
+        div#containers {
+            margin: 2em 0 0 20em;
+            width: 30em;
+        }
+        div#total-price {
+            margin-left: 20em;
+            height: 2em;
+        }
+        div#kube-resources {
+            float: left;
+        }
+        div#package-dialog {
+            margin: 0 0 0 20em;
+        }
+        div#kube-controls {
+            width: 20em;
+            float: left;
+        }
+        div.container-title {
+            background-color: #E5E5E5;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            text-align: center;
+        }
+        div.container-item {
+            margin: .2em 0 .2em 0;
+            border: 1px solid #C9C9C9;
+            border-radius: 4px;
+        }
+        div.container-body {
+            padding: .4em;
+        }
+    </style>
+
+    </head>
+    <body>
+        <div id="containers">
+            {% for container in containers %}
+            <div class="container-item">
+                <div class="container-title">{{ container.image }}</div>
+                <div class="container-body">
+                    <label for="kubes-amount">kubes</label>
+                    <select class="kubes-amount">
+                        {% for row in range(1,11) %}
+                        <option value="{{ row }}">{{ row }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div id="total-price"></div>
+        <div id="package-dialog">
+            <div id="kube-controls">
+                <div>
+                    <label for="package-selector">Select package</label>
+                    <select id="package-selector">
+                    {% for package in packages %}
+                        <option value="{{ package.id }}">{{ package.name }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="kube-selector">Select kube</label>
+                    <select id="kube-selector"></select>
+                </div>
+                <div>
+                    <label for="restart-policy-selector">Select kube</label>
+                    <select id="restart-policy-selector">
+                        <option selected="selected" value="Always">Always</option>
+                        <option value="OnFailure">OnFailure</option>
+                        <option value="Never">Never</option>
+                    </select>
+                </div>
+            </div>
+            <div id="kube-resources"></div>
+        </div>
+        <script type="text/javascript">
+            'use strict;'
+            var kubes = {{ kubes|safe }},
+                pkgsel = document.getElementById('package-selector'),
+                kubesel = document.getElementById('kube-selector'),
+                resources = document.getElementById('kube-resources'),
+                totalprice = document.getElementById('total-price'),
+                kubesamount = document.getElementsByClassName('kubes-amount');
+            function empty(node){while (node.firstChild) node.removeChild(node.firstChild);}
+            function fill(node, idx){
+                kubes[idx].forEach(function(el){
+                    var o = document.createElement('option');
+                    o.value = el.id;
+                    o.appendChild(document.createTextNode(el.name));
+                    node.appendChild(o);
+                });
+            }
+            function compose(pi, ki){
+                var pkg = kubes[pi],
+                    data = pkg.filter(function(i){return (+i.id) === (+ki)})[0];
+                empty(resources);
+                var c = document.createElement('div'),
+                    m = document.createElement('div'),
+                    d = document.createElement('div');
+                c.appendChild(document.createTextNode('CPU:' + String.fromCharCode(160) + data.cpu + data.cpu_units));
+                m.appendChild(document.createTextNode('Mem:' + String.fromCharCode(160) + data.memory + data.memory_units));
+                d.appendChild(document.createTextNode('Disk:' + String.fromCharCode(160) + data.disk_space + data.disk_space_units));
+                [c, m, d].forEach(function(i){resources.appendChild(i);});
+            }
+            function setPrice(pi, ki){
+                var pkg = kubes[pi],
+                    data = pkg.filter(function(i){return (+i.id) === (+ki)})[0],
+                    totalKubes = Array.prototype.map.call(kubesamount,
+                            function(el){return +el.value})
+                        .reduce(function(a, c){return a+c});
+                empty(totalprice);
+                var tc = totalKubes * data.price;
+                totalprice.appendChild(document.createTextNode(
+                    'Total price:'  + String.fromCharCode(160) + tc + '$'));
+            }
+            fill(kubesel, pkgsel.value);
+            compose(pkgsel.value, kubesel.value);
+            setPrice(pkgsel.value, kubesel.value);
+            Array.prototype.forEach.call(kubesamount, function(s){
+                s.onchange = function(){setPrice(pkgsel.value, kubesel.value)};
+            });
+            pkgsel.onchange = function(evt){
+                empty(kubesel);
+                fill(kubesel, pkgsel.value);
+                compose(this.value, kubesel.value);
+                setPrice(this.value, kubesel.value);
+            };
+            kubesel.onchange = function(evt){
+                compose(pkgsel.value, this.value);
+                setPrice(pkgsel.value, this.value);
+            };
+        </script>
+    </body>
+</html>

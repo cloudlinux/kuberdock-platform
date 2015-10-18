@@ -144,10 +144,11 @@ class PodResource(object):
 
 
 class TemplateResource(object):
-    def __init__(self, ctl, id=None, filename=None, json=False,
+    def __init__(self, ctl, id=None, filename=None, name=None, json=False,
                  printout=False, **_):
         self.app_id = id
         self.fin = filename
+        self.name = name
         self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
 
     def get(self):
@@ -169,7 +170,8 @@ class TemplateResource(object):
         if not yaml_content:
             raise SystemExit('Empty file content')
         query = self.resource.query()
-        answer = query.post(PREDEFINED_APPS_PATH, {'template': yaml_content})
+        answer = query.post(PREDEFINED_APPS_PATH, {'template': yaml_content,
+                                                   'name': self.name})
         if answer.get('status', None) != 'OK':
             raise SystemExit(u'Failed To create pod: {0}'.format(str(answer)))
         data = query.unwrap(answer)
@@ -191,13 +193,15 @@ class TemplateResource(object):
     def update(self):
         if not self.app_id:
             raise SystemExit('Empty template identifier')
-        yaml_content = self.fin.read()
-        if not yaml_content:
-            raise SystemExit('Empty file content')
+        template_data = {}
+        if self.fin is not None:
+            template_data['template'] = self.fin.read()
+        if self.name is not None:
+            template_data['name'] = self.name
         query = self.resource.query()
         answer = query.put(
             PREDEFINED_APPS_PATH + str(self.app_id),
-            {'template': yaml_content}
+            template_data
         )
         if answer and answer.get('status', None) != 'OK':
             raise SystemExit(u'Failed To update pod: {0}'.format(str(answer)))

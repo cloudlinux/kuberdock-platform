@@ -419,10 +419,7 @@
             </button>
         </td>
         <td><%- ip %></td>
-        <td>
-            <%- kubeType %>
-{#            <span class="more-ico"  data-toggle="tooltip" data-placement="bottom" title="<%- hostname ? hostname : 'Not specified' %>"></span>#}
-        </td>
+        <td><%- kubeType %></td>
         <td>
             <span class="<%- status %>"><%- status %></span>
             <span id="deleteNode" class="pull-right" title="Remove <%- hostname %> node">&nbsp;</span>
@@ -433,9 +430,7 @@
         <div class="breadcrumbs-wrapper">
             <div class="container breadcrumbs" id="breadcrumbs">
                 <ul class="breadcrumb">
-                    <li class="active">
-                        Nodes
-                    </li>
+                    <li class="active">Nodes</li>
                 </ul>
                 <div class="control-group">
                     <button id="add_node">Add Node</button>

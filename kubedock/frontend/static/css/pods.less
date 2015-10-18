@@ -78,6 +78,18 @@
                             background-position: 0 -18px;
                         }
                     }
+                    .check-for-update{
+                        background: url('../img/check-update-ico.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -17px;
+                        }
+                    }
+                    .container-update{
+                        background: url('../img/container-update-ico.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -21px;
+                        }
+                    }
                 }
             }
             &.checked{
@@ -121,7 +133,9 @@
                 &.actions{
                     .start-btn, .stop-btn{
                         margin-right: 0;
-                        margin-left: -7px;
+                    }
+                    .check-for-update, .container-update{
+                        margin-left: 10px;
                     }
                 }
                 a, span, button{
@@ -201,15 +215,6 @@
                     }
                 }
                 span{
-                    &.more-ico{
-                        width: 20px;
-                        height: 5px;
-                        background: url('../img/small-circles.png') 0 0 no-repeat;
-                        &:hover{
-                            cursor: default;
-                            background-position: 0 -5px;
-                        }
-                    }
                     &.mountPath{
                         margin-right: 10px;
                     }
@@ -278,9 +283,9 @@
                         }
                     }
                 }
-                .start-btn, .stop-btn, .terminate-btn, .editPod{
+                .start-btn, .stop-btn, .terminate-btn, .editPod, {
                     top: 2px;
-                    left: 7px;
+                    left: 0px;
                     height: 17px;
                     font-size: 0;
                     margin-right: 30px;
@@ -289,6 +294,24 @@
                     &:hover{
                         cursor: pointer;
                     }
+                }
+                .check-for-update, .container-update{
+                    left: 0;
+                    top: 2px;
+                    font-size: 0;
+                    position: relative;
+                    display: inline-block;
+                    &:hover{
+                        cursor: pointer;
+                    }
+                }
+                .check-for-update{
+                    width: 14px;
+                    height: 16px;
+                }
+                .container-update{
+                    width: 24px;
+                    height: 21px;
                 }
                 .start-btn{
                     width: 12px;
@@ -1614,11 +1637,11 @@
                 color: #4e5665;
                 font-size: 13px;
                 margin-left: 20px;
+                padding-left: 25px;
+                position: relative;
                 vertical-align: top;
                 display: inline-block;
-                position: relative;
                 text-transform: capitalize;
-                padding-left: 25px;
                 &:before{
                     .border-radius(0);
                     .box-sizing(padding-box);
@@ -1651,6 +1674,33 @@
                     &:hover{
                         &:before{
                             background-position: 0 -17px;
+                        }
+                    }
+                }
+                &.check-for-update{
+                    &:before{
+                        top: 5px;
+                        width: 14px;
+                        height: 16px;
+                        background: url('../img/check-update-ico.png') 0 0 no-repeat;
+                    }
+                    &:hover{
+                        &:before{
+                            background-position: 0 -17px;
+                        }
+                    }
+                }
+                &.container-update{
+                    padding-left: 35px;
+                    &:before{
+                        top: 5px;
+                        width: 24px;
+                        height: 21px;
+                        background: url('../img/container-update-ico.png') 0 0 no-repeat;
+                    }
+                    &:hover{
+                        &:before{
+                            background-position: 0 -21px;
                         }
                     }
                 }

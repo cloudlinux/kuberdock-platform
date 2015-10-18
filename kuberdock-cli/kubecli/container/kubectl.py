@@ -6,6 +6,7 @@ from .container import KubeCtl
 def parser(subs):
     resource_help = "A resource name to take action upon"
     template_id_help = "Template identifier"
+    name_help = "Template name"
     yaml_file_help = "YAML file path or '-' to pass file content via stdin"
 
     kubectl = subs.add_parser('kubectl')
@@ -98,6 +99,11 @@ def parser(subs):
         required=True,
         help=yaml_file_help
     )
+    create_template.add_argument(
+        '-n', '--name',
+        required=True,
+        help=name_help
+    )
 
     update = action.add_parser('update')
     update_resource = update.add_subparsers(
@@ -115,9 +121,15 @@ def parser(subs):
     update_template.add_argument(
         '-f', '--filename',
         type=argparse.FileType('r'),
-        required=True,
+        required=False,
         help=yaml_file_help
     )
+    update_template.add_argument(
+        '-n', '--name',
+        required=False,
+        help=name_help
+    )
+
 
     post = action.add_parser('postprocess')
     post.add_argument('name', help="Container name")

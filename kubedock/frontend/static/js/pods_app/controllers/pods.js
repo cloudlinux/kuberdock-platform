@@ -1,4 +1,4 @@
-define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
+define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods, Utils){
     Pods.module("WorkFlow", function(WorkFlow, App, Backbone, Marionette, $, _){
         WorkFlow.getCollection = function(){
             if (!WorkFlow.hasOwnProperty('PodCollection')) {
@@ -6,6 +6,51 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
             }
             return WorkFlow.PodCollection;
         }
+
+        WorkFlow.commandPod = function(cmd, podID, containerName){
+            Utils.preloader.show();
+            var model = WorkFlow.getCollection().fullCollection.get(podID);
+
+            if (/^container_/.test(cmd)) {
+                console.error('Container stop/start/delete not implemented yet.');
+                return;
+            }
+            return $.ajax({
+                url: '/api/podapi/' + podID,
+                data: {command: cmd},
+                type: 'PUT',
+                complete: function(){ Utils.preloader.hide(); },
+                error: function(xhr){ Utils.notifyWindow(xhr); },
+            });
+        };
+
+        WorkFlow.updateContainer = function(containerModel){
+            Utils.preloader.show();
+            return $.ajax({
+                url: '/api/podapi/' + containerModel.get('parentID') +
+                     '/' + containerModel.get('containerID') + '/update',
+                type: 'POST',
+                complete: function(){ Utils.preloader.hide(); },
+                error: function(xhr){ Utils.notifyWindow(xhr); },
+                success: function(){ containerModel.updateIsAvailable = undefined; },
+            });
+        };
+
+        WorkFlow.checkContainerForUpdate = function(containerModel){
+            Utils.preloader.show();
+            return $.ajax({
+                url: '/api/podapi/' + containerModel.get('parentID') +
+                     '/' + containerModel.get('containerID') + '/update',
+                type: 'GET',
+                complete: function(){ Utils.preloader.hide(); },
+                error: function(xhr){ Utils.notifyWindow(xhr); },
+                success: function(rs){
+                    if (!rs.data)
+                        Utils.notifyWindow('No updates found', 'success');
+                    containerModel.updateIsAvailable = rs.data;
+                },
+            });
+        };
 
         WorkFlow.Router = Marionette.AppRouter.extend({
             appRoutes: {
@@ -166,19 +211,11 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                          'pods_app/views/paginator',
                          'pods_app/views/loading'], function(){
                     var wizardLayout = new App.Views.NewItem.PodWizardLayout(),
-                        parent_model = WorkFlow.getCollection().fullCollection.get(id),
-                        model_data = _.find(parent_model.get('containers'),
-                            function(i){return i.name === name}
-                        );
-                    if (!model_data.hasOwnProperty('kubes')) model_data['kubes'] = 1;
-                    if (!model_data.hasOwnProperty('workingDir')) model_data['workingDir'] = undefined;
-                    if (!model_data.hasOwnProperty('args')) model_data['args'] = [];
-                    if (!model_data.hasOwnProperty('env')) model_data['env'] = [];
-                    if (!model_data.hasOwnProperty('parentID')) model_data['parentID'] = id;
+                        parent_model = WorkFlow.getCollection().fullCollection.get(id);
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardLogsSubView({
-                            model: new App.Data.Image(model_data)
+                            model: parent_model.getContainer(name)
                         }));
                     });
 
@@ -207,7 +244,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             reset: true,
                             success: function(){
                                 wizardLayout.steps.show(new App.Views.NewItem.WizardStatsSubView({
-                                    containerModel: data,
+                                    model: data,
                                     collection:statCollection
                                 }));
                             },
@@ -347,13 +384,12 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                             model: model
                         }));
                     });
-                    that.listenTo(wizardLayout, 'image:selected', function(image, url, imageName, auth){
-                        if (imageName !== undefined) {
+                    that.listenTo(wizardLayout, 'image:selected', function(image, containerName, auth){
+                        if (containerName !== undefined) {
                             var container = _.find(model.get('containers'), function(c){
-                                return imageName === c.name
+                                return containerName === c.name;
                             });
                             var containerModel = new App.Data.Image(container);
-                            containerModel.set('sourceUrl', url);
                             containerModel.persistentDrives = model.persistentDrives;
                             wizardLayout.steps.show(
                                 new App.Views.NewItem.WizardPortsSubView({
@@ -383,7 +419,7 @@ define(['pods_app/app', 'pods_app/models/pods'], function(Pods){
                                 var contents = {
                                     image: image, name: name, workingDir: null,
                                     ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
-                                    terminationMessagePath: null, sourceUrl: url
+                                    terminationMessagePath: null, sourceUrl: null
                                 };
                                 model.fillContainer(contents, data);
                                 var containerModel = new App.Data.Image(contents);

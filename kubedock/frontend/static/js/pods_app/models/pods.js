@@ -48,11 +48,20 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
                         container['volumeMounts'].push({name: null, mountPath: m, readOnly: false})
                     });
                 }
-                _.each(['workingDir', 'args', 'env', 'secret'], function(i){
+                _.each(['workingDir', 'args', 'env', 'secret', 'sourceUrl'], function(i){
                     if (data.hasOwnProperty(i)) {
                         container[i] = data[i];
                     }
                 });
+            },
+            getContainer: function(containerName){
+                var data = _.findWhere(this.get('containers'), {name: containerName});
+                if (!data.hasOwnProperty('kubes')) data['kubes'] = 1;
+                if (!data.hasOwnProperty('workingDir')) data['workingDir'] = undefined;
+                if (!data.hasOwnProperty('args')) data['args'] = [];
+                if (!data.hasOwnProperty('env')) data['env'] = [];
+                if (!data.hasOwnProperty('parentID')) data['parentID'] = this.get('id');
+                return new Data.Image(data);
             },
         });
 

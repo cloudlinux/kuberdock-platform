@@ -60,6 +60,7 @@ def search_image(patt=re.compile(r'https?://')):
     data = {
         'num_pages': data.get('count', 1) // per_page + bool(data.get('count', 1) % per_page),
         'results': [{
+            'source_url': Image(image.get('repo_name', '')).source_url,
             'is_automated': image.get('is_automated', False),
             'star_count': image.get('star_count', 0),
             'description': image.get('short_description', ''),

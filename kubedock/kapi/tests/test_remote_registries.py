@@ -13,6 +13,7 @@ from ...validation import (V, args_list_schema, env_schema, path_schema,
 from ...testutils.testcases import DBTestCase
 
 schema = {
+    'sourceUrl': {'type': str, 'required': True},
     'args': dict(args_list_schema, required=True),
     'command': dict(args_list_schema, required=True),
     'env': dict(env_schema, required=True),

@@ -14,5 +14,5 @@ def index(**kwargs):
     return render_template(
         'nodes/index.html',
         nodes_collection=json.dumps(api_nodes.get_nodes_collection()),
-        kube_types=[{'id': x.id, 'name': x.name} for x in Kube.query.all()])
+        kube_types=[{'id': x.id, 'name': x.name} for x in Kube.public_kubes()])
 

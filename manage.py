@@ -46,8 +46,13 @@ class Creator(Command):
 
         # Create default packages and kubes
         # Package and Kube with id=0 are default
-        # end must be undeletable (always present with id=0) for fallback
-        k1 = Kube(id=0, name='Standard kube', cpu=.01, cpu_units='Cores',
+        # and must be undeletable (always present with id=0) for fallback
+        k_internal = Kube(id=Kube.get_internal_service_kube_type(),
+                  name='Internal service', cpu=.01, cpu_units='Cores',
+                  memory=64, memory_units='MB', disk_space=1,
+                  disk_space_units='GB', included_traffic=0)
+        k1 = Kube(id=Kube.get_default_kube_type(),
+                  name='Standard kube', cpu=.01, cpu_units='Cores',
                   memory=64, memory_units='MB', disk_space=1,
                   disk_space_units='GB', included_traffic=0)
         k2 = Kube(name='High CPU', cpu=.02, cpu_units='Cores',
@@ -60,6 +65,7 @@ class Creator(Command):
         p1 = Package(id=0, name='Standard package', first_deposit=0, currency='USD',
                      period='hour', prefix='$', suffix=' USD')
 
+        db.session.add(k_internal)
         PackageKube(packages=p1, kubes=k1, kube_price=0)
         PackageKube(packages=p1, kubes=k2, kube_price=0)
         PackageKube(packages=p1, kubes=k3, kube_price=0)

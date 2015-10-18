@@ -3,9 +3,9 @@ from flask import Blueprint, render_template, redirect, url_for
 from flask.ext.login import current_user, login_required
 
 #from ..utils import JSONDefaultEncoder
-from ..billing import Kube, Package, ExtraTax, PackageKube
+from ..billing import Package, ExtraTax, PackageKube, Kube
 from ..kapi.podcollection import PodCollection
-from ..settings import TEST
+from ..settings import TEST, KUBERDOCK_INTERNAL_USER
 
 
 main = Blueprint('main', __name__)
@@ -26,6 +26,8 @@ def index():
     for pk in PackageKube.query.filter(PackageKube.package_id == current_user.package_id).all():
         package_kubes.append(pk.to_dict())
         kube_types.append(pk.kubes.to_dict())
+    if current_user.username == KUBERDOCK_INTERNAL_USER:
+        kube_types = [kube.to_dict() for kube in Kube.query]
 
     return render_template(
         'index.html',

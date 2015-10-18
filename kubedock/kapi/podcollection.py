@@ -12,6 +12,7 @@ from .pstorage import CephStorage, AmazonStorage, NodeCommandError
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY)
+DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 
 
 def get_user_namespaces(user):
@@ -27,12 +28,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._merge()
 
     def add(self, params, skip_check=False):  # TODO: celery
-        secrets = set()  # username, password, registry
+        secrets = set()  # username, password, full_registry
         for container in params['containers']:
             secret = container.pop('secret', None)
             if secret is not None:
                 secrets.add((secret['username'], secret['password'],
-                             Image(container['image']).registry))
+                             Image(container['image']).full_registry))
         secrets = sorted(secrets)
 
         if not skip_check:
@@ -157,10 +158,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             # TODO where raise ?
             # current_app.logger.debug(rv)
 
-    def _make_secret(self, namespace, username=None, password=None,
-                     registry=DEFAULT_REGISTRY):
-        if registry == DEFAULT_REGISTRY:  # only index.docker.io allowes to use
-            registry = 'https://index.docker.io/v1/'  # image name without registry
+    def _make_secret(self, namespace, username, password, registry=DEFAULT_REGISTRY):
+        # only index.docker.io in .dockercfg allowes to use
+        # image url without the registry, like wncm/mynginx
+        if registry.endswith('docker.io'):
+            registry = DOCKERHUB_INDEX
         auth = urlsafe_b64encode('{0}:{1}'.format(username, password))
         secret = urlsafe_b64encode('{{"{0}": {{"auth": "{1}", "email": "a@a.a" }}}}'
                                    .format(registry, auth))
@@ -192,6 +194,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             dockercfg = json.loads(urlsafe_b64decode(str(rv['data']['.dockercfg'])))
             for registry, data in dockercfg.iteritems():
                 username, password = urlsafe_b64decode(str(data['auth'])).split(':', 1)
+                # only index.docker.io in .dockercfg allowes to use image url without
+                # the registry, like wncm/mynginx. Replace it back to default registry
+                if registry == DOCKERHUB_INDEX:
+                    registry = DEFAULT_REGISTRY
                 secrets.append((username, password, registry))
         return secrets
 

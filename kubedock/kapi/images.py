@@ -206,6 +206,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         repo - repository name, like "quay/redis"
         tag - tag name, like "latest"
     """
+    pattern = re.compile(r'^(?:(.+(?:\..+?)+)\/)?(.+?)(?:\:(.+))?$')
+
     # Image inherits from immutable type (namedtuple),
     # so we use __new__ instead of __init__
     def __new__(cls, image):
@@ -221,23 +223,25 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         """
         if isinstance(image, Image):
             return super(Image, cls).__new__(cls, *image)
-        else:  # `image` is image url in format [registry/]repo[:tag]
-            # TODO: improve parsing, add hash
-            full_registry, repo, tag = DEFAULT_REGISTRY, image, 'latest'
-            registry = DEFAULT_REGISTRY_HOST
-            parts = repo.split('/', 1)
-            if '.' in parts[0] and len(parts) == 2:
-                registry, repo = parts
+        else:
+            # TODO: add digest support
+            parsed = cls.pattern.match(image)
+            if not parsed:
+                raise APIError('invalid image url: {0}'.format(image))
+            registry, repo, tag = parsed.groups()
+            tag = tag or 'latest'
+            if not registry or registry.endswith('docker.io'):
+                registry = DEFAULT_REGISTRY_HOST
+                full_registry = DEFAULT_REGISTRY
+                if '/' not in repo:
+                    repo = 'library/{0}'.format(repo)
+            else:
                 full_registry = complement_registry(registry)
-            if ':' in repo:
-                repo, tag = repo.rsplit(':', 1)
-            if '/' not in repo and full_registry == DEFAULT_REGISTRY:
-                repo = 'library/{0}'.format(repo)
             return super(Image, cls).__new__(cls, full_registry, registry, repo, tag)
 
     def __str__(self):
         full_registry, registry, repo, tag = self
-        if full_registry == DEFAULT_REGISTRY and repo.startswith('library/'):
+        if self.is_dockerhub and repo.startswith('library/'):
             repo = repo[len('library/'):]
 
         url_format = '{repo}'
@@ -246,6 +250,20 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         if full_registry != DEFAULT_REGISTRY:
             url_format = '{registry}/' + url_format
         return url_format.format(registry=registry, repo=repo, tag=tag)
+
+    @property
+    def is_dockerhub(self):
+        return self.registry.endswith('docker.io')
+
+    @property
+    def is_official(self):
+        return self.is_dockerhub and self.repo.startswith('library/')
+
+    @property
+    def source_url(self):
+        return (str(self) if not self.is_dockerhub else
+                'hub.docker.com/r/' + self.repo if not self.is_official else
+                'hub.docker.com/_/' + self.repo.replace('library/', '', 1))
 
     def _v2_request_image_info(self, auth, just_check=False):
         """Config request via V2 API
@@ -337,6 +355,7 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
 
         config = {
             'image': str(self),
+            'sourceUrl': self.source_url,
             'command': ([] if raw_config.get('Entrypoint') is None else
                         raw_config['Entrypoint']),
             'args': [] if raw_config.get('Cmd') is None else raw_config['Cmd'],

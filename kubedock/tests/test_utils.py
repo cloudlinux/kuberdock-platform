@@ -31,15 +31,15 @@ class TestUtilsGetApiUrl(unittest.TestCase):
         self.assertEquals('http://localhost:8080/api/v1/namespaces/asd',
                           get_api_url('namespaces', 'asd', namespace=False))
 
-        self.assertEquals('http://localhost:8080/api/v1/endpoints?watch=true',
+        self.assertEquals('ws://localhost:8080/api/v1/endpoints?watch=true',
                           get_api_url('endpoints', namespace=False, watch=True))
 
         self.assertEquals(
-            'http://localhost:8080/api/v1/namespaces/test/endpoints?watch=true',
+            'ws://localhost:8080/api/v1/namespaces/test/endpoints?watch=true',
             get_api_url('endpoints', namespace='test', watch=True))
 
         self.assertEquals(
-            'http://localhost:8080/api/v1/namespaces/n/endpoints/t1?watch=true',
+            'ws://localhost:8080/api/v1/namespaces/n/endpoints/t1?watch=true',
             get_api_url('endpoints', 't1', namespace='n', watch=True))
 
         # Special pod name

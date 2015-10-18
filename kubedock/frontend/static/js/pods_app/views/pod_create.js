@@ -60,8 +60,8 @@ define(['pods_app/app',
             getImage: function(data){
                 this.trigger('step:getimage', data);
             },
-            imageSelected: function(image, url, imageName, auth){
-                this.trigger('image:selected', image, url, imageName, auth);
+            imageSelected: function(image, containerName, auth){
+                this.trigger('image:selected', image, containerName, auth);
             },
             portConf: function(data, imageName){
                 this.trigger('step:portconf', data.model, imageName);
@@ -158,7 +158,7 @@ define(['pods_app/app',
             }
         });
 
-       NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
+        NewItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
             template: wizardImageCollectionItemTpl,
             tagName: 'div',
             className: 'item',
@@ -166,19 +166,6 @@ define(['pods_app/app',
             triggers: {
                 'click .add-item': 'image:selected'
             },
-
-            initialize: function(options){
-                this.imageURL = 'http://'
-                    + options.registryURL + '/'
-                    + (this.model.get('is_official') ? '_' : 'u') + '/'
-                    + this.model.get('name');
-            },
-            templateHelpers: function(){
-                var imageURL = this.imageURL;
-                return {
-                    url: imageURL
-                }
-            }
         });
 
         NewItem.GetImageView = Backbone.Marionette.CompositeView.extend({
@@ -245,11 +232,8 @@ define(['pods_app/app',
 
             selectImage: function(){
                 var fieldValue = this.ui.privateField.val(),
-                    sourceUrl = this.ui.privateField.hasClass('private-registry')
-                        ? fieldValue
-                        : 'hub.docker.com/r/' + fieldValue.replace(/^\//, ''),
                     select = _.bind(this.trigger, this, 'image:selected',
-                                    fieldValue, sourceUrl);
+                                    fieldValue);
 
                 if (fieldValue.length === 0) {
                     this.ui.privateField.focus();
@@ -333,8 +317,9 @@ define(['pods_app/app',
                 }
             },
 
+            // image was selected from search results
             childImageSelected: function(data){
-                this.trigger('image:selected', data.model.get('name'), data.imageURL);
+                this.trigger('image:selected', data.model.get('name'));
             },
 
             loadNextPage: function(){
@@ -378,7 +363,12 @@ define(['pods_app/app',
                 restartPolicy  : '.restart-policy',
                 addDriveCancel : '.add-drive-cancel',
                 containerPort  : '.containerPort',
-                podPorts       : '.hostPort'
+                podPorts       : '.hostPort',
+
+                stopContainer  : '#stopContainer',
+                startContainer : '#startContainer',
+                updateContainer: '.container-update',
+                checkForUpdate : '.check-for-update',
             },
 
             events: {
@@ -392,7 +382,12 @@ define(['pods_app/app',
                 'click @ui.persistent'     : 'togglePersistent',
                 'click @ui.removeVolume'   : 'removeVolumeEntry',
                 'change @ui.restartPolicy' : 'changePolicy',
-                'change @ui.input_command' : 'changeCommand'
+                'change @ui.input_command' : 'changeCommand',
+
+                'click @ui.stopContainer'  : 'stopContainer',
+                'click @ui.startContainer' : 'startContainer',
+                'click @ui.updateContainer': 'updateContainer',
+                'click @ui.checkForUpdate' : 'checkContainerForUpdate',
             },
 
             initialize: function(options) {
@@ -410,6 +405,14 @@ define(['pods_app/app',
                         this.volumes.push({name: vm.name, localStorage: true})
                     }
                 }, {volumes: this.volumes})
+
+                if (this.model.has('parentID'))
+                    this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
+                        var pod = App.WorkFlow.getCollection().fullCollection.get(
+                            this.model.get('parentID'));
+                        this.model.set(pod.getContainer(this.model.get('name')).attributes);
+                        this.render();
+                    });
             },
 
             triggers: {
@@ -449,6 +452,7 @@ define(['pods_app/app',
                 }
 
                 return {
+                    updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
                     hasPersistent: this.model.hasOwnProperty('persistentDrives'),
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd')
@@ -460,6 +464,19 @@ define(['pods_app/app',
                     podName: model !== undefined ? model.get('name') : '',
                     volumeEntries: this.composeVolumeEntries()
                 };
+            },
+
+            startContainer: function(){
+                App.WorkFlow.commandPod('start', this.model.get('parentID'));
+            },
+            stopContainer: function(){
+                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
+            },
+            updateContainer: function(){
+                App.WorkFlow.updateContainer(this.model).done(this.render);
+            },
+            checkContainerForUpdate: function(){
+                App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
             addItem: function(evt){
@@ -788,6 +805,11 @@ define(['pods_app/app',
                 removeItem : '.remove-env',
                 nameField  : 'input.name',
                 next       : '.next-step',
+
+                stopContainer  : '#stopContainer',
+                startContainer : '#startContainer',
+                updateContainer: '.container-update',
+                checkForUpdate : '.check-for-update',
             },
 
             events: {
@@ -795,7 +817,12 @@ define(['pods_app/app',
                 'click @ui.removeItem' : 'removeItem',
                 'click @ui.reset'      : 'resetFielsdsValue',
                 'change @ui.input'     : 'onChangeInput',
-                'click @ui.next'      : 'finalStep'
+                'click @ui.next'       : 'finalStep',
+
+                'click @ui.stopContainer'  : 'stopContainer',
+                'click @ui.startContainer' : 'startContainer',
+                'click @ui.updateContainer': 'updateContainer',
+                'click @ui.checkForUpdate' : 'checkContainerForUpdate',
             },
 
             triggers: {
@@ -806,6 +833,15 @@ define(['pods_app/app',
                 'click .go-to-other'     : 'step:otherconf',
                 'click .go-to-stats'     : 'step:statsconf',
                 'click .go-to-logs'      : 'step:logsconf',
+            },
+
+            initialize: function() {
+                this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
+                    var pod = App.WorkFlow.getCollection().fullCollection.get(
+                        this.model.get('parentID'));
+                    this.model.set(pod.getContainer(this.model.get('name')).attributes);
+                    this.render();
+                });
             },
 
             templateHelpers: function(){
@@ -821,6 +857,7 @@ define(['pods_app/app',
                 }
 
                 return {
+                    updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
                     isPending: !this.model.has('parentID'),
                     hasPersistent: this.model.has('persistentDrives'),
@@ -830,6 +867,19 @@ define(['pods_app/app',
                     restart_policy: model !== undefined ? model.get('restartPolicy') : '',
                     podName: model !== undefined ? model.get('name') : ''
                 };
+            },
+
+            startContainer: function(){
+                App.WorkFlow.commandPod('start', this.model.get('parentID'));
+            },
+            stopContainer: function(){
+                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
+            },
+            updateContainer: function(){
+                App.WorkFlow.updateContainer(this.model).done(this.render);
+            },
+            checkContainerForUpdate: function(){
+                App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
             finalStep: function(){
@@ -939,24 +989,37 @@ define(['pods_app/app',
             tagName: 'div',
 
             initialize: function(options){
-                this.containerModel = options.containerModel;
+                this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
+                    var pod = App.WorkFlow.getCollection().fullCollection.get(
+                        this.model.get('parentID'));
+                    this.model.set(pod.getContainer(this.model.get('name')).attributes);
+                    this.render();
+                });
             },
 
             events: {
-                'click .go-to-ports'     : 'onPortsClick',
-                'click .go-to-volumes'   : 'onVolumesClick',
-                'click .go-to-envs'      : 'onEnvsClick',
-                'click .go-to-resources' : 'onResClick',
-                'click .go-to-other'     : 'onOtherClick',
-                'click .go-to-logs'      : 'onLogsClick'
+                'click #stopContainer'    : 'stopContainer',
+                'click #startContainer'   : 'startContainer',
+                'click .container-update' : 'updateContainer',
+                'click .check-for-update' : 'checkContainerForUpdate',
+            },
+
+            triggers: {
+                'click .go-to-ports'     : 'step:portconf',
+                'click .go-to-volumes'   : 'step:volconf',
+                'click .go-to-envs'      : 'step:envconf',
+                'click .go-to-resources' : 'step:resconf',
+                'click .go-to-other'     : 'step:otherconf',
+                'click .go-to-stats'     : 'step:statsconf',
+                'click .go-to-logs'      : 'step:logsconf'
             },
 
             templateHelpers: function(){
-                var parentID = this.containerModel.get('parentID'),
-                    model = App.WorkFlow.getCollection().fullCollection.get(parentID),
+                var parentID = this.model.get('parentID'),
+                    pod = App.WorkFlow.getCollection().fullCollection.get(parentID),
                     kubeType;
-                if (model !== undefined){
-                    kube_id = model.get('kube_type');
+                if (pod !== undefined){
+                    kube_id = pod.get('kube_type');
                     _.each(kubeTypes, function(kube){
                         if(parseInt(kube.id) == parseInt(kube_id))
                             kubeType = kube;
@@ -964,48 +1027,32 @@ define(['pods_app/app',
                 }
 
                 return {
+                    updateIsAvailable: this.model.updateIsAvailable,
                     parentID: parentID,
-                    isPending: !this.containerModel.has('parentID'),
-                    image: this.containerModel.get('image'),
-                    name: this.containerModel.get('name'),
-                    state: this.containerModel.get('state'),
+                    isPending: !this.model.has('parentID'),
+                    image: this.model.get('image'),
+                    name: this.model.get('name'),
+                    state: this.model.get('state'),
                     kube_type: kubeType,
-                    restart_policy: model !== undefined ? model.get('restartPolicy') : '',
-                    kubes: this.containerModel.get('kubes'),
-                    podName: model !== undefined ? model.get('name') : '',
+                    restart_policy: pod !== undefined ? pod.get('restartPolicy') : '',
+                    kubes: this.model.get('kubes'),
+                    podName: pod !== undefined ? pod.get('name') : '',
                 };
 
             },
 
-            onPortsClick: function(evt){
-                evt.stopPropagation();
-                this.trigger('step:portconf', {model: this.containerModel});
+            startContainer: function(){
+                App.WorkFlow.commandPod('start', this.model.get('parentID'));
             },
-
-            onVolumesClick: function(evt){
-                evt.stopPropagation();
-                this.trigger('step:volconf', {model: this.containerModel});
+            stopContainer: function(){
+                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
             },
-
-            onEnvsClick: function(evt){
-                evt.stopPropagation();
-                this.trigger('step:envconf', {model: this.containerModel});
+            updateContainer: function(){
+                App.WorkFlow.updateContainer(this.model).done(this.render);
             },
-
-            onResClick: function(evt){
-                evt.stopPropagation();
-                this.trigger('step:resconf', {model: this.containerModel});
+            checkContainerForUpdate: function(){
+                App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
-
-            onOtherClick: function(evt){
-                evt.stopPropagation();
-                this.trigger('step:otherconf', {model: this.containerModel});
-            },
-
-            onLogsClick: function(evt){
-                evt.stopPropagation();
-                this.trigger('step:logsconf', {model: this.containerModel});
-            }
         });
 
         NewItem.WizardLogsSubView = Backbone.Marionette.ItemView.extend({
@@ -1017,11 +1064,15 @@ define(['pods_app/app',
                 textarea  : '.container-logs',
                 stopItem  : '#stopContainer',
                 startItem : '#startContainer',
+                updateContainer: '.container-update',
+                checkForUpdate : '.check-for-update',
             },
 
             events: {
                 'click @ui.stopItem'  : 'stopItem',
                 'click @ui.startItem' : 'startItem',
+                'click @ui.updateContainer': 'updateContainer',
+                'click @ui.checkForUpdate' : 'checkContainerForUpdate',
             },
 
             templateHelpers: function(){
@@ -1035,6 +1086,7 @@ define(['pods_app/app',
                     });
                 }
                 return {
+                    updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
                     isPending: !this.model.has('parentID'),
                     podName: model !== undefined ? model.get('name') : '',
@@ -1053,8 +1105,21 @@ define(['pods_app/app',
             },
 
             initialize: function() {
+                this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
+                    var pod = App.WorkFlow.getCollection().fullCollection.get(
+                            this.model.get('parentID'));
+                    this.model.set(pod.getContainer(this.model.get('name')).attributes);
+                    if (!this.model.has('logs'))
+                        this.model.set('logs', []);
+                    this.render();
+                });
+
                 this.model.set('logs', []);
                 function get_logs() {
+                    if (this.model.get('state') !== 'running') {
+                        this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
+                        return;
+                    }
                     var parent_id = this.model.get('parentID'),
                         parent_model = App.WorkFlow.getCollection().fullCollection.get(parent_id),
                         node = parent_model.get('host'),
@@ -1095,41 +1160,19 @@ define(['pods_app/app',
                 $.proxy(get_logs, this)();
             },
 
-            command: function(evt, cmd){
-                var that = this,
-                    preloader = $('#page-preloader');
-                preloader.show();
-                evt.stopPropagation();
-                var model = App.WorkFlow.getCollection().fullCollection.get(
-                    this.model.get('parentID')),
-                    _containers = [],
-                    host = null;
-                _.each(model.get('containers'), function(itm){
-                    if(itm.name == that.model.get('name'))
-                        _containers.push(itm.containerID);
-                        host = model.get('host');
-                });
-
-                $.ajax({
-                    url: '/api/podapi/' + model.get('id'),
-                    data: {command: cmd, host: host, containers: _containers.join(',')},
-                    type: 'PUT',
-                    dataType: 'JSON',
-                    success: function(rs){
-                        preloader.hide();
-                    },
-                    error: function(xhr){
-                        utils.notifyWindow(xhr);
-                    }
-                });
+            startItem: function(){
+                App.WorkFlow.commandPod('start', this.model.get('parentID'));
+            },
+            stopItem: function(){
+                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
+            },
+            updateContainer: function(){
+                App.WorkFlow.updateContainer(this.model).done(this.render);
+            },
+            checkContainerForUpdate: function(){
+                App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
-            startItem: function(evt){
-                this.command(evt, 'start');
-            },
-            stopItem: function(evt){
-                this.command(evt, 'stop');
-            },
             onBeforeDestroy: function () {
                 clearTimeout(this.model.get('timeout'));
             },
@@ -1230,10 +1273,8 @@ define(['pods_app/app',
             editItem: function(evt){
                 evt.stopPropagation();
                 var tgt = evt.target,
-                    containerId = $(tgt).closest('tr').children('td:first').attr('id'),
-                    image = _.find(this.model.get('containers'), function(c){return c.name === containerId}).image,
-                    url = this.model.containerUrls[image];
-                this.trigger('image:selected', image, url, containerId);
+                    containerId = $(tgt).closest('tr').children('td:first').attr('id');
+                this.trigger('image:selected', undefined, containerId);
             },
 
             toggleCluster: function(evt){

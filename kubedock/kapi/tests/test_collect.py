@@ -5,7 +5,6 @@ import sys
 import subprocess
 
 sys.modules['ipaddress'] = mock.Mock()
-sys.modules['flask'] = mock.Mock()
 
 from .. import collect
 
@@ -80,8 +79,7 @@ class TestStatItem(unittest.TestCase):
         _PodCollection.return_value = mock_inst
         expected = {'total': 2, 'running': 1}
         pods = collect.get_pods()
-        self.assertTrue(mock_inst.get.assert_called_once(),
-                        "PodCollection.get() is expected to be called with False")
+        mock_inst.get.assert_called_once_with(False)
         self.assertEqual(pods, expected,
             "Pods are expected to be {0} but got {1}".format(str(pods), str(expected)))
 
@@ -116,8 +114,7 @@ class TestStatItem(unittest.TestCase):
         expected = '0000'
         fh.read.return_value = '0000'
         rv = collect.read_or_write_id()
-        self.assertTrue(fh.read.assert_called_once(),
-                        "file read is expected to happen once")
+        fh.read.assert_called_once_with()
         self.assertEqual(rv, expected,
                          "Got {0} while expected {1}".format(rv, expected))
 
@@ -127,8 +124,7 @@ class TestStatItem(unittest.TestCase):
         fh = _open.return_value.__enter__.return_value
         expected = '0000'
         collect.read_or_write_id(expected)
-        self.assertTrue(fh.write.assert_called_once(),
-            "file write is expected to be called once".format(expected))
+        fh.write.assert_called_once_with(expected)
 
     @mock.patch('kubedock.kapi.collect.subprocess.check_output')
     @mock.patch('kubedock.kapi.collect.read_or_write_id')
@@ -136,8 +132,8 @@ class TestStatItem(unittest.TestCase):
         expected = '0000'
         _RoW.return_value = expected
         rv = collect.get_installation_id()
-        self.assertTrue(_RoW.assert_called_once())
-        self.assertTrue(_run.assert_not_called())
+        _RoW.assert_called_once_with()
+        self.assertFalse(_run.called)
         self.assertEqual(rv, expected,
             "Returned {0} while expected {1}".format(rv, expected))
 

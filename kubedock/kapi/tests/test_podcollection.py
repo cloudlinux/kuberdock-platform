@@ -732,7 +732,7 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
     def test_check_images_availability_called(self, check_, create_):
         images = ['wncm/test_image:4', 'quay.io/wncm/test_image']
         secrets = [('test_user', 'test_password', mock.ANY),
-                   ('test_user2', 'test_password2', 'quay.io')]
+                   ('test_user2', 'test_password2', 'https://quay.io')]
         params = dict(self.params, containers=[
             {'image': images[0], 'secret': {'username': secrets[0][0],
                                             'password': secrets[0][1]}},

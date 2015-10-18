@@ -6,7 +6,7 @@
         </div>
         <% if (description && name) { %>
             <div class="more">
-                <a href="<%- url %>" target="blank">Learn more...</a>
+                <a href="<%- /^https?:\/\//.test(source_url) ? source_url : 'http://' + source_url %>" target="blank">Learn more...</a>
             </div>
         <% } %>
     </div>

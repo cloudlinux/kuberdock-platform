@@ -34,6 +34,12 @@
                     <div class="status-line <%- state %> curent-margin">Status: <%- state %>
                         <% if (state == "running"){ %>
                             <span id="stopContainer">Stop</span>
+                            <!-- AC-1279 -->
+                            <% if (!updateIsAvailable) { %>
+                                <span class="check-for-update" title="Check <%- image %> for updates">Check for updates</span>
+                            <% } else { %>
+                                <span class="container-update" title="Update <%- image %> container">Update</span>
+                            <% } %>
                         <% } else  if (state == "stopped"){ %>
                             <span id="startContainer">Start</span>
                         <% } %>

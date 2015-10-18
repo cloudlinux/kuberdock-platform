@@ -47,9 +47,9 @@ NGINX_IMAGE_INFO = {
     'id': 'ceab60537ad28d87709d49420853766d02e9f3d4c0f4e36899d020e774b514d7'}
 
 
-class TestImages(DBTestCase):
+class TestImagesCache(DBTestCase):
     @mock.patch.object(Image, '_request_image_info', autospec=True)
-    def test_get_container_config(self, request_config_mock):
+    def test_get_container_config_cache(self, request_config_mock):
         """Test for kapi.images.Image.get_container_config function."""
         request_config_mock.return_value = NGINX_IMAGE_INFO
         result = Image('nginx').get_container_config()
@@ -65,6 +65,8 @@ class TestImages(DBTestCase):
         with self.assertRaises(APIError):
             Image('nginx').get_container_config()
 
+
+class TestImagesAuth(DBTestCase):
     @responses.activate
     def test_v1request_config(self):
         """Test for kapi.images.Image._v1_request_image_info function."""
@@ -222,6 +224,15 @@ class TestImages(DBTestCase):
             Image(image_url)._v2_request_image_info(auth)
         self.assertEqual(err.exception.status_code, 429)
 
+
+@mock.patch.object(images, 'db', mock.MagicMock())
+class TestImages(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch.object(images, 'DockerfileCache')
+        self.addCleanup(patcher.stop)
+        DockerfileCacheMock = patcher.start()
+        DockerfileCacheMock.query.get.return_value = None
+
     @mock.patch.object(Image, '_v1_request_image_info', autospec=True)
     @mock.patch.object(Image, '_v2_request_image_info', autospec=True)
     def test_request_image_info(self, v2_req_mock, v1_req_mock):
@@ -256,6 +267,21 @@ class TestImages(DBTestCase):
         }
         for image_name, result in test_pairs.iteritems():
             self.assertEqual(Image(image_name), result)
+
+        test_pairs = {
+            'nginx': (True, True, 'hub.docker.com/_/nginx'),
+            'library/nginx': (True, True, 'hub.docker.com/_/nginx'),
+            'docker.io/nginx': (True, True, 'hub.docker.com/_/nginx'),
+            'docker.io/library/nginx': (True, True, 'hub.docker.com/_/nginx'),
+            'wncm/nginx': (True, False, 'hub.docker.com/r/wncm/nginx'),
+            'docker.io/wncm/nginx': (True, False, 'hub.docker.com/r/wncm/nginx'),
+            'quay.io/nginx': (False, False, 'quay.io/nginx'),
+            'quay.io/wncm/nginx': (False, False, 'quay.io/wncm/nginx'),
+        }
+        for image_name, (is_dockerhub, is_official, source_url) in test_pairs.iteritems():
+            self.assertEqual(Image(image_name).is_dockerhub, is_dockerhub)
+            self.assertEqual(Image(image_name).is_official, is_official)
+            self.assertEqual(Image(image_name).source_url, source_url)
 
     # @unittest.skip('')
     def test_complement_registry(self):

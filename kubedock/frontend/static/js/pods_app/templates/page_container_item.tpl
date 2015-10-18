@@ -9,15 +9,11 @@
     <% if (state == 'running' )  { %>
         <span class="stop-btn" title="Stop <%- image %> container">Stop</span>
         <!-- AC-1279 -->
-        <!--
-        <% if (updateIsAvailable === undefined) { %>
-            <span class="check-for-update-btn pull-right" title="Check <%- image %> for updates">Check for updates</span>
-        <% } else if (updateIsAvailable === false) { %>
-            <span class="check-for-update-btn pull-right" title="No updates found for <%- image %>">No updates found</span>
-        <% } else if (updateIsAvailable === true) { %>
-            <span class="update-btn pull-right" title="Update <%- image %> container">Update</span>
+        <% if (!updateIsAvailable) { %>
+            <span class="check-for-update" title="Check <%- image %> for updates">Check for updates</span>
+        <% } else { %>
+            <span class="container-update" title="Update <%- image %> container">Update</span>
         <% } %>
-         -->
     <%} else if (state == 'stopped' ) { %>
         <span class="start-btn" title="Start <%- image %> container">Start</span>
     <% } %>

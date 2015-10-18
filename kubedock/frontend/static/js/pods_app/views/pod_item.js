@@ -85,7 +85,7 @@ define(['pods_app/app',
                 return {
                     kubes: kubes ? kubes : 0,
                     startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' : localizeDatetime(startedAt, userSettings.timezone),
-                    updateIsAvailable: this.updateIsAvailable
+                    updateIsAvailable: this.model.updateIsAvailable,
                 }
             },
 
@@ -93,8 +93,8 @@ define(['pods_app/app',
                 'start'            : '.start-btn',
                 'stop'             : '.stop-btn',
                 'delete'           : '.terminate-btn',
-                'update'           : '.update-btn',
-                'checkForUpdate'   : '.check-for-update-btn',
+                'updateContainer'  : '.container-update',
+                'checkForUpdate'   : '.check-for-update',
                 'containerPageBtn' : '.container-page-btn',
                 'checkbox'         : 'input[type="checkbox"]'
             },
@@ -103,98 +103,23 @@ define(['pods_app/app',
                 'click @ui.start'              : 'startItem',
                 'click @ui.stop'               : 'stopItem',
                 'click @ui.delete'             : 'deleteItem',
-                'click @ui.update'             : 'updateItem',
+                'click @ui.updateContainer'    : 'updateItem',
                 'click @ui.checkForUpdate'     : 'checkForUpdate',
                 'click @ui.containerPageBtn'   : 'containerPage',
                 'click @ui.checkbox'           : 'checkItem'
             },
 
-            command: function(evt, cmd){
-                var that = this,
-                    preloader = $('#page-preloader');
-                preloader.show();
-                evt.stopPropagation();
-                var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
-                    _containers = [],
-                    host = null;
-                _.each(model.get('containers'), function(itm){
-                    if(itm.name == that.model.get('name'))
-                        _containers.push(itm.containerID);
-                        host = model.get('host');
-                });
-                $.ajax({
-                    url: '/api/podapi/' + model.get('id'),
-                    data: {command: cmd, host: host, containers: _containers.join(',')},
-                    type: 'PUT',
-                    dataType: 'JSON',
-                    success: function(rs){
-                        preloader.hide();
-                    },
-                    error: function(xhr){
-                        preloader.hide();
-                        utils.notifyWindow(xhr);
-                    }
-                });
+            startItem: function(){
+                App.WorkFlow.commandPod('start', this.model.get('parentID'));
             },
-
-            startItem: function(evt){
-                this.command(evt, 'start');
+            stopItem: function(){
+                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
             },
-
-            updateItem: function(evt){
-                console.log('updateItem: evt, this');
-                console.log(evt);
-                console.log(this);
-                utils.preloader.show();
-                var podID = this.model.get('parentID'),
-                    containerID = this.model.get('containerID'),
-                    that = this;
-                $.ajax({
-                    url: '/api/podapi/' + podID + '/' + containerID + '/update',
-                    type: 'POST',
-                    dataType: 'JSON',
-                    success: function(rs){
-                        console.log(rs);
-                        utils.preloader.hide();
-                        that.updateIsAvailable = undefined;
-                        that.render();
-                    },
-                    error: function(xhr){
-                        console.log(xhr);
-                        utils.preloader.hide();
-                        utils.notifyWindow(xhr);
-                    }
-                });
+            updateItem: function(){
+                App.WorkFlow.updateContainer(this.model).done(this.render);
             },
-
-            checkForUpdate: function(evt){
-                console.log('checkForUpdate: evt, this');
-                console.log(evt);
-                console.log(this);
-                utils.preloader.show();
-                var podID = this.model.get('parentID'),
-                    containerID = this.model.get('containerID'),
-                    that = this;
-                $.ajax({
-                    url: '/api/podapi/' + podID + '/' + containerID + '/update',
-                    type: 'GET',
-                    dataType: 'JSON',
-                    success: function(rs){
-                        console.log(rs);
-                        utils.preloader.hide();
-                        that.updateIsAvailable = rs.data;
-                        that.render();
-                    },
-                    error: function(xhr){
-                        console.log(xhr);
-                        utils.preloader.hide();
-                        utils.notifyWindow(xhr);
-                    }
-                });
-            },
-
-            stopItem: function(evt){
-                this.command(evt, 'stop');
+            checkForUpdate: function(){
+                App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
             deleteItem: function(evt){

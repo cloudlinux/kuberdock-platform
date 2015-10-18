@@ -61,19 +61,19 @@ define({
         return modal;
     },
 
-    notifyWindow: function(b, t){
-        var err = typeof b == "string" ? b :
+    notifyWindow: function(b, type){
+        var msg = typeof b == "string" ? b :
                   !(b.responseJSON && b.responseJSON.data) ? b.responseText :
                   typeof b.responseJSON.data == 'string' ? b.responseJSON.data :
                   JSON.stringify(b.responseJSON.data);
         if (b && b.status == 401){
             window.location = '/logout'
         } else {
-            $.notify(err,{
+            $.notify(msg,{
                 autoHideDelay: 5000,
                 clickToHide: true,
                 globalPosition: 'bottom left',
-                className: 'error',
+                className: type || 'error',
             });
         }
     },

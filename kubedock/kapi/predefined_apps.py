@@ -21,6 +21,12 @@ class PredefinedApps(object):
             raise APIError('Not found', status_code=404)
         return app.to_dict()
 
+    def get_by_qualifier(self, qualifier):
+        app = self.apps.filter_by(qualifier=qualifier).first()
+        if app is None:
+            raise APIError('Not found', status_code=404)
+        return app.to_dict()
+
     def create(self, name, template):
         if template is None:
             raise APIError('Template not specified')

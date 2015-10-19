@@ -3,7 +3,6 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Hash</th>
                 <th></th>
                 <th>Actions</th>
             </tr>

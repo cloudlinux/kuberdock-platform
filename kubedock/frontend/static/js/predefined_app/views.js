@@ -35,19 +35,19 @@ define(['app', 'marionette',
             showLoadControl: function(){
                 this.trigger('app:showloadcontrol');
             },
-            
+
             saveApp: function(data){
                 this.trigger('app:save', data);
             },
-            
+
             cancelApp: function(){
                 this.trigger('app:cancel');
             },
-            
+
             editApp: function(id){
                 this.trigger('app:showloadcontrol', id);
             },
-            
+
         });
 
         views.Breadcrumbs = Marionette.ItemView.extend({
@@ -105,16 +105,16 @@ define(['app', 'marionette',
                 'display' : 'textarea#app-contents',
                 'appname' : 'input#app-name',
             },
-            
+
             events: {
                 'change @ui.uploader': 'handleUpload',
                 'click button.save-app': 'saveApp',
             },
-            
+
             triggers: {
                 'click button.cancel-app': 'app:cancel',
             },
-            
+
             handleUpload: function(evt){
                 var file = evt.target.files[0],
                     reader = new FileReader(),
@@ -124,7 +124,7 @@ define(['app', 'marionette',
                 };
                 reader.readAsText(file);
             },
-            
+
             saveApp: function(env){
                 env.stopPropagation();
                 env.preventDefault();
@@ -148,12 +148,26 @@ define(['app', 'marionette',
         views.AppListItem = Marionette.ItemView.extend({
             template    : appListItemTpl,
             tagName     : 'tr',
-            
+
+            initialize: function(){
+                this.urlPath = window.location.protocol
+                        + '//'
+                        + window.location.host
+                        + '/apps/';
+                console.log(this.urlPath);
+            },
+
+            templateHelpers: function(){
+                return {
+                    urlPath: this.urlPath
+                };
+            },
+
             events: {
                 'click span.delete-item': 'deleteItem',
                 'click span.edit-item'  : 'editItem'
             },
-            
+
             deleteItem: function(){
                 var that = this;
                 this.model.destroy({
@@ -163,7 +177,7 @@ define(['app', 'marionette',
                     }
                 });
             },
-            
+
             editItem: function(){
                 this.trigger('app:edit:item', this.model.get('id'));
             }
@@ -176,11 +190,11 @@ define(['app', 'marionette',
             className           : 'container',
             emptyView           : views.AppListEmpty,
             childViewContainer  : 'tbody',
-            
+
             childEvents: {
                 'app:edit:item': 'appEditItem'
             },
-            
+
             appEditItem: function(view, id){
                 this.trigger('app:edit', id);
             }

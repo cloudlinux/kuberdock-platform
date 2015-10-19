@@ -473,7 +473,7 @@ define(['pods_app/app',
                 App.WorkFlow.commandPod('stop', this.model.get('parentID'));
             },
             updateContainer: function(){
-                App.WorkFlow.updateContainer(this.model).done(this.render);
+                App.WorkFlow.updateContainer(this.model);
             },
             checkContainerForUpdate: function(){
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
@@ -876,7 +876,7 @@ define(['pods_app/app',
                 App.WorkFlow.commandPod('stop', this.model.get('parentID'));
             },
             updateContainer: function(){
-                App.WorkFlow.updateContainer(this.model).done(this.render);
+                App.WorkFlow.updateContainer(this.model);
             },
             checkContainerForUpdate: function(){
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
@@ -1048,7 +1048,7 @@ define(['pods_app/app',
                 App.WorkFlow.commandPod('stop', this.model.get('parentID'));
             },
             updateContainer: function(){
-                App.WorkFlow.updateContainer(this.model).done(this.render);
+                App.WorkFlow.updateContainer(this.model);
             },
             checkContainerForUpdate: function(){
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
@@ -1167,7 +1167,7 @@ define(['pods_app/app',
                 App.WorkFlow.commandPod('stop', this.model.get('parentID'));
             },
             updateContainer: function(){
-                App.WorkFlow.updateContainer(this.model).done(this.render);
+                App.WorkFlow.updateContainer(this.model);
             },
             checkContainerForUpdate: function(){
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);

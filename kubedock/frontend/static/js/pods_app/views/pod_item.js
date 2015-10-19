@@ -116,7 +116,7 @@ define(['pods_app/app',
                 App.WorkFlow.commandPod('stop', this.model.get('parentID'));
             },
             updateItem: function(){
-                App.WorkFlow.updateContainer(this.model).done(this.render);
+                App.WorkFlow.updateContainer(this.model);
             },
             checkForUpdate: function(){
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);

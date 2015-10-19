@@ -25,14 +25,24 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
         };
 
         WorkFlow.updateContainer = function(containerModel){
-            Utils.preloader.show();
-            return $.ajax({
-                url: '/api/podapi/' + containerModel.get('parentID') +
-                     '/' + containerModel.get('containerID') + '/update',
-                type: 'POST',
-                complete: function(){ Utils.preloader.hide(); },
-                error: function(xhr){ Utils.notifyWindow(xhr); },
-                success: function(){ containerModel.updateIsAvailable = undefined; },
+            var performUpdate = function () {
+                Utils.preloader.show();
+                return $.ajax({
+                    url: '/api/podapi/' + containerModel.get('parentID') +
+                         '/' + containerModel.get('containerID') + '/update',
+                    type: 'POST',
+                    complete: function(){ Utils.preloader.hide(); },
+                    error: function(xhr){ Utils.notifyWindow(xhr); },
+                    success: function(){ containerModel.updateIsAvailable = undefined; },
+                });
+            };
+
+            Utils.modalDialog({
+                title: 'Update container',
+                body: "During update whole pod will be restarted. Continue?",
+                small: true,
+                show: true,
+                footer: {buttonOk: performUpdate, buttonCancel: true}
             });
         };
 

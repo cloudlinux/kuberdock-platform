@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 5.3%{?dist}.cloudlinux
+Release: 5.4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Mon Oct 19 2015 Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5.4
+- AC-1251: Add style to predefined app list
+- AC-1297: Replace `hostname -f` by `uname -n` in deploy.sh
+- hide unverified https request warning
+- AC-1247, AC-1248: further additions
+
 * Sun Oct 18 2015 Igor Savenko <bliss@cloudlinux.com> 0.3-5.3
 - implemented missed subroutine in kapi/predefined_apps.py
 

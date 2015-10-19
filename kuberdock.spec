@@ -1,7 +1,7 @@
 Version: 0.3
 Name: kuberdock
 Summary: KuberDock
-Release: 5.4%{?dist}.cloudlinux
+Release: 5.5%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Tue Oct 20 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.3-5.5
+- api/usage return new data format
+- AC-1155: Correct error message on username validation
+- AC-1327: popup to confirm container update
+- AC-1248: reworked unregistered user app logic
+
 * Mon Oct 19 2015 Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 0.3-5.4
 - AC-1251: Add style to predefined app list
 - AC-1297: Replace `hostname -f` by `uname -n` in deploy.sh

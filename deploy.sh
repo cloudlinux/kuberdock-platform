@@ -434,7 +434,7 @@ do_and_log mv ca.crt /etc/pki/etcd/
 do_and_log rm -f ca.key.insecure
 
 # first instance of etcd cluster
-etcd1=$(hostname -f)
+etcd1=$(uname -n)
 etcd-ca new-cert --ip "127.0.0.1,$MASTER_IP" --passphrase "" $etcd1
 etcd-ca sign --passphrase "" $etcd1
 etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -

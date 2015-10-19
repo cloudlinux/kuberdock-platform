@@ -1,0 +1,93 @@
+/* predefined-app-main */
+#predefined-app-table{
+    .box-shadow-materials();
+    thead{
+        background-color: transparent;
+        tr{
+            border-color: transparent;
+            th{
+                .user-select(none);
+                height: 50px;
+                color: #4e5665;
+                font-size: 13px;
+                cursor: default;
+                text-align: left;
+                border-top: none;
+                border-bottom: none;
+                font-weight: normal;
+                vertical-align: middle;
+                font-family: @regular;
+                &:focus{
+                    outline: 0;
+                }
+                &:first-child{
+                    padding-left: 24px;
+                }
+            }
+        }
+    }
+    tbody{
+        tr{
+            background-color: #fff;
+            &:hover{
+                background-color: #f5fafe;
+                td{
+                    .edit-item{
+                        background: url('../img/pencil-big.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -17px;
+                        }
+                    }
+                    .delete-item{
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
+                    }
+                }
+            }
+            td{
+                height: 50px;
+                color: #1d1d1d;
+                padding-top: 0;
+                font-size: 13px;
+                padding-bottom: 0;
+                vertical-align: middle;
+                font-family: @regular;
+                &.disabled-color-text{
+                    color: #b1b9c0;
+                }
+                &:first-child{
+                    padding-left: 24px;
+                }
+                &.actions{
+                    span{
+                        + span{
+                            margin-left: 10px;
+                        }
+                    }
+                }
+                .delete-item, .edit-item, {
+                    top: 0;
+                    left: 0;
+                    bottom: 0;
+                    height: 17px;
+                    margin: auto;
+                    font-size: 0;
+                    position: relative;
+                    display: inline-block;
+                    vertical-align: middle;
+                    &:hover{
+                        cursor: pointer;
+                    }
+                }
+                .delete-item{
+                    width: 15px;
+                }
+                .edit-item{
+                    width: 20px;
+                }
+            }
+        }
+    }
+}

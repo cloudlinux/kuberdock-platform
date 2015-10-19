@@ -1,11 +1,11 @@
 <div class="col-md-12 no-padding">
-    <table id="podlist-table" class="table">
+    <table id="predefined-app-table" class="table">
         <thead>
             <tr>
                 <th>Name</th>
                 <th>Hash</th>
                 <th></th>
-                <th></th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody></tbody>

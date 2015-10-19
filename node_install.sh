@@ -255,6 +255,10 @@ EOF
 systemctl mask docker-storage-setup
 sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=overlay' /etc/sysconfig/docker-storage
 
+
+# enable registries with self-sighned certs
+sed -i "s|^# \(INSECURE_REGISTRY='--insecure-registry\)'|\1=0.0.0.0/0'|" /etc/sysconfig/docker
+
 echo 'Enabling docker...'
 systemctl reenable docker
 check_status

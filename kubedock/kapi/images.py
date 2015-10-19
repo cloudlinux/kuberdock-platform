@@ -12,6 +12,9 @@ from ..pods.models import DockerfileCache, PrivateRegistryFailedLogin
 from ..utils import APIError
 from ..settings import DEFAULT_REGISTRY
 
+# FIXME: private registries with self-signed certs
+requests.packages.urllib3.disable_warnings(
+    requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 #: Minimum time in seconds to stop authentication attempts to a private
 # registry after last failed login attempt

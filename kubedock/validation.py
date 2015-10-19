@@ -731,7 +731,15 @@ class UserValidator(V):
             self._error(field, 'has already been taken')
 
     def validate_user_create(self, data):
-        self._api_validation(data, create_user_schema)
+        try:
+            self._api_validation(data, create_user_schema)
+        except APIError:
+            if 'username' in self.errors:
+                self.errors['username'] = ('Username should contain only '
+                                           'Latin letters and Numbers and '
+                                           'must not be more than '
+                                           '25 characters in length')
+            raise APIError(self.errors)
         data = convert_extbools(data, create_user_schema)
         return data
 

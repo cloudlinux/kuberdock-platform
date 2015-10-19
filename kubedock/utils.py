@@ -45,6 +45,8 @@ class POD_STATUSES:
     running = 'running'
     stopped = 'stopped'
     pending = 'pending'
+    succeeded = 'succeeded'
+    failed = 'failed'
 
 
 

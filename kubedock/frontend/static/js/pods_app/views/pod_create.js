@@ -683,8 +683,9 @@ define(['pods_app/app',
                             + _.map(_.range(10),
                                     function(i){return _.random(1, 10)}).join('');
                     }
-                    if (vm[i].isPersistent) {
-                        var pd = vm[i].persistentDisk;
+                    var vol = _.findWhere(this.volumes, {name: vm[i].name});
+                    if (vol.hasOwnProperty('persistentDisk')) {
+                        var pd = vol.persistentDisk;
                         if (!pd.hasOwnProperty('pdSize') ||
                             !pd.hasOwnProperty('pdName') || !pd.pdName) {
                             utils.notifyWindow('Persistent options must be set!');

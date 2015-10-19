@@ -47,8 +47,6 @@ def get_pod_usage(pod):
 
 
 def get_user_usage(user):
-    return map(get_pod_usage, user.pods)
-    # TODO: use new api
     return {'pods_usage': map(get_pod_usage, user.pods),
             'ip_usage': [ip_state.to_dict() for ip_state in user.ip_states],
             'pd_usage': [pd_state.to_dict(exclude=['user_id'])

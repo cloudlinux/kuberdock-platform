@@ -308,7 +308,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
 
-                pod.secrets = db_pod_config.get('secrets')
+                pod.secrets = db_pod_config.get('secrets', [])
                 a = pod.containers
                 b = db_pod_config.get('containers')
                 pod.containers = self.merge_lists(a, b, 'name')

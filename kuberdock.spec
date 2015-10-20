@@ -1,7 +1,7 @@
-Version: 0.3
+Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 5.6%{?dist}.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,16 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Tue Oct 20 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-1
+- Add some style to page configuring predefined app
+- Add style to error page app/error.html
+- AC-1208: user delete error
+- Allow to start SUCCEEDED and FAILED pods. Implicid stop is called before.
+- Added template_id to Pod. Moved kuberdock specific fields for yaml to kuberdock section
+- AC-1248: further impovements
+- container update bugfix
+- Fix style in predefined app configure page
+
 * Tue Oct 20 2015 Igor Savenko <bliss@cloudlinux.com> 0.3-5.6
 - AC-1248: added exception handler to YAML parser
 

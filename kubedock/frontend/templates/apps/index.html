@@ -87,89 +87,216 @@
     input, select {vertical-align:middle;}
 
     /* custom styles */
-    div#select-controls {margin: 7em 0 0 20em;}
-    div#custom-fields {
-        margin: 1em 0 0 20em;
-        width: 30em;
+    .body{
+        background-color: #f8f8f8;
     }
-    div#resource-list {
-        margin: 0 0 0 20em;
-        width: 30em;
-    }
-    div.custom-field-title {
-        background-color: #E5E5E5;
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
+    header{
+        min-height: 52px;
         text-align: center;
-        padding: .2em;
+        margin-bottom: 28px;
+        padding: 10px 0 17px;
+        border-bottom: 8px solid #0070c2;
     }
-    div.custom-field-item {
-        margin: .2em 0 .2em 0;
-        border: 1px solid #C9C9C9;
-        border-radius: 4px;
+    .container{
+        width: 100%;
+        margin: 0 auto;
+        max-width: 757px;
     }
-    div.custom-field-body {padding: .4em;}
-    div#controls {
-        margin: 0 0 0 20em;
-        padding: .4em 0;
-        width: 30em;
+    .container #custom-fields{
+        margin-bottom: 23px;
+        background-color: #fff;
+        -webkit-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        -moz-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+    }
+    .container #custom-fields .custom-field-item{
+        max-width: 50%;
+    }
+    .container #custom-fields .title{
+        color: #1d1d1d;
+        font-size: 18px;
+        line-height: 18px;
+        background-color: #fff;
+        text-transform: capitalize;
+        padding: 23px 40px 22px 45px;
+        border-bottom: 1px solid #dfdfdf;
+    }
+    .container #custom-fields .body{
+        background-color: #fff;
+        padding: 23px 45px 45px 45px;
+    }
+   .container #custom-fields .custom-field-title {
+    }
+    .container #custom-fields label{
+        display: block;
+        color: #1d1d1d;
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-transform: capitalize;
+    }
+    .container #custom-fields .body select, .container #custom-fields .body input {
+        outline: 0;
+        height: 49px;
+        padding: 0 20px;
+        min-width: 285px;
+        margin-bottom: 30px;
+        border: 1px solid #e5e5e5;
+    }
+    .container #custom-fields .body input:focus{
+        -webkit-transition: color 500ms ease;
+        -moz-transition: color 500ms ease;
+        -ms-transition: color 500ms ease;
+        -o-transition: color 500ms ease;
+        border-color: #188eed;
+    }
+    .container #custom-fields .body select{
+        min-width: 325px;
+        background-color: #ffffff;
+    }
+    #total-price {
+        float: right;
+        display: block;
+        color: #121010;
+        font-size: 30px;
+        line-height: 37px;
+        margin-right: 45px;
+        margin-bottom: 23px;
+    }
+    #submit-button{
+        -webkit-border-radius: 2px;
+        -moz-border-radius: 2px;
+        border-radius: 2px;
+        -moz-background-clip: padding;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        -webkit-transition: all 300ms;
+        -moz-transition: all 300ms;
+        -ms-transition: all 300ms;
+        -o-transition: all 300ms;
+        -webkit-box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        -moz-box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        float: right;
+        border: none;
+        color: #fff;
+        height: 37px;
+        padding: 0 31px;
+        font-size: 13px;
+        min-width: 105px;
+        line-height: 37px;
         text-align: center;
+        margin-right: 45px;
+        text-transform: uppercase;
+        background-color: #2490EA;
+        font-family: "open_sansregular";
     }
-    div#total-price {
-        margin: 0 0 0 20em;
-        height: 2em;
+    #controls{
+        margin-bottom: 23px;
+    }
+    #submit-button:hover{
+        -webkit-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        -moz-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        cursor: pointer;
+    }
+    #resource-list {
+        position: relative;
+        margin-bottom: 23px;
+        background-color: #fcfcfc;
+        border: 1px solid #ebebeb;
+        padding: 20px 17px 20px 114px;
+    }
+    #resource-list:before{
+        top: 0;
+        bottom: 0;
+        left: 18px;
+        width: 80px;
+        content: '';
+        height: 66px;
+        margin: auto;
+        position: absolute;
+        background: url('../static/img/servers.png') center no-repeat;
+    }
+    #resource-list > div{
+        color: #323232;
+        font-size: 14px;
+        line-height: 23px;
+    }
+    .clearfix:before,
+    .clearfix:after {
+      content:"";
+      display:table;
+    }
+    .clearfix:after {
+      clear:both;
+    }
+    .clearfix {
+      zoom:1; /* For IE 6/7 (trigger hasLayout) */
     }
     </style>
     </head>
     <body>
-        <div id="select-controls">
-            {#
-            <div>
-                <label for="package-selector">Select package</label>
-                <select id="package-selector">
-                    {% for package in packages %}
-                    <option value="{{ package.id }}">{{ package.name }}</option>
+        <header>
+            <a href="/"><img alt="CloudLinux Kuberdock" class="logo" src="{{ url_for('static', filename='img/logo2.png') }}"></a>
+        </header>
+        <div class="container">
+            <div id="custom-fields">
+                <div class="title">Set up resources amount</div>
+                <div class="body">
+                    {% for k, v in fields.iteritems() %}
+                    <div class="custom-field-item">
+                        <label class="custom-field-title">{{ v.title }}</label>
+                        <div class="custom-field-body">
+                            {% if v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube' %}
+                            <select id="{{ v.hashsum }}" class="custom-field">
+                                {% for row in range(1, 11) %}
+                                    {% if row == v.value|int %}
+                                    <option selected="selected" value="{{ row }}">{{ row }}</option>
+                                    {% else %}
+                                    <option value="{{ row }}">{{ row }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% elif v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube_type' %}
+                            <select id="{{ v.hashsum }}" class="custom-field">
+                                {% for row in kubes_data[package_id] %}
+                                    {% if row.id == kube_type %}
+                                    <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
+                                    {% else %}
+                                    <option value="{{ row.id }}">{{ row.name }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <input id="{{ v.hashsum }}" class="custom-field" type="text" value="{{ v.value }}">
+                            {% endif %}
+                        </div>
+                    </div>
                     {% endfor %}
-                </select>
-            </div>
-            #}
-        </div>
-        <div id="total-price"></div>
-        <div id="resource-list"></div>
-        <div id="custom-fields">
-            {% for k, v in fields.iteritems() %}
-            <div class="custom-field-item">
-                <div class="custom-field-title">{{ v.title }}</div>
-                <div class="custom-field-body">
-                    {% if v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube' %}
-                    <select id="{{ v.hashsum }}" class="custom-field">
-                        {% for row in range(1, 11) %}
-                            {% if row == v.value|int %}
-                            <option selected="selected" value="{{ row }}">{{ row }}</option>
-                            {% else %}
-                            <option value="{{ row }}">{{ row }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                    {% elif v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube_type' %}
-                    <select id="{{ v.hashsum }}" class="custom-field">
-                        {% for row in kubes_data[package_id] %}
-                            {% if row.id == kube_type %}
-                            <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
-                            {% else %}
-                            <option value="{{ row.id }}">{{ row.name }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                    {% else %}
-                    <input id="{{ v.hashsum }}" class="custom-field" type="text" value="{{ v.value }}">
-                    {% endif %}
                 </div>
             </div>
-            {% endfor %}
+            <div id="resource-list"></div>
+            <input type="hidden" value="{{ template }}" id="template-data">
+            <div id="select-controls">
+                {#
+                <div>
+                    <label for="package-selector">Select package</label>
+                    <select id="package-selector">
+                        {% for package in packages %}
+                        <option value="{{ package.id }}">{{ package.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                #}
+            </div>
+            <div class="clearfix">
+                <div id="total-price"></div>
+            </div>
+            <div id="controls" class="clearfix">
+                <button id="submit-button">Order now</button>
+            </div>
         </div>
-        <div id="controls"><button id="submit-button">Order now</button></div>
-        <input type="hidden" value="{{ template }}" id="template-data">
         <script type="text/javascript">
             'use strict;'
             var fields = {{ jfields|safe }},

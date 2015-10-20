@@ -404,6 +404,8 @@ class KuberDock(KubeCtl):
         self._kube_path = None
         # pending container path
         self._data_path = None
+        # Need to set resource type from KubeCtl
+        args['resource'] = 'pod'
         self._load(args)
         super(KuberDock, self).__init__(**args)
 
@@ -516,8 +518,8 @@ class KuberDock(KubeCtl):
             # But API for start/stop takes only 'command' parameter from request
             # body
             command['command'] = 'start'
-        res = self.query.unwrap(self.query.put(PODAPI_PATH + pod['id'],
-                                              json.dumps(command)))
+        res = self.query.unwrap(
+            self.query.put(PODAPI_PATH + pod['id'], command))
         printout.show(res)
         self._set_delayed()
 
@@ -531,8 +533,8 @@ class KuberDock(KubeCtl):
         command = {}
         if pod['status'] in ['running', 'pending']:
             command['command'] = 'stop'
-        res = self.query.unwrap(self.query.put(PODAPI_PATH + pod['id'],
-                                          json.dumps(command)))
+        res = self.query.unwrap(
+            self.query.put(PODAPI_PATH + pod['id'], command))
         printout.show_list(res)
 
     def forget(self):

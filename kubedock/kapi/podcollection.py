@@ -379,29 +379,32 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
-        if pod.status == POD_STATUSES.stopped:
-            self._make_namespace(pod.namespace)
-            db_config = pod.get_config()
-            if not db_config.get('service'):
-                for c in pod.containers:
-                    if len(c.get('ports', [])) > 0:
-                        service_rv = self._run_service(pod)
-                        self._raise_if_failure(service_rv, "Could not start a service")
-                        db_config['service'] = service_rv['metadata']['name']
-                        break
-
-            self._process_persistent_volumes(pod, db_config.get('volumes', []))
-
-            self.replace_config(pod, db_config)
-
-            config = pod.prepare()
-            rv = self._post([pod.kind], json.dumps(config), rest=True,
-                            ns=pod.namespace)
-            self._raise_if_failure(rv, "Could not start '{0}' pod".format(
-                pod.name.encode('ascii', 'replace')))
-            return {'status': POD_STATUSES.pending}
-        else:
+        if pod.status == POD_STATUSES.running or \
+           pod.status == POD_STATUSES.pending:
             raise APIError("Pod is not stopped, we can't run it")
+        if pod.status == POD_STATUSES.succeeded or \
+           pod.status == POD_STATUSES.failed:
+            self._stop_pod(pod)
+        self._make_namespace(pod.namespace)
+        db_config = pod.get_config()
+        if not db_config.get('service'):
+            for c in pod.containers:
+                if len(c.get('ports', [])) > 0:
+                    service_rv = self._run_service(pod)
+                    self._raise_if_failure(service_rv, "Could not start a service")
+                    db_config['service'] = service_rv['metadata']['name']
+                    break
+
+        self._process_persistent_volumes(pod, db_config.get('volumes', []))
+
+        self.replace_config(pod, db_config)
+
+        config = pod.prepare()
+        rv = self._post([pod.kind], json.dumps(config), rest=True,
+                        ns=pod.namespace)
+        self._raise_if_failure(rv, "Could not start '{0}' pod".format(
+            pod.name.encode('ascii', 'replace')))
+        return {'status': POD_STATUSES.pending}
 
     def _stop_pod(self, pod, data=None, raise_=True):
         if pod.status != POD_STATUSES.stopped:

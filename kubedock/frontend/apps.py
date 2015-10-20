@@ -34,13 +34,15 @@ def index(app_hash):
         packages, kubes_data = get_packages()
         if not package_exists(packages, package_id):
             package_id = 0
-        template, kube_type = set_defaults(template, mutables, kubes)
+        template, kube_type, pre_desc = get_defaults(template, mutables, kubes)
+        has_simple = True if [v for v in fields.values() if v.get('hashsum') in mutables] else False
 
         return render_template('apps/index.html',
             name=name, jfields=jfields, billing_url=billing_url, packages=packages,
             template=template, jmutables=json.dumps(mutables), kubes=json.dumps(kubes),
             mutables=mutables, fields=fields, kube_type=kube_type, jpackages=json.dumps(packages),
-            jkubes_data=json.dumps(kubes_data), kubes_data=kubes_data, package_id=package_id)
+            jkubes_data=json.dumps(kubes_data), kubes_data=kubes_data, package_id=package_id,
+            pre_desc=pre_desc, has_simple=has_simple)
 
     except (yaml.scanner.ScannerError, yaml.parser.ParserError):
         return render_template('apps/error.html', message='Could not parse App config'), 500
@@ -60,11 +62,13 @@ def package_exists(packages, package_id):
 
 
 def find_root(app):
-    if app['kind'] == 'ReplicationController':
-        return app['spec']['template']['spec']
-    elif app['kind'] == 'Pod':
-        return app['spec']
-    else:
+    try:
+        if app['kind'] == 'ReplicationController':
+            return app['spec']['template']['spec']
+        if app['kind'] == 'Pod':
+            return app['spec']
+        raise AppParseError
+    except (TypeError, KeyError):
         raise AppParseError
 
 
@@ -99,10 +103,13 @@ def get_value(value,  patt=re.compile(r"""\$([^\$]+?)\$""")):
     return dflt[1], hashlib.sha1(value).hexdigest()
 
 
-def set_defaults(app, mutables, kubes, default_kube_type=0, default_kubes_num=1):
+def get_defaults(app, mutables, kubes, default_kube_type=0, default_kubes_num=1):
     yml = yaml.safe_load(app)
+    if not isinstance(yml, (dict, list)):
+        raise AppParseError
     root = find_root(yml)
     kube_type = None
+    pre_desc = yml.get('metadata', {}).get('preDescription')
 
     if 'kube_type' not in root:
         root['kube_type'] = default_kube_type
@@ -122,7 +129,7 @@ def set_defaults(app, mutables, kubes, default_kube_type=0, default_kubes_num=1)
                 kubes.append(kube_num)
             else:
                 mutables[hashsum] = {'type': 'kube'}
-    return yaml.safe_dump(yml, default_flow_style=False), kube_type
+    return yaml.safe_dump(yml, default_flow_style=False), kube_type, pre_desc
 
 
 def generate(length=8):

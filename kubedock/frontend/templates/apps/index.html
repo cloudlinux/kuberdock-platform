@@ -87,7 +87,7 @@
     input, select {vertical-align:middle;}
 
     /* custom styles */
-    .body{
+    body{
         background-color: #f8f8f8;
     }
     header{
@@ -102,7 +102,24 @@
         margin: 0 auto;
         max-width: 757px;
     }
-    .container #custom-fields{
+    #app-header, #pre-description{
+        display: block;
+        color: #1d1d1d;
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        text-transform: capitalize;
+        text-align: center;
+    }
+    #pre-description{
+        text-align: justify;
+        font-weight: normal;
+        font-size: 14px;
+        line-height: 19px;
+        text-transform: none;
+        padding: 0 20px;
+    }
+    .container #custom-fields, .container #recource-fields{
         margin-bottom: 23px;
         background-color: #fff;
         -webkit-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
@@ -112,7 +129,7 @@
     .container #custom-fields .custom-field-item{
         max-width: 50%;
     }
-    .container #custom-fields .title{
+    .container #custom-fields .title, .container #recource-fields .title{
         color: #1d1d1d;
         font-size: 18px;
         line-height: 18px;
@@ -121,13 +138,13 @@
         padding: 23px 40px 22px 45px;
         border-bottom: 1px solid #dfdfdf;
     }
-    .container #custom-fields .body{
+    .container #custom-fields .body, .container #recource-fields .body{
         background-color: #fff;
         padding: 23px 45px 45px 45px;
     }
    .container #custom-fields .custom-field-title {
     }
-    .container #custom-fields label{
+    .container #custom-fields label, .container #recource-fields label{
         display: block;
         color: #1d1d1d;
         font-size: 16px;
@@ -135,7 +152,10 @@
         margin-bottom: 20px;
         text-transform: capitalize;
     }
-    .container #custom-fields .body select, .container #custom-fields .body input {
+    .container #custom-fields .body select,
+    .container #custom-fields .body input,
+    .container #recource-fields .body input,
+    .container #recource-fields .body select{
         outline: 0;
         height: 49px;
         padding: 0 20px;
@@ -143,14 +163,16 @@
         margin-bottom: 30px;
         border: 1px solid #e5e5e5;
     }
-    .container #custom-fields .body input:focus{
+    .container #custom-fields .body input:focus,
+    .container #recource-fields .body input:focus{
         -webkit-transition: color 500ms ease;
         -moz-transition: color 500ms ease;
         -ms-transition: color 500ms ease;
         -o-transition: color 500ms ease;
         border-color: #188eed;
     }
-    .container #custom-fields .body select{
+    .container #custom-fields .body select,
+    .container #recource-fields .body select{
         min-width: 325px;
         background-color: #ffffff;
     }
@@ -241,41 +263,71 @@
             <a href="/"><img alt="CloudLinux Kuberdock" class="logo" src="{{ url_for('static', filename='img/logo2.png') }}"></a>
         </header>
         <div class="container">
+            <div id="masthead">
+                <div id="app-header"><span>{{ name }}</span></div>
+                {% if pre_desc %}
+                <div id="pre-description">{{ pre_desc }}</div>
+                {% endif %}
+            </div>
+            {% if has_simple %}
+            <div id="recource-fields">
+                <div class="title">Additional configuration</div>
+                <div class="body">
+                {% for k, v in fields.iteritems() %}
+                    {% if v.hashsum not in mutables %}
+                    <div class="custom-field-item">
+                        <label class="custom-field-title">{{ v.title }}</label>
+                        <div class="custom-field-body">
+                            <input id="{{ v.hashsum }}" class="custom-field" type="text" value="{{ v.value }}">
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="container">
+            {% if mutables %}
             <div id="custom-fields">
                 <div class="title">Set up resources amount</div>
                 <div class="body">
                     {% for k, v in fields.iteritems() %}
-                    <div class="custom-field-item">
-                        <label class="custom-field-title">{{ v.title }}</label>
-                        <div class="custom-field-body">
-                            {% if v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube' %}
-                            <select id="{{ v.hashsum }}" class="custom-field">
-                                {% for row in range(1, 11) %}
-                                    {% if row == v.value|int %}
-                                    <option selected="selected" value="{{ row }}">{{ row }}</option>
-                                    {% else %}
-                                    <option value="{{ row }}">{{ row }}</option>
-                                    {% endif %}
-                                {% endfor %}
-                            </select>
-                            {% elif v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube_type' %}
-                            <select id="{{ v.hashsum }}" class="custom-field">
-                                {% for row in kubes_data[package_id] %}
-                                    {% if row.id == kube_type %}
-                                    <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
-                                    {% else %}
-                                    <option value="{{ row.id }}">{{ row.name }}</option>
-                                    {% endif %}
-                                {% endfor %}
-                            </select>
-                            {% else %}
-                            <input id="{{ v.hashsum }}" class="custom-field" type="text" value="{{ v.value }}">
-                            {% endif %}
+                        {% if v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube' %}
+                        <div class="custom-field-item">
+                            <label class="custom-field-title">{{ v.title }}</label>
+                            <div class="custom-field-body">
+                                <select id="{{ v.hashsum }}" class="custom-field">
+                                    {% for row in range(1, 11) %}
+                                        {% if row == v.value|int %}
+                                        <option selected="selected" value="{{ row }}">{{ row }}</option>
+                                        {% else %}
+                                        <option value="{{ row }}">{{ row }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
-                    </div>
+                        {% elif v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube_type' %}
+                        <div class="custom-field-item">
+                            <label class="custom-field-title">{{ v.title }}</label>
+                            <div class="custom-field-body">
+                                <select id="{{ v.hashsum }}" class="custom-field">
+                                    {% for row in kubes_data[package_id] %}
+                                        {% if row.id == kube_type %}
+                                        <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
+                                        {% else %}
+                                        <option value="{{ row.id }}">{{ row.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
             <div id="resource-list"></div>
             <input type="hidden" value="{{ template }}" id="template-data">
             <div id="select-controls">

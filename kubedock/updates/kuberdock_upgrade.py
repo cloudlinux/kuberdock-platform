@@ -242,6 +242,7 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
         # not upgraded nodes. For now - always is.
         upgrade_func(db_upd, with_testing)
     except Exception as e:
+        db.session.rollback()
         db_upd.status = UPDATE_STATUSES.failed
         db_upd.print_log('Error in update script '
                          '{0}. {1}. Starting downgrade...'

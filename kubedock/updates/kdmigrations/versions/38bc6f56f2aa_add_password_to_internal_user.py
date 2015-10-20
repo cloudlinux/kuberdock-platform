@@ -14,6 +14,7 @@ import logging
 import uuid
 
 from alembic import op
+import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
 from kubedock.users.models import User
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def upgrade():
+    op.add_column('pods', sa.Column('template_id', sa.Integer(), nullable=True))
     bind = op.get_bind()
     session = sessionmaker()(bind=bind)
     ku = session.query(User).filter(
@@ -42,4 +44,4 @@ def upgrade():
 def downgrade():
     # There is nothing to do. We don't know if the password and token were
     # assigned by admin or by the upgrade script
-    pass
+    op.drop_column('pods', 'template_id')

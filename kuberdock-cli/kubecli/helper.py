@@ -235,15 +235,11 @@ def create_user_config(args):
     old_default_path = '/etc/kubecli.conf'
 
     if not os.path.exists(default_path):
-        print('Default config was not found: {0}'.format(default_path))
         conf = ConfigParser.ConfigParser()
         conf.optionxform = str
         if os.path.exists(path):
-            print('Saving specified config as default...')
             conf.read(path)
         elif os.path.exists(old_default_path):
-            print('Default config path was changed. Saving {0} as {1}...'
-                  ''.format(old_default_path, default_path))
             conf.read(old_default_path)
         else:
             raise SystemExit("Config '{0}' not found. Try to specify a custom "

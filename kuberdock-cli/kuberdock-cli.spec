@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 22%{?dist}.cloudlinux
+Release: 23%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,7 +54,12 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
-* Wed Oct 07 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com> 0.1-21
+* Tue Oct 20 2015 Aleksandr Tishin <atishin@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 0.1-23
+- Fix kuberdock-cli.spec
+- AC-1298: Add template name to kcli
+- AC-1271: use token instead of user/password
+
+* Wed Oct 07 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com> 0.1-22
 - KCLI container.py bugfix: on comparison of unicode and non-unicode strings defaults to false
 - AC-1169: kcli: rename kuberdock kubes to kuberdock kube-types
 - AC-1176: added CRUD actions for predefined apps templates in kcli

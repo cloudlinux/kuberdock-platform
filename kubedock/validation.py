@@ -8,6 +8,7 @@ from sqlalchemy import func
 
 from .api import APIError
 from .billing import Kube
+from .predefined_apps.models import PredefinedApp
 from .users.models import User
 from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
                        MAX_KUBES_PER_CONTAINER)
@@ -170,6 +171,12 @@ new_pod_schema = {
     },
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
     'kube_type': {'type': 'integer', 'required': True},
+    'kuberdock_template_id': {
+        'type': 'integer',
+        'min': 0,
+        'nullable': True,
+        'template_exists': True,
+    },
     'replicationController': {'type': 'boolean'},   # TODO remove
     'node': {
         'type': 'string',
@@ -555,6 +562,14 @@ class V(cerberus.Validator):
     def _validate_internal_only(self, internal_only, field, value):
         if internal_only and self.user != KUBERDOCK_INTERNAL_USER:
             self._error(field, 'not allowed')
+
+    def _validate_template_exists(self, exists, field, value):
+        if exists:
+            if value is None:
+                return
+            templ = PredefinedApp.query.get(value)
+            if not templ:
+                self._error(field, 'There is no template with such template_id')
 
     def _validate_pd_backend_required(self, pd_backend_required, field, value):
         if pd_backend_required and not (AWS or CEPH):

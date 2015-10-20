@@ -202,7 +202,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
             {
                 "command": ["/elasticsearch/run.sh"],
                 "kubes": storage_kubes,
-                "image": "kuberdock/elasticsearch:1.3",
+                "image": "kuberdock/elasticsearch:1.4",
                 "name": "elasticsearch",
                 "env": [
                     {

@@ -55,14 +55,8 @@ def get_node_logs(host, date, size, hostname):
         index += date.strftime('%Y.%m.%d')
     else:
         index += '*'
-    filters = []
     if hostname:
-        if isinstance(hostname, (list, tuple)):
-            filters.append({'terms': {'host': hostname}})
-        else:
-            filters.append({'term': {'host': hostname}})
-    if filters:
-        query = {'filtered': {'filter': {'and': filters}}}
+        query = {'filtered': {'filter': {'term': {'host': hostname}}}}
     else:
         query = None
 

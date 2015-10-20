@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 1.1%{?dist}.cloudlinux
+Release: 1.2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Tue Oct 20 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>  0.4-1.2
+- Added rollback() when upgrade failed. Moved 00038_update to 00020_update due conflict.
+
 * Tue Oct 20 2015 Igor Savenko <bliss@cloudlinux.com>  0.4-1.1
 - kapi/helpers.py delattr bugfix
 

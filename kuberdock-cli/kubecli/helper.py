@@ -37,10 +37,9 @@ class KubeQuery(object):
         self.token = token
 
     def _compose_args(self):
-        args = {
-            'auth': HTTPBasicAuth(self.user, self.password),
-            #'timeout': (self.CONNECT_TIMEOUT, self.READ_TIMEOUT)
-        }
+        args = {}
+        if not self.token or self.token == 'None':
+            args['auth'] = HTTPBasicAuth(self.user, self.password)
         if self.url.startswith('https'):
             args['verify'] = False
         return args
@@ -249,8 +248,11 @@ def create_user_config(args):
         else:
             raise SystemExit("Config '{0}' not found. Try to specify a custom "
                              "one with option '--config'".format(path))
-        conf.set('defaults', 'user', args.user)
-        conf.set('defaults', 'password', args.password)
-        conf.set('defaults', 'token', args.token)
+        if args.user:
+            conf.set('defaults', 'user', args.user)
+        if args.password:
+            conf.set('defaults', 'password', args.password)
+        if args.token:
+            conf.set('defaults', 'token', args.token)
         with open(default_path, 'wb') as config:
             conf.write(config)

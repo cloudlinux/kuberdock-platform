@@ -372,10 +372,13 @@ class KubeCtl(object):
         binary 'suidwrap').
 
         """
-        data = self.query.get(AUTH_TOKEN_PATH)
+        token = getattr(self, 'token', None)
+        if not token or token == 'None':
+            data = self.query.get(AUTH_TOKEN_PATH)
+            token = data['token']
         try:
             fmt = """echo /usr/libexec/suidwrap '"{0}"' {1} |at now + 2 minute > /dev/null 2>&1"""
-            subprocess.check_call([fmt.format(data['token'], self.name)], shell=True)
+            subprocess.check_call([fmt.format(token, self.name)], shell=True)
         except (KeyError, TypeError, subprocess.CalledProcessError):
             return
 

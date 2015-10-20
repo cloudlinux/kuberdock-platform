@@ -42,7 +42,7 @@ def index(app_hash):
             mutables=mutables, fields=fields, kube_type=kube_type, jpackages=json.dumps(packages),
             jkubes_data=json.dumps(kubes_data), kubes_data=kubes_data, package_id=package_id)
 
-    except yaml.scanner.ScannerError:
+    except (yaml.scanner.ScannerError, yaml.parser.ParserError):
         return render_template('apps/error.html', message='Could not parse App config'), 500
 
     except AppParseError:

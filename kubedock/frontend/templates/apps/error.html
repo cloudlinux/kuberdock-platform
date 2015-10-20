@@ -13,15 +13,151 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.jqplot.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-select.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdowns-enhancement.min.css') }}">
-            
+
         <link rel="stylesheet/less" type="text/css" href="{{ url_for('static', filename='css/main.less') }}">
-            
+
         <script src="{{ url_for('static', filename='js/lib/less.min.js') }}" type="text/javascript"></script>
 #}
+ <style type="text/css">
+    html, body, div, span, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    abbr, address, cite, code,
+    del, dfn, em, img, ins, kbd, q, samp,
+    small, strong, sub, sup, var,
+    b, i,
+    dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend,
+    table, caption, tbody, tfoot, thead, tr, th, td,
+    article, aside, canvas, details, figcaption, figure,
+    footer, header, hgroup, menu, nav, section, summary,
+    time, mark, audio, video {
+        margin:0;
+        padding:0;
+        border:0;
+        outline:0;
+        font-size:100%;
+        vertical-align:baseline;
+        background:transparent;
+    }
+    body {line-height:1;}
+    article,aside,details,figcaption,figure,
+    footer,header,hgroup,menu,nav,section {display:block;}
+    nav ul {list-style:none;}
+    blockquote, q {quotes:none;}
+    blockquote:before, blockquote:after,
+    q:before, q:after {
+        content:'';
+        content:none;
+    }
+    a {
+        margin:0;
+        padding:0;
+        font-size:100%;
+        vertical-align:baseline;
+        background:transparent;
+    }
+    ins {
+        background-color:#ff9;
+        color:#000;
+        text-decoration:none;
+    }
+    mark {
+        background-color:#ff9;
+        color:#000;
+        font-style:italic;
+        font-weight:bold;
+    }
+    del {text-decoration: line-through;}
+    abbr[title], dfn[title] {
+        border-bottom:1px dotted;
+        cursor:help;
+    }
+    table {
+        border-collapse:collapse;
+        border-spacing:0;
+    }
+    hr {
+        display:block;
+        height:1px;
+        border:0;
+        border-top:1px solid #cccccc;
+        margin:1em 0;
+        padding:0;
+    }
+    input, select {vertical-align:middle;}
+
+    /* custom styles */
+    body{
+        font-size: 14px;
+        background-color: #f8f8f8;
+        font-family: 'open_sansregular';
+    }
+    header{
+        min-height: 52px;
+        text-align: center;
+        margin-bottom: 28px;
+        padding: 10px 0 17px;
+        border-bottom: 8px solid #0070c2;
+    }
+    .container{
+        width: 100%;
+        margin: 0 auto;
+        max-width: 757px;
+    }
+    .item{
+        margin-bottom: 23px;
+        background-color: #fff;
+        -webkit-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        -moz-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+    }
+    .item .title{
+        font-size: 15px;
+        line-height: 18px;
+        background-color: #fff;
+        text-transform: capitalize;
+        padding: 23px 40px 22px 45px;
+        border-bottom: 1px solid #dfdfdf;
+    }
+    .item .body{
+        text-align: center;
+        background-color: #fff;
+        padding: 23px 45px 23px 45px;
+        font-family: "open_sanslight";
+    }
+    @font-face {
+        font-family: 'open_sanslight';
+        src: url('../static/fonts/opensans-light-webfont.eot');
+        src: url('../static/fonts/opensans-light-webfont.eot?#iefix') format('embedded-opentype'),
+             url('../static/fonts/opensans-light-webfont.woff2') format('woff2'),
+             url('../static/fonts/opensans-light-webfont.woff') format('woff'),
+             url('../static/fonts/opensans-light-webfont.ttf') format('truetype'),
+             url('../static/fonts/opensans-light-webfont.svg#open_sanslight') format('svg');
+        font-weight: normal;
+        font-style: normal;
+    }
+    @font-face {
+        font-family: 'open_sansregular';
+        src: url('../static/fonts/opensans-regular-webfont.eot');
+        src: url('../static/fonts/opensans-regular-webfont.eot?#iefix') format('embedded-opentype'),
+             url('../static/fonts/opensans-regular-webfont.woff2') format('woff2'),
+             url('../static/fonts/opensans-regular-webfont.woff') format('woff'),
+             url('../static/fonts/opensans-regular-webfont.ttf') format('truetype'),
+             url('../static/fonts/opensans-regular-webfont.svg#open_sansregular') format('svg');
+        font-weight: normal;
+        font-style: normal;
+    }
+    </style>
     </head>
     <body>
-        <div>
-            {{ message }}
+        <header>
+            <a href="/"><img alt="CloudLinux Kuberdock" class="logo" src="{{ url_for('static', filename='img/logo2.png') }}"></a>
+        </header>
+        <div class="container">
+            <div class="item">
+                <div class="title">Application error</div>
+                <div class="body">{{ message }}</div>
+            </div>
         </div>
     </body>
 </html>

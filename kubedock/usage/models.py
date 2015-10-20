@@ -4,7 +4,6 @@ from sqlalchemy.dialects import postgresql
 from ..core import db
 from ..models_mixin import BaseModelMixin
 from ..kapi import pd_utils
-from ..users.models import User
 
 
 def to_timestamp(dt):
@@ -41,7 +40,7 @@ class IpState(BaseModelMixin, db.Model):
     start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
     pod = db.relationship('Pod')
-    user = db.relationship('User', secondary='pods', backref='ip_states')
+    user = db.relationship('User', secondary='pods', backref='ip_states', viewonly=True)
 
     def __repr__(self):
         return ("<IpState(pod_id='{0}', ip_address='{1}', start='{2}', end='{3}')>"
@@ -68,7 +67,7 @@ class IpState(BaseModelMixin, db.Model):
 
 class PersistentDiskState(BaseModelMixin, db.Model):
     __tablename__ = 'pd_states'
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     pd_name = db.Column(db.String, nullable=False)
     size = db.Column(db.Integer, nullable=False)
     start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
@@ -92,7 +91,7 @@ class PersistentDiskState(BaseModelMixin, db.Model):
             pd_name, user = pd_utils.get_drive_and_user(sys_drive_name)
             if not user:
                 return
-            query = query.filter_by(pd_name=pd_name, user_id=User.id)
+            query = query.filter_by(pd_name=pd_name, user_id=user.id)
         else:
             query = query.filter_by(pd_name=pd_name, user_id=user_id)
         query.update({'end_time': datetime.utcnow()})

@@ -85,20 +85,23 @@ def dispatch_kind(docs):
 def process_pod(pod, rc, service):
     # TODO for now Services are useless and ignored
     if rc:
-        pod_name = rc.get('metadata', {}).get('name', '')
+        doc = rc
         rc_spec = rc.get('spec', {})
         spec_body = rc_spec.get('template', {}).get('spec', {})
-        kube_type = rc_spec.get('kube_type', Kube.get_default_kube_type())
         replicas = rc_spec.get('replicas', 1)
     else:
-        pod_name = pod.get('metadata', {}).get('name', '')
+        doc = pod
         spec_body = pod.get('spec', {})
-        kube_type = spec_body.get('kube_type', Kube.get_default_kube_type())
         replicas = spec_body.get('replicas', 1)
 
+    kdSection = doc.get('kuberdock', {})
+
     new_pod = {
-        'name': pod_name,
-        'restartPolicy': spec_body.get('restartPolicy', "Always")
+        'name': doc.get('metadata', {}).get('name', ''),
+        'restartPolicy': spec_body.get('restartPolicy', "Always"),
+        'replicas': replicas,
+        'kube_type': kdSection.get('kube_type', Kube.get_default_kube_type()),
+        'kuberdock_template_id': kdSection.get('kuberdock_template_id'),
     }
 
     if 'containers' in spec_body:
@@ -112,7 +115,4 @@ def process_pod(pod, rc, service):
 
     if 'volumes' in spec_body:
         new_pod['volumes'] = spec_body['volumes'] or []
-
-    new_pod['kube_type'] = kube_type
-    new_pod['replicas'] = replicas
     return new_pod

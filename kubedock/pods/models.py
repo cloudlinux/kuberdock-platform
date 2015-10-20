@@ -21,6 +21,8 @@ class Pod(BaseModelMixin, db.Model):
     name = db.Column(db.String(length=255))
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
+    # Not a foreignkey because templates may be deleted at any time
+    template_id = db.Column(db.Integer, nullable=True)
     config = db.Column(db.Text)
     status = db.Column(db.String(length=32), default='unknown')
 

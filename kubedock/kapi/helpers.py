@@ -158,7 +158,8 @@ class ModelQuery(object):
     def _save_pod(self, obj):
         kube_type = getattr(obj, 'kube_type', Kube.get_default_kube_type())
         template_id = getattr(obj, 'kuberdock_template_id', None)
-        delattr(obj, 'kuberdock_template_id')   # to prevent save to config
+        if hasattr(obj, 'kuberdock_template_id'):   # to prevent save to config
+            delattr(obj, 'kuberdock_template_id')
         pod = Pod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
                   status=POD_STATUSES.stopped, template_id=template_id)
         kube = db.session.query(Kube).get(kube_type)

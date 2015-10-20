@@ -354,6 +354,9 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             initialize: function (options) {
                 this.tab = options.tab;
                 this.node_id = options.node_id;
+                this.listenTo(App.Data.nodes, 'reset', function () {
+                    this.render();
+                })
             },
 
             changeTab: function (evt) {

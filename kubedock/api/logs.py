@@ -6,8 +6,11 @@ from flask.ext.login import current_user
 from ..api import PermissionDenied
 from ..rbac import check_permission
 from ..usage.models import ContainerState
-from ..utils import login_required_or_basic_or_token, parse_datetime_str
-from ..kapi import es_logs
+from ..utils import (login_required_or_basic_or_token, parse_datetime_str,
+    KubeUtils)
+from ..kapi import es_logs, pod_states
+from ..pods.models import Pod
+from . import APIError
 
 
 logs = Blueprint('logs', __name__, url_prefix='/logs')
@@ -68,6 +71,40 @@ def api_get_node_logs(host, date):
     date = parse_datetime_str(date)
     hostname = request.args.get('hostname')
     return jsonify(es_logs.get_node_logs(host, date, size, hostname))
+
+
+@logs.route('/pod-states/<pod_id>/<depth>', methods=['GET'])
+@login_required_or_basic_or_token
+def api_get_pod_states(pod_id, depth):
+    """Extracts pod history.
+    :param pod_id: kuberdock pod identifier
+    :param depth: number of retrieved history items. 0 - to retrieve all the
+        history
+    :return: list of dicts. Each item contains fields
+        'pod_id' - kuberdock pod identifier
+        'hostname' - name of a node where the pod was running
+        'start_time' - start time of the pod
+        'end_time' - stop time of the pod (if it was stopped)
+        'last_event' - last kubernetes event for the pod ('ADDED',
+        'MODIFIED', 'DELETED')
+        'last_event_time' - time of last kubernetes event for the pod
+    """
+    pod = Pod.query.filter(Pod.id == pod_id).first()
+    user = KubeUtils._get_current_user()
+    if not(user.is_administrator() or user.id == pod.owner_id):
+        raise APIError(u'Forbidden for current user', 403)
+    if not Pod:
+        raise APIError(u'Unknown pod {}'.format(pod_id), 404)
+    try:
+        depth = int(depth)
+        if depth < 1:
+            depth = 0
+    except (TypeError, ValueError):
+        depth = 1
+    return jsonify({
+        'status': 'OK',
+        'data': pod_states.select_pod_states_history(pod_id, depth)
+    })
 
 
 def gettime_parameter(args, param):

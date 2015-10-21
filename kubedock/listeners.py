@@ -13,6 +13,7 @@ from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .tasks import fix_pods_timeline_heavy
 from .utils import (modify_node_ips, get_api_url, set_limit,
                     unregistered_pod_warning, send_event, pod_without_id_warning)
+from .kapi.pod_states import save_pod_state
 
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -222,11 +223,13 @@ def process_pods_event(data, app):
             with app.app_context():
                 update_containers_state(event_type, pod_id, containers)
 
+    host = pod['spec'].get('nodeName')
+    if host is None:
+        return
+    with app.app_context():
+        save_pod_state(pod_id, event_type, host)
     if event_type == 'MODIFIED':
         # fs limits
-        host = pod['spec'].get('nodeName')
-        if host is None:
-            return
         containers = {}
         for container in pod['status'].get('containerStatuses', []):
             if 'containerID' in container:

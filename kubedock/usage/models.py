@@ -32,6 +32,100 @@ class ContainerState(db.Model):
                     self.end_time))
 
 
+class PodState(db.Model):
+    __tablename__ = 'pod_states'
+    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
+                       primary_key=True, nullable=False)
+    start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    last_event_time = db.Column(db.DateTime, nullable=True)
+    last_event = db.Column(db.String(255), nullable=True)
+    hostname = db.Column(db.String(255), nullable=True)
+
+    @classmethod
+    def save_state(cls, pod_id, event, hostname):
+        """Creates new or updates existing one pod state entity.
+        If existing pod entities are closed and/or belongs to another host name,
+        then will be created new state. If there is one not closed state for
+        the same pod_id and host, then it will be updated.
+        Returns created or updated PodState entity.
+
+        """
+        entity = cls.get_alive_state(pod_id, hostname)
+        current_time = datetime.utcnow()
+        if entity is None:
+            entity = cls(
+                pod_id=pod_id,
+                start_time=current_time,
+                end_time=None,
+                hostname=hostname
+            )
+            db.session.add(entity)
+        entity.last_event = event
+        entity.last_event_time = current_time
+        if event == 'DELETED':
+            entity.end_time = current_time
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise
+        if entity.end_time is None:
+            cls.close_other_pod_states(pod_id, entity.start_time, hostname)
+        return entity
+
+    @classmethod
+    def get_alive_state(cls, pod_id, hostname):
+        """Returns existing PodState entity which is not closed and belongs
+        to the given host name. If there is no such item, then will return None.
+
+        """
+        entity = cls.query.filter(
+            cls.pod_id == pod_id,
+            cls.end_time == None,
+            cls.hostname == hostname
+        ).order_by(cls.start_time.desc()).first()
+        return entity
+
+    @classmethod
+    def close_other_pod_states(cls, pod_id, start_time, hostname):
+        """Closes all not closed PodState with the given pod_id, which belongs
+        to another host names. Or those which belongs to the same host name
+        and have start_time less then given (for some reasons it may occurs,
+        though it's incorrect situation).
+
+        """
+        current_time = datetime.utcnow()
+        cls.query.filter(
+            cls.pod_id == pod_id,
+            cls.end_time == None,
+            db.or_(
+                cls.hostname != hostname,
+                db.and_(
+                    cls.hostname == hostname,
+                    cls.start_time < start_time
+                )
+            )
+        ).update({
+            cls.end_time: current_time
+        })
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise
+
+    def to_dict(self):
+        return {
+            'pod_id': self.pod_id,
+            'hostname': self.hostname,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'last_event': self.last_event,
+            'last_event_time': self.last_event_time
+        }
+
+
 class IpState(BaseModelMixin, db.Model):
     __tablename__ = 'ip_states'
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),

@@ -6,7 +6,16 @@ from ..utils import APIError
 
 from flask.ext.login import current_user
 from flask import jsonify
+from flask.json import JSONEncoder
 from rbac.context import PermissionDenied
+
+
+class APIJSONEncoder(JSONEncoder):
+    """Fix datetime conversion in flask.jsonify"""
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return obj.isoformat()
+        return JSONEncoder.default(self, obj)
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -43,7 +52,7 @@ def create_app(settings_override=None, fake_sessions=False):
                pstorage, predefined_apps, logs):
         app.register_blueprint(bp)
 
-    #app.json_encoder = JSONEncoder
+    app.json_encoder = APIJSONEncoder
     app.errorhandler(404)(on_404)
     app.errorhandler(PermissionDenied)(on_permission_denied)
     app.errorhandler(APIError)(on_app_error)

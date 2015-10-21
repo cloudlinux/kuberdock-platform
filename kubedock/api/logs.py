@@ -16,9 +16,9 @@ from . import APIError
 logs = Blueprint('logs', __name__, url_prefix='/logs')
 
 
-@logs.route('/container/<host>/<containerid>', methods=['GET'])
+@logs.route('/container/<containerid>', methods=['GET'])
 @login_required_or_basic_or_token
-def api_get_container_logs(host, containerid):
+def api_get_container_logs(containerid):
     """Return logs from specified host and container.
     Optional parameters (submitted via ?key=value&...):
         starttime - minimum log time to select
@@ -49,17 +49,17 @@ def api_get_container_logs(host, containerid):
     except (TypeError, ValueError):
         size = 100
     return jsonify(es_logs.get_container_logs(
-        host, containerid, size, starttime, endtime
+        containerid, size, starttime, endtime
     ))
 
 
-@logs.route('/node/<host>/<date>', methods=['GET'])
+@logs.route('/node/<hostname>', methods=['GET'])
 @login_required_or_basic_or_token
 @check_permission('get', 'nodes')
-def api_get_node_logs(host, date):
+def api_get_node_logs(hostname):
     """Extracts node's logs by query to node's elasticsearch.
     Optional parameters (submitted via ?key=value&...):
-        hostname - name of the host to get logs
+        date - date to get logs
         size - limit selection to this number (default = 100)
     Records will be ordered by timestamp in descending order.
     TODO: add ordering parameter support.
@@ -68,9 +68,10 @@ def api_get_node_logs(host, date):
         size = int(request.args.get('size', None))
     except (TypeError, ValueError):
         size = 100
-    date = parse_datetime_str(date)
-    hostname = request.args.get('hostname')
-    return jsonify(es_logs.get_node_logs(host, date, size, hostname))
+    date = request.args.get('date', None)
+    if date:
+        date = parse_datetime_str(date)
+    return jsonify(es_logs.get_node_logs(hostname, date, size))
 
 
 @logs.route('/pod-states/<pod_id>/<depth>', methods=['GET'])

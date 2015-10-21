@@ -3,13 +3,13 @@ import elasticsearch as elastic
 
 from ..settings import ELASTICSEARCH_REST_PORT
 from ..api import APIError
+from ..nodes.models import Node
 
 
-def execute_es_query(host, index, query, size, sort):
+def execute_es_query(index, query, size, sort):
     """Composes and executes elasticsearch query.
     Answer will be converted to standard API answer structure.
     Exceptions will be correctly handled.
-    :param host: address of ES server
     :param index: elasticsearch index name
     :param size: restrict output to this number of records
     :param query: dict with query parameters (optional)
@@ -17,7 +17,7 @@ def execute_es_query(host, index, query, size, sort):
 
     """
     es = elastic.Elasticsearch(
-        [{'host': host, 'port': ELASTICSEARCH_REST_PORT}]
+        [{'host': n.ip, 'port': ELASTICSEARCH_REST_PORT} for n in Node.query]
     )
     body = {'size': size}
     if sort:

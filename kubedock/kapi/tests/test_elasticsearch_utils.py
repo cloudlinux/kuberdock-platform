@@ -6,16 +6,21 @@ import mock
 from .. import elasticsearch_utils
 from ...api import APIError
 
+
 class TestElasticsearchUtils(unittest.TestCase):
     """Tests for elasticsearch_utils functions."""
+    nodes = ['192.168.168.2', '192.168.168.3']
 
-    @mock.patch.object(elasticsearch_utils.elastic.Elasticsearch,
-                       'search')
-    def test_execute_es_query(self, search_mock):
+    @mock.patch('kubedock.kapi.elasticsearch_utils.Node')
+    @mock.patch.object(elasticsearch_utils.elastic.Elasticsearch, 'search')
+    def test_execute_es_query(self, search_mock, node_mock):
         """Test elasticsearch_utils.execute_es_query function."""
+        node_query_mock = mock.PropertyMock(
+            return_value=[type('Node', (), {'ip': n})() for n in self.nodes]
+        )
+        type(node_mock).query = node_query_mock
         size = 123
         index = '1234qwerty'
-        host = 'adsfg'
         query = None
         sort = None
         search_result = {
@@ -25,8 +30,7 @@ class TestElasticsearchUtils(unittest.TestCase):
             }
         }
         search_mock.return_value = search_result
-        res = elasticsearch_utils.execute_es_query(
-            host, index, query, size, sort)
+        res = elasticsearch_utils.execute_es_query(index, query, size, sort)
         self.assertEqual(
             res,
             {
@@ -44,7 +48,7 @@ class TestElasticsearchUtils(unittest.TestCase):
 
         query = {'a': 1}
         sort = {'b': 2}
-        elasticsearch_utils.execute_es_query(host, index, query, size, sort)
+        elasticsearch_utils.execute_es_query(index, query, size, sort)
         search_mock.assert_called_with(
             index=index,
             body={
@@ -55,8 +59,8 @@ class TestElasticsearchUtils(unittest.TestCase):
         )
         search_mock.side_effect = RequestException('!!!')
         with self.assertRaises(APIError):
-            elasticsearch_utils.execute_es_query(
-                host, index, query, size, sort)
+            elasticsearch_utils.execute_es_query(index, query, size, sort)
+        self.assertEqual(node_query_mock.call_count, 3)
 
 
 if __name__ == '__main__':

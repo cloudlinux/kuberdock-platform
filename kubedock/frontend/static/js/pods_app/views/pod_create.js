@@ -1121,13 +1121,9 @@ define(['pods_app/app',
                         this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
                         return;
                     }
-                    var parent_id = this.model.get('parentID'),
-                        parent_model = App.WorkFlow.getCollection().fullCollection.get(parent_id),
-                        node = parent_model.get('host'),
-                        container_id = this.model.get('containerID'),
+                    var container_id = this.model.get('containerID'),
                         size = 100,
-                        url = '/api/logs/container/' + node +
-                              '/' + container_id +
+                        url = '/api/logs/container/' + container_id +
                               '?size=' + size;
                     $.ajax({
                         url: url,

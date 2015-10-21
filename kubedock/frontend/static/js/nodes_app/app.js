@@ -476,17 +476,9 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
             initialize: function() {
                 this.model.set('logs', []);
                 function get_logs() {
-                    var ip = this.model.get('ip');
-                    var today = new Date();
-                    var year = today.getUTCFullYear();
-                    var month = today.getUTCMonth() + 1;
-                    var day = today.getUTCDate();
-                    var dt = year + '-' + ('0' + month).slice(-2) +'-' +
-                             ('0' + day).slice(-2);
-                    var hostname = this.model.get('hostname');
-                    var size = 100;
-                    var url = '/api/logs/node/' + ip + '/' + dt +
-                        '?hostname=' + hostname + '&size=' + size;
+                    var hostname = this.model.get('hostname'),
+                        size = 100,
+                        url = '/api/logs/node/' + hostname + '?size=' + size;
                     $.ajax({
                         url: url,
                         dataType : 'json',

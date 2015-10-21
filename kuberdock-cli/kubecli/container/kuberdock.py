@@ -14,7 +14,7 @@ def parser(subs):
     c_create.add_argument('--index', default=0, type=int, help="Index of ports or volumes entry (by default 0)")
     c_create.add_argument('--container-port', help="Add or change a container port of ports entry.")
     c_create.add_argument('--mount-path', help="Point to existent mount path entry or create a new one")
-    c_create.add_argument('--kubes', help="Set image kubes", default=1)
+    c_create.add_argument('--kubes', type=int, choices=range(1, 11), help="Set image kubes. Integer between 1 and 10", default=1)
     c_create.add_argument('--kube-type', help="Set pod kube type")
     c_create.add_argument('--restart-policy', default="Always", help="Set container restart policy",
                        dest="restartPolicy", choices=['Always', 'Never', 'OnFailure'])

@@ -1,5 +1,7 @@
 <div class="container breadcrumbs" id="breadcrumbs">
     <ul class="breadcrumb">
+
+    <%- breadcrumbs %>
     <% _.each(breadcrumbs, function(b){  %>
         <% if (b.hasOwnProperty('href')){ %>
         <li>

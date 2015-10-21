@@ -3,7 +3,7 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th></th>
+<!--                 <th>Link</th> -->
                 <th>Actions</th>
             </tr>
         </thead>

@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 23%{?dist}.cloudlinux
+Release: 24%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,9 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Wed Oct 21 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-24
+- KCLI. Remove info messages (breaks cPanel plugin)
+
 * Tue Oct 20 2015 Aleksandr Tishin <atishin@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 0.1-23
 - Fix kuberdock-cli.spec
 - AC-1298: Add template name to kcli

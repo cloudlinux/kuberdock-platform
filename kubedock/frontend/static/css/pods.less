@@ -78,18 +78,6 @@
                             background-position: 0 -18px;
                         }
                     }
-                    .check-for-update{
-                        background: url('../img/check-update-ico.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -17px;
-                        }
-                    }
-                    .container-update{
-                        background: url('../img/container-update-ico.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -21px;
-                        }
-                    }
                 }
             }
             &.checked{
@@ -308,10 +296,18 @@
                 .check-for-update{
                     width: 14px;
                     height: 16px;
+                    background: url('../img/check-update-ico.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -17px;
+                    }
                 }
                 .container-update{
                     width: 24px;
                     height: 21px;
+                    background: url('../img/container-update-ico.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -21px;
+                    }
                 }
                 .start-btn{
                     width: 12px;
@@ -378,12 +374,26 @@
     position: relative;
     thead{
         tr{
-            &.main-table-head{
+            th{
+                &:first-child{
+                    padding-left: 24px;
+                }
+            }
+/*            &.main-table-head{
                 th{ border-bottom: 0; }
+            }*/
+        }
+    }
+    tbody{
+        tr{
+            td{
+                &:first-child{
+                    padding-left: 24px;
+                }
             }
         }
     }
-    .containersControl{
+/*    .containersControl{
         top: 0px;
         display: none;
         padding-left: 0;
@@ -392,7 +402,7 @@
             padding-left: 0;
             border-bottom: none;
         }
-    }
+    }*/
 }
 #ports-table, #volumes-table, .env-table, .variables-table {
     thead{

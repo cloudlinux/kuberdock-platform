@@ -39,7 +39,7 @@ define(['pods_app/app',
             },
 
             ui: {
-                podsList     : '.podsList',
+                podsList : '.podsList'
             },
 
             events: {
@@ -74,14 +74,16 @@ define(['pods_app/app',
         Item.InfoPanelItem = Backbone.Marionette.ItemView.extend({
             template    : pageContainerItemTpl,
             tagName     : 'tr',
-            className   : function(){
+            className   : 'container-item',
+/*            className   : function(){
                 return this.model.is_checked ? 'container-item checked' : 'container-item';
-            },
+            },*/
 
             templateHelpers: function(){
-                var modelIndex = this.model.collection.indexOf(this.model);
-                var kubes = this.model.get('kubes');
-                var startedAt = this.model.get('startedAt');
+                var kubes = this.model.get('kubes'),
+                    startedAt = this.model.get('startedAt'),
+                    modelIndex = this.model.collection.indexOf(this.model);
+
                 return {
                     kubes: kubes ? kubes : 0,
                     startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' : localizeDatetime(startedAt, userSettings.timezone),
@@ -96,25 +98,25 @@ define(['pods_app/app',
                 'updateContainer'  : '.container-update',
                 'checkForUpdate'   : '.check-for-update',
                 'containerPageBtn' : '.container-page-btn',
-                'checkbox'         : 'input[type="checkbox"]'
+/*                'checkbox'         : 'input[type="checkbox"]'*/
             },
 
             events: {
-                'click @ui.start'              : 'startItem',
+/*                'click @ui.start'              : 'startItem',
                 'click @ui.stop'               : 'stopItem',
-                'click @ui.delete'             : 'deleteItem',
+                'click @ui.delete'             : 'deleteItem',*/
                 'click @ui.updateContainer'    : 'updateItem',
                 'click @ui.checkForUpdate'     : 'checkForUpdate',
                 'click @ui.containerPageBtn'   : 'containerPage',
-                'click @ui.checkbox'           : 'checkItem'
+/*                'click @ui.checkbox'           : 'checkItem'*/
             },
 
-            startItem: function(){
+/*            startItem: function(){
                 App.WorkFlow.commandPod('start', this.model.get('parentID'));
             },
             stopItem: function(){
                 App.WorkFlow.commandPod('stop', this.model.get('parentID'));
-            },
+            },*/
             updateItem: function(){
                 App.WorkFlow.updateContainer(this.model);
             },
@@ -122,7 +124,7 @@ define(['pods_app/app',
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
-            deleteItem: function(evt){
+/*            deleteItem: function(evt){
                 var that = this,
                     name = that.model.get('name');
                 utils.modalDialogDelete({
@@ -137,9 +139,9 @@ define(['pods_app/app',
                         buttonCancel: true
                     }
                 });
-            },
+            },*/
 
-            checkItem: function(){
+/*            checkItem: function(){
                 if (this.model.is_checked){
                     this.$el.removeClass('checked');
                     this.model.is_checked = false;
@@ -148,7 +150,7 @@ define(['pods_app/app',
                     this.$el.addClass('checked');
                 }
                 this.render();
-            },
+            },*/
 
             containerPage: function(evt){
                 evt.stopPropagation();
@@ -163,19 +165,19 @@ define(['pods_app/app',
             childViewContainer: "tbody",
 
             ui: {
-                count             : '.count',
+/*                count             : '.count',
                 defaultTableHead  : '.main-table-head',
                 containersControl : '.containersControl',
-                checkAllItems     : 'table thead .custom',
+                checkAllItems     : 'table thead .custom',*/
             },
 
             events: {
-                'click .stop-checked'     : 'stopItems',
+/*                'click .stop-checked'     : 'stopItems',
                 'click .start-checked'    : 'startItems',
-                'click @ui.checkAllItems' : 'checkAllItems',
+                'click @ui.checkAllItems' : 'checkAllItems',*/
             },
 
-            childEvents: {
+/*            childEvents: {
                 render: function() {
                     var col = this.collection,
                         count = 0;
@@ -203,9 +205,9 @@ define(['pods_app/app',
                     model.is_checked = true
                 });
                 this.render();
-            },
+            },*/
 
-            command: function(cmd){
+/*            command: function(cmd){
                 var preloader = $('#page-preloader');
                     preloader.show();
                 var model;
@@ -220,7 +222,6 @@ define(['pods_app/app',
                     }
                 });
                 if(model)
-               /* model.set({'command': cmd, 'containers': containers});*/
                 model.save({'command': cmd, 'containers_action': containers}, {
                     success: function(){
                         preloader.hide();
@@ -230,15 +231,15 @@ define(['pods_app/app',
                         utils.notifyWindow(response);
                     }
                 });
-            },
+            },*/
 
-            startItems: function(evt){
+/*            startItems: function(evt){
                 this.command('start');
             },
 
             stopItems: function(evt){
                 this.command('stop');
-            },
+            },*/
         });
 
         Item.ControlsPanel = Backbone.Marionette.ItemView.extend({

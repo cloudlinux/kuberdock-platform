@@ -484,11 +484,9 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     var dt = year + '-' + ('0' + month).slice(-2) +'-' +
                              ('0' + day).slice(-2);
                     var hostname = this.model.get('hostname');
-                    var host = hostname.split('.')[0];
                     var size = 100;
                     var url = '/api/logs/node/' + ip + '/' + dt +
-                        '?hostname=' + hostname + '&hostname=' + host +
-                        '&size=' + size;
+                        '?hostname=' + hostname + '&size=' + size;
                     $.ajax({
                         url: url,
                         dataType : 'json',
@@ -511,7 +509,7 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                             },
                             200: function(xhr){
                                 if (xhr.data.hits.length == 0){
-                                    this.ui.textarea.append('<p>Nothing to show because containers log is empty.</p');
+                                    this.ui.textarea.append('<p>Nothing to show because node log is empty.</p');
                                 }
                             }
                         }

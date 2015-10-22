@@ -195,7 +195,8 @@ def add_new_node(host, kube_type, db_node,
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
-                     'FLANNEL_IFACE={3} TZ={4} bash /node_install.sh{5}'
+                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
+                     'bash /node_install.sh{6}'
         # we pass ports and hosts to let the node know which hosts are allowed
         data_for_firewall = reduce(
             (lambda x, y: x + ' {0}'.format(','.join(y))),
@@ -204,7 +205,8 @@ def add_new_node(host, kube_type, db_node,
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
         i, o, e = ssh.exec_command(
             deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
-                              node_interface, timezone, data_for_firewall),
+                              node_interface, timezone, host,
+                              data_for_firewall),
             get_pty=True)
         s_time = time.time()
         while not o.channel.exit_status_ready():

@@ -1,6 +1,8 @@
 import os
 import pytz
 import logging
+import string
+from random import choice
 from datetime import datetime
 import uuid
 
@@ -19,7 +21,7 @@ from kubedock.updates.models import Updates
 from kubedock.updates.kuberdock_upgrade import get_available_updates
 from kubedock.updates.helpers import get_maintenance
 
-from flask.ext.script import Manager, Shell, Command, Option
+from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.migrate import Migrate, MigrateCommand, upgrade, stamp
 from flask.ext.migrate import migrate as migrate_func
 
@@ -143,6 +145,33 @@ class NodeManager(Command):
         else:
             print res.get_data()
 
+
+class ResetPass(Command):
+
+    chars = string.digits + string.letters
+    option_list = (Option('--generate', dest='generate',
+                          default=False, action='store_true'),)
+
+    def run(self, generate):
+        print "Change password for admin."
+        u = db.session.query(User).filter(User.username == 'admin').first()
+        new_pass = None
+        if generate:
+            new_pass = ''.join(choice(self.chars) for _ in range(10))
+            print "New password: {}".format(new_pass)
+        else:
+            for i in range(3):
+                first_attempt = prompt_pass("Enter new password")
+                second_attempt = prompt_pass("Retype new password")
+                if first_attempt == second_attempt:
+                    new_pass = first_attempt
+                    break
+                print "Sorry, passwords do not match."
+        if new_pass:
+            u.password = new_pass
+            db.session.commit()
+            print "Password has been changed"
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -160,6 +189,7 @@ manager.add_command('db', MigrateCommand)
 manager.add_command('createdb', Creator())
 manager.add_command('updatedb', Updater())
 manager.add_command('add_node', NodeManager())
+manager.add_command('reset-password', ResetPass())
 
 
 if __name__ == '__main__':

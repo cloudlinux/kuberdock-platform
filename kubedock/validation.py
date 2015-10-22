@@ -10,6 +10,7 @@ from .api import APIError
 from .billing import Kube
 from .predefined_apps.models import PredefinedApp
 from .users.models import User
+from .nodes.models import Node
 from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
                        MAX_KUBES_PER_CONTAINER)
 
@@ -170,7 +171,11 @@ new_pod_schema = {
         'internal_only': True,
     },
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
-    'kube_type': {'type': 'integer', 'required': True},
+    'kube_type': {
+        'type': 'integer',
+        'required': True,
+        'kube_type_exists': True,
+    },
     'kuberdock_template_id': {
         'type': 'integer',
         'min': 0,
@@ -570,6 +575,14 @@ class V(cerberus.Validator):
             templ = PredefinedApp.query.get(value)
             if not templ:
                 self._error(field, 'There is no template with such template_id')
+
+    def _validate_kube_type_exists(self, exists, field, value):
+        if exists:
+            templ = Node.query.filter(Node.kube_id == value).first()
+            if templ is None:
+                self._error(field, "Pod can't be created, because cluster has "
+                                   "no nodes with such kube type, please "
+                                   "contact administrator.")
 
     def _validate_pd_backend_required(self, pd_backend_required, field, value):
         if pd_backend_required and not (AWS or CEPH):

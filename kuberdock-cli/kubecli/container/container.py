@@ -584,7 +584,8 @@ class KuberDock(KubeCtl):
         """
         if self._data_path:
             if not os.path.isfile(self._data_path):
-                raise SystemExit("Pod isn't found")
+                raise SystemExit(
+                    "Temporary pod {} isn't found".format(self.name))
             os.unlink(self._data_path)
 
 

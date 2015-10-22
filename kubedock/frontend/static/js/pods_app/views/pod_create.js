@@ -893,7 +893,7 @@ define(['pods_app/app',
                 })
 
                 !success ?
-                utils.notifyWindow('First symbol in variables name must be letter') :
+                utils.notifyWindow('First symbol must be letter in variables name') :
                 this.trigger('step:complete', this);
             },
 

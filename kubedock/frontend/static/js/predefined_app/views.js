@@ -22,6 +22,7 @@ define(['app', 'marionette',
 
             initialize: function(){
                 var that = this;
+                console.log(this);
                 this.listenTo(this.breadcrumbs, 'show', function(view){
                     that.listenTo(view, 'app:showloadcontrol', that.showLoadControl);
                 });
@@ -98,21 +99,22 @@ define(['app', 'marionette',
         views.AppLoader = Marionette.ItemView.extend({
             template: appLoadFormTpl,
             tagName : 'div',
-            className: 'col-md-4 col-md-offset-2',
 
             ui: {
-                'uploader': 'input#app-upload',
-                'display' : 'textarea#app-contents',
-                'appname' : 'input#app-name',
+                'uploader' : 'input#app-upload',
+                'display'  : 'textarea#app-contents',
+                'appname'  : 'input#app-name',
+                'save'     : 'button.save-app',
+                'cancel'   : 'button.cancel-app'
             },
 
             events: {
-                'change @ui.uploader': 'handleUpload',
-                'click button.save-app': 'saveApp',
+                'click @ui.save'      : 'saveApp',
+                'change @ui.uploader' : 'handleUpload'
             },
 
             triggers: {
-                'click button.cancel-app': 'app:cancel',
+                'click @ui.cancel' : 'app:cancel'
             },
 
             handleUpload: function(evt){
@@ -163,9 +165,14 @@ define(['app', 'marionette',
                 };
             },
 
+            ui: {
+                deleteItem : 'span.delete-item',
+                editItem   : 'span.edit-item'
+            },
+
             events: {
-                'click span.delete-item': 'deleteItem',
-                'click span.edit-item'  : 'editItem'
+                'click @ui.deleteItem' : 'deleteItem',
+                'click @ui.editItem'   : 'editItem',
             },
 
             deleteItem: function(){
@@ -174,6 +181,10 @@ define(['app', 'marionette',
                     wait: true,
                     success: function(){
                         that.remove();
+                    },
+                    error: function(model, response){
+                        console.log(model);
+                        console.log(response);
                     }
                 });
             },

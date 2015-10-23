@@ -81,6 +81,26 @@
                         background-position: 0 -17px;
                     }
                 }
+                .copy-link{
+                    position: relative;
+                    padding-left: 22px;
+                    &:before{
+                        top: 0;
+                        left: 0;
+                        width: 16px;
+                        content: '';
+                        height: 16px;
+                        background:url('../img/link.png') 0 0 no-repeat;
+                        position: absolute;
+                    }
+                    &:hover{
+                        color: #3197ee;
+                        cursor: pointer;
+                        &:before{
+                            background-position: 0 -16px;
+                        }
+                    }
+                }
                 a{
                     color: #3197ee;
                     &:hover{
@@ -221,4 +241,7 @@
             }
         }
     }
+}
+.cancel-app{
+    cursor: pointer;
 }

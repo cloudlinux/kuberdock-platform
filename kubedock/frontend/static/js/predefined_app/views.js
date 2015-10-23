@@ -5,10 +5,10 @@ define(['app', 'marionette',
         'tpl!predefined_app/templates/app_list_item.tpl',
         'tpl!predefined_app/templates/app_list.tpl',
         'tpl!predefined_app/templates/app_load_form.tpl',
-        'bootstrap'],
+        '../utils', 'bootstrap'],
        function(App, Marionette,
                 mainTpl, breadcrumbsTpl, appListEmptyTpl,
-                appListItemTpl, appListTpl, appLoadFormTpl){
+                appListItemTpl, appListTpl, appLoadFormTpl, utils){
 
         var views = {};
 
@@ -33,6 +33,14 @@ define(['app', 'marionette',
                 });
             },
 
+            ui: {
+                'cancel' : '.cancel-app'
+            },
+
+            triggers: {
+                'click @ui.cancel' : 'app:cancel'
+            },
+
             showLoadControl: function(){
                 this.trigger('app:showloadcontrol');
             },
@@ -47,8 +55,7 @@ define(['app', 'marionette',
 
             editApp: function(id){
                 this.trigger('app:showloadcontrol', id);
-            },
-
+            }
         });
 
         views.Breadcrumbs = Marionette.ItemView.extend({
@@ -105,7 +112,7 @@ define(['app', 'marionette',
                 'display'  : 'textarea#app-contents',
                 'appname'  : 'input#app-name',
                 'save'     : 'button.save-app',
-                'cancel'   : 'button.cancel-app'
+                'cancel'   : '.cancel-app'
             },
 
             events: {
@@ -133,12 +140,18 @@ define(['app', 'marionette',
                 var name = this.ui.appname.val(),
                     template = this.ui.display.val();
                 if ((!name) || (!template)) {
-                    alert('name and template is expected to be filled');
+                    utils.notifyWindow('Name and template is expected to be filled');
                     return;
                 }
                 this.model.set({name: name,
                     template: template});
                 this.trigger('app:save', this.model);
+                $.notify('Predefined application "' + name + '" is added', {
+                    autoHideDelay: 5000,
+                    clickToHide: true,
+                    globalPosition: 'bottom left',
+                    className: 'success'
+                });
             }
         });
 
@@ -156,7 +169,6 @@ define(['app', 'marionette',
                         + '//'
                         + window.location.host
                         + '/apps/';
-                console.log(this.urlPath);
             },
 
             templateHelpers: function(){
@@ -167,30 +179,63 @@ define(['app', 'marionette',
 
             ui: {
                 deleteItem : 'span.delete-item',
-                editItem   : 'span.edit-item'
+                editItem   : 'span.edit-item',
+                copyLink   : '.copy-link'
             },
 
             events: {
                 'click @ui.deleteItem' : 'deleteItem',
                 'click @ui.editItem'   : 'editItem',
+                'click @ui.copyLink'   : 'copyLink'
             },
 
             deleteItem: function(){
-                var that = this;
-                this.model.destroy({
-                    wait: true,
-                    success: function(){
-                        that.remove();
-                    },
-                    error: function(model, response){
-                        console.log(model);
-                        console.log(response);
-                    }
-                });
+                var that = this,
+                    name = this.model.get('name'),
+                    preloader = $('#page-preloader');
+
+                utils.modalDialogDelete({
+                    title: 'Delete "' + name + '"',
+                    body: 'Are you sure want to delete "' + name + '" predefined application?',
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            preloader.show();
+                            that.model.destroy({
+                                wait: true,
+                                success: function(){
+                                    preloader.hide();
+                                    that.remove();
+                                    $.notify('Predefined application "' + name + '" is removed', {
+                                        autoHideDelay: 5000,
+                                        clickToHide: true,
+                                        globalPosition: 'bottom left',
+                                        className: 'success',
+                                    });
+                                },
+                                error: function(){
+                                    preloader.hide();
+                                }
+                            });
+                            that.render();
+                        },
+                        buttonCancel: true
+                   }
+               });
             },
 
             editItem: function(){
                 this.trigger('app:edit:item', this.model.get('id'));
+            },
+
+            copyLink: function(){
+                $.notify('Link copied to buffer', {
+                    autoHideDelay: 5000,
+                    clickToHide: true,
+                    globalPosition: 'bottom left',
+                    className: 'success',
+                });
             }
         });
 

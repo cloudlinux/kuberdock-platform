@@ -475,41 +475,107 @@ define(['marionette', 'paginator', 'utils'],
                 var that = this,
                     users = App.Data.users.models,
                     existsUsername = false,
+                    existsEmail = false,
                     preloader = $('#page-preloader'),
                     username = this.ui.username.val(),
-                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
+                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i,
+                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i;
 
                 _.each(users, function(user){
                     if (user.get('username') == that.ui.username.val()) existsUsername = true;
+                    if (user.get('email') == that.ui.email.val()) existsEmail = true;
                 });
 
                 switch (true)
                 {
+                /* username */
                 case this.ui.username.val() == '':
                     utils.scrollTo(this.ui.username);
-                    this.ui.username.notify("empty username");
+                    this.ui.username.notify("Empty username");
+                    this.ui.username.addClass('error');
+                    break;
+                case this.ui.username.val().length >= 26:
+                    utils.scrollTo(this.ui.username);
+                    this.ui.username.notify("Maximum length should be 25 symbols");
+                    this.ui.username.addClass('error');
+                    break;
+                case !patternLatin.test(this.ui.username.val()):
+                    utils.scrollTo(this.ui.username);
+                    this.ui.username.notify("Username should contain letters of Latin alphabet only");
                     this.ui.username.addClass('error');
                     break;
                 case existsUsername:
                     utils.scrollTo(this.ui.username);
-                    this.ui.username.notify('Username "' + username + '" already exists');
+                    this.ui.username.notify('Username should be unique');
                     this.ui.username.addClass('error');
                     break;
+                /* first name */
+                case this.ui.first_name.val().length >= 26:
+                    utils.scrollTo(this.ui.first_name);
+                    this.ui.first_name.addClass('error');
+                    this.ui.first_name.notify("Maximum length should be 25 symbols");
+                    break;
+                case !patternLatin.test(this.ui.first_name.val()) && this.ui.first_name.val() !== '':
+                    utils.scrollTo(this.ui.first_name);
+                    this.ui.first_name.notify("Username should contain letters of Latin alphabet only");
+                    this.ui.first_name.addClass('error');
+                    break;
+                /* last name */
+                case this.ui.last_name.val().length >= 26:
+                    utils.scrollTo(this.ui.last_name);
+                    this.ui.last_name.addClass('error');
+                    this.ui.last_name.notify("Maximum length should be 25 symbols");
+                    break;
+                case !patternLatin.test(this.ui.last_name.val()) && this.ui.last_name.val() !== '':
+                    utils.scrollTo(this.ui.last_name);
+                    this.ui.last_name.notify("Username should contain letters of Latin alphabet only");
+                    this.ui.last_name.addClass('error');
+                    break;
+                /* middle initials */
+                case this.ui.middle_initials.val().length >= 26:
+                    utils.scrollTo(this.ui.middle_initials);
+                    this.ui.middle_initials.addClass('error');
+                    this.ui.middle_initials.notify("Maximum length should be 25 symbols");
+                    break;
+                case !patternLatin.test(this.ui.middle_initials.val()) && this.ui.middle_initials.val() !== '':
+                    utils.scrollTo(this.ui.middle_initials);
+                    this.ui.middle_initials.notify("Username should contain letters of Latin alphabet only");
+                    this.ui.middle_initials.addClass('error');
+                    break;
+                /* password */
                 case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
                     utils.scrollTo(this.ui.password);
                     this.ui.password.addClass('error');
                     this.ui.password_again.addClass('error');
-                    this.ui.password_again.notify("empty password or don't match");
+                    this.ui.password_again.notify("Empty password or don't match");
                     break;
+                case this.ui.password.val().length >= 26:
+                    utils.scrollTo(this.ui.password);
+                    this.ui.password.addClass('error');
+                    this.ui.password_again.addClass('error');
+                    this.ui.password_again.notify("Maximum length should be 25 symbols");
+                    break;
+                /* email */
                 case this.ui.email.val() == '':
                     utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
-                    this.ui.email.notify("empty E-mail");
+                    this.ui.email.notify("Empty E-mail");
                     break;
-                case this.ui.email.val() != '' && !pattern.test(this.ui.email.val()):
+                case this.ui.email.val() !== '' && !pattern.test(this.ui.email.val()):
                     utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
                     this.ui.email.notify("E-mail must be correct");
+                    break;
+                case this.ui.email.val().length >= 51:
+                    utils.scrollTo(this.ui.email);
+                    this.ui.email.addClass('error');
+                    this.ui.email.addClass('error');
+                    this.ui.email.notify("Maximum length should be 50 symbols");
+                    break;
+                case existsEmail && this.ui.email.val() !== '':
+                    utils.scrollTo(this.ui.email);
+                    this.ui.email.notify('Email should be unique');
+                    this.ui.email.addClass('error');
                     break;
                 default:
                     preloader.show();
@@ -845,25 +911,88 @@ define(['marionette', 'paginator', 'utils'],
                     'last_name'       : this.ui.last_name.val(),
                     'middle_initials' : this.ui.middle_initials.val()
                 };
-                var pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
+
+                var that = this,
+                    existsEmail = false,
+                    users = App.Data.users.models,
+                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i,
+                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i;
+
+                    if (this.model.get('email') !== that.ui.email.val()){
+                        _.each(users, function(user){
+                            if (user.get('email') == that.ui.email.val()) existsEmail = true;
+                        });
+                    }
 
                 switch (true)
                 {
-                case this.ui.password.val() !== this.ui.password_again.val():
+                /* first name */
+                case this.ui.first_name.val().length >= 26:
+                    utils.scrollTo(this.ui.first_name);
+                    this.ui.first_name.addClass('error');
+                    this.ui.first_name.notify("Maximum length should be 25 symbols");
+                    break;
+                case !patternLatin.test(this.ui.first_name.val()) && this.ui.first_name.val() !== '':
+                    utils.scrollTo(this.ui.first_name);
+                    this.ui.first_name.notify("Username should contain letters of Latin alphabet only");
+                    this.ui.first_name.addClass('error');
+                    break;
+                /* last name */
+                case this.ui.last_name.val().length >= 26:
+                    utils.scrollTo(this.ui.last_name);
+                    this.ui.last_name.addClass('error');
+                    this.ui.last_name.notify("Maximum length should be 25 symbols");
+                    break;
+                case !patternLatin.test(this.ui.last_name.val()) && this.ui.last_name.val() !== '':
+                    utils.scrollTo(this.ui.last_name);
+                    this.ui.last_name.notify("Username should contain letters of Latin alphabet only");
+                    this.ui.last_name.addClass('error');
+                    break;
+                /* middle initials */
+                case this.ui.middle_initials.val().length >= 26:
+                    utils.scrollTo(this.ui.middle_initials);
+                    this.ui.middle_initials.addClass('error');
+                    this.ui.middle_initials.notify("Maximum length should be 25 symbols");
+                    break;
+                case !patternLatin.test(this.ui.middle_initials.val()) && this.ui.middle_initials.val() !== '':
+                    utils.scrollTo(this.ui.middle_initials);
+                    this.ui.middle_initials.notify("Username should contain letters of Latin alphabet only");
+                    this.ui.middle_initials.addClass('error');
+                    break;
+                /* password */
+                case this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
                     utils.scrollTo(this.ui.password);
                     this.ui.password.addClass('error');
                     this.ui.password_again.addClass('error');
-                    this.ui.password_again.notify("passwords don't match");
+                    this.ui.password_again.notify("Empty password or don't match");
                     break;
+                case this.ui.password.val().length >= 26:
+                    utils.scrollTo(this.ui.password);
+                    this.ui.password.addClass('error');
+                    this.ui.password_again.addClass('error');
+                    this.ui.password_again.notify("Maximum length should be 25 symbols");
+                    break;
+                /* email */
                 case this.ui.email.val() == '':
                     utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
-                    this.ui.email.notify("empty E-mail");
+                    this.ui.email.notify("Empty E-mail");
                     break;
-                case this.ui.email.val() != '' && !pattern.test(this.ui.email.val()):
+                case this.ui.email.val() !== '' && !pattern.test(this.ui.email.val()):
                     utils.scrollTo(this.ui.email);
                     this.ui.email.addClass('error');
                     this.ui.email.notify("E-mail must be correct");
+                    break;
+                case this.ui.email.val().length >= 51:
+                    utils.scrollTo(this.ui.email);
+                    this.ui.email.addClass('error');
+                    this.ui.email.addClass('error');
+                    this.ui.email.notify("Maximum length should be 50 symbols");
+                    break;
+                case existsEmail && this.ui.email.val() !== '':
+                    utils.scrollTo(this.ui.email);
+                    this.ui.email.notify('Email should be unique');
+                    this.ui.email.addClass('error');
                     break;
                 default:
                     if (this.ui.password.val())  // update only if specified

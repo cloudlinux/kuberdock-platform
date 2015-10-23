@@ -578,6 +578,8 @@ class V(cerberus.Validator):
 
     def _validate_kube_type_exists(self, exists, field, value):
         if exists:
+            if value == Kube.get_internal_service_kube_type():
+                return
             templ = Node.query.filter(Node.kube_id == value).first()
             if templ is None:
                 self._error(field, "Pod can't be created, because cluster has "

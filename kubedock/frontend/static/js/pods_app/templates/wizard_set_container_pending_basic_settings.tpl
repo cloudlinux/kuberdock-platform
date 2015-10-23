@@ -10,7 +10,9 @@
     <div id="tab-content">
         <div class="image-name-wrapper">
             <%- image %>
-            <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
+            <% if (sourceUrl !== undefined) { %>
+                <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
+            <% } %>
         </div>
         <div class="entrypoint">
             <label>Command:</label>

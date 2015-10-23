@@ -3,13 +3,12 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from functools import wraps
 
-from .. import tasks
 from ..core import db
 from ..models import ImageCache
 from ..validation import check_container_image_name, check_image_request
 from ..settings import DEFAULT_IMAGES_URL
-from ..utils import login_required_or_basic_or_token, KubeUtils
-from ..kapi.images import Image
+from ..utils import login_required_or_basic_or_token, KubeUtils, APIError
+from ..kapi import images as kapi_images
 
 
 images = Blueprint('images', __name__, url_prefix='/images')
@@ -39,13 +38,12 @@ def headerize(func):
 @images.route('/', methods=['GET'])
 @headerize
 @login_required_or_basic_or_token
-def search_image(patt=re.compile(r'https?://')):
+def search_image():
     search_key = request.args.get('searchkey', 'none')
-    repo_url = request.args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 10))
     refresh_cache = request.args.get('refresh_cache', 'no').lower() in ('1', 'true')
-    repo_url = repo_url if patt.match(repo_url) else 'https://' + repo_url
+    repo_url = _get_repo_url(request.args)
 
     check_container_image_name(search_key)
     query_key = '{0}?{1}:{2}'.format(repo_url, search_key, page)
@@ -56,11 +54,12 @@ def search_image(patt=re.compile(r'https?://')):
         return {'status': 'OK', 'data': query.data['results'],
                 'num_pages': query.data['num_pages'], 'page': page, 'per_page': per_page}
 
-    data = tasks.search_image(search_key, url=repo_url, page=page)
+    data = kapi_images.search_image(search_key, url=repo_url, page=page)
     data = {
         'num_pages': data.get('count', 1) // per_page + bool(data.get('count', 1) % per_page),
         'results': [{
-            'source_url': Image(image.get('repo_name', '')).source_url,
+            'source_url': kapi_images.Image(
+                image.get('repo_name', '')).source_url,
             'is_automated': image.get('is_automated', False),
             'star_count': image.get('star_count', 0),
             'description': image.get('short_description', ''),
@@ -86,4 +85,29 @@ def search_image(patt=re.compile(r'https?://')):
 def get_dockerfile_data():
     params = KubeUtils._get_params()
     check_image_request(params)
-    return Image(params.pop('image')).get_container_config(**params)
+    return kapi_images.Image(
+        params.pop('image')
+    ).get_container_config(**params)
+
+
+@images.route('/isalive', methods=['GET'])
+@login_required_or_basic_or_token
+def ping_registry():
+    repo_url = _get_repo_url(request.args)
+    if not kapi_images.check_registry_status(repo_url):
+        raise APIError(
+            'It seems that the registry is not available now. '
+            'Check the registry {} is alive or try again later'.format(
+                repo_url
+            ),
+            503
+        )
+    return {'status': 'OK', 'data': True}
+
+
+def _get_repo_url(args):
+    patt = re.compile(r'https?://')
+    repo_url = args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
+    repo_url = repo_url if patt.match(repo_url) else 'https://' + repo_url
+    return repo_url
+    

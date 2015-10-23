@@ -271,11 +271,19 @@ define(['pods_app/app',
                 }
             },
 
-            appendLoader: function(){
-                var loader = $('<div class="state load-state"></div>');
+            appendLoader: function(control){
+                var loader = $('<div class="state load-state" id="image-search-small-loader"></div>');
                 loader.append($('<span class="small-loader"></span>'))
                     .append($('<span>Loading...</span>'));
-                this.ui.searchControl.empty().append(loader);
+                if (control === undefined) {
+                    this.ui.searchControl.empty().append(loader);
+                } else {
+                    control.empty().append(loader);
+                }
+            },
+
+            removeLoader: function(){
+                $('#image-search-small-loader').remove();
             },
 
             onInputKeypress: function(evt){
@@ -323,10 +331,7 @@ define(['pods_app/app',
             },
 
             loadNextPage: function(){
-                this.ui.loader.removeClass('btn-more').empty()
-                    .append($('<span class="small-loader"></span>'))
-                    .append($('<span>Loading...</span>'))
-                    .addClass('state load-state');
+                this.appendLoader(this.ui.loader.removeClass('btn-more'));
                 this.trigger('image:getnextpage', this.collection, this.query);
             }
         });

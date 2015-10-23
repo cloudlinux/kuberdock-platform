@@ -2,7 +2,7 @@
 import json
 import re
 import requests
-from urlparse import urlparse, parse_qsl
+from urlparse import urlparse, parse_qsl, urlsplit
 from collections import Mapping, defaultdict, namedtuple
 from datetime import datetime
 from urllib import urlencode
@@ -10,7 +10,7 @@ from urllib import urlencode
 from ..core import db
 from ..pods.models import DockerfileCache, PrivateRegistryFailedLogin
 from ..utils import APIError
-from ..settings import DEFAULT_REGISTRY
+from ..settings import DEFAULT_REGISTRY, DEFAULT_IMAGES_URL
 
 # FIXME: private registries with self-signed certs
 requests.packages.urllib3.disable_warnings(
@@ -22,6 +22,52 @@ MIN_FAILED_LOGIN_PAUSE = 3
 
 DOCKERHUB_V1_INDEX = 'https://index.docker.io'
 DEFAULT_REGISTRY_HOST = urlparse(DEFAULT_REGISTRY).netloc
+
+
+#: Timeout for requests to registries in seconds
+REQUEST_TIMEOUT = 15.0
+
+#: Timeout for ping requests to registries in seconds
+PING_REQUEST_TIMEOUT = 5.0
+
+
+def check_registry_status(url=DEFAULT_IMAGES_URL):
+    """Performs api check for registry health status."""
+    url = urlsplit(url)._replace(path='/v1/_ping').geturl()
+    try:
+        response = requests.get(url, timeout=PING_REQUEST_TIMEOUT)
+        response.raise_for_status()
+    except (requests.exceptions.HTTPError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError):
+        return False
+    return response.status_code == 200
+
+
+def search_image(term, url=DEFAULT_IMAGES_URL, page=1, page_size=10):
+    url = urlsplit(url)._replace(path='/v2/search/repositories').geturl()
+    params = {'query': term, 'page_size': page_size, 'page': page}
+    try:
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+    except requests.exceptions.Timeout:
+        raise APIError(
+            'Timeout while sending request to the registry. Try again later',
+            503
+        )
+    except requests.exceptions.HTTPError:
+        raise APIError(
+            'Failed to perform request to the registry. '
+            'Registry answered with code: {}'.format(response.status_code),
+            502
+        )
+    except requests.exceptions.ConnectionError:
+        raise APIError(
+            'Failed to connect to the registry. '
+            'Try again later or contact your administrator for support',
+            503
+        )
+    return response.json()
 
 
 class APIVersionError(Exception):

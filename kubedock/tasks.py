@@ -5,8 +5,6 @@ import re
 import requests
 import subprocess
 import time
-import urlparse
-
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from distutils.util import strtobool
@@ -38,12 +36,6 @@ from .kapi.collect import collect, send
 
 
 celery = make_celery()
-
-
-def search_image(term, url='https://registry.hub.docker.com', page=1, page_size=10):
-    url = urlparse.urlsplit(url)._replace(path='/v2/search/repositories').geturl()
-    params = {'query': term, 'page_size': page_size, 'page': page}
-    return requests.get(url, params=params).json()
 
 
 def get_pods_nodelay(pod_id=None, namespace=None):

@@ -119,9 +119,15 @@ class KubeQuery(object):
                 warnings.simplefilter("ignore")
                 req = dispatcher.get(act, 'get')(self._make_url(res), **args)
                 return self._return_request(req)
-        except (requests.exceptions.ConnectionError,
-                requests.exceptions.HTTPError) as e:
+        except requests.exceptions.ConnectionError as e:
             return self._raise_error(str(e))
+        except requests.exceptions.HTTPError as e:
+            try:
+                res = req.json()
+                res = res['data']
+            except:
+                res = str(e)
+            return self._raise_error(res)
 
     @staticmethod
     def unwrap(data):

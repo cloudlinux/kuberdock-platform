@@ -78,6 +78,13 @@ email_literal_regex = re.compile(
     r'\[([A-f0-9:\.]+)\]\Z',
     re.IGNORECASE)
 
+#: Restriction for environment variables names - uppercase letters, underscore,
+# digits and must not start with digits.
+# Do not compile it, because there is no support to deep copy of compiled
+# regexps since 2.6, and this regex is participating in further deepcopy of
+# schemas.
+envvar_name_regex = r'^[A-Z_]+[A-Z0-9_]*'
+
 
 # Kubernetes restriction, names must be dns-compatible
 # pod_name = r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])+$"
@@ -158,7 +165,13 @@ create_user_schema = {
 
 args_list_schema = {'type': 'list', 'schema': {'type': 'string', 'empty': False}}
 env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
-    'name': {'type': 'string', 'required': True, 'empty': False, 'maxlength': 255},
+    'name': {
+        'type': 'string',
+        'required': True,
+        'empty': False,
+        'maxlength': 255,
+        'regex': envvar_name_regex
+    },
     'value': {'type': 'string', 'required': True},
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}

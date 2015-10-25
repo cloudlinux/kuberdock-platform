@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 1.3%{?dist}.cloudlinux
+Release: 1.4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,13 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Sun Oct 25 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>  0.4-1.4
+- AC-1251 Add style to predefined app create page
+- AC-1344: hide star/stop button & chechboxes in container-list table
+- AC-935: small fix to error message
+- Fix breadcrumb in pre app, add notification to events add,remove,error, add modal dilog to delete app event
+- AC-1255: Implement correct error messages & validation on front side
+
 * Tue Oct 20 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>  0.4-1.3
 - Add rendering node's page after node status update
 

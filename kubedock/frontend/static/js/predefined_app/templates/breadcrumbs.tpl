@@ -1,14 +1,11 @@
 <div class="container breadcrumbs" id="breadcrumbs">
     <ul class="breadcrumb">
-    <% _.each(breadcrumbs, function(b){  %>
-        <% if (b.hasOwnProperty('href')){ %>
-        <li>
-            <a href="<%- b.href %>"><%- b.name %></a>
-        </li>
+        <% if (showControls){ %>
+            <li class="active"><%- breadcrumbs[0].name %></li>
         <% } else { %>
-            <li class="active"><%- b.name %></li>
+            <li class="cancel-app"><%- breadcrumbs[0].name %></li>
+            <li class="active"><%- breadcrumbs[1].name %></li>
         <% } %>
-    <% }) %>
     </ul>
     <% if (showControls){ %>
     <div class="control-group">

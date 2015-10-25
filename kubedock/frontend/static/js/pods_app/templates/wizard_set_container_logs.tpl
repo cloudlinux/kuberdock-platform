@@ -45,7 +45,9 @@
                         <% } %>
                         <!-- <span>Terminate</span> -->
                         <!-- <span>Redeploy</span> -->
-                        <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
+                        <% if (sourceUrl !== undefined) { %>
+                            <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
+                        <% } %>
                     </div>
                     <div class="col-xs-10">
                         <div class="info col-xs-6">

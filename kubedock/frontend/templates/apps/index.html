@@ -142,7 +142,8 @@
     .container #custom-fields .custom-field-item{
         max-width: 50%;
     }
-    .container #custom-fields .title, .container #recource-fields .title{
+    .container #custom-fields .title,
+    .container #recource-fields .title{
         color: #1d1d1d;
         font-size: 16px;
         line-height: 18px;
@@ -151,11 +152,11 @@
         padding: 23px 40px 22px 45px;
         border-bottom: 1px solid #dfdfdf;
     }
-    .container #custom-fields .title{
+    .container #recource-fields .title{
         position: relative;
         padding: 23px 40px 22px 83px;
     }
-    .container #custom-fields .title:before{
+    .container #recource-fields .title:before{
         top: 0;
         bottom: 0;
         content: '';
@@ -166,25 +167,13 @@
         position: absolute;
         background: url('../static/img/gear.png') 0 0 no-repeat;
     }
-/*    .container #custom-fields .title:after{
-        content: '';
-        right: 26px;
-        margin-top: 5px;
-        color: transparent;
-        position: absolute;
-        display: inline-block;
-        vertical-align: middle;
-        border-top: 7px solid #B1B9C0;
-        border-right: 4.6px solid transparent;
-        border-left: 4.5px solid transparent;
-    }*/
-    .container #custom-fields .body, .container #recource-fields .body{
+    .container #custom-fields .body,
+    .container #recource-fields .body{
         background-color: #fff;
         padding: 23px 45px 45px 45px;
     }
-   .container #custom-fields .custom-field-title {
-    }
-    .container #custom-fields label, .container #recource-fields label{
+    .container #custom-fields label,
+    .container #recource-fields label{
         display: block;
         color: #1d1d1d;
         font-size: 13px;
@@ -210,8 +199,6 @@
     .container #custom-fields .custom-field-item:last-child select{
         margin-bottom: 0;
     }
-
-
     .container #custom-fields .body input:focus,
     .container #recource-fields .body input:focus{
         -webkit-transition: color 500ms ease;
@@ -318,25 +305,6 @@
                 <div id="pre-description">{{ pre_desc }}</div>
                 {% endif %}
             </div>
-            {% if has_simple %}
-            <div id="recource-fields">
-                <div class="title">Additional configuration</div>
-                <div class="body">
-                {% for k, v in fields.iteritems() %}
-                    {% if v.hashsum not in mutables %}
-                    <div class="custom-field-item">
-                        <label class="custom-field-title">{{ v.title }}</label>
-                        <div class="custom-field-body">
-                            <input id="{{ v.hashsum }}" class="custom-field" type="text" value="{{ v.value }}">
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        <div class="container">
             {% if mutables %}
             <div id="custom-fields">
                 <div class="title">Set up resources amount</div>
@@ -374,6 +342,23 @@
                         </div>
                         {% endif %}
                     {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% if has_simple %}
+            <div id="recource-fields">
+                <div class="title">Additional configuration</div>
+                <div class="body">
+                {% for k, v in fields.iteritems() %}
+                    {% if v.hashsum not in mutables %}
+                    <div class="custom-field-item">
+                        <label class="custom-field-title">{{ v.title }}</label>
+                        <div class="custom-field-body">
+                            <input id="{{ v.hashsum }}" class="custom-field" type="text" value="{{ v.value }}">
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
                 </div>
             </div>
             {% endif %}

@@ -19,12 +19,6 @@ from ..pods.models import Pod as PodModel
 class Pod(KubeQuery, ModelQuery, Utilities):
     def __init__(self, data=None):
         if data is not None:
-
-            # Regardless of restartPolicy we should create RC
-            # TODO we need to clean up all non RC pods code and remove this
-            # param at all
-            self.replicationController = True
-
             for c in data['containers']:
 
                 # At least one kube per container expected so we can make it
@@ -57,21 +51,25 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     @staticmethod
     def populate(data):
+        """
+        Create Pod object using Pod from Kubernetes
+        """
         pod = Pod()
         metadata = data.get('metadata', {})
         status = data.get('status', {})
         spec = data.get('spec', {})
-        pod.sid        = metadata.get('name')
-        pod.id       = metadata.get('labels', {}).get('kuberdock-pod-uid')
-        pod.namespace  = metadata.get('namespace')
-        pod.replicationController = False
-        pod.replicas   = 1
-        pod.status     = status.get('phase', POD_STATUSES.pending).lower()
-        pod.host       = spec.get('nodeName')
-        pod.kube_type  = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
-        pod.node       = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
-        pod.volumes    = spec.get('volumes', [])
-        pod.labels     = metadata.get('labels')
+
+        pod.sid = metadata.get('name')
+        pod.namespace = metadata.get('namespace')
+        pod.labels = metadata.get('labels', {})
+        pod.id = pod.labels.get('kuberdock-pod-uid')
+
+        pod.status = status.get('phase', POD_STATUSES.pending).lower()
+
+        pod.host = spec.get('nodeName')
+        pod.kube_type = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
+        pod.node = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
+        pod.volumes = spec.get('volumes', [])
         pod.containers = spec.get('containers', [])
         pod.restartPolicy = spec.get('restartPolicy')
 
@@ -104,7 +102,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if hasattr(self, 'id'):
             return
         self.id = str(uuid4())
-
 
     def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
@@ -165,61 +162,41 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
-        if self.replicationController:
-            config = {
-                "kind": "ReplicationController",
-                "apiVersion": KUBE_API_VERSION,
-                "metadata": {
-                    "name": self.sid,
-                    "namespace": self.namespace,
-                    "uid": self.id,
-                    "labels": {
-                        "kuberdock-pod-uid": self.id
-                    }
+
+        config = {
+            "kind": "ReplicationController",
+            "apiVersion": KUBE_API_VERSION,
+            "metadata": {
+                "name": self.sid,
+                "namespace": self.namespace,
+                "labels": {
+                    "kuberdock-pod-uid": self.id
+                }
+            },
+            "spec": {
+                "replicas": getattr(self, 'replicas', 1),
+                "selector": {
+                    "kuberdock-pod-uid": self.id
                 },
-                "spec": {
-                    "replicas": 1,
-                    "selector": {
-                        "kuberdock-pod-uid": self.id
-                    },
-                    "template": {
-                        "metadata": {
-                            "labels": {
-                                "kuberdock-pod-uid": self.id
-                            }
-                        },
-                        "spec": {
-                            "volumes": volumes,
-                            "containers": [self._prepare_container(c, kube_type, volumes)
-                                           for c in self.containers],
-                            "imagePullSecrets": [{"name": secret}
-                                                 for secret in secrets]
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "kuberdock-pod-uid": self.id
                         }
+                    },
+                    "spec": {
+                        "volumes": volumes,
+                        "containers": [self._prepare_container(c, kube_type, volumes)
+                                       for c in self.containers],
+                        "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
+                        "imagePullSecrets": [{"name": secret}
+                                             for secret in secrets]
                     }
                 }
             }
-            pod_config = config['spec']['template']
-        else:
-            config = {
-                "kind": "Pod",
-                "apiVersion": KUBE_API_VERSION,
-                "metadata": {
-                    "name": self.sid,
-                    "namespace": self.namespace,
-                    "uid": self.id,
-                    "labels": {
-                        "kuberdock-pod-uid": self.id
-                    }
-                },
-                "spec": {
-                    "volumes": volumes,
-                    "containers": [self._prepare_container(c, kube_type, volumes)
-                                   for c in self.containers],
-                    "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
-                    "imagePullSecrets": [{"name": secret} for secret in secrets]
-                }
-            }
-            pod_config = config
+        }
+        pod_config = config['spec']['template']
+
         # Internal services may run on any nodes, do not care of kube type of
         # the node. All other kube types must be binded to the appropriate nodes
         if Kube.is_node_attachable_type(kube_type):
@@ -294,7 +271,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                    [v for v in volumes if v.get('name') == vm.get('name')]
                    if 'rbd' in i] for vm in volume_mounts])
 
-
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)
         lex.whitespace_split = True
@@ -304,14 +280,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             return list(lex)
         except ValueError:
             self._raise('Incorrect cmd string')
-
-    # TODO remove - we always use replicas
-    @property
-    def kind(self):
-        if getattr(self, 'replicationController', False):
-            return 'replicationcontrollers'
-        else:
-            return 'pods'
 
     def _forge_dockers(self, status='stopped'):
         for container in self.containers:

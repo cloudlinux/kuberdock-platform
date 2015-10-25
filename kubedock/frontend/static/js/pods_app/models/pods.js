@@ -24,7 +24,6 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
                 name: 'Nameless',
                 containers: [],
                 volumes: [],
-                replicationController: true,
                 replicas: 1,
                 restartPolicy: "Always",
                 node: null

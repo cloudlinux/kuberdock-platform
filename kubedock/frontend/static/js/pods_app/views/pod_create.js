@@ -1230,7 +1230,6 @@ define(['pods_app/app',
             events: {
                 'click .delete-item'     : 'deleteItem',
                 'click .edit-item'       : 'editItem',
-                'click .cluster'         : 'toggleCluster',
                 'click .node'            : 'toggleNode',
                 'change .replicas'       : 'changeReplicas',
                 'change @ui.kubeTypes'   : 'changeKubeType',
@@ -1279,18 +1278,6 @@ define(['pods_app/app',
                 this.trigger('image:selected', undefined, containerId);
             },
 
-            toggleCluster: function(evt){
-                evt.stopPropagation();
-                if (this.model.get('replicationController')) {
-                    this.model.set('replicationController', false);
-                }
-                else {
-                    var obj = {replicationController: true};
-                    this.model.set(obj);
-                }
-                this.render();
-            },
-
             toggleNode: function(evt){
                 evt.stopPropagation();
                 var tgt = $(evt.target),
@@ -1327,11 +1314,6 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var restart_policy = $(evt.target).val();
                 this.model.set('restartPolicy', restart_policy)
-                if (restart_policy == 'Always') {
-                    this.model.set('replicationController', true);
-                } else {
-                    this.model.set('replicationController', false);
-                }
             },
 
             getKubePrice: function(kubeId) {

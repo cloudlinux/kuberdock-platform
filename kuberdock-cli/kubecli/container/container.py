@@ -624,11 +624,10 @@ class KuberDock(KubeCtl):
 
     def _prepare(self, final=False):
         valid = set([
-            'name', 'containers', 'volumes', 'service', 'replicationController',
+            'name', 'containers', 'volumes', 'service',
             'replicas', 'set_public_ip', 'kube_type', 'restartPolicy',
             'public_ip'
         ])
-        self.replicationController = True
         self._prepare_volumes(final)
         self._prepare_ports()
         self._prepare_env()

@@ -183,7 +183,7 @@ new_pod_schema = {
         'nullable': True,
         'internal_only': True,
     },
-    'replicas': {'type': 'integer', 'min': 0, 'max': 1},
+    'replicas': {'type': 'integer', 'min': 0},
     'kube_type': {
         'type': 'integer',
         'required': True,
@@ -195,7 +195,6 @@ new_pod_schema = {
         'nullable': True,
         'template_exists': True,
     },
-    'replicationController': {'type': 'boolean'},   # TODO remove
     'node': {
         'type': 'string',
         'nullable': True,

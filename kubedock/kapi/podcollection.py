@@ -279,8 +279,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     # If replication controller manages more then one pod,
                     # _get_pods must return only one of them (we will filter by sid)
                     pod.sid = r['metadata']['name']
-                    pod.replicationController = True
+                    pod.replicas = r['spec']['replicas']
                     break
+            else:
+                pod.replicas = 1
+                current_app.logger.warn('Pod doesn\'t have Replication Controller:'
+                                        '{0}'.format(item))
 
             if pod.sid not in pod_index:
                 self._collection[pod.id, pod.namespace] = pod
@@ -400,8 +404,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self.replace_config(pod, db_config)
 
         config = pod.prepare()
-        rv = self._post([pod.kind], json.dumps(config), rest=True,
-                        ns=pod.namespace)
+        rv = self._post(['replicationcontrollers'], json.dumps(config),
+                        rest=True, ns=pod.namespace)
         self._raise_if_failure(rv, "Could not start '{0}' pod".format(
             pod.name.encode('ascii', 'replace')))
         return {'status': POD_STATUSES.pending}
@@ -410,11 +414,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if pod.status != POD_STATUSES.stopped:
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
-                rv = self._del([pod.kind, pod.sid], ns=pod.namespace)
-                if pod.replicationController:
-                    self._stop_cluster(pod)
+                rv = self._del(['replicationcontrollers', pod.sid],
+                               ns=pod.namespace)
+                self._stop_cluster(pod)
                 self._raise_if_failure(rv, "Could not stop a pod")
-                #return rv
+                # return rv
                 return {'status': POD_STATUSES.stopped}
         elif raise_:
             raise APIError('Pod is already stopped')

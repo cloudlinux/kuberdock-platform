@@ -340,11 +340,11 @@ class CephStorage(PersistentStorage):
         with settings(host_string=self._first_node_ip):
             with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                           warn_only=True):
-                rv = run('rbd info {0} --format json'.format(drive))
+                rv = run('rbd status {0} --format json'.format(drive))
                 if rv.return_code != 0:
                     raise NodeCommandError(
                         'Node command returned non-zero status: '
-                        'failed to get info for rbd image')
+                        'failed to get status of rbd image')
                 try:
                     if json.loads(rv).get('watchers'):
                         return True

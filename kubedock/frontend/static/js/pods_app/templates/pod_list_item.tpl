@@ -13,11 +13,7 @@
     <span class="poditem-page-btn" title="Edit <%- name %> pod" ><%- name %></span>
 </td>
 <td>
-    <% if (replicationController){ %>
-        <span><%- replicas %></span>
-    <% }  else { %>
-        none
-    <% } %>
+    <span><%- replicas || 1 %></span>
 </td>
 <td>
     <% if (status) { %>

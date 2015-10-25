@@ -37,10 +37,8 @@ def fake_pod(**kwargs):
     parents = kwargs.pop('use_parents', ())
     return type('Pod', parents,
                dict({
-                   'kind': 'k',
                    'namespace': 'n',
                    'owner': 'u',
-                   'replicationController': False,
                    'status': POD_STATUSES.running,
                }, **kwargs))()
 
@@ -63,7 +61,8 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
     def setUp(self):
         U = type('User', (), {'username': 'bliss'})
 
-        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge')
+        self.mock_methods(PodCollection, '_get_namespaces', '_get_pods', '_merge',
+                          '_stop_cluster')
 
         self.app = PodCollection(U())
 
@@ -110,7 +109,7 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         self.app.delete(str(uuid4()), force=True)
 
         # Checking our _del has been called only once with expected args
-        del_.assert_called_once_with(['k', 's'], ns='n')
+        del_.assert_called_once_with(['replicationcontrollers', 's'], ns='n')
         self.assertFalse(raise_.called)
 
     @mock.patch.object(PodCollection, '_del')
@@ -133,6 +132,7 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         # Checking our _del has not been called
         self.assertFalse(del_.called)
 
+    @unittest.skip('Now all pods have Replication Controller')
     @mock.patch.object(PodCollection, '_del')
     def test_delete_request_is_sent_for_serviceless_non_replica(self, del_):
         """
@@ -154,14 +154,13 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         # Checking our _del has been called only once with expected args
         del_.assert_called_once_with(['k', 's'], ns='n')
 
-    @mock.patch.object(PodCollection, '_stop_cluster')
     @mock.patch.object(PodCollection, '_del')
-    def test_delete_request_is_sent_for_serviceless_replica(self, del_, stop_):
+    def test_delete_request_is_sent_for_serviceless_replica(self, del_):
         """
         If serviceless pod has replicas (one replica for now) an attempt to stop
         cluster after pod deletion is expected to be made
         """
-        pod = fake_pod(sid='s', replicationController=True)
+        pod = fake_pod(sid='s')
         pod.get_config = (lambda x: None)
 
         # Monkey-patched PodCollection methods
@@ -169,13 +168,14 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         self.app._mark_pod_as_deleted = (lambda x: None)
         self.app._raise_if_failure = (lambda x,y: None)
         self.app._drop_namespace = (lambda x: None)
+        self.app._stop_cluster.reset_mock()
 
         # Making actual call
         self.app.delete(str(uuid4()))
 
         # Checking our _del has been called only once with expected args
-        del_.assert_called_once_with(['k', 's'], ns='n')
-        self.assertTrue(stop_.called)
+        del_.assert_called_once_with(['replicationcontrollers', 's'], ns='n')
+        self.assertTrue(self.app._stop_cluster.called)
 
     @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
     @mock.patch.object(PodCollection, '_del')
@@ -205,7 +205,7 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         get_.assert_called_once_with(['services', 'fs'], ns='n')
 
         # Making sure del_ has been called twice with proper params each time
-        expected = [mock.call(['k', 's'], ns='n'),
+        expected = [mock.call(['replicationcontrollers', 's'], ns='n'),
                     mock.call(['services', 'fs'], ns='n')]
         self.assertEqual(del_.call_args_list, expected,
                          "Arguments for deletion pod and service differ from expected ones")
@@ -525,11 +525,9 @@ class TestPodCollection(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         self.pods = [{'id': 1, 'name': 'Unnamed-1', 'namespace': 'Unnamed-1-namespace-md5',
-                      'owner': 'user', 'containers': '',
-                      'replicationController': True},
+                      'owner': 'user', 'containers': ''},
                      {'id': 2, 'name': 'Unnamed-2', 'namespace': 'Unnamed-2-namespace-md5',
-                      'owner': 'user', 'containers': '',
-                      'replicationController': True}]
+                      'owner': 'user', 'containers': ''}]
 
         self.pods_output = copy.deepcopy(self.pods)
         for pod in self.pods_output:
@@ -691,14 +689,14 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         :type stop_cluster: mock.Mock
         :type rif: mock.Mock
         """
-        pod = fake_pod(sid='yyy', kind='RC', namespace='some_ns',
-                       replicationController=True)
+        pod = fake_pod(sid='yyy', namespace='some_ns')
 
         # Actual call
         res = self.pod_collection._stop_pod(pod)
 
         self.assertEquals(pod.status, POD_STATUSES.stopped)
-        del_.assert_called_once_with([pod.kind, pod.sid], ns=pod.namespace)
+        del_.assert_called_once_with(['replicationcontrollers', pod.sid],
+                                     ns=pod.namespace)
         stop_cluster.assert_called_once_with(pod)
         self.assertEquals(rif.called, True)
         self.assertEquals(res, {'status': POD_STATUSES.stopped})
@@ -1022,8 +1020,10 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
                                for name in ('pod1', 'pod1', 'pod1', 'pod2', 'pod2')]},
             'services': {'items': []},
             'replicationcontrollers': {'items': [
-                {'spec': {'selector': {'name': 'pod1'}}, 'metadata': {'name': 'pod1'}},
-                {'spec': {'selector': {'name': 'pod2'}}, 'metadata': {'name': 'pod2'}}
+                {'spec': {'selector': {'name': 'pod1'}, 'replicas': 1},
+                 'metadata': {'name': 'pod1'}},
+                {'spec': {'selector': {'name': 'pod2'}, 'replicas': 1},
+                 'metadata': {'name': 'pod2'}}
             ]}
         }[res[0]]
 

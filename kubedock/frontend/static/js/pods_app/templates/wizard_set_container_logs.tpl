@@ -64,9 +64,13 @@
                     </div>
                     <div class="col-xs-12 no-padding container-logs-wrapper">
                         <div class="container-logs">
-                            <% _.each(logs, function(line){ %>
-                            <p><%- line['@timestamp'] %>: <%- line['log'] %></p>
-                            <% }) %>
+                            <% if (!logs.length) { %>
+                                <p>Nothing to show because containers log is empty.</p>
+                            <% } else { %>
+                                <% _.each(logs, function(line){ %>
+                                <p><%- line['@timestamp'] %>: <%- line['log'] %></p>
+                                <% }) %>
+                            <% } %>
                         </div>
                     </div>
                 </div>

@@ -1139,22 +1139,23 @@ define(['pods_app/app',
                             var lines = _.map(data.data.hits, function(line) {
                                 return line._source;
                             });
-                            lines.reverse();
-                            this.model.set('logs', lines);
-                            this.render();
-                            _.defer(function(caller){
-                                caller.ui.textarea.scrollTop(caller.ui.textarea[0].scrollHeight);
-                            }, this);
-                        },
-                        statusCode: {
-                            404: function(xhr) {
-                                utils.notifyWindow('Log not found');
-                            },
-                            200: function(xhr){
-                                if (xhr.data.hits.length == 0){
-                                    this.ui.textarea.append('<p>Nothing to show because containers log is empty.</p');
+                            if (lines.length) {
+                                lines.reverse();  // from oldest to newest
+                                var logs = this.model.get('logs');
+                                if (logs.length) {
+                                    // if we have some logs, append only new lines
+                                    var last = logs[logs.length - 1]['@timestamp'];
+                                    lines = _.filter(lines, function(line) {
+                                        return line['@timestamp'] > last;
+                                    });
                                 }
+                                this.model.set('logs', logs.concat(lines));
                             }
+
+                            this.render();
+                        },
+                        error: function(){
+                            utils.notifyWindow('Log not found');
                         }
                     });
                     this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
@@ -1177,6 +1178,10 @@ define(['pods_app/app',
 
             onBeforeDestroy: function () {
                 clearTimeout(this.model.get('timeout'));
+            },
+
+            onRender: function () {
+                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
             },
         });
 

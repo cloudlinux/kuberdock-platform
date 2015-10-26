@@ -9,6 +9,7 @@ from ..validation import check_container_image_name, check_image_request
 from ..settings import DEFAULT_IMAGES_URL
 from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..kapi import images as kapi_images
+from ..rbac import check_permission
 
 
 images = Blueprint('images', __name__, url_prefix='/images')
@@ -38,6 +39,7 @@ def headerize(func):
 @images.route('/', methods=['GET'])
 @headerize
 @login_required_or_basic_or_token
+@check_permission('get', 'images')
 def search_image():
     search_key = request.args.get('searchkey', 'none')
     page = int(request.args.get('page', 1))
@@ -82,6 +84,7 @@ def search_image():
 @images.route('/new', methods=['POST'])
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
+@check_permission('get', 'images')
 def get_dockerfile_data():
     params = KubeUtils._get_params()
     check_image_request(params)
@@ -92,6 +95,7 @@ def get_dockerfile_data():
 
 @images.route('/isalive', methods=['GET'])
 @login_required_or_basic_or_token
+@check_permission('isalive', 'images')
 def ping_registry():
     repo_url = _get_repo_url(request.args)
     kapi_images.check_registry_status(repo_url)

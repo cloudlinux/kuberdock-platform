@@ -1,13 +1,15 @@
+from kubedock.core import db
 from .models import Resource, Role, Permission
 
 
 RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages",
-             "notifications", "system_settings")
+             "notifications", "system_settings", "images")
 
 ROLES = (
     "Admin",
     "User",
-    "TrialUser"
+    "TrialUser",
+    "HostingPanel"
 )
 
 PERMISSIONS = (
@@ -43,6 +45,8 @@ PERMISSIONS = (
     ("system_settings", "Admin", "read", True),
     ("system_settings", "Admin", "write", True),
     ("system_settings", "Admin", "delete", True),
+    ("images", "Admin", "get", True),
+    ("images", "Admin", "isalive", True),
     # User
     ("users", "User", "create", False),
     ("users", "User", "get", False),
@@ -72,6 +76,8 @@ PERMISSIONS = (
     ("notifications", "User", "get", False),
     ("notifications", "User", "edit", False),
     ("notifications", "User", "delete", False),
+    ("images", "User", "get", True),
+    ("images", "User", "isalive", True),
     # TrialUser
     ("users", "TrialUser", "create", False),
     ("users", "TrialUser", "get", False),
@@ -101,28 +107,105 @@ PERMISSIONS = (
     ("notifications", "TrialUser", "get", False),
     ("notifications", "TrialUser", "edit", False),
     ("notifications", "TrialUser", "delete", False),
+    ("images", "TrialUser", "get", True),
+    ("images", "TrialUser", "isalive", True),
+    # HostingPanel
+    ("users", "HostingPanel", "create", False),
+    ("users", "HostingPanel", "get", False),
+    ("users", "HostingPanel", "edit", False),
+    ("users", "HostingPanel", "delete", False),
+    ("users", "HostingPanel", "auth_by_another", False),
+    ("nodes", "HostingPanel", "create", False),
+    ("nodes", "HostingPanel", "get", False),
+    ("nodes", "HostingPanel", "edit", False),
+    ("nodes", "HostingPanel", "delete", False),
+    ("nodes", "HostingPanel", "redeploy", False),
+    ("pods", "HostingPanel", "create", False),
+    ("pods", "HostingPanel", "get", False),
+    ("pods", "HostingPanel", "edit", False),
+    ("pods", "HostingPanel", "delete", False),
+    ("ippool", "HostingPanel", "create", False),
+    ("ippool", "HostingPanel", "get", False),
+    ("ippool", "HostingPanel", "edit", False),
+    ("ippool", "HostingPanel", "delete", False),
+    ("ippool", "HostingPanel", "view", False),
+    ("static_pages", "HostingPanel", "create", False),
+    ("static_pages", "HostingPanel", "get", False),
+    ("static_pages", "HostingPanel", "edit", False),
+    ("static_pages", "HostingPanel", "delete", False),
+    ("static_pages", "HostingPanel", "view", False),
+    ("notifications", "HostingPanel", "create", False),
+    ("notifications", "HostingPanel", "get", False),
+    ("notifications", "HostingPanel", "edit", False),
+    ("notifications", "HostingPanel", "delete", False),
+    ("images", "HostingPanel", "get", True),
+    ("images", "HostingPanel", "isalive", True),
 
 )
 
 
-def add_permissions():
-    # Add resources
-    resources = {}
-    roles = {}
-    for r in RESOURCES:
-        res = Resource.create(name=r)
-        res.save()
-        resources[r] = res
-    # Add roles
-    for r in ROLES:
-        role = Role.create(rolename=r)
-        role.save()
-        roles[r] = role
-    # Add permissions
-    for res, role, perm, allow in PERMISSIONS:
-        p = Permission.create(resource_id=resources[res].id,
-                              role_id=roles[role].id, name=perm, allow=allow)
-        p.save()
+def add_roles(roles=()):
+    for r in roles:
+        if not Role.filter(Role.rolename == r).first():
+            role = Role.create(rolename=r)
+            role.save()
+
+
+def delete_roles(roles=()):
+    """ Delete roles with its permissions
+    """
+    for role_name in roles:
+        role = Role.filter(Role.rolename == role_name).first()
+        if role:
+            Permission.filter(Permission.role == role).delete()
+            db.session.commit()
+            role.delete()
+
+
+def add_resources(resources=()):
+    for res in resources:
+        if not Resource.filter(Resource.name == res).first():
+            resource = Resource.create(name=res)
+            resource.save()
+
+
+def delete_resources(resources=()):
+    """ Delete resources with its permissions
+    """
+    for resource_name in resources:
+        resource = Resource.filter(Resource.name == resource_name).first()
+        if resource:
+            Permission.filter(Permission.resource == resource).delete()
+            db.session.commit()
+            resource.delete()
+
+
+def _add_permissions(permissions=()):
+    for res, role, perm, allow in permissions:
+        resource = Resource.query.filter_by(name=res).first()
+        role = Role.query.filter_by(rolename=role).first()
+        if role and resource:
+            exist = Permission.filter(Permission.role == role). \
+                filter(Permission.resource == resource). \
+                filter(Permission.allow == allow). \
+                filter(Permission.name == perm).first()
+            if not exist:
+                permission = Permission.create(
+                    resource_id=resource.id,
+                    role_id=role.id, name=perm, allow=allow)
+                permission.save()
+
+
+def add_permissions(roles=None, resources=None, permissions=None):
+    if not roles:
+        roles = ROLES
+    if not resources:
+        resources = RESOURCES
+    if not permissions:
+        permissions = PERMISSIONS
+    add_roles(roles)
+    add_resources(resources)
+    _add_permissions(permissions)
 
 
 if __name__ == '__main__':

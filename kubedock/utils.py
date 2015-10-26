@@ -562,6 +562,9 @@ def set_limit(host, pod_id, containers, app):
         #kube = Kube.query.get(kube_type) this query raises an exception
     limits = []
     for container in config['containers']:
+        container_name = container['name']
+        if container_name not in containers:
+            continue
         #disk_space = kube.disk_space * container['kubes']
         space, unit = spaces.get(kube_type, (0, 'GB'))
         disk_space = space * container['kubes']
@@ -569,7 +572,7 @@ def set_limit(host, pod_id, containers, app):
         if disk_space_unit not in ('', 'k', 'm', 'g', 't'):
             disk_space_unit = ''
         disk_space_str = '{0}{1}'.format(disk_space, disk_space_unit)
-        limits.append((containers[container['name']], disk_space_str))
+        limits.append((containers[container_name], disk_space_str))
     limits_repr = ' '.join('='.join(limit) for limit in limits)
     _, o, e = ssh.exec_command(
         'python /var/lib/kuberdock/scripts/fslimit.py {0}'.format(limits_repr)

@@ -146,12 +146,6 @@ define(['app', 'marionette',
                 this.model.set({name: name,
                     template: template});
                 this.trigger('app:save', this.model);
-                $.notify('Predefined application "' + name + '" is added', {
-                    autoHideDelay: 5000,
-                    clickToHide: true,
-                    globalPosition: 'bottom left',
-                    className: 'success'
-                });
             }
         });
 

@@ -9,7 +9,9 @@ from ..usage.models import ContainerState
 from ..utils import (login_required_or_basic_or_token, parse_datetime_str,
     KubeUtils)
 from ..kapi import es_logs, pod_states
+from ..kapi.podcollection import PodCollection
 from ..pods.models import Pod
+from ..nodes.models import Node
 from . import APIError
 
 
@@ -48,8 +50,15 @@ def api_get_container_logs(containerid):
         size = int(request.args.get('size', None))
     except (TypeError, ValueError):
         size = 100
+
+    host = None
+    for pod in PodCollection(current_user).get(as_json=False):
+        if pod['id'] == cs.pod_id:
+            host = Node.query.filter_by(hostname=pod['host']).first().ip
+            break
+
     return jsonify(es_logs.get_container_logs(
-        containerid, size, starttime, endtime
+        containerid, size, starttime, endtime, host=host
     ))
 
 
@@ -71,7 +80,8 @@ def api_get_node_logs(hostname):
     date = request.args.get('date', None)
     if date:
         date = parse_datetime_str(date)
-    return jsonify(es_logs.get_node_logs(hostname, date, size))
+    host = Node.query.filter_by(hostname=hostname).first().ip
+    return jsonify(es_logs.get_node_logs(hostname, date, size, host=host))
 
 
 @logs.route('/pod-states/<pod_id>/<depth>', methods=['GET'])

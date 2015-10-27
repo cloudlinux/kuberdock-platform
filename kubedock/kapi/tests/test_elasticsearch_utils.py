@@ -15,10 +15,10 @@ class TestElasticsearchUtils(unittest.TestCase):
     @mock.patch.object(elasticsearch_utils.elastic.Elasticsearch, 'search')
     def test_execute_es_query(self, search_mock, node_mock):
         """Test elasticsearch_utils.execute_es_query function."""
-        node_query_mock = mock.PropertyMock(
-            return_value=[type('Node', (), {'ip': n})() for n in self.nodes]
+        node_query_values_mock = mock.Mock(
+            return_value=[(n,) for n in self.nodes]
         )
-        type(node_mock).query = node_query_mock
+        node_mock.query.values = node_query_values_mock
         size = 123
         index = '1234qwerty'
         query = None
@@ -60,7 +60,7 @@ class TestElasticsearchUtils(unittest.TestCase):
         search_mock.side_effect = RequestException('!!!')
         with self.assertRaises(APIError):
             elasticsearch_utils.execute_es_query(index, query, size, sort)
-        self.assertEqual(node_query_mock.call_count, 3)
+        self.assertEqual(node_query_values_mock.call_count, 3)
 
 
 if __name__ == '__main__':

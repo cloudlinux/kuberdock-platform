@@ -4,12 +4,13 @@ from datetime import datetime
 from .elasticsearch_utils import execute_es_query
 
 
-def get_container_logs(containerid, size, starttime=None, endtime=None):
+def get_container_logs(containerid, size, starttime=None, endtime=None, host=None):
     """Return logs from specified host and container.
     :param containerid: docker container identifier
     :param starttime: minimum log time to select
     :param endtime: maximum log time to select
     :param size: limits selection to this number (default = 100)
+    :param host: node ip to use or None to search all nodes
     If no parameters specified, then 100 last log records will be selected.
     If only 'size' was specified, then only that count of last records will be
     selected.
@@ -36,15 +37,16 @@ def get_container_logs(containerid, size, starttime=None, endtime=None):
         filters.append({'range': {'@timestamp': condition}})
     query = {'filtered': {'filter': {'and': filters}}}
     return execute_es_query(
-        index, query, size, {'@timestamp': {'order': 'desc'}}
+        index, query, size, {'@timestamp': {'order': 'desc'}}, host=host
     )
 
 
-def get_node_logs(hostname, date, size):
+def get_node_logs(hostname, date, size, host=None):
     """Extracts node's logs by query to node's elasticsearch.
     :param hostname: name of the host to get logs
     :param date: date of logs
     :param size: limit selection to this number (default = 100)
+    :param host: node ip to use or None to search all nodes
     Records will be ordered by timestamp in descending order.
     TODO: add ordering parameter support.
     """
@@ -55,4 +57,4 @@ def get_node_logs(hostname, date, size):
     query = {'filtered': {'filter': {'term': {'host': hostname}}}}
     order = {'@timestamp': {'order': 'desc'}}
 
-    return execute_es_query(index, query, size, order)
+    return execute_es_query(index, query, size, order, host=host)

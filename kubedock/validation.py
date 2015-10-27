@@ -183,7 +183,7 @@ new_pod_schema = {
         'nullable': True,
         'internal_only': True,
     },
-    'replicas': {'type': 'integer', 'min': 0},
+    'replicas': {'type': 'integer', 'min': 0, 'max': 1},
     'kube_type': {
         'type': 'integer',
         'required': True,

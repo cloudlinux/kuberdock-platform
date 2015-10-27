@@ -114,13 +114,14 @@ class PodResource(object):
               "labels": dict for some labels, for example {"name": "mypod"},
               "containers": list of containers in the pod, each container is
                  a dict, here we're extracting only "image" field - name
-                 of image in the container
+                 of image in the container,
+              "template_id": template_id of the pod
             }
         Name and status will be returned as is, labels will be joined to
         one string. Image names of container also will be joined to one string.
 
         """
-        ready = ['name', 'status']
+        ready = ['name', 'status', 'template_id']
         out = dict((k, data.get(k, '???')) for k in ready)
         out['labels'] = u','.join(
             [u'{0}={1}'.format(k, v)
@@ -135,7 +136,8 @@ class PodResource(object):
         printout = PrintOut(
             wants_header=True,
             fields=(('name', 32), ('images', 32),
-                    ('labels', 64), ('status', 10)),
+                    ('labels', 64), ('status', 10),
+                    ('template_id', 11)),
             as_json=self.resource.as_json)
         data = data or []
         if not isinstance(data, (list, tuple)):

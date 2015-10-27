@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 1.3%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,28 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Tue Oct 27 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>  0.4-2
+- AC-1322: Force node's rsyslog to use hostname as KuberDock knows it
+- AC-1251 Add style to predefined app create page
+- AC-1344: hide start/stop button & chechboxes in container-list table
+- Restrict to create pod when no such kube type on any node
+- fix: pod create -> set up image -> "Persistent options must be set!"
+- AC-1286: add pod nodes history selection
+- AC-1321: Simplify logs API
+- AC-1346: add reset-password command to manage.py
+- AC-1303: inform user about registry inaccessibility during image search
+- Fix breadcrumb in pre app, add notification to events add,remove,error, add modal dilog to delete app event
+- AC-1255: Implement correct error messages & validation on front side
+- Fix internal pods and kube type exists validation.
+- AC-1372: add validation to environment variable name.
+- AC-1376: all pods must have RC; bugfix
+- Fix rare pod listener restart
+- AC-1371: fix containers logs (frontend)
+- AC-1373: added optional validation to custom variables in predefined apps templates
+- forbid to create pods with more then 1 replicas
+- AC-1374: Add template_id to pods API
+- AC-1366: Show cpu/memory/disk on pod page where pod resources block
+
 * Tue Oct 20 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>  0.4-1.3
 - Add rendering node's page after node status update
 

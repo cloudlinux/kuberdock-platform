@@ -200,7 +200,7 @@ class PrintOut(object):
     def _print_header(self):
         fmt = ''.join( ['{{{0}:<{1[1]}}}'.format(i, v)
                 for i, v in enumerate(self.fields)])
-        print fmt.format(*[i[0].upper() for i in self.fields])
+        print fmt.format(*[i[0].upper().replace('_', ' ') for i in self.fields])
 
     def _list_data(self, data):
         if self.fields is None:

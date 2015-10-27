@@ -296,15 +296,18 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         for db_pod in db_pods:
             db_pod_config = json.loads(db_pod.config)
             namespace = db_pod.namespace
+            template_id = db_pod.template_id
 
             if (db_pod.id, namespace) not in self._collection:  # exists in DB only
                 pod = Pod(db_pod_config)
                 pod.id = db_pod.id
+                pod.template_id = template_id
                 pod._forge_dockers()
                 self._collection[pod.id, namespace] = pod
             else:
                 pod = self._collection[db_pod.id, namespace]
                 pod.name = db_pod.name
+                pod.template_id = template_id
                 # TODO if remove _is_related then add podIP attribute here
                 # pod.service = json.loads(db_pod.config).get('service')
                 pod.kube_type = db_pod_config.get('kube_type')

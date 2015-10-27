@@ -75,7 +75,7 @@ define(['pods_app/app',
             template    : pageContainerItemTpl,
             tagName     : 'tr',
             className   : 'container-item',
-/*            className   : function(){
+            /*className   : function(){
                 return this.model.is_checked ? 'container-item checked' : 'container-item';
             },*/
 
@@ -98,20 +98,20 @@ define(['pods_app/app',
                 'updateContainer'  : '.container-update',
                 'checkForUpdate'   : '.check-for-update',
                 'containerPageBtn' : '.container-page-btn',
-/*                'checkbox'         : 'input[type="checkbox"]'*/
+                /*'checkbox'         : 'input[type="checkbox"]'*/
             },
 
             events: {
-/*                'click @ui.start'              : 'startItem',
+                /*'click @ui.start'              : 'startItem',
                 'click @ui.stop'               : 'stopItem',
                 'click @ui.delete'             : 'deleteItem',*/
                 'click @ui.updateContainer'    : 'updateItem',
                 'click @ui.checkForUpdate'     : 'checkForUpdate',
                 'click @ui.containerPageBtn'   : 'containerPage',
-/*                'click @ui.checkbox'           : 'checkItem'*/
+                /*'click @ui.checkbox'           : 'checkItem'*/
             },
 
-/*            startItem: function(){
+            /*startItem: function(){
                 App.WorkFlow.commandPod('start', this.model.get('parentID'));
             },
             stopItem: function(){
@@ -124,7 +124,7 @@ define(['pods_app/app',
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
-/*            deleteItem: function(evt){
+            /*deleteItem: function(evt){
                 var that = this,
                     name = that.model.get('name');
                 utils.modalDialogDelete({
@@ -141,7 +141,7 @@ define(['pods_app/app',
                 });
             },*/
 
-/*            checkItem: function(){
+            /*checkItem: function(){
                 if (this.model.is_checked){
                     this.$el.removeClass('checked');
                     this.model.is_checked = false;
@@ -165,19 +165,19 @@ define(['pods_app/app',
             childViewContainer: "tbody",
 
             ui: {
-/*                count             : '.count',
+                /*count             : '.count',
                 defaultTableHead  : '.main-table-head',
                 containersControl : '.containersControl',
                 checkAllItems     : 'table thead .custom',*/
             },
 
             events: {
-/*                'click .stop-checked'     : 'stopItems',
+                /*'click .stop-checked'     : 'stopItems',
                 'click .start-checked'    : 'startItems',
                 'click @ui.checkAllItems' : 'checkAllItems',*/
             },
 
-/*            childEvents: {
+            /*childEvents: {
                 render: function() {
                     var col = this.collection,
                         count = 0;
@@ -207,7 +207,7 @@ define(['pods_app/app',
                 this.render();
             },*/
 
-/*            command: function(cmd){
+            /*command: function(cmd){
                 var preloader = $('#page-preloader');
                     preloader.show();
                 var model;
@@ -233,7 +233,7 @@ define(['pods_app/app',
                 });
             },*/
 
-/*            startItems: function(evt){
+            /*startItems: function(evt){
                 this.command('start');
             },
 
@@ -267,21 +267,21 @@ define(['pods_app/app',
                         ? this.model.get('public_aws')
                         : '',
                     graphs = this.graphs,
-                    kube = this.getKubeById(),
+                    kubeType = this.getKubeById(),
                     kubes = _.reduce(this.model.get('containers'), function(memo, c) {
                         return memo + c.kubes
                     }, 0),
-                    kubesPrice = this.getFormattedPrice(kubes * kube.kube_price),
+                    kubesPrice = this.getFormattedPrice(kubes * kubeType.kube_price),
                     package = this.getUserPackage();
 
                 return {
                     publicIP   : publicIP,
                     publicName : publicName,
                     graphs     : graphs,
-                    kube       : kube,
+                    kubeType   : kubeType,
                     kubes      : kubes,
                     kubesPrice : kubesPrice,
-                    package    : package
+                    package    : package,
                 };
             },
 

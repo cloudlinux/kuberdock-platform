@@ -15,7 +15,6 @@
 <div class="row placeholders">
     <div class="col-xs-10 col-xs-offset-2">
         <div class="col-xs-6 info">
-            <div>Status: <%- status %></div>
             <% if (publicIP) { %>
                 <div>Public IP: <%- publicIP %></div>
             <% } %>
@@ -23,16 +22,18 @@
                 <div>Public name: <%- publicName %></div>
             <% } %>
             <div>Pod IP: <%- (typeof(podIP) != 'undefined') ? podIP : 'Internal ip is not assigned yet'%></div>
-        </div>
-        <div class="col-xs-6 servers">
-            <div><b><%- name %></b></div>
-            <div>Kube type: <%- kube.name %></div>
             <div>Restart policy: <%- restartPolicy %></div>
+            <div>Kube type: <%- kubeType.name %></div>
             <div>Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
             <div>Price: <%- kubesPrice %> / <%- package.period %></div>
             <!--
             <div class="edit">Edit pod</div>
             -->
+        </div>
+        <div class="col-xs-6 servers">
+            <div>CPU: <%- kubeType.cpu * kubes %> <%- kubeType.cpu_units %></div>
+            <div>RAM: <%- kubeType.memory * kubes %> <%- kubeType.memory_units %></div>
+            <div>HDD: <%- kubeType.disk_space * kubes %> <%- kubeType.disk_space_units %></div>
         </div>
     </div>
 </div>

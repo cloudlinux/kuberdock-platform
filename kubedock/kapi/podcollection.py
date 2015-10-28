@@ -3,13 +3,13 @@ from uuid import uuid4
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from flask import current_app
 
-from ..billing import repr_limits
-from ..utils import (modify_node_ips, run_ssh_command, send_event, APIError,
-                     POD_STATUSES)
 from .pod import Pod
 from .images import Image
 from .pstorage import CephStorage, AmazonStorage, NodeCommandError
 from .helpers import KubeQuery, ModelQuery, Utilities
+from ..billing import repr_limits
+from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
+                     unbind_ip)
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
@@ -98,15 +98,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if service_name:
             service = self._get(['services', service_name], ns=pod.namespace)
             state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
-            if 'assigned-to' in state:
-                res = modify_node_ips(
-                    service_name,
-                    state['assigned-to'], 'del',
-                    state['assigned-pod-ip'],
-                    state['assigned-public-ip'],
-                    service.get('spec', {}).get('ports'), current_app)
-                if not res:
-                    self._raise("Can't unbind ip from node({0}). Connection error".format(state['assigned-to']))
+            # TODO pod is stopped at this moment, may be don't needed?
+            if state.get('assigned-to'):
+                unbind_ip(service_name, state, service, 0, current_app)
             rv = self._del(['services', service_name], ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a service")
 

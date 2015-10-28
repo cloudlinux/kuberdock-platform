@@ -300,19 +300,19 @@ cat > /var/lib/kuberdock/scripts/modify_ip.sh << 'EOF'
 CMD=$1
 PUBLIC_IP=$2
 IFACE=$3
-nmcli g &> /dev/null
-if [ $? == 0 ];then
-    CONNECTION=$(nmcli -f UUID,DEVICE con | awk "/$IFACE/ {print \$1; exit}")
-    if [ -z $CONNECTION ];then
-        echo "No connection found for interface $IFACE"
-        exit 1
-    fi
-    if [ $CMD == 'add' ];then
-        nmcli con mod "$CONNECTION" +ipv4.addresses "$PUBLIC_IP/32"
-    else
-        nmcli con mod "$CONNECTION" -ipv4.addresses "$PUBLIC_IP/32"
-    fi
-fi
+#nmcli g &> /dev/null
+#if [ $? == 0 ];then
+#    CONNECTION=$(nmcli -f UUID,DEVICE con | awk "/$IFACE/ {print \$1; exit}")
+#    if [ -z $CONNECTION ];then
+#        echo "No connection found for interface $IFACE"
+#        exit 1
+#    fi
+#    if [ $CMD == 'add' ];then
+#        nmcli con mod "$CONNECTION" +ipv4.addresses "$PUBLIC_IP/32"
+#    else
+#        nmcli con mod "$CONNECTION" -ipv4.addresses "$PUBLIC_IP/32"
+#    fi
+#fi
 ip addr $CMD $PUBLIC_IP/32 dev $IFACE
 if [ $CMD == 'add' ];then
     arping -I $IFACE -A $PUBLIC_IP -c 10 -w 1

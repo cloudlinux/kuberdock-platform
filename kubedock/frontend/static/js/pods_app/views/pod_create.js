@@ -249,7 +249,6 @@ define(['pods_app/app',
             imageSourceOnChange: function(){
                 var val = this.ui.imageSource.val();
                 if (val == "Docker Hub"){
-                    console.log(1);
                     this.ui.input.parent().show();
                     this.ui.privateWrapper.hide();
                     this.ui.loginPrivateUres.slideUp();
@@ -877,7 +876,6 @@ define(['pods_app/app',
             },
 
             finalStep: function(){
-                console.log(this);
                 var success = true,
                     pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]/;
 

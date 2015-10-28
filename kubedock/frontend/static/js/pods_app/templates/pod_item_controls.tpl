@@ -1,3 +1,11 @@
+<div class="message-wrapper">
+    <div class="message">
+        <h3>Congratulations!</h3>
+        <p>We just want to inform you that your application "<%- podName %>" now deploying and will be started in a few minutes. <br>
+        The application will be available via Public IP that you have on top of the page. You can find app credential on application page in tab "General". You need to wait until application will obtain status "running" that will mean that you application is ready to use. You can find more information about how to use KuberDock in our documentation.</p>
+        <span class="close"></span>
+    </div>
+</div>
 <div class="no-padding">
     <span class="status-line <%- status %>">Status: <%- status %></span>
     <% if ( status == "running" || status == "pending") { %>

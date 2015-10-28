@@ -53,32 +53,6 @@
             background-color: #fff;
             &:hover{
                 background-color: #f5fafe;
-                td{
-                    .editPod{
-                        background: url('../img/pencil-big.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                    .start-btn{
-                        background: url('../img/start.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                    .stop-btn{
-                        background: url('../img/stop.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -17px;
-                        }
-                    }
-                    .terminate-btn{
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                }
             }
             &.checked{
                 background-color: #f5fafe;
@@ -311,16 +285,31 @@
                 }
                 .start-btn{
                     width: 12px;
+                    background: url('../img/start.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -18px;
+                    }
                 }
                 .stop-btn{
                     width: 17px;
+                    background: url('../img/stop.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -17px;
+                    }
                 }
                 .terminate-btn{
                     width: 15px;
+                    background: url('../img/recycling.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -18px;
+                    }
                 }
                 .editPod{
                     width: 20px;
-                    display: inline-block;
+                    background: url('../img/pencil-big.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -18px;
+                    }
                 }
                 .tooltip.bottom{
                     .opacity(1);
@@ -379,9 +368,6 @@
                     padding-left: 24px;
                 }
             }
-/*            &.main-table-head{
-                th{ border-bottom: 0; }
-            }*/
         }
     }
     tbody{
@@ -393,16 +379,6 @@
             }
         }
     }
-/*    .containersControl{
-        top: 0px;
-        display: none;
-        padding-left: 0;
-        position: absolute;
-        th{
-            padding-left: 0;
-            border-bottom: none;
-        }
-    }*/
 }
 #ports-table, #volumes-table, .env-table, .variables-table {
     thead{
@@ -424,7 +400,7 @@
         }
     }
 }
-.podsControl, .containersControl{
+.podsControl{
     z-index: 1;
     width: 93%;
     height: 50px;
@@ -508,14 +484,70 @@
     }
     &:hover{
         text-decoration: none;
-        &:before{
-            .transition(all 300ms ease);
-            left: 2px;
-        }
     }
 }
 #item-controls{
     margin-bottom: 0px;
+    .pod-controls{
+        .message-wrapper{
+            display: none;
+            &.show{
+                display: block;
+            }
+            .box-shadow(0px 10px 21px 1px rgba(230,230,230,0.96));
+            margin-bottom: 40px;
+            background-color: rgb(255, 254, 236);
+            .message{
+                top: 10px;
+                width: 100%;
+                position: relative;
+                padding: 10px 35px 30px;
+                border: 10px solid transparent;
+                border-width: 0 0 10px;
+                background-color: #fffeec;
+                background-color: hsla(0, 0%, 0%, 0);
+                background-image: -webkit-linear-gradient(#fffeec, #fffeec), -webkit-linear-gradient(top left, transparent 50.5%, #fffeec 50.5%), -webkit-linear-gradient(top right, transparent 50.5%, #fffeec 50.5%), -webkit-linear-gradient(bottom left, transparent 50.5%, #fffeec 50.5%), -webkit-linear-gradient(bottom right, transparent 50.5%, #fffeec 50.5%);
+                background-image: -moz-linear-gradient(#fffeec, #fffeec), -moz-linear-gradient(top left, transparent 50.5%, #fffeec 50.5%), -moz-linear-gradient(top right, transparent 50.5%, #fffeec 50.5%), -moz-linear-gradient(bottom left, transparent 50.5%, #fffeec 50.5%), -moz-linear-gradient(bottom right, transparent 50.5%, #fffeec 50.5%);
+                background-image: linear-gradient(#fffeec, #fffeec), linear-gradient(to bottom right, transparent 50.5%, #fffeec 50.5%), linear-gradient(to bottom left, transparent 50.5%, #fffeec 50.5%), linear-gradient(to top right, transparent 50.5%, #fffeec 50.5%), linear-gradient(to top left, transparent 50.5%, #fffeec 50.5%);
+                background-repeat: repeat, repeat-x, repeat-x, repeat-x, repeat-x;
+                background-position: 0 0, 0 0, 0 0, 10px 100%, 10px 100%;
+                background-size: auto auto, 0 0, 0 0, 20px 20px, 20px 20px;
+                background-clip: padding-box, border-box, border-box, border-box, border-box;
+                background-origin: padding-box, border-box, border-box, border-box, border-box;
+                h3{
+                    color: #050505;
+                    font-size: 17px;
+                    margin-top: 5px;
+                    line-height: 17px;
+                    text-align: center;
+                    margin-bottom: 15px;
+                    font-family: @bold;
+                }
+                p{
+                    color: #565656;
+                    font-size: 13px;
+                    line-height: 20px;
+                    font-family: @regular;
+                }
+                .close{
+                    .opacity(1);
+                    .border-radius(50%);
+                    top: 0;
+                    margin: 0;
+                    right: 10px;
+                    width: 23px;
+                    height: 23px;
+                    position: absolute;
+                    background: url('../img/close-circle.png') 0 0 no-repeat;
+                    &:hover{
+                        .opacity(0.8);
+                        .transition(color 500ms ease);
+                        cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
     .start-btn, .stop-btn, .terminate-btn, .list-btn, .stats-btn{
         padding-left: 25px;
         position: relative;

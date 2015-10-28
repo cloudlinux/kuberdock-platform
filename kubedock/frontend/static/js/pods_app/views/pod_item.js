@@ -247,12 +247,17 @@ define(['pods_app/app',
             tagName: 'div',
             className: 'pod-controls',
 
+            ui: {
+                close : 'span.close'
+            },
+
             events: {
                 'click .stats-btn'     : 'statsItem',
                 'click .list-btn'      : 'listItem',
                 'click .start-btn'     : 'startItem',
                 'click .stop-btn'      : 'stopItem',
-                'click .terminate-btn' : 'terminateItem'
+                'click .terminate-btn' : 'terminateItem',
+                'click @ui.close'      : 'closeMessage'
             },
 
             initialize: function(options){
@@ -281,6 +286,7 @@ define(['pods_app/app',
                     kubeType   : kubeType,
                     kubes      : kubes,
                     kubesPrice : kubesPrice,
+                    podName    : this.model.get('name'),
                     package    : package,
                 };
             },
@@ -294,6 +300,8 @@ define(['pods_app/app',
                 var item = this.getItem();
                 this.trigger('display:pod:stats', item);
             },
+
+            closeMessage: function(){ this.ui.close.parents('.message-wrapper').slideUp() },
 
             listItem: function(evt){
                 evt.stopPropagation();

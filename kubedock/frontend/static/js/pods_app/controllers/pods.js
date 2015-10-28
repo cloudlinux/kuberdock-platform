@@ -277,11 +277,15 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                          'pods_app/views/pod_create',
                          'pods_app/views/paginator',
                          'pods_app/views/loading'], function(utils){
-                    var model = new App.Data.Pod({name: "Unnamed-1", containers: [], volumes: []}),
-                        registryURL = 'registry.hub.docker.com',
+                    var registryURL = 'registry.hub.docker.com',
                         imageTempCollection = new App.Data.ImagePageableCollection(),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout(),
-                        imageView;
+                        imageView,
+                        podName = 'Unnamed-' + (Math.max.apply(null, WorkFlow.getCollection().fullCollection.models.map(function(m){
+                            var match = /^Unnamed\-(\d+)$/.exec(m.attributes.name);
+                               return match !== null ? +match[1] : 0;
+                        }))+1);
+                    var model = new App.Data.Pod({ name: podName, containers: [], volumes: [] });
                     var newImageView = function(options){
                         imageView = new App.Views.NewItem.GetImageView(
                             options
@@ -293,9 +297,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         imageView.removeLoader();
                     };
 
-
                     model.origEnv = {};
-
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.header.show(new App.Views.NewItem.PodHeaderView({model: model}));

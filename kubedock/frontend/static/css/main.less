@@ -40,8 +40,10 @@ body{
                 &:before{
                     top: 0;
                     left: 0;
-                    content: '';
+                    bottom: 0;
                     width: 35px;
+                    content: '';
+                    margin: auto;
                     height: 18px;
                     position: absolute;
                     background: url('../img/glasses.png') 0 0 no-repeat;
@@ -1278,10 +1280,10 @@ body{
     /* end select styles */
 }
 @-moz-document url-prefix() {
-  body .podsControl, body .containersControl{
+  body .podsControl/*, body .containersControl*/{
     height: 49px;
   }
-  body #imagelist-table thead tr.main-table-head.min-opacity th{
+/*  body #imagelist-table thead tr.main-table-head.min-opacity th{
     height: 49px
-  }
+  }*/
 }

@@ -517,6 +517,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             changeTab: function (evt) {
                 evt.preventDefault();
                 var tgt = $(evt.target);
+                if (!tgt.hasClass('active')) $('#page-preloader').show();
                 if (tgt.hasClass('general')) App.router.navigate('/general/', {trigger: true});
                 else if (tgt.hasClass('profile')) App.router.navigate('/profile/', {trigger: true});
                 else if (tgt.hasClass('publicIPs')) App.router.navigate('/publicIPs/', {trigger: true});
@@ -529,6 +530,8 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 var href = window.location.pathname.split('/'),
                     tabs = this.ui.tabButton,
                     that = this;
+
+                $('#page-preloader').hide();
 
                 href = href[href.length - 2];
 

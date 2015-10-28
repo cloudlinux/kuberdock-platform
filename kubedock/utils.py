@@ -527,6 +527,23 @@ def modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app=None):
     return result
 
 
+def unbind_ip(service_name, state, service, verbosity, app):
+    if not state.get('assigned-to'):
+        print 'WARNING: unbind_ip called for not assigned pod. Skipped.'
+        return
+    res = modify_node_ips(service_name, state['assigned-to'], 'del',
+                          state['assigned-pod-ip'],
+                          state['assigned-public-ip'],
+                          service['spec']['ports'], app)
+    if verbosity >= 2:
+        if not res:
+            print 'Failed to unbind from {0} node. Ignoring'\
+                .format(state['assigned-to'])
+        else:
+            print 'Successfully unbinded ip from {0} node'\
+                .format(state['assigned-to'])
+
+
 def unregistered_pod_warning(pod_id):
     current_app.logger.warn('Pod with id {0} is not registered in Kuberdock '
                             'database, but was found in kubernetes.'.format(pod_id))

@@ -12,7 +12,8 @@ from .usage.models import ContainerState
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .tasks import fix_pods_timeline_heavy
 from .utils import (modify_node_ips, get_api_url, set_limit,
-                    unregistered_pod_warning, send_event, pod_without_id_warning)
+                    unregistered_pod_warning, send_event,
+                    pod_without_id_warning, unbind_ip)
 from .kapi.pod_states import save_pod_state
 
 
@@ -30,8 +31,6 @@ def filter_event(data):
 def process_endpoints_event(data, app):
     if data is None:
         return
-    if SERVICES_VERBOSE_LOG >= 2:
-        print 'ENDPOINT EVENT', data
     service_name = data['object']['metadata']['name']
     current_namespace = data['object']['metadata']['namespace']
     r = requests.get(get_api_url('services', service_name,
@@ -46,23 +45,22 @@ def process_endpoints_event(data, app):
             # Handle here if public-ip added during runtime
             if SERVICES_VERBOSE_LOG >= 2:
                 print 'SERVICE IN ADDED(pods 0)', service
-        elif event_type == 'MODIFIED':      # when stop pod
+        elif event_type == 'MODIFIED':      # when stop(delete) pod
             if SERVICES_VERBOSE_LOG >= 2:
                 print 'SERVICE IN MODIF(pods 0)', service
             state = json.loads(service['metadata']['annotations']['public-ip-state'])
+            if SERVICES_VERBOSE_LOG >= 2:
+                print 'STATE(pods=0)==========', state
             if 'assigned-to' in state:
-                res = modify_node_ips(service_name, state['assigned-to'], 'del',
-                                      state['assigned-pod-ip'],
-                                      state['assigned-public-ip'],
-                                      service['spec']['ports'], app)
-                if res is True:
-                    del state['assigned-to']
-                    del state['assigned-pod-ip']
-                    service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                    # TODO what if resourceVersion has changed?
-                    r = requests.put(get_api_url('services', service_name,
-                                     namespace=current_namespace),
-                                     json.dumps(service))
+                unbind_ip(service_name, state, service,
+                          SERVICES_VERBOSE_LOG, app)
+                del state['assigned-to']
+                del state['assigned-pod-ip']
+                service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
+                # TODO what if resourceVersion has changed?
+                r = requests.put(get_api_url('services', service_name,
+                                 namespace=current_namespace),
+                                 json.dumps(service))
         elif event_type == 'DELETED':
             pass
             # Handle here if public-ip removed during runtime
@@ -70,6 +68,8 @@ def process_endpoints_event(data, app):
             print 'Unknown event type in endpoints event listener:', event_type
     elif len(pods) == 1:
         state = json.loads(service['metadata']['annotations']['public-ip-state'])
+        if SERVICES_VERBOSE_LOG >= 2:
+            print 'STATE(pods=1)==========', state
         public_ip = state['assigned-public-ip']
         if not public_ip:
             # TODO change with "release ip" feature
@@ -93,22 +93,29 @@ def process_endpoints_event(data, app):
                 r = requests.put(get_api_url('services', service_name,
                                  namespace=current_namespace),
                                  json.dumps(service))
-        else:
+        else:   # Happens after reboot node
             if current_host != assigned_to:     # migrate pod
+                # This case is never happens, presumably due fact that pod is
+                # never changes - old pod deleted and new pod created.
+                # Maybe this case will be useful in "unbind at runtime" feature
+                # or when we can switch kube_type
                 if SERVICES_VERBOSE_LOG >= 2:
-                    print 'MIGRATE POD'
-                res = modify_node_ips(service_name, assigned_to, 'del',
-                                      state['assigned-pod-ip'],
-                                      public_ip, ports, app)
-                if res is True:
-                    res2 = modify_node_ips(service_name, current_host, 'add', pod_ip,
-                                           public_ip, ports, app)
-                    if res2 is True:
-                        state['assigned-to'] = current_host
-                        state['assigned-pod-ip'] = pod_ip
-                        service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                        r = requests.put(get_api_url('services', service_name,
-                                         namespace=current_namespace), service)
+                    print 'MIGRATE POD from {0} to {1}'.format(assigned_to,
+                                                               current_host)
+                # Try to unbind ip from possibly failed node, even if we can't
+                # we add ip to another node.
+                unbind_ip(service_name, state, service,
+                          SERVICES_VERBOSE_LOG, app)
+                res2 = modify_node_ips(service_name, current_host, 'add', pod_ip,
+                                       public_ip, ports, app)
+                if res2 is True:
+                    state['assigned-to'] = current_host
+                    state['assigned-pod-ip'] = pod_ip
+                    service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
+                    r = requests.put(get_api_url('services', service_name,
+                                     namespace=current_namespace), service)
+                else:
+                    print 'Failed to bind new ip to {0}'.format(current_host)
     else:   # more? replica case
         pass
 
@@ -289,7 +296,7 @@ def listen_fabric(url, func, verbose=1):
                     continue
                 while True:
                     content = ws.recv()
-                    if verbose >= 2:
+                    if verbose >= 3:
                         print '==EVENT CONTENT {0} ==: {1}'.format(
                             fn_name, content)
                     data = json.loads(content)

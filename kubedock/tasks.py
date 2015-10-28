@@ -187,6 +187,7 @@ def add_new_node(host, kube_type, db_node,
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read())
         sftp = ssh.open_sftp()
+        sftp.put('fslimit.py', '/fslimit.py')
         sftp.put('node_install.sh', '/node_install.sh')
         sftp.put('pd.sh', '/pd.sh')
         sftp.put('/etc/kubernetes/configfile_for_nodes', '/configfile')

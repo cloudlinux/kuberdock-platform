@@ -187,13 +187,13 @@
                                 value="{{ user_settings.timezone }}"
                                   placeholder="City, country or region"/>
                         <% if(administrator) { %>
-                            <label>Billing system base link for predefined apps</label>
-                            <select class="selectpicker" value="WHMCS" disabled="true" size="1">
-                                <option value="WHMCS">WHMCS</option>
-                            </select>
-                            <input type="text" name="billingAppsLink" id="billingAppsLink"
-                                  value="{{ system_settings.billing_apps_link }}"
-                                  placeholder="Billing system base url"/>
+                            <div class="link-wrapper">
+                                <label>Link to billing system scrypt</label>
+                                <input type="text" name="billingAppsLink" id="billingAppsLink"
+                                    value="{{ system_settings.billing_apps_link }}"
+                                    placeholder="http://whmcs.com/script.php"/>
+                                <div class="link-description">Link to predefined application request processing script</div>
+                            </div>
                         <% } %>
                       </div>
                       <div class="col-xs-5 image"></div>

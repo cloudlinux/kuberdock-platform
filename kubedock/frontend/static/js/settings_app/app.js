@@ -69,7 +69,6 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             ui: {
                 'timezone'        : '#timezone',
                 'billingAppsLink' : '#billingAppsLink',
-                'selectpicker'    : '.selectpicker'
             },
 
             events: {
@@ -78,8 +77,6 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
 
             onRender: function(){
                 var that = this;
-
-                this.ui.selectpicker.selectpicker();
 
                 this.ui.timezone.typeahead({
                     autoSelect: false,

@@ -140,207 +140,218 @@
     }
 }
 #settingsGeneralTab, #settingsNotificationTab, #settingsPermisionTab{
-	.content-body{
-		.clearfix;
-		border-bottom: 1px solid #e5e5e5;
-		label{
-			padding-left: 0px;
-			font-size: 13px;
-			font-family: @bold;
-			margin-bottom: 20px;
-			display: block;
-		}
-		#timezone, #conectionType, #billingAppsLink, input[type="text"], input[type="email"]{
-			.placeholder(#b4b4b4);
-			.box-shadow(none);
-			outline: 0;
-			width: 100%;
-			height: 49px;
-			padding: 0 20px;
-			font-size: 13px;
-			position: relative;
-			font-weight: normal;
-			background-color: #fff;
-			border: 1px solid #e5e5e5;
-			&:focus{
-				.transition(color 500ms ease);
-				border-color: #188eed;
-			}
-		}
-		input[type="text"], input[type="email"], select{
-			.placeholder(#1d1d1d);
-			margin-bottom: 25px;
-		}
-	}
+    .content-body{
+        .clearfix;
+        border-bottom: 1px solid #e5e5e5;
+        label{
+            padding-left: 0px;
+            font-size: 13px;
+            font-family: @bold;
+            margin-bottom: 20px;
+            display: block;
+        }
+        #timezone, #conectionType, #billingAppsLink, input[type="text"], input[type="email"]{
+            .placeholder(#b4b4b4);
+            .box-shadow(none);
+            outline: 0;
+            width: 100%;
+            height: 49px;
+            padding: 0 20px;
+            font-size: 13px;
+            position: relative;
+            font-weight: normal;
+            background-color: #fff;
+            border: 1px solid #e5e5e5;
+            &:focus{
+                .transition(color 500ms ease);
+                border-color: #188eed;
+            }
+        }
+        input[type="text"], input[type="email"], select{
+            .placeholder(#1d1d1d);
+            margin-bottom: 25px;
+        }
+    }
 }
 #settingsGeneralTab{
-	.content-body{
-		.image{
-			min-height: 88px;
-			margin-bottom: 88px;
-			&:after{
-				left: 4%;
-				top: 30px;
-				content: '';
-				width: 109px;
-				height: 94px;
-				position: absolute;
-				background: url('../img/settings-cube.png') 0 0 no-repeat;
-			}
-		}
-        .selectpicker + .bootstrap-select{
-            margin-bottom: 30px;
+    .content-body{
+        .image{
+            min-height: 88px;
+            margin-bottom: 88px;
+            &:after{
+                left: 4%;
+                top: 30px;
+                content: '';
+                width: 109px;
+                height: 94px;
+                position: absolute;
+                background: url('../img/settings-cube.png') 0 0 no-repeat;
+            }
         }
-	}
+        .link-wrapper{
+            position: relative;
+            margin-bottom: 55px;
+            .link-description{
+                left: 10px;
+                bottom: -20px;
+                color: #adaaaa;
+                font-size: 11px;
+                position: absolute;
+            }
+            input{
+                margin-bottom: 0;
+            }
+        }
+    }
 }
 #settingsNotificationEditTab{
-	#user-controls{
-		.status-line{
-			padding-left: 0;
-			line-height: 36px;
-			margin-bottom: 37px;
-		}
-		.form-group{
-			font-size: 13px;
-			max-width: 100%;
-			margin-bottom: 0;
-			&:after{
-				content: none;
-			}
-			label{
-				font-size: 13px;
-			}
-			textarea{
-				width: 100%;
-				resize: none;
-				padding: 10px;
-				min-height: 175px;
-				margin-bottom: 35px;
-				border-color: #ebebeb;
-			}
-		}
-	}
+    #user-controls{
+        .status-line{
+            padding-left: 0;
+            line-height: 36px;
+            margin-bottom: 37px;
+        }
+        .form-group{
+            font-size: 13px;
+            max-width: 100%;
+            margin-bottom: 0;
+            &:after{
+                content: none;
+            }
+            label{
+                font-size: 13px;
+            }
+            textarea{
+                width: 100%;
+                resize: none;
+                padding: 10px;
+                min-height: 175px;
+                margin-bottom: 35px;
+                border-color: #ebebeb;
+            }
+        }
+    }
 }
 #settingsNotificationTab{
-	.content-body{
-		.bell{
-			&:after{
-				left: 4%;
-				top: 30px;
-				content: '';
-				width: 44%;
-				height: 94px;
-				min-width: 150px;
-				position: absolute;
-				background: url('../img/bell.png') center 0 no-repeat;
-			}
-		}
-		.inline{
-			display: inline-block;
-			font-size: 0;
-			margin-top: 54px;
-			label{
-				margin: 0;
-				font-weight: normal;
-				vertical-align: top;
-				display: inline-block;
-				span{
-					width: 20px;
-  					height: 20px;
-  					margin: 0 12px 0 20px;
-  					&:before{
-  						top: 0;
-  						left: 0;
-  						width: 18px;
-  						height: 18px;
-  						background-position: center;
-  					}
-				}
-			}
-		}
-		.notifications{
-			margin-bottom: 66px;
-			span{
-				height: 20px;
-				color: #339aed;
-				font-size: 13px;
-				min-width: 170px;
-				padding-left: 25px;
-				position: relative;
-				margin-bottom: 18px;
-				font-weight: normal;
-				vertical-align: top;
-				display: inline-block;
-				font-family: @regular;
-				&:before{
-					top: 0;
-					left: 0;
-					width: 18px;
-					content: '';
-					height: 18px;
-					position: absolute;
-					background: url('../img/pencil-big.png') 0 0 no-repeat;
-				}
-				&:hover{
-					cursor: pointer;
-					&:before{
-						background-position: 0 -18px;
-					}
-				}
-			}
-			.group{
-				label, input{
-					font-weight: normal;
-					vertical-align: top;
-					display: inline-block;
-					margin: 0;
-				}
-				input{
-					outline: 0;
-					width: 18px;
-					height: 18px;
-					margin-bottom: 0;
-					background: none;
-					vertical-align: top;
-					display: inline-block;
-					margin: 0 10px 0 0;
-					border: 1px solid #e5e5e5;
-				}
-			}
-		}
-	}
+    .content-body{
+        .bell{
+            &:after{
+                left: 4%;
+                top: 30px;
+                content: '';
+                width: 44%;
+                height: 94px;
+                min-width: 150px;
+                position: absolute;
+                background: url('../img/bell.png') center 0 no-repeat;
+            }
+        }
+        .inline{
+            display: inline-block;
+            font-size: 0;
+            margin-top: 54px;
+            label{
+                margin: 0;
+                font-weight: normal;
+                vertical-align: top;
+                display: inline-block;
+                span{
+                    width: 20px;
+                    height: 20px;
+                    margin: 0 12px 0 20px;
+                    &:before{
+                        top: 0;
+                        left: 0;
+                        width: 18px;
+                        height: 18px;
+                        background-position: center;
+                    }
+                }
+            }
+        }
+        .notifications{
+            margin-bottom: 66px;
+            span{
+                height: 20px;
+                color: #339aed;
+                font-size: 13px;
+                min-width: 170px;
+                padding-left: 25px;
+                position: relative;
+                margin-bottom: 18px;
+                font-weight: normal;
+                vertical-align: top;
+                display: inline-block;
+                font-family: @regular;
+                &:before{
+                    top: 0;
+                    left: 0;
+                    width: 18px;
+                    content: '';
+                    height: 18px;
+                    position: absolute;
+                    background: url('../img/pencil-big.png') 0 0 no-repeat;
+                }
+                &:hover{
+                    cursor: pointer;
+                    &:before{
+                        background-position: 0 -18px;
+                    }
+                }
+            }
+            .group{
+                label, input{
+                    font-weight: normal;
+                    vertical-align: top;
+                    display: inline-block;
+                    margin: 0;
+                }
+                input{
+                    outline: 0;
+                    width: 18px;
+                    height: 18px;
+                    margin-bottom: 0;
+                    background: none;
+                    vertical-align: top;
+                    display: inline-block;
+                    margin: 0 10px 0 0;
+                    border: 1px solid #e5e5e5;
+                }
+            }
+        }
+    }
 }
 #permissions-table{
-	td{
-		text-transform: capitalize;
-		label{
-			font-weight: normal;
-			span{
-				margin-right: 6px;
-			}
-		}
-	}
+    td{
+        text-transform: capitalize;
+        label{
+            font-weight: normal;
+            span{
+                margin-right: 6px;
+            }
+        }
+    }
 }
 .settings-user{
-	#user-controls{
-		.form-group {
-			&:first-child{
-				&:after{
-					right: initial;
-					left:  -160px;
-				}
-			}
-			&.show{
-				label{
-					margin-bottom: 0;
-					font-size: 12px;
-				}
-				> div{
-					font-size: 19px;
-					line-height: 23px;
-					margin-bottom: 20px
-				}
-			}
-		}
-	}
+    #user-controls{
+        .form-group {
+            &:first-child{
+                &:after{
+                    right: initial;
+                    left:  -160px;
+                }
+            }
+            &.show{
+                label{
+                    margin-bottom: 0;
+                    font-size: 12px;
+                }
+                > div{
+                    font-size: 19px;
+                    line-height: 23px;
+                    margin-bottom: 20px
+                }
+            }
+        }
+    }
 }

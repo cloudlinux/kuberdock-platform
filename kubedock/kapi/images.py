@@ -23,6 +23,8 @@ MIN_FAILED_LOGIN_PAUSE = 3
 DOCKERHUB_V1_INDEX = 'https://index.docker.io'
 DEFAULT_REGISTRY_HOST = urlparse(DEFAULT_REGISTRY).netloc
 
+API_VERSION_HEADER = 'docker-distribution-api-version'
+
 
 #: Timeout for requests to registries in seconds
 REQUEST_TIMEOUT = 15.0
@@ -31,17 +33,45 @@ REQUEST_TIMEOUT = 15.0
 PING_REQUEST_TIMEOUT = 5.0
 
 
-def check_registry_status(url=DEFAULT_IMAGES_URL):
-    """Performs api check for registry health status."""
-    url = urlsplit(url)._replace(path='/v1/_ping').geturl()
+class RegistryError(APIError):
+    """
+    Raised when the whole registry is not available.
+    """
+    _msg_format = ('It seems that the registry {registry} is not available now '
+                   '({status}). Try again later or contact your administrator '
+                   'for support.')
+
+    def __init__(self, registry=DEFAULT_REGISTRY, status=''):
+        message = self._msg_format.format(registry=urlparse(registry).netloc,
+                                          status=status)
+        return super(RegistryError, self).__init__(message, 503)
+
+
+def check_registry_status(url=DEFAULT_IMAGES_URL, _v2=False):
+    """
+    Performs api check for registry health status.
+
+    :params url: registry url
+    :raises RegistryError: if registry is not available
+    """
+    url = urlsplit(url)._replace(path='/v2/' if _v2 else '/v1/_ping').geturl()
+
     try:
-        response = requests.get(url, timeout=PING_REQUEST_TIMEOUT)
-        response.raise_for_status()
+        response = requests.get(url, timeout=PING_REQUEST_TIMEOUT, verify=False)
+        if not _v2 and response.status_code == 404 and \
+                response.headers.get(API_VERSION_HEADER) == 'registry/2.0':
+            check_registry_status(url, _v2=True)
+        elif response.status_code == 401:
+            return  # user is not authorized, but registry is available
+        else:
+            response.raise_for_status()
     except (requests.exceptions.HTTPError,
-            requests.exceptions.Timeout,
-            requests.exceptions.ConnectionError):
-        return False
-    return response.status_code == 200
+            requests.exceptions.TooManyRedirects) as e:
+        raise RegistryError(url, e.message)
+    except requests.exceptions.Timeout:
+        raise RegistryError(url, 'timeout error')
+    except requests.exceptions.ConnectionError:
+        raise RegistryError(url, 'connection error')
 
 
 def search_image(term, url=DEFAULT_IMAGES_URL, page=1, page_size=10):
@@ -49,24 +79,11 @@ def search_image(term, url=DEFAULT_IMAGES_URL, page=1, page_size=10):
     params = {'query': term, 'page_size': page_size, 'page': page}
     try:
         response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-    except requests.exceptions.Timeout:
-        raise APIError(
-            'Timeout while sending request to the registry. Try again later',
-            503
-        )
-    except requests.exceptions.HTTPError:
-        raise APIError(
-            'Failed to perform request to the registry. '
-            'Registry answered with code: {}'.format(response.status_code),
-            502
-        )
-    except requests.exceptions.ConnectionError:
-        raise APIError(
-            'Failed to connect to the registry. '
-            'Try again later or contact your administrator for support',
-            503
-        )
+    except (requests.exceptions.HTTPError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.TooManyRedirects):
+        check_registry_status(url)
     return response.json()
 
 
@@ -109,7 +126,7 @@ class DockerAuth(requests.auth.AuthBase):
         query = urlencode(dict(parse_qsl(url.query), **chal))
         url = url._replace(query=query).geturl()
         auth = None if self.username is None else (self.username, self.password)
-        response = requests.get(url, auth=auth)
+        response = requests.get(url, auth=auth, timeout=REQUEST_TIMEOUT)
         data = _json_or_none(response)
         if isinstance(data, dict):
             return data.get('token')
@@ -217,7 +234,8 @@ def docker_auth_v1(session, registry, repo, auth):
         seconds_to_wait = when_next_login_allowed(username, registry)
         raise_api_error_to_login_pause(seconds_to_wait)
     url = get_url(registry, 'v1/repositories', repo, 'images')
-    response = session.get(url, auth=auth, headers={'x-docker-token': 'true'})
+    response = session.get(url, auth=auth, headers={'x-docker-token': 'true'},
+                           timeout=REQUEST_TIMEOUT)
     if response.status_code != 200:
         if response.status_code == requests.codes.unauthorized and username:
             save_failed_login(username, url)
@@ -330,12 +348,11 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
 
         url = get_url(self.full_registry, 'v2', self.repo, 'manifests', self.tag)
         try:
-            response = s.get(url, auth=DockerAuth(auth))
+            response = s.get(url, auth=DockerAuth(auth), timeout=REQUEST_TIMEOUT)
             if just_check:
                 if response.status_code == 200:
                     return True
-                if response.headers.get('docker-distribution-api-version') !=\
-                        'registry/2.0':
+                if response.headers.get(API_VERSION_HEADER) != 'registry/2.0':
                     raise APIVersionError()
 
             v2_data = _json_or_none(response)
@@ -362,7 +379,7 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         try:
             docker_auth_v1(s, registry, repo, auth)
             url = get_url(registry, 'v1/repositories', repo, 'tags', tag)
-            response = s.get(url)
+            response = s.get(url, timeout=REQUEST_TIMEOUT)
             if response.status_code == 200:
                 image_id = _json_or_none(response)
                 if not isinstance(image_id, basestring):
@@ -370,11 +387,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
                 if just_check:
                     return True
                 url = get_url(registry, 'v1/images', image_id, 'json')
-                data = _json_or_none(s.get(url))  # get image info
-                try:
-                    return data
-                except (KeyError, TypeError):
-                    pass
+                response = s.get(url, timeout=REQUEST_TIMEOUT)  # get image info
+                return _json_or_none(response)
         except requests.RequestException:
             pass
         return None
@@ -441,6 +455,7 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
 
         image_info = self._request_image_info(auth)
         if image_info is None or 'config' not in image_info:
+            check_registry_status(self.full_registry)
             raise APIError('Couldn\'t get the image')
         data = self._prepare_response(image_info['config'], auth)
 
@@ -470,6 +485,7 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
                 except APIVersionError:
                     registry['v2_available'] = False
 
+        check_registry_status(self.full_registry)
         raise APIError('image {0} is not available'.format(self))
 
     def get_id(self, secrets=()):
@@ -493,7 +509,7 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         """
         Check if all images are available using provided credentials.
         Tries to check image availability wihout credentials and if it failed, will
-        try all specified crenedentials for the registry until successful result.
+        try all specified credentials for the registry until successful result.
 
         :param images: list of images
         :param secrets: list of secrets

@@ -6,6 +6,7 @@ import json
 from urllib import urlencode
 from urlparse import urlparse
 
+from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError, HTTPError
 import responses
 
 from ..images import (Image, complement_registry, get_url, APIError)
@@ -385,6 +386,81 @@ class TestImages(unittest.TestCase):
         self.assertEqual(result, NGINX_IMAGE_INFO['id'])
         request_image_info_mock.assert_called_once_with(
             Image('nginx'), ('username2', 'password2'))
+
+
+class TestCheckRegistryStatus(unittest.TestCase):
+    v2_is_supported = {'docker-distribution-api-version': 'registry/2.0'}
+
+    def _get_urls(self, registry):
+        return ('https://{0}/some/image'.format(registry),
+                'https://{0}/v1/_ping'.format(registry),
+                'https://{0}/v2/'.format(registry))
+
+    def _get_err_cases(self, registry):
+        err_msg_template = ('It seems that the registry {0} is not available now '
+                            '({1}). Try again later or contact your administrator '
+                            'for support.')
+        err_msg_timeout = err_msg_template.format(registry, 'timeout error')
+        err_msg_connection = err_msg_template.format(registry, 'connection error')
+        err_msg_502 = err_msg_template.format(registry, '502 Server Error: BAD GATEWAY')
+
+        return ((ConnectTimeout(), err_msg_timeout),
+                (ReadTimeout(), err_msg_timeout),
+                (ConnectionError(), err_msg_connection),
+                (HTTPError('502 Server Error: BAD GATEWAY'), err_msg_502))
+
+    @responses.activate
+    def test_v1_ok(self):
+        """Case when registry is available."""
+        url, ping_url_v1, _ = self._get_urls('qwerty.fgh:5000')
+        responses.add(responses.GET, ping_url_v1, body='true')
+
+        images.check_registry_status(url)
+
+        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(responses.calls[0].request.url, ping_url_v1)
+
+    @responses.activate
+    def test_v1_fail_v2_ok(self):
+        """Cases when registry v1 api is not available, but v2 is."""
+        url, ping_url_v1, ping_url_v2 = self._get_urls('qwerty.fgh:5000')
+
+        for status in (200, 401):
+            responses.reset()
+            responses.add(responses.GET, ping_url_v1, status=404,
+                          adding_headers=self.v2_is_supported)
+            responses.add(responses.GET, ping_url_v2, body='{}', status=status,
+                          content_type='application/json; charset=utf-8')
+            images.check_registry_status(url)
+            self.assertEqual(len(responses.calls), 2)
+            self.assertEqual(responses.calls[0].request.url, ping_url_v1)
+            self.assertEqual(responses.calls[1].request.url, ping_url_v2)
+
+    @responses.activate
+    def test_v1_or_both_fail(self):
+        """Cases when registry is not available."""
+        registry = 'qwerty.fgh:5000'
+        url, ping_url_v1, ping_url_v2 = self._get_urls(registry)
+
+        def check():
+            try:
+                images.check_registry_status(url)
+            except APIError as e:
+                self.assertEqual(e.message, message)
+            else:
+                self.fail('APIError is not raised')
+            responses.reset()
+
+        for exception, message in self._get_err_cases(registry):
+            responses.add(responses.GET, ping_url_v1, body=exception)
+            check()
+
+            # v2 registry api is supported by the host, but both v1 and v2 are
+            # not available now
+            responses.add(responses.GET, ping_url_v1, status=404,
+                          adding_headers=self.v2_is_supported)
+            responses.add(responses.GET, ping_url_v2, body=exception)
+            check()
 
 
 if __name__ == '__main__':

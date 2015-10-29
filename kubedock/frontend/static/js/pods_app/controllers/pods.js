@@ -288,27 +288,9 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         );
                         wizardLayout.steps.show(imageView);
                     };
-                    var processCollectionLoadError = function(collection, response, options){
-                          utils.preloader.hide();
-                          var body = response.responseJSON ?
-                              JSON.stringify(response.responseJSON.data) :
-                              response.responseText;
-                          utils.notifyWindow(body);
-                          imageView.removeLoader();
-                          if (response.status == 503) {
-                              checkRegistryAlive(options.data.url);
-                          }
-                    };
-                    var checkRegistryAlive = function(registry) {
-                        return $.ajax({
-                            url: '/api/images/isalive',
-                            data: { url: registry },
-                            type: 'GET',
-                            complete: function(){ utils.preloader.hide(); },
-                            error: function(xhr){
-                                utils.notifyWindow(xhr);
-                            },
-                        });
+                    var processCollectionLoadError = function(collection, response){
+                        utils.notifyWindow(response);
+                        imageView.removeLoader();
                     };
 
 

@@ -99,7 +99,6 @@ mkdir -p %{buildroot}/var/lib/kuberdock
 mkdir -p %{buildroot}%{_bindir}
 cp -r * %{buildroot}/var/opt/kuberdock
 ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_bindir}/kuberdock-upgrade
-%{__install} -D -m 0644 conf/kuberdock.ini %{buildroot}%{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %{__install} -D -m 0644 conf/shared-kubernetes.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
 %{__install} -D -m 0644 conf/shared-etcd.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-etcd.conf
@@ -113,12 +112,19 @@ rm -rf %{buildroot}
 
 %define sslcert %{_sysconfdir}/nginx/ssl/kubecert.crt
 %define sslkey %{_sysconfdir}/nginx/ssl/kubecert.key
+%define kd_vassal_source /var/opt/kuberdock/conf/kuberdock.ini
+%define kd_vassal %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 
 %post
 umask 077
 
 if [ ! -f %{sslkey} ] ; then
 %{_bindir}/openssl genrsa -rand /proc/apm:/proc/cpuinfo:/proc/dma:/proc/filesystems:/proc/interrupts:/proc/ioports:/proc/pci:/proc/rtc:/proc/uptime 1024 > %{sslkey} 2> /dev/null
+fi
+
+if [ ! -f %{kd_vassal} ]; then
+    cp %{kd_vassal_source} %{kd_vassal}
+    chmod 644 %{kd_vassal}
 fi
 
 FQDN=`hostname`
@@ -151,6 +157,12 @@ if [ "$SESTATUS" != disabled ];then
     fi
 fi
 
+%postun
+# When 1 - it's upgrade, 0 it's remove
+if [ "$1" = "0" ]; then
+   rm -f %{kd_vassal}
+fi
+
 %files
 %defattr(-,root,root)
 %attr (-,nginx,nginx) /var/opt/kuberdock
@@ -160,7 +172,6 @@ fi
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %config %{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
 %config %{_sysconfdir}/nginx/conf.d/shared-etcd.conf
-%config(noreplace) %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 

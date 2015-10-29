@@ -11,7 +11,7 @@ from hashlib import md5
 from StringIO import StringIO
 
 from ..core import db
-from ..nodes.models import Node
+from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
@@ -253,6 +253,19 @@ class CephStorage(PersistentStorage):
     def __init__(self):
         super(CephStorage, self).__init__()
 
+    def __getattr__(self, attr):
+        if attr == '_first_node_ip':
+            item = Node.all_with_flag_query(
+                NodeFlagNames.CEPH_INSTALLED, 'true'
+            ).first()
+            if item is None:
+                raise type('NodesNotFoundError', (Exception,), {})(
+                    'Unable to get any node from database')
+            self.__dict__['_first_node_ip'] = item.ip
+            return item.ip
+        else:
+            return super(CephStorage, self).__getattr__(attr)
+
     @staticmethod
     def _poll():
         """
@@ -417,10 +430,10 @@ class CephStorage(PersistentStorage):
         :param first_only: boolean
         :return: dict -> dict of node ip -> hostname
         """
+        query = Node.all_with_flag_query(NodeFlagNames.CEPH_INSTALLED, 'true')
         if not first_only:
-            return dict([(k, v)
-                for k, v in db.session.query(Node).values(Node.ip, Node.hostname)])
-        rv = db.session.query(Node).first()
+            return {k: v for k, v in query.values(Node.ip, Node.hostname)}
+        rv = query.first()
         if rv:
             return {rv.ip: rv.hostname}
 

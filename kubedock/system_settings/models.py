@@ -25,8 +25,10 @@ class SystemSettings(db.Model):
         if name:
             name = name.lower()
         entity = cls.get_by_name(name)
-        if entity and entity.value == value:
-                entity.deleted = datetime.datetime.utcnow()
+        if entity:
+            if entity.value == value:
+                return entity
+            entity.deleted = datetime.datetime.utcnow()
         entity = cls(name=name, value=value, created=datetime.datetime.utcnow())
         db.session.add(entity)
         db.session.commit()

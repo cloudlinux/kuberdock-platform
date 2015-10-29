@@ -32,14 +32,12 @@ def get_pods():
 def get_updates():
     return [{u.fname: u.status} for u in Updates.query.all()]
 
+
 def fetch_nodes():
     """
     Gets basic nodes data: IP address, cpu cores and memory
     """
-    nodes = []
-    for node in Node.query.all():
-        nodes.append({'_ip': node.ip})
-    return nodes
+    return [{'_ip': node.ip} for node in Node.get_all()]
 
 
 def extend_nodes(nodes):

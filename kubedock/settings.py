@@ -102,6 +102,7 @@ NODE_TOBIND_EXTERNAL_IPS = 'enp0s5'
 NODE_TOBIND_FLANNEL = 'enp0s5'
 NODE_INSTALL_TIMEOUT_SEC = 30*60    # 30 min
 
+NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
 # Import hoster settings in update case
 

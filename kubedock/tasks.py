@@ -28,9 +28,10 @@ from .utils import (
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, User
-from .nodes.models import NodeMissedAction
-from .settings import NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, \
-                        NODE_INSTALL_TIMEOUT_SEC, PORTS_TO_RESTRICT
+from .nodes.models import NodeMissedAction, Node, NodeFlag, NodeFlagNames
+from .settings import (
+    NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
+    PORTS_TO_RESTRICT, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
 from .kapi.podcollection import PodCollection
 from .kapi.collect import collect, send
 
@@ -102,34 +103,39 @@ def remove_node_by_host(host):
     return r.json()
 
 
-def add_node_to_k8s(host, kube_type):
+def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
     """
     :param host: Node hostname
     :param kube_type: Kuberdock kube type (integer id)
     :return: Error text if error else False
     """
     # TODO handle connection errors except requests.RequestException
+    data = {
+        'metadata': {
+            'name': host,
+            'labels': {
+                'kuberdock-node-hostname': host,
+                'kuberdock-kube-type':
+                    'type_' + str(kube_type)
+            }
+        },
+        'spec': {
+            'externalID': host,
+        }
+    }
+    if is_ceph_installed:
+        data['metadata']['labels'][NODE_CEPH_AWARE_KUBERDOCK_LABEL] = 'True'
     res = requests.post(get_api_url('nodes', namespace=False),
-                        json={
-                            'metadata': {
-                                'name': host,
-                                'labels': {
-                                    'kuberdock-node-hostname': host,
-                                    'kuberdock-kube-type':
-                                        'type_' + str(kube_type)
-                                }
-                            },
-                            'spec': {
-                                'externalID': host,
-                            }
-                        })
+                        json=data)
     return res.text if not res.ok else False
 
 
 @celery.task()
-def add_new_node(host, kube_type, db_node,
-                 with_testing=False, nodes=None, redeploy=False):
+def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
 
+    db_node = Node.get_by_id(node_id)
+    host = db_node.hostname
+    kube_type = db_node.kube_id
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
         try:
             current_master_kubernetes = subprocess.check_output(
@@ -139,7 +145,6 @@ def add_new_node(host, kube_type, db_node,
                   ' on master. {0}'.format(e.output)
             send_logs(host, mes, log_file)
             db_node.state = 'completed'
-            db.session.add(db_node)
             db.session.commit()
             return mes
         except OSError:     # no rpm
@@ -172,9 +177,11 @@ def add_new_node(host, kube_type, db_node,
         if error_message:
             send_logs(host, error_message, log_file)
             db_node.state = 'completed'
-            db.session.add(db_node)
             db.session.commit()
             return error_message
+        is_ceph_installed = _check_ceph_via_ssh(ssh)
+        if is_ceph_installed:
+            NodeFlag.save_flag(node_id, NodeFlagNames.CEPH_INSTALLED, "true")
 
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read())
@@ -214,7 +221,6 @@ def add_new_node(host, kube_type, db_node,
                 ssh.exec_command('rm /node_install.sh')
                 ssh.close()
                 db_node.state = 'completed'
-                db.session.add(db_node)
                 db.session.commit()
                 return err
             time.sleep(0.2)
@@ -226,7 +232,7 @@ def add_new_node(host, kube_type, db_node,
         else:
             send_logs(host, 'Rebooting node...', log_file)
             ssh.exec_command('reboot')
-            err = add_node_to_k8s(host, kube_type)
+            err = add_node_to_k8s(host, kube_type, is_ceph_installed)
             if err:
                 send_logs(host, 'ERROR adding node.', log_file)
                 send_logs(host, err, log_file)
@@ -242,7 +248,6 @@ def add_new_node(host, kube_type, db_node,
                                 'takes few minutes ***', log_file)
         ssh.close()
         db_node.state = 'completed'
-        db.session.add(db_node)
         db.session.commit()
         if s != 0:
             # Until node has been rebooted we try to delay update
@@ -429,3 +434,31 @@ def fix_pods_timeline_heavy():
     print('fix_pods_timeline_heavy: {0}'.format(datetime.now() - t0))
 
     redis.delete('fix_pods_timeline_heavy')
+
+
+def add_k8s_node_labels(nodename, labels):
+    """Add given labels to the node in kubernetes
+    :param nodename: node hostname
+    :param labels: dict of labels to add
+    """
+    headers = {'Content-Type': 'application/strategic-merge-patch+json'}
+    res = requests.patch(
+        get_api_url('nodes', nodename, namespace=False),
+        json={'metadata': {'labels': labels}},
+        headers=headers
+    )
+
+
+def _check_ceph_via_ssh(ssh):
+    _, out, _ = ssh.exec_command('which rbd')
+    return not out.channel.recv_exit_status()
+
+
+def is_ceph_installed_on_node(hostname):
+    """Checks CEPH client is installed on the node, and, if it is, then add
+    appropriate flag to node's flags.
+    """
+    ssh, error_message = ssh_connect(hostname)
+    if error_message:
+        return
+    return _check_ceph_via_ssh(ssh)

@@ -1,4 +1,4 @@
-from kubedock.api.nodes import handle_nodes, process_rule
+from kubedock.kapi.nodes import handle_nodes, process_rule
 from kubedock.nodes.models import Node
 from kubedock.settings import MASTER_IP, PORTS_TO_RESTRICT
 

@@ -1,7 +1,7 @@
 import re
 import yaml
 
-from kubedock.api.nodes import (
+from kubedock.kapi.nodes import (
     get_kuberdock_logs_config,
     get_kuberdock_logs_pod_name,
 )

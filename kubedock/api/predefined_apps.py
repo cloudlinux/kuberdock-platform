@@ -3,6 +3,7 @@ from flask.views import MethodView
 from ..utils import (login_required_or_basic_or_token, KubeUtils, register_api,
                      maintenance_protected, APIError, all_request_params)
 from ..kapi import predefined_apps as kapi_apps
+from ..rbac import check_permission
 
 
 predefined_apps = Blueprint('predefined_apps', __name__,
@@ -12,6 +13,7 @@ predefined_apps = Blueprint('predefined_apps', __name__,
 class PredefinedAppsAPI(KubeUtils, MethodView):
     decorators = [login_required_or_basic_or_token]
 
+    @check_permission('get', 'predefined_apps')
     def get(self, app_id=None):
         user = self._get_current_user()
         if user.is_administrator():
@@ -26,6 +28,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
 
     @KubeUtils.jsonwrap
     @maintenance_protected
+    @check_permission('create', 'predefined_apps')
     def post(self):
         user = self._get_current_user()
         params = self._get_params()
@@ -44,6 +47,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
 
     @KubeUtils.jsonwrap
     @maintenance_protected
+    @check_permission('edit', 'predefined_apps')
     def put(self, app_id):
         user = self._get_current_user()
         params = self._get_params()
@@ -56,6 +60,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
 
     @KubeUtils.jsonwrap
     @maintenance_protected
+    @check_permission('delete', 'predefined_apps')
     def delete(self, app_id):
         user = self._get_current_user()
         return kapi_apps.PredefinedApps(user).delete(app_id)

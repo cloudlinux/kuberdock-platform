@@ -3,7 +3,7 @@ from .models import Resource, Role, Permission
 
 
 RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages",
-             "notifications", "system_settings", "images")
+             "notifications", "system_settings", "images", "predefined_apps")
 
 ROLES = (
     "Admin",
@@ -47,6 +47,10 @@ PERMISSIONS = (
     ("system_settings", "Admin", "delete", True),
     ("images", "Admin", "get", True),
     ("images", "Admin", "isalive", True),
+    ("predefined_apps", "Admin", "create", True),
+    ("predefined_apps", "Admin", "get", True),
+    ("predefined_apps", "Admin", "edit", True),
+    ("predefined_apps", "Admin", "delete", True),
     # User
     ("users", "User", "create", False),
     ("users", "User", "get", False),
@@ -78,6 +82,10 @@ PERMISSIONS = (
     ("notifications", "User", "delete", False),
     ("images", "User", "get", True),
     ("images", "User", "isalive", True),
+    ("predefined_apps", "User", "create", False),
+    ("predefined_apps", "User", "get", True),
+    ("predefined_apps", "User", "edit", False),
+    ("predefined_apps", "User", "delete", False),
     # TrialUser
     ("users", "TrialUser", "create", False),
     ("users", "TrialUser", "get", False),
@@ -109,6 +117,10 @@ PERMISSIONS = (
     ("notifications", "TrialUser", "delete", False),
     ("images", "TrialUser", "get", True),
     ("images", "TrialUser", "isalive", True),
+    ("predefined_apps", "TrialUser", "create", False),
+    ("predefined_apps", "TrialUser", "get", True),
+    ("predefined_apps", "TrialUser", "edit", False),
+    ("predefined_apps", "TrialUser", "delete", False),
     # HostingPanel
     ("users", "HostingPanel", "create", False),
     ("users", "HostingPanel", "get", False),
@@ -140,6 +152,10 @@ PERMISSIONS = (
     ("notifications", "HostingPanel", "delete", False),
     ("images", "HostingPanel", "get", True),
     ("images", "HostingPanel", "isalive", True),
+    ("predefined_apps", "HostingPanel", "create", False),
+    ("predefined_apps", "HostingPanel", "get", True),
+    ("predefined_apps", "HostingPanel", "edit", False),
+    ("predefined_apps", "HostingPanel", "delete", False),
 
 )
 

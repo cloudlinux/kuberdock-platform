@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,32 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Oct 30 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-3
+- AC-1392: Fix empty response from ElasticSearch cluster
+- AC-1316: pd isn't removed with container on final step of pod creation; other pd bugfix
+- Fixed pod's ip migration from failed node. Fixed "Can not delete pod from failed node"
+- AC-1393: Remove select & add placeholder & description to billing link script
+- AC-1389: info message about maintance mode on 3rd part registries; bugfix; tests
+- AC-1381: Fix FS limit applying to prevent container crash in some cases
+- Install kuberdock.ini in post-install script, not in package itself
+- Add style to Users app mobile version
+- AC-1379: Add preloader to change tab event in settings app
+- AC-1390: Add autogenerate podname function;
+- AC-1369: Add style to post description in poditem page; Show control icons in podlist table
+- AC-1358: add user hostingPanel for cPanel. Create hostingPanel user for cPanel(and other apps).
+- User has role HostingPanel and password: hostingPanel. Add resource images for /api/images.
+- Role HostingPanel allowed to access only resource images. Add base methods for create/delete roles and resource, and its permissions to the rbac/fixtures
+- AC-1358: permissions,resource for predeffined_apps. Add permission and resource for predeffined_apps
+- Anyone has permissions to GET to predeffined_apps, but only Admin can create, edit and delete.
+- Add some style to logs area (pods/nodes)
+- AC-1347: mark nodes with ceph client installed. Moved logic of nodes from api to kapi, added tests to kapi.nodes
+- AC-1380: Implement preloader on Set up image step after clicking persistent checkbox
+- Added resourceVersion handling in listeneres
+- AC-1403: added check for pod existance in listeners.process_pods_event to prevent Integrity errors on saving pod state
+- AC-1397: Add style to scroll node/pode logs
+- AC-1350: On deleting free PD add confirmation dialog box
+- AC-819: implemented node graphs rewrite node web-interface
+
 * Tue Oct 27 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>  0.4-2
 - AC-1322: Force node's rsyslog to use hostname as KuberDock knows it
 - AC-1251 Add style to predefined app create page

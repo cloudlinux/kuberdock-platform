@@ -278,14 +278,35 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             },
 
             terminateVolume: function(){
-                var that = this;
+                var that = this,
+                    preloader = $('#page-preloader');
+
                 if (this.model.get('in_use')) {
-                    return;
+                    utils.notifyWindow('Persistent volume in use');
+                } else {
+                    preloader.show();
+                    utils.modalDialogDelete({
+                        title: "Delete persistent volume?",
+                        body: "Are you sure want to delete this persistent volume?",
+                        small: true,
+                        show: true,
+                        footer: {
+                            buttonOk: function(){
+                                that.model.destroy({
+                                    wait: true,
+                                    success: function(){
+                                        preloader.hide();
+                                        that.remove();
+                                    },
+                                    error: function(){
+                                        preloader.hide();
+                                    }
+                                });
+                            },
+                            buttonCancel: true
+                        }
+                    });
                 }
-                this.model.destroy({
-                    wait: true,
-                    success: function(){that.remove()}
-                });
             }
         });
 

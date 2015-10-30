@@ -98,7 +98,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if service_name:
             service = self._get(['services', service_name], ns=pod.namespace)
             state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
-            # TODO pod is stopped at this moment, may be don't needed?
             if state.get('assigned-to'):
                 unbind_ip(service_name, state, service, 0, current_app)
             rv = self._del(['services', service_name], ns=pod.namespace)

@@ -156,7 +156,7 @@ def get_api_url(*args, **kwargs):
                           '/{0}/namespaces/{1}'.format(api_version, namespace),
                           1)
     if kwargs.get('watch'):
-        url = url.replace('http', 'ws') + '?watch=true'
+        url = url.replace('http://', 'ws://') + '?watch=true'
     return url
 
 

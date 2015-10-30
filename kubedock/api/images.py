@@ -7,7 +7,7 @@ from ..core import db
 from ..models import ImageCache
 from ..validation import check_container_image_name, check_image_request
 from ..settings import DEFAULT_IMAGES_URL
-from ..utils import login_required_or_basic_or_token, KubeUtils, APIError
+from ..utils import login_required_or_basic_or_token, KubeUtils
 from ..kapi import images as kapi_images
 
 
@@ -94,14 +94,7 @@ def get_dockerfile_data():
 @login_required_or_basic_or_token
 def ping_registry():
     repo_url = _get_repo_url(request.args)
-    if not kapi_images.check_registry_status(repo_url):
-        raise APIError(
-            'It seems that the registry is not available now. '
-            'Check the registry {} is alive or try again later'.format(
-                repo_url
-            ),
-            503
-        )
+    kapi_images.check_registry_status(repo_url)
     return {'status': 'OK', 'data': True}
 
 
@@ -110,4 +103,3 @@ def _get_repo_url(args):
     repo_url = args.get('url', DEFAULT_IMAGES_URL).rstrip('/')
     repo_url = repo_url if patt.match(repo_url) else 'https://' + repo_url
     return repo_url
-    

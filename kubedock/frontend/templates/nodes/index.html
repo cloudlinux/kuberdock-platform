@@ -1,502 +1,53 @@
-{% extends "index.html" %}
-{% block script_templates %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{% block title %}KuberDock{% endblock %}</title>
+        <meta charset="utf8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-    <script type="text/template" id="node-detailed-layout-template">
-        <div class="breadcrumbs-wrapper">
-            <div class="container breadcrumbs" id="breadcrumbs">
-                <ul class="breadcrumb">
-                    <li>
-                        <div id="nodes-page">Nodes</div>
-                    </li>
-                    <li class="active">
-                        <%- hostname %>
-                    </li>
-                </ul>
-                <div class="control-group">
-                    <!-- <button id="rename_node">Rename</button>
-                    <button id="stop_node">Stop</button>
-                    <button id="redeploy_node">Re-install</button>-->
-                    <button id="delete_node">Delete</button>
-                </div>
-            </div>
-        </div>
-        <div class="container">
-            <div class="row">
-                <div class="col-sm-3 col-md-2 sidebar">
-                    <ul class="nav nav-sidebar">
-                    <% var s = {};
-                    switch (tab) {
-                        case 'general': s.general = 'active'; break;
-                        case 'stats': s.stats = 'active'; break;
-                        case 'logs': s.logs = 'active'; break;
-                        case 'monitoring': s.monitoring = 'active'; break;
-                        case 'timelines': s.timelines = 'active'; break;
-                        case 'configuration': s.configuration = 'active'; break;
-                    } %>
-                        <li role="presentation" class="general <%- s.general %> nodeGeneralTab">General</li>
-                        <!-- <li role="presentation" class="stats <%- s.stats %> nodeStatsTab">Stats</li> -->
-                        <li role="presentation" class="<%- s.logs %> nodeLogsTab">Logs</li>
-                        <!-- <li role="presentation" class="<%- s.monitoring %> nodeMonitoringTab">Monitoring</li> -->
-                        <!-- <li role="presentation" class="<%- s.timelines %> nodeTimelinesTab">Timelines</li>
-                        <li role="presentation" class="configuration <%- s.configuration %> nodeConfigurationTab">Configuration</li> -->
-                    </ul>
-                </div>
-                <div id="details_content" class="col-sm-10">
-                    <div class="status-line <%- status %>">Status: <%- status %></div>
-                    <div id="tab-content"></div>
-                </div>
-            </div>
-        </div>
-    </script>
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
+        
 
-    <script type="text/template" id="node-general-tab-template">
-        <% switch (status) { case 'running': %>
-        <% var ram = (resources.memory / (1024*1024*1024)).toFixed(2); %>
-        <div class="row placeholders">
-            <div class="col-xs-10 clearfix">
-                <div class="col-xs-6 info no-padding">
-                    <div>IP: <%- ip %></div>
-{#                    <div>Kube capacity: 100</div>#}
-{#                    <div>Used kubes: 50</div>#}
-                </div>
-                <div class="col-xs-6 servers no-padding">
-                    <div class="server-ico">CPU: <%- resources.cpu %> cores <!-- with 3GHz --></div>
-                    <div class="server-ico">RAM: <%- ram %> GB <!--DDR3 - 2000 --></div>
-                    <div class="server-ico"><!-- SDD: 0GB in Raid 0 --></div>
-                </div>
-            </div>
-        </div>
-        <% break; case 'pending': %>
-        <div class="details">Node is in installation progress</div>
-        <div class="reason">
-            <p>Node installation log</p>
-            <% _.each(install_log.split('\n'), function(line){ %>
-                <p><%- line %></p>
-            <% }) %>
-        </div>
-        <% break; case 'troubles': %>
-        <div class="reason">
-        <% _.each(reason.split('\n'), function(line){ %>
-            <p><%- line %></p>
-        <% }) %>
-            <p>Node installation log</p>
-            <% _.each(install_log.split('\n'), function(line){ %>
-                <p><%- line %></p>
-            <% }) %>
-        </div>
-        <% break; } %>
-    </script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.jqplot.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-select.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdowns-enhancement.min.css') }}">
 
-    <script type="text/template" id="node-stats-tab-template">
-        <div id="stats-page" class="col-sm-12">
-            <div class="page-top-menu">
-                <span>Choose kube type:</span>
-                <div class="checkbox">
-                    <label class="custom">
-                        <input type="checkbox">
-                        <span></span>
-                        Kube type 1
-                    </label>
-                </div>
-                <div class="checkbox">
-                    <label class="custom">
-                        <input type="checkbox">
-                        <span></span>
-                        Kube type 2
-                    </label>
-                </div>
-            </div>
-        </div>
-    </script>
+        <link rel="stylesheet/less" type="text/css" href="{{ url_for('static', filename='css/main.less') }}">
 
-    <script type="text/template" id="node-logs-tab-template">
-        <div id="logs-page" class="col-sm-12 no-padding">
-            <!--
-            <div class="page-top-menu">
-                <span>Choose log:</span>
-                <span class="active">Log 1</span>
-                <span>Log 2</span>
-                <span>Log 3</span>
-                <span>Log 3</span>
-            </div>
-            -->
-            <div class="node-logs">
-                <% _.each(logs, function(line){ %>
-                <p><%- line['@timestamp'] %> <%- line['ident'] %>: <%- line['message'] %></p>
-                <% }) %>
-            </div>
-        </div>
-    </script>
+        <script src="{{ url_for('static', filename='js/lib/less.min.js') }}" type="text/javascript"></script>
 
-    <script type="text/template" id="node-monitoring-tab-template">
-        <div id="monitoring-page" class="col-sm-12 no-padding">
-           <!-- <div class="page-top-menu">
-                <span>Choose period:</span>
-                <span>Last 6 Hours</span>
-                <span class="active">24 Hours</span>
-                <span>1 week</span>
-                <span>1 month</span>
-                <span>1 year</span>
-            </div> -->
-            <p class="name first">CPU graph</p>
-            <div class="cpu-graph"></div>
-            <p class="name">Memory graph</p>
-            <div class="memory-graph"></div>
-            <p class="name">Bandwith IN/OUT graph</p>
-            <div class="bandwith-graph"></div>
-        </div>
-    </script>
+    </head>
+    <body>
 
-    <script type="text/template" id="node-timelines-tab-template">
-        <div id="timelines-page" class="col-sm-12">
-            <div class="cases">
-                <div class="item">
-                    <span class="pull-left">Some case 1</span>
-                    <span class="">22.02.15 at 22:20</span>
-                    <span class="pull-right control">show</span>
-                    <span class="pull-right control-hide">hide</span>
-                </div>
-                <div class="item-body">
-                    <div class="general">
-                        <div class="title">General</div>
-                        <div class="all-info">
-                            <p>
-                                <span>Finished:</span>
-                                <span>12:57 12/12/2014</span>
-                            </p>
-                            <p>
-                                <span>Duration:</span>
-                                <span>3 minutes</span>
-                            </p>
-                            <p>
-                                <span>Location:</span>
-                                <span>USA</span>
-                            </p>
-                            <p>
-                                <span>IP:</span>
-                                <span>1.1.1.1</span>
-                            </p>
-                            <p>
-                                <span>User agent:</span>
-                                <span>Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)</span>
-                            </p>
-                            <p>
-                                <span>Request:</span>
-                                <span>POST /api/v1/service/bfff0ab9-c357-47b7-b476-dd8f5c841266/start/</span>
-                            </p>
-                            <p>
-                                <span>Request body:</span>
-                                <span>Some request details</span>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="detailes">
-                        <div class="title">Detailes</div>
-                        <p></p>
-                    </div>
-                </div>
-                <div class="item active">
-                    <span class="pull-left">Some case 2</span>
-                    <span class="">22.02.15 at 22:20</span>
-                    <span class="pull-right control ">show</span>
-                    <span class="pull-right control-hide">hide</span>
-                </div>
-                <div class="item-body">
-                    <div class="general">
-                        <div class="title">General</div>
-                        <div class="all-info">
-                            <p>
-                                <span>Finished:</span>
-                                <span>12:57 12/12/2014</span>
-                            </p>
-                            <p>
-                                <span>Duration:</span>
-                                <span>3 minutes</span>
-                            </p>
-                            <p>
-                                <span>Location:</span>
-                                <span>USA</span>
-                            </p>
-                            <p>
-                                <span>IP:</span>
-                                <span>1.1.1.1</span>
-                            </p>
-                            <p>
-                                <span>User agent:</span>
-                                <span>Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)</span>
-                            </p>
-                            <p>
-                                <span>Request:</span>
-                                <span>POST /api/v1/service/bfff0ab9-c357-47b7-b476-dd8f5c841266/start/</span>
-                            </p>
-                            <p>
-                                <span>Request body:</span>
-                                <span>Some request details</span>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="detailes">
-                        <div class="title">Detailes</div>
-                        <p></p>
-                    </div>
-                </div>
-                <div class="item">
-                    <span class="pull-left">Some case 3</span>
-                    <span class="">22.02.15 at 22:20</span>
-                    <span class="pull-right control ">show</span>
-                    <span class="pull-right control-hide">hide</span>
-                </div>
-                <div class="item-body">
-                    <div class="general">
-                        <div class="title">General</div>
-                        <div class="all-info">
-                            <p>
-                                <span>Finished:</span>
-                                <span>12:57 12/12/2014</span>
-                            </p>
-                            <p>
-                                <span>Duration:</span>
-                                <span>3 minutes</span>
-                            </p>
-                            <p>
-                                <span>Location:</span>
-                                <span>USA</span>
-                            </p>
-                            <p>
-                                <span>IP:</span>
-                                <span>1.1.1.1</span>
-                            </p>
-                            <p>
-                                <span>User agent:</span>
-                                <span>Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)</span>
-                            </p>
-                            <p>
-                                <span>Request:</span>
-                                <span>POST /api/v1/service/bfff0ab9-c357-47b7-b476-dd8f5c841266/start/</span>
-                            </p>
-                            <p>
-                                <span>Request body:</span>
-                                <span>Some request details</span>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="detailes">
-                        <div class="title">Detailes</div>
-                        <p></p>
-                    </div>
-                </div>
-                <div class="item">
-                    <span class="pull-left">Some case 4</span>
-                    <span class="">22.02.15 at 22:20</span>
-                    <span class="pull-right control ">show</span>
-                    <span class="pull-right control-hide">hide</span>
-                </div>
-                <div class="item-body">
-                    <div class="general">
-                        <div class="title">General</div>
-                        <div class="all-info">
-                            <p>
-                                <span>Finished:</span>
-                                <span>12:57 12/12/2014</span>
-                            </p>
-                            <p>
-                                <span>Duration:</span>
-                                <span>3 minutes</span>
-                            </p>
-                            <p>
-                                <span>Location:</span>
-                                <span>USA</span>
-                            </p>
-                            <p>
-                                <span>IP:</span>
-                                <span>1.1.1.1</span>
-                            </p>
-                            <p>
-                                <span>User agent:</span>
-                                <span>Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)</span>
-                            </p>
-                            <p>
-                                <span>Request:</span>
-                                <span>POST /api/v1/service/bfff0ab9-c357-47b7-b476-dd8f5c841266/start/</span>
-                            </p>
-                            <p>
-                                <span>Request body:</span>
-                                <span>Some request details</span>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="detailes">
-                        <div class="title">Detailes</div>
-                        <p></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </script>
+    {% with items=MENU.navbar.get_items() %}
+    {% include "inc/navbar_menu.html" %}
+    {% endwith %}
 
-    <script type="text/template" id="node-configuration-tab-template">
-        <div id="configuration-page" class="col-sm-12">
-            <div class="page-top-menu">
-                <span>configuration template</span>
-            </div>
-        </div>
-    </script>
-
-    <script type="text/template" id="node-add-layout-template">
-        <div class="breadcrumbs-wrapper">
-            <div class="container breadcrumbs" id="breadcrumbs">
-                <ul class="breadcrumb">
-                    <li>
-                        <div id="nodes-page">Nodes</div>
-                    </li>
-                    <li class="active">
-                        Add node
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div class="container">
-            <div id="node-contents">
-                <div class="node-steps">
-                    <div id="node-add-step"></div>
-                </div>
-            </div>
-        </div>
-    </script>
-
-    <script type="text/template" id="node-add-step-template">
-        <div id="address-spinner"></div>
-        <div class="col-md-12 clearfix no-padding information">
-            <label>Keep in mind please</label>
-            <div>
-                To successfully add a node you must first create a pair of keys with ssh-keygen and then place them to a node to be added with ssh-copy-id under user nginx
-            </div>
-        </div>
-        <div class="form-field col-lg-6">
-            <label for="node_address">Node name</label>
-            <input class="find-input" type="text" placeholder="Enter node hostname here" id="node_address" name="node_address"/>
-        </div>
-        <div class="col-lg-12">
-            <div class="col-lg-6">
-                <label for="extra-options">Kube type</label>
-                <select class="kube_type selectpicker" id="extra-options">
-                    {% for kube_type in kube_types %}
-                    <option value="{{ kube_type.id }}">{{ kube_type.name }}</option>
-                    {% endfor %}
-                </select>
-               </div>
-            <div class="col-lg-6 right">
-               <!-- <div class="info">
-                    <p></p>
-                </div> -->
-            </div>
-        </div>
-        <div class="buttons pull-right">
-            <button id="node-cancel-btn" type="submit">Cancel</button>
-            <button id="node-add-btn" type="submit">Add</button>
-        </div>
-    </script>
-
-    <script type="text/template" id="node-console-template">
-        <div class="well">
-            <% _.each(text, function(x){ %>
-            <p><%- x %></p>
-            <% }) %>
-        </div>
-        <div class="buttons pull-right">
-            <button id="main">Back</button>
-        </div>
-    </script>
-
-    <script type="text/template" id="node-empty-template">
-        <td colspan="5" class="text-center disabled-color-text">You don't have any nodes</td>
-    </script>
-
-    <script type="text/template" id="node-item-template">
-        <td>
-            <button id="detailedNode" title="<%- hostname %>">
-                <%- hostname ? hostname : ip ? ip : 'Not specified' %>
-            </button>
-        </td>
-        <td><%- ip %></td>
-        <td><%- kubeType %></td>
-        <td>
-            <span class="<%- status %>"><%- status %></span>
-            <span id="deleteNode" class="pull-right" title="Remove <%- hostname %> node">&nbsp;</span>
-        </td>
-    </script>
-
-    <script type="text/template" id="nodes-list-template">
-        <div class="breadcrumbs-wrapper">
-            <div class="container breadcrumbs" id="breadcrumbs">
-                <ul class="breadcrumb">
-                    <li class="active">Nodes</li>
-                </ul>
-                <div class="control-group">
-                    <button id="add_node">Add Node</button>
-                    <div class="nav-search" id="nav-search"></div>
-                    <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
-                </div>
-            </div>
-        </div>
-        <div class="container">
-            <table id="nodelist-table" class="table">
-                <thead>
-                    <tr class="tablesorter-headerRow">
-                        <th class="hostname">Node<b class="caret"></b></th>
-                        <th class="ip">IP<b class="caret"></b></th>
-                        <th class="kube_type">Kube type<b class="caret"></b></th>
-                        <!-- <th class="hostname">Kube capacity<b class="caret"></b><br>(used/max)</th> -->
-                        <!-- <th>Average<b class="caret"></b><br>CPU usage</th> -->
-                        <!-- <th>Active pods<b class="caret"></b><br>(containers)</th> -->
-                        <th class="status">Status<b class="caret"></b></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </script>
-
-    <script type="text/template" id="nodes-layout-template">
-        <div id="main">main div text</div>
-        <div id="pager">pager div text</div>
-    </script>
-
-{#    Copy from main app, delete when merge #}
-    <script type="text/template" id="paginator-template">
-        <% if ( c.state.pageSize < c.state.totalRecords){ %>
-        <ul class="pager">
-            <li class="paginatorFirst pseudo-link btn btn-default btn-sm btn-group">first</li>
-            <li class="paginatorPrev pseudo-link btn btn-default btn-sm btn-group">prev</li>
-            <li class="paginatorStat"><%- c.state.currentPage %> of <%- c.state.totalPages %></li>
-            <li class="paginatorNext pseudo-link btn btn-default btn-sm btn-group">next</li>
-            <li class="paginatorLast pseudo-link btn btn-default btn-sm btn-group">last</li>
-        </ul>
-        <% } %>
-    </script>
-{#    ===================================== #}
-
+    <!-- contents container -->
+    <div id="contents"></div>
+    
     <div class="modal fade">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true"></span>
                     </button>
                     <h4 class="modal-title"></h4>
                 </div>
                 <div class="modal-body"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
+                <div class="modal-footer buttons">
+                    <button type="button" class="blue" data-dismiss="modal">ok</button>
                 </div>
             </div>
         </div>
     </div>
-
+        
     <div id="page-preloader"></div>
 
-{% endblock %}
-
-{% block app_js_asset %}
     <script data-main="{{ url_for('static', filename='js/nodes_app/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
 
     <script type="text/javascript">
@@ -504,4 +55,6 @@
         var kubeTypes = {{ kube_types|tojson|safe }};
         var userSettings = {{ user_settings|tojson|safe }};
     </script>
-{% endblock %}
+
+    </body>
+</html>

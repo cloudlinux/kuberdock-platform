@@ -1,4 +1,4 @@
-define(function () {
+define(['notify'], function () {
 
     // jQuery ajax setup
     var that = this;

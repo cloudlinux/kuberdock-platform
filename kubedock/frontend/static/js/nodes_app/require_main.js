@@ -16,14 +16,16 @@ requirejs.config({
         moment                 : 'lib/moment.min',
         'moment-timezone'      : 'lib/moment-timezone-with-data.min',
         paginator              : 'lib/backbone.paginator',
-        tpl                    : 'lib/tpl',
-        text                   : 'lib/text',
+        text                   : "lib/text",
+        tpl                    : "lib/underscore-tpl",
         notify                 : 'lib/notify.min',
         mask                   : 'lib/jquery.mask',
         utils                  : 'utils',
         selectpicker           : 'lib/bootstrap-select.min',
         mousewheel             : 'lib/jquery.mousewheel',
-        jscrollpane            : 'lib/jquery.jscrollpane.min'
+        jscrollpane            : 'lib/jquery.jscrollpane.min',
+        jqplot                 : "lib/jquery.jqplot.min",
+        "jqplot-axis-renderer" : "lib/jqplot.dateAxisRenderer.min",
     },
     shim: {
         jquery: {

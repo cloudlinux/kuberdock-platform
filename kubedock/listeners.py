@@ -226,6 +226,11 @@ def process_pods_event(data, app):
 
     send_pod_status_update(pod, pod_id, event_type, app)
 
+    with app.app_context():
+        if Pod.query.get(pod_id) is None:
+            unregistered_pod_warning(pod_id)
+            return
+
     if event_type in ('MODIFIED', 'DELETED'):
         containers = pod['status'].get('containerStatuses', [])
         if containers:

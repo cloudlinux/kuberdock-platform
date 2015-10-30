@@ -576,6 +576,7 @@ define(['pods_app/app',
 
                 if (!this.model.hasOwnProperty('persistentDrives')) {
                     var pdCollection = new App.Data.PersistentStorageCollection();
+                        utils.preloader.show();
                         pdCollection.fetch({
                             wait: true,
                             data: {'free-only': true},
@@ -583,7 +584,11 @@ define(['pods_app/app',
                                 that.model.persistentDrives = _.map(collection.models, function(m){
                                     return that.transformKeys(m.attributes);
                                 });
+                                utils.preloader.hide();
                                 that.render();
+                            },
+                            error: function(){
+                                utils.preloader.hide();
                             }
                         });
                 }

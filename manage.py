@@ -1,4 +1,5 @@
 import os
+import sys
 import pytz
 import logging
 import string
@@ -7,7 +8,7 @@ from datetime import datetime
 import uuid
 
 from kubedock.api import create_app
-from kubedock.api.nodes import add_node
+from kubedock.kapi.nodes import create_node
 from kubedock.validation import check_node_data
 from kubedock.utils import APIError, UPDATE_STATUSES
 from kubedock.core import db
@@ -16,12 +17,16 @@ from kubedock.billing.models import Package, Kube, PackageKube
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
 from kubedock.static_pages.fixtures import generate_menu
-from kubedock.settings import KUBERDOCK_INTERNAL_USER
+from kubedock.settings import (
+    KUBERDOCK_INTERNAL_USER, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
 from kubedock.updates.models import Updates
+from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
 from kubedock.updates.kuberdock_upgrade import get_available_updates
 from kubedock.updates.helpers import get_maintenance
+from kubedock import tasks
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
+from flask.ext.script.commands import InvalidCommand
 from flask.ext.migrate import Migrate, MigrateCommand, upgrade, stamp
 from flask.ext.migrate import migrate as migrate_func
 
@@ -141,18 +146,18 @@ class NodeManager(Command):
 
     def run(self, hostname, kube_type, do_deploy, testing):
         if get_maintenance():
-            print 'Kuberdock is in maintenance mode. Operation canceled'
-            return
-        data = {'hostname': hostname, 'kube_type': kube_type}
+            raise InvalidCommand(
+                'Kuberdock is in maintenance mode. Operation canceled'
+            )
         try:
-            check_node_data(data)
-            res = add_node(data, do_deploy, testing)
+            check_node_data({'hostname': hostname, 'kube_type': kube_type})
+            res = create_node(None, hostname, kube_type, do_deploy, testing)
         except APIError as e:
             print e.message
         except Exception as e:
             print e
         else:
-            print res.get_data()
+            print res.to_dict()
 
 
 class ResetPass(Command):
@@ -181,6 +186,37 @@ class ResetPass(Command):
             db.session.commit()
             print "Password has been changed"
 
+class NodeFlagCmd(Command):
+    """Manage flags for a node"""
+    option_list = (
+        Option('-n', '--nodename', dest='nodename', required=True,
+               help='Node host name'),
+        Option('-f', '--flagname', dest='flagname', required=True,
+               help='Flag name to change'),
+        Option('--value', dest='value', required=False,
+               help='Flag value to set'),
+        Option('--delete', dest='delete', required=False, default=False,
+               action='store_true', help='Delete the flag'),
+    )
+
+    def run(self, nodename, flagname, value, delete):
+        node = Node.get_by_name(nodename)
+        if not node:
+            raise InvalidCommand(u'Node "{0}" not found'.format(nodename))
+        if delete:
+            NodeFlag.delete_by_name(node.id, flagname)
+            print u'Node flag "{0}" was deleted'.format(flagname)
+            return
+        NodeFlag.save_flag(node.id, flagname, value)
+        if flagname == NodeFlagNames.CEPH_INSTALLED:
+            tasks.add_k8s_node_labels(
+                node.hostname,
+                {NODE_CEPH_AWARE_KUBERDOCK_LABEL: "True"}
+            )
+        print u'Node "{0}": flag "{1}" was set to "{2}"'.format(
+            nodename, flagname, value)
+
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -199,7 +235,12 @@ manager.add_command('createdb', Creator())
 manager.add_command('updatedb', Updater())
 manager.add_command('add_node', NodeManager())
 manager.add_command('reset-password', ResetPass())
+manager.add_command('node-flag', NodeFlagCmd())
 
 
 if __name__ == '__main__':
-    manager.run()
+    try:
+        manager.run()
+    except InvalidCommand as err:
+        sys.stderr.write(str(err))
+        sys.exit(1)

@@ -6,7 +6,7 @@ from kubedock.users.models import User
 from kubedock.pods.models import Pod
 from kubedock.nodes.models import Node
 from kubedock.settings import KUBERDOCK_INTERNAL_USER, MASTER_IP
-from kubedock.api.nodes import (
+from kubedock.kapi.nodes import (
     get_kuberdock_logs_config,
     get_dns_pod_config,
     get_kuberdock_logs_pod_name,

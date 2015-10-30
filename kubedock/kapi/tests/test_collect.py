@@ -33,10 +33,10 @@ class TestStatItem(unittest.TestCase):
 
     @mock.patch('kubedock.kapi.collect.Node')
     def test_fetch_nodes(self, _Node):
-        _Node.query.all = mock.MagicMock(return_value=[type('_', (), {'ip': n})()
+        _Node.get_all = mock.MagicMock(return_value=[type('_', (), {'ip': n})()
             for n in self._NODES_DATA])
         nodes = collect.fetch_nodes()
-        self.assertTrue(_Node.query.all.called)
+        self.assertTrue(_Node.get_all.called)
         self.assertEqual(nodes, [{'_ip': n} for n in self._NODES_DATA])
 
     @mock.patch('kubedock.kapi.collect.requests')

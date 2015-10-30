@@ -22,4 +22,5 @@ EOF
 "
 ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" yum --enablerepo=Ceph install -y ceph-common
 scp -r -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" /var/lib/kuberdock/conf/ceph.* root@$TARGET_HOST:/etc/ceph
+python /var/opt/kuberdock/manage.py node-flag --nodename $TARGET_HOST --flagname ceph_installed --value true 2> /dev/null
 

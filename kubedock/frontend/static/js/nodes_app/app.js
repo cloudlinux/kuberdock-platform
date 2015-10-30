@@ -1,4 +1,4 @@
-define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'selectpicker', 'jquery-spin']
+define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'selectpicker', 'jquery-spin', 'mousewheel', 'jscrollpane']
         , function(Backbone, Marionette, utils) {
 
     var NodesApp = new Backbone.Marionette.Application({
@@ -509,6 +509,11 @@ define(['backbone', 'marionette', 'utils', 'notify', 'backbone-paginator', 'sele
                     this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
                 }
                 $.proxy(get_logs, this)();
+            },
+
+            onRender: function(){
+                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
+                this.ui.textarea.jScrollPane();
             },
 
             onBeforeDestroy: function () {

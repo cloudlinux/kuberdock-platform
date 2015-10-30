@@ -21,7 +21,9 @@ requirejs.config({
         notify                 : 'lib/notify.min',
         mask                   : 'lib/jquery.mask',
         utils                  : 'utils',
-        selectpicker           : 'lib/bootstrap-select.min'
+        selectpicker           : 'lib/bootstrap-select.min',
+        mousewheel             : 'lib/jquery.mousewheel',
+        jscrollpane            : 'lib/jquery.jscrollpane.min'
     },
     shim: {
         jquery: {
@@ -52,6 +54,9 @@ requirejs.config({
         },
         utils: {
             deps: ['backbone', 'jquery']
+        },
+        mousewheel: {
+            deps: ["jquery"]
         }
     },
     config: {

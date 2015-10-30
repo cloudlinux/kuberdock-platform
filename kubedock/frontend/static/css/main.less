@@ -979,6 +979,28 @@ body{
     }
     /*end alert messages */
 
+    /* Scroll */
+    .jspScrollable{
+        .jspContainer{
+            .jspPane{
+                padding: 1% !important;
+                max-width: 98%;
+            }
+            .jspVerticalBar{
+                .jspTrack{
+                    background-color: #E7F4FF;
+                    .jspDrag{
+                        background-color: #69AEDF;
+                        &:hover, &:active, &:focus{
+                            background-color: darken(#69AEDF, 10%);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /* end Scroll */
+
     @import "pods.less";
     @import "nodes.less";
     @import "users.less";

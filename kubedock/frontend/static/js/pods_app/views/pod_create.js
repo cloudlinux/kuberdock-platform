@@ -12,7 +12,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/wizard_set_container_complete.tpl',
         'pods_app/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot',
-        'jqplot-axis-renderer', 'numeral', 'selectpicker'],
+        'jqplot-axis-renderer', 'numeral', 'selectpicker', 'mousewheel', 'jscrollpane'],
        function(Pods,
                 layoutWizardTpl,
                 breadcrumbHeaderTpl,
@@ -1173,6 +1173,7 @@ define(['pods_app/app',
 
             onRender: function () {
                 this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
+                this.ui.textarea.jScrollPane();
             },
         });
 

@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 3%{?dist}.cloudlinux
+Release: 3.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Sun Nov 01 2015 Igor Savenko <bliss@cloudlinux.com>  0.4-3.1
+- AC-819: bugfixes
+
 * Fri Oct 30 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-3
 - AC-1392: Fix empty response from ElasticSearch cluster
 - AC-1316: pd isn't removed with container on final step of pod creation; other pd bugfix

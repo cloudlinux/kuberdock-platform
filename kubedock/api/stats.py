@@ -102,11 +102,15 @@ def get_node_data(node, start, end=None):
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)).filter(
             StatWrap5Min.time_window>=start).filter(
-            StatWrap5Min.unit_name=='/', StatWrap5Min.container=='/').group_by(
+            StatWrap5Min.unit_name=='/',
+            StatWrap5Min.container=='/',
+            StatWrap5Min.host==node).group_by(
                 StatWrap5Min.time_window)
     disks = db.session.query(StatWrap5Min.time_window, StatWrap5Min.fs_data).filter(
             StatWrap5Min.time_window>=start).filter(
-                StatWrap5Min.unit_name=='/', StatWrap5Min.container=='/')
+                StatWrap5Min.unit_name=='/',
+                StatWrap5Min.container=='/',
+                StatWrap5Min.host==node)
     organized = defaultdict(list)
     for record in disks:
         organized[record[0]].append(record[1])

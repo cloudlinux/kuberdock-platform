@@ -284,7 +284,6 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 if (this.model.get('in_use')) {
                     utils.notifyWindow('Persistent volume in use');
                 } else {
-                    preloader.show();
                     utils.modalDialogDelete({
                         title: "Delete persistent volume?",
                         body: "Are you sure want to delete this persistent volume?",
@@ -292,6 +291,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                         show: true,
                         footer: {
                             buttonOk: function(){
+                                preloader.show();
                                 that.model.destroy({
                                     wait: true,
                                     success: function(){

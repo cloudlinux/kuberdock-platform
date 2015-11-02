@@ -8,6 +8,8 @@ MENUS = [
         name='Navbar menu',
         items=[
             dict(name="Pods", path="/", ordering=0, roles=json.dumps(["User", "TrialUser"])),
+            dict(name="Public IPs", path="/publicIPs/", ordering=1, roles=json.dumps(["User", "TrialUser"])),
+            dict(name="Persistent volumes", path="/persistent-volumes/", ordering=2, roles=json.dumps(["User", "TrialUser"])),
             dict(name="Nodes", path="/nodes/", ordering=1,
                  roles=json.dumps(["Admin"])),
             dict(name="Predefined Applications", path="/predefined-apps/", ordering=2,

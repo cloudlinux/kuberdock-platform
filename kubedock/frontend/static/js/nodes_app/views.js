@@ -284,7 +284,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                 this.ui.node_name.focus();
                 break;
             case val && !pattern.test(val):
-                utils.notifyWindow('Hostname can\'t start with symbols like ".", "#", "%" or "/"');
+                utils.notifyWindow('Hostname can\'t contain some special symbols like "#", "%", "/" or start with "."');
                 this.ui.node_name.focus();
                 break;
             default:

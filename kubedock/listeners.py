@@ -19,6 +19,7 @@ from .kapi.pod_states import save_pod_state
 
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+MAX_ETCD_VERSIONS = 1000
 
 
 def filter_event(data):
@@ -325,7 +326,10 @@ def listen_fabric(watch_url, list_url, func, verbose=1):
                     data = json.loads(content)
                     if data['type'].lower() == 'error' and \
                        '401' in data['object']['message']:
-                        redis.delete(redis_key)
+                        # Rewind to earliest possible
+                        new_version = str(int(prelist_version(list_url)) -
+                                          MAX_ETCD_VERSIONS)
+                        redis.set(redis_key, new_version)
                         break
                     evt_version = data['object']['metadata']['resourceVersion']
                     last_saved = redis.get(redis_key)

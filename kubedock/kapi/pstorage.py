@@ -89,22 +89,15 @@ class PersistentStorage(object):
         return [dict([(k, v) for k, v in d.items() if k != 'owner'])
                     for d in self.get_unmapped_drives() if d['owner'] == user.username]
 
-    def create(self, name, size, user):
+    def create(self, pd):
         """
         Creates a new drive for a user and returns its ID
-        :param name: string -> drive name
-        :params size: int -> drive size in GB
-        :param user: object -> user object
+
+        :param pd: kubedock.pods.models.PersistentDisk instance
         """
-        drive_name = pd_utils.compose_pdname(name, user)
-        rv_code = self._create_drive(drive_name, size)
+        rv_code = self._create_drive(pd.drive_name, pd.size)
         if rv_code == 0:
-            data = {
-                'id'     : md5(drive_name).hexdigest(),
-                'name'   : name,
-                'owner'  : user.username,
-                'size'   : size,
-                'in_use' : False}
+            data = pd.to_dict()
             if hasattr(self, '_drives'):
                 self._drives.append(data)
             return data
@@ -126,13 +119,14 @@ class PersistentStorage(object):
                 if d['name'] != name and d['owner'] != user.username]
         return rv
 
-    def makefs(self, drive, user, fs='ext4'):
+    def makefs(self, pd, fs='ext4'):
         """
         Creates a filesystem on the device
+
+        :param pd: kubedock.pods.models.PersistentDisk instance
         :param fs: string -> fs type by default ext4
         """
-        drive_name = pd_utils.compose_pdname(drive, user)
-        self._makefs(drive_name, fs)
+        return self._makefs(pd.drive_name, fs)
 
     def delete_by_id(self, drive_id):
         """
@@ -247,6 +241,7 @@ class PersistentStorage(object):
         To be overwritten by child classes
         """
         return 0
+
 
 class CephStorage(PersistentStorage):
 
@@ -492,16 +487,17 @@ class CephStorage(PersistentStorage):
     def _get_drives(self):
         raw_drives = self._get_raw_drives()
         drives = {}
-        for node in raw_drives: # iterate by node ip addresses or names
+        for node in raw_drives:  # iterate by node ip addresses or names
             for item in raw_drives[node]:   # iterate by drive names
-                drive, user = pd_utils.get_drive_and_user(item)
+                name, user = pd_utils.get_drive_and_user(item)
                 if not user:
                     # drive name does not contain separator. Skip it
                     continue
-                entry = {'name'  : drive,
-                         'owner' : user.username,
-                         'size'  : int(raw_drives[node][item]['size'] / 1073741824),
-                         'id'    : md5(item).hexdigest(),
+                entry = {'name': name,
+                         'drive_name': item,
+                         'owner': user.username,
+                         'size': int(raw_drives[node][item]['size'] / 1073741824),
+                         'id': md5(item).hexdigest(),
                          'in_use': raw_drives[node][item]['in_use']}
                 if raw_drives[node][item]['in_use']:
                     entry['device'] = raw_drives[node][item].get('device')
@@ -585,13 +581,14 @@ class AmazonStorage(PersistentStorage):
         raw_drives = self._get_raw_drives()
         for vol in raw_drives:
             item = vol.tags.get('Name', 'Nameless')
-            drive, user = pd_utils.get_drive_and_user(item)
+            name, user = pd_utils.get_drive_and_user(item)
             if not user:
                 continue
-            entry = {'name'  : drive,
-                     'owner' : user.username,
-                     'size'  : vol.size,
-                     'id'    : md5(item).hexdigest(),
+            entry = {'name': name,
+                     'drive_name': item,
+                     'owner': user.username,
+                     'size': vol.size,
+                     'id': md5(item).hexdigest(),
                      'in_use': True if vol.status == 'in_use' else False}
             if vol.status == 'in_use':
                 entry['node'] = vol.attach_data.instance_id
@@ -721,7 +718,6 @@ class AmazonStorage(PersistentStorage):
                 if last_num >= 122:
                     raise APIError("No free letters for devices")
                 return '/dev/xvd{0}'.format(chr(last_num+1))
-
 
     def _create_fs_if_missing(self, device, fs='ext4'):
         with settings(host_string=self._first_node_ip):

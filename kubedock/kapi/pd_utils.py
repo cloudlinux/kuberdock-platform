@@ -41,9 +41,14 @@ def get_drive_and_user(pdname):
 
 
 def compose_pdname(drive, user):
-    """Creates persistent drive name with user identifier.
     """
-    return PD_SEPARATOR_USERID.join((drive, str(user.id)))
+    Creates persistent drive name with user identifier.
+
+    :param drive: persistent disk name
+    :param user: User object or user id
+    """
+    user_id = getattr(user, 'id', user)
+    return PD_SEPARATOR_USERID.join((drive, str(user_id)))
 
 
 def compose_pdname_legacy(drive, user):

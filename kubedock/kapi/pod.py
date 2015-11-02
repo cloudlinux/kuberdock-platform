@@ -12,8 +12,7 @@ from ..billing.models import Kube
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
                         AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
-from . import pd_utils
-from ..pods.models import Pod as PodModel
+from ..pods.models import PersistentDisk
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
@@ -115,12 +114,12 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     @staticmethod
     def _handle_persistent_storage(volume, owner):
         pd = volume.pop('persistentDisk')
-        pdname = pd.get('pdName')
-        device = _get_pd_device(pdname, owner)
+        name = pd.get('pdName')
+        drive_name = _get_pd_drive_name(name, owner)
         size = pd.get('pdSize')
         if CEPH:
             volume['rbd'] = {
-                'image': device,
+                'image': drive_name,
                 'keyring': '/etc/ceph/ceph.client.admin.keyring',
                 'fsType': 'ext4',
                 'user': 'admin',
@@ -139,11 +138,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 from ..settings import AVAILABILITY_ZONE
             except ImportError:
                 return
-            #volumeID: aws://<availability-zone>/<volume-id>
+            # volumeID: aws://<availability-zone>/<volume-id>
             volume['awsElasticBlockStore'] = {
                 'volumeID': 'aws://{0}/'.format(AVAILABILITY_ZONE),
                 'fsType': 'ext4',
-                'drive': device
+                'drive': drive_name,
             }
             if size is not None:
                 volume['awsElasticBlockStore']['size'] = size
@@ -308,13 +307,12 @@ def _del_docker_prefix(value):
     return value.split('docker://')[-1]
 
 
-def _get_pd_device(pdname, owner):
+def _get_pd_drive_name(name, owner):
     """Returns persistent drive name for a user and PD name.
     Also handles backward compatitbility with old drive names where drive names
     were composed with user name
     """
-    user_drives = PodModel.get_user_persistent_drives(owner.id)
-    legacy_device = pd_utils.compose_pdname_legacy(pdname, owner)
-    if legacy_device in user_drives:
-        return legacy_device
-    return pd_utils.compose_pdname(pdname, owner)
+    pd = PersistentDisk.query.filter_by(name=name, owner_id=owner.id).first()
+    if pd is None:
+        pd = PersistentDisk(name=name, owner_id=owner.id)
+    return pd.drive_name

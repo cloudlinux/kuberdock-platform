@@ -3,11 +3,14 @@ from uuid import uuid4
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from flask import current_app
 
+from . import pd_utils
 from .pod import Pod
 from .images import Image
 from .pstorage import CephStorage, AmazonStorage, NodeCommandError
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..billing import repr_limits
+from ..pods.models import PersistentDisk
+from ..users.models import User
 from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
                      unbind_ip)
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
@@ -387,6 +390,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             self._stop_pod(pod)
         self._make_namespace(pod.namespace)
         db_config = pod.get_config()
+
+        self._process_persistent_volumes(pod, db_config.get('volumes', []))
+
         if not db_config.get('service'):
             for c in pod.containers:
                 if len(c.get('ports', [])) > 0:
@@ -394,8 +400,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     self._raise_if_failure(service_rv, "Could not start a service")
                     db_config['service'] = service_rv['metadata']['name']
                     break
-
-        self._process_persistent_volumes(pod, db_config.get('volumes', []))
 
         self.replace_config(pod, db_config)
 
@@ -448,31 +452,52 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         :param pod: object -> a Pod instance
         :param volumes: list -> list of volumes
         """
+        # extract PDs from volumes
+        drives = {}
         for v in volumes:
             if 'rbd' in v:
-                ps = CephStorage()
+                storage = CephStorage()
                 if not v['rbd'].get('monitors'):
-                    v['rbd']['monitors'] = ps.get_monitors()
+                    v['rbd']['monitors'] = storage.get_monitors()
                 size = v['rbd'].get('size')
-                drive = v['rbd'].get('image')
+                drive_name = v['rbd'].get('image')
             elif 'awsElasticBlockStore' in v:
-                ps = AmazonStorage()
+                storage = AmazonStorage()
                 size = v['awsElasticBlockStore'].get('size')
-                drive = v['awsElasticBlockStore'].get('drive')
+                drive_name = v['awsElasticBlockStore'].get('drive')
             else:
                 continue
-            if drive is None:
+            if drive_name is None:
                 raise APIError("Got no drive name")
-            if size is not None:
-                ps._create_drive(drive, size)
+
+            persistent_disk = PersistentDisk.filter_by(drive_name=drive_name).first()
+            if persistent_disk is None:
+                name = pd_utils.parse_pd_name(drive_name).drive
+                owner = User.query.filter_by(username=pod.owner).first()
+                persistent_disk = PersistentDisk(drive_name=drive_name,
+                                                 owner=owner, name=name,
+                                                 size=size).save()
+            drives[drive_name] = (storage, persistent_disk)
+        if not drives:
+            return
+
+        # check that pod can use all of them
+        already_taken = PersistentDisk.take(pod.id, drives.keys())
+        if already_taken:
+            raise APIError(
+                u'For now two pods cannot share one Persistent Disk ({0}). '
+                u'Please stop pod "{1}" before starting this one.'
+                .format(already_taken.name, already_taken.pod.name))
+
+        # prepare drives
+        for drive_name, (storage, persistent_disk) in drives.iteritems():
+            storage.create(persistent_disk)
             try:
-                vid = ps._makefs(drive)
+                vid = storage.makefs(persistent_disk)
             except NodeCommandError:
-                msg = u"Failed to make FS for drive '{0}' because of failed "\
-                      u"node command".format(drive)
-                current_app.logger.exception(
-                    msg
-                )
+                msg = (u'Failed to make FS for drive "{0}" because of failed '
+                       u'node command'.format(drive_name))
+                current_app.logger.exception(msg)
                 raise APIError(msg)
             pod._update_volume_path(v['name'], vid)
 

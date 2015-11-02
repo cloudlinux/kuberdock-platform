@@ -8,7 +8,7 @@ from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
 from .core import db, ConnectionPool
-from .pods.models import Pod
+from .pods.models import Pod, PersistentDisk
 from .usage.models import ContainerState
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .tasks import fix_pods_timeline_heavy
@@ -233,9 +233,12 @@ def process_pods_event(data, app):
             return
 
     if event_type in ('MODIFIED', 'DELETED'):
-        containers = pod['status'].get('containerStatuses', [])
-        if containers:
-            with app.app_context():
+        with app.app_context():
+            if event_type == 'DELETED' or \
+                    pod['status']['phase'].lower() in ('succeeded', 'failed'):
+                PersistentDisk.free(pod_id)
+            containers = pod['status'].get('containerStatuses', [])
+            if containers:
                 update_containers_state(event_type, pod_id, containers)
 
     host = pod['spec'].get('nodeName')

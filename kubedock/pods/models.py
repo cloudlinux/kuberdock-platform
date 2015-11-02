@@ -4,6 +4,7 @@ import random
 import string
 import types
 from datetime import datetime
+from hashlib import md5
 from sqlalchemy.dialects import postgresql
 from flask import current_app
 from ..core import db
@@ -11,6 +12,8 @@ from ..settings import DOCKER_IMG_CACHE_TIMEOUT
 from ..models_mixin import BaseModelMixin
 from .. import signals
 from ..usage.models import IpState
+from ..users.models import User
+from ..kapi import pd_utils
 
 
 class Pod(BaseModelMixin, db.Model):
@@ -70,33 +73,12 @@ class Pod(BaseModelMixin, db.Model):
 
     def to_dict(self):
         return dict(
-            id = self.id,
-            name = self.name,
-            kube = self.kube.to_dict(),
-            owner = self.owner.to_dict(),
-            config = json.loads(self.config),
-            status = self.status)
-
-    @classmethod
-    def get_user_persistent_drives(cls, user_id):
-        """Extracts existent persistent drives for a user."""
-        pods = cls.query.filter(cls.status != 'deleted',
-                                cls.owner_id == user_id)
-        drive_names = set()
-        for pod in pods:
-            try:
-                config = json.loads(pod.config)
-            except (TypeError, ValueError):
-                continue
-            volumes = config.get('volumes', None)
-            if not volumes:
-                continue
-            for volume in volumes:
-                if 'rbd' in volume:
-                    drive_names.add(volume['rbd']['image'])
-                elif 'awsElasticBlockStore' in volume:
-                    drive_names.add(volume['awsElasticBlockStore']['drive'])
-        return drive_names
+            id=self.id,
+            name=self.name,
+            kube=self.kube.to_dict(),
+            owner=self.owner.to_dict(),
+            config=json.loads(self.config),
+            status=self.status)
 
 
 class ImageCache(db.Model):
@@ -386,6 +368,61 @@ class PodIP(BaseModelMixin, db.Model):
             ip_address_int=ip,
             ip_address=ipaddress.ip_address(ip)
         )
+
+
+class PersistentDisk(BaseModelMixin, db.Model):
+    __tablename__ = 'persistent_disk'
+    __table_args__ = (
+        db.UniqueConstraint('drive_name'),
+        db.UniqueConstraint('name', 'owner_id'),
+    )
+
+    id = db.Column(db.String(32), primary_key=True, nullable=False)
+    drive_name = db.Column(db.String(64), nullable=False)
+    name = db.Column(db.String(64), nullable=False)
+    owner_id = db.Column(db.ForeignKey('users.id'), nullable=False)
+    owner = db.relationship(User)
+    size = db.Column(db.BigInteger, nullable=False)
+    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=True)
+    pod = db.relationship(Pod)
+
+    def __init__(self, *args, **kwargs):
+        super(PersistentDisk, self).__init__(*args, **kwargs)
+        if self.drive_name is None:
+            owner = self.owner if self.owner is not None else self.owner_id
+            self.drive_name = pd_utils.compose_pdname(self.name, owner)
+        if self.id is None:
+            self.id = md5(self.drive_name).hexdigest()
+
+    def __str__(self):
+        return ('PersistentDisk(drive_name={0}, name={1}, owner={2}, size={3}, pod={4})'
+                .format(self.drive_name, self.name, self.owner, self.size, self.pod))
+
+    @classmethod
+    def take(cls, pod_id, drives):
+        db.session.begin_nested()
+        cls.filter(cls.drive_name.in_(drives), cls.pod_id.is_(None)).update(
+            {'pod_id': pod_id}, synchronize_session=False)
+        already_taken = cls.filter(cls.drive_name.in_(drives),
+                                   cls.pod_id != pod_id).first()
+        if already_taken:
+            db.session.rollback()
+            db.session.refresh(already_taken)
+            return already_taken
+        db.session.commit()
+
+    @classmethod
+    def free(cls, pod_id):
+        return cls.filter_by(pod_id=pod_id).update({cls.pod_id: None})
+
+    def to_dict(self):
+        return dict(id=self.id,
+                    drive_name=self.drive_name,
+                    name=self.name,
+                    owner=self.owner.username,
+                    size=self.size,
+                    pod=self.pod_id,
+                    in_use=self.pod_id is not None)
 
 
 class PrivateRegistryFailedLogin(BaseModelMixin, db.Model):

@@ -16,7 +16,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
     upd.print_log('Update fslimit.py script...')
     upd.print_log(put('/var/opt/kuberdock/fslimit.py',
-                      '/var/lib/kuberdock/scripts/fslimit.py {0}',
+                      '/var/lib/kuberdock/scripts/fslimit.py',
                       mode=0755))
 
     upd.print_log('Update FS limits on nodes...')

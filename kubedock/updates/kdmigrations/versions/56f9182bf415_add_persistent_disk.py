@@ -22,7 +22,7 @@ def upgrade():
         sa.Column('drive_name', sa.String(length=64), nullable=False),
         sa.Column('name', sa.String(length=64), nullable=False),
         sa.Column('owner_id', sa.Integer(), nullable=False),
-        sa.Column('size', sa.BigInteger(), nullable=False),
+        sa.Column('size', sa.Integer(), nullable=False),
         sa.Column('pod_id', postgresql.UUID(), nullable=True),
         sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ),
         sa.ForeignKeyConstraint(['pod_id'], ['pods.id'], ),

@@ -382,7 +382,7 @@ class PersistentDisk(BaseModelMixin, db.Model):
     name = db.Column(db.String(64), nullable=False)
     owner_id = db.Column(db.ForeignKey('users.id'), nullable=False)
     owner = db.relationship(User)
-    size = db.Column(db.BigInteger, nullable=False)
+    size = db.Column(db.Integer, nullable=False)
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=True)
     pod = db.relationship(Pod)
 

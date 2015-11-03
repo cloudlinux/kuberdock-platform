@@ -180,6 +180,10 @@ class APIError(Exception):
         self.message = message
         self.status_code = status_code
 
+    def __repr__(self):
+        return '<{0}: "{1}" ({2})>'.format(
+            self.__class__.__name__, self.message, self.status_code)
+
 
 def hostname_to_ip(name):
     """

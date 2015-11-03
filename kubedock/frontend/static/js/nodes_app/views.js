@@ -308,9 +308,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                     },
                     error: function(model, response){
                         preloader.hide();
-                        if (response.status == 409) {
-                            utils.notifyWindow('Node "' + val + '" already exists');
-                        }
+                        utils.notifyWindow(response.responseJSON.data);
                     }
                 });
             }

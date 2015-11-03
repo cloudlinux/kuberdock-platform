@@ -54,7 +54,17 @@ type=rpm-md
 gpgkey=https://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc
 EOF
 "
-ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" yum --enablerepo=Ceph install -y ceph-common
+#ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" yum --enablerepo=Ceph install -y ceph-common
+CNT=1
+/bin/false
+while [ $? -ne 0 ]; do
+    echo "Trying to install CEPH-client $CNT"
+    ((CNT++))
+    if [[ $CNT > 4 ]]; then
+        ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" "yum --enablerepo=Ceph --nogpgcheck install -y ceph-common"
+    fi
+    ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" "yum --enablerepo=Ceph install -y ceph-common"
+done
 scp -r -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" /var/lib/kuberdock/conf/ceph.* root@$TARGET_HOST:/etc/ceph
 
 if [[ -z "$SKIPHOSTNAMECHECK" ]]; then

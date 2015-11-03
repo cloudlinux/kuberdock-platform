@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 3.1%{?dist}.cloudlinux
+Release: 4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,21 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Tue Nov 03 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>  0.4-4
+- AC-1269 Fixed error message
+- AC-1412: fixed description for invalid envvar name
+- AC-1381: Fix copy-paste issue in 00041_update.py
+- Improved cleaned up resource version handling
+- AC-1352: two pods cannot use one Persistent Disk simultaneously
+- small fix for AC-1352
+- small bugfix: preloader on PD delete
+- AC-1410: added node existence check to ceph.sh
+- AC-1419: Fix bug in autogeneration 1-th podname
+- Removed hardcoded error message at "add node" page.
+- AC-1370: added quick workaround to ceph.sh when ceph.com key is unavailable
+- AC-1340: Add the ability to copy the link pre app
+- AC-1364:move PVolumes and PublicIPs menu to navbar menu
+
 * Sun Nov 01 2015 Igor Savenko <bliss@cloudlinux.com>  0.4-3.1
 - AC-819: bugfixes
 

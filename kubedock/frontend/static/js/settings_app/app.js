@@ -33,31 +33,6 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             model: Data.NotificationModel
         });
 
-        Data.PersistentStorageModel = utils.BaseModel.extend({
-            defaults: {
-                name   : 'Nameless',
-                size   : 0,
-                in_use : false,
-                pod    : ''
-            },
-        });
-
-        Data.PersistentStorageCollection = utils.BaseCollection.extend({
-            url: '/api/pstorage',
-            model: Data.PersistentStorageModel,
-        });
-
-        Data.UserAddressModel = utils.BaseModel.extend({
-            defaults: {
-                pod    : ''
-            },
-        });
-
-        Data.UserAddressCollection = utils.BaseCollection.extend({
-            url: '/api/ippool/userstat',
-            model: Data.UserAddressModel,
-        });
-
     });
 
 
@@ -236,86 +211,6 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             template: '#notifications-settings-template',
             childViewContainer: '#notification-templates',
             childView: Views.NotificationItemView
-        });
-
-        /* Public IPs Views */
-        Views.PublicIPsItemView = Marionette.ItemView.extend({
-            template: '#publicIPs-item-template',
-            tagName: 'tr'
-        });
-
-        /* Public IPs Empty Views */
-        Views.PublicIPsEmptyView = Marionette.ItemView.extend({
-            template: '#publicIPs-item-empty-template',
-            tagName: 'tr'
-        });
-
-        /* Public IPs Views */
-        Views.PublicIPsView = Marionette.CompositeView.extend({
-            template            : '#publicIPs-template',
-            childView           : Views.PublicIPsItemView,
-            emptyView           : Views.PublicIPsEmptyView,
-            childViewContainer  : 'tbody',
-        });
-
-        /* Persistent volumes empty view */
-        Views.PersistentVolumesEmptyView = Marionette.ItemView.extend({
-            template: '#persistent-volumes-empty-template',
-            tagName: 'tr',
-        });
-
-        /* Persistent volumes entry view */
-        Views.PersistentVolumesItemView = Marionette.ItemView.extend({
-            template: '#persistent-volumes-item-template',
-            tagName: 'tr',
-
-            ui: {
-                terminate: 'span.terminate-btn'
-            },
-
-            events: {
-                'click @ui.terminate': 'terminateVolume'
-            },
-
-            terminateVolume: function(){
-                var that = this,
-                    preloader = $('#page-preloader');
-
-                if (this.model.get('in_use')) {
-                    utils.notifyWindow('Persistent volume in use');
-                } else {
-                    utils.modalDialogDelete({
-                        title: "Delete persistent volume?",
-                        body: "Are you sure want to delete this persistent volume?",
-                        small: true,
-                        show: true,
-                        footer: {
-                            buttonOk: function(){
-                                preloader.show();
-                                that.model.destroy({
-                                    wait: true,
-                                    success: function(){
-                                        preloader.hide();
-                                        that.remove();
-                                    },
-                                    error: function(){
-                                        preloader.hide();
-                                    }
-                                });
-                            },
-                            buttonCancel: true
-                        }
-                    });
-                }
-            }
-        });
-
-        /* Persistent volumes Views */
-        Views.PersistentVolumesView = Marionette.CompositeView.extend({
-            template           : '#persistent-volumes-template',
-            childView          : Views.PersistentVolumesItemView,
-            emptyView          : Views.PersistentVolumesEmptyView,
-            childViewContainer : 'tbody',
         });
 
         /* Profile edit volumes Views */
@@ -541,10 +436,8 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 if (!tgt.hasClass('active')) $('#page-preloader').show();
                 if (tgt.hasClass('general')) App.router.navigate('/general/', {trigger: true});
                 else if (tgt.hasClass('profile')) App.router.navigate('/profile/', {trigger: true});
-                else if (tgt.hasClass('publicIPs')) App.router.navigate('/publicIPs/', {trigger: true});
                 else if (tgt.hasClass('permissions')) App.router.navigate('/permissions/', {trigger: true});
                 else if (tgt.hasClass('notifications')) App.router.navigate('/notifications/', {trigger: true});
-                else if (tgt.hasClass('persistent-volumes')) App.router.navigate('/persistent-volumes/', {trigger: true});
             },
 
             onRender: function(){
@@ -645,36 +538,6 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 App.contents.show(layout_view);
             },
 
-            showIPs: function(){
-                var layout_view = new App.Views.SettingsLayout(),
-                    collection = new App.Data.UserAddressCollection(),
-                    public_ips_view = new App.Views.PublicIPsView({
-                        collection: collection
-                    }),
-                    promise = collection.fetch();
-                this.listenTo(layout_view, 'show', function(){
-                    layout_view.main.show(public_ips_view);
-                });
-                promise.done(function(data){
-                    App.contents.show(layout_view);
-                });
-            },
-
-            showPersistentVolumes: function(){
-                var layout_view = new App.Views.SettingsLayout(),
-                    collection = new App.Data.PersistentStorageCollection(),
-                    persistent_volumes_view = new App.Views.PersistentVolumesView({
-                        collection: collection
-                    }),
-                    promise = collection.fetch();
-                this.listenTo(layout_view, 'show', function(){
-                    layout_view.main.show(persistent_volumes_view);
-                });
-                promise.done(function(data){
-                    App.contents.show(layout_view);
-                });
-
-            },
         });
 
         SettingsCRUD.addInitializer(function(){
@@ -685,11 +548,9 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                     ''                        : 'showGeneral',
                     'general/'                : 'showGeneral',
                     'profile/'                : 'editProfile',
-                    'publicIPs/'              : 'showIPs',
                     'permissions/'            : 'showPermissions',
                     'notifications/'          : 'showNotifications',
                     'notifications/add/'      : 'addNotifications',
-                    'persistent-volumes/'     : 'showPersistentVolumes',
                     'notifications/edit/:id/' : 'editNotifications',
                 }
             });

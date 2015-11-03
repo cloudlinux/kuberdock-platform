@@ -64,6 +64,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                         show: true,
                         footer: {
                             buttonOk: function(){
+                                preloader.show();
                                 that.model.destroy({
                                     wait: true,
                                     success: function(){

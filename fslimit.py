@@ -19,7 +19,7 @@ def _containers():
         container_path = os.path.dirname(target)
         if not container_path.endswith('-init'):
             container_name = os.path.basename(container_path)
-            containers[container_name] = target
+            containers[container_name] = container_path
     return containers
 
 
@@ -86,7 +86,7 @@ def fslimit():
                     id_ = int(project_dict['id'])
                     path = project_dict['path']
                     if path.startswith(OVERLAY):
-                        name = os.path.basename(os.path.dirname(path))
+                        name = os.path.basename(path)
                         if name not in containers:
                             delete.add(id_)
                             continue

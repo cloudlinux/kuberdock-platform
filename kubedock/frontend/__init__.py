@@ -31,10 +31,12 @@ def create_app(settings_override=None, fake_sessions=False):
     from .ippool import ippool
     from .settings import settings
     from .predefined_apps import predefined_apps
+    from .public_ips import public_ips
+    from .persistent_volumes import persistent_volumes
     from .apps import apps
 
     for bp in main, auth, nodes, users, notifications, static_pages, ippool, \
-            settings, predefined_apps, apps:
+            settings, predefined_apps, public_ips, persistent_volumes, apps:
         app.register_blueprint(bp)
 
     app.errorhandler(PermissionDenied)(on_permission_denied)

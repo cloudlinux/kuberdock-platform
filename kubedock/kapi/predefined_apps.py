@@ -1,7 +1,14 @@
 import re
 
+import yaml
+
 from ..utils import APIError
 from ..predefined_apps.models import PredefinedApp as PredefinedAppModel
+from ..billing.models import Kube
+
+
+class AppParseError(Exception):
+    pass
 
 
 class PredefinedApps(object):
@@ -10,7 +17,7 @@ class PredefinedApps(object):
             user = user.id
         self.user = user
 
-        self.apps = PredefinedAppModel.query
+        self.apps = PredefinedAppModel.query.order_by(PredefinedAppModel.id)
         if self.user is not None:
             self.apps = self.apps.filter_by(user_id=self.user)
 
@@ -34,7 +41,9 @@ class PredefinedApps(object):
             raise APIError('Template not specified')
         if validate:
             validate_template(template)
-        app = PredefinedAppModel(user_id=self.user, name=name, template=template)
+        app = PredefinedAppModel(
+            user_id=self.user, name=name, template=template
+        )
         app.save()
         return app.to_dict()
 
@@ -64,12 +73,40 @@ CUSTOM_VAR_PATTERN = re.compile(r'\$[^\$]+\$')
 # Valid variable must be in form:
 CORRECT_VARIABLE_FORMAT_DESCRIPTION = \
 "$<VARIABLE_NAME|default:<word 'autogen' or some default value>|VAR_DESCRIPTION>$"
-VARIABLE_PATTERN = re.compile(r'^\$([^\|\$]+)\|default:([^\|\$]+)\|([^\|\$]+)\$$')
+VARIABLE_PATTERN = \
+    re.compile(r'^\$([^\|\$]+)\|default:([^\|\$]+)\|([^\|\$]+)\$$')
 
 
 def validate_template(template):
     """Validates saving template text.
-    Now checks only validity of custom variables in template.
+    Now checks:
+        - validity of custom variables in template;
+        - kube type. If it is specified, then it must be one of existing types.
+
+    """
+    check_custom_variables(template)
+    try:
+        parsed_template = yaml.safe_load(template)
+    except (yaml.scanner.ScannerError, yaml.parser.ParserError):
+        raise_validation_error(u'common', u'Invalid yaml format')
+    try:
+        app_root = find_root(parsed_template)
+    except AppParseError as err:
+        raise_validation_error(
+            u'common', u'Invalid application structure: {}'.format(str(err))
+        )
+    if not isinstance(parsed_template, (dict, list)):
+        raise_validation_error(
+            u'common',
+            u'Invalid yaml template: top level element must be list or dict'
+        )
+    check_kube_type(app_root)
+
+
+def check_custom_variables(template):
+    """Checks validity of custom variables in template.
+    :param template: string with template content
+    :raise: APIError in case of invalid variables.
 
     """
     custom_vars = find_custom_vars(template)
@@ -80,9 +117,59 @@ def validate_template(template):
         if not VARIABLE_PATTERN.match(var):
             errors.append(var)
     if errors:
-        raise APIError({'validationError': {'customVars': errors}})
+        raise_validation_error('customVars', errors)
 
 
 def find_custom_vars(text):
     custom = CUSTOM_VAR_PATTERN.findall(text)
     return custom
+
+
+def check_kube_type(app_root):
+    """Checks validity of kube type in application structure.
+    :param app_struct: dict or list for application structure.
+    :raise: APIError in case of invalid kube type.
+
+    """
+    key = 'kube_type'
+    if key not in app_root:
+        return
+    kube_type = app_root[key]
+    _, value, _ = get_value(kube_type)
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        raise_validation_error('values', {'kube_type': 'Invalid kube type'})
+    kube = Kube.get_by_id(value)
+    if not kube:
+        raise_validation_error(
+            'values', {'kube_type': 'Specified kube does not exist'})
+
+
+def find_root(app_struct):
+    try:
+        if app_struct['kind'] == 'ReplicationController':
+            return app_struct['spec']['template']['spec']
+        if app_struct['kind'] == 'Pod':
+            return app_struct['spec']
+    except (TypeError, KeyError):
+        pass
+    raise AppParseError("Not found 'spec' section")
+
+
+def get_value(value, strict=False):
+    if not isinstance(value, basestring):
+        if strict:
+            AppParseError(u'Invalid custom variable: {}'.format(value))
+        return (None, value, None)
+    m = VARIABLE_PATTERN.match(value)
+    if m is None:
+        if strict:
+            AppParseError(u'Invalid custom variable: {}'.format(value))
+        return (None, value, None)
+    varname, defaultvalue, description = m.groups()
+    return (varname, defaultvalue, description)
+
+
+def raise_validation_error(key, error):
+    raise APIError({'validationError': {key: error}})

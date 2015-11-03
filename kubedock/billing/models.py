@@ -68,6 +68,10 @@ class Kube(db.Model):
         return {field: getattr(self, field) for field in self.__mapper__.columns.keys()}
 
     @classmethod
+    def get_by_id(cls, kubeid):
+        return cls.query.filter(cls.id == kubeid).first()
+
+    @classmethod
     def public_kubes(cls):
         return cls.query.filter(
             ~cls.id.in_(NOT_PUBLIC_KUBE_TYPES)

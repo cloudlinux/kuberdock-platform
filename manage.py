@@ -6,6 +6,7 @@ import string
 from random import choice
 from datetime import datetime
 import uuid
+import json
 
 from kubedock.api import create_app
 from kubedock.kapi.nodes import create_node
@@ -186,6 +187,7 @@ class ResetPass(Command):
             db.session.commit()
             print "Password has been changed"
 
+
 class NodeFlagCmd(Command):
     """Manage flags for a node"""
     option_list = (
@@ -217,6 +219,20 @@ class NodeFlagCmd(Command):
             nodename, flagname, value)
 
 
+class NodeInfoCmd(Command):
+    """Manage flags for a node"""
+    option_list = (
+        Option('-n', '--nodename', dest='nodename', required=True,
+               help='Node host name'),
+    )
+
+    def run(self, nodename):
+        node = Node.get_by_name(nodename)
+        if not node:
+            raise InvalidCommand(u'Node "{0}" not found'.format(nodename))
+        print json.dumps(node.to_dict())
+
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -236,6 +252,7 @@ manager.add_command('updatedb', Updater())
 manager.add_command('add_node', NodeManager())
 manager.add_command('reset-password', ResetPass())
 manager.add_command('node-flag', NodeFlagCmd())
+manager.add_command('node-info', NodeInfoCmd())
 
 
 if __name__ == '__main__':

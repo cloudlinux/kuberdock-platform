@@ -1,7 +1,41 @@
 #!/bin/bash
 
-TARGET_HOST=$1
+MANAGECMD=/var/opt/kuberdock/manage.py
+
+while [[ $# > 1 ]]; do
+    key="$1"
+    case $key in
+        -s|--skip-hostname-check)
+        SKIPHOSTNAMECHECK=YES
+        ;;
+        *)
+        ;;
+    esac
+    shift # past argument or value
+done
+
+if [[ -n $1 ]]; then
+    TARGET_HOST="$1"
+fi
+
+if [[ -z $TARGET_HOST ]]; then
+    echo "Empty hostname"
+    exit 1
+fi
+
+
 VERSION=hammer
+# Check existence of the node with specified hostname in kuberdock database
+# to prevent invalid (incomplete) hostnames arguments.
+# Skip this checking if ceph client will be installed on host which is not
+# attached as a node.
+if [[ -z "$SKIPHOSTNAMECHECK" ]]; then
+    python $MANAGECMD node-info --nodename "$TARGET_HOST" > /dev/null 2>&1
+    if [[ $? != 0 ]]; then
+        echo "Node $TARGET_HOST not found in DB. Use -s|--skip-hostname-check flag for installing ceph client to hosts which are not attached as nodes yet."
+        exit 1
+    fi
+fi
 #ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" rpm -ivh http://ceph.com/rpm-$VERSION/el7/noarch/ceph-release-1-0.el7.noarch.rpm --force 
 ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" "
 cat > /etc/yum.repos.d/ceph-base << EOF
@@ -22,5 +56,10 @@ EOF
 "
 ssh root@$TARGET_HOST -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" yum --enablerepo=Ceph install -y ceph-common
 scp -r -i /var/lib/nginx/.ssh/id_rsa -o "StrictHostKeyChecking no" /var/lib/kuberdock/conf/ceph.* root@$TARGET_HOST:/etc/ceph
-python /var/opt/kuberdock/manage.py node-flag --nodename $TARGET_HOST --flagname ceph_installed --value true 2> /dev/null
+
+if [[ -z "$SKIPHOSTNAMECHECK" ]]; then
+    python $MANAGECMD node-flag --nodename $TARGET_HOST --flagname ceph_installed --value true
+else
+    python $MANAGECMD node-flag --nodename $TARGET_HOST --flagname ceph_installed --value true 2> /dev/null
+fi
 

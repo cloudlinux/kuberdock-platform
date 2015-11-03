@@ -2,9 +2,9 @@
     <table id="predefined-app-table" class="table">
         <thead>
             <tr>
-                <th>Name</th>
-<!--                 <th>Link</th> -->
-                <th>Actions</th>
+                <th class="col-md-4">Name</th>
+                <th class="col-md-4">Link</th>
+                <th class="col-md-4">Actions</th>
             </tr>
         </thead>
         <tbody></tbody>

@@ -21,6 +21,7 @@
                 <!-- <th>Average<b class="caret"></b><br>CPU usage</th> -->
                 <!-- <th>Active pods<b class="caret"></b><br>(containers)</th> -->
                 <th class="status">Status<b class="caret"></b></th>
+                <th class="actions">Actions</b></th>
             </tr>
         </thead>
         <tbody></tbody>

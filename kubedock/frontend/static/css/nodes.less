@@ -40,17 +40,6 @@
             background-color: #fff;
             &.checked, &:hover{
                 background-color: #f5fafe;
-                td{
-                    span{
-                        &#deleteNode{
-                            background: url('../img/recycling.png') 0 0 no-repeat;
-                            &:hover{
-                                cursor: pointer;
-                                background-position: 0 -18px;
-                            }
-                        }
-                    }
-                }
             }
             td{
                 height: 50px;
@@ -70,12 +59,16 @@
                     color: #b1b9c0;
                 }
                 span{
-                    &#deleteNode{
+                    &.deleteNode{
                         width: 16px;
                         height: 17px;
-                        margin-right: 24px;
                         position: relative;
                         display: inline-block;
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                            &:hover{
+                                cursor: pointer;
+                                background-position: 0 -18px;
+                        }
                     }
                     &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
                         position: relative;

@@ -310,7 +310,7 @@
         <td><%- package  %></td>
         <td><%- rolename  %></td>
         <td><span class="<%- active ? 'active' : 'locked' %>"><%- active ? 'Active' : 'Locked' %></span></td>
-        <td>
+        <td class="actions">
             <% if (active) { %>
                 <span class="blockUser" title="Lock user <%- username %>"></span>
             <% } else { %>
@@ -405,7 +405,7 @@
                                        <th class="package">Package<span class="caret"></span></th>
                                        <th class="rolename">Role<span class="caret"></span></th>
                                        <th class="active">Status<span class="caret"></span></th>
-                                       <th>Actions</span></th>
+                                       <th class="actions">Actions</span></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>

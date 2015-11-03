@@ -22,7 +22,6 @@ define(['app', 'marionette',
 
             initialize: function(){
                 var that = this;
-                console.log(this);
                 this.listenTo(this.breadcrumbs, 'show', function(view){
                     that.listenTo(view, 'app:showloadcontrol', that.showLoadControl);
                 });
@@ -223,13 +222,26 @@ define(['app', 'marionette',
                 this.trigger('app:edit:item', this.model.get('id'));
             },
 
-            copyLink: function(){
-                $.notify('Link copied to buffer', {
-                    autoHideDelay: 5000,
-                    clickToHide: true,
-                    globalPosition: 'bottom left',
-                    className: 'success',
-                });
+            copyLink: function(evt){
+                var msg,
+                    successful,
+                    target = $(evt.target),
+                    link = target.parent().find('textarea');
+
+                link.select();
+                successful = document.execCommand('copy');
+                msg = successful ? 'successful' : 'unsuccessful';
+
+                if (successful) {
+                    $.notify('Link copied to buffer', {
+                        autoHideDelay: 5000,
+                        clickToHide: true,
+                        globalPosition: 'bottom left',
+                        className: 'success',
+                    });
+                } else {
+                    utils.notifyWindow('Sorry, link not copied');
+                }
             }
         });
 

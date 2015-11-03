@@ -42,26 +42,6 @@
             background-color: #fff;
             &:hover{
                 background-color: #f5fafe;
-                span{
-                    &.deleteUser{
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                    &.blockUser{
-                        background: url('../img/block-user-ico.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -16px;
-                        }
-                    }
-                    &.activeteUser{
-                        background: url('../img/activate-user-ico.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -15px;
-                        }
-                    }
-                }
             }
             td{
                 height: 50px;
@@ -77,11 +57,15 @@
                 &.disabled-color-text{
                     color: #b1b9c0;
                 }
+                &.actions{
+                    font-size: 0;
+                    span + span{
+                        margin-left: 10px;
+                    }
+                }
                 span{
                     &.deleteUser, &.blockUser, &.activeteUser{
-                        top: 3px;
                         position: relative;
-                        margin-right: 10px;
                         display: inline-block;
                         &:hover{
                             cursor: pointer;
@@ -98,25 +82,39 @@
                     &.deleteUser{
                         width: 16px;
                         height: 17px;
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
                     }
                     &.blockUser{
                         width: 16px;
                         height: 15px;
+                        background: url('../img/block-user-ico.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -16px;
+                        }
                     }
                     &.activeteUser{
                         width: 19px;
                         height: 15px;
+                        background: url('../img/activate-user-ico.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -15px;
+                        }
                     }
                     &.active, &.locked{
                         position: relative;
                         padding-left: 22px;
                         &:before{
                             .border-radius(50%);
+                            top: 0;
                             left: 2px;
+                            bottom: 0;
                             width: 12px;
                             content: '';
                             height: 12px;
-                            bottom: 2px;
+                            margin: auto;
                             position: absolute;
                         }
                     }

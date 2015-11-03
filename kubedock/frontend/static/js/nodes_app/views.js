@@ -34,7 +34,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                 nodeItemGraphTpl){
 
     var views = {};
-    
+
     views.PaginatorView = Backbone.Marionette.ItemView.extend({
         template: nodePaginatorTpl,
 
@@ -75,8 +75,8 @@ define(['nodes_app/app', 'marionette', 'utils',
         tagName: 'tr',
 
         ui: {
-            'deleteNode'       : '#deleteNode',
-            'detailedNode'     : 'button#detailedNode',
+            'deleteNode'       : '.deleteNode',
+            'detailedNode'     : 'button.detailedNode',
             'upgradeNode'      : 'button#upgradeNode',
             //'configurationTab' : 'button#detailedConfigurationTab'
         },
@@ -270,7 +270,7 @@ define(['nodes_app/app', 'marionette', 'utils',
         templateHelpers: {
             kubeTypes: kubeTypes
         },
-        
+
         complete: function () {
             var that = this,
                 preloader = $('#page-preloader'),
@@ -524,7 +524,7 @@ define(['nodes_app/app', 'marionette', 'utils',
             this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
             this.ui.textarea.jScrollPane();
         },
-        
+
         onBeforeDestroy: function () {
             clearTimeout(this.model.get('timeout'));
         }
@@ -533,11 +533,11 @@ define(['nodes_app/app', 'marionette', 'utils',
     //================= Node Monitoring Tab =================//
     views.NodeMonitoringTabViewItem = Backbone.Marionette.ItemView.extend({
         template: nodeItemGraphTpl,
-        
+
         ui: {
             chart: '.graph-item'
         },
-        
+
         makeGraph: function(){
             var lines = this.model.get('lines'),
                 points = [],
@@ -579,7 +579,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                     points.push([])
                 }
             }
-        
+
             this.model.get('points').forEach(function(record){
                 for (var i=0; i<lines; i++) {
                     points[i].push([record[0], record[i+1]])
@@ -587,7 +587,7 @@ define(['nodes_app/app', 'marionette', 'utils',
             });
             this.ui.chart.jqplot(points, options);
         },
-        
+
         onShow: function(){
             try {
                 this.makeGraph();
@@ -597,7 +597,7 @@ define(['nodes_app/app', 'marionette', 'utils',
             }
         }
     });
-    
+
     views.NodeMonitoringTabView = Backbone.Marionette.CollectionView.extend({
         childView: views.NodeMonitoringTabViewItem,
     });

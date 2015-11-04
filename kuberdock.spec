@@ -112,19 +112,19 @@ rm -rf %{buildroot}
 
 %define sslcert %{_sysconfdir}/nginx/ssl/kubecert.crt
 %define sslkey %{_sysconfdir}/nginx/ssl/kubecert.key
+
 %define kd_vassal_source /var/opt/kuberdock/conf/kuberdock.ini
 %define kd_vassal %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
+if [ ! -f %{kd_vassal} ]; then
+    cp %{kd_vassal_source} %{kd_vassal}
+    chmod 644 %{kd_vassal}
+fi
 
 %post
 umask 077
 
 if [ ! -f %{sslkey} ] ; then
 %{_bindir}/openssl genrsa -rand /proc/apm:/proc/cpuinfo:/proc/dma:/proc/filesystems:/proc/interrupts:/proc/ioports:/proc/pci:/proc/rtc:/proc/uptime 1024 > %{sslkey} 2> /dev/null
-fi
-
-if [ ! -f %{kd_vassal} ]; then
-    cp %{kd_vassal_source} %{kd_vassal}
-    chmod 644 %{kd_vassal}
 fi
 
 FQDN=`hostname`

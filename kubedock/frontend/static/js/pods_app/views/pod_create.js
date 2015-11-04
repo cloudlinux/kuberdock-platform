@@ -805,6 +805,7 @@ define(['pods_app/app',
                 removeItem : '.remove-env',
                 nameField  : 'input.name',
                 next       : '.next-step',
+                navButtons : '.nav-buttons',
 
                 stopContainer  : '#stopContainer',
                 startContainer : '#startContainer',
@@ -842,6 +843,12 @@ define(['pods_app/app',
                     this.model.set(pod.getContainer(this.model.get('name')).attributes);
                     this.render();
                 });
+            },
+
+            onRender: function(){
+                utils.hasScroll() ?
+                this.ui.navButtons.addClass('fixed') :
+                this.ui.navButtons.removeClass('fixed');
             },
 
             templateHelpers: function(){

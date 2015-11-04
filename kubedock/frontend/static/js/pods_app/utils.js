@@ -81,5 +81,12 @@ define({
     preloader: {
         show: function(){ $('#page-preloader').show(); },
         hide: function(){ $('#page-preloader').hide(); }
+    },
+
+    hasScroll: function() {
+        var hContent = $('body').height(),
+            hWindow = $(window).height();
+
+        hContent>hWindow ? return true : return false;
     }
 });

@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 1.4%{?dist}.cloudlinux
+Release: 1.5%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -165,6 +165,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Wed Nov 04 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.4-1.5
+- AC-1371: fix containers logs (frontend)
+- AC-1381: Fix FS limit applying to prevent container crash in some cases
+- AC-1381: Fix copy-paste issue in 00041_update.py
+- AC-1418: Fix FS limit script
+
 * Sun Oct 25 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>  0.4-1.4
 - AC-1251 Add style to predefined app create page
 - AC-1344: hide star/stop button & chechboxes in container-list table

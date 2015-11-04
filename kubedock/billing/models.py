@@ -46,6 +46,10 @@ class Package(db.Model):
     def to_dict(self):
         return {field: getattr(self, field) for field in self.__mapper__.columns.keys()}
 
+    @classmethod
+    def by_name(cls, package_name):
+        return cls.query.filter_by(name=package_name).first()
+
 
 class Kube(db.Model):
     __tablename__ = 'kubes'

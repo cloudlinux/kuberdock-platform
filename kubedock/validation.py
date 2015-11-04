@@ -7,10 +7,11 @@ from copy import deepcopy
 from sqlalchemy import func
 
 from .api import APIError
-from .billing import Kube
+from .billing import Kube, Package
 from .predefined_apps.models import PredefinedApp
 from .users.models import User
 from .nodes.models import Node
+from .rbac.models import Role
 from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
                        MAX_KUBES_PER_CONTAINER)
 
@@ -148,13 +149,15 @@ create_user_schema = {
         'type': 'string',
         'required': True,
         'empty': False,
-        'maxlength': 64.
+        'maxlength': 64,
+        'role_exists': True,
     },
     'package': {
         'type': 'string',
         'required': True,
         'empty': False,
         'maxlength': 64,
+        'package_exists': True,
     },
     'active': {
         'type': 'extbool',
@@ -760,7 +763,6 @@ class UserValidator(V):
                    'hyphen and underscore are allowed'
     }
 
-
     def __init__(self, *args, **kwargs):
         self.id = kwargs.get('id')
         super(UserValidator, self).__init__(*args, **kwargs)
@@ -775,6 +777,16 @@ class UserValidator(V):
             taken_query = taken_query.filter(model.id != self.id)
         if taken_query.first() is not None:
             self._error(field, 'has already been taken')
+
+    def _validate_role_exists(self, exists, field, value):
+        if exists:
+            if Role.by_rolename(value) is None:
+                self._error(field, "Role doesn't exists")
+
+    def _validate_package_exists(self, exists, field, value):
+        if exists:
+            if Package.by_name(value) is None:
+                self._error(field, "Package doesn't exists")
 
     def validate_user_create(self, data):
         try:

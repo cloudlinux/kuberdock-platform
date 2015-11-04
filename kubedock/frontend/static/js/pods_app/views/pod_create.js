@@ -848,8 +848,7 @@ define(['pods_app/app',
             onRender: function(){
                 if (utils.hasScroll()) {
                     this.ui.navButtons.addClass('fixed');
-                }
-                else {
+                } else {
                     this.ui.navButtons.removeClass('fixed');
                 }
             },

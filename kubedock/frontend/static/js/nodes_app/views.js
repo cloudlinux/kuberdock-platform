@@ -14,8 +14,7 @@ define(['nodes_app/app', 'marionette', 'utils',
         'tpl!nodes_app/templates/node_paginator.tpl',
         'tpl!nodes_app/templates/node_layout.tpl',
         'tpl!nodes_app/templates/node_item_graph.tpl',
-        'bootstrap', 'jqplot', 'jqplot-axis-renderer', 'selectpicker',
-        'mousewheel', 'jscrollpane'],
+        'bootstrap', 'jqplot', 'jqplot-axis-renderer', 'selectpicker'],
        function(App, Marionette, utils,
                 nodeDetailedLayoutTpl,
                 nodeGeneralTabTpl,
@@ -508,11 +507,6 @@ define(['nodes_app/app', 'marionette', 'utils',
                 this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
             }
             $.proxy(get_logs, this)();
-        },
-
-        onRender: function(){
-            this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
-            this.ui.textarea.jScrollPane();
         },
 
         onBeforeDestroy: function () {

@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 5%{?dist}.cloudlinux
+Release: 5.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,10 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Wed Nov 04 2015 Igor Savenko <bliss@cloudlinux.com>  0.4-5.1
+- brought back accidentally deleted logs fixes
+- refactored some JS
+
 * Wed Nov 04 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>  0.4-5
 - AC-1336: Fix bug with navigate on top after load-more event
 - AC-1137: Fixed broken amazon-hosted installation with error if the wrong public key is added

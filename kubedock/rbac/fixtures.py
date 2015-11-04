@@ -2,7 +2,7 @@ from kubedock.core import db
 from .models import Resource, Role, Permission
 
 
-RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages",
+RESOURCES = ("users", "nodes", "pods", "ippool",
              "notifications", "system_settings", "images", "predefined_apps")
 
 ROLES = (
@@ -33,11 +33,6 @@ PERMISSIONS = (
     ("ippool", "Admin", "edit", True),
     ("ippool", "Admin", "delete", True),
     ("ippool", "Admin", "view", True),
-    ("static_pages", "Admin", "create", True),
-    ("static_pages", "Admin", "get", True),
-    ("static_pages", "Admin", "edit", True),
-    ("static_pages", "Admin", "delete", True),
-    ("static_pages", "Admin", "view", True),
     ("notifications", "Admin", "create", True),
     ("notifications", "Admin", "get", True),
     ("notifications", "Admin", "edit", True),
@@ -71,11 +66,6 @@ PERMISSIONS = (
     ("ippool", "User", "edit", False),
     ("ippool", "User", "delete", False),
     ("ippool", "User", "view", False),
-    ("static_pages", "User", "create", False),
-    ("static_pages", "User", "get", False),
-    ("static_pages", "User", "edit", False),
-    ("static_pages", "User", "delete", False),
-    ("static_pages", "User", "view", True),
     ("notifications", "User", "create", False),
     ("notifications", "User", "get", False),
     ("notifications", "User", "edit", False),
@@ -106,11 +96,6 @@ PERMISSIONS = (
     ("ippool", "TrialUser", "edit", False),
     ("ippool", "TrialUser", "delete", False),
     ("ippool", "TrialUser", "view", False),
-    ("static_pages", "TrialUser", "create", False),
-    ("static_pages", "TrialUser", "get", False),
-    ("static_pages", "TrialUser", "edit", False),
-    ("static_pages", "TrialUser", "delete", False),
-    ("static_pages", "TrialUser", "view", True),
     ("notifications", "TrialUser", "create", False),
     ("notifications", "TrialUser", "get", False),
     ("notifications", "TrialUser", "edit", False),
@@ -141,11 +126,6 @@ PERMISSIONS = (
     ("ippool", "HostingPanel", "edit", False),
     ("ippool", "HostingPanel", "delete", False),
     ("ippool", "HostingPanel", "view", False),
-    ("static_pages", "HostingPanel", "create", False),
-    ("static_pages", "HostingPanel", "get", False),
-    ("static_pages", "HostingPanel", "edit", False),
-    ("static_pages", "HostingPanel", "delete", False),
-    ("static_pages", "HostingPanel", "view", False),
     ("notifications", "HostingPanel", "create", False),
     ("notifications", "HostingPanel", "get", False),
     ("notifications", "HostingPanel", "edit", False),

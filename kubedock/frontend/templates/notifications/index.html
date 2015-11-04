@@ -1,9 +1,7 @@
 {% extends "layout.html" %}
 
 {% block body %}
-    {% with items=MENU.navbar.get_items() %}
-    {% include "inc/navbar_menu.html" %}
-    {% endwith %}
+{% include "inc/navbar_menu.html" %}
 
     <!-- contents container -->
     <div id="contents" class="container"></div>

@@ -10,12 +10,11 @@ from ..utils import APIError
 from ..kapi.predefined_apps import PredefinedApps
 from ..billing.models import Package
 from ..system_settings.models import SystemSettings
+from ..billing.models import Kube
+from ..kapi import predefined_apps as kapi_papps
 
 
 apps = Blueprint('apps', __name__, url_prefix='/apps')
-
-class AppParseError(Exception):
-    pass
 
 @apps.route('/<app_hash>', methods=['GET'], strict_slashes=False)
 def index(app_hash):
@@ -47,7 +46,7 @@ def index(app_hash):
     except (yaml.scanner.ScannerError, yaml.parser.ParserError):
         return render_template('apps/error.html', message='Could not parse App config'), 500
 
-    except AppParseError:
+    except kapi_papps.AppParseError:
         return render_template('apps/error.html', message='Unsupported App'), 500
 
     except APIError:
@@ -67,9 +66,9 @@ def find_root(app):
             return app['spec']['template']['spec']
         if app['kind'] == 'Pod':
             return app['spec']
-        raise AppParseError
+        raise kapi_papps.AppParseError
     except (TypeError, KeyError):
-        raise AppParseError
+        raise kapi_papps.AppParseError
 
 
 def get_packages():
@@ -93,20 +92,22 @@ def get_packages():
     return packages, kubes
 
 
-def get_value(value,  patt=re.compile(r"""\$([^\$]+?)\$""")):
-    if not isinstance(value, basestring):
-        value = str(value)
-    m = patt.search(value)
-    if m is None:
-        return value, None
-    _, dflt, title = [i.strip() for i in m.group(1).split('|')]
-    return dflt[1], hashlib.sha1(value).hexdigest()
+def get_value(value):
+    varname, dflt, _ = kapi_papps.get_value(value)
+    hs = None
+    if varname is not None:
+        hs = hashlib.sha1(str(value)).hexdigest()
+    return dflt, hs
 
 
-def get_defaults(app, mutables, kubes, default_kube_type=0, default_kubes_num=1):
+def get_defaults(app, mutables, kubes,
+                 default_kube_type=None,
+                 default_kubes_num=1):
+    if default_kube_type is None:
+        default_kube_type = Kube.get_default_kube_type()
     yml = yaml.safe_load(app)
     if not isinstance(yml, (dict, list)):
-        raise AppParseError
+        raise kapi_papps.AppParseError
     root = find_root(yml)
     kube_type = None
     pre_desc = yml.get('metadata', {}).get('preDescription')
@@ -138,12 +139,11 @@ def generate(length=8):
             for i in range(length))
 
 
-def find_custom(text, length=8, patt=re.compile(r"""\$[^\$]+?\$""")):
-    custom = patt.findall(text)
+def find_custom(text):
+    custom = kapi_papps.find_custom_vars(text)
     data = {}
     for item in custom:
-        name, default, title = [i.strip() for i in item.strip('$').split('|')]
-        _, value = [i.strip() for i in default.split(':')]
+        _, value, title = kapi_papps.get_value(item, strict=True)
         if value == 'autogen':
             value = generate()
         data[item] = {

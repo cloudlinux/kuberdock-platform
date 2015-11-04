@@ -331,7 +331,7 @@
                             <div class="custom-field-body">
                                 <select id="{{ v.hashsum }}" class="custom-field">
                                     {% for row in kubes_data[package_id] %}
-                                        {% if row.id == kube_type %}
+                                        {% if row.id == kube_type|int %}
                                         <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
                                         {% else %}
                                         <option value="{{ row.id }}">{{ row.name }}</option>

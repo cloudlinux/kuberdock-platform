@@ -54,9 +54,16 @@ define(['backbone', 'marionette', 'predefined_app/app', '../utils'],
 
                 var getValidationError = function(data) {
                     var res = '';
+                    if (data.common) {
+                        res += JSON.stringify(data.common) + '<br />';
+                    }
                     if (data.customVars) {
                         res += 'Invalid custom variables:<br />' +
-                            JSON.stringify(data.customVars);
+                            JSON.stringify(data.customVars) + '<br />';
+                    }
+                    if (data.values) {
+                        res += 'Invalid values:<br />' +
+                            JSON.stringify(data.values) + '<br />';
                     }
                     if (!res) {
                         res = JSON.stringify(data);

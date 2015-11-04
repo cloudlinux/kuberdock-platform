@@ -8,7 +8,7 @@ import hashlib
 from flask import Blueprint, request, render_template
 from ..utils import APIError
 from ..kapi.predefined_apps import PredefinedApps
-from ..billing.models import Package
+from ..billing.models import Package, Kube
 from ..system_settings.models import SystemSettings
 from ..billing.models import Kube
 from ..kapi import predefined_apps as kapi_papps

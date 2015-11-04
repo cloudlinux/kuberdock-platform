@@ -62,6 +62,7 @@ class Kube(db.Model):
     disk_space = db.Column(db.Integer, default=0, nullable=False)
     disk_space_units = db.Column(db.String(3), default='GB', nullable=False)
     included_traffic = db.Column(db.Integer, default=0, nullable=False)
+    is_default = db.Column(db.Boolean, default=None, nullable=True, unique=True)
     nodes = db.relationship('Node', backref='kube')
     pods = db.relationship('Pod', backref='kube')
 
@@ -88,13 +89,17 @@ class Kube(db.Model):
     def is_public(self):
         return self.id not in NOT_PUBLIC_KUBE_TYPES
 
-    @staticmethod
-    def get_default_kube_type():
-        return DEFAULT_KUBE_TYPE
+    @classmethod
+    def get_default_kube_type(cls):
+        default_kube = cls.get_default_kube()
+        if default_kube:
+            return default_kube.id
+        else:
+            return DEFAULT_KUBE_TYPE
 
     @classmethod
     def get_default_kube(cls):
-        return cls.query.filter(cls.id == cls.get_default_kube_type()).first()
+        return cls.query.filter(cls.is_default == True).first()
 
     @staticmethod
     def get_internal_service_kube_type():

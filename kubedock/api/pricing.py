@@ -130,6 +130,15 @@ class KubesAPI(KubeUtils, MethodView):
             if duplicate:
                 raise APIError('Kube with name \'{0}\' already exists'
                                .format(data['name']))
+        is_default = data.get('is_default', None)
+        if is_default:
+            _remove_is_default_kube_flags()
+        elif kube.is_default and is_default is not None:
+            # Do not allow to turn off is_default flag from a kube, because in
+            # this case there will be no default kube. The only right (and
+            # acceptable) way to remove this flag: set is_default = True for
+            # another kube.
+            raise APIError("Can't remove default flag for the kube")
 
         for key, value in data.items():
             setattr(kube, key, value)
@@ -145,6 +154,10 @@ class KubesAPI(KubeUtils, MethodView):
         kube = Kube.query.get(kube_id)
         if kube is None:
             raise APIError('Kube not found', 404)
+        if kube.is_default:
+            raise APIError(
+                'Deleting of default kube type is forbidden. '
+                'Set another kube type as default and try again', 403)
         if not Kube.is_kube_editable(kube_id):
             raise APIError('Kube type is not editable', 403)
         if kube.nodes:
@@ -168,6 +181,9 @@ def add_kube(data):
                        .format(data['name']))
 
     kube = Kube(**data)
+    if kube.is_default:
+        # reset is_default flag for all kubes if new kube marked as default
+        _remove_is_default_kube_flags()
     db.session.add(kube)
     try:
         db.session.commit()
@@ -282,3 +298,9 @@ def _add_kube_type_to_package(package_id, kube_id, kube_price):
         db.session.rollback()
         raise APIError('could not add kube type to package')
     return package_kube.to_dict()
+
+
+def _remove_is_default_kube_flags():
+    db.session.query(Kube).update(
+        {Kube.is_default: None}, synchronize_session='fetch'
+    )

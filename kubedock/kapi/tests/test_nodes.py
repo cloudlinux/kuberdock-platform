@@ -45,7 +45,8 @@ class TestNodes(DBTestCase):
         """Test for kapi.nodes.create_node function."""
         ip = '192.168.1.2'
         hostname = 'testhost1'
-        kube_id = Kube.get_default_kube_type()
+        default_kube_type = Kube.get_default_kube_type()
+        kube_id = default_kube_type
 
         gethostbyname_mock.return_value = ip
         podcollection_mock.add.return_value = {'id': 1}
@@ -62,7 +63,7 @@ class TestNodes(DBTestCase):
         node = Node.get_by_name(hostname)
         self.assertIsNotNone(node)
         self.assertEqual(node.ip, ip)
-        self.assertEqual(node.kube_id, Kube.get_default_kube_type())
+        self.assertEqual(node.kube_id, default_kube_type)
 
         # add a node with the same IP
         with self.assertRaises(APIError):

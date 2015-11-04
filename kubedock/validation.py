@@ -465,6 +465,7 @@ kube_schema = {
                      'allowed': ['MB']},
     'disk_space_units': {'type': 'string', 'maxlength': 3, 'empty': False,
                          'allowed': ['GB']},
+    'is_default': {'type': 'extbool', 'required': False}
 }
 
 packagekube_schema = {
@@ -841,4 +842,6 @@ def convert_extbools(data, schema):
 def check_pricing_api(data, schema, *args, **kwargs):
     validated = V(allow_unknown=True)._api_validation(data, schema, *args, **kwargs)
     # purge unknown
-    return {field: value for field, value in validated.iteritems() if field in schema}
+    data = {field: value for field, value in validated.iteritems() if field in schema}
+    data = convert_extbools(data, schema)
+    return data

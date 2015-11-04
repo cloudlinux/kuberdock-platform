@@ -221,10 +221,12 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             except KeyError:
                 continue
 
-    def _prepare_container(self, data, kube_type=Kube.get_default_kube_type(),
-                           volumes=None):
+    def _prepare_container(self, data, kube_type=None, volumes=None):
         # Strip non-kubernetes params
         data.pop('sourceUrl', None)
+
+        if kube_type is None:
+            kube_type = Kube.get_default_kube_type()
 
         if not data.get('name'):
             data['name'] = self._make_name_from_image(data.get('image', ''))

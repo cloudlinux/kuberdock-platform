@@ -109,7 +109,7 @@ class UserFullTestCase(APITestCase):
         package1 = Package(id=1, name='New package', first_deposit=0,
                            currency='USD', period='hour', prefix='$',
                            suffix=' USD')
-        kube0, kube1, kube2 = [Kube.query.get(i) for i in range(3)]
+        kube0, kube1, kube2 = Kube.public_kubes().all()
         # new package allows only standard kube
         PackageKube(packages=package1, kubes=kube0, kube_price=0)
         db.session.commit()

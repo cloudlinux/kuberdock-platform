@@ -164,7 +164,7 @@ class ModelQuery(object):
                   status=POD_STATUSES.stopped, template_id=template_id)
         kube = db.session.query(Kube).get(kube_type)
         if kube is None:
-            kube = db.session.query(Kube).get(0)
+            kube = Kube.get_default_kube()
         if not kube.is_public():
             if not self.owner or self.owner.username != KUBERDOCK_INTERNAL_USER:
                 raise APIError('Forbidden kube type for a pods')

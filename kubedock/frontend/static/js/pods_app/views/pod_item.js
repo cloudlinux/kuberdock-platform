@@ -385,9 +385,7 @@ define(['pods_app/app',
                     packageKube = _.find(packageKubes, function(p) {
                         return p.package_id == userPackage && p.kube_id == kubeId;
                     }),
-                    kube = _.find(kubeTypes, function(p) {
-                        return p.id == kubeId;
-                    });
+                    kube = _.findWhere(kubeTypes, {id: kubeId});
 
                 return _.extend(packageKube || { kube_price: 0 }, kube);
             },

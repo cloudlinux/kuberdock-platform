@@ -1193,9 +1193,12 @@ define(['pods_app/app',
             initialize: function(){
                 this.package = this.getUserPackage();
                 // kubeTypes is taken from index.html
-                var kube_id = _.min(_.pluck(kubeTypes, 'id'));
+                var default_kube = _.findWhere(kubeTypes, {is_default: true});
+                if (default_kube === undefined) {
+                    default_kube = kubeTypes[0];
+                }
                 if(!this.model.has('kube_type')){
-                    this.model.attributes['kube_type'] = kube_id;
+                    this.model.attributes['kube_type'] = default_kube.id;
                 }
                 this.recalcTotal();
             },

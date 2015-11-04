@@ -846,9 +846,12 @@ define(['pods_app/app',
             },
 
             onRender: function(){
-                utils.hasScroll() ?
-                this.ui.navButtons.addClass('fixed') :
-                this.ui.navButtons.removeClass('fixed');
+                if (utils.hasScroll()) {
+                    this.ui.navButtons.addClass('fixed');
+                }
+                else {
+                    this.ui.navButtons.removeClass('fixed');
+                }
             },
 
             templateHelpers: function(){

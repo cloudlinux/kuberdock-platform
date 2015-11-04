@@ -265,7 +265,9 @@ class IPPool(BaseModelMixin, db.Model):
         for net in cls.all():
             network = ip_network(net.network)
             for page in network.iterpages():
-                if ip_address in network.hosts(page=page):
+                hosts = (list(network.hosts(page=page)) or
+                         [network.network_address])
+                if ip_address in hosts:
                     return net
         return None
 

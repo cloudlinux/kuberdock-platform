@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 4%{?dist}.cloudlinux
+Release: 5%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,15 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Wed Nov 04 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>  0.4-5
+- AC-1336: Fix bug with navigate on top after load-more event
+- AC-1137: Fixed broken amazon-hosted installation with error if the wrong public key is added
+- AC-1418: Fix FS limit script
+- Fixed kuberdock.spec not to delete .ini at upgrade case.
+- AC-1396: added validation for kube type in predefined app creation
+- AC-1398: Fixed butons on env step if window has scroll
+- 
+
 * Tue Nov 03 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>  0.4-4
 - AC-1269 Fixed error message
 - AC-1412: fixed description for invalid envvar name

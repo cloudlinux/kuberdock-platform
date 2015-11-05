@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 5.1%{?dist}.cloudlinux
+Release: 6%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,16 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Thu Nov 05 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>  0.4-6
+- AC-1409 Restrict create users without existing package or without existing role
+- remove style from scroll on nodelogs textarea
+- remove preloader before ok button pressed
+- Ntpd setup like at OpenStack
+- AC-1422: default kube type now is defined in database
+- AC-1368: Fix rendering detailed node page after collection.fetch
+- AC-1404, AC-1423 user deletion workflow; bugfix; refactoring
+- AC-1155: Fix username/email validation
+
 * Wed Nov 04 2015 Igor Savenko <bliss@cloudlinux.com>  0.4-5.1
 - brought back accidentally deleted logs fixes
 - refactored some JS

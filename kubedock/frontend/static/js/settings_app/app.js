@@ -42,7 +42,6 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             template: '#general-settings-template',
 
             ui: {
-                'timezone'        : '#timezone',
                 'billingAppsLink' : '#billingAppsLink',
             },
 
@@ -51,42 +50,9 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             },
 
             onRender: function(){
-                var that = this;
-
-                this.ui.timezone.typeahead({
-                    autoSelect: false,
-                    source: function(query, process){
-                        $.ajax({
-                            url: '/api/settings/timezone',
-                            data: {'s': that.ui.timezone.val()},
-                            cache: false,
-                            success: function(responce){
-                                process(responce.data);
-                            }
-                        })
-                    }
-                });
             },
 
             submitSettings: function(){
-                var data = {
-                    timezone: this.ui.timezone.val(),
-                };
-                $.ajax({
-                    url: '/api/settings/timezone',
-                    dataType: 'JSON',
-                    data: data,
-                    type: 'PUT',
-                    cache: false,
-                    success: function(rs){
-                        if(rs.status == 'OK')
-                            $.notify('Timezone changed successfully', {
-                                autoHideDelay: defaultHideDelay,
-                                globalPosition: 'bottom left',
-                                className: 'success'
-                        });
-                    }
-                });
                 if (administrator) {
                     data = {
                         value: this.ui.billingAppsLink.val()
@@ -224,6 +190,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 'password'         : 'input#password',
                 'password_again'   : 'input#password-again',
                 'email'            : 'input#email',
+                'timezone'         : 'input#timezone',
                 'save'             : 'button#template-save-btn',
                 'back'             : 'button#template-back-btn',
                 'editBtn'          : '#template-edit-btn',
@@ -235,7 +202,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                 'click @ui.back'       : 'back',
                 'click @ui.save'       : 'onSave',
                 'click @ui.editBtn'    : 'editTemplate',
-                'keyup @ui.input'      : 'changeValue',
+                'input @ui.input'     : 'changeValue',
                 'focus @ui.input'      : 'removeError',
                 /*'click @ui.deleteBtn'  : 'deleteProfile',*/
             },
@@ -246,15 +213,31 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                     first_name: this.model.get('first_name'),
                     last_name: this.model.get('last_name'),
                     middle_initials: this.model.get('middle_initials'),
-                    email: this.model.get('email')
+                    email: this.model.get('email'),
+                    timezone: this.model.get('timezone')
                 }
             },
 
             onRender: function(){
+                var that = this;
                 this.ui.first_name.val(this.model.get('first_name'));
                 this.ui.last_name.val(this.model.get('last_name'));
                 this.ui.middle_initials.val(this.model.get('middle_initials'));
                 this.ui.email.val(this.model.get('email'));
+                this.ui.timezone.val(this.model.get('timezone'));
+                this.ui.timezone.typeahead({
+                    autoSelect: false,
+                    source: function(query, process){
+                        $.ajax({
+                            url: '/api/settings/timezone',
+                            data: {'s': that.ui.timezone.val()},
+                            cache: false,
+                            success: function(responce){
+                                process(responce.data);
+                            }
+                        });
+                    }
+                });
             },
 
             changeValue: function(){
@@ -265,6 +248,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                     'middle_initials' : this.model.get('middle_initials'),
                     'email'           : this.model.get('email'),
                     'password'        : '',
+                    'timezone'        : this.model.get('timezone').split(' (', 1)[0],
                 },
                 newData = {
                     'first_name'      : this.ui.first_name.val(),
@@ -272,6 +256,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                     'middle_initials' : this.ui.middle_initials.val(),
                     'email'           : this.ui.email.val(),
                     'password'        : this.ui.password.val(),
+                    'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
                 };
 
                 equal = _.isEqual(oldData, newData)
@@ -322,7 +307,8 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
                         'first_name': this.ui.first_name.val(),
                         'last_name': this.ui.last_name.val(),
                         'middle_initials': this.ui.middle_initials.val(),
-                        'email': this.ui.email.val()
+                        'email': this.ui.email.val(),
+                        'timezone': this.ui.timezone.val(),
                     },
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 

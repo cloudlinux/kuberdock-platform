@@ -1,6 +1,8 @@
 import os
 from datetime import timedelta
 
+DEFAULT_TIMEZONE = 'UTC'
+
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 DEBUG = True

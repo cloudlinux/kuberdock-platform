@@ -56,7 +56,6 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 if (this.model.get('in_use')) {
                     utils.notifyWindow('Persistent volume in use');
                 } else {
-                    preloader.show();
                     utils.modalDialogDelete({
                         title: "Delete persistent volume?",
                         body: "Are you sure want to delete this persistent volume?",

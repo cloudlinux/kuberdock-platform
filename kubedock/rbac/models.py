@@ -71,5 +71,3 @@ class Permission(BaseModelMixin, db.Model):
     def __repr__(self):
         return "<Permission(name='{0}', allow={1})>".format(
             self.name, self.allow)
-
-

@@ -15,7 +15,7 @@ def token():
         passwd = request.authorization.get('password', None)
         if username is not None and passwd is not None:
             user = User.query.filter_by(username=username).first()
-            if user is None:
+            if user is None or user.deleted:
                 pass
             elif not user.active:
                 raise APIError("User '{0}' is blocked".format(username), 403)

@@ -32,6 +32,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     middle_initials = db.Column(db.String(128), nullable=True)
     active = db.Column(db.Boolean, nullable=False, default=False)
     suspended = db.Column(db.Boolean, nullable=False, default=False)
+    deleted = db.Column(db.Boolean, nullable=False, default=False)
     role_id = db.Column(db.Integer, db.ForeignKey('rbac_role.id'))
     permission_id = db.Column(db.Integer, db.ForeignKey('rbac_permission.id'))
     package_id = db.Column(db.Integer, db.ForeignKey('packages.id'))
@@ -45,10 +46,27 @@ class User(BaseModelMixin, UserMixin, db.Model):
     # Admins can edit them too
     profile_fields = ['email', 'first_name', 'last_name', 'middle_initials']
 
+    class __metaclass__(db.Model.__class__):
+        @property
+        def not_deleted(cls):
+            return cls.query.filter_by(deleted=False)
+
+    @classmethod
+    def get(cls, uid):
+        """Get User by id, username or User object."""
+        if uid is None:
+            return
+        if isinstance(uid, cls):
+            return cls.query.get(uid.id)
+        uid = str(uid)
+        if uid.isdigit():
+            return cls.query.get(uid)
+        return cls.query.filter_by(username=uid).first()
+
     @classmethod
     def get_online_collection(cls, to_json=None):
         user_ids = get_online_users()
-        users = [u.to_dict() for u in cls.query.filter(cls.id.in_(user_ids))]
+        users = [u.to_dict() for u in cls.not_deleted.filter(cls.id.in_(user_ids))]
         if to_json:
             return json.dumps(users)
         return users

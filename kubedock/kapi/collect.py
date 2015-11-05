@@ -9,14 +9,14 @@ import json
 from flask import current_app
 
 from kubedock.settings import AWS, ID_PATH, STAT_URL, CEPH
-from kubedock.api.users import get_users_collection
+from kubedock.kapi.users import UserCollection
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.updates.models import Updates
 from kubedock.nodes.models import Node
 
 
 def get_users_number():
-    return len([u for u in get_users_collection()
+    return len([u for u in UserCollection().get()
                 if u.get('rolename') == 'User'
                     and u.get('username') != 'kuberdock-internal'])
 

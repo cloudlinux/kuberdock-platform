@@ -94,7 +94,7 @@ class UserFullTestCase(APITestCase):
         response = self.open(url=url, method='DELETE', auth=self.adminauth)
         self.assert200(response)  # only Admin has permission
 
-        self.assertIsNone(User.query.filter_by(id=self.user.id).first())
+        self.assertIsNone(User.not_deleted.filter_by(id=self.user.id).first())
 
     # @unittest.skip('')
     def test_change_package(self, *args):

@@ -49,7 +49,6 @@ class POD_STATUSES:
     failed = 'failed'
 
 
-
 def login_required_or_basic_or_token(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -69,7 +68,7 @@ def login_required_or_basic_or_token(func):
                 if token:
                     authenticated_user = User.query.filter_by(token=token).first()
 
-            if authenticated_user is None:
+            if authenticated_user is None or authenticated_user.deleted:
                 raise APIError('Not Authorized', status_code=401)
             if not authenticated_user.active:
                 raise APIError('User is in inactive status', status_code=403)
@@ -643,7 +642,7 @@ def all_request_params():
         params.update(data)
     params.pop('token', None)  # remove auth token from params if exists
     return params
-    
+
 
 class KubeUtils(object):
 

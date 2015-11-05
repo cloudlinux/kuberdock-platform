@@ -54,9 +54,9 @@ class TestStatItem(unittest.TestCase):
                          "requests get params differ from expected ones")
         self.assertEqual(nodes, received, "Extended data differ from expected")
 
-    @mock.patch('kubedock.kapi.collect.get_users_collection')
+    @mock.patch('kubedock.kapi.collect.UserCollection')
     def test_get_users(self, _users):
-        _users.return_value = self._USERS_DATA
+        _users().get.return_value = self._USERS_DATA
         users = collect.get_users_number()
         self.assertEqual(users, 1,
             "Users number must be 1 whereas now it is {0}".format(users))

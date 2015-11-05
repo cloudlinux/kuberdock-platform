@@ -11,7 +11,10 @@ sys.modules['kubedock.core'] = mock.Mock()
 sys.modules['kubedock.api'] = api_mock = mock.Mock()
 sys.modules['kubedock.utils'] = mock.Mock()
 sys.modules['kubedock.billing'] = mock.Mock()
+sys.modules['kubedock.rbac'] = mock.Mock()
 sys.modules['kubedock.users.models'] = mock.Mock()
+sys.modules['kubedock.nodes.models'] = mock.Mock()
+sys.modules['kubedock.rbac.models'] = mock.Mock()
 sys.modules['kubedock.predefined_apps.models'] = mock.Mock()
 
 # TODO: Integration tests for _validate_unique_case_insensitive

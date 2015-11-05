@@ -438,7 +438,7 @@ class KuberDock(KubeCtl):
             raise SystemExit(ERR_INVALID_KUBE_TYPE)
         try:
             res = self.query.post(PODAPI_PATH, json.dumps(data), True)
-            if res.get('status') != 'error':
+            if res.get('status').lower() == 'ok':
                 self._clear()
             else:
                 raise SystemExit(str(res))

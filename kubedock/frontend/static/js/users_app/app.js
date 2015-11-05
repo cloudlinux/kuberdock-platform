@@ -9,7 +9,46 @@ define(['marionette', 'paginator', 'utils'],
 
     UsersApp.module('Data', function(Data, App, Backbone, Marionette, $, _){
         Data.UserModel = utils.BaseModel.extend({
-            urlRoot: '/api/users/full'
+            urlRoot: '/api/users/full',
+
+            deleteUserConfirmDialog: function(options, text, force){
+                var that = this;
+                text = text || ('Are you sure want to delete user "' +
+                                this.get('username') + '"?');
+
+                utils.modalDialogDelete({
+                    title: 'Delete ' + this.get('username') + '?',
+                    body: text,
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){ that.deleteUser(options, force); },
+                        buttonCancel: true
+                    }
+                });
+            },
+            deleteUser: function(options, force){
+                var that = this;
+                utils.preloader.show();
+                return this.destroy(_.extend({
+                    wait:true,
+                    data: JSON.stringify({force: !!force}),
+                    contentType: 'application/json; charset=utf-8',
+                    statusCode: {400: null},  // prevent default error message
+                }, options))
+                .always(function(){ utils.preloader.hide(); })
+                .fail(function(response){
+                    var responseData = response.responseJSON || {};
+                    if (!force && responseData.type === 'ResourceReleaseError') {
+                        // initiate force delete dialog
+                        var message = responseData.data + ' You can try again ' +
+                                      'later or delete ignoring these problems."';
+                        that.deleteUserConfirmDialog(options, message, true);
+                    } else {
+                        utils.notifyWindow(response);
+                    }
+                });
+            },
         });
         Data.UsersCollection = Backbone.Collection.extend({
             url: '/api/users/full',
@@ -82,7 +121,7 @@ define(['marionette', 'paginator', 'utils'],
 
             events: {
                 'click @ui.profileUser'    : 'profileUser_btn',
-                'click @ui.remove_user'    : 'removeUser',
+                'click @ui.remove_user'    : 'removeUserConfirm',
                 'click @ui.block_user'     : 'blockUser',
                 'click @ui.activated_user' : 'activatedUser',
                 'click'                    : 'checkUser'
@@ -97,36 +136,12 @@ define(['marionette', 'paginator', 'utils'],
                 }
             },
 
-            removeUser: function(){
-                var that = this,
-                    preloader = $('#page-preloader');
-                utils.modalDialogDelete({
-                    title: "Delete " + this.model.get('username') + "?",
-                    body: "Are you sure want to delete user '" +
-                        this.model.get('username') + "'?",
-                    small: true,
-                    show: true,
-                    footer: {
-                        buttonOk: function(){
-                            preloader.show();
-                            that.model.destroy({
-                                wait:true,
-                                success: function(){
-                                    preloader.hide();
-                                },
-                                error: function(){
-                                    preloader.hide();
-                                }
-                            });
-                        },
-                        buttonCancel: true
-                    }
-                });
+            removeUserConfirm: function(){
+                this.model.deleteUserConfirmDialog();
             },
 
             blockUser: function(){
-                var that = this,
-                    preloader = $('#page-preloader');
+                var that = this;
                 utils.modalDialog({
                     title: "Block " + this.model.get('username'),
                     body: "Are you sure want to block user '" +
@@ -135,18 +150,18 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            preloader.show();
+                            utils.preloader.show();
                             that.model.save({
                                 active: false
                             },{
                                 wait: true,
                                 patch: true,
                                 success: function(){
-                                    preloader.hide();
+                                    utils.preloader.hide();
                                     that.render();
                                 },
                                 error: function(model, response){
-                                    preloader.hide();
+                                    utils.preloader.hide();
                                     utils.notifyWindow(response.statusText);
                                 }
                             });
@@ -348,17 +363,16 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             _getActivities: function(username, dateFrom, dateTo){
-                var that = this,
-                    preloader = $('#page-preloader');
+                var that = this;
 
-                preloader.show();
+                utils.preloader.show();
                 $.ajax({
                     url: '/api/users/a/' + username,
                     data: {date_from: dateFrom, date_to: dateTo},
                     dataType: 'JSON',
                     success: function(rs){
                         console.log(rs)
-                        preloader.hide();
+                        utils.preloader.hide();
                         if(rs.data){
                             that.ui.tbody.empty();
                             if(rs.data.length == 0){
@@ -380,7 +394,7 @@ define(['marionette', 'paginator', 'utils'],
                         }
                     },
                     error: function(){
-                        preloader.hide();
+                        utils.preloader.hide();
                     }
                 });
             },
@@ -476,7 +490,6 @@ define(['marionette', 'paginator', 'utils'],
                     users = App.Data.users.models,
                     existsUsername = false,
                     existsEmail = false,
-                    preloader = $('#page-preloader'),
                     username = this.ui.username.val(),
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i,
                     patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i;
@@ -578,7 +591,7 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.email.addClass('error');
                     break;
                 default:
-                    preloader.show();
+                    utils.preloader.show();
                     App.Data.users.create({
                         'username'        : username,
                         'first_name'      : this.ui.first_name.val(),
@@ -592,7 +605,7 @@ define(['marionette', 'paginator', 'utils'],
                     }, {
                         wait: true,
                         success: function(){
-                            preloader.hide();
+                            utils.preloader.hide();
                             App.router.navigate('/', {trigger: true})
                             $.notify('User "' + username + '" created successfully', {
                                 autoHideDelay: 4000,
@@ -601,7 +614,7 @@ define(['marionette', 'paginator', 'utils'],
                             });
                         },
                         error: function(model, response){
-                            preloader.hide();
+                            utils.preloader.hide();
                             utils.notifyWindow(response.statusText);
                         }
                     });
@@ -640,10 +653,9 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             onRender: function(e){
-                var that = this,
-                    preloader = $('#page-preloader');
+                var that = this;
 
-                preloader.show();
+                utils.preloader.show();
                 $.ajax({
                     url: '/api/users/logHistory',
                     data: {'uid': this.model.get('id')},
@@ -657,18 +669,17 @@ define(['marionette', 'paginator', 'utils'],
                                     '<td>' + itm[3] + '</td>'
                                 ))
                             });
-                            preloader.hide();
+                            utils.preloader.hide();
                         } else {
                             that.ui.tb.append($('<tr>').append('<td colspan="4" class="text-center">There is no login history for this user</td>'));
-                            preloader.hide();
+                            utils.preloader.hide();
                         }
                     }
                 });
             },
 
             login_this_user: function(){
-                var that = this,
-                    preloader = $('#page-preloader');
+                var that = this;
                 utils.modalDialog({
                     title: "Authorize by " + this.model.get('username'),
                     body: "Are you sure want to authorize by user '" +
@@ -677,7 +688,7 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            preloader.show();
+                            utils.preloader.show();
                             $.ajax({
                                 url: '/api/users/loginA',
                                 type: 'POST',
@@ -686,10 +697,10 @@ define(['marionette', 'paginator', 'utils'],
                                 success: function(rs){
                                     if(rs.status == 'OK')
                                         window.location.href = '/';
-                                    preloader.hide();
+                                    utils.preloader.hide();
                                 },
                                 error: function(){
-                                    preloader.hide();
+                                    utils.preloader.hide();
                                 }
                             });
                         },
@@ -699,30 +710,10 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             delete_user: function(){
-                var that = this,
-                    preloader = $('#page-preloader');
-                utils.modalDialogDelete({
-                    title: "Delete " + this.model.get('username') + "?",
-                    body: "Are you sure want to delete user '" +
-                        this.model.get('username') + "'?",
-                    small: true,
-                    show: true,
-                    footer: {
-                        buttonOk: function(){
-                            preloader.show();
-                            that.model.destroy({
-                                wait:true,
-                                success: function(){
-                                    preloader.hide();
-                                    App.router.navigate('/', {trigger: true});
-                                },
-                                error: function(){
-                                    preloader.hide();
-                                }
-                            });
-                        },
-                        buttonCancel: true
-                    }
+                this.model.deleteUserConfirmDialog({
+                    success: function(){
+                        App.router.navigate('/', {trigger: true});
+                    },
                 });
             },
 
@@ -788,8 +779,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             login_this_user: function(){
-                var that = this,
-                    preloader = $('#page-preloader');
+                var that = this;
                 utils.modalDialog({
                     title: "Authorize by " + this.model.get('username'),
                     body: "Are you sure want to authorize by user '" +
@@ -798,7 +788,7 @@ define(['marionette', 'paginator', 'utils'],
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            preloader.show();
+                            utils.preloader.show();
                             $.ajax({
                                 url: '/api/users/loginA',
                                 type: 'POST',
@@ -807,10 +797,10 @@ define(['marionette', 'paginator', 'utils'],
                                 success: function(rs){
                                     if(rs.status == 'OK')
                                         window.location.href = '/';
-                                    preloader.hide();
+                                    utils.preloader.hide();
                                 },
                                 error: function(){
-                                    preloader.hide();
+                                    utils.preloader.hide();
                                 }
                             });
                         },
@@ -820,30 +810,10 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             delete_user: function(){
-                var that = this,
-                    preloader = $('#page-preloader');
-                utils.modalDialogDelete({
-                    title: "Delete " + this.model.get('username') + "?",
-                    body: "Are you sure want to delete user '" +
-                        this.model.get('username') + "'?",
-                    small: true,
-                    show: true,
-                    footer: {
-                        buttonOk: function(){
-                            preloader.show();
-                            that.model.destroy({
-                                wait:true,
-                                success: function(){
-                                    preloader.hide();
-                                    App.router.navigate('/', {trigger: true});
-                                },
-                                error: function(){
-                                    preloader.hide();
-                                }
-                            });
-                        },
-                        buttonCancel: true
-                    }
+                this.model.deleteUserConfirmDialog({
+                    success: function(){
+                        App.router.navigate('/', {trigger: true});
+                    },
                 });
             },
 

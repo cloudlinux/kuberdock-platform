@@ -381,10 +381,10 @@ class PersistentDisk(BaseModelMixin, db.Model):
     drive_name = db.Column(db.String(64), nullable=False)
     name = db.Column(db.String(64), nullable=False)
     owner_id = db.Column(db.ForeignKey('users.id'), nullable=False)
-    owner = db.relationship(User)
+    owner = db.relationship(User, backref='persistent_disks')
     size = db.Column(db.Integer, nullable=False)
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=True)
-    pod = db.relationship(Pod)
+    pod = db.relationship(Pod, backref='persistent_disks')
 
     def __init__(self, *args, **kwargs):
         super(PersistentDisk, self).__init__(*args, **kwargs)

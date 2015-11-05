@@ -1,4 +1,5 @@
 <div id="stats-page" class="col-sm-12">
+    <div class="status-line <%- status %>">Status: <%- status %></div>
     <div class="page-top-menu">
         <span>Choose kube type:</span>
         <div class="checkbox">

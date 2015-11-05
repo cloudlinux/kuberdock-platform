@@ -129,7 +129,7 @@ define(['nodes_app/app', 'marionette', 'utils',
         },
 
         detailedNode: function(){
-            App.navigate('/detailed/' + this.model.id + '/general/', {trigger: true});
+            App.navigate(this.model.id + '/general/', {trigger: true});
         },
 
         //detailedConfigurationTab: function(){
@@ -352,21 +352,23 @@ define(['nodes_app/app', 'marionette', 'utils',
         initialize: function (options) {
             this.tab = options.tab;
             this.node_id = options.node_id;
-            this.listenTo(App.nodesCollection, 'reset', function () {
-                this.render();
-            });
+        },
+
+        childEvents: {
+            render: function() {
+              console.log('A child view has been rendered.');
+            }
         },
 
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
-            var url_ = '/detailed/' + this.node_id;
-            if (tgt.hasClass('nodeGeneralTab')) App.navigate(url_ + '/general/', {trigger: true});
-            else if (tgt.hasClass('nodeStatsTab')) App.navigate(url_ + '/stats/', {trigger: true});
-            else if (tgt.hasClass('nodeLogsTab')) App.navigate(url_ + '/logs/', {trigger: true});
-            else if (tgt.hasClass('nodeMonitoringTab')) App.navigate(url_ + '/monitoring/', {trigger: true});
-            else if (tgt.hasClass('nodeTimelinesTab')) App.navigate(url_ + '/timelines/', {trigger: true});
-            else if (tgt.hasClass('nodeConfigurationTab')) App.navigate(url_ + '/configuration/', {trigger: true});
+            if (tgt.hasClass('nodeGeneralTab')) App.navigate(this.node_id + '/general/', {trigger: true});
+            else if (tgt.hasClass('nodeStatsTab')) App.navigate(this.node_id + '/stats/', {trigger: true});
+            else if (tgt.hasClass('nodeLogsTab')) App.navigate(this.node_id + '/logs/', {trigger: true});
+            else if (tgt.hasClass('nodeMonitoringTab')) App.navigate(this.node_id + '/monitoring/', {trigger: true});
+            else if (tgt.hasClass('nodeTimelinesTab')) App.navigate(this.node_id + '/timelines/', {trigger: true});
+            else if (tgt.hasClass('nodeConfigurationTab')) App.navigate(this.node_id + '/configuration/', {trigger: true});
         },
 
         redeployNode: function() {
@@ -444,7 +446,7 @@ define(['nodes_app/app', 'marionette', 'utils',
         },
 
         nodeLogsTab: function(){
-            App.navigate('/detailed/' + this.model.id + '/logs/', {trigger: true});
+            App.navigate(this.model.id + '/logs/', {trigger: true});
         },
 
         logSpoller: function(){
@@ -452,9 +454,8 @@ define(['nodes_app/app', 'marionette', 'utils',
         },
 
         initialize: function () {
-            this.listenTo(App.vent, 'update_console_log', function () {
-                this.render();
-            })
+            this.listenTo(App.vent, 'update_console_log', this.render);
+            this.listenTo(App.nodesCollection, 'reset', this.render);
         }
     });
 
@@ -472,6 +473,8 @@ define(['nodes_app/app', 'marionette', 'utils',
         },
 
         initialize: function() {
+            this.listenTo(App.nodesCollection, 'reset', this.render);
+
             this.model.set('logs', []);
             function get_logs() {
                 var hostname = this.model.get('hostname'),

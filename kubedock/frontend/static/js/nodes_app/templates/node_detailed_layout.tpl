@@ -38,7 +38,6 @@
             </ul>
         </div>
         <div id="details_content" class="col-sm-10">
-            <div class="status-line <%- status %>">Status: <%- status %></div>
             <div id="tab-content"></div>
         </div>
     </div>

@@ -1,4 +1,5 @@
-<div id="logs-page" class="col-sm-12 no-padding">
+<div id="logs-page">
+    <div class="status-line <%- status %>">Status: <%- status %></div>
     <!--
     <div class="page-top-menu">
         <span>Choose log:</span>

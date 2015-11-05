@@ -1,4 +1,5 @@
 <div id="timelines-page" class="col-sm-12">
+    <div class="status-line <%- status %>">Status: <%- status %></div>
     <div class="cases">
         <div class="item">
             <span class="pull-left">Some case 1</span>

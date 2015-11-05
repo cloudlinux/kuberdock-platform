@@ -1,4 +1,5 @@
 <div id="monitoring-page" class="col-sm-12 no-padding">
+    <div class="status-line <%- status %>">Status: <%- status %></div>
    <!-- <div class="page-top-menu">
         <span>Choose period:</span>
         <span>Last 6 Hours</span>

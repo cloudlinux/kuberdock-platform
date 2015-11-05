@@ -32,12 +32,15 @@ class Role(BaseModelMixin, db.Model):
                  for p in Permission.filter_by(role_id=self.id)]
         return perms
 
+    @classmethod
+    def by_rolename(cls, rolename):
+        return cls.query.filter_by(rolename=rolename).first()
+
     def __repr__(self):
         return "<Role(rolename='{0}')>".format(self.rolename)
 
     def to_dict(self):
         return dict(id=self.id, rolename=self.rolename)
-
 
 
 class Permission(BaseModelMixin, db.Model):

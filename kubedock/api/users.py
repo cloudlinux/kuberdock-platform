@@ -204,16 +204,13 @@ def create_item():
         data = request.form.to_dict()
     try:
         data = UserValidator().validate_user_create(data)
-        rolename = data.pop('rolename', 'User')
-        package = data.pop('package', 'basic')
-        r = Role.filter_by(rolename=rolename).first()
-        p = get_pricing(package)
-        temp = {key: value for key, value in data.iteritems() if value != ''}
+        temp = {key: value for key, value in data.iteritems()
+                if value != '' and key not in ('package', 'rolename',)}
         u = User(**temp)
-        u.role = r
-        u.package = p
+        u.role = Role.by_rolename(data['rolename'])
+        u.package = Package.by_name(data['package'])
         u.save()
-        data.update({'id': u.id, 'rolename': rolename, 'package': package})
+        data.update({'id': u.id})
         return jsonify({'status': 'OK', 'data': data})
     except (IntegrityError, InvalidRequestError), e:
         db.session.rollback()
@@ -237,7 +234,7 @@ def put_item(user_id):
     data = UserValidator(id=u.id, allow_unknown=True).validate_user_update(data)
     if 'rolename' in data:
         rolename = data.pop('rolename', 'User')
-        r = db.session.query(Role).filter_by(rolename=rolename).first()
+        r = Role.by_rolename(rolename)
         if r is not None:
             if r.rolename == 'Admin':
                 pods = [p for p in u.pods if not p.is_deleted]
@@ -246,20 +243,20 @@ def put_item(user_id):
                                    'cannot have any pods'.format(r.rolename))
             data['role'] = r
         else:
-            data['role'] = db.session.query(Role).filter_by(rolename='User').first()
+            data['role'] = Role.by_rolename('User')
     if 'package' in data:
         package = data['package']
-        p = db.session.query(Package).filter_by(name=package).first()
+        p = Package.by_name(package)
         if p is None:
-            p = db.session.query(Package).filter_by(name='Standard package').first()
+            p = Package.by_name('Standard package')
 
         old_package, new_package = u.package, p
         kubes_in_old_only = (set(kube.kube_id for kube in old_package.kubes) -
                              set(kube.kube_id for kube in new_package.kubes))
         if kubes_in_old_only:
             if u.pods.filter(Pod.kube_id.in_(kubes_in_old_only)).first() is not None:
-                raise APIError('New package doesn\'t have kube_types of some '
-                               'of user\'s pods')
+                raise APIError("New package doesn't have kube_types of some "
+                               "of user's pods")
 
         data['package'] = p
     u.update(data)
@@ -304,11 +301,3 @@ def delete_item(user_id):
     if u is not None:
         u.delete()
     return jsonify({'status': 'OK'})
-
-
-def get_pricing(package_name):
-    try:
-        return filter((lambda x: x.name == package_name),
-            db.session.query(Package).all())[0]
-    except IndexError:
-        return None

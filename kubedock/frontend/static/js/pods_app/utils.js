@@ -87,6 +87,6 @@ define({
         var hContent = $('body').height(),
             hWindow = $(window).height();
 
-        return (hContent > hWindow) ? true : false;
+        return  hContent > hWindow ? true : false;
     }
 });

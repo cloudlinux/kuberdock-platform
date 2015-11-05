@@ -123,7 +123,7 @@ name_schema = {
 
 create_user_schema = {
     'username': {
-        'type': ['username', 'email'],
+        'type': 'username',
         'required': True,
         'empty': False,
         'unique_case_insensitive': User.username,
@@ -760,8 +760,8 @@ class UserValidator(V):
     username_regex = {
         'regex': re.compile(r'^[A-Z0-9](?:[A-Z0-9_-]{0,23}[A-Z0-9])?$',
                             re.IGNORECASE),
-        'message': 'only letters of Latin alphabet, numbers, '\
-                   'hyphen and underscore are allowed'
+        'message': 'Username should contain only Latin letters and Numbers and '
+                   'must not be more than 25 characters in length'
     }
 
     def __init__(self, *args, **kwargs):
@@ -790,15 +790,7 @@ class UserValidator(V):
                 self._error(field, "Package doesn't exists")
 
     def validate_user_create(self, data):
-        try:
-            self._api_validation(data, create_user_schema)
-        except APIError:
-            if 'username' in self.errors:
-                self.errors['username'] = ('Username should contain only '
-                                           'Latin letters and Numbers and '
-                                           'must not be more than '
-                                           '25 characters in length')
-            raise APIError(self.errors)
+        self._api_validation(data, create_user_schema)
         data = convert_extbools(data, create_user_schema)
         return data
 
@@ -811,10 +803,13 @@ class UserValidator(V):
         return data
 
     def _validate_type_username(self, field, value):
-        """Validates username by username_regex"""
-        super(V, self)._validate_type_string(field, value)
+        """Validates username by username_regex and email validator"""
+        if self.username_regex['regex'].match(value):
+            return
 
-        if not self.username_regex['regex'].match(value):
+        super(UserValidator, self)._validate_type_email(field, value)
+
+        if 'username' in self.errors:
             self._error(field, self.username_regex['message'])
 
 

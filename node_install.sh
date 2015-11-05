@@ -103,8 +103,12 @@ fi
 systemctl reenable iptables
 
 # 1.2 Install ntp, we need correct time for node logs
+# We use setup like this
+# http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
 yum_wrapper install -y ntp
 check_status
+sed -i "/^server /d" /etc/ntp.conf
+echo "server ${MASTER_IP} iburst" >> /etc/ntp.conf
 systemctl daemon-reload
 systemctl restart ntpd
 check_status

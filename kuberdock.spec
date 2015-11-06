@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 6.1%{?dist}.cloudlinux
+Release: 6.2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Nov 06 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 0.4-6.2
+- added logs for terminated containers
+- AC-1407: change timezone setting placement
+- AC-1394: show postDescription with publicIP
+- Added time fields to predefined_apps
+
 * Fri Nov 06 2015 Igor Savenko <bliss@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>  0.4-6.1
 - fixed bug connected to missing revision
 - AC-1399: Fix public IP allocation from /32 network

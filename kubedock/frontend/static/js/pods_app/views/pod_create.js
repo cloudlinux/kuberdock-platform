@@ -1370,11 +1370,13 @@ define(['pods_app/app',
                     containers = this.model.get('containers'),
                     volumes = this.model.get('volumes'),
                     kube = _.findWhere(kubeTypes, {id: kube_id}),
-                    kube_price = this.getKubePrice(kube_id);
+                    kube_price = this.getKubePrice(kube_id),
+                    total_kubes = _.reduce(containers,
+                        function (sum, c) { return sum + c.kubes; }, 0);
 
-                this.cpu_data = kube.cpu + ' ' + kube.cpu_units;
-                this.ram_data = kube.memory + ' ' + kube.memory_units;
-                this.hdd_data = kube.disk_space + ' ' + kube.disk_space_units;
+                this.cpu_data = total_kubes * kube.cpu + ' ' + kube.cpu_units;
+                this.ram_data = total_kubes * kube.memory + ' ' + kube.memory_units;
+                this.hdd_data = total_kubes * kube.disk_space + ' ' + kube.disk_space_units;
 
                 var allPorts = _.flatten(_.pluck(containers, 'ports'), true),
                     allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),

@@ -845,13 +845,13 @@ define(['pods_app/app',
                 });
             },
 
-            onRender: function(){
-                if (utils.hasScroll()) {
-                    this.ui.navButtons.addClass('fixed');
-                } else {
-                    this.ui.navButtons.removeClass('fixed');
-                }
-            },
+            //onRender: function(){
+            //    if (utils.hasScroll()) {
+            //        this.ui.navButtons.addClass('fixed');
+            //    } else {
+            //        this.ui.navButtons.removeClass('fixed');
+            //    }
+            //},
 
             templateHelpers: function(){
                 var kubeType,

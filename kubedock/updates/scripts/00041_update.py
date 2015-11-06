@@ -3,14 +3,15 @@ from fabric.api import put, run
 from kubedock.billing.models import Kube
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.users.models import User
+from kubedock.updates import helpers
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    pass
+    helpers.upgrade_db()
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
-    pass
+    helpers.downgrade_db(revision='3a8320be841c')
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):

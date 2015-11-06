@@ -462,6 +462,7 @@ define(['marionette', 'paginator', 'utils'],
                 'password'        : 'input#password',
                 'password_again'  : 'input#password-again',
                 'email'           : 'input#email',
+                'timezone'        : 'input#timezone',
                 'user_status'     : 'select#status-select',
                 'role_select'     : 'select#role-select',
                 'package_select'  : 'select#package-select',
@@ -477,12 +478,27 @@ define(['marionette', 'paginator', 'utils'],
                 'click @ui.user_cancel_btn' : 'back',
                 'click @ui.user_add_btn'    : 'onSave',
                 'focus @ui.input'           : 'removeError',
-                'keyup @ui.input'           : 'changeValue',
+                'input @ui.input'           : 'changeValue',
                 'change @ui.selectpicker'   : 'changeValue'
             },
 
             onRender: function(){
+                var that = this;
                 this.ui.selectpicker.selectpicker();
+                this.ui.timezone.val('UTC (+0000)');
+                this.ui.timezone.typeahead({
+                    autoSelect: false,
+                    source: function(query, process){
+                        $.ajax({
+                            url: '/api/settings/timezone',
+                            data: {'s': that.ui.timezone.val()},
+                            cache: false,
+                            success: function(responce){
+                                process(responce.data);
+                            }
+                        });
+                    }
+                });
             },
 
             onSave: function(){
@@ -590,6 +606,12 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.email.notify('Email should be unique');
                     this.ui.email.addClass('error');
                     break;
+                /* timezone */
+                case this.ui.timezone.val() == '':
+                    utils.scrollTo(this.ui.timezone);
+                    this.ui.timezone.addClass('error');
+                    this.ui.timezone.notify("Empty Timezone");
+                    break;
                 default:
                     utils.preloader.show();
                     App.Data.users.create({
@@ -599,6 +621,7 @@ define(['marionette', 'paginator', 'utils'],
                         'middle_initials' : this.ui.middle_initials.val(),
                         'password'        : this.ui.password.val(),
                         'email'           : this.ui.email.val(),
+                        'timezone'        : this.ui.timezone.val(),
                         'active'          : (this.ui.user_status.val() == 1 ? true : false),
                         'rolename'        : this.ui.role_select.val(),
                         'package'         : this.ui.package_select.val(),
@@ -832,15 +855,31 @@ define(['marionette', 'paginator', 'utils'],
 
         Views.UsersEditView = Views.UserCreateView.extend({     // inherit
             onRender: function(){
+                var that = this;
                 this.ui.first_name.val(this.model.get('first_name'));
                 this.ui.last_name.val(this.model.get('last_name'));
                 this.ui.middle_initials.val(this.model.get('middle_initials'))
                 this.ui.email.val(this.model.get('email'));
+                this.ui.timezone.val(this.model.get('timezone'));
                 this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
                 this.ui.role_select.val(this.model.get('rolename'));
                 this.ui.package_select.val(this.model.get('package'));
                 this.ui.user_add_btn.html('Save');
                 this.ui.selectpicker.selectpicker();
+
+                this.ui.timezone.typeahead({
+                    autoSelect: false,
+                    source: function(query, process){
+                        $.ajax({
+                            url: '/api/settings/timezone',
+                            data: {'s': that.ui.timezone.val()},
+                            cache: false,
+                            success: function(responce){
+                                process(responce.data);
+                            }
+                        });
+                    }
+                });
             },
 
             changeValue: function(){
@@ -854,6 +893,7 @@ define(['marionette', 'paginator', 'utils'],
                     'last_name'       : this.model.get('last_name'),
                     'middle_initials' : this.model.get('middle_initials'),
                     'password'        : '',
+                    'timezone'        : this.model.get('timezone').split(' (', 1)[0],
                 },
                 newData = {
                     'email'           : this.ui.email.val(),
@@ -864,6 +904,7 @@ define(['marionette', 'paginator', 'utils'],
                     'last_name'       : this.ui.last_name.val(),
                     'middle_initials' : this.ui.middle_initials.val(),
                     'password'        : this.ui.password.val(),
+                    'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
                 };
 
                 equal = _.isEqual(oldData, newData)
@@ -879,7 +920,8 @@ define(['marionette', 'paginator', 'utils'],
                     'package'         : this.ui.package_select.val(),
                     'first_name'      : this.ui.first_name.val(),
                     'last_name'       : this.ui.last_name.val(),
-                    'middle_initials' : this.ui.middle_initials.val()
+                    'middle_initials' : this.ui.middle_initials.val(),
+                    'timezone'        : this.ui.timezone.val(),
                 };
 
                 var that = this,
@@ -963,6 +1005,12 @@ define(['marionette', 'paginator', 'utils'],
                     utils.scrollTo(this.ui.email);
                     this.ui.email.notify('Email should be unique');
                     this.ui.email.addClass('error');
+                    break;
+                /* timezone */
+                case this.ui.timezone.val() == '':
+                    utils.scrollTo(this.ui.timezone);
+                    this.ui.timezone.addClass('error');
+                    this.ui.timezone.notify("Empty Timezone");
                     break;
                 default:
                     if (this.ui.password.val())  // update only if specified

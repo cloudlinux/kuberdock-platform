@@ -12,7 +12,9 @@ from .signals import (
     user_logged_in, user_logged_out, user_logged_in_by_another,
     user_logged_out_by_another, user_get_all_settings, user_get_setting,
     user_set_setting)
-from .utils import get_user_last_activity, get_online_users
+from .utils import (
+    get_user_last_activity, get_online_users, enrich_tz_with_offset)
+from ..settings import DEFAULT_TIMEZONE
 
 
 @login_manager.user_loader
@@ -41,10 +43,14 @@ class User(BaseModelMixin, UserMixin, db.Model):
     activities = db.relationship('UserActivity', back_populates="user")
     settings = db.Column(db.Text)
     token = db.Column(db.String(96), nullable=True)
+    timezone = db.Column(db.String(64), nullable=False,
+                         default=DEFAULT_TIMEZONE,
+                         server_default=DEFAULT_TIMEZONE)
 
     # This fields(+password) can be seen and edited by user himself
     # Admins can edit them too
-    profile_fields = ['email', 'first_name', 'last_name', 'middle_initials']
+    profile_fields = ['email', 'first_name', 'last_name', 'middle_initials',
+                      'timezone']
 
     class __metaclass__(db.Model.__class__):
         @property
@@ -136,6 +142,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         self.settings = json.dumps(data)
         self.save()
 
+    @enrich_tz_with_offset(['timezone'])
     def to_dict(self, for_profile=False, full=False, exclude=None):
         if for_profile and full:
             raise RuntimeWarning('Serialize user for profile or full, not both')

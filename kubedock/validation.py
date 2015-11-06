@@ -5,6 +5,7 @@ import cerberus.errors
 from copy import deepcopy
 
 from sqlalchemy import func
+import pytz
 
 from .api import APIError
 from .billing import Kube, Package
@@ -14,6 +15,7 @@ from .nodes.models import Node
 from .rbac.models import Role
 from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
                        MAX_KUBES_PER_CONTAINER)
+from .users.utils import strip_offset_from_timezone
 
 
 SUPPORTED_VOLUME_TYPES = ['persistentDisk', 'localStorage']
@@ -167,6 +169,11 @@ create_user_schema = {
         'type': 'extbool',
         'required': False,
     },
+    'timezone': {
+        'type': 'string',
+        'required': False,
+        'allowed': pytz.common_timezones
+    }
 }
 
 
@@ -790,11 +797,13 @@ class UserValidator(V):
                 self._error(field, "Package doesn't exists")
 
     def validate_user_create(self, data):
+        data = _clear_timezone(data, ['timezone'])
         self._api_validation(data, create_user_schema)
         data = convert_extbools(data, create_user_schema)
         return data
 
     def validate_user_update(self, data):
+        data = _clear_timezone(data, ['timezone'])
         self._api_validation(data, create_user_schema, update=True)
         data = convert_extbools(data, create_user_schema)
         if self.allow_unknown:  # filter unknown
@@ -811,6 +820,17 @@ class UserValidator(V):
 
         if 'username' in self.errors:
             self._error(field, self.username_regex['message'])
+
+
+def _clear_timezone(data, keys):
+    """Clears timezone fields - removes UTC offset from timezone string:
+    Europe/London (+000) -> Europe/London
+    """
+    if not data:
+        return data
+    for key in keys:
+        data[key] = strip_offset_from_timezone(data.get(key))
+    return data
 
 
 def convert_extbools(data, schema):

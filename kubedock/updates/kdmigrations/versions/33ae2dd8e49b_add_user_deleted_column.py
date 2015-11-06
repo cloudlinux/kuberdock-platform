@@ -1,14 +1,14 @@
 """Add User.deleted column
 
 Revision ID: 33ae2dd8e49b
-Revises: 28b23145af40
+Revises: 4fbcae87c090
 Create Date: 2015-11-04 19:39:11.270502
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '33ae2dd8e49b'
-down_revision = '28b23145af40'
+down_revision = '4fbcae87c090'
 
 from alembic import op
 import sqlalchemy as sa

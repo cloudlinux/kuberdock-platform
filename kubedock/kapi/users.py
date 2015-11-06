@@ -8,6 +8,7 @@ from ..billing.models import Package
 from ..pods.models import Pod
 from ..rbac.models import Role
 from ..users.models import User
+from ..users.utils import enrich_tz_with_offset
 from .podcollection import PodCollection
 from .pstorage import CephStorage, AmazonStorage
 
@@ -33,6 +34,7 @@ class UserCollection(object):
         user = self._convert_user(user)
         return user.to_dict(full=full)
 
+    @enrich_tz_with_offset(['timezone'])
     def create(self, data):
         """Create user"""
         data = UserValidator().validate_user_create(data)
@@ -49,6 +51,7 @@ class UserCollection(object):
         data.update({'id': user.id})
         return data
 
+    @enrich_tz_with_offset(['timezone'])
     def update(self, user, data):
         """Update user
 
@@ -93,6 +96,7 @@ class UserCollection(object):
             db.session.rollback()
             raise APIError('Cannot update a user: {0}'.format(str(e)))
 
+    @enrich_tz_with_offset(['timezone'])
     def update_profile(self, user, data):
         """Update user's profile
 

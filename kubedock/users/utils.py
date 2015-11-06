@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import time
 from datetime import datetime
+from functools import wraps
+
 from flask import current_app
+from pytz import common_timezones, timezone
 
 from ..core import ConnectionPool
 
@@ -34,3 +37,44 @@ def get_online_users():
     redis = ConnectionPool.get_connection()
     return redis.sunion(['online-users/%d' % (current - x)
                          for x in minutes])
+
+
+def append_offset_to_timezone(tz):
+    """Appends offset value to timezone string:
+    Europe/London -> Europe/London (+000)
+    """
+    if tz not in common_timezones:
+        return tz
+    offset = datetime.now(timezone(tz)).strftime('%z')
+    return '{0} ({1})'.format(tz, offset)
+
+
+def strip_offset_from_timezone(tz):
+    """Clears timezone string - removes UTC offset from timezone string:
+    Europe/London (+000) -> Europe/London
+    """
+    if not isinstance(tz, basestring):
+        return tz
+    return tz.split(' (')[0].strip()
+
+
+def enrich_tz_with_offset(timezone_keys):
+    """Decorator appends offset to valid timezone fields in result dict of
+    decorated function.
+    :param timezone_keys: list of fields which must be treated as timezones
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwds):
+            res = f(*args, **kwds)
+            if not isinstance(res, dict):
+                return res
+            for key in timezone_keys:
+                value = res.get(key, None)
+                if value is None:
+                    continue
+                res[key] = append_offset_to_timezone(value)
+            return res
+        return wrapper
+    return decorator
+

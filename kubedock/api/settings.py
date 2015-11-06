@@ -1,6 +1,5 @@
 import json
-from pytz import common_timezones, timezone
-from datetime import datetime
+from pytz import common_timezones
 from flask import Blueprint, request, jsonify, current_app
 from flask.ext.login import current_user
 
@@ -9,6 +8,7 @@ from ..rbac import check_permission, acl
 from ..rbac.models import Role, Resource, Permission
 from ..utils import (
     login_required_or_basic_or_token, APIError, all_request_params)
+from ..users.utils import append_offset_to_timezone
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
 from ..system_settings.models import SystemSettings
@@ -151,29 +151,19 @@ def delete_template(tid):
 @login_required_or_basic_or_token
 @check_permission('get_timezone', 'settings')
 def get_timezone():
-    s = request.args.get('s', '')
+    search_result_length = 5
+    search = request.args.get('s', '')
+    search = search.lower()
+    count = 0
     timezones_list = []
-    c = 0
     for tz in common_timezones:
-        if tz.find(s) >= 0 or tz.find(s.title()) >= 0:
-            offset = datetime.now(timezone(tz)).strftime('%z')
-            timezones_list.append('{0} ({1})'.format(tz, offset))
-            c += 1
-            if c == 5:
+        if search in tz.lower():
+            timezones_list.append(append_offset_to_timezone(tz))
+            count += 1
+            if count >= search_result_length:
                 break
+
     return jsonify({'status': 'OK', 'data': timezones_list})
-
-
-@settings.route('/timezone', methods=['PUT'])
-@login_required_or_basic_or_token
-@check_permission('set_timezone', 'settings')
-def set_timezone():
-    tz = request.form.get('timezone')
-    tz = tz.split(' (')[0]
-    if tz.strip() not in common_timezones:
-        raise APIError('Unknown timezone')
-    current_user.set_settings('timezone', tz)
-    return jsonify({'status': 'OK', 'data': tz})
 
 
 @settings.route('/system', methods=['GET'])

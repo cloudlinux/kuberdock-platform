@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 6.2%{?dist}.cloudlinux
+Release: 6.3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Nov 06 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-6.3
+- AC-1437: fixed null timezone error on user self-edit
+- undelete user api endpoint
+- Bug fix and improvement for upgrade system to do all db upgrades at once
+- 
+
 * Fri Nov 06 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 0.4-6.2
 - added logs for terminated containers
 - AC-1407: change timezone setting placement

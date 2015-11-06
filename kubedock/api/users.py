@@ -187,3 +187,11 @@ def edit_self():
 def delete_item(uid):
     force = KubeUtils._get_params().get('force', False)
     return UserCollection().delete(uid, force)
+
+
+@users.route('/undelete/<uid>', methods=['POST'])
+@login_required_or_basic_or_token
+@check_permission('create', 'users')
+@KubeUtils.jsonwrap
+def undelete_item(uid):
+    return UserCollection().undelete(uid)

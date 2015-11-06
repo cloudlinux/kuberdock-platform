@@ -248,7 +248,14 @@ define(['pods_app/app',
             className: 'pod-controls',
 
             ui: {
-                close : 'span.close'
+                close : 'span.close',
+				message: '.message-wrapper'
+            },
+            onShow: function(){
+                if (postDescription){
+                    this.ui.close.parents('.message-wrapper').slideDown();
+
+                }
             },
 
             events: {
@@ -278,8 +285,16 @@ define(['pods_app/app',
                     }, 0),
                     kubesPrice = this.getFormattedPrice(kubes * kubeType.kube_price),
                     package = this.getUserPackage();
+                    var public_address = "%PUBLIC_ADDRESS%";
+                    var r = new RegExp("(" + public_address + ")", "gi");
+                    var public_ip = "Public address"
+                    if (this.model.get('public_ip')){
+                        public_ip = this.model.get('public_ip');
+                    }
+                    postDescription = postDescription.replace(r, public_ip);
 
                 return {
+                    postDescription: postDescription,
                     publicIP   : publicIP,
                     publicName : publicName,
                     graphs     : graphs,
@@ -301,7 +316,10 @@ define(['pods_app/app',
                 this.trigger('display:pod:stats', item);
             },
 
-            closeMessage: function(){ this.ui.close.parents('.message-wrapper').slideUp() },
+            closeMessage: function(){
+                this.ui.close.parents('.message-wrapper').slideUp()
+
+            },
 
             listItem: function(evt){
                 evt.stopPropagation();

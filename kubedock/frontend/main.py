@@ -6,6 +6,7 @@ from flask.ext.login import current_user, login_required
 from ..billing import Package, ExtraTax, PackageKube, Kube
 from ..kapi.podcollection import PodCollection
 from ..settings import TEST, KUBERDOCK_INTERNAL_USER
+from ..utils import all_request_params
 
 
 main = Blueprint('main', __name__)
@@ -14,6 +15,7 @@ main = Blueprint('main', __name__)
 @main.route('/')
 @login_required
 def index():
+    post_desc = all_request_params().get('postDescription', '')
     # In setup KuberDock admin has no access to pods pages (AC-228)
     if current_user.is_administrator():
         return redirect(url_for('nodes.index'))
@@ -37,7 +39,8 @@ def index():
         packages=packages,
         extra_taxes=extra_taxes,
         package_kubes=package_kubes,
-        user_package=current_user.package_id
+        user_package=current_user.package_id,
+        post_desc=post_desc
     )
 
 

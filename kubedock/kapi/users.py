@@ -152,6 +152,20 @@ class UserCollection(object):
             db.session.rollback()
             raise APIError('Cannot delete a user: {0}'.format(str(e)))
 
+    def undelete(self, user):
+        """Undelete user.
+
+        :param user: user id, username or kuberdock.users.models.User object
+        :raises APIError: if user was not found
+        """
+        user = self._convert_user(user)
+        user.deleted = False
+        try:
+            db.session.commit()
+        except (IntegrityError, InvalidRequestError), e:
+            db.session.rollback()
+            raise APIError('Cannot undelete a user: {0}'.format(str(e)))
+
     @staticmethod
     def _convert_user(user):
         """Transform id, username, or User to User."""

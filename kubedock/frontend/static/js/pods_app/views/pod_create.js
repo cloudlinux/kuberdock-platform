@@ -1122,7 +1122,7 @@ define(['pods_app/app',
 
                 this.model.set('logs', []);
                 function get_logs() {
-                    if (this.model.get('state') !== 'running') {
+                    if (!_.contains(['running', 'terminated'], this.model.get('state'))) {
                         this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
                         return;
                     }

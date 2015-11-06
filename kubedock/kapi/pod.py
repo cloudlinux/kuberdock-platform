@@ -72,15 +72,19 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.containers = spec.get('containers', [])
         pod.restartPolicy = spec.get('restartPolicy')
 
-        if pod.status == POD_STATUSES.running:
+        if pod.status in (POD_STATUSES.running, POD_STATUSES.succeeded,
+                          POD_STATUSES.failed):
             for pod_item in status.get('containerStatuses', []):
                 if pod_item['name'] == 'POD':
                     continue
                 for container in pod.containers:
                     if container['name'] == pod_item['name']:
-                        state, startedAt = pod_item.pop('state').items()[0]
+                        state, stateDetails = pod_item.pop('state').items()[0]
                         pod_item['state'] = state
-                        pod_item['startedAt'] = startedAt.get('startedAt')
+                        pod_item['startedAt'] = stateDetails.get('startedAt')
+                        if state == 'terminated':
+                            pod_item['exitCode'] = stateDetails.get('exitCode')
+                            pod_item['finishedAt'] = stateDetails.get('finishedAt')
                         container_id = pod_item.get('containerID', container['name'])
                         pod_item['containerID'] = _del_docker_prefix(container_id)
                         image_id = pod_item.get('imageID', container['image'])

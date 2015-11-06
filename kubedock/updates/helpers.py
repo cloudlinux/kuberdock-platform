@@ -11,8 +11,14 @@ from kubedock import settings
 from kubedock.sessions import SessionData
 
 # For convenience to use in update scripts:
-from flask.ext.migrate import upgrade as upgrade_db
+from flask.ext.migrate import upgrade
 from flask.ext.migrate import downgrade as downgrade_db
+
+
+def upgrade_db(*args, **kwargs):
+    if 'revision' in kwargs:
+        print 'Trying to apply db revision:', kwargs.pop('revision')
+    return upgrade(*args, **kwargs)
 
 
 class UpgradeError(Exception):

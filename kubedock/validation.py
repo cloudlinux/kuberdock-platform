@@ -829,7 +829,8 @@ def _clear_timezone(data, keys):
     if not data:
         return data
     for key in keys:
-        data[key] = strip_offset_from_timezone(data.get(key))
+        if key in data:
+            data[key] = strip_offset_from_timezone(data[key])
     return data
 
 

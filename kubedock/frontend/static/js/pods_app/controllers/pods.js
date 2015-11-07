@@ -232,7 +232,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                     that.listenTo(wizardLayout, 'step:portconf', function(data){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({
                             model: data,
-                            volumes: parent_model.get('volumes')
+                            pod: parent_model,
                         }));
                     });
                     that.listenTo(wizardLayout, 'step:volconf', function(data){
@@ -287,9 +287,9 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         if (podModels.length === 0) {
                             podName = 'Unnamed-1';
                         } else {
-                            podName = 'Unnamed-' + (Math.max.apply(null, podModels.map(function(m){
-                                var match = /^Unnamed\-(\d+)$/.exec(m.attributes.name);
-                                   return match !== null ? +match[1] : 0;
+                            podName = 'Unnamed-' + (_.max(podModels.map(function(m){
+                                var match = /^Unnamed-(\d+)$/.exec(m.attributes.name);
+                                return match !== null ? +match[1] : 0;
                             }))+1);
                         }
                     var model = new App.Data.Pod({ name: podName, containers: [], volumes: [] });
@@ -298,6 +298,13 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             options
                         );
                         wizardLayout.steps.show(imageView);
+                    };
+                    var convertToContainer = function(data){
+                        if (data instanceof App.Data.Image) return data;
+                        data = typeof data === 'string'  // got container name
+                            ? _.findWhere(model.get('containers'), {name: data})
+                            : _.last(model.get('containers'));
+                        return new App.Data.Image(data);
                     };
                     var processCollectionLoadError = function(collection, response){
                         utils.notifyWindow(response);
@@ -356,21 +363,17 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         wizardLayout.footer.empty();
                     });
                     that.listenTo(wizardLayout, 'step:portconf', function(data){
-                        var containerModel = data.has('containers')
-                                ? new App.Data.Image(_.last(model.get('containers')))
-                                : data;
-                        containerModel.persistentDrives = model.persistentDrives;
+                        var containerModel = convertToContainer(data);
+                        model.last_edited_container = containerModel.get('name');
                         wizardLayout.steps.show(
                             new App.Views.NewItem.WizardPortsSubView({
                                 model: containerModel,
-                                containers: model.get('containers'),
-                                volumes: model.get('volumes')
-                            }));
+                                pod: model,
+                            })
+                        );
                     });
                     that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        var containerModel = data.has('containers')
-                                ? new App.Data.Image(_.last(model.get('containers')))
-                                : data,
+                        var containerModel = convertToContainer(data),
                             image = containerModel.get('image');
                         if (!(containerModel.get('image') in model.origEnv)) {
                             model.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
@@ -408,9 +411,6 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         });
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(containerModel){
-                        if (containerModel.hasOwnProperty('persistentDrives')) {
-                            model.persistentDrives = containerModel.persistentDrives;
-                        }
                         if (containerModel.hasOwnProperty('origEnv')) {
                             model.origEnv[containerModel.get('image')] = containerModel.origEnv;
                         }
@@ -427,55 +427,32 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             model: model
                         }));
                     });
-                    that.listenTo(wizardLayout, 'image:selected', function(image, containerName, auth){
-                        if (containerName !== undefined) {
-                            var container = _.find(model.get('containers'), function(c){
-                                return containerName === c.name;
-                            });
-                            var containerModel = new App.Data.Image(container);
-                            containerModel.persistentDrives = model.persistentDrives;
-                            wizardLayout.steps.show(
-                                new App.Views.NewItem.WizardPortsSubView({
-                                    model: containerModel,
-                                    containers: model.get('containers'),
-                                    volumes: model.get('volumes')
-                            }));
-                        }
-                        else {
-                            utils.preloader.show();
-                            var rqst = $.ajax({
-                                type: 'POST',
-                                dataType: 'json',
-                                contentType: 'application/json; charset=utf-8',
-                                url: '/api/images/new',
-                                data: JSON.stringify({image: image, auth: auth})
-                            });
-                            rqst.error(function(data){
-                                utils.preloader.hide();
-                                utils.notifyWindow(data);
-                            });
-                            rqst.success(function(data){
-                                utils.preloader.hide();
-                                var name = image.replace(/[^a-z0-9]+/gi, '-');
-                                name += _.random(Math.pow(36, 8)).toString(36);
-                                if (data.hasOwnProperty('data')) { data = data['data']; }
-                                var contents = {
-                                    image: image, name: name, workingDir: null,
-                                    ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
-                                    terminationMessagePath: null, sourceUrl: null
-                                };
-                                model.fillContainer(contents, data);
-                                var containerModel = new App.Data.Image(contents);
-                                if (model.hasOwnProperty('persistentDrives')) {
-                                    containerModel.persistentDrives = model.persistentDrives;
-                                }
-                                wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({
-                                    model: containerModel,
-                                    containers: model.get('containers'),
-                                    volumes: model.get('volumes')
-                                }));
-                            });
-                        }
+                    that.listenTo(wizardLayout, 'image:selected', function(image, auth){
+                        utils.preloader.show();
+                        $.ajax({
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            url: '/api/images/new',
+                            data: JSON.stringify({image: image, auth: auth})
+                        }).error(function(data){
+                            utils.preloader.hide();
+                            utils.notifyWindow(data);
+                        }).success(function(data){
+                            utils.preloader.hide();
+                            var name = image.replace(/[^a-z0-9]+/gi, '-');
+                            name += _.random(Math.pow(36, 8)).toString(36);
+                            if (data.hasOwnProperty('data')) { data = data.data; }
+                            var contents = {
+                                image: image, name: name, workingDir: null,
+                                ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
+                                terminationMessagePath: null, sourceUrl: null
+                            };
+                            model.fillContainer(contents, data);
+                            model.deleteContainer(model.last_edited_container);
+                            var containerModel = new App.Data.Image(contents);
+                            wizardLayout.trigger('step:portconf', containerModel);
+                        });
                     });
                     App.contents.show(wizardLayout);
                 });

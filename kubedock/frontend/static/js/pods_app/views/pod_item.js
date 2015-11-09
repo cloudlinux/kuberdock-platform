@@ -294,15 +294,15 @@ define(['pods_app/app',
                     postDescription = postDescription.replace(r, public_ip);
 
                 return {
-                    postDescription: postDescription,
-                    publicIP   : publicIP,
-                    publicName : publicName,
-                    graphs     : graphs,
-                    kubeType   : kubeType,
-                    kubes      : kubes,
-                    kubesPrice : kubesPrice,
-                    podName    : this.model.get('name'),
-                    package    : package,
+                    postDescription : postDescription,
+                    publicIP        : publicIP,
+                    publicName      : publicName,
+                    graphs          : graphs,
+                    kubeType        : kubeType,
+                    kubes           : kubes,
+                    kubesPrice      : kubesPrice,
+                    podName         : this.model.get('name'),
+                    package         : package,
                 };
             },
 
@@ -317,8 +317,13 @@ define(['pods_app/app',
             },
 
             closeMessage: function(){
-                this.ui.close.parents('.message-wrapper').slideUp()
+                this.ui.close.parents('.message-wrapper').slideUp();
+                postDescription = '';
 
+            },
+
+            onBeforeDestroy: function(){
+                this.closeMessage();
             },
 
             listItem: function(evt){

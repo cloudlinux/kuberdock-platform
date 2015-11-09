@@ -430,7 +430,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
             {
                 "command": ["./run.sh"],
                 "kubes": collector_kubes,
-                "image": "kuberdock/fluentd:1.3",
+                "image": "kuberdock/fluentd:1.4",
                 "name": "fluentd",
                 "env": [
                     {

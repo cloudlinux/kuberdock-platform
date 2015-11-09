@@ -37,7 +37,7 @@ def get_container_logs(containerid, size, starttime=None, endtime=None, host=Non
         filters.append({'range': {'@timestamp': condition}})
     query = {'filtered': {'filter': {'and': filters}}}
     return execute_es_query(
-        index, query, size, {'@timestamp': {'order': 'desc'}}, host=host
+        index, query, size, {'time_nano': {'order': 'desc'}}, host=host
     )
 
 
@@ -55,6 +55,6 @@ def get_node_logs(hostname, date, size, host=None):
     date = date or datetime.utcnow().date()
     index += date.strftime('%Y.%m.%d')
     query = {'filtered': {'filter': {'term': {'host': hostname}}}}
-    order = {'@timestamp': {'order': 'desc'}}
+    order = {'time_nano': {'order': 'desc'}}
 
     return execute_es_query(index, query, size, order, host=host)

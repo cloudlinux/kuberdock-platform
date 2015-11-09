@@ -315,6 +315,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 a = pod.containers
                 b = db_pod_config.get('containers')
                 pod.containers = self.merge_lists(a, b, 'name')
+                restore_containers_host_ports_config(pod.containers, b)
 
             if db_pod_config.get('public_aws'):
                 pod.public_aws = db_pod_config['public_aws']
@@ -532,3 +533,45 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if pod_kubes > kubes_left:
                 self._raise('Trial User limit is exceeded. '
                             'Kubes available for you: {0}'.format(kubes_left))
+
+
+def restore_containers_host_ports_config(pod_containers, db_containers):
+    """Updates 'hostPort' parameters in ports list of containers list.
+    This parameters for usual pods (all users' pods) is not sending to
+    kubernetes, it is treated as service port. So when we will get container
+    list from kubernetes there will be no any 'hostPort' parameters.
+    This function tries to restore that, so an user will see that parameters in
+    client interface. 'hostPort' is stored in Pod's database config.
+    If kubernetes will return 'hostPort' for some pods (it is explicitly set for
+    internal service pods), then leave it as is.
+    Matching of ports in ports lists will be made by 'containerPort' parameter.
+    The function updates pod_containers items and return that changed list.
+
+    """
+    name_key = 'name'
+    ports_key = 'ports'
+    container_port_key = 'containerPort'
+    host_port_key = 'hostPort'
+    pod_conf = {item[name_key]: item for item in pod_containers}
+    for db_container in db_containers:
+        name = db_container[name_key]
+        if name not in pod_conf:
+            continue
+        ports = pod_conf[name].get(ports_key)
+        db_ports = db_container.get(ports_key)
+        if not (ports and db_ports):
+            continue
+        container_ports_map = {
+            item.get(container_port_key): item for item in ports
+            if item.get(container_port_key)
+        }
+        for port in db_ports:
+            container_port = port.get(container_port_key)
+            src_port = container_ports_map.get(container_port)
+            if not src_port:
+                continue
+            if src_port.get(host_port_key):
+                continue
+            if host_port_key in port:
+                src_port[host_port_key] = port[host_port_key]
+    return pod_containers

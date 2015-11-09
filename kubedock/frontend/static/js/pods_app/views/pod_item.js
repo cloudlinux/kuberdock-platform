@@ -20,6 +20,10 @@ define(['pods_app/app',
     Pods.module('Views.Item', function(Item, App, Backbone, Marionette, $, _){
 
         function localizeDatetime(dt, tz){
+            if (typeof tz === 'string') {
+                // accept timezones in form 'Europe/London (+0000)'
+                tz = tz.split(' (', 1)[0];
+            }
             try {
                 return moment(dt).tz(tz).format('HH:mm:ss YYYY-MM-DD');
             } catch (e){
@@ -86,7 +90,8 @@ define(['pods_app/app',
 
                 return {
                     kubes: kubes ? kubes : 0,
-                    startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' : localizeDatetime(startedAt, userSettings.timezone),
+                    startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' :
+                            localizeDatetime(startedAt, userProfile.timezone),
                     updateIsAvailable: this.model.updateIsAvailable,
                 }
             },

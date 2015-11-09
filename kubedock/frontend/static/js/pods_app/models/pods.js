@@ -62,6 +62,32 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
                 if (!data.hasOwnProperty('parentID')) data['parentID'] = this.get('id');
                 return new Data.Image(data);
             },
+
+            // delete specified volumes from pod model, release Persistent Disks
+            deleteVolumes: function(names){
+                var volumes = this.get('volumes');
+                this.set('volumes', _.filter(volumes, function(volume) {
+                    if (!_.contains(names, volume.name))
+                        return true;  // leave this volume
+
+                    if (_.has(volume, 'persistentDisk')) {  // release PD
+                        _.chain(this.persistentDrives || [])
+                            .where({pdName: volume.persistentDisk.pdName})
+                            .each(function(disk) { disk.used = false; });
+                    }
+                    return false;  // remove this volume
+                }, this));
+            },
+
+            // delete container by name. Returns deleted container or undefined.
+            deleteContainer: function(name){
+                var containers = this.get('containers'),
+                    container = _.findWhere(containers, {name: name});
+                if (container === undefined) return;
+                this.set('containers', _.without(containers, container));
+                this.deleteVolumes(_.pluck(container.volumeMounts, 'name'));
+                return container;
+            },
         });
 
         Data.Image = Backbone.Model.extend({

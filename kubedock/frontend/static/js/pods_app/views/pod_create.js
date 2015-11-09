@@ -60,17 +60,17 @@ define(['pods_app/app',
             getImage: function(data){
                 this.trigger('step:getimage', data);
             },
-            imageSelected: function(image, containerName, auth){
-                this.trigger('image:selected', image, containerName, auth);
+            imageSelected: function(image, auth){
+                this.trigger('image:selected', image, auth);
             },
-            portConf: function(data, imageName){
-                this.trigger('step:portconf', data.model, imageName);
+            portConf: function(data){
+                this.trigger('step:portconf', typeof data === 'string' ? data : data.model);
             },
             volConf: function(data){
                 this.trigger('step:volconf', data.model);
             },
             envConf: function(data){
-                this.trigger('step:envconf', data.model);
+                this.trigger('step:envconf', typeof data === 'string' ? data : data.model);
             },
             resConf: function(data){
                 this.trigger('step:resconf', data.model);
@@ -230,20 +230,21 @@ define(['pods_app/app',
                 }
             },
 
+            // image was selected directly by image url
             selectImage: function(){
-                var fieldValue = this.ui.privateField.val(),
-                    select = _.bind(this.trigger, this, 'image:selected',
-                                    fieldValue);
+                var image = this.ui.privateField.val(),
+                    auth;
 
-                if (fieldValue.length === 0) {
+                if (image.length === 0) {
                     this.ui.privateField.focus();
                     utils.notifyWindow('Please, enter image url');
-                } else if (this.ui.password.val() && this.ui.username.val()) {
-                    select(undefined, {username: this.ui.username.val(),
-                                       password: this.ui.password.val()});
-                } else {
-                    select();
+                    return;
                 }
+                if (this.ui.username.val() && this.ui.password.val()) {
+                    auth = {username: this.ui.username.val(),
+                            password: this.ui.password.val()};
+                }
+                this.trigger('image:selected', image, auth);
             },
 
             imageSourceOnChange: function(){
@@ -376,6 +377,7 @@ define(['pods_app/app',
             },
 
             events: {
+                'click @ui.prevStep'       : 'goBack',
                 'click @ui.nextStep'       : 'goNext',
                 'click @ui.addPort'        : 'addItem',
                 'click @ui.addDrive'       : 'addDrive',
@@ -395,20 +397,18 @@ define(['pods_app/app',
             },
 
             initialize: function(options) {
-                var that = this;
-                this.containers = options.containers;
-                this.volumes = options.volumes;
+                this.pod = options.pod;
+                var that = this,
+                    volumes = this.pod.get('volumes');
                 _.each(this.model.get('volumeMounts'), function(vm){
                     if (!vm.name) {
                         vm.name = that.generateName(vm.mountPath);
                     }
-                    var item = _.find(this.volumes, function(v){
-                        return v.name === vm.name
-                    });
+                    var item = _.findWhere(volumes, {name: vm.name});
                     if (item === undefined) {
-                        this.volumes.push({name: vm.name, localStorage: true})
+                        volumes.push({name: vm.name, localStorage: true});
                     }
-                }, {volumes: this.volumes})
+                });
 
                 if (this.model.has('parentID'))
                     this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
@@ -420,7 +420,6 @@ define(['pods_app/app',
             },
 
             triggers: {
-                'click @ui.prevStep'     : 'step:getimage',
                 'click .complete'        : 'step:complete',
                 'click .go-to-volumes'   : 'step:volconf',
                 'click .go-to-envs'      : 'step:envconf',
@@ -458,7 +457,7 @@ define(['pods_app/app',
                 return {
                     updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
-                    hasPersistent: this.model.hasOwnProperty('persistentDrives'),
+                    hasPersistent: this.pod.persistentDrives !== undefined,
                     showPersistentAdd: this.hasOwnProperty('showPersistentAdd')
                         ? this.showPersistentAdd
                         : false,
@@ -497,7 +496,8 @@ define(['pods_app/app',
 
             addDrive: function(evt){
                 evt.stopPropagation();
-                var tgt = $(evt.target);
+                var tgt = $(evt.target),
+                    volumes = this.pod.get('volumes');
                 if (this.hasOwnProperty('showPersistentAdd')) {
                     var cells = tgt.closest('div').children('span'),
                         pdName = cells.eq(0).children('input').first().val().trim(),
@@ -505,7 +505,7 @@ define(['pods_app/app',
                     if (!pdName || !pdSize) return;
                     if (this.hasOwnProperty('currentIndex')) {
                         var vmEntry = this.model.get('volumeMounts')[this.currentIndex],
-                            vol = _.findWhere(this.volumes, {name: vmEntry.name});
+                            vol = _.findWhere(volumes, {name: vmEntry.name});
                         this.releasePersistentDisk(vol);
                         vol['persistentDisk'] = {pdName: pdName, pdSize: pdSize};
                     }
@@ -523,8 +523,9 @@ define(['pods_app/app',
                  /* we don't want to add additional fields to volumeMounts
                   * that's why we produce temporary volumeEntries
                   */
+                var volumes = this.pod.get('volumes');
                 return _.map(this.model.get('volumeMounts'), function(vm){
-                    var item = _.find(this.volumes, function(v){return v.name === vm.name;});
+                    var item = _.findWhere(volumes, {name: vm.name});
                     var rv = {mountPath: vm.mountPath, name: vm.name};
                     if (item === undefined) return _.extend(rv, {isPersistent: false});
                     if ('persistentDisk' in item) {
@@ -535,7 +536,7 @@ define(['pods_app/app',
                         rv['isPersistent'] = false;
                     }
                     return rv;
-                }, {volumes: this.volumes});
+                });
             },
 
             cancelAddDrive: function(evt){
@@ -574,14 +575,14 @@ define(['pods_app/app',
 
                 this.toggleVolumeEntry(row);
 
-                if (!this.model.hasOwnProperty('persistentDrives')) {
+                if (this.pod.persistentDrives === undefined) {
                     var pdCollection = new App.Data.PersistentStorageCollection();
                         utils.preloader.show();
                         pdCollection.fetch({
                             wait: true,
                             data: {'free-only': true},
                             success: function(collection, response, opts){
-                                that.model.persistentDrives = _.map(collection.models, function(m){
+                                that.pod.persistentDrives = _.map(collection.models, function(m){
                                     return that.transformKeys(m.attributes);
                                 });
                                 utils.preloader.hide();
@@ -598,7 +599,7 @@ define(['pods_app/app',
             },
 
             toggleVolumeEntry: function(row){
-                var vItem = _.findWhere(this.volumes, {name: row.name});
+                var vItem = _.findWhere(this.pod.get('volumes'), {name: row.name});
                 if (vItem === undefined) return;
                 if ('persistentDisk' in vItem) {
                     this.releasePersistentDisk(vItem);
@@ -629,8 +630,8 @@ define(['pods_app/app',
             // if volume uses PD, release it
             releasePersistentDisk: function(volume){
                 if (!_.has(volume, 'persistentDisk') ||
-                    !_.has(this.model, 'persistentDrives')) return;
-                var disk = _.findWhere(this.model.persistentDrives,
+                    this.pod.persistentDrives === undefined) return;
+                var disk = _.findWhere(this.pod.persistentDrives,
                                        {pdName: volume.persistentDisk.pdName});
                 if (disk === undefined) return;
                 disk.used = false;
@@ -649,11 +650,8 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var tgt = $(evt.target),
                     index = tgt.closest('tr').index(),
-                    volumeMounts = this.model.get('volumeMounts'),
-                    volume = _.findWhere(this.volumes, {name: volumeMounts[index].name});
-
-                this.releasePersistentDisk(volume);
-                this.volumes.splice(_.indexOf(this.volumes, volume), 1);
+                    volumeMounts = this.model.get('volumeMounts');
+                this.pod.deleteVolumes([volumeMounts[index].name]);
                 volumeMounts.splice(index, 1);
                 this.render();
             },
@@ -664,6 +662,7 @@ define(['pods_app/app',
                     uniqueContainerPorts = [],
                     podContainersHostPorts = [],
                     uniqueContainerHostPorts = [],
+                    volumes = this.pod.get('volumes'),
                     vm = this.model.get('volumeMounts');
 
                 /* mountPath and persistent disk check */
@@ -681,7 +680,7 @@ define(['pods_app/app',
                             + _.map(_.range(10),
                                     function(i){return _.random(1, 10)}).join('');
                     }
-                    var vol = _.findWhere(this.volumes, {name: vm[i].name});
+                    var vol = _.findWhere(volumes, {name: vm[i].name});
                     if (vol.hasOwnProperty('persistentDisk')) {
                         var pd = vol.persistentDisk;
                         if (!pd.hasOwnProperty('pdSize') ||
@@ -693,7 +692,7 @@ define(['pods_app/app',
                 };
 
                 /* check ports */
-                _.each(this.containers, function(container){
+                _.each(this.pod.get('containers'), function(container){
                     _.each(container.ports, function(item){
                         var port = parseInt(item.containerPort,10),
                             hostPort = parseInt(item.hostPort,10);
@@ -717,14 +716,21 @@ define(['pods_app/app',
                 }
             },
 
+            goBack: function(evt){
+                this.pod.deleteVolumes(
+                    _.pluck(this.model.get('volumeMounts'), 'name')
+                );
+                this.trigger('step:getimage');
+            },
+
             onRender: function(){
                 var that = this,
                     disks = [];
 
                 this.ui.input_command.val(this.filterCommand(this.model.get('args')));
 
-                if (this.model.hasOwnProperty('persistentDrives')) {
-                    disks = _.map(this.model.persistentDrives, function(i){
+                if (this.pod.persistentDrives !== undefined) {
+                    disks = _.map(this.pod.persistentDrives, function(i){
                         var item = {value: i.pdName, text: i.pdName};
                         if (i.used) { item.disabled = true; }
                         return item;
@@ -738,7 +744,6 @@ define(['pods_app/app',
                         var index = $(this).closest('tr').index(),
                             className = $(this).parent().attr('class'),
                             item = $(this);
-
                         if (className !== undefined) {
                             that.model.get('ports')[index][className] = parseInt(newValue);
                         }
@@ -746,7 +751,8 @@ define(['pods_app/app',
                             var mountEntry = that.model.get('volumeMounts')[index];
                             mountEntry['mountPath'] = newValue;
                             mountEntry['name'] = that.generateName(newValue);
-                            that.volumes.push({name: mountEntry['name'], localStorage: true})
+                            that.pod.get('volumes').push({name: mountEntry.name,
+                                                          localStorage: true});
                         }
                     }
                 });
@@ -772,8 +778,8 @@ define(['pods_app/app',
                     success: function(response, newValue) {
                         var index = $(this).closest('tr').index(),
                             entry = that.model.get('volumeMounts')[index],
-                            pEntry = _.findWhere(that.model.persistentDrives, {pdName: newValue}),
-                            vol = _.findWhere(that.volumes, {name: entry.name});
+                            pEntry = _.findWhere(that.pod.persistentDrives, {pdName: newValue}),
+                            vol = _.findWhere(that.pod.get('volumes'), {name: entry.name});
                         that.releasePersistentDisk(vol);
                         if (vol) {
                             vol.persistentDisk = _.pick(pEntry, 'pdName', 'pdSize');
@@ -845,13 +851,13 @@ define(['pods_app/app',
                 });
             },
 
-            //onRender: function(){
-            //    if (utils.hasScroll()) {
-            //        this.ui.navButtons.addClass('fixed');
-            //    } else {
-            //        this.ui.navButtons.removeClass('fixed');
-            //    }
-            //},
+            onRender: function(){
+                if (utils.hasScroll()) {
+                    this.ui.navButtons.addClass('fixed');
+                } else {
+                    this.ui.navButtons.removeClass('fixed');
+                }
+            },
 
             templateHelpers: function(){
                 var kubeType,
@@ -1206,6 +1212,7 @@ define(['pods_app/app',
             templateHelpers: function() {
 
                 return {
+                    last_edited      : this.model.last_edited_container,
                     isPublic         : this.isPublic,
                     isPerSorage      : this.isPerSorage,
                     cpu_data         : this.cpu_data,
@@ -1237,8 +1244,10 @@ define(['pods_app/app',
             },
 
             events: {
+                'click .prev-step'       : 'goBack',
                 'click .delete-item'     : 'deleteItem',
                 'click .edit-item'       : 'editItem',
+                'click .add-more'        : 'addItem',
                 'click .node'            : 'toggleNode',
                 'change .replicas'       : 'changeReplicas',
                 'change @ui.kubeTypes'   : 'changeKubeType',
@@ -1249,59 +1258,55 @@ define(['pods_app/app',
             },
 
             triggers: {
-                'click .add-more'           : 'step:getimage',
-                'click .prev-step'          : 'step:envconf',
                 'click .save-container'     : 'pod:save',
                 'click .save-run-container' : 'pod:run',
             },
 
-            // delete specified volumes from pod model
-            deleteVolumes: function(names){
-                var volumes = this.model.get('volumes');
-                this.model.set('volumes', _.filter(volumes, function(volume) {
-                    if (!_.contains(names, volume.name))
-                        return true;  // leave this volume
-
-                    if (_.has(volume, 'persistentDisk')) {  // release PD
-                        _.chain(this.model.persistentDrives)
-                            .where({pdName: volume.persistentDisk.pdName})
-                            .each(function(disk) { disk.used = false; });
-                    }
-                    return false;  // remove this volume
-                }, this));
-            },
-
             deleteItem: function(evt){
                 evt.stopPropagation();
-                var name = $(evt.target).closest('tr').children('td:first').attr('id'),
-                    containers = this.model.get('containers');
-                if (containers.length >= 2) {
-                    var container = _.findWhere(containers, {name: name});
-                    this.deleteVolumes(_.pluck(container.volumeMounts, 'name'));
-                    this.model.set('containers', _.without(containers, container));
+                var name = $(evt.target).closest('tr').children('td:first').attr('id');
+                if (this.model.get('containers').length >= 2) {
+                    this.model.deleteContainer(name);
+                    if (name == this.model.last_edited_container) {
+                        this.model.last_edited_container = _.last(this.model.get('containers')).name;
+                    }
                     this.recalcTotal();
                     this.render();
                 } else {
                     utils.modalDialogDelete({
-                    title: "Delete",
-                    body: "After deleting the last container, you will go back to the main page. Delete this container?",
-                    small: true,
-                    show: true,
-                    footer: {
-                        buttonOk: function(){
-                            Pods.navigate('pods', {trigger: true});
-                        },
-                        buttonCancel: true
-                   }
-               });
+                        title: "Delete",
+                        body: "After deleting the last container, you will go " +
+                              "back to the main page. Delete this container?",
+                        small: true,
+                        show: true,
+                        footer: {
+                            buttonOk: function(){
+                                Pods.navigate('pods', {trigger: true});
+                            },
+                            buttonCancel: true
+                        }
+                    });
                 }
             },
 
             editItem: function(evt){
                 evt.stopPropagation();
                 var tgt = evt.target,
-                    containerId = $(tgt).closest('tr').children('td:first').attr('id');
-                this.trigger('image:selected', undefined, containerId);
+                    name = $(tgt).closest('tr').children('td:first').attr('id');
+                this.model.last_edited_container = name;
+                this.trigger('step:portconf', name);
+            },
+
+            addItem: function(evt){
+                evt.stopPropagation();
+                this.model.last_edited_container = null;
+                this.trigger('step:getimage');
+            },
+
+            // edit env vars of the last edited container
+            goBack: function(evt){
+                evt.stopPropagation();
+                this.trigger('step:envconf', this.model.last_edited_container);
             },
 
             toggleNode: function(evt){
@@ -1365,11 +1370,13 @@ define(['pods_app/app',
                     containers = this.model.get('containers'),
                     volumes = this.model.get('volumes'),
                     kube = _.findWhere(kubeTypes, {id: kube_id}),
-                    kube_price = this.getKubePrice(kube_id);
+                    kube_price = this.getKubePrice(kube_id),
+                    total_kubes = _.reduce(containers,
+                        function (sum, c) { return sum + c.kubes; }, 0);
 
-                this.cpu_data = kube.cpu + ' ' + kube.cpu_units;
-                this.ram_data = kube.memory + ' ' + kube.memory_units;
-                this.hdd_data = kube.disk_space + ' ' + kube.disk_space_units;
+                this.cpu_data = total_kubes * kube.cpu + ' ' + kube.cpu_units;
+                this.ram_data = total_kubes * kube.memory + ' ' + kube.memory_units;
+                this.hdd_data = total_kubes * kube.disk_space + ' ' + kube.disk_space_units;
 
                 var allPorts = _.flatten(_.pluck(containers, 'ports'), true),
                     allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),

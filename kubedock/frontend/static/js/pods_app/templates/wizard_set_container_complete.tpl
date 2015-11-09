@@ -83,13 +83,16 @@
                     <tbody>
                         <% _.each(containers, function(c, i){ %>
                             <tr class="added-containers">
-                                 <td id="<%- c.name %>"><b><%- c.image %></b></td>
-                                 <td><%- c.kubes %></td>
-                                 <td><%- containerPrices[i] %> / <%- package.period %></td>
-                                 <td>
-                                     <button class="delete-item pull-right">&nbsp;</button>
-                                     <button class="edit-item">&nbsp;</button>
-                                 </td>
+                                <td id="<%- c.name %>">
+                                    <b><%- c.image %></b>
+                                    <!-- <%- (c.name === last_edited) ? '*' : '' %> -->
+                                </td>
+                                <td><%- c.kubes %></td>
+                                <td><%- containerPrices[i] %> / <%- package.period %></td>
+                                <td>
+                                    <button class="delete-item pull-right">&nbsp;</button>
+                                    <button class="edit-item">&nbsp;</button>
+                                </td>
                             </tr>
                         <% }) %>
                         <% if (isPublic) { %>

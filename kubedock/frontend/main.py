@@ -12,7 +12,7 @@ from ..utils import all_request_params
 main = Blueprint('main', __name__)
 
 
-@main.route('/')
+@main.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
     post_desc = all_request_params().get('postDescription', '')

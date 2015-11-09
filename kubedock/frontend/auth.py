@@ -1,12 +1,30 @@
 from flask import (
     Blueprint, render_template, redirect, request, url_for, flash, session)
-from flask.ext.login import login_user, logout_user, current_user, login_required
+from flask.ext.login import login_user, logout_user
+from flask.ext.login import current_user, login_required
+from sqlalchemy.sql import not_
 
 from ..users import User
 from ..users.signals import user_logged_in, user_logged_out
+from ..core import login_manager
 
 
 auth = Blueprint('auth', __name__)
+
+
+@login_manager.request_loader
+def load_users_from_request(request):
+    token = request.args.get('token', '')
+    if 'token' in request.form:
+        token = request.form['token']
+    if token:
+        username = token.split('|', 1)[0] or None
+        user = User.filter(
+            User.username == username, User.active, not_(User.deleted)).first()
+        if user and user.verify_token(token):
+            login_user(user)
+            user_logged_in.send((user.id, request.remote_addr))
+            return user
 
 
 @auth.route('/login', methods=['GET', 'POST'])

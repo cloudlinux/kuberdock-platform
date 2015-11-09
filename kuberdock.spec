@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 6.4%{?dist}.cloudlinux
+Release: 6.5%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Nov 06 2015 Alex Tishin <atishin@cloudlinux.com>  0.4-6.5
+- AC-1436: Fix logs ordering
+
 * Mon Nov 09 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com> 0.4-6.4
 - AC-1109: choosing an image for edited container doesn't creates a new one; refactoring
 - pod api bugfix: "create" should return the same structure as "get", but "status" and "owner" were missing

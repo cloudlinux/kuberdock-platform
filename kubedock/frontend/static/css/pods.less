@@ -403,10 +403,12 @@
 #steps{
     .nav-buttons{
         &.fixed{
-            left: 0;
-            right: 0;
-            bottom: 0;
-            position: fixed;
+            .buttons{
+                bottom: 0;
+                z-index: 10;
+                right: 15px;
+                position: fixed;
+            }
         }
     }
 }

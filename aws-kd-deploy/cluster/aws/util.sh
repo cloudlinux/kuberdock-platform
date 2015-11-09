@@ -142,35 +142,39 @@ function detect-image () {
   if [[ -z "${AWS_IMAGE-}" ]]; then
     case "${AWS_REGION}" in
       ap-northeast-1)
-        AWS_IMAGE=ami-89634988
+        AWS_IMAGE=ami-b80b6db8
         ;;
 
       ap-southeast-1)
-        AWS_IMAGE=ami-aea582fc
-        ;;
-
-      eu-west-1)
-        AWS_IMAGE=ami-e4ff5c93
-        ;;
-
-      sa-east-1)
-        AWS_IMAGE=ami-bf9520a2
-        ;;
-
-      us-east-1)
-        AWS_IMAGE=ami-96a818fe
-        ;;
-
-      us-west-1)
-        AWS_IMAGE=ami-6bcfc42e
+        AWS_IMAGE=ami-2a7b6b78
         ;;
 
       ap-southeast-2)
-        AWS_IMAGE=ami-cd4e3ff7
+        AWS_IMAGE=ami-d38dc6e9
+        ;;
+
+      eu-west-1)
+        AWS_IMAGE=ami-33734044
+        ;;
+
+      eu-central-1)
+        AWS_IMAGE=ami-e68f82fb
+        ;;
+
+      sa-east-1)
+        AWS_IMAGE=ami-fd0197e0
+        ;;
+
+      us-east-1)
+        AWS_IMAGE=ami-61bbf104
+        ;;
+
+      us-west-1)
+        AWS_IMAGE=ami-f77fbeb3
         ;;
 
       us-west-2)
-        AWS_IMAGE=ami-c7d092f7
+        AWS_IMAGE=ami-d440a6e7
         ;;
 
       *)

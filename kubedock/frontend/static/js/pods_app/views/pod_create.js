@@ -897,7 +897,7 @@ define(['pods_app/app',
 
             finalStep: function(){
                 var success = true,
-                    pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]/;
+                    pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]*$/;
 
                 _.each(this.ui.nameField, function(field){
                     if (!pattern.test(field.value)) success = false
@@ -948,17 +948,20 @@ define(['pods_app/app',
         NewItem.WizardStatsSubItemView = Backbone.Marionette.ItemView.extend({
             template: podItemGraphTpl,
 
+            initialize: function(options){ this.container = options.container; },
+
             ui: {
                 chart: '.graph-item'
             },
 
             onShow: function(){
-                var lines = this.model.get('lines');
-                var options = {
+                var lines = this.model.get('lines'),
+                    running = this.container.get('state') === 'running',
+                    options = {
                     title: this.model.get('title'),
                     axes: {
                         xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
-                        yaxis: {label: this.model.get('ylabel')}
+                        yaxis: {label: this.model.get('ylabel'), min: 0}
                     },
                     seriesDefaults: {
                         showMarker: false,
@@ -970,19 +973,33 @@ define(['pods_app/app',
                         background: '#ffffff',
                         drawBorder: false,
                         shadow: false
-                    }
+                    },
+                    noDataIndicator: {
+                        show: true,
+                        indicator: !running ? 'Container is not running...' :
+                            'Collecting data... plot will be dispayed in a few minutes.',
+                        axes: {
+                            xaxis: {
+                                min: new Date(+new Date() - 1000*60*20),
+                                max: new Date(),
+                                tickOptions: {formatString:'%H:%M'},
+                                tickInterval: '5 minutes',
+                            },
+                            yaxis: {min: 0, max: 150, tickInterval: 50}
+                        }
+                    },
                 };
 
                 var points = [];
                 for (var i=0; i<lines; i++) {
                     if (points.length < i+1) {
-                        points.push([])
+                        points.push([]);
                     }
                 }
 
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
-                        points[i].push([record[0], record[i+1]])
+                        points[i].push([record[0], record[i+1]]);
                     }
                 });
                 try {
@@ -999,6 +1016,10 @@ define(['pods_app/app',
             childViewContainer: "div.container-stats #monitoring-page",
             template: wizardSetContainerStatsTpl,
             tagName: 'div',
+
+            childViewOptions: function() {
+                return {container: this.model};
+            },
 
             initialize: function(options){
                 this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){

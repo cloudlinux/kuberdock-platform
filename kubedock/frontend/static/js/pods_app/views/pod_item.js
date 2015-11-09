@@ -274,6 +274,8 @@ define(['pods_app/app',
 
             initialize: function(options){
                 this.graphs = options.graphs;
+                this.listenTo(App.WorkFlow.getCollection(),
+                              'pods:collection:fetched', this.render);
             },
 
             templateHelpers: function(){
@@ -435,17 +437,20 @@ define(['pods_app/app',
         Item.PodGraphItem = Backbone.Marionette.ItemView.extend({
             template: podItemGraphTpl,
 
+            initialize: function(options){ this.pod = options.pod; },
+
             ui: {
                 chart: '.graph-item'
             },
 
             onShow: function(){
-                var lines = this.model.get('lines');
-                var options = {
+                var lines = this.model.get('lines'),
+                    running = this.pod.get('status') === 'running',
+                    options = {
                     title: this.model.get('title'),
                     axes: {
                         xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
-                        yaxis: {label: this.model.get('ylabel')}
+                        yaxis: {label: this.model.get('ylabel'), min: 0}
                     },
                     seriesDefaults: {
                         showMarker: false,
@@ -457,19 +462,33 @@ define(['pods_app/app',
                         background: '#ffffff',
                         drawBorder: false,
                         shadow: false
-                    }
+                    },
+                    noDataIndicator: {
+                        show: true,
+                        indicator: !running ? 'Pod is not running...' :
+                            'Collecting data... plot will be dispayed in a few minutes.',
+                        axes: {
+                            xaxis: {
+                                min: new Date(+new Date() - 1000*60*20),
+                                max: new Date(),
+                                tickOptions: {formatString:'%H:%M'},
+                                tickInterval: '5 minutes',
+                            },
+                            yaxis: {min: 0, max: 150, tickInterval: 50}
+                        }
+                    },
                 };
 
                 var points = [];
                 for (var i=0; i<lines; i++) {
                     if (points.length < i+1) {
-                        points.push([])
+                        points.push([]);
                     }
                 }
 
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
-                        points[i].push([record[0], record[i+1]])
+                        points[i].push([record[0], record[i+1]]);
                     }
                 });
 
@@ -483,7 +502,15 @@ define(['pods_app/app',
         });
 
         Item.PodGraph = Backbone.Marionette.CollectionView.extend({
-            childView: Item.PodGraphItem
+            childView: Item.PodGraphItem,
+            childViewOptions: function() {
+                return {pod: this.model};
+            },
+
+            initialize: function(options){
+                this.listenTo(App.WorkFlow.getCollection(),
+                              'pods:collection:fetched', this.render);
+            },
         });
 
     });

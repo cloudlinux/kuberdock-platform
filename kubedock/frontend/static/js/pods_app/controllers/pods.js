@@ -182,6 +182,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                                     model: model
                                 }));
                                 itemLayout.info.show(new App.Views.Item.PodGraph({
+                                    model: model,
                                     collection: statCollection
                                 }));
                             },

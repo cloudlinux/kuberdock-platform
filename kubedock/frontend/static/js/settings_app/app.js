@@ -531,7 +531,7 @@ define(['marionette', 'utils', 'selectpicker'], function (Marionette, utils) {
             App.router = new Marionette.AppRouter({
                 controller: controller,
                 appRoutes: {
-                    ''                        : 'showGeneral',
+                    ''                        : administrator ? 'showGeneral' : 'editProfile',
                     'general/'                : 'showGeneral',
                     'profile/'                : 'editProfile',
                     'permissions/'            : 'showPermissions',

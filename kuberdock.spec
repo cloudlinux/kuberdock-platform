@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 6.3%{?dist}.cloudlinux
+Release: 6.4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,24 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Mon Nov 09 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com> 0.4-6.4
+- AC-1109: choosing an image for edited container doesn't creates a new one; refactoring
+- pod api bugfix: "create" should return the same structure as "get", but "status" and "owner" were missing
+- Show correct in settings for user & administrator
+- Add settings link to user in dropdown navbar menu near logout
+- AC-1394: no redirect to /login, if token exist
+- AC-1434: fixed presentation of 'pod port' to a client
+- Fix copy predefined app link bug in chrome browser
+- AC-1433: show total limits on pod creation final step
+- Fix fixed buttons bug in env step
+- update image tables
+- AC-1439: fixed broken time conversion in users pod page
+- fix typo of persistent_volumes path
+- AC-870: containers monitoring, plots are not dispayed
+- small bugfix in environment variables validation;
+- plots placeholders
+- rerender pod page when pods collection fetched
+
 * Fri Nov 06 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-6.3
 - AC-1437: fixed null timezone error on user self-edit
 - undelete user api endpoint

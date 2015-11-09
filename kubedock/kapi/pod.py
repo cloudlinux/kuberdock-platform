@@ -34,8 +34,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     @staticmethod
     def create(data):
+        data = data.copy()
         set_public_ip = data.pop('set_public_ip', None)
         owner = data.pop('owner', None)
+        data['owner'] = None if owner is None else owner.username
+        data.setdefault('status', POD_STATUSES.stopped)
         pod = Pod(data)
         pod._check_pod_name(owner)
         if set_public_ip:

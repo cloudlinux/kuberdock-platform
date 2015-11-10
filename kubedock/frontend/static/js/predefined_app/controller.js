@@ -88,6 +88,7 @@ define(['backbone', 'marionette', 'predefined_app/app', '../utils'],
                         body: errorText,
                         show: true,
                         small: true,
+                        type: 'saveAnyway',
                         footer: {
                             buttonOk: function(){
                                 context.model.save(null, {

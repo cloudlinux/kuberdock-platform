@@ -129,7 +129,16 @@ define(['notify'], function () {
         if(options.show) modal.modal('show');
         if(options.footer){
             modal.find('.modal-footer').empty();
-            var buttonText = options.type === 'delete' ? 'Delete' : 'Ok';
+            var buttonText;
+            if (options.type === 'delete'){
+                buttonText = 'Delete';
+            } else if (options.type === 'saveAnyway'){
+                 buttonText = 'save anyway';
+            } else if ( options.type === 'deleteAnyway'){
+                buttonText = 'Delete Anyway';
+            } else {
+                buttonText = 'Ok';
+            }
             if(options.footer.buttonOk){
                 modal.find('.modal-footer').append(
                     $('<button type="button" class="btn blue" ' +

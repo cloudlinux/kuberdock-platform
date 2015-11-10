@@ -498,7 +498,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                     },
                     statusCode: {
                         404: function(xhr) {
-                            utils.notifyWindow('Log not found');
+                            utils.notifyWindow('Logs aren\'t found');
                         },
                         200: function(xhr){
                             if (xhr.data.hits.length == 0){

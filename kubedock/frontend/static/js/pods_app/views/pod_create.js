@@ -141,8 +141,8 @@ define(['pods_app/app',
                                 return item.get('name') == newValue;
                             }
                         );
-                        if (newValue.length > 64){
-                            utils.notifyWindow('The maximum length of the Pod name must be less than 64 characters');
+                        if (newValue.length > 63){
+                            utils.notifyWindow('The maximum length of the Pod name must be less than 63 characters');
                             return ' ';
                         }
                         if (model) {

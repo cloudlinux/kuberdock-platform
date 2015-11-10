@@ -490,6 +490,12 @@ define(['pods_app/app',
                     }
                 }
 
+                // If there is only one point, jqplot will display ugly plot with
+                // weird grid and no line.
+                // Remove this point to force jqplot to show noDataIndicator.
+                if (this.model.get('points').length == 1)
+                    this.model.get('points').splice(0);
+
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
                         points[i].push([record[0], record[i+1]]);

@@ -106,7 +106,7 @@ pod_name_schema = {
 
 port_schema = {
     'type': 'integer',
-    'min': 0,
+    'min': 1,
     'max': 65535,
 }
 nullable_port_schema = deepcopy(port_schema)

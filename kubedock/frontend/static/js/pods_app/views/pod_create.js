@@ -352,7 +352,9 @@ define(['pods_app/app',
             },
 
             ui: {
-                ieditable      : '.ieditable',
+                containerPort  : '.containerPort .ieditable',
+                podPort        : '.hostPort .ieditable',
+                mountPath      : '.mountPath.ieditable',
                 iseditable     : '.iseditable',
                 iveditable     : '.iveditable',
                 addPort        : '.add-port',
@@ -367,7 +369,6 @@ define(['pods_app/app',
                 removeVolume   : '.remove-volume',
                 restartPolicy  : '.restart-policy',
                 addDriveCancel : '.add-drive-cancel',
-                containerPort  : '.containerPort',
                 podPorts       : '.hostPort',
 
                 stopContainer  : '#stopContainer',
@@ -737,23 +738,54 @@ define(['pods_app/app',
                     });
                 }
 
-                this.ui.ieditable.editable({
+                var validatePort = function(newValue) {
+                    newValue = parseInt(newValue);
+                    if (isNaN(newValue) || newValue < 1 || newValue > 65535) {
+                        utils.notifyWindow('Port must be a number in range 1-65535.');
+                        return ' ';  // return string - means validation not passed
+                    }
+                    return {newValue: newValue};
+                };
+
+                this.ui.podPort.editable({
+                    type: 'text',
+                    mode: 'inline',
+                    validate: function(newValue) {
+                        if (newValue === '') return;  // host port accepts empty value
+                        return validatePort(newValue);
+                    },
+                    success: function(response, newValue) {
+                        var index = $(this).closest('tr').index(),
+                            port = that.model.get('ports')[index];
+                        port.hostPort = newValue === '' ? null : newValue;
+                    }
+                });
+
+                this.ui.containerPort.editable({
+                    type: 'text',
+                    mode: 'inline',
+                    validate: validatePort,
+                    success: function(response, newValue) {
+                        var index = $(this).closest('tr').index();
+                        that.model.get('ports')[index].containerPort = newValue;
+                    }
+                });
+
+                this.ui.mountPath.editable({
                     type: 'text',
                     mode: 'inline',
                     success: function(response, newValue) {
                         var index = $(this).closest('tr').index(),
-                            className = $(this).parent().attr('class'),
-                            item = $(this);
-                        if (className !== undefined) {
-                            that.model.get('ports')[index][className] = parseInt(newValue);
-                        }
-                        else if (item.hasClass('mountPath')) {
-                            var mountEntry = that.model.get('volumeMounts')[index];
-                            mountEntry['mountPath'] = newValue;
-                            mountEntry['name'] = that.generateName(newValue);
-                            that.pod.get('volumes').push({name: mountEntry.name,
-                                                          localStorage: true});
-                        }
+                            mountEntry = that.model.get('volumeMounts')[index],
+                            newName = that.generateName(newValue),
+                            volumes = that.pod.get('volumes'),
+                            volume = _.findWhere(volumes, {name: mountEntry.name});
+                        if (volume !== undefined)
+                            volume.name = newName;
+                        else
+                            volumes.push({name: newName, localStorage: true});
+                        mountEntry.mountPath = newValue;
+                        mountEntry.name = newName;
                     }
                 });
 
@@ -851,7 +883,7 @@ define(['pods_app/app',
                 });
             },
 
-            onRender: function(){
+            onDomRefresh: function(){
                 if (utils.hasScroll()) {
                     this.ui.navButtons.addClass('fixed');
                 } else {

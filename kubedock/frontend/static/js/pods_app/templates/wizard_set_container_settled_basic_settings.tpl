@@ -49,7 +49,7 @@
             <div id="tab-content">
                 <div class="col-xs-10">
                     <div class="info col-xs-6">
-                        <div>Image tag: <%- image %></div>
+                        <div>Image: <%- image %></div>
                         <div>Kube type: <%- kube_type.name %></div>
                         <div>Restart policy: <%- restart_policy %></div>
                         <div>Kubes: <%- kubes %></div>

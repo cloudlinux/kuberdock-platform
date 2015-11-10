@@ -226,7 +226,11 @@ def parse_config(path):
     data = {}
     conf = ConfigParser.ConfigParser()
     conf.optionxform = str
-    configs = conf.read(path)
+    try:
+        configs = conf.read(path)
+    except Exception as e:
+        raise SystemExit(
+            "Parsing error. {0}".format(str(e)))
     if len(configs) == 0:   # no configs found
         raise SystemExit(
             "Config '{0}' not found. Try to specify a custom one with option '--config'".format(path))

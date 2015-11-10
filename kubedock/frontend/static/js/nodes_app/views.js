@@ -502,7 +502,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                         },
                         200: function(xhr){
                             if (xhr.data.hits.length == 0){
-                                this.ui.textarea.append('<p>Nothing to show because containers log is empty.</p');
+                                this.ui.textarea.append('<p>Nothing to show because node log is empty.</p');
                             }
                         }
                     }

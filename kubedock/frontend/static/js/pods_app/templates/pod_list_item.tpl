@@ -30,7 +30,7 @@
             <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } else if ( status == 'stopped' ) { %>
             <span class="start-btn" title="Start <%- name %> pod">Start</span>
-        <% } else if ( status == 'waiting' ) { %>
+        <% } else if ( status == 'waiting' || status == 'pending' ) { %>
             <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } %>
     <% } else { %>

@@ -1037,7 +1037,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             back: function(){
-                App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
+                App.router.navigate('/', {trigger: true});
             },
         });
 

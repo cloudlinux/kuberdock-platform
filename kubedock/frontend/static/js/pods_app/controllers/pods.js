@@ -333,12 +333,16 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                                     collection: imageCollection,
                                     query: query
                                 });
+                                if (collection.length == 0) {
+                                    utils.notifyWindow('We couldn\'t find any results for this search');
+                                }
                             },
                             error: processCollectionLoadError,
                         });
                     });
                     that.listenTo(wizardLayout, 'image:getnextpage', function(currentCollection, query){
-                        var windowTopPosition = window.pageYOffset;
+                        var that = this,
+                            windowTopPosition = window.pageYOffset;
                         imageTempCollection.getNextPage({
                             wait: true,
                             data: {searchkey: query, url: registryURL},
@@ -350,6 +354,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                                     query: query
                                 });
                                 $('html, body').scrollTop(windowTopPosition);
+                                if (collection.length == 0) $('#load-control').hide();
                             },
                             error: processCollectionLoadError
                         });

@@ -6,10 +6,10 @@ RESOURCES = ("users", "nodes", "pods", "ippool", "static_pages",
              "notifications", "system_settings", "images", "predefined_apps")
 
 ROLES = (
-    "Admin",
-    "User",
-    "TrialUser",
-    "HostingPanel"
+    ("Admin", False),
+    ("User", False),
+    ("TrialUser", False),
+    ("HostingPanel", True),
 )
 
 PERMISSIONS = (
@@ -162,8 +162,8 @@ PERMISSIONS = (
 
 def add_roles(roles=()):
     for r in roles:
-        if not Role.filter(Role.rolename == r).first():
-            role = Role.create(rolename=r)
+        if not Role.filter(Role.rolename == r[0]).first():
+            role = Role.create(rolename=r[0], internal=r[1])
             role.save()
 
 

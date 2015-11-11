@@ -857,6 +857,7 @@ define(['pods_app/app',
                 'click @ui.reset'      : 'resetFielsdsValue',
                 'change @ui.input'     : 'onChangeInput',
                 'click @ui.next'       : 'finalStep',
+                'focus @ui.nameField'  : 'removeError',
 
                 'click @ui.stopContainer'  : 'stopContainer',
                 'click @ui.startContainer' : 'startContainer',
@@ -927,13 +928,23 @@ define(['pods_app/app',
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
+            removeError: function(evt){
+                var target = $(evt.target);
+                if (target.hasClass('error')) target.removeClass('error');
+            },
+
             finalStep: function(){
                 var success = true,
                     pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]*$/;
 
                 _.each(this.ui.nameField, function(field){
-                    if (!pattern.test(field.value)) success = false
+                    if (!pattern.test(field.value)){
+                        $(field).addClass('error');
+                        success = false
+                    }
                 })
+
+                if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
 
                 !success ?
                 utils.notifyWindow('First symbol must be letter in variables name') :

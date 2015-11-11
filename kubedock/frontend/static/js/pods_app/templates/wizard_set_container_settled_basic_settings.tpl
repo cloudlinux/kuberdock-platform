@@ -77,7 +77,7 @@
                                 <tr>
                                     <td class="containerPort"><%- p.containerPort ? p.containerPort : 'none'%></td>
                                     <td class="containerProtocol"><%- p.protocol ? p.protocol : 'none' %></td>
-                                    <td class="hostPort"><%- p.hostPort ? p.hostPort : 'none'%></td>
+                                    <td class="hostPort"><%- p.hostPort ? p.hostPort : p.containerPort%></td>
                                     <td><%- p.isPublic ? 'yes' : 'no' %></td>
                                 </tr>
                             <% }) %>

@@ -552,6 +552,8 @@ def restore_containers_host_ports_config(pod_containers, db_containers):
     ports_key = 'ports'
     container_port_key = 'containerPort'
     host_port_key = 'hostPort'
+    is_public_key = "isPublic"
+    protocol_key = 'protocol'
     pod_conf = {item[name_key]: item for item in pod_containers}
     for db_container in db_containers:
         name = db_container[name_key]
@@ -570,6 +572,8 @@ def restore_containers_host_ports_config(pod_containers, db_containers):
             src_port = container_ports_map.get(container_port)
             if not src_port:
                 continue
+            src_port[is_public_key] = port[is_public_key]
+            src_port[protocol_key] = src_port[protocol_key].lower()
             if src_port.get(host_port_key):
                 continue
             if host_port_key in port:

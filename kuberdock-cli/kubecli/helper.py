@@ -228,9 +228,14 @@ def parse_config(path):
     conf.optionxform = str
     try:
         configs = conf.read(path)
-    except Exception as e:
-        raise SystemExit(
-            "Parsing error. {0}".format(str(e)))
+    except ConfigParser.MissingSectionHeaderError as e:
+        raise SystemExit("Parsing error: missing section header in INI file. {0}".format(str(e)))
+    except ConfigParser.DuplicateSectionError as e:
+        raise SystemExit("Parsing error: duplicate section header. {0}".format(str(e)))
+    except ConfigParser.ParsingError as e:
+        raise SystemExit("Parsing error: common error. {0}".format(str(e)))
+    except IOError as e:
+        raise SystemExit("Parsing error: I/O common error. {0}".format(str(e)))
     if len(configs) == 0:   # no configs found
         raise SystemExit(
             "Config '{0}' not found. Try to specify a custom one with option '--config'".format(path))

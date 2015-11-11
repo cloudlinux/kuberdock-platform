@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 6.5%{?dist}.cloudlinux
+Release: 7%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,7 +176,24 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
-* Fri Nov 06 2015 Alex Tishin <atishin@cloudlinux.com>  0.4-6.5
+* Wed Nov 11 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.4-7
+- Fix Grammar mistakes AC-856, АС-1317, AC-1388, AC-1377, AC-1292;
+- Fix validation in podname 63 max simbols - AC-914; AC-1443: Rename some fields
+- AC-1400: do not show podIP if pod does not have ports
+- AC-1198: improved validation in kube types API
+- Node logging timestamp should contain timezone info
+- AC-933: ports validation; added ports validaion in frontend, fixed in backend
+- duplicate volumes bugfix; buttons on environment variables step bugfix
+- AC-1447: noDataIndicator for nodes monitoring
+- AC-1335: Edit user > Users back button fix navigate to user's list;
+- AC-1445: Add stop button if status is pending
+- AC-978: show message if no such image, fix style with word-break;
+- AC-1430: hide role HostingPanel
+- Added field `internal` to rbac_role model: role 'HostingPanel' is internal now.
+- AC-1046: show containerPort if hostPort none; If hostPort is 'None', show containerPort.
+- Fix Published and Protocol columns
+
+* Mon Nov 09 2015 Alex Tishin <atishin@cloudlinux.com>  0.4-6.5
 - AC-1436: Fix logs ordering
 
 * Mon Nov 09 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com> 0.4-6.4

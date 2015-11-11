@@ -447,6 +447,19 @@ positive_float_schema = {'coerce': float, 'min': 0}
 positive_integer_schema = {'coerce': int, 'min': 0}
 billing_name_schema = {'type': 'string', 'maxlength': 64,
                        'required': True, 'empty': False}
+
+kube_name_schema = {
+    'type': 'string',
+    'maxlength': 25,
+    'required': True,
+    'empty': False,
+    'regex': {
+        'regex': r'^[A-Za-z0-9]+[A-Za-z0-9 ]*$',
+        'message': 'Name may contain Latin alphabet letters, digits, spaces '\
+                   'and should not start with a space'
+    }
+}
+
 package_schema = {
     'name': billing_name_schema,
     'first_deposit': positive_float_schema,
@@ -461,11 +474,13 @@ package_schema = {
 }
 
 kube_schema = {
-    'name': billing_name_schema,
-    'cpu': positive_float_schema,
-    'memory': positive_integer_schema,
-    'disk_space': positive_integer_schema,
-    'included_traffic': positive_integer_schema,
+    'name':  kube_name_schema,
+    'cpu': {'coerce': float, 'min': 0.01, 'max': 999, 'required': True},
+    'memory': {'coerce': int, 'min': 1, 'max': 99999, 'required': True},
+    'disk_space': {'coerce': int, 'min': 0, 'max': 999, 'required': True},
+    'included_traffic': {
+        'coerce': int, 'min': 0, 'max': 99999, 'required': True
+    },
     'cpu_units': {'type': 'string', 'maxlength': 32, 'empty': False,
                   'allowed': ['Cores']},
     'memory_units': {'type': 'string', 'maxlength': 3, 'empty': False,

@@ -467,8 +467,9 @@ class KuberDock(KubeCtl):
         printout = PrintOut(wants_header=True,
                             fields=(('id', 12), ('name', 32)),
                             as_json=self.as_json)
-        data = self._get_kube_types()
-        printout.show_list([{'name': k, 'id': v} for k, v in data.iteritems()])
+        data = [{'name': k, 'id': v} for k, v in self._get_kube_types().iteritems()]        
+        data.sort()
+        printout.show_list(data)
 
     def drives(self):
         """

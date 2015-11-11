@@ -4,7 +4,7 @@ from flask.ext.login import login_required, current_user
 
 
 persistent_volumes = Blueprint(
-    'persistent_volumes', __name__, url_prefix='/persistent_volumes')
+    'persistent_volumes', __name__, url_prefix='/persistent-volumes')
 
 
 @persistent_volumes.route('/')

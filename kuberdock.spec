@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 7%{?dist}.cloudlinux
+Release: 7.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,12 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Wed Nov 11 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-7.1
+- AC-1249: Add podname to confirmation remove dilog box
+- AC-1056: fix KeyError
+- AC-1446: Add error class to name fields if validation == false & scroll to this items
+- persistent volumes link bugfix
+
 * Wed Nov 11 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.4-7
 - Fix Grammar mistakes AC-856, АС-1317, AC-1388, AC-1377, AC-1292;
 - Fix validation in podname 63 max simbols - AC-914; AC-1443: Rename some fields

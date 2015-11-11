@@ -2,6 +2,8 @@ import json
 from flask import Blueprint, request, current_app, session
 from flask.ext.login import login_user, current_user
 
+from sqlalchemy import not_
+
 from . import APIError
 from ..rbac import check_permission
 from ..rbac.models import Role
@@ -50,7 +52,8 @@ def get_usernames():
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_roles():
-    return zip(*Role.query.values(Role.rolename))[0]
+    roles = Role.query.filter(not_(Role.internal)).values(Role.rolename)
+    return zip(*roles)[0]
 
 
 def user_activities(user, date_from=None, date_to=None, to_dict=None,

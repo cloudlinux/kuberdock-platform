@@ -1,4 +1,6 @@
 import json
+from sqlalchemy import not_
+
 from flask import Blueprint, render_template, session, current_app, redirect, flash
 from flask.ext.login import login_user, logout_user, current_user, login_required
 
@@ -26,7 +28,7 @@ def mark_current_user_online():
 @check_permission('get', 'users')
 def index(**kwargs):
     """Returns the index page."""
-    roles = Role.all()
+    roles = Role.filter(not_(Role.internal)).all()
     return render_template(
         'users/index.html', roles=roles,
         users_collection=[u.to_dict(full=True, exclude=['states'])

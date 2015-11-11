@@ -299,8 +299,12 @@ define(['pods_app/app',
                         public_ip = this.model.get('public_ip');
                     }
                     postDescription = postDescription.replace(r, public_ip);
+                    hasPorts = _.any(this.model.get('containers'), function(c) {
+                        return c.ports && c.ports.length;
+                    });
 
                 return {
+                    hasPorts        : hasPorts,
                     postDescription : postDescription,
                     publicIP        : publicIP,
                     publicName      : publicName,

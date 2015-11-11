@@ -36,7 +36,9 @@
             <% if (publicName) { %>
                 <div>Public name: <%- publicName %></div>
             <% } %>
-            <div>Pod IP: <%- (typeof(podIP) != 'undefined') ? podIP : 'Internal ip is not assigned yet'%></div>
+            <% if (hasPorts) { %>
+                <div>Pod IP: <%- (typeof(podIP) !== 'undefined') ? podIP : 'Internal ip is not assigned yet'%></div>
+            <%} %>
             <div>Restart policy: <%- restartPolicy %></div>
             <div>Kube type: <%- kubeType.name %></div>
             <div>Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>

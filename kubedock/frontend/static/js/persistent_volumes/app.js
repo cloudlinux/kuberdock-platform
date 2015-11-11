@@ -135,7 +135,7 @@ define(['marionette', 'utils'], function (Marionette, utils) {
 
     PVolumesApp.on('start', function(){
         if (Backbone.history) {
-            Backbone.history.start({root: '/persistent_volumes/', pushState: true});
+            Backbone.history.start({root: '/persistent-volumes/', pushState: true});
         }
     });
 

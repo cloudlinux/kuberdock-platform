@@ -15,7 +15,9 @@ requirejs.config({
         notify: 'lib/notify.min',
         mask: 'lib/jquery.mask',
         utils: 'utils',
-        dde: 'lib/dropdowns-enhancement'
+        dde: 'lib/dropdowns-enhancement',
+        moment: "lib/moment.min",
+        "moment-timezone": "lib/moment-timezone-with-data.min",
     },
     shim: {
         jquery: {

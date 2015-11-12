@@ -125,7 +125,7 @@ class NotificationEvent(object):
             for f in object_fields:
                 if f == '_ts':
                     context['__TS__'] = \
-                        datetime.now().isoformat(sep=' ')
+                        datetime.utcnow().isoformat(sep=' ')
                 else:
                     context['__%s_%s__' % (k.upper(), f.upper())] = getattr(obj, f)
         return context

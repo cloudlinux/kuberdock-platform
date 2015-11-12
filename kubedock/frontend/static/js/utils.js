@@ -1,4 +1,4 @@
-define(['notify'], function () {
+define(['moment-timezone', 'notify'], function (moment) {
 
     // jQuery ajax setup
     var that = this;
@@ -97,13 +97,34 @@ define(['notify'], function () {
         return hours + ':' + minutes + ':' + secs;
     };
 
-    this.localizeDatetime = function(dt, tz){
+    this.localizeDatetimeForUser = function(dt, user, formatString) {
+        // Returns string representing date&time with timezone converted to
+        // the given user. 'user' must contain 'timezone' field.
+        // If there is defined global userProfile variable, then it will
+        // be used for timezone extracting (in case when 'user' is undefined).
+        // Accepts timezones in form 'Europe/London (+0000)', 'Europe/London'
+        // When no user is specified and userProfile is undefined, then uses
+        // 'UTC' timezone to convert date&time.
+        var tz;
+        if (user === undefined && typeof userProfile != 'undefined') {
+            user = userProfile;
+        }
+        if (user === undefined || typeof user.timezone !== 'string') {
+            tz = 'UTC';
+        } else {
+            tz = user.timezone.split(' (', 1)[0];
+        }
+        return this.localizeDatetime(dt, tz, formatString);
+    };
+
+    this.localizeDatetime = function(dt, tz, formatString){
+        formatString = formatString || 'YYYY-MM-DD HH:mm:ss';
         try {
-            return moment(dt).tz(tz).format('YYYY-MM-DD hh:mm:ss');
-        } catch (e){
+            return moment(dt).tz(tz).format(formatString);
+        } catch (e) {
             console.log(e);
         }
-        return dt;
+        return moment(dt).format(formatString);
     };
 
     this.BaseModel = Backbone.Model.extend({
@@ -180,19 +201,19 @@ define(['notify'], function () {
             globalPosition: 'bottom left',
             className: 'error',
         });
-    }
+    };
 
     this.scrollTo = function(a, b){
         el = a.offset().top;
         $('html, body').animate({
             scrollTop: el-50
         }, 500);
-    }
+    };
 
     this.preloader = {
         show: function(){ $('#page-preloader').show(); },
         hide: function(){ $('#page-preloader').hide(); }
-    }
+    };
 
     return this;
 });

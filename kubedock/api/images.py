@@ -72,10 +72,10 @@ def search_image():
     }
     if query is None:
         db.session.add(ImageCache(query=query_key, data=data,
-                                  time_stamp=datetime.now()))
+                                  time_stamp=datetime.utcnow()))
     else:
         query.data = data
-        query.time_stamp = datetime.now()
+        query.time_stamp = datetime.utcnow()
     db.session.commit()
     return {'status': 'OK', 'data': data['results'],
             'num_pages': data['num_pages'], 'page': page, 'per_page': per_page}

@@ -25,7 +25,6 @@ def index():
     extra_taxes = {e.pop('key'): e for e in extra_taxes_list}
     package_kubes = []
     kube_types = []
-    user_profile = current_user.to_dict(for_profile=True)
     for pk in PackageKube.query.filter(PackageKube.package_id == current_user.package_id).all():
         package_kubes.append(pk.to_dict())
         kube_types.append(pk.kubes.to_dict())
@@ -42,7 +41,6 @@ def index():
         package_kubes=package_kubes,
         user_package=current_user.package_id,
         post_desc=post_desc,
-        user_profile=user_profile
     )
 
 

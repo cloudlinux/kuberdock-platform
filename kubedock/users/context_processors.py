@@ -7,5 +7,7 @@ def users_helpers():
         auth_by_id=session.get('auth_by_another'),
         username=u.username if u.is_authenticated() else 'Anonymous',
         user_settings=u.get_settings() if u.is_authenticated() else {},
+        user_profile=\
+            u.to_dict(for_profile=True) if u.is_authenticated() else {},
     )
     return context

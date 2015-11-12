@@ -109,14 +109,15 @@ def get_defaults(app, mutables, kubes,
     if not isinstance(yml, (dict, list)):
         raise kapi_papps.AppParseError
     root = find_root(yml)
+    kuberdock = yml.get('kuberdock', {})
     kube_type = None
-    pre_desc = yml.get('metadata', {}).get('preDescription')
+    pre_desc = kuberdock.get('preDescription')
 
-    if 'kube_type' not in root:
-        root['kube_type'] = default_kube_type
+    if 'kube_type' not in kuberdock:
+        kuberdock['kube_type'] = default_kube_type
         kube_type = default_kube_type
     else:
-        kube_type, hashsum = get_value(root['kube_type'])
+        kube_type, hashsum = get_value(kuberdock['kube_type'])
         if hashsum is not None:
             mutables[hashsum] = {'type': 'kube_type'}
 

@@ -214,8 +214,7 @@ new_pod_schema = {
         'nullable': True,
         'internal_only': True,
     },
-    'set_public_ip': {'type': 'boolean', 'required': False},    # TODO remove
-    'public_ip': {'type': 'ipv4', 'required': False},           # TODO remove
+    'public_ip': {'type': 'ipv4', 'required': False},  # TODO remove for new pod
     'restartPolicy': {
         'type': 'string', 'required': True,
         'allowed': ['Always', 'OnFailure', 'Never']

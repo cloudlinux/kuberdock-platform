@@ -108,8 +108,6 @@ def process_pod(pod, rc, service):
         containers = spec_body['containers'] or []
         for c in containers:
             for p in c.get('ports', []):
-                if p.get('isPublic'):
-                    new_pod['set_public_ip'] = True
                 p.pop('name', '')
         new_pod['containers'] = containers
 

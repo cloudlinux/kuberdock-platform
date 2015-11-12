@@ -8,13 +8,14 @@ from .pod import Pod
 from .images import Image
 from .pstorage import CephStorage, AmazonStorage, NodeCommandError
 from .helpers import KubeQuery, ModelQuery, Utilities
-from ..billing import repr_limits
-from ..pods.models import PersistentDisk
+from ..core import db
+from ..billing import repr_limits, Kube
+from ..pods.models import PersistentDisk, PodIP, Pod as DBPod
 from ..users.models import User
 from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
                      unbind_ip)
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
-                        DEFAULT_REGISTRY)
+                        DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 
 
@@ -51,10 +52,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._make_namespace(pod.namespace)
         pod.secrets = [self._make_secret(pod.namespace, *secret)
                        for secret in secrets]
-        self._save_pod(pod)
+        set_public_ip = self.needs_public_ip(params)
+        if set_public_ip:
+            db_pod = self._save_pod(pod, set_public_ip)
+            if getattr(db_pod, 'public_ip', None):
+                pod.public_ip = db_pod.public_ip
+            if getattr(db_pod, 'public_aws', None):
+                pod.public_aws = db_pod.public_aws
+        else:
+            self._save_pod(pod, set_public_ip)
         pod._forge_dockers()
-        if hasattr(pod, 'public_ip') and pod.public_ip:
-            pod._allocate_ip()
         return pod.as_dict()
 
     def get(self, as_json=True):
@@ -74,6 +81,59 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return pod
         except IndexError:
             self._raise("No such item", 404)
+
+    @staticmethod
+    def needs_public_ip(conf):
+        """
+        Return true of pod needs public ip
+        """
+        for c in conf.get('containers', []):
+            for port in c.get('ports', []):
+                if port.get('isPublic', False):
+                    return True
+        return False
+
+    @staticmethod
+    def _set_public_ip(pod, set_public_ip):
+        if set_public_ip:
+            conf = pod.get_dbconfig()
+            if AWS:
+                pod.public_aws = True
+                conf['public_aws'] = pod.public_aws
+            else:
+                pod.public_ip = str(PodIP.allocate_ip_address(pod.id))
+                conf['public_ip'] = pod.public_ip
+            pod.set_dbconfig(conf, False)
+            db.session.add(pod)
+
+    def _save_pod(self, obj, set_public_ip):
+        kube_type = getattr(obj, 'kube_type', Kube.get_default_kube_type())
+        template_id = getattr(obj, 'kuberdock_template_id', None)
+        if hasattr(obj, 'kuberdock_template_id'):   # to prevent save to config
+            delattr(obj, 'kuberdock_template_id')
+        if hasattr(obj, 'owner'):   # to prevent save to config
+            delattr(obj, 'owner')
+        pod = DBPod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
+                    status=POD_STATUSES.stopped, template_id=template_id)
+        kube = db.session.query(Kube).get(kube_type)
+        if kube is None:
+            kube = Kube.get_default_kube()
+        if not kube.is_public():
+            if not self.owner or self.owner.username != KUBERDOCK_INTERNAL_USER:
+                raise APIError('Forbidden kube type for a pods')
+        pod.kube = kube
+        pod.owner = self.owner
+        try:
+            db.session.add(pod)
+            self._set_public_ip(pod, set_public_ip)
+            db.session.commit()
+            return pod
+        except Exception as e:
+            current_app.logger.debug(e.__repr__())
+            db.session.rollback()
+            # Raise APIError because else response will be 200
+            # and backbone creates new model even in error case
+            raise APIError(str(e))
 
     def update(self, pod_id, data):
         pod = self.get_by_id(pod_id)

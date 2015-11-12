@@ -390,9 +390,6 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         }));
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
-                        data.attributes['set_public_ip'] = _.any(
-                            _.flatten(_.pluck(data.get('containers'), 'ports')),
-                            function(p){return p['isPublic']});
                         // if (window.hasOwnProperty('replicas')) {
                         //     console.warn('Taking number of replicas from global var');
                         //     data.attributes.replicas = window.replicas;

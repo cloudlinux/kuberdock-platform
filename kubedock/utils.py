@@ -179,6 +179,10 @@ class APIError(Exception):
         self.message = message
         self.status_code = status_code
 
+    def __str__(self):
+        # Only message because this class may wrap other exception classes
+        return self.message
+
     def __repr__(self):
         return '<{0}: "{1}" ({2})>'.format(
             self.__class__.__name__, self.message, self.status_code)

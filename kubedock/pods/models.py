@@ -10,7 +10,6 @@ from flask import current_app
 from ..core import db
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT
 from ..models_mixin import BaseModelMixin
-from .. import signals
 from ..usage.models import IpState
 from ..users.models import User
 from ..kapi import pd_utils
@@ -71,13 +70,25 @@ class Pod(BaseModelMixin, db.Model):
         self.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
         self.status = 'deleted'
 
+    # Such name to distinguish from non-db Pod's get_config() method
+    def get_dbconfig(self, param=None, default=None):
+        if param is None:
+            return json.loads(self.config)
+        return json.loads(self.config).get(param, default)
+
+    def set_dbconfig(self, conf, save=True):
+        self.config = json.dumps(conf)
+        if save:
+            self.save()
+        return self
+
     def to_dict(self):
         return dict(
             id=self.id,
             name=self.name,
             kube=self.kube.to_dict(),
             owner=self.owner.to_dict(),
-            config=json.loads(self.config),
+            config=self.get_dbconfig(),
             status=self.status)
 
 
@@ -331,21 +342,16 @@ class PodIP(BaseModelMixin, db.Model):
         """
         Allocate an IP-address to POD
         :param pid: Pod Id
-        :param network: (optional) Selected network (pool)
         :return: PodIP object
         """
         pod = Pod.query.filter_by(id=pid).first()
         if pod is None:
             raise Exception("Wrong Pod Id '{0}".format(pid))
-        network = None
         if ip_address is None:
             ip_address = IPPool.get_free_host(as_int=True)
             if ip_address is None:
                 raise Exception('There are no free IP-addresses')
-        else:
-            network = IPPool.get_network_by_ip(ip_address)
-        if ip_address is None:
-            raise Exception('There are no free networks to allocate IP-address')
+        network = IPPool.get_network_by_ip(ip_address)
         if network is None:
             raise Exception(
                 'Cannot find network by IP-address: {0}'.format(ip_address))
@@ -356,6 +362,9 @@ class PodIP(BaseModelMixin, db.Model):
             podip = cls.create(pod_id=pid, network=network.network,
                                ip_address=ip_address)
             podip.save()
+        else:
+            current_app.logger.warning('PodIP {0} is already allocated'
+                                       .format(podip.to_dict()))
         return podip
 
     def get_pod(self):
@@ -442,13 +451,3 @@ class PrivateRegistryFailedLogin(BaseModelMixin, db.Model):
     login = db.Column(db.String(255), primary_key=True, nullable=False)
     registry = db.Column(db.String(255), primary_key=True, nullable=False)
     created = db.Column(db.DateTime, primary_key=True, nullable=False)
-
-
-###############
-### Signals ###
-@signals.allocate_ip_address.connect
-def allocate_ip_address_signal(args):
-    if len(args) == 1:
-        args = (args[0], None)
-    pid, ip = args
-    return PodIP.allocate_ip_address(pid, ip)

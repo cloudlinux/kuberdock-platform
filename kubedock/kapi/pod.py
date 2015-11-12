@@ -4,7 +4,6 @@ import shlex
 from uuid import uuid4
 from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
-from .ippool import IpAddrPool
 
 from .pstorage import CephStorage, AmazonStorage
 from ..billing import kubes_to_limits
@@ -35,18 +34,12 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     @staticmethod
     def create(data):
         data = data.copy()
-        set_public_ip = data.pop('set_public_ip', None)
         owner = data.pop('owner', None)
+        # TODO delete this becouse 'owner' will appear in api response
         data['owner'] = None if owner is None else owner.username
         data.setdefault('status', POD_STATUSES.stopped)
         pod = Pod(data)
         pod._check_pod_name(owner)
-        if set_public_ip:
-            if AWS:
-                pod.public_aws = True
-            else:
-                ip = IpAddrPool().get_free()
-                pod.public_ip = unicode(ip, encoding='utf-8') if ip is not None else None
         pod._make_uuid_if_missing()
         pod.sid = str(uuid4())
         return pod

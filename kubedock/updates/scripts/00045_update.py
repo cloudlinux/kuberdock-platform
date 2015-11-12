@@ -65,7 +65,9 @@ PERMISSIONS = (
 
 RESOURCES = ("images", "predefined_apps")
 
-ROLES = ("HostingPanel",)
+ROLES = (
+    ("HostingPanel", True),
+)
 
 USER = "hostingPanel"
 

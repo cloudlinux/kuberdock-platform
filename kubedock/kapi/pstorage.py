@@ -479,6 +479,8 @@ class CephStorage(PersistentStorage):
         """
         nodes = self._get_nodes(first_only)
 
+        if not nodes:
+            return []
         # Got dict: node ip -> node data
         with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                       warn_only=True):

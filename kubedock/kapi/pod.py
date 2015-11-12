@@ -128,7 +128,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             volume['rbd'] = {
                 'image': drive_name,
                 'keyring': '/etc/ceph/ceph.client.admin.keyring',
-                'fsType': 'ext4',
+                'fsType': 'xfs',
                 'user': 'admin',
                 'pool': 'rbd'
             }
@@ -148,7 +148,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             # volumeID: aws://<availability-zone>/<volume-id>
             volume['awsElasticBlockStore'] = {
                 'volumeID': 'aws://{0}/'.format(AVAILABILITY_ZONE),
-                'fsType': 'ext4',
+                'fsType': 'xfs',
                 'drive': drive_name,
             }
             if size is not None:

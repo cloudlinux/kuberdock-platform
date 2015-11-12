@@ -569,8 +569,8 @@ define(['nodes_app/app', 'marionette', 'utils',
                             "Collecting data... plot will be dispayed in a few minutes.",
                         axes: {
                             xaxis: {
-                                min: new Date(+new Date() - 1000*60*20),
-                                max: new Date(),
+                                min: utils.localizeDatetimeForUser(new Date(+new Date() - 1000*60*20)),
+                                max: utils.localizeDatetimeForUser(new Date()),
                                 tickOptions: {formatString:'%H:%M'},
                                 tickInterval: '5 minutes',
                             },
@@ -596,7 +596,10 @@ define(['nodes_app/app', 'marionette', 'utils',
 
             this.model.get('points').forEach(function(record){
                 for (var i=0; i<lines; i++) {
-                    points[i].push([record[0], record[i+1]])
+                    points[i].push([
+                        utils.localizeDatetimeForUser(record[0]),
+                        record[i+1]
+                    ]);
                 }
             });
             this.ui.chart.jqplot(points, options);

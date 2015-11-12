@@ -19,19 +19,6 @@ define(['pods_app/app',
 
     Pods.module('Views.Item', function(Item, App, Backbone, Marionette, $, _){
 
-        function localizeDatetime(dt, tz){
-            if (typeof tz === 'string') {
-                // accept timezones in form 'Europe/London (+0000)'
-                tz = tz.split(' (', 1)[0];
-            }
-            try {
-                return moment(dt).tz(tz).format('HH:mm:ss YYYY-MM-DD');
-            } catch (e){
-                console.log(e);
-            }
-            return moment(dt).format('HH:mm:ss YYYY-MM-DD');
-        }
-
         Item.PodItemLayout = Backbone.Marionette.LayoutView.extend({
             template : layoutPodItemTpl,
 
@@ -91,7 +78,7 @@ define(['pods_app/app',
                 return {
                     kubes: kubes ? kubes : 0,
                     startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' :
-                            localizeDatetime(startedAt, userProfile.timezone),
+                            utils.localizeDatetime(startedAt),
                     updateIsAvailable: this.model.updateIsAvailable,
                 }
             },
@@ -473,8 +460,8 @@ define(['pods_app/app',
                             'Collecting data... plot will be dispayed in a few minutes.',
                         axes: {
                             xaxis: {
-                                min: new Date(+new Date() - 1000*60*20),
-                                max: new Date(),
+                                min: utils.localizeDatetime(new Date(+new Date() - 1000*60*20)),
+                                max: utils.localizeDatetime(new Date()),
                                 tickOptions: {formatString:'%H:%M'},
                                 tickInterval: '5 minutes',
                             },
@@ -498,7 +485,10 @@ define(['pods_app/app',
 
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
-                        points[i].push([record[0], record[i+1]]);
+                        points[i].push([
+                            utils.localizeDatetime(record[0]),
+                            record[i+1]
+                        ]);
                     }
                 });
 

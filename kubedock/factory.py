@@ -19,7 +19,9 @@ class APIJSONEncoder(JSONEncoder):
     """
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
-            return obj.replace(tzinfo=pytz.UTC).isoformat()
+            if obj.tzinfo is None:
+                obj = obj.replace(tzinfo=pytz.UTC)
+            return obj.isoformat()
         if isinstance(obj, datetime.date):
             return obj.isoformat()
         return JSONEncoder.default(self, obj)

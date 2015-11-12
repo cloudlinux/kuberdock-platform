@@ -1,5 +1,5 @@
-define({
-    modalDialog: function(options){
+define(['moment-timezone'], function (moment) {
+    this.modalDialog = function(options){
         var modal = $('.modal'),
             modalDialog = modal.find('.modal-dialog');
         if ($('.modal-backdrop').is(':visible')) {
@@ -31,20 +31,20 @@ define({
             }
         }
         return modal;
-    },
+    };
 
-    modalDialogDelete: function(options){
+    this.modalDialogDelete = function(options){
         options.type = 'delete';
         return this.modalDialog(options);
-    },
+    };
 
-    notifyWindow: function(b, type){
+    this.notifyWindow = function(b, type){
         var msg = typeof b == "string" ? b :
                   !(b.responseJSON && b.responseJSON.data) ? b.responseText :
                   typeof b.responseJSON.data == 'string' ? b.responseJSON.data :
                   JSON.stringify(b.responseJSON.data);
         if (b && b.status == 401){
-            window.location = '/logout'
+            window.location = '/logout';
         } else {
             $.notify(msg,{
                 autoHideDelay: 5000,
@@ -53,24 +53,44 @@ define({
                 className: type || 'error',
             });
         }
-    },
+    };
 
-    preloader: {
+    this.preloader = {
         show: function(){ $('#page-preloader').show(); },
         hide: function(){ $('#page-preloader').hide(); }
-    },
+    };
 
-    hasScroll: function() {
+    this.hasScroll = function() {
         var hContent = $('body').height(),
             hWindow = $(window).height();
 
         return  hContent > hWindow ? true : false;
-    },
+    };
 
-    scrollTo : function(a, b){
+    this.scrollTo = function(a, b){
         el = a.offset().top;
         $('html, body').animate({
             scrollTop: el-50
         }, 500);
-    }
+    };
+
+    this.localizeDatetime = function(dt, tz, formatString){
+        formatString = formatString || 'YYYY-MM-DD HH:mm:ss';
+        if (tz === undefined && typeof userProfile != 'undefined') {
+            tz = userProfile.timezone;
+        }
+        if (typeof tz !== 'string') {
+            tz = 'UTC';
+        } else {
+            tz = tz.split(' (', 1)[0];
+        }
+        try {
+            return moment(dt).tz(tz).format(formatString);
+        } catch (e){
+            console.log(e);
+        }
+        return moment(dt).format(formatString);
+    };
+
+    return this;
 });

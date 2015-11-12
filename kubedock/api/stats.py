@@ -1,3 +1,4 @@
+import pytz
 from flask import Blueprint, jsonify
 from ..core import db
 from ..stats import StatWrap5Min
@@ -46,7 +47,7 @@ def unit_stat():
          'lines': 2, 'points': []}]
 
     for record in sorted(data, key=operator.itemgetter(0)):
-        timetick = datetime.datetime.fromtimestamp(record[0]).strftime("%H:%M")
+        timetick = datetime.datetime.fromtimestamp(record[0], pytz.UTC)
         metrics[0]['points'].append([timetick, record[1]])
         metrics[1]['points'].append([timetick, record[2]])
         metrics[2]['points'].append([timetick, record[3], record[4]])
@@ -54,7 +55,7 @@ def unit_stat():
     if disks:
         disk_metrics = {}
         for record in sorted(disks.items(), key=operator.itemgetter(0)):
-            timetick = datetime.datetime.fromtimestamp(record[0]).strftime("%H:%M")
+            timetick = datetime.datetime.fromtimestamp(record[0], pytz.UTC)
             disk_data = process_disks(record[1], timetick, ['/dev/rbd'])
             for key, value in disk_data.items():
                 if key not in disk_metrics:

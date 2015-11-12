@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 7.1%{?dist}.cloudlinux
+Release: 8%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,6 +176,15 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Thu Nov 12 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-8
+- AC-1430: move role edit to update script
+- AC-991: fixed timezone saving and conversion
+- changed ext4 filesystem to xfs for persistent volumes
+- some fixes for predefined apps unauthorized page
+- AC-980. Restrict create pod when no free public ip in pool. Refactored IP allocation. Removed blinker signals. Removed old api param set_public_ip
+- Fixes for updates: 00045_update.py, pstorage module
+- AC-1364: fix persistent-volumes path everywhere
+
 * Wed Nov 11 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-7.1
 - AC-1249: Add podname to confirmation remove dilog box
 - AC-1056: fix KeyError

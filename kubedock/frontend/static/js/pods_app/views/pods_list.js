@@ -158,7 +158,8 @@ define(['pods_app/app',
             templateHelpers: function(){
                 return {
                     allChecked: this.collection.fullCollection.allChecked ? true : false,
-                    checked: this.collection.fullCollection.checkedNumber
+                    checked: this.collection.fullCollection.checkedNumber,
+                    isCollection : this.collection.fullCollection.length < 1 ? 'disabled' : ''
                 }
             },
 
@@ -184,15 +185,17 @@ define(['pods_app/app',
             toggleCheck: function(evt){
                 var tgt = evt.target;
                 evt.stopPropagation();
-                if (this.collection.fullCollection.allChecked){
-                    this.collection.fullCollection.allChecked = false;
-                    this.collection.fullCollection.checkedNumber = 0;
-                    this.collection.fullCollection.each(function(m){m.is_checked = false;});
-                }
-                else {
-                    this.collection.fullCollection.allChecked = true;
-                    this.collection.fullCollection.checkedNumber = this.collection.fullCollection.length;
-                    this.collection.fullCollection.each(function(m){m.is_checked = true;});
+                if (this.collection.fullCollection.length > 0){
+                    if (this.collection.fullCollection.allChecked){
+                        this.collection.fullCollection.allChecked = false;
+                        this.collection.fullCollection.checkedNumber = 0;
+                        this.collection.fullCollection.each(function(m){m.is_checked = false;});
+                    }
+                    else {
+                        this.collection.fullCollection.allChecked = true;
+                        this.collection.fullCollection.checkedNumber = this.collection.fullCollection.length;
+                        this.collection.fullCollection.each(function(m){m.is_checked = true;});
+                    }
                 }
                 this.render();
             },
@@ -209,9 +212,9 @@ define(['pods_app/app',
                     model.is_checked = model.is_checked
                         ? (this.collection.fullCollection.checkedNumber--, false)
                         : (this.collection.fullCollection.checkedNumber++, true);
-                    if (!this.collection.fullCollection.checkedNumber) {
-                        this.collection.fullCollection.allChecked = false;
-                    }
+                    this.collection.fullCollection.checkedNumber == this.collection.length
+                        ? this.collection.fullCollection.allChecked = true
+                        : this.collection.fullCollection.allChecked = false
                     this.render();
                 }
             },

@@ -2,7 +2,7 @@
 <td><span class="container-page-btn"><%- image %></span></td>
 <td><span class="<%- state %>"><%- state %></span></td>
 <td><span><%- kubes ? kubes : 'unknown' %></span></td>
-<td><span><%- startedAt ? startedAt : '' %></span></td>
+<td><span><%- startedAt ? startedAt == 'Invalid date' ? 'Not deployed yet' : startedAt : '' %></span></td>
 <td class="actions">
     <% if (state == 'running' )  { %>
         <% if (!updateIsAvailable) { %>

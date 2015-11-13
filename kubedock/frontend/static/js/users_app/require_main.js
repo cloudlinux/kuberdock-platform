@@ -16,6 +16,8 @@ requirejs.config({
         notify                 : 'lib/notify.min',
         utils                  : 'utils',
         selectpicker           : 'lib/bootstrap-select.min',
+        moment                 : "lib/moment.min",
+        "moment-timezone"      : "lib/moment-timezone-with-data.min",
     },
     shim: {
         jquery: {

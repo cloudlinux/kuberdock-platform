@@ -3,16 +3,12 @@ import json
 import random
 import requests
 import string
-from .. import signals
 from ..core import db
 from ..pods.models import Pod, PodIP
 #from ..users.models import User
 #from ..users.signals import user_get_setting, user_set_setting
-from ..billing.models import Kube
 from ..api import APIError
-from ..utils import get_api_url, POD_STATUSES
-from ..settings import KUBERDOCK_INTERNAL_USER
-
+from ..utils import get_api_url
 from flask import current_app
 
 
@@ -125,16 +121,6 @@ class ModelQuery(object):
                            "Try another name.".format(self.name),
                            status_code=409)
 
-    def _allocate_ip(self, pod_id=None, ip=None):
-        if pod_id is None:
-            if hasattr(self, 'id'):
-                pod_id = self.id
-            else:
-                raise TypeError('pod_id should be specified')
-        if hasattr(self, 'public_ip'):
-            ip = self.public_ip
-        signals.allocate_ip_address.send([pod_id, ip])
-
     def _free_ip(self, ip=None, pod_id=None):
         if hasattr(self, 'public_ip'):
             ip = self.public_ip
@@ -147,36 +133,13 @@ class ModelQuery(object):
                 return
 
             pod = podip.pod
-            pod_config = json.loads(pod.config)
+            pod_config = pod.get_dbconfig()
             pod_config.pop('public_ip', None)
             for container in pod_config['containers']:
                 for port in container['ports']:
                     port.pop('isPublic', None)
-            pod.config = json.dumps(pod_config)
+            pod.set_dbconfig(pod_config, False)
             podip.delete()
-
-    def _save_pod(self, obj):
-        kube_type = getattr(obj, 'kube_type', Kube.get_default_kube_type())
-        template_id = getattr(obj, 'kuberdock_template_id', None)
-        if hasattr(obj, 'kuberdock_template_id'):   # to prevent save to config
-            delattr(obj, 'kuberdock_template_id')
-        pod = Pod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
-                  status=POD_STATUSES.stopped, template_id=template_id)
-        kube = db.session.query(Kube).get(kube_type)
-        if kube is None:
-            kube = Kube.get_default_kube()
-        if not kube.is_public():
-            if not self.owner or self.owner.username != KUBERDOCK_INTERNAL_USER:
-                raise APIError('Forbidden kube type for a pods')
-        pod.kube = kube
-        pod.owner = self.owner
-        try:
-            db.session.add(pod)
-            db.session.commit()
-            return pod
-        except Exception, e:
-            current_app.logger.debug(e)
-            db.session.rollback()
 
     def _mark_pod_as_deleted(self, pod_id):
         p = db.session.query(Pod).get(pod_id)

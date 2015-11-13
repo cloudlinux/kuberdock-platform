@@ -65,5 +65,12 @@ define({
             hWindow = $(window).height();
 
         return  hContent > hWindow ? true : false;
+    },
+
+    scrollTo : function(a, b){
+        el = a.offset().top;
+        $('html, body').animate({
+            scrollTop: el-50
+        }, 500);
     }
 });

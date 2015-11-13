@@ -16,11 +16,12 @@ define(['marionette', 'paginator', 'utils'],
                 text = text || ('Are you sure want to delete user "' +
                                 this.get('username') + '"?');
 
-                utils.modalDialogDelete({
+                utils.modalDialog({
                     title: 'Delete ' + this.get('username') + '?',
                     body: text,
                     small: true,
                     show: true,
+                    type: 'deleteAnyway',
                     footer: {
                         buttonOk: function(){ that.deleteUser(options, force); },
                         buttonCancel: true
@@ -385,7 +386,7 @@ define(['marionette', 'paginator', 'utils'],
                                        // '<td>' + itm.username + '</td>' +
                                        // '<td>' + itm.email + '</td>' +
                                        // '<td>' + itm.rolename + '</td>' +
-                                        '<td>' + itm.ts + '</td>' +
+                                        '<td>' + utils.localizeDatetimeForUser(itm.ts) + '</td>' +
                                         '<td>' + itm.action + '</td>'
                                        // '<td>' + itm.ts + '</td>'
                                     ));
@@ -686,9 +687,9 @@ define(['marionette', 'paginator', 'utils'],
                         if (rs.data.length != 0){
                             _.each(rs.data, function(itm){
                                 that.ui.tb.append($('<tr>').append(
-                                    '<td>' + itm[0] + '</td>' +
+                                    '<td>' + utils.localizeDatetimeForUser(itm[0]) + '</td>' +
                                     '<td>' + utils.toHHMMSS(itm[1]) + '</td>' +
-                                    '<td>' + itm[2] + '</td>' +
+                                    '<td>' + utils.localizeDatetimeForUser(itm[2]) + '</td>' +
                                     '<td>' + itm[3] + '</td>'
                                 ))
                             });
@@ -705,7 +706,7 @@ define(['marionette', 'paginator', 'utils'],
                 var that = this;
                 utils.modalDialog({
                     title: "Authorize by " + this.model.get('username'),
-                    body: "Are you sure want to authorize by user '" +
+                    body: "Are you sure you want to authorize by user '" +
                         this.model.get('username') + "'?",
                     small: true,
                     show: true,
@@ -791,9 +792,9 @@ define(['marionette', 'paginator', 'utils'],
                 return {
                     first_name: first_name ? first_name : '',
                     last_name: last_name ? last_name : '',
-                    join_date: join_date ? join_date : '',
-                    last_login: last_login ? last_login : '',
-                    last_activity: last_activity ? last_activity : '',
+                    join_date: join_date ? utils.localizeDatetimeForUser(join_date) : '',
+                    last_login: last_login ? utils.localizeDatetimeForUser(last_login) : '',
+                    last_activity: last_activity ? utils.localizeDatetimeForUser(last_activity) : '',
                     pods: pods ? pods : [],
                     'kubeTypes': kubeTypes,
                     'kubes': kubesCount,
@@ -805,7 +806,7 @@ define(['marionette', 'paginator', 'utils'],
                 var that = this;
                 utils.modalDialog({
                     title: "Authorize by " + this.model.get('username'),
-                    body: "Are you sure want to authorize by user '" +
+                    body: "Are you sure you want to authorize by user '" +
                         this.model.get('username') + "'?",
                     small: true,
                     show: true,
@@ -1036,7 +1037,7 @@ define(['marionette', 'paginator', 'utils'],
             },
 
             back: function(){
-                App.router.navigate('/profile/' + this.model.id + '/general/', {trigger: true});
+                App.router.navigate('/', {trigger: true});
             },
         });
 

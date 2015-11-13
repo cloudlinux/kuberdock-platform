@@ -1241,6 +1241,9 @@
                                         vertical-align: top;
                                         display: inline-block;
                                         border: 1px solid #e5e5e5;
+                                        &.error{
+                                            border-color: red;
+                                        }
                                     }
                                 }
                             }
@@ -1407,9 +1410,10 @@
                             font-weight: bold;
                             margin-bottom: 5px;
                         }
-                        .item-body{
+                        .item-body-info{
                             font-size: 13px;
                             font-weight: normal;
+                            word-break: break-all;
                         }
                         .more{
                             padding-top: 12px;

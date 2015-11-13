@@ -38,7 +38,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('rbac_role.id'))
     permission_id = db.Column(db.Integer, db.ForeignKey('rbac_permission.id'))
     package_id = db.Column(db.Integer, db.ForeignKey('packages.id'))
-    join_date = db.Column(db.DateTime, default=datetime.datetime.now)
+    join_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     activities = db.relationship('UserActivity', back_populates="user")
     settings = db.Column(db.Text)
@@ -111,10 +111,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
             pod_id=x.pod_id,
             container_name=x.container_name,
             kubes=x.kubes,
-            start_time=x.start_time.isoformat(sep=' ')[:19]
-                if x.start_time else None,
-            end_time=x.end_time.isoformat(sep=' ')[:19]
-                if x.end_time else None
+            start_time=x.start_time,
+            end_time=x.end_time
         )
         return [
             dict(
@@ -164,11 +162,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
             data['pods_count'] = len(pods)
             data['containers_count'] = containers_count
             data['package_info'] = self.package_info()
-            data['join_date'] = self.join_date.isoformat(sep=' ')[:19]
-            data['last_activity'] = last_activity.isoformat(sep=' ')[:19] \
-                                    if last_activity else ''
-            data['last_login'] = last_login.isoformat(sep=' ')[:19] \
-                                    if last_login else None
+            data['join_date'] = self.join_date
+            data['last_activity'] = last_activity if last_activity else ''
+            data['last_login'] = last_login if last_login else None
         return data
 
     # def to_dict(self):
@@ -255,7 +251,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
 
     def get_token(self, regen=False):
         if not self.token or regen:
-            now = datetime.datetime.now()
+            now = datetime.datetime.utcnow()
             epoch = datetime.datetime(1970, 1, 1)
             delta = now - epoch
             seconds = int(delta.total_seconds())
@@ -308,7 +304,7 @@ class UserActivity(BaseModelMixin, db.Model):
 
     id = db.Column(
         db.Integer, primary_key=True, autoincrement=True, nullable=False)
-    ts = db.Column(db.DateTime, default=datetime.datetime.now)
+    ts = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     action = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User')
@@ -367,7 +363,7 @@ class UserActivity(BaseModelMixin, db.Model):
     def to_dict(self, include=None, exclude=None):
         data = dict(
             id=self.id,
-            ts=self.ts.isoformat(sep=' ')[:19],
+            ts=self.ts,
             action=UserActivity.ACTIONS.get(self.action),
             user_id=self.user_id,
             remote_ip=self.remote_ip or ''
@@ -387,7 +383,7 @@ class SessionData(db.Model):
     def __init__(self, id, data=None):
         self.id = id
         self.data = data
-        self.time_stamp = datetime.datetime.now()
+        self.time_stamp = datetime.datetime.utcnow()
 
     def expand_data(self):
         """Returns tuple of (randval, hmac_digest, data)."""

@@ -1,9 +1,29 @@
 import os
+import datetime
+
+import pytz
 from celery import Celery
 from flask import Flask
+from flask.json import JSONEncoder
 
 from .core import db, login_manager, influx_db
 #from .utils import register_blueprints
+
+
+class APIJSONEncoder(JSONEncoder):
+    """Fix datetime conversion in flask.jsonify, 'tojson' jinja filter.
+    All internal datetime fields are treated as UTC time. UTC offset will
+    be added to all serialized to json datetime objects.
+    Output date&time serialized strings will be looked like
+    '2015-11-12T06:41:02+00:00'
+    """
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.replace(tzinfo=pytz.UTC).isoformat()
+        if isinstance(obj, datetime.date):
+            return obj.isoformat()
+        return JSONEncoder.default(self, obj)
+
 
 def create_app(package_name, package_path, settings_override=None):
     app = Flask(package_name, instance_relative_config=True)
@@ -13,6 +33,7 @@ def create_app(package_name, package_path, settings_override=None):
     db.init_app(app)
     influx_db.init_app(app)
     login_manager.init_app(app)
+    app.json_encoder = APIJSONEncoder
     #register_blueprints(app, package_name, package_path)
     return app
 

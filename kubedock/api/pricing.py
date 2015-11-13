@@ -125,11 +125,10 @@ class KubesAPI(KubeUtils, MethodView):
             raise APIError('Kube type is not editable', 403)
         data = check_pricing_api(self._get_params(), kube_schema, update=True)
         if 'name' in data:
-            duplicate = Kube.query.filter(Kube.name == data['name'],
-                                          Kube.id != kube_id).first() is not None
-            if duplicate:
-                raise APIError('Kube with name \'{0}\' already exists'
-                               .format(data['name']))
+            duplicate = Kube.get_by_name(data['name'], Kube.id != kube_id)
+            if duplicate is not None:
+                raise APIError('Kube with name \'{0}\' already exists. '
+                               'Name should be unique'.format(data['name']))
         is_default = data.get('is_default', None)
         if is_default:
             _remove_is_default_kube_flags()
@@ -176,9 +175,9 @@ register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id', strict_slashes=Fa
 
 def add_kube(data):
     data = check_pricing_api(data, kube_schema)
-    if Kube.query.filter_by(name=data['name']).first() is not None:
-        raise APIError('Kube type with name \'{0}\' already exists'
-                       .format(data['name']))
+    if Kube.get_by_name(data['name']) is not None:
+        raise APIError('Kube type with name \'{0}\' already exists. '
+                       'Name should be unique'.format(data['name']))
 
     kube = Kube(**data)
     if kube.is_default:

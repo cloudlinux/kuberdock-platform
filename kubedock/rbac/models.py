@@ -23,6 +23,7 @@ class Role(BaseModelMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     rolename = db.Column(db.String(64), unique=True)
+    internal = db.Column(db.Boolean, nullable=False, default=False)
     users = db.relationship('User', backref='role', lazy='dynamic')
     permissions = db.relationship('Permission', backref='role', lazy='dynamic')
 
@@ -34,7 +35,8 @@ class Role(BaseModelMixin, db.Model):
 
     @classmethod
     def by_rolename(cls, rolename):
-        return cls.query.filter_by(rolename=rolename).first()
+        q = cls.query.filter(Role.rolename == rolename, db.not_(Role.internal))
+        return q.first()
 
     def __repr__(self):
         return "<Role(rolename='{0}')>".format(self.rolename)

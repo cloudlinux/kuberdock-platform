@@ -299,8 +299,12 @@ define(['pods_app/app',
                         public_ip = this.model.get('public_ip');
                     }
                     postDescription = postDescription.replace(r, public_ip);
+                    hasPorts = _.any(this.model.get('containers'), function(c) {
+                        return c.ports && c.ports.length;
+                    });
 
                 return {
+                    hasPorts        : hasPorts,
                     postDescription : postDescription,
                     publicIP        : publicIP,
                     publicName      : publicName,
@@ -485,6 +489,12 @@ define(['pods_app/app',
                         points.push([]);
                     }
                 }
+
+                // If there is only one point, jqplot will display ugly plot with
+                // weird grid and no line.
+                // Remove this point to force jqplot to show noDataIndicator.
+                if (this.model.get('points').length == 1)
+                    this.model.get('points').splice(0);
 
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {

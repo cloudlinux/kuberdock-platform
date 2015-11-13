@@ -1,7 +1,8 @@
 import json
+import socket
+
 import paramiko
 import redis
-import socket
 from sse import Sse
 from paramiko.ssh_exception import AuthenticationException, SSHException
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -9,7 +10,6 @@ from flask.ext.influxdb import InfluxDB
 from flask.ext.login import LoginManager
 from flask import current_app
 from werkzeug.contrib.cache import RedisCache
-
 
 from .settings import REDIS_HOST, REDIS_PORT, SSH_KEY_FILENAME
 
@@ -111,7 +111,7 @@ class RemoteManager(object):
 
     def exec_command(self, cmd):
         """
-        Asynchronously execute commend and return i, o, e  streams
+        Asynchronously execute command and return i, o, e  streams
         """
         return self.raw_ssh.exec_command(cmd)
 

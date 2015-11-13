@@ -49,7 +49,7 @@
             <div id="tab-content">
                 <div class="col-xs-10">
                     <div class="info col-xs-6">
-                        <div>Image tag: <%- image %></div>
+                        <div>Image: <%- image %></div>
                         <div>Kube type: <%- kube_type.name %></div>
                         <div>Restart policy: <%- restart_policy %></div>
                         <div>Kubes: <%- kubes %></div>
@@ -77,7 +77,7 @@
                                 <tr>
                                     <td class="containerPort"><%- p.containerPort ? p.containerPort : 'none'%></td>
                                     <td class="containerProtocol"><%- p.protocol ? p.protocol : 'none' %></td>
-                                    <td class="hostPort"><%- p.hostPort ? p.hostPort : 'none'%></td>
+                                    <td class="hostPort"><%- p.hostPort ? p.hostPort : p.containerPort%></td>
                                     <td><%- p.isPublic ? 'yes' : 'no' %></td>
                                 </tr>
                             <% }) %>

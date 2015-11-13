@@ -426,7 +426,7 @@
                             .filter(function(k){return k !== tgt.id})
                             .map(function(k){return document.getElementById(k).value})
                             .reduce(function(a, b){return (+a)+(+b)}, 0);
-                    displayTotal(getPackage(packageId).prefix + ((fixed + changing + (+tgt.value)) * price));
+                    displayTotal(getPackage(packageId).prefix + ((fixed + changing + (+tgt.value)) * price).toFixed(2));
                 }
                 else if (tgt.id in mutables && mutables[tgt.id].type === 'kube_type') {
                     var price = getKubeById(+tgt.value).price || 0,
@@ -435,7 +435,7 @@
                             .filter(function(k){return mutables[k].type === 'kube'})
                             .map(function(k){return document.getElementById(k).value})
                             .reduce(function(a, b){return (+a)+(+b)}, 0);
-                    displayTotal(getPackage(packageId).prefix + ((fixed + changing) * price));
+                    displayTotal(getPackage(packageId).prefix + ((fixed + changing) * price).toFixed(2));
                     composeResources(+tgt.value);
                 }
             }

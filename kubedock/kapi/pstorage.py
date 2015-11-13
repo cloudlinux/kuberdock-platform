@@ -119,12 +119,12 @@ class PersistentStorage(object):
                 if d['name'] != name and d['owner'] != user.username]
         return rv
 
-    def makefs(self, pd, fs='ext4'):
+    def makefs(self, pd, fs='xfs'):
         """
         Creates a filesystem on the device
 
         :param pd: kubedock.pods.models.PersistentDisk instance
-        :param fs: string -> fs type by default ext4
+        :param fs: string -> fs type by default xfs
         """
         return self._makefs(pd.drive_name, fs)
 
@@ -312,7 +312,7 @@ class CephStorage(PersistentStorage):
                           warn_only=True):
                 return run('cat /etc/ceph/ceph.conf')
 
-    def _makefs(self, drive, fs='ext4'):
+    def _makefs(self, drive, fs='xfs'):
         """
         Wrapper around checking drive status, mapper, fs creator and unmapper
         :param drive: string -> drive name
@@ -327,7 +327,7 @@ class CephStorage(PersistentStorage):
         self._unmap_drive(dev)
         return True
 
-    def _create_fs(self, device, fs='ext4'):
+    def _create_fs(self, device, fs='xfs'):
         """
         Actually makes a filesystem
         :param fs: string -> fs type
@@ -479,6 +479,8 @@ class CephStorage(PersistentStorage):
         """
         nodes = self._get_nodes(first_only)
 
+        if not nodes:
+            return []
         # Got dict: node ip -> node data
         with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                       warn_only=True):
@@ -622,7 +624,7 @@ class AmazonStorage(PersistentStorage):
                 self.end_stat(sys_drive_name=drive_name)
                 return 0 if vol.delete() else 1
 
-    def _makefs(self, drive_name, fs='ext4'):
+    def _makefs(self, drive_name, fs='xfs'):
         """
         Wrapper around checking drive status, attacher, fs creator and detacher
         :param drive_name: string -> drive name
@@ -719,7 +721,7 @@ class AmazonStorage(PersistentStorage):
                     raise APIError("No free letters for devices")
                 return '/dev/xvd{0}'.format(chr(last_num+1))
 
-    def _create_fs_if_missing(self, device, fs='ext4'):
+    def _create_fs_if_missing(self, device, fs='xfs'):
         with settings(host_string=self._first_node_ip):
             with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                           warn_only=True):

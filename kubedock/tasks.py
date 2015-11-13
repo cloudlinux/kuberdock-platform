@@ -303,7 +303,7 @@ def pull_hourly_stats():
 @celery.task()
 def process_missed_actions():
     actions = db.session.query(NodeMissedAction).filter(
-        NodeMissedAction.time_stamp > (datetime.now()-timedelta(minutes=35))
+        NodeMissedAction.time_stamp > (datetime.utcnow()-timedelta(minutes=35))
         ).order_by(NodeMissedAction.time_stamp)
     for action in actions:
         ssh, error_message = ssh_connect(action.host)

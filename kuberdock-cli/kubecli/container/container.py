@@ -591,7 +591,6 @@ class KuberDock(KubeCtl):
                     "Temporary pod {} isn't found".format(self.name))
             os.unlink(self._data_path)
 
-
     def _load(self, args):
         """
         Loads prevously saved pod data from a json file
@@ -628,8 +627,7 @@ class KuberDock(KubeCtl):
     def _prepare(self, final=False):
         valid = set([
             'name', 'containers', 'volumes', 'service',
-            'replicas', 'set_public_ip', 'kube_type', 'restartPolicy',
-            'public_ip'
+            'replicas', 'kube_type', 'restartPolicy', 'public_ip',
         ])
         self._prepare_volumes(final)
         self._prepare_ports()
@@ -695,7 +693,6 @@ class KuberDock(KubeCtl):
                     'pdName': self.persistent_drive,
                     'pdSize': getattr(self, 'size', None)}
 
-
     def _prepare_ports(self):
         """Checks if all necessary port entry data are set"""
         if not hasattr(self, 'container_port'):
@@ -715,7 +712,6 @@ class KuberDock(KubeCtl):
             "(?P<protocol>tcp|udp)?$"
         )
         ports = []
-        is_public_ip = False
 
         min_port = 1
         max_port = 2**16
@@ -740,8 +736,6 @@ class KuberDock(KubeCtl):
                         protocol not in ('tcp', 'udp')]):
                     raise SystemExit(right_format_error_message)
 
-                if public:
-                    is_public_ip = True
                 ports.append({
                     'isPublic': public,
                     'containerPort': container_port,
@@ -755,8 +749,6 @@ class KuberDock(KubeCtl):
             if c['image'] != self.image:
                 continue
             c['ports'] = ports
-
-        self.set_public_ip = is_public_ip
 
     def _prepare_env(self):
         """

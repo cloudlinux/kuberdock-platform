@@ -260,7 +260,7 @@ class MenuItem(BaseModelMixin, db.Model):
                     page.content = page_content
                     is_page_modified = True
                 if is_page_modified:
-                    page.modified = datetime.now()
+                    page.modified = datetime.utcnow()
                     page.modified_by_id = user_id
             if page is not None:
                 page.save()

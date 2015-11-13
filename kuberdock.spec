@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 6.5%{?dist}.cloudlinux
+Release: 8%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -176,7 +176,39 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
-* Fri Nov 06 2015 Alex Tishin <atishin@cloudlinux.com>  0.4-6.5
+* Thu Nov 12 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-8
+- AC-1430: move role edit to update script
+- AC-991: fixed timezone saving and conversion
+- changed ext4 filesystem to xfs for persistent volumes
+- some fixes for predefined apps unauthorized page
+- AC-980. Restrict create pod when no free public ip in pool. Refactored IP allocation. Removed blinker signals. Removed old api param set_public_ip
+- Fixes for updates: 00045_update.py, pstorage module
+- AC-1364: fix persistent-volumes path everywhere
+
+* Wed Nov 11 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-7.1
+- AC-1249: Add podname to confirmation remove dilog box
+- AC-1056: fix KeyError
+- AC-1446: Add error class to name fields if validation == false & scroll to this items
+- persistent volumes link bugfix
+
+* Wed Nov 11 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.4-7
+- Fix Grammar mistakes AC-856, АС-1317, AC-1388, AC-1377, AC-1292;
+- Fix validation in podname 63 max simbols - AC-914; AC-1443: Rename some fields
+- AC-1400: do not show podIP if pod does not have ports
+- AC-1198: improved validation in kube types API
+- Node logging timestamp should contain timezone info
+- AC-933: ports validation; added ports validaion in frontend, fixed in backend
+- duplicate volumes bugfix; buttons on environment variables step bugfix
+- AC-1447: noDataIndicator for nodes monitoring
+- AC-1335: Edit user > Users back button fix navigate to user's list;
+- AC-1445: Add stop button if status is pending
+- AC-978: show message if no such image, fix style with word-break;
+- AC-1430: hide role HostingPanel
+- Added field `internal` to rbac_role model: role 'HostingPanel' is internal now.
+- AC-1046: show containerPort if hostPort none; If hostPort is 'None', show containerPort.
+- Fix Published and Protocol columns
+
+* Mon Nov 09 2015 Alex Tishin <atishin@cloudlinux.com>  0.4-6.5
 - AC-1436: Fix logs ordering
 
 * Mon Nov 09 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Leonid Kanter <lkanter@cloudlinux.com> 0.4-6.4

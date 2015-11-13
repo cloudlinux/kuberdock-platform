@@ -179,6 +179,10 @@ class APIError(Exception):
         self.message = message
         self.status_code = status_code
 
+    def __str__(self):
+        # Only message because this class may wrap other exception classes
+        return self.message
+
     def __repr__(self):
         return '<{0}: "{1}" ({2})>'.format(
             self.__class__.__name__, self.message, self.status_code)
@@ -674,7 +678,7 @@ class KubeUtils(object):
             user = cls._get_current_user()
             params = cls._get_params()
             if ('command' in params and params['command'] in ['start'] or params) and user.suspended is True:
-                raise PermissionDenied('Permission denied. User suspended.')
+                raise PermissionDenied('Permission denied. User suspended. +  Your package has expired. Please upgrade it.')
             return func(*args, **kwargs)
         return wrapper
 

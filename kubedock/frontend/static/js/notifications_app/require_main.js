@@ -3,15 +3,17 @@ requirejs.config({
     baseUrl: '/static/js',
     urlArgs: "bust=" + (new Date()).getTime(),
     paths: {
-        backbone: 'lib/backbone',
-        jquery: 'lib/jquery',
-        underscore: 'lib/underscore-min',
-        marionette: 'lib/backbone.marionette',
-        bootstrap: 'lib/bootstrap',
-        paginator: 'lib/backbone.paginator',
-        tpl: 'lib/tpl',
-        text: 'lib/text',
-        dde: 'lib/dropdowns-enhancement'
+        backbone         : 'lib/backbone',
+        jquery           : 'lib/jquery',
+        underscore       : 'lib/underscore-min',
+        marionette       : 'lib/backbone.marionette',
+        bootstrap        : 'lib/bootstrap',
+        paginator        : 'lib/backbone.paginator',
+        tpl              : 'lib/tpl',
+        text             : 'lib/text',
+        dde              : 'lib/dropdowns-enhancement',
+        moment           : "lib/moment.min",
+        "moment-timezone": "lib/moment-timezone-with-data.min",
     },
     shim: {
         jquery: {

@@ -47,7 +47,7 @@
                         </select>
                     </div>
                     <% } %>
-                    <label>Kubes/replicas:</label>
+                    <label>Kubes:</label>
                     <div class="col-xs-4 no-padding">
                         <select class="kube-quantity selectpicker">
                             <option value="1">1</option>

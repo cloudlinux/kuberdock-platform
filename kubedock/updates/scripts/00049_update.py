@@ -8,7 +8,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
                                  ordering=1, menu_id=1,
                                  roles=json.dumps(["User", "TrialUser"]))
     public_ips.save()
-    p = MenuItem.create(name="Persistent volumes", path="/persistent_volumes/",
+    p = MenuItem.create(name="Persistent volumes", path="/persistent-volumes/",
                         ordering=2, menu_id=1,
                         roles=json.dumps(["User", "TrialUser"]))
     p.save()

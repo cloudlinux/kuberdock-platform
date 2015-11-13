@@ -498,11 +498,11 @@ define(['nodes_app/app', 'marionette', 'utils',
                     },
                     statusCode: {
                         404: function(xhr) {
-                            utils.notifyWindow('Log not found');
+                            utils.notifyWindow('Logs aren\'t found');
                         },
                         200: function(xhr){
                             if (xhr.data.hits.length == 0){
-                                this.ui.textarea.append('<p>Nothing to show because containers log is empty.</p');
+                                this.ui.textarea.append('<p>Nothing to show because node log is empty.</p');
                             }
                         }
                     }
@@ -525,8 +525,15 @@ define(['nodes_app/app', 'marionette', 'utils',
             chart: '.graph-item'
         },
 
+        initialize: function(options) {
+            this.nodeId = options.nodeId;
+            this.listenTo(App.nodesCollection, 'reset', this.render);
+        },
+
         makeGraph: function(){
             var lines = this.model.get('lines'),
+                node = App.nodesCollection.get(this.nodeId),
+                running = node.get('status') === 'running',
                 points = [],
                 options = {
                     title: this.model.get('title'),
@@ -555,7 +562,21 @@ define(['nodes_app/app', 'marionette', 'utils',
                         background: '#ffffff',
                         drawBorder: false,
                         shadow: false
-                    }
+                    },
+                    noDataIndicator: {
+                        show: true,
+                        indicator: !running ? "Couldn't connect to the node (maybe it's rebooting)..." :
+                            "Collecting data... plot will be dispayed in a few minutes.",
+                        axes: {
+                            xaxis: {
+                                min: new Date(+new Date() - 1000*60*20),
+                                max: new Date(),
+                                tickOptions: {formatString:'%H:%M'},
+                                tickInterval: '5 minutes',
+                            },
+                            yaxis: {min: 0, max: 150, tickInterval: 50}
+                        }
+                    },
                 };
             if (this.model.has('seriesColors')) {
                 options.seriesColors = this.model.get('seriesColors');
@@ -567,6 +588,12 @@ define(['nodes_app/app', 'marionette', 'utils',
                 }
             }
 
+            // If there is only one point, jqplot will display ugly plot with
+            // weird grid and no line.
+            // Remove this point to force jqplot to show noDataIndicator.
+            if (this.model.get('points').length == 1)
+                this.model.get('points').splice(0);
+
             this.model.get('points').forEach(function(record){
                 for (var i=0; i<lines; i++) {
                     points[i].push([record[0], record[i+1]])
@@ -575,18 +602,19 @@ define(['nodes_app/app', 'marionette', 'utils',
             this.ui.chart.jqplot(points, options);
         },
 
-        onShow: function(){
+        onDomRefresh: function(){
             try {
                 this.makeGraph();
             }
             catch(e){
                 console.log('Cannot display graph' + e);
             }
-        }
+        },
     });
 
     views.NodeMonitoringTabView = Backbone.Marionette.CollectionView.extend({
         childView: views.NodeMonitoringTabViewItem,
+        childViewOptions: function() { return { nodeId: this.options.nodeId }; },
     });
 
     //================= Node Timelines Tab =================//

@@ -77,6 +77,16 @@ class Kube(db.Model):
         return cls.query.filter(cls.id == kubeid).first()
 
     @classmethod
+    def get_by_name(cls, name, *additional_filters):
+        """Searches for a kube by given name. Search is case insensitive."""
+        query = cls.query.filter(
+            db.func.lower(cls.name) == db.func.lower(name)
+        )
+        if additional_filters:
+            query = query.filter(*additional_filters)
+        return query.first()
+
+    @classmethod
     def public_kubes(cls):
         return cls.query.filter(
             ~cls.id.in_(NOT_PUBLIC_KUBE_TYPES)

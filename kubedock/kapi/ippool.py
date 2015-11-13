@@ -3,6 +3,7 @@ import ipaddress
 from ..pods.models import IPPool, PodIP, ip_network
 from ..api import APIError
 
+
 class IpAddrPool(object):
 
     def get(self, net=None, page=None):

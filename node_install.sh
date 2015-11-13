@@ -253,7 +253,7 @@ EOF
 echo "Reconfiguring rsyslog..."
 cat > /etc/rsyslog.d/kuberdock.conf << EOF
 \$LocalHostName $NODENAME
-*.* @127.0.0.1:5140
+*.* @127.0.0.1:5140;RSYSLOG_ForwardFormat
 EOF
 
 

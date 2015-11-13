@@ -222,9 +222,9 @@ define(['pods_app/app',
                     that = this,
                     items = that.collection.fullCollection.filter(function(i){return i.is_checked});
                 if (items.length > 1){
-                    body = "Are you sure want to delete selected pods?"
+                    body = 'Are you sure want to delete selected pods?';
                 } else {
-                    body = "Are you sure want to delete selected pod?"
+                    body = 'Are you sure want to delete "' + items[0].get('name') + '" pod?';
                 }
                 utils.modalDialogDelete({
                     title: "Delete",

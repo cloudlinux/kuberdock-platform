@@ -141,8 +141,8 @@ define(['pods_app/app',
                                 return item.get('name') == newValue;
                             }
                         );
-                        if (newValue.length > 64){
-                            utils.notifyWindow('The maximum length of the Pod name must be less than 64 characters');
+                        if (newValue.length > 63){
+                            utils.notifyWindow('The maximum length of the Pod name must be less than 63 characters');
                             return ' ';
                         }
                         if (model) {
@@ -352,7 +352,9 @@ define(['pods_app/app',
             },
 
             ui: {
-                ieditable      : '.ieditable',
+                containerPort  : '.containerPort .ieditable',
+                podPort        : '.hostPort .ieditable',
+                mountPath      : '.mountPath.ieditable',
                 iseditable     : '.iseditable',
                 iveditable     : '.iveditable',
                 addPort        : '.add-port',
@@ -367,7 +369,6 @@ define(['pods_app/app',
                 removeVolume   : '.remove-volume',
                 restartPolicy  : '.restart-policy',
                 addDriveCancel : '.add-drive-cancel',
-                containerPort  : '.containerPort',
                 podPorts       : '.hostPort',
 
                 stopContainer  : '#stopContainer',
@@ -737,23 +738,54 @@ define(['pods_app/app',
                     });
                 }
 
-                this.ui.ieditable.editable({
+                var validatePort = function(newValue) {
+                    newValue = parseInt(newValue);
+                    if (isNaN(newValue) || newValue < 1 || newValue > 65535) {
+                        utils.notifyWindow('Port must be a number in range 1-65535.');
+                        return ' ';  // return string - means validation not passed
+                    }
+                    return {newValue: newValue};
+                };
+
+                this.ui.podPort.editable({
+                    type: 'text',
+                    mode: 'inline',
+                    validate: function(newValue) {
+                        if (newValue === '') return;  // host port accepts empty value
+                        return validatePort(newValue);
+                    },
+                    success: function(response, newValue) {
+                        var index = $(this).closest('tr').index(),
+                            port = that.model.get('ports')[index];
+                        port.hostPort = newValue === '' ? null : newValue;
+                    }
+                });
+
+                this.ui.containerPort.editable({
+                    type: 'text',
+                    mode: 'inline',
+                    validate: validatePort,
+                    success: function(response, newValue) {
+                        var index = $(this).closest('tr').index();
+                        that.model.get('ports')[index].containerPort = newValue;
+                    }
+                });
+
+                this.ui.mountPath.editable({
                     type: 'text',
                     mode: 'inline',
                     success: function(response, newValue) {
                         var index = $(this).closest('tr').index(),
-                            className = $(this).parent().attr('class'),
-                            item = $(this);
-                        if (className !== undefined) {
-                            that.model.get('ports')[index][className] = parseInt(newValue);
-                        }
-                        else if (item.hasClass('mountPath')) {
-                            var mountEntry = that.model.get('volumeMounts')[index];
-                            mountEntry['mountPath'] = newValue;
-                            mountEntry['name'] = that.generateName(newValue);
-                            that.pod.get('volumes').push({name: mountEntry.name,
-                                                          localStorage: true});
-                        }
+                            mountEntry = that.model.get('volumeMounts')[index],
+                            newName = that.generateName(newValue),
+                            volumes = that.pod.get('volumes'),
+                            volume = _.findWhere(volumes, {name: mountEntry.name});
+                        if (volume !== undefined)
+                            volume.name = newName;
+                        else
+                            volumes.push({name: newName, localStorage: true});
+                        mountEntry.mountPath = newValue;
+                        mountEntry.name = newName;
                     }
                 });
 
@@ -825,6 +857,7 @@ define(['pods_app/app',
                 'click @ui.reset'      : 'resetFielsdsValue',
                 'change @ui.input'     : 'onChangeInput',
                 'click @ui.next'       : 'finalStep',
+                'focus @ui.nameField'  : 'removeError',
 
                 'click @ui.stopContainer'  : 'stopContainer',
                 'click @ui.startContainer' : 'startContainer',
@@ -851,7 +884,7 @@ define(['pods_app/app',
                 });
             },
 
-            onRender: function(){
+            onDomRefresh: function(){
                 if (utils.hasScroll()) {
                     this.ui.navButtons.addClass('fixed');
                 } else {
@@ -895,13 +928,23 @@ define(['pods_app/app',
                 App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
             },
 
+            removeError: function(evt){
+                var target = $(evt.target);
+                if (target.hasClass('error')) target.removeClass('error');
+            },
+
             finalStep: function(){
                 var success = true,
                     pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]*$/;
 
                 _.each(this.ui.nameField, function(field){
-                    if (!pattern.test(field.value)) success = false
+                    if (!pattern.test(field.value)){
+                        $(field).addClass('error');
+                        success = false
+                    }
                 })
+
+                if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
 
                 !success ?
                 utils.notifyWindow('First symbol must be letter in variables name') :
@@ -996,6 +1039,12 @@ define(['pods_app/app',
                         points.push([]);
                     }
                 }
+
+                // If there is only one point, jqplot will display ugly plot with
+                // weird grid and no line.
+                // Remove this point to force jqplot to show noDataIndicator.
+                if (this.model.get('points').length == 1)
+                    this.model.get('points').splice(0);
 
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {

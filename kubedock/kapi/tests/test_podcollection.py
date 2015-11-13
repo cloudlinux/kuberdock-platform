@@ -173,10 +173,9 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         del_.assert_called_once_with(['replicationcontrollers', 's'], ns='n')
         self.assertTrue(self.app._stop_cluster.called)
 
-    @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_delete_request_is_sent_twice_if_pod_has_service(self, get_, del_, mod_):
+    def test_delete_request_is_sent_twice_if_pod_has_service(self, get_, del_):
         """
         If a pod has a service then _del is expected to be called twice: for deletion
         a pod itself and for deletion its service. Moreover a _get request to learn
@@ -206,15 +205,11 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         self.assertEqual(del_.call_args_list, expected,
                          "Arguments for deletion pod and service differ from expected ones")
 
-        # Making sure modify_node_ips has not been called
-        self.assertFalse(mod_.called, "modify_node_ips is not expected to be called"
-                         " if no 'assigned-to' property")
 
     @mock.patch('kubedock.kapi.podcollection.current_app')
-    @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_pod_assigned_IPs_are_cleared(self, get_, del_, mod_, ca_):
+    def test_pod_assigned_IPs_are_cleared(self, get_, del_, ca_):
         """
         Check if an attempt to unbind IP address has been made and was successful.
         """
@@ -233,20 +228,15 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
                     'public-ip-state':'{"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
             'spec':{
                 'ports':[]}}
-        mod_.return_value = True
 
         # Making actual call
         self.app.delete(str(uuid4()))
 
-        # Making sure modify_node_ips has been called once with expected args
-        mod_.assert_called_once_with('fs', 'host1', 'del', 'ip1', 'ip2', [], ca_)
-
     @mock.patch('kubedock.kapi.podcollection.current_app')
-    @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
     @mock.patch.object(podcollection.PodCollection, '_raise')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_pod_exception_raised_when_modified_node_ips_returns_false(self, get_, del_, raise_, mod_, ca_):
+    def test_pod_exception_raised_when_modified_node_ips_returns_false(self, get_, del_, raise_, ca_):
         """
         Check if an attempt to unbind IP address has been made and failed.
         """
@@ -265,7 +255,6 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
                     'public-ip-state':'{"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
             'spec':{
                 'ports':[]}}
-        mod_.return_value = False
 
         # Making actual call
         self.app.delete(str(uuid4()))
@@ -274,10 +263,9 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
 
     @mock.patch.object(podcollection.ModelQuery, '_free_ip')
     @mock.patch('kubedock.kapi.podcollection.current_app')
-    @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_pod_assigned_IPs_are_marked_as_free(self, get_, del_, mod_, ca_, free_):
+    def test_pod_assigned_IPs_are_marked_as_free(self, get_, del_, ca_, free_):
         """
         Check if an attempt to free a pod public IP has been made after the deletion
         of the pod
@@ -298,7 +286,6 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
                     'public-ip-state':'{"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
             'spec':{
                 'ports':[]}}
-        mod_.return_value = True
 
         # Making actual call
         self.app.delete(str(uuid4()))
@@ -306,11 +293,10 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         self.assertTrue(free_.called, "pod._free_ip is expected to be called")
 
     @mock.patch('kubedock.kapi.podcollection.current_app')
-    @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
     @mock.patch.object(podcollection.PodCollection, '_drop_namespace')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_namespace_is_dropped(self, get_, del_, dn_, mod_, ca_):
+    def test_namespace_is_dropped(self, get_, del_, dn_, ca_):
         """
         Check if an attempt to call _drop_namespace has been made.
         """
@@ -328,7 +314,6 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
                     'public-ip-state':'{"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
             'spec':{
                 'ports':[]}}
-        mod_.return_value = True
 
         # Making actual call
         self.app.delete(str(uuid4()))
@@ -337,10 +322,9 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
 
     @mock.patch.object(podcollection.ModelQuery, '_mark_pod_as_deleted')
     @mock.patch('kubedock.kapi.podcollection.current_app')
-    @mock.patch('kubedock.kapi.podcollection.modify_node_ips')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_pod_marked_as_deleted(self, get_, del_, mod_, ca_, mark_):
+    def test_pod_marked_as_deleted(self, get_, del_, ca_, mark_):
         """
         Check if an attempt to call _mark_pod_as_deleted has been made.
         """
@@ -358,7 +342,6 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
                     'public-ip-state':'{"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
             'spec':{
                 'ports':[]}}
-        mod_.return_value = True
 
         # Making actual call
         uuid = str(uuid4())

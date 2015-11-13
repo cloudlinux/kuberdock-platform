@@ -8,8 +8,8 @@ from sqlalchemy import func
 import pytz
 
 from .api import APIError
-from .billing import Kube, Package
 from .predefined_apps.models import PredefinedApp
+from .billing.models import Kube, Package
 from .users.models import User
 from .nodes.models import Node
 from .rbac.models import Role

@@ -32,7 +32,7 @@ class KubeQuery(object):
         Raises an error
         :param error_string: string
         """
-        if self._json:
+        if self.return_json:
             raise SystemExit(
                 json.dumps(
                     {'status': 'ERROR',

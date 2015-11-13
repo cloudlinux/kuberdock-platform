@@ -33,12 +33,14 @@ class DBTestCase(FlaskTestCase):
     def create_app(self):
         return create_app(self)
 
-    def setUp(self):
+    def _pre_setup(self, *args, **kwargs):
+        super(DBTestCase, self)._pre_setup(*args, **kwargs)
         db.reflect()
         db.drop_all()
         db.create_all()
 
-    def tearDown(self):
+    def _post_teardown(self, *args, **kwargs):
+        super(DBTestCase, self)._post_teardown(*args, **kwargs)
         db.session.remove()
 
 
@@ -47,8 +49,8 @@ class APITestCase(DBTestCase):
         from kubedock.api import create_app
         return create_app(self, fake_sessions=True)
 
-    def setUp(self):
-        super(APITestCase, self).setUp()
+    def _pre_setup(self, *args, **kwargs):
+        super(APITestCase, self)._pre_setup(*args, **kwargs)
         from kubedock import sessions
         self.app.session_interface = sessions.ManagedSessionInterface(
             sessions.DataBaseSessionManager(self.SECRET_KEY), [], timedelta(days=1))

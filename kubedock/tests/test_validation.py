@@ -1,39 +1,40 @@
 # -*- coding: utf-8 -*-
-import sys
 import unittest
 import mock
 import random
 import string
-
-_saved_modules = {}
-_modules_to_mock = ('flask', 'sqlalchemy', 'kubedock.core', 'kubedock.api',
-                    'kubedock.utils', 'kubedock.billing', 'kubedock.rbac',
-                    'kubedock.users.models', 'kubedock.nodes.models',
-                    'kubedock.rbac.models', 'kubedock.predefined_apps.models')
-
-
-# We want to mock real modules which could be missing on test system
-def setUpModule():
-    global User, V, UserValidator
-
-    for module in _modules_to_mock:
-        if module in sys.modules:
-            _saved_modules[module] = sys.modules.get(module)
-        sys.modules[module] = mock.Mock()
-    sys.modules['kubedock.api'].APIError = APIError
-
-    from kubedock.users.models import User
-    from ..validation import V, UserValidator
-
-
-def tearDownModule():
-    for module in _modules_to_mock:
-        if module in _saved_modules:
-            sys.modules[module] = _saved_modules[module]
+from .. import validation
 
 
 class APIError(Exception):
     pass
+
+global_patchers = [
+    mock.patch.object(validation, 'APIError', APIError),
+    mock.patch.object(validation, 'PredefinedApp'),
+    mock.patch.object(validation, 'Kube'),
+    mock.patch.object(validation, 'Package'),
+    mock.patch.object(validation, 'User'),
+    mock.patch.object(validation, 'Node'),
+    mock.patch.object(validation, 'Role'),
+    mock.patch.object(validation, 'strip_offset_from_timezone'),
+]
+
+
+# We want to mock real modules which could be missing on test system
+def setUpModule():
+    for patcher in global_patchers:
+        patcher.start()
+
+
+def tearDownModule():
+    for patcher in global_patchers:
+        patcher.stop()
+
+
+V = validation.V
+UserValidator = validation.UserValidator
+User = validation.User
 
 
 class TestV(unittest.TestCase):

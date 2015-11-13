@@ -124,7 +124,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 status=p.status,
                 kubes=p.kubes,
                 containers_count=p.containers_count,
-                states=[states(state) for state in p.states] if 'states' not in exclude else []
+                states=([] if 'states' in exclude else
+                        [states(state) for state in p.container_states])
             ) for p in self.pods if not p.is_deleted
         ]
 

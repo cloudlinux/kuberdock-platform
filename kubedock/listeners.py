@@ -1,24 +1,19 @@
-import datetime
 import gevent
 import json
 import os
 import requests
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
-from .core import db, ConnectionPool
+from .core import ConnectionPool
 from .pods.models import Pod, PersistentDisk
-from .usage.models import ContainerState
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
-from .tasks import fix_pods_timeline_heavy
 from .utils import (modify_node_ips, get_api_url, set_limit,
                     unregistered_pod_warning, send_event,
                     pod_without_id_warning, unbind_ip)
-from .kapi.pod_states import save_pod_state
+from .kapi.usage import save_pod_state, update_containers_state
 
 
-DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 MAX_ETCD_VERSIONS = 1000
 
 
@@ -125,66 +120,6 @@ def process_endpoints_event(data, app):
         pass
 
 
-def update_containers_state(event_type, pod_id, containers):
-    if Pod.query.get(pod_id) is None:
-        unregistered_pod_warning(pod_id)
-        return
-
-    for container in containers:
-        if 'containerID' not in container:
-            continue
-        container_name = container['name']
-        docker_id = container['containerID'].split('docker://')[-1]
-        kubes = container.get('kubes', 1)
-        for state in container['state'].values():
-            start = state.get('startedAt')
-            if start is None:
-                continue
-            start = datetime.datetime.strptime(start, DATETIME_FORMAT)
-            end = state.get('finishedAt')
-            cs = ContainerState.query.filter(
-                ContainerState.pod_id == pod_id,
-                ContainerState.container_name == container_name,
-                ContainerState.docker_id == docker_id,
-                ContainerState.kubes == kubes,
-                ContainerState.start_time == start,
-            ).first()
-            if end is not None:
-                end = datetime.datetime.strptime(end, DATETIME_FORMAT)
-            elif event_type == 'DELETED':
-                end = datetime.datetime.utcnow().replace(microsecond=0)
-            if cs:
-                cs.end_time = end
-            else:
-                cs = ContainerState(
-                    pod_id=pod_id,
-                    container_name=container_name,
-                    docker_id=docker_id,
-                    kubes=kubes,
-                    start_time=start,
-                    end_time=end,
-                )
-                db.session.add(cs)
-            try:
-                prev_cs = ContainerState.query.filter(
-                    ContainerState.pod_id == pod_id,
-                    ContainerState.container_name == container_name,
-                    ContainerState.start_time < start,
-                    db.or_(ContainerState.end_time > start,
-                           ContainerState.end_time.is_(None)),
-                ).one()
-            except MultipleResultsFound:
-                fix_pods_timeline_heavy.delay()
-            except NoResultFound:
-                pass
-            else:
-                prev_cs.end_time = start
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-
-
 def get_pod_state(pod):
     res = [pod['status']['phase']]
     for container in pod['status'].get('containerStatuses', []):
@@ -232,20 +167,19 @@ def process_pods_event(data, app):
             unregistered_pod_warning(pod_id)
             return
 
-    if event_type in ('MODIFIED', 'DELETED'):
-        with app.app_context():
+        host = pod['spec'].get('nodeName')
+        if host is not None:
+            save_pod_state(pod_id, event_type, host)
+
+        if event_type in ('MODIFIED', 'DELETED'):
             if event_type == 'DELETED' or \
                     pod['status']['phase'].lower() in ('succeeded', 'failed'):
                 PersistentDisk.free(pod_id)
             containers = pod['status'].get('containerStatuses', [])
             if containers:
-                update_containers_state(event_type, pod_id, containers)
+                update_containers_state(pod_id, containers,
+                                        deleted=(event_type == 'DELETED'))
 
-    host = pod['spec'].get('nodeName')
-    if host is None:
-        return
-    with app.app_context():
-        save_pod_state(pod_id, event_type, host)
     if event_type == 'MODIFIED':
         # fs limits
         containers = {}

@@ -33,7 +33,7 @@ def get_usage(login):
 
 def get_pod_usage(pod):
     time_ = defaultdict(list)
-    for state in pod.states:
+    for state in pod.container_states:
         start = to_timestamp(state.start_time)
         end = (int(time.time()) if state.end_time is None else
                to_timestamp(state.end_time))

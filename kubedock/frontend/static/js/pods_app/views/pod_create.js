@@ -1187,6 +1187,7 @@ define(['pods_app/app',
             },
 
             initialize: function() {
+                _.bindAll(this, 'getLogs');
                 this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
                     var pod = App.WorkFlow.getCollection().fullCollection.get(
                             this.model.get('parentID'));
@@ -1197,46 +1198,39 @@ define(['pods_app/app',
                 });
 
                 this.model.set('logs', []);
-                function get_logs() {
-                    if (!_.contains(['running', 'terminated'], this.model.get('state'))) {
-                        this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
-                        return;
-                    }
-                    var container_id = this.model.get('containerID'),
-                        size = 100,
-                        url = '/api/logs/container/' + container_id +
-                              '?size=' + size;
-                    $.ajax({
-                        url: url,
-                        dataType : 'json',
-                        type: 'GET',
-                        context: this,
-                        success: function(data){
-                            var lines = _.map(data.data.hits, function(line) {
-                                return line._source;
-                            });
-                            if (lines.length) {
-                                lines.reverse();  // from oldest to newest
-                                var logs = this.model.get('logs');
-                                if (logs.length) {
-                                    // if we have some logs, append only new lines
-                                    var last = logs[logs.length - 1]['@timestamp'];
-                                    lines = _.filter(lines, function(line) {
-                                        return line['@timestamp'] > last;
-                                    });
-                                }
-                                this.model.set('logs', logs.concat(lines));
-                            }
+                this.getLogs();
+            },
 
-                            this.render();
-                        },
-                        error: function(){
-                            utils.notifyWindow('Log not found');
-                        }
-                    });
-                    this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
-                }
-                $.proxy(get_logs, this)();
+            getLogs: function() {
+                var containerName = this.model.get('name'),
+                    size = 100,
+                    url = '/api/logs/container/' + containerName +
+                          '?size=' + size;
+                $.ajax({
+                    url: url,
+                    dataType : 'json',
+                    type: 'GET',
+                    context: this,
+                    complete: function(){
+                        this.model.set('timeout', setTimeout(this.getLogs, 10000));
+                    },
+                    success: function(data){
+                        var seriesByTime = _.indexBy(this.model.get('logs'), 'start');
+                        _.each(data.data.reverse(), function(serie) {
+                            var lines = serie.hits.reverse(),
+                                oldSerie = seriesByTime[serie.start];
+                            if (lines.length && oldSerie && oldSerie.hits.length) {
+                                // if we have some logs, append only new lines
+                                var first = lines[0],
+                                    index = _.sortedIndex(oldSerie.hits, first, 'time_nano');
+                                lines.unshift.apply(lines, _.first(oldSerie.hits, index));
+                            }
+                        });
+                        this.model.set('logs', data.data);
+                        this.render();
+                    },
+                    error: function(){ utils.notifyWindow('Log not found'); },
+                });
             },
 
             startItem: function(){
@@ -1256,9 +1250,25 @@ define(['pods_app/app',
                 clearTimeout(this.model.get('timeout'));
             },
 
+            onBeforeRender: function () {
+                // remember scroll position
+                var el = this.ui.textarea,
+                    jspAPI = el.data ? el.data('jsp') : undefined,
+                    logScrollPercent = jspAPI ? jspAPI.getPercentScrolledY() : null;
+                if (logScrollPercent < 1)  // if not scrolled to the end, stay
+                    this.logScroll = jspAPI ? jspAPI.getContentPositionY() : null;
+                else  // otherwise stick to bottom
+                    this.logScroll = null;
+            },
+
             onRender: function () {
-                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
                 this.ui.textarea.jScrollPane();
+                var jspAPI = this.ui.textarea.data('jsp');
+                if (!jspAPI) return;
+                if (this.logScroll === null)
+                    jspAPI.scrollToPercentY(1);  // stick to bottom
+                else
+                    jspAPI.scrollToY(this.logScroll);  // stay at the same position
             },
         });
 

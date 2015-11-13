@@ -1,15 +1,13 @@
 """API for logs retreiving.
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 from flask.ext.login import current_user
 
-from ..api import PermissionDenied
 from ..rbac import check_permission
-from ..usage.models import ContainerState
 from ..utils import (login_required_or_basic_or_token, parse_datetime_str,
-    KubeUtils)
-from ..kapi import es_logs, pod_states
-from ..kapi.podcollection import PodCollection
+                     KubeUtils)
+from ..kapi import es_logs, usage
+from ..users.models import User
 from ..pods.models import Pod
 from ..nodes.models import Node
 from . import APIError
@@ -20,8 +18,9 @@ logs = Blueprint('logs', __name__, url_prefix='/logs')
 
 @logs.route('/container/<containerid>', methods=['GET'])
 @login_required_or_basic_or_token
+@KubeUtils.jsonwrap
 def api_get_container_logs(containerid):
-    """Return logs from specified host and container.
+    """Return logs from specified container.
     Optional parameters (submitted via ?key=value&...):
         starttime - minimum log time to select
         endtime - maximum log time to select
@@ -37,34 +36,22 @@ def api_get_container_logs(containerid):
     TODO: add ordering parameter support.
 
     """
-    cs = ContainerState.query.filter(
-        ContainerState.pod.has(owner=current_user),
-        ContainerState.docker_id == containerid,
-    ).first()
-    if not cs:
-        raise PermissionDenied('Denied to {0}'.format(current_user.username))
-
     starttime = gettime_parameter(request.args, 'starttime')
     endtime = gettime_parameter(request.args, 'endtime')
     try:
         size = int(request.args.get('size', None))
     except (TypeError, ValueError):
         size = 100
+    owner = User.get(current_user.username)
 
-    host = None
-    for pod in PodCollection(current_user).get(as_json=False):
-        if pod['id'] == cs.pod_id:
-            host = Node.query.filter_by(hostname=pod['host']).first().ip
-            break
-
-    return jsonify(es_logs.get_container_logs(
-        containerid, size, starttime, endtime, host=host
-    ))
+    return es_logs.get_container_logs(containerid, owner.id,
+                                      size, starttime, endtime)
 
 
 @logs.route('/node/<hostname>', methods=['GET'])
 @login_required_or_basic_or_token
 @check_permission('get', 'nodes')
+@KubeUtils.jsonwrap
 def api_get_node_logs(hostname):
     """Extracts node's logs by query to node's elasticsearch.
     Optional parameters (submitted via ?key=value&...):
@@ -81,11 +68,12 @@ def api_get_node_logs(hostname):
     if date:
         date = parse_datetime_str(date)
     host = Node.query.filter_by(hostname=hostname).first().ip
-    return jsonify(es_logs.get_node_logs(hostname, date, size, host=host))
+    return es_logs.get_node_logs(hostname, date, size, host=host)
 
 
 @logs.route('/pod-states/<pod_id>/<depth>', methods=['GET'])
 @login_required_or_basic_or_token
+@KubeUtils.jsonwrap
 def api_get_pod_states(pod_id, depth):
     """Extracts pod history.
     :param pod_id: kuberdock pod identifier
@@ -112,10 +100,7 @@ def api_get_pod_states(pod_id, depth):
             depth = 0
     except (TypeError, ValueError):
         depth = 1
-    return jsonify({
-        'status': 'OK',
-        'data': pod_states.select_pod_states_history(pod_id, depth)
-    })
+    return usage.select_pod_states_history(pod_id, depth)
 
 
 def gettime_parameter(args, param):

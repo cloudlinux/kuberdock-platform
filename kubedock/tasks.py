@@ -27,7 +27,7 @@ from .utils import (
 )
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
-from .models import Pod, ContainerState, User
+from .models import Pod, ContainerState, PodState, User
 from .nodes.models import NodeMissedAction, Node, NodeFlag, NodeFlagNames
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
@@ -377,15 +377,13 @@ def fix_pods_timeline():
 
     for cs in css:
         cs_next = ContainerState.query.filter(
-            ContainerState.pod_id == cs.pod_id,
+            ContainerState.pod_state.has(pod_id=cs.pod_state.pod_id),
             ContainerState.container_name == cs.container_name,
             ContainerState.start_time > cs.start_time,
-        ).order_by(
-            ContainerState.start_time,
-        ).first()
+        ).order_by(ContainerState.start_time).first()
         if cs_next:
             cs.end_time = cs_next.start_time
-        elif cs.pod_id not in pod_ids:
+        elif cs.pod_state.pod_id not in pod_ids:
             cs.end_time = now
 
     try:
@@ -410,20 +408,25 @@ def fix_pods_timeline_heavy():
     t0 = datetime.now()
 
     cs1 = db.aliased(ContainerState, name='cs1')
-    cs2 = db.aliased(ContainerState, name='cs2')
-    cs_query = db.session.query(cs1, cs2.start_time).join(
-        cs2, db.and_(cs1.pod_id == cs2.pod_id,
-                     cs1.container_name == cs2.container_name)
-        ).filter(db.and_(cs1.start_time < cs2.start_time,
-                         db.or_(cs1.end_time > cs2.start_time,
-                                cs1.end_time.is_(None)))
-                 ).order_by(cs1.pod_id, cs1.container_name,
-                            db.desc(cs1.start_time), cs2.start_time)
+    ps1 = db.aliased(PodState, name='ps1')
+    cs2 = db.session.query(ContainerState, PodState.pod_id).join(PodState).subquery()
+    cs_query = db.session.query(cs1, cs2.c.start_time).join(
+        ps1, ps1.id == cs1.pod_state_id
+    ).join(
+        cs2, db.and_(ps1.pod_id == cs2.c.pod_id,
+                     cs1.container_name == cs2.c.container_name)
+    ).filter(
+        cs1.start_time < cs2.c.start_time,
+        db.or_(cs1.end_time > cs2.c.start_time,
+               cs1.end_time.is_(None))
+    ).order_by(
+        ps1.pod_id, cs1.container_name, db.desc(cs1.start_time), cs2.c.start_time
+    )
 
     prev_cs = None
     for cs1_obj, cs2_start_time in cs_query:
         if cs1_obj is not prev_cs:
-            cs1_obj.end_time = cs2_start_time
+            cs1_obj.fix_overlap(cs2_start_time)
         prev_cs = cs1_obj
 
     try:

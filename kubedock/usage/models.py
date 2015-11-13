@@ -1,6 +1,7 @@
 import ipaddress
 from datetime import datetime
 from sqlalchemy.dialects import postgresql
+from flask import current_app
 from ..core import db
 from ..models_mixin import BaseModelMixin
 from ..kapi import pd_utils
@@ -12,8 +13,7 @@ def to_timestamp(dt):
 
 class ContainerState(db.Model):
     __tablename__ = 'container_states'
-    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
-                       primary_key=True, nullable=False)
+    pod_state_id = db.Column(db.ForeignKey('pod_states.id'), nullable=False)
     container_name = db.Column(db.String(length=255), primary_key=True,
                                nullable=False)
     docker_id = db.Column(db.String(length=80), primary_key=True,
@@ -21,26 +21,52 @@ class ContainerState(db.Model):
     kubes = db.Column(db.Integer, primary_key=True, nullable=False, default=1)
     start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
-    pod = db.relationship('Pod', backref='states')
+    exit_code = db.Column(db.Integer, nullable=True)
+    reason = db.Column(db.Text, nullable=True)
+    pod = db.relationship('Pod', secondary='pod_states',
+                          backref='container_states', viewonly=True)
+    pod_state = db.relationship('PodState', backref='container_states')
 
     def __repr__(self):
-        return ("<ContainerState(pod_id={}, container_name={}, "
-                "docker_id={}, kubes={}, start_time={}, "
-                "end_time={})>".format(
-                    self.pod_id, self.container_name,
-                    self.docker_id, self.kubes, self.start_time,
-                    self.end_time))
+        data = {field: getattr(self, field) for field in self.__table__.c.keys()}
+        return '<ContainerState({0})>'.format(
+            ', '.join('{0}={1}'.format(*item) for item in data.iteritems()))
+
+    def fix_overlap(self, end_time):
+        """Shift end_time timestamp of container state to fix overlaping."""
+        current_app.logger.warn('Overlaping ContainerStates was found: {0} at {1}.'
+                                .format(self.container_name, self.start_time,
+                                        self.end_time, end_time))
+        self.end_time = end_time
+        if self.exit_code is None and self.reason is None:
+            self.exit_code = 1
+            self.reason = 'Reason of failure was missed.'
+
+    @classmethod
+    def in_range(cls, start=None, end=None):
+        """Get query matching container states that lie in specified time range.
+        """
+        query = cls.query.order_by(cls.start_time.desc())
+        if end is not None:
+            query = query.filter(cls.start_time < end)
+        if start is not None:
+            query = query.filter(cls.end_time.is_(None) | (cls.end_time > start))
+        return query
 
 
 class PodState(db.Model):
     __tablename__ = 'pod_states'
-    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
-                       primary_key=True, nullable=False)
-    start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
+    __table_args__ = (db.Index('ix_pod_id_start_time',
+                               'pod_id', 'start_time', unique=True),)
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
     last_event_time = db.Column(db.DateTime, nullable=True)
     last_event = db.Column(db.String(255), nullable=True)
     hostname = db.Column(db.String(255), nullable=True)
+    pod = db.relationship('Pod', backref='states')
 
     @classmethod
     def save_state(cls, pod_id, event, hostname):

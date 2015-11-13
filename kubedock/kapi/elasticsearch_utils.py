@@ -44,16 +44,4 @@ def execute_es_query(index, query, size, sort, host=None):
         raise APIError(u'Failed to execute elasticsearch query: {}'.format(err),
                        status_code=500)
 
-    return convert_elastic_result_to_answer(res)
-
-
-def convert_elastic_result_to_answer(elastic_result):
-    """Converts elasticsearch answer to standard API answer structure."""
-    hits = elastic_result.get('hits', {})
-    return {
-        'status': 'OK',
-        'data': {
-            'total': hits.get('total', 0),
-            'hits': hits.get('hits', [])
-        }
-    }
+    return res.get('hits', {})

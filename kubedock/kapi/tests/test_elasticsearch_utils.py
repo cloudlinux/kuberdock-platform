@@ -34,11 +34,8 @@ class TestElasticsearchUtils(unittest.TestCase):
         self.assertEqual(
             res,
             {
-                'status': 'OK',
-                'data': {
-                    'total': search_result['hits']['total'],
-                    'hits': search_result['hits']['hits']
-                }
+                'total': search_result['hits']['total'],
+                'hits': search_result['hits']['hits'],
             }
         )
         search_mock.assert_called_once_with(

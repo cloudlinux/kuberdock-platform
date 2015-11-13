@@ -5,26 +5,39 @@ import mock
 import random
 import string
 
-sys.modules['flask'] = mock.Mock()
-sys.modules['sqlalchemy'] = mock.Mock()
-sys.modules['kubedock.core'] = mock.Mock()
-sys.modules['kubedock.api'] = api_mock = mock.Mock()
-sys.modules['kubedock.utils'] = mock.Mock()
-sys.modules['kubedock.billing'] = mock.Mock()
-sys.modules['kubedock.rbac'] = mock.Mock()
-sys.modules['kubedock.users.models'] = mock.Mock()
-sys.modules['kubedock.nodes.models'] = mock.Mock()
-sys.modules['kubedock.rbac.models'] = mock.Mock()
-sys.modules['kubedock.predefined_apps.models'] = mock.Mock()
-
-# TODO: Integration tests for _validate_unique_case_insensitive
-
-class APIError(Exception):
-    pass
-api_mock.APIError = APIError
-
 from kubedock.users.models import User
 from ..validation import V, UserValidator
+
+api_mock = None
+_saved_modules = {}
+_modules_to_mock = ('flask', 'sqlalchemy', 'kubedock.core', 'kubedock.api',
+                    'kubedock.utils', 'kubedock.billing', 'kubedock.rbac',
+                    'kubedock.users.models','kubedock.nodes.models',
+                    'kubedock.rbac.models', 'kubedock.predefined_apps.models')
+
+# We want to mock real modules which could be missing on test system
+def setUpModule():
+    global api_mock
+
+    for module in _modules_to_mock:
+        _saved_modules[module] = sys.modules[module]
+        sys.modules[module] = mock.Mock()
+
+    # TODO: Integration tests for _validate_unique_case_insensitive
+    api_mock = mock.Mock()
+    class APIError(Exception):
+        pass
+    api_mock.APIError = APIError
+
+
+def tearDownModule():
+    global api_mock
+
+    for module in _modules_to_mock:
+        if module in _saved_modules:
+            sys.modules[module] = _saved_modules[module]
+
+    api_mock = None
 
 
 class TestV(unittest.TestCase):

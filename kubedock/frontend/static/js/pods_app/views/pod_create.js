@@ -491,7 +491,7 @@ define(['pods_app/app',
 
             addVolume: function(evt){
                 evt.stopPropagation();
-                this.model.get('volumeMounts').push({mountPath: null, name: null, readOnly: false});
+                this.model.get('volumeMounts').push({mountPath: null, name: null});
                 this.render();
             },
 

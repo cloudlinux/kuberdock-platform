@@ -452,7 +452,6 @@ def get_kuberdock_logs_config(node, name, kube_type,
                 ],
                 "volumeMounts": [
                     {
-                        "readOnly": False,
                         "name": "docker-containers",
                         "mountPath": "/var/lib/docker/containers"
                     }
@@ -499,7 +498,6 @@ def get_kuberdock_logs_config(node, name, kube_type,
                 ],
                 "volumeMounts": [
                     {
-                        "readOnly": False,
                         "name": "es-persistent-storage",
                         "mountPath": "/elasticsearch/data"
                     }

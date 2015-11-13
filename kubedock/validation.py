@@ -214,7 +214,6 @@ new_pod_schema = {
         'nullable': True,
         'internal_only': True,
     },
-    'public_ip': {'type': 'ipv4', 'required': False},  # TODO remove for new pod
     'restartPolicy': {
         'type': 'string', 'required': True,
         'allowed': ['Always', 'OnFailure', 'Never']
@@ -365,7 +364,6 @@ new_pod_schema = {
                                 'type': 'string',
                                 'has_volume': True,
                             },
-                            'readOnly': {'type': 'boolean'}     # TODO remove
                         },
                     }
                 },

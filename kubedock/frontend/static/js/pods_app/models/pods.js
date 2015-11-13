@@ -44,7 +44,7 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
                 }
                 if (data.hasOwnProperty('volumeMounts')) {
                     _.each(data['volumeMounts'], function(m){
-                        container['volumeMounts'].push({name: null, mountPath: m, readOnly: false})
+                        container['volumeMounts'].push({name: null, mountPath: m})
                     });
                 }
                 _.each(['workingDir', 'args', 'env', 'secret', 'sourceUrl'], function(i){

@@ -35,7 +35,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def create(data):
         data = data.copy()
         owner = data.pop('owner', None)
-        # TODO delete this becouse 'owner' will appear in api response
+        # TODO delete this because 'owner' will appear in api response
         data['owner'] = None if owner is None else owner.username
         data.setdefault('status', POD_STATUSES.stopped)
         pod = Pod(data)

@@ -109,10 +109,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _save_pod(self, obj, set_public_ip):
         kube_type = getattr(obj, 'kube_type', Kube.get_default_kube_type())
         template_id = getattr(obj, 'kuberdock_template_id', None)
-        if hasattr(obj, 'kuberdock_template_id'):   # to prevent save to config
-            delattr(obj, 'kuberdock_template_id')
-        if hasattr(obj, 'owner'):   # to prevent save to config
-            delattr(obj, 'owner')
+        for i in 'kuberdock_template_id', 'owner':
+            # to prevent save to config
+            if hasattr(obj, i):
+                delattr(obj, i)
         pod = DBPod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
                     status=POD_STATUSES.stopped, template_id=template_id)
         kube = db.session.query(Kube).get(kube_type)

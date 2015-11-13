@@ -32,11 +32,11 @@ def tearDownModule():
 def fake_pod(**kwargs):
     parents = kwargs.pop('use_parents', ())
     return type('Pod', parents,
-               dict({
-                   'namespace': 'n',
-                   'owner': 'u',
-                   'status': POD_STATUSES.running,
-               }, **kwargs))()
+                dict({
+                    'namespace': 'n',
+                    'owner': 'u',
+                    'status': POD_STATUSES.running,
+                }, **kwargs))()
 
 
 class TestCaseMixin(object):
@@ -205,13 +205,14 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         self.assertEqual(del_.call_args_list, expected,
                          "Arguments for deletion pod and service differ from expected ones")
 
-
     @mock.patch('kubedock.kapi.podcollection.current_app')
+    @mock.patch.object(podcollection, 'unbind_ip')
+    @mock.patch.object(podcollection.PodCollection, '_stop_pod')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_pod_assigned_IPs_are_cleared(self, get_, del_, ca_):
+    def test_pod_assigned_IPs_are_cleared(self, get_, del_, stop_pod_, unbind_, ca_):
         """
-        Check if an attempt to unbind IP address has been made and was successful.
+        Check if an attempt to unbind IP address has been made.
         """
         pod = fake_pod(sid='s')
         pod.get_config = (lambda x: 'fs')
@@ -219,47 +220,19 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         # Monkey-patched podcollection.PodCollection methods
         self.app.get_by_id = (lambda x: pod)
         self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x,y: None)
+        self.app._raise_if_failure = (lambda x, y: None)
         self.app._drop_namespace = (lambda x: None)
 
         get_.return_value = {
-            'metadata':{
-                'annotations':{
+            'metadata': {
+                'annotations': {
                     'public-ip-state':'{"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
-            'spec':{
-                'ports':[]}}
+            'spec': {
+                'ports': []}}
 
         # Making actual call
         self.app.delete(str(uuid4()))
-
-    @mock.patch('kubedock.kapi.podcollection.current_app')
-    @mock.patch.object(podcollection.PodCollection, '_raise')
-    @mock.patch.object(podcollection.PodCollection, '_del')
-    @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_pod_exception_raised_when_modified_node_ips_returns_false(self, get_, del_, raise_, ca_):
-        """
-        Check if an attempt to unbind IP address has been made and failed.
-        """
-        pod = fake_pod(sid='s')
-        pod.get_config = (lambda x: 'fs')
-
-        # Monkey-patched podcollection.PodCollection methods
-        self.app.get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x,y: None)
-        self.app._drop_namespace = (lambda x: None)
-
-        get_.return_value = {
-            'metadata':{
-                'annotations':{
-                    'public-ip-state':'{"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
-            'spec':{
-                'ports':[]}}
-
-        # Making actual call
-        self.app.delete(str(uuid4()))
-
-        self.assertTrue(raise_.called, "self._raise is expected to be called")
+        self.assertTrue(unbind_.called)
 
     @mock.patch.object(podcollection.ModelQuery, '_free_ip')
     @mock.patch('kubedock.kapi.podcollection.current_app')
@@ -651,6 +624,24 @@ class TestPodCollectionStartPod(unittest.TestCase, TestCaseMixin):
             ns=self.test_pod.namespace)
         self.assertEquals(res, {'status': POD_STATUSES.pending})
 
+    def test_needs_public_ip(self):
+        test_conf = {
+            'containers': [{
+                'ports': [{'hostPort': 1000, 'containerPort': 80,
+                           'isPublic': True},
+                          {'containerPort': 80, 'isPublic': False}],
+            }]
+        }
+        test_conf2 = {
+            'containers': [{
+                'ports': [{'hostPort': 1000, 'containerPort': 80,
+                           'isPublic': False},
+                          {'containerPort': 80, 'isPublic': False}],
+            }]
+        }
+        self.assertTrue(self.pod_collection.needs_public_ip(test_conf))
+        self.assertFalse(self.pod_collection.needs_public_ip(test_conf2))
+
 
 class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
 
@@ -695,7 +686,6 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
         self.pod = type('Pod', (), {
             'compose_persistent': mock.Mock(),
             '_forge_dockers': mock.Mock(),
-            '_allocate_ip': mock.Mock(),
             'as_dict': mock.Mock(),
             'namespace': 'n'
         })
@@ -781,18 +771,12 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
         self.pod_collection.add(self.params)
         self.assertTrue(pod_._forge_dockers.called)
 
-    def test_pod_allocate_ip_not_called(self, create_):
+    @mock.patch.object(podcollection.PodCollection, 'needs_public_ip')
+    def test_pod_needs_public_ip_called(self, _npip, create_):
         pod_ = self.pod()
         create_.return_value = pod_
         self.pod_collection.add(self.params)
-        self.assertFalse(pod_._allocate_ip.called)
-
-    def test_pod_allocate_ip_called(self, create_):
-        pod_ = self.pod()
-        pod_.public_ip = True
-        create_.return_value = pod_
-        self.pod_collection.add(self.params)
-        self.assertTrue(pod_._allocate_ip.called)
+        self.assertTrue(_npip.called)
 
     def test_pod_as_dict_called(self, create_):
         pod_ = self.pod()

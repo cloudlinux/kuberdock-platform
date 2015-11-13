@@ -10,11 +10,7 @@
             <tr>
                 <th class="checkboxes">
                     <label class="custom">
-                        <% if (allChecked){ %>
-                        <input type="checkbox" checked>
-                        <% } else { %>
-                        <input type="checkbox">
-                        <% } %>
+                        <input type="checkbox" <%- allChecked? 'checked' : '' %> <%- isCollection %> >
                         <span></span>
                     </label>
                 </th>

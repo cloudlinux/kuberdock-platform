@@ -29,7 +29,7 @@ GET_KUBE_TYPES_RESPONSE = {
     "data": {
         "High CPU": 1,
         "High memory": 2,
-        "Standard kube": 0
+        "Standard": 0
     },
     "status": "OK"
 }
@@ -219,7 +219,7 @@ class TestKuberDock(unittest.TestCase):
 
         # create pod, set one container parameters
         kd = container.KuberDock(name=name, action='create',
-                restartPolicy="Always", kube_type="Standard kube")
+                restartPolicy="Always", kube_type="Standard")
         kd.create()
         kd = container.KuberDock(name=name, action='set',
             container_port='+123:45:udp',
@@ -246,7 +246,7 @@ class TestKuberDock(unittest.TestCase):
         """Test for KuberDock.list method."""
         name = "test1"
         kd = container.KuberDock(name=name, action='create',
-                restartPolicy="Always", kube_type="Standard kube")
+                restartPolicy="Always", kube_type="Standard")
         kd.create()
 
         kd = container.KuberDock()
@@ -339,7 +339,7 @@ class TestKuberDock(unittest.TestCase):
         """Test for KuberDock.stop method."""
         name = "test1"
         kd = container.KuberDock(name=name, action='create',
-                restartPolicy="Always", kube_type="Standard kube")
+                restartPolicy="Always", kube_type="Standard")
         kd.create()
         self.assertTrue(os.path.exists(kd._data_path))
         kd = container.KuberDock(name=name)

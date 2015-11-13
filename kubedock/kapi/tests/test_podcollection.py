@@ -12,23 +12,30 @@ from collections import namedtuple
 # SAVE BEFORE MOCK utils
 from ...utils import POD_STATUSES, APIError
 
-# We want to mock real modules which could be missing on test system
-sys.modules['kubedock.core'] = mock.Mock()
-sys.modules['bitmath'] = mock.Mock()
-sys.modules['ipaddress'] = mock.Mock()
-sys.modules['blinker'] = mock.Mock()
-sys.modules['flask'] = mock.Mock()
-sys.modules['requests'] = mock.Mock()
-sys.modules['kubedock.api'] = mock.Mock()
-sys.modules['kubedock.pods.models'] = mock.Mock()
-sys.modules['kubedock.utils'] = mock.Mock()
-sys.modules['kubedock.kapi.pstorage'] = mock.Mock()
+_saved_modules = {}
+_modules_to_mock = ('kubedock.core', 'bitmath', 'ipaddress', 'blinker', 'flask',
+                   'requests', 'kubedock.api', 'kubedock.pods.models',
+                   'kubedock.utils', 'kubedock.kapi.pstorage')
 
+# We want to mock real modules which could be missing on test system
+def setUpModule():
+    global PodCollection, ModelQuery, KUBERDOCK_INTERNAL_USER, Pod
+
+    for module in _modules_to_mock:
+        _saved_modules[module] = sys.modules[module]
+        sys.modules[module] = mock.Mock()
+
+
+def tearDownModule():
+    for module in _modules_to_mock:
+        if module in _saved_modules:
+            sys.modules[module] = _saved_modules[module]
+
+from .. import podcollection
 from ..podcollection import PodCollection, ModelQuery, KUBERDOCK_INTERNAL_USER
 from ..pod import Pod
 
 # RESTORE AFTER MOCK utils:
-from .. import podcollection
 podcollection.APIError = APIError
 podcollection.POD_STATUSES = POD_STATUSES
 

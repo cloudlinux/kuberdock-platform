@@ -118,8 +118,8 @@ name_schema = {
     'nullable': True,
     'maxlength': 25,
     'regex': {
-        'regex': re.compile(r'^[A-Z]{,25}$', re.IGNORECASE),
-        'message': 'only letters of Latin alphabet are allowed'
+        'regex': re.compile(r'^[^\W\d]{,25}$', re.U),
+        'message': 'only alphabetic characters allowed'
     }
 }
 

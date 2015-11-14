@@ -31,7 +31,7 @@ schema = {
 # Increase wait interval for login attempts to prevent tests fails on slow
 # connections - when serial requests will take more time than default
 # pause.
-images.MIN_FAILED_LOGIN_PAUSE = 60
+images.MIN_FAILED_LOGIN_PAUSE = 120
 
 
 # Accounts for repos testing. Create a new ones if these will failed on

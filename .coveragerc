@@ -1,0 +1,10 @@
+[run]
+source =
+    kubedock
+    kuberdock-cli
+omit =
+    kubedock/updates/*
+    */tests/*
+    */env/*
+[report]
+show_missing = True

@@ -65,17 +65,19 @@ def initial_fixtures():
     db.engine.execute("SELECT setval('packages_id_seq', 1, false)")
 
 
-def user_fixtures():
+def user_fixtures(**kwargs):
     password = 'o3r2hdfe'
-    user = User(username='test_user', password=password, active=True,
+    data = dict(username='test_user', password=password, active=True,
                 role_id=Role.filter_by(rolename='User').first().id,
-                package_id=0, email='mfkdeogn49ekj@test.test').save()
+                package_id=0, email='mfkdeogn49ekj@test.test')
+    user = User(**dict(data, **kwargs)).save()
     return user, password
 
 
-def admin_fixtures():
+def admin_fixtures(**kwargs):
     password = 'mdld0oenbf'
-    user = User(username='test_admin', password=password, active=True,
+    data = dict(username='test_admin', password=password, active=True,
                 role_id=Role.filter_by(rolename='Admin').first().id,
-                package_id=0, email='mdfldpnrfu3489e@test.test').save()
+                package_id=0, email='mdfldpnrfu3489e@test.test')
+    user = User(**dict(data, **kwargs)).save()
     return user, password

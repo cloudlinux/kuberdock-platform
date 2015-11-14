@@ -112,6 +112,7 @@ rm -rf %{buildroot}
 
 %define sslcert %{_sysconfdir}/nginx/ssl/kubecert.crt
 %define sslkey %{_sysconfdir}/nginx/ssl/kubecert.key
+%define dhparam %{_sysconfdir}/nginx/ssl/dhparam.pem
 
 %define kd_vassal_source /var/opt/kuberdock/conf/kuberdock.ini
 %define kd_vassal %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
@@ -144,6 +145,10 @@ SomeOrganizationalUnit
 ${FQDN}
 root@${FQDN}
 EOF
+fi
+
+if [ ! -f %{dhparam} ] ; then
+%{_bindir}/openssl dhparam -rand /proc/apm:/proc/cpuinfo:/proc/dma:/proc/filesystems:/proc/interrupts:/proc/ioports:/proc/pci:/proc/rtc:/proc/uptime -out %{dhparam} 2048 2> /dev/null
 fi
 
 # Setting labels

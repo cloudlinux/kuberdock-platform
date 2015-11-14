@@ -89,5 +89,9 @@ def log_query(index, filters=None, host=None, size=100, start=None, end=None):
             condition['lt'] = end
         filters.append({'range': {'@timestamp': condition}})
     query = {'filtered': {'filter': {'and': filters}}}
-    order = {'time_nano': {'order': 'desc'}}
+    order = {'time_nano': {
+        'order': 'desc',
+        'missing': '@timestamp',
+        'unmapped_type': 'string',
+    }}
     return execute_es_query(index, query, size, order, host)

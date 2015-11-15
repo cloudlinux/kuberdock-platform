@@ -340,15 +340,15 @@ define(['pods_app/app',
             tagName: 'div',
 
             getTemplate: function(){
-                return this.model.has('parentID')
+                return !this.model.getPod().detached
                     ? wizardSetContainerSettledBasicSettingsTpl
                     : wizardSetContainerPendingBasicSettingsTpl;
             },
             className: function(){
-                return this.model.has('parentID') ? '' : 'container';
+                return this.model.getPod().detached ? 'container' : '';
             },
             id: function(){
-                return this.model.has('parentID') ? 'container-page' : 'add-image';
+                return this.model.getPod().detached ? 'add-image' : 'container-page';
             },
 
             ui: {
@@ -398,7 +398,7 @@ define(['pods_app/app',
             },
 
             initialize: function(options) {
-                this.pod = options.pod;
+                this.pod = this.model.getPod();
                 var that = this,
                     volumes = this.pod.get('volumes');
                 _.each(this.model.get('volumeMounts'), function(vm){
@@ -411,13 +411,8 @@ define(['pods_app/app',
                     }
                 });
 
-                if (this.model.has('parentID'))
-                    this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
-                        var pod = App.WorkFlow.getCollection().fullCollection.get(
-                            this.model.get('parentID'));
-                        this.model.set(pod.getContainer(this.model.get('name')).attributes);
-                        this.render();
-                    });
+                this.listenTo(App.WorkFlow.getCollection(),
+                              'pods:collection:fetched', this.render);
             },
 
             triggers: {
@@ -444,11 +439,10 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
-                    kubeType;
+                var kubeType;
 
-                if (model !== undefined){
-                    kube_id = model.get('kube_type');
+                if (!this.pod.detached){
+                    kube_id = this.pod.get('kube_type');
                     _.each(kubeTypes, function(kube){
                         if(parseInt(kube.id) == parseInt(kube_id))
                             kubeType = kube;
@@ -456,6 +450,7 @@ define(['pods_app/app',
                 }
 
                 return {
+                    parentID: this.pod.id,
                     updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
                     hasPersistent: this.pod.persistentDrives !== undefined,
@@ -464,17 +459,17 @@ define(['pods_app/app',
                         : false,
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
-                    restart_policy: model !== undefined ? model.get('restartPolicy') : '',
-                    podName: model !== undefined ? model.get('name') : '',
+                    restart_policy: this.pod.get('restartPolicy'),
+                    podName: this.pod.get('name'),
                     volumeEntries: this.composeVolumeEntries()
                 };
             },
 
             startContainer: function(){
-                App.WorkFlow.commandPod('start', this.model.get('parentID'));
+                App.WorkFlow.commandPod('start', this.model.getPod());
             },
             stopContainer: function(){
-                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
+                App.WorkFlow.commandPod('stop', this.model.getPod());
             },
             updateContainer: function(){
                 App.WorkFlow.updateContainer(this.model);
@@ -659,17 +654,13 @@ define(['pods_app/app',
 
             goNext: function(evt){
                 var that = this,
-                    podContainersPorts = [],
-                    uniqueContainerPorts = [],
-                    podContainersHostPorts = [],
-                    uniqueContainerHostPorts = [],
                     volumes = this.pod.get('volumes'),
                     vm = this.model.get('volumeMounts');
 
                 /* mountPath and persistent disk check */
                 for (var i=0; i<vm.length; i++) {
                     if (!vm[i].mountPath) {
-                        utils.notifyWindow('Container path must be set!');
+                        utils.notifyWindow('Mount path must be set!');
 
                         return;
                     }
@@ -693,28 +684,33 @@ define(['pods_app/app',
                 };
 
                 /* check ports */
-                _.each(this.pod.get('containers'), function(container){
-                    _.each(container.ports, function(item){
-                        var port = parseInt(item.containerPort,10),
-                            hostPort = parseInt(item.hostPort,10);
-
-                        if (port) podContainersPorts.push(port);
-                        if (hostPort) podContainersHostPorts.push(hostPort);
-                    })
-                })
-
-                uniqueContainerPorts = _.uniq(podContainersPorts);
-                uniqueContainerHostPorts = _.uniq(podContainersHostPorts);
-
-                if (podContainersPorts.length != uniqueContainerPorts.length){
-                    utils.notifyWindow('You have a duplicate container port in ' + this.model.get('name') + ' container!');
+                var showDublicatePortError = function(dublicatePort){
+                    var container = dublicatePort.container,
+                        type = dublicatePort.isPod ? 'pod' : 'container',
+                        where = container === that.model ? 'this container!'
+                            : ' other container (' + container.get('image') + ')!';
+                    utils.notifyWindow('You have a duplicate ' + type + ' port ' +
+                                       dublicatePort.port + ' in ' + where);
+                };
+                try {
+                    _.each(this.model.get('ports'), function(port, i){
+                        that.pod.get('containers').each(function(container2){
+                            _.each(container2.get('ports'), function(port2, j){
+                                if (container2 == that.model && i === j) return;
+                                if (port.containerPort === port2.containerPort)
+                                    throw {container: container2, port: port.containerPort};
+                                var hostPort = port.hostPort || port.containerPort,
+                                    hostPort2 = port2.hostPort || port2.containerPort;
+                                if (hostPort === hostPort2)
+                                    throw {container: container2, port: hostPort, isPod: true};
+                            });
+                        });
+                    });
+                } catch (e) {
+                    showDublicatePortError(e);
+                    return;
                 }
-                else if (podContainersHostPorts.length != uniqueContainerHostPorts.length){
-                    utils.notifyWindow('You have a duplicate pod port in ' + this.model.get('name') + ' container!');
-                }
-                else {
-                    this.trigger('step:envconf', this);
-                }
+                this.trigger('step:envconf', this);
             },
 
             goBack: function(evt){
@@ -876,12 +872,8 @@ define(['pods_app/app',
             },
 
             initialize: function() {
-                this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
-                    var pod = App.WorkFlow.getCollection().fullCollection.get(
-                        this.model.get('parentID'));
-                    this.model.set(pod.getContainer(this.model.get('name')).attributes);
-                    this.render();
-                });
+                this.listenTo(App.WorkFlow.getCollection(),
+                              'pods:collection:fetched', this.render);
             },
 
             onDomRefresh: function(){
@@ -894,10 +886,10 @@ define(['pods_app/app',
 
             templateHelpers: function(){
                 var kubeType,
-                    model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID'));
+                    pod = this.model.getPod();
 
-                if (model !== undefined){
-                    kube_id = model.get('kube_type');
+                if (!pod.detached){
+                    kube_id = pod.get('kube_type');
                     _.each(kubeTypes, function(kube){
                         if(parseInt(kube.id) == parseInt(kube_id))
                             kubeType = kube;
@@ -905,21 +897,22 @@ define(['pods_app/app',
                 }
 
                 return {
+                    parentID: pod.id,
                     updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
-                    isPending: !this.model.has('parentID'),
+                    detached: pod.detached,
                     ip: this.model.get('ip'),
                     kube_type: kubeType,
-                    restart_policy: model !== undefined ? model.get('restartPolicy') : '',
-                    podName: model !== undefined ? model.get('name') : ''
+                    restart_policy: pod.get('restartPolicy'),
+                    podName: pod.get('name'),
                 };
             },
 
             startContainer: function(){
-                App.WorkFlow.commandPod('start', this.model.get('parentID'));
+                App.WorkFlow.commandPod('start', this.model.getPod());
             },
             stopContainer: function(){
-                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
+                App.WorkFlow.commandPod('stop', this.model.getPod());
             },
             updateContainer: function(){
                 App.WorkFlow.updateContainer(this.model);
@@ -1074,12 +1067,8 @@ define(['pods_app/app',
             },
 
             initialize: function(options){
-                this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
-                    var pod = App.WorkFlow.getCollection().fullCollection.get(
-                        this.model.get('parentID'));
-                    this.model.set(pod.getContainer(this.model.get('name')).attributes);
-                    this.render();
-                });
+                this.listenTo(App.WorkFlow.getCollection(),
+                              'pods:collection:fetched', this.render);
             },
 
             events: {
@@ -1100,10 +1089,9 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var parentID = this.model.get('parentID'),
-                    pod = App.WorkFlow.getCollection().fullCollection.get(parentID),
+                var pod = this.model.getPod(),
                     kubeType;
-                if (pod !== undefined){
+                if (!pod.detached){
                     kube_id = pod.get('kube_type');
                     _.each(kubeTypes, function(kube){
                         if(parseInt(kube.id) == parseInt(kube_id))
@@ -1113,24 +1101,24 @@ define(['pods_app/app',
 
                 return {
                     updateIsAvailable: this.model.updateIsAvailable,
-                    parentID: parentID,
-                    isPending: !this.model.has('parentID'),
+                    parentID: pod.id,
+                    detached: pod.detached,
                     image: this.model.get('image'),
                     name: this.model.get('name'),
                     state: this.model.get('state'),
                     kube_type: kubeType,
-                    restart_policy: pod !== undefined ? pod.get('restartPolicy') : '',
+                    restart_policy: pod.get('restartPolicy'),
                     kubes: this.model.get('kubes'),
-                    podName: pod !== undefined ? pod.get('name') : '',
+                    podName: pod.get('name'),
                 };
 
             },
 
             startContainer: function(){
-                App.WorkFlow.commandPod('start', this.model.get('parentID'));
+                App.WorkFlow.commandPod('start', this.model.getPod());
             },
             stopContainer: function(){
-                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
+                App.WorkFlow.commandPod('stop', this.model.getPod());
             },
             updateContainer: function(){
                 App.WorkFlow.updateContainer(this.model);
@@ -1161,22 +1149,22 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var model = App.WorkFlow.getCollection().fullCollection.get(this.model.get('parentID')),
+                var pod = this.model.getPod(),
                     kubeType;
-                if (model !== undefined){
-                    kube_id = model.get('kube_type');
+                if (!pod.detached) {
+                    kube_id = pod.get('kube_type');
                     _.each(kubeTypes, function(kube){
                         if(parseInt(kube.id) == parseInt(kube_id))
                             kubeType = kube;
                     });
                 }
                 return {
+                    parentID: pod.id,
                     updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
-                    isPending: !this.model.has('parentID'),
-                    podName: model !== undefined ? model.get('name') : '',
+                    podName: pod.get('name'),
                     kube_type: kubeType,
-                    restart_policy: model !== undefined ? model.get('restartPolicy') : '',
+                    restart_policy: pod.get('restartPolicy'),
                 };
             },
 
@@ -1192,9 +1180,6 @@ define(['pods_app/app',
             initialize: function() {
                 _.bindAll(this, 'getLogs');
                 this.listenTo(App.WorkFlow.getCollection(), 'pods:collection:fetched', function(){
-                    var pod = App.WorkFlow.getCollection().fullCollection.get(
-                            this.model.get('parentID'));
-                    this.model.set(pod.getContainer(this.model.get('name')).attributes);
                     if (!this.model.has('logs'))
                         this.model.set('logs', []);
                     this.render();
@@ -1205,42 +1190,18 @@ define(['pods_app/app',
             },
 
             getLogs: function() {
-                var containerName = this.model.get('name'),
-                    size = 100,
-                    url = '/api/logs/container/' + containerName +
-                          '?size=' + size;
-                $.ajax({
-                    url: url,
-                    dataType : 'json',
-                    type: 'GET',
-                    context: this,
-                    complete: function(){
-                        this.model.set('timeout', setTimeout(this.getLogs, 10000));
-                    },
-                    success: function(data){
-                        var seriesByTime = _.indexBy(this.model.get('logs'), 'start');
-                        _.each(data.data.reverse(), function(serie) {
-                            var lines = serie.hits.reverse(),
-                                oldSerie = seriesByTime[serie.start];
-                            if (lines.length && oldSerie && oldSerie.hits.length) {
-                                // if we have some logs, append only new lines
-                                var first = lines[0],
-                                    index = _.sortedIndex(oldSerie.hits, first, 'time_nano');
-                                lines.unshift.apply(lines, _.first(oldSerie.hits, index));
-                            }
-                        });
-                        this.model.set('logs', data.data);
-                        this.render();
-                    },
-                    error: function(){ utils.notifyWindow('Log not found'); },
-                });
+                var that = this;
+                this.model.getLogs(/*size=*/100).done(this.render)
+                    .fail(function(){ utils.notifyWindow('Log not found'); })
+                    .always(function(){
+                        this.set('timeout', setTimeout(that.getLogs, 10000)); });
             },
 
             startItem: function(){
-                App.WorkFlow.commandPod('start', this.model.get('parentID'));
+                App.WorkFlow.commandPod('start', this.model.getPod());
             },
             stopItem: function(){
-                App.WorkFlow.commandPod('stop', this.model.get('parentID'));
+                App.WorkFlow.commandPod('stop', this.model.getPod());
             },
             updateContainer: function(){
                 App.WorkFlow.updateContainer(this.model);
@@ -1349,9 +1310,10 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var name = $(evt.target).closest('tr').children('td:first').attr('id');
                 if (this.model.get('containers').length >= 2) {
-                    this.model.deleteContainer(name);
+                    this.model.get('containers').remove(name);
                     if (name == this.model.last_edited_container) {
-                        this.model.last_edited_container = _.last(this.model.get('containers')).name;
+                        this.model.last_edited_container = this.model
+                            .get('containers').last().id;
                     }
                     this.recalcTotal();
                     this.render();
@@ -1408,7 +1370,7 @@ define(['pods_app/app',
             changeKubeQuantity: function(evt){
                 evt.stopPropagation();
                 var num = parseInt(evt.target.value);
-                this.getCurrentContainer().kubes = num;
+                this.getCurrentContainer().set('kubes', num);
 
                 this.recalcTotal();
                 this.render();
@@ -1454,22 +1416,21 @@ define(['pods_app/app',
                     volumes = this.model.get('volumes'),
                     kube = _.findWhere(kubeTypes, {id: kube_id}),
                     kube_price = this.getKubePrice(kube_id),
-                    total_kubes = _.reduce(containers,
-                        function (sum, c) { return sum + c.kubes; }, 0);
+                    total_kubes = this.model.getKubes();
 
                 this.cpu_data = total_kubes * kube.cpu + ' ' + kube.cpu_units;
                 this.ram_data = total_kubes * kube.memory + ' ' + kube.memory_units;
                 this.hdd_data = total_kubes * kube.disk_space + ' ' + kube.disk_space_units;
 
-                var allPorts = _.flatten(_.pluck(containers, 'ports'), true),
+                var allPorts = _.flatten(containers.pluck('ports'), true),
                     allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
                     total_size = _.reduce(allPersistentVolumes,
                         function(sum, v) { return sum + v.pdSize; }, 0);
                 this.isPublic = _.some(_.pluck(allPorts, 'isPublic'));
                 this.isPerSorage = !!allPersistentVolumes.length;
 
-                var rawContainerPrices = _.map(containers,
-                    function(c) { return kube_price * c.kubes; });
+                var rawContainerPrices = containers.map(
+                    function(c) { return kube_price * c.get('kubes'); });
                 this.containerPrices = _.map(rawContainerPrices,
                     function(price) { return this.getFormattedPrice(price); }, this);
 
@@ -1484,13 +1445,13 @@ define(['pods_app/app',
 
             getCurrentContainer: function() {
                 var containers = this.model.get('containers'),
-                    last_edited = _.findWhere(containers, {name: this.model.last_edited_container});
-                return last_edited || _.last(containers);
+                    last_edited = containers.get(this.model.last_edited_container);
+                return last_edited || containers.last();
             },
 
             onRender: function() {
                 this.ui.selectpicker.selectpicker();
-                this.ui.kubeQuantity.selectpicker('val', this.getCurrentContainer().kubes);
+                this.ui.kubeQuantity.selectpicker('val', this.getCurrentContainer().get('kubes'));
                 this.ui.kubeTypes.selectpicker('val', this.model.get('kube_type'));
             },
 

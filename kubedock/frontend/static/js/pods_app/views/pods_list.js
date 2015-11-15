@@ -56,14 +56,10 @@ define(['pods_app/app',
             },
 
             templateHelpers: function(){
-                var kubes = _.reduce(this.model.get('containers'), function(memo, c) {
-                        return memo + c.kubes
-                    }, 0),
-                    checked = this.model.is_checked ? true : false;
                 return {
-                    kubes: kubes,
-                    checked: checked
-                }
+                    kubes: this.model.getKubes(),
+                    checked: !!this.model.is_checked,
+                };
             },
 
             ui: {
@@ -82,45 +78,17 @@ define(['pods_app/app',
 
             podPage: function(evt){
                 evt.stopPropagation();
-                App.navigate('pods/' + this.model.get('id'), {trigger: true});
+                App.navigate('pods/' + this.model.id, {trigger: true});
             },
 
             startItem: function(evt){
-                var that = this,
-                    preloader = $('#page-preloader');
-                preloader.show();
                 evt.stopPropagation();
-                this.model.save({command: 'start'}, {
-                    wait: true,
-                    success: function(model, response, options){
-                        that.render();
-                        preloader.hide();
-                    },
-                    error: function(model, response, options, data){
-                        that.render();
-                        preloader.hide();
-                        utils.notifyWindow(response);
-                    }
-                });
+                App.WorkFlow.commandPod('start', this.model).always(this.render);
             },
 
             stopItem: function(evt){
-                var that = this,
-                    preloader = $('#page-preloader');
-                preloader.show();
                 evt.stopPropagation();
-                this.model.save({command: 'stop'}, {
-                    wait: true,
-                    success: function(model, response, options){
-                        that.render();
-                        preloader.hide();
-                    },
-                    error: function(model, response, options, data){
-                        that.render();
-                        preloader.hide();
-                        utils.notifyWindow(response);
-                    }
-                });
+                App.WorkFlow.commandPod('stop', this.model).always(this.render);
             },
 
             toggleItem: function(evt){
@@ -264,8 +232,8 @@ define(['pods_app/app',
             sendCommand: function(command){
                 var items = this.collection.fullCollection.filter(function(i){return i.is_checked});
 
-                for (i in items) {
-                    items[i].save({command: command}, {
+                for (var i in items) {
+                    items[i].command(command, {
                         error: function(model, response){
                             utils.notifyWindow(response);
                         }

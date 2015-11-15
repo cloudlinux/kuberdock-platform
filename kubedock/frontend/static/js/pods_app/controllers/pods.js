@@ -7,34 +7,25 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
             return WorkFlow.PodCollection;
         }
 
-        WorkFlow.commandPod = function(cmd, podID, containerName){
+        WorkFlow.commandPod = function(cmd, pod){
             Utils.preloader.show();
-            var model = WorkFlow.getCollection().fullCollection.get(podID);
-
+            pod = WorkFlow.getCollection().fullCollection.get(pod);
             if (/^container_/.test(cmd)) {
                 console.error('Container stop/start/delete not implemented yet.');
                 return;
             }
-            return $.ajax({
-                url: '/api/podapi/' + podID,
-                data: {command: cmd},
-                type: 'PUT',
-                complete: function(){ Utils.preloader.hide(); },
-                error: function(xhr){ Utils.notifyWindow(xhr); },
+            return pod.command(cmd, {
+                wait: true,
+                complete: Utils.preloader.hide,
+                error: function(model, xhr){ Utils.notifyWindow(xhr); },
             });
         };
 
         WorkFlow.updateContainer = function(containerModel){
             var performUpdate = function () {
                 Utils.preloader.show();
-                return $.ajax({
-                    url: '/api/podapi/' + containerModel.get('parentID') +
-                         '/' + containerModel.get('containerID') + '/update',
-                    type: 'POST',
-                    complete: function(){ Utils.preloader.hide(); },
-                    error: function(xhr){ Utils.notifyWindow(xhr); },
-                    success: function(){ containerModel.updateIsAvailable = undefined; },
-                });
+                return containerModel.update().always(Utils.preloader.hide)
+                    .fail(function(xhr){ Utils.notifyWindow(xhr); });
             };
 
             Utils.modalDialog({
@@ -48,18 +39,12 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
 
         WorkFlow.checkContainerForUpdate = function(containerModel){
             Utils.preloader.show();
-            return $.ajax({
-                url: '/api/podapi/' + containerModel.get('parentID') +
-                     '/' + containerModel.get('containerID') + '/update',
-                type: 'GET',
-                complete: function(){ Utils.preloader.hide(); },
-                error: function(xhr){ Utils.notifyWindow(xhr); },
-                success: function(rs){
+            return containerModel.checkForUpdate().always(Utils.preloader.hide)
+                .fail(function(xhr){ Utils.notifyWindow(xhr); })
+                .done(function(rs){
                     if (!rs.data)
                         Utils.notifyWindow('No updates found', 'success');
-                    containerModel.updateIsAvailable = rs.data;
-                },
-            });
+                });
         };
 
         WorkFlow.Router = Marionette.AppRouter.extend({
@@ -133,17 +118,8 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         return;
                     }
 
-                    var containerCollection = new Backbone.Collection(
-                        _.each(model.get('containers'), function(i){
-                            i.parentID = this.parentID;
-                        }, {parentID: id}));
-
                     var masthead = new App.Views.Item.PageHeader({
                         model: new Backbone.Model({name: model.get('name')})
-                    });
-
-                    var infoPanel = new App.Views.Item.InfoPanel({
-                        collection: containerCollection
                     });
 
                     that.listenTo(WorkFlow.getCollection(), 'pods:collection:fetched', function(){
@@ -158,10 +134,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             }));
                             if (!graphsOn) {
                                 itemLayout.info.show(new App.Views.Item.InfoPanel({
-                                    collection: new Backbone.Collection(
-                                        _.each(model.get('containers'), function(i){
-                                            i.parentID = this.parentID;
-                                        }, {parentID: id}))
+                                    collection: model.get('containers'),
                                 }));
                             }
                         } catch(e) {
@@ -174,7 +147,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             that = this;
                         graphsOn = true;
                         statCollection.fetch({
-                            data: {unit: data.get('id')},
+                            data: {unit: data.id},
                             reset: true,
                             success: function(){
                                 itemLayout.controls.show(new App.Views.Item.ControlsPanel({
@@ -200,7 +173,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         }));
 
                         itemLayout.info.show(new App.Views.Item.InfoPanel({
-                            collection: containerCollection
+                            collection: model.get('containers')
                         }));
                     });
 
@@ -210,7 +183,9 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             graphs: false,
                             model: model
                         }));
-                        itemLayout.info.show(infoPanel);
+                        itemLayout.info.show(new App.Views.Item.InfoPanel({
+                            collection: model.get('containers'),
+                        }));
                     });
                     App.contents.show(itemLayout);
                 });
@@ -222,40 +197,34 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                          'pods_app/views/paginator',
                          'pods_app/views/loading'], function(){
                     var wizardLayout = new App.Views.NewItem.PodWizardLayout(),
-                        parent_model = WorkFlow.getCollection().fullCollection.get(id);
+                        parent_model = WorkFlow.getCollection().fullCollection.get(id),
+                        model = parent_model.get('containers').get(name);
 
-                    that.listenTo(wizardLayout, 'show', function(){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardLogsSubView({
-                            model: parent_model.getContainer(name)
-                        }));
-                    });
+                    var show = function(View){
+                        return wizardLayout.steps.show(new View({model: model}));
+                    };
 
-                    that.listenTo(wizardLayout, 'step:portconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardPortsSubView({
-                            model: data,
-                            pod: parent_model,
-                        }));
-                    });
-                    that.listenTo(wizardLayout, 'step:volconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardVolumesSubView({model: data}));
-                    });
-                    that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardEnvSubView({model: data}));
-                    });
-                    that.listenTo(wizardLayout, 'step:resconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardResSubView({model: data}));
-                    });
-                    that.listenTo(wizardLayout, 'step:otherconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardOtherSubView({model: data}));
-                    });
-                    that.listenTo(wizardLayout, 'step:statsconf', function(data){
+                    that.listenTo(wizardLayout, 'show',
+                        _.partial(show, App.Views.NewItem.WizardLogsSubView));
+
+                    that.listenTo(wizardLayout, 'step:portconf',
+                        _.partial(show, App.Views.NewItem.WizardPortsSubView));
+                    that.listenTo(wizardLayout, 'step:volconf',
+                        _.partial(show, App.Views.NewItem.WizardVolumesSubView));
+                    that.listenTo(wizardLayout, 'step:envconf',
+                        _.partial(show, App.Views.NewItem.WizardEnvSubView));
+                    that.listenTo(wizardLayout, 'step:resconf',
+                        _.partial(show, App.Views.NewItem.WizardResSubView));
+                    that.listenTo(wizardLayout, 'step:otherconf',
+                        _.partial(show, App.Views.NewItem.WizardOtherSubView));
+                    that.listenTo(wizardLayout, 'step:statsconf', function(){
                         var statCollection = new App.Data.StatsCollection();
                         statCollection.fetch({
-                            data: {unit: data.get('parentID'), container: data.get('name')},
+                            data: {unit: parent_model.id, container: model.id},
                             reset: true,
                             success: function(){
                                 wizardLayout.steps.show(new App.Views.NewItem.WizardStatsSubView({
-                                    model: data,
+                                    model: model,
                                     collection:statCollection
                                 }));
                             },
@@ -264,9 +233,8 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             }
                         });
                     });
-                    that.listenTo(wizardLayout, 'step:logsconf', function(data){
-                        wizardLayout.steps.show(new App.Views.NewItem.WizardLogsSubView({model: data}));
-                    });
+                    that.listenTo(wizardLayout, 'step:logsconf',
+                        _.partial(show, App.Views.NewItem.WizardLogsSubView));
                     App.contents.show(wizardLayout);
                 });
             },
@@ -278,7 +246,6 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                          'pods_app/views/pod_create',
                          'pods_app/views/paginator',
                          'pods_app/views/loading'], function(utils){
-
                     var registryURL = 'registry.hub.docker.com',
                         imageTempCollection = new App.Data.ImagePageableCollection(),
                         wizardLayout = new App.Views.NewItem.PodWizardLayout(),
@@ -293,19 +260,17 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                                 return match !== null ? +match[1] : 0;
                             }))+1);
                         }
-                    var model = new App.Data.Pod({ name: podName, containers: [], volumes: [] });
+                    var model = new App.Data.Pod({ name: podName });
+                    model.detached = true;
+                    that.listenTo(model, 'remove:containers', function(container){
+                        model.deleteVolumes(_.pluck(container.get('volumeMounts'), 'name'));
+                    });
+
                     var newImageView = function(options){
                         imageView = new App.Views.NewItem.GetImageView(
-                            options
+                            _.extend({registryURL: registryURL}, options)
                         );
                         wizardLayout.steps.show(imageView);
-                    };
-                    var convertToContainer = function(data){
-                        if (data instanceof App.Data.Image) return data;
-                        data = typeof data === 'string'  // got container name
-                            ? _.findWhere(model.get('containers'), {name: data})
-                            : _.last(model.get('containers'));
-                        return new App.Data.Image(data);
                     };
                     var processCollectionLoadError = function(collection, response){
                         utils.notifyWindow(response);
@@ -329,7 +294,6 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             success: function(collection, response, opts){
                                 collection.each(function(m){imageCollection.add(m)});
                                 newImageView({
-                                    registryURL: registryURL,
                                     collection: imageCollection,
                                     query: query
                                 });
@@ -349,7 +313,6 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             success: function(collection, response, opts){
                                 collection.each(function(m){currentCollection.add(m)});
                                 newImageView({
-                                    registryURL: registryURL,
                                     collection: currentCollection,
                                     query: query
                                 });
@@ -362,24 +325,22 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                     that.listenTo(wizardLayout, 'step:getimage', function(){
                         newImageView({
                             collection: new App.Data.ImageCollection(imageTempCollection.fullCollection.models),
-                            registryURL: registryURL
                         });
                     });
                     that.listenTo(wizardLayout, 'clear:pager', function(){
                         wizardLayout.footer.empty();
                     });
                     that.listenTo(wizardLayout, 'step:portconf', function(data){
-                        var containerModel = convertToContainer(data);
-                        model.last_edited_container = containerModel.get('name');
+                        var containerModel = model.get('containers').get(data);
+                        model.last_edited_container = containerModel.id;
                         wizardLayout.steps.show(
                             new App.Views.NewItem.WizardPortsSubView({
                                 model: containerModel,
-                                pod: model,
                             })
                         );
                     });
                     that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        var containerModel = convertToContainer(data),
+                        var containerModel = model.get('containers').get(data),
                             image = containerModel.get('image');
                         if (!(containerModel.get('image') in model.origEnv)) {
                             model.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
@@ -396,9 +357,10 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         // }
 
                         utils.preloader.show();
-                        WorkFlow.getCollection().fullCollection.create(data.attributes, {
+                        WorkFlow.getCollection().fullCollection.create(data, {
                             wait: true,
-                            success: function(){
+                            success: function(model){
+                                model.detached = false;
                                 utils.preloader.hide();
                                 Pods.navigate('pods');
                                 that.showPods();
@@ -413,19 +375,7 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             }
                         });
                     });
-                    that.listenTo(wizardLayout, 'step:complete', function(containerModel){
-                        if (containerModel.hasOwnProperty('origEnv')) {
-                            model.origEnv[containerModel.get('image')] = containerModel.origEnv;
-                        }
-                        model.last_edited_container = containerModel.get('name');
-                        var container = _.find(model.get('containers'), function(c){
-                            return c.name === containerModel.get('name');
-                        });
-                        if (container === undefined) {
-                            container = {};
-                            model.get('containers').push(container);
-                        }
-                        _.extendOwn(container, containerModel.attributes);
+                    that.listenTo(wizardLayout, 'step:complete', function(){
                         wizardLayout.steps.show(new App.Views.NewItem.WizardCompleteSubView({
                             model: model
                         }));
@@ -434,27 +384,16 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         utils.preloader.show();
                         $.ajax({
                             type: 'POST',
-                            dataType: 'json',
                             contentType: 'application/json; charset=utf-8',
                             url: '/api/images/new',
                             data: JSON.stringify({image: image, auth: auth})
-                        }).error(function(data){
-                            utils.preloader.hide();
+                        }).always(utils.preloader.hide).fail(function(data){
                             utils.notifyWindow(data);
-                        }).success(function(data){
-                            utils.preloader.hide();
-                            var name = image.replace(/[^a-z0-9]+/gi, '-');
-                            name += _.random(Math.pow(36, 8)).toString(36);
-                            if (data.hasOwnProperty('data')) { data = data.data; }
-                            var contents = {
-                                image: image, name: name, workingDir: null,
-                                ports: [], volumeMounts: [], env: [], args: [], kubes: 1,
-                                terminationMessagePath: null, sourceUrl: null
-                            };
-                            model.fillContainer(contents, data);
-                            model.deleteContainer(model.last_edited_container);
-                            var containerModel = new App.Data.Image(contents);
-                            wizardLayout.trigger('step:portconf', containerModel);
+                        }).done(function(data){
+                            var newContainer = App.Data.Container.fromImage(data.data);
+                            model.get('containers').remove(model.last_edited_container);
+                            model.get('containers').add(newContainer);
+                            wizardLayout.trigger('step:portconf', newContainer);
                         });
                     });
                     App.contents.show(wizardLayout);

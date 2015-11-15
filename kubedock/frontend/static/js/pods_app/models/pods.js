@@ -1,4 +1,4 @@
-define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Pods, Backbone){
+define(['pods_app/app', 'backbone', 'backbone-paginator', 'backbone-associations', 'notify'], function(Pods, Backbone){
 
     Pods.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
@@ -18,7 +18,84 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
             return data;
         };
 
-        Data.Pod = Backbone.Model.extend({
+        Data.Container = Backbone.Model.extend({
+            idAttribute: 'name',
+            defaults: function(){
+                return {
+                    image: null,
+                    name: _.random(Math.pow(36, 8)).toString(36),
+                    workingDir: null,
+                    ports: [],
+                    volumeMounts: [],
+                    env: [],
+                    args: [],
+                    kubes: 1,
+                    terminationMessagePath: null,
+                    sourceUrl: null,
+                };
+            },
+            getPod: function(){
+                return ((this.collection || {}).parents || [])[0];
+            },
+            checkForUpdate: function(){
+                return $.ajax({
+                    url: this.getPod().url() + '/' + this.get('containerID') + '/update',
+                    context: this,
+                }).done(function(rs){ this.updateIsAvailable = rs.data; });
+            },
+            update: function(){
+                return $.ajax({
+                    url: this.getPod().url() + '/' + this.get('containerID') + '/update',
+                    type: 'POST',
+                    context: this,
+                }).done(function(){ this.updateIsAvailable = undefined; });
+            },
+            getLogs: function(size){
+                size = size || 100;
+                return $.ajax({
+                    url: '/api/logs/container/' + this.get('name') + '?size=' + size,
+                    context: this,
+                    success: function(data){
+                        var seriesByTime = _.indexBy(this.get('logs'), 'start');
+                        _.each(data.data.reverse(), function(serie) {
+                            var lines = serie.hits.reverse(),
+                                oldSerie = seriesByTime[serie.start];
+                            if (lines.length && oldSerie && oldSerie.hits.length) {
+                                // if we have some logs, append only new lines
+                                var first = lines[0],
+                                    index = _.sortedIndex(oldSerie.hits, first, 'time_nano');
+                                lines.unshift.apply(lines, _.first(oldSerie.hits, index));
+                            }
+                        });
+                        this.set('logs', data.data);
+                    },
+                });
+            },
+        }, {  // Class Methods
+            fromImage: function(image){
+                var data = _.clone(image instanceof Data.Image ? image.attributes : image);
+                data.ports = _.map(data.ports || [], function(port){
+                    return {
+                        containerPort: port.number,
+                        protocol: port.protocol,
+                        hostPort: null,
+                        isPublic: false
+                    };
+                });
+                data.volumeMounts = _.map(data.volumeMounts || [], function(vm){
+                    return {name: null, mountPath: vm};
+                });
+                return new this(data);
+            }
+        });
+
+        Data.Pod = Backbone.AssociatedModel.extend({
+            urlRoot: '/api/podapi/',
+            relations: [{
+                  type: Backbone.Many,
+                  key: 'containers',
+                  relatedModel: Data.Container,
+            }],
 
             defaults: {
                 name: 'Nameless',
@@ -31,36 +108,8 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
 
             parse: unwrapper,
 
-            fillContainer: function(container, data){
-                if (data.hasOwnProperty('ports')) {
-                    _.each(data['ports'], function(p){
-                        container['ports'].push({
-                            containerPort: p['number'],
-                            protocol: p['protocol'],
-                            hostPort: null,
-                            isPublic: false
-                        })
-                    });
-                }
-                if (data.hasOwnProperty('volumeMounts')) {
-                    _.each(data['volumeMounts'], function(m){
-                        container['volumeMounts'].push({name: null, mountPath: m})
-                    });
-                }
-                _.each(['workingDir', 'args', 'env', 'secret', 'sourceUrl'], function(i){
-                    if (data.hasOwnProperty(i)) {
-                        container[i] = data[i];
-                    }
-                });
-            },
-            getContainer: function(containerName){
-                var data = _.findWhere(this.get('containers'), {name: containerName});
-                if (!data.hasOwnProperty('kubes')) data['kubes'] = 1;
-                if (!data.hasOwnProperty('workingDir')) data['workingDir'] = undefined;
-                if (!data.hasOwnProperty('args')) data['args'] = [];
-                if (!data.hasOwnProperty('env')) data['env'] = [];
-                if (!data.hasOwnProperty('parentID')) data['parentID'] = this.get('id');
-                return new Data.Image(data);
+            command: function(cmd, options){
+                return this.save({command: cmd}, options);
             },
 
             // delete specified volumes from pod model, release Persistent Disks
@@ -79,15 +128,10 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'notify'], function(Po
                 }, this));
             },
 
-            // delete container by name. Returns deleted container or undefined.
-            deleteContainer: function(name){
-                var containers = this.get('containers'),
-                    container = _.findWhere(containers, {name: name});
-                if (container === undefined) return;
-                this.set('containers', _.without(containers, container));
-                this.deleteVolumes(_.pluck(container.volumeMounts, 'name'));
-                return container;
-            },
+            getKubes: function(){
+                return this.get('containers').reduce(
+                    function(sum, c){ return sum + c.get('kubes'); }, 0);
+            }
         });
 
         Data.Image = Backbone.Model.extend({

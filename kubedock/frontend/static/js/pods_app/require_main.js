@@ -8,6 +8,7 @@ requirejs.config({
         marionette             : "lib/backbone.marionette.min",
         bootstrap              : "lib/bootstrap",
         "backbone-paginator"   : "lib/backbone.paginator",
+        "backbone-associations": "lib/backbone-associations",
         text                   : "lib/text",
         tpl                    : "lib/underscore-tpl",
         "jquery-spin"          : "lib/jquery.spin",
@@ -36,6 +37,7 @@ requirejs.config({
             exports: 'Backbone'
         },
         'backbone-paginator' : ['backbone'],
+        'backbone-associations' : ['backbone'],
         marionette: ['backbone'],
         'bootstrap-editable': ['bootstrap'],
         'jquery-spin': ['spin'],

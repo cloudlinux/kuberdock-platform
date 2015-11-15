@@ -147,7 +147,8 @@ define(['pods_app/app',
             containerPage: function(evt){
                 evt.stopPropagation();
                 this.checked = false;
-                App.navigate('poditem/' + this.model.get('parentID') + '/' + this.model.get('name') , {trigger: true});
+                App.navigate('poditem/' + this.model.getPod().id + '/' +
+                             this.model.get('name') , {trigger: true});
             },
         });
 
@@ -259,11 +260,7 @@ define(['pods_app/app',
                 'click @ui.close'      : 'closeMessage'
             },
 
-            initialize: function(options){
-                this.graphs = options.graphs;
-                this.listenTo(App.WorkFlow.getCollection(),
-                              'pods:collection:fetched', this.render);
-            },
+            initialize: function(options){ this.graphs = options.graphs; },
 
             templateHelpers: function(){
                 var publicIP = this.model.has('labels')
@@ -274,9 +271,7 @@ define(['pods_app/app',
                         : '',
                     graphs = this.graphs,
                     kubeType = this.getKubeById(),
-                    kubes = _.reduce(this.model.get('containers'), function(memo, c) {
-                        return memo + c.kubes
-                    }, 0),
+                    kubes = this.model.getKubes(),
                     kubesPrice = this.getFormattedPrice(kubes * kubeType.kube_price),
                     package = this.getUserPackage();
                     var public_address = "%PUBLIC_ADDRESS%";
@@ -286,8 +281,8 @@ define(['pods_app/app',
                         public_ip = this.model.get('public_ip');
                     }
                     postDescription = postDescription.replace(r, public_ip);
-                    hasPorts = _.any(this.model.get('containers'), function(c) {
-                        return c.ports && c.ports.length;
+                    hasPorts = this.model.get('containers').any(function(c) {
+                        return c.get('ports') && c.get('ports').length;
                     });
 
                 return {
@@ -304,14 +299,9 @@ define(['pods_app/app',
                 };
             },
 
-            getItem: function(){
-                return App.WorkFlow.getCollection().fullCollection.get(this.model.id);
-            },
-
             statsItem: function(evt){
                 evt.stopPropagation();
-                var item = this.getItem();
-                this.trigger('display:pod:stats', item);
+                this.trigger('display:pod:stats', this.model);
             },
 
             closeMessage: function(){
@@ -326,54 +316,22 @@ define(['pods_app/app',
 
             listItem: function(evt){
                 evt.stopPropagation();
-                var item = this.getItem();
-                this.trigger('display:pod:list', item);
+                this.trigger('display:pod:list', this.model);
             },
 
             startItem: function(evt){
-                var item = this.getItem(),
-                    that = this,
-                    preloader = $('#page-preloader');
-                    preloader.show();
                 evt.stopPropagation();
-                item.save({command: 'start'}, {
-                    wait: true,
-                    success: function(model, response, options){
-                        preloader.hide();
-                        that.render();
-                    },
-                    error: function(model, response, options, data){
-                        preloader.hide();
-                        that.render();
-                        utils.notifyWindow(response);
-                    }
-                });
+                App.WorkFlow.commandPod('start', this.model).always(this.render);
             },
 
             stopItem: function(evt){
-                var item = this.getItem(),
-                    that = this,
-                    preloader = $('#page-preloader');
-                    preloader.show();
                 evt.stopPropagation();
-                item.save({command: 'stop'}, {
-                    wait: true,
-                    success: function(model, response, options){
-                        preloader.hide();
-                        that.render();
-                    },
-                    error: function(model, response, options, data){
-                        preloader.hide();
-                        utils.notifyWindow(response);
-                    }
-                });
+                App.WorkFlow.commandPod('stop', this.model).always(this.render);
             },
 
             terminateItem: function(evt){
-                var that = this,
-                    item = that.getItem(),
-                    name = item.get('name'),
-                    preloader = $('#page-preloader');
+                var item = this.model,
+                    name = item.get('name');
                 utils.modalDialogDelete({
                     title: "Delete " + name + "?",
                     body: "Are you sure you want to delete pod '" + name + "'?",
@@ -381,17 +339,16 @@ define(['pods_app/app',
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            preloader.show();
+                            utils.preloader.show();
                             item.destroy({
                                 wait: true,
+                                complete: utils.preloader.hide,
                                 success: function(){
                                     var col = App.WorkFlow.getCollection();
-                                    preloader.hide();
                                     col.remove(item);
                                     Pods.navigate('pods', {trigger: true});
                                 },
                                 error: function(model, response, options, data){
-                                    preloader.hide();
                                     utils.notifyWindow(response);
                                 }
                             });

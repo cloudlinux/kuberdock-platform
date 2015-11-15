@@ -1,4 +1,4 @@
-<% if (isPending) { %>
+<% if (detached) { %>
     <div class="container" id="add-image">
         <div class="col-md-3 sidebar">
             <ul class="nav nav-sidebar">

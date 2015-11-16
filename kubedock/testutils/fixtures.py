@@ -20,7 +20,7 @@ def initial_fixtures():
               memory=64, memory_units='MB', disk_space=1,
               disk_space_units='GB', included_traffic=0)
     k1 = Kube(id=DEFAULT_KUBE_TYPE,
-              name='Standard kube', cpu=.01, cpu_units='Cores',
+              name='Standard', cpu=.01, cpu_units='Cores',
               memory=64, memory_units='MB', disk_space=1,
               disk_space_units='GB', included_traffic=0,
               is_default=True)

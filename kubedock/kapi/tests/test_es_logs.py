@@ -155,8 +155,15 @@ class TestLogQuery(unittest.TestCase):
 
             self.assertEqual(res, self.default_result)
             self.es_query_mock.assert_called_once_with(
-                index, {'filtered': {'filter': {'and': filters + time_filters}}},
-                size, {'time_nano': {'order': 'desc'}}, host
+                index,
+                {'filtered': {'filter': {'and': filters + time_filters}}},
+                size,
+                {'time_nano': {
+                    'order': 'desc',
+                    'missing': '@timestamp',
+                    'unmapped_type': 'string'
+                }},
+                host
             )
 
         start, end = datetime(2015, 2, 5, 6), datetime(2015, 2, 5, 18)

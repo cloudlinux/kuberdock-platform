@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 8%{?dist}.cloudlinux
+Release: 9%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -112,7 +112,6 @@ rm -rf %{buildroot}
 
 %define sslcert %{_sysconfdir}/nginx/ssl/kubecert.crt
 %define sslkey %{_sysconfdir}/nginx/ssl/kubecert.key
-%define dhparam %{_sysconfdir}/nginx/ssl/dhparam.pem
 
 %define kd_vassal_source /var/opt/kuberdock/conf/kuberdock.ini
 %define kd_vassal %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
@@ -147,10 +146,6 @@ root@${FQDN}
 EOF
 fi
 
-if [ ! -f %{dhparam} ] ; then
-%{_bindir}/openssl dhparam -rand /proc/apm:/proc/cpuinfo:/proc/dma:/proc/filesystems:/proc/interrupts:/proc/ioports:/proc/pci:/proc/rtc:/proc/uptime -out %{dhparam} 2048 2> /dev/null
-fi
-
 # Setting labels
 SESTATUS=$(sestatus|awk '/SELinux\sstatus/ {print $3}')
 if [ "$SESTATUS" != disabled ];then
@@ -181,6 +176,25 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Mon Nov 16 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-9
+- moved modules mocking to module level in test_podcollection.py and test_validation.py
+- test_validation fix
+- removed checking calling of 'modify_node_ips' method because of its unavailability
+- AC-1293: Disabled chechbox in bulk operation if podcollection is empty && some fix in logic bulk operaton
+- AC-1451: display container log history
+- kapi.pod_states renamed to kapi.usage; container states moved from listeners to kapi.usage
+  Container logs api now returns logs from previous container's lives too. More tests for kapi.es_logs.
+- Fixed some tests; added default .coveragerc config.
+- AC-1477: Improve KuberDock web-ui SSL security
+- AC-1094: Clean up old params in api
+- AC-1490: Prevent elasticsearch search failures after document structure changes
+- AC-1471: add date_from, date_to params to usage. Accept date_from, date_to params for usage query.
+- AC-1429: allow non-english names
+- AC-1118: rename 'Standard kube' to 'Standard'
+- AC-1460: added possibility to reuse custom variables in predefined apps templates
+- AC-1450: fixed timezone conversion for statistics
+- AC-1478: Hide negative values in nodes monitoring plots
+
 * Thu Nov 12 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-8
 - AC-1430: move role edit to update script
 - AC-991: fixed timezone saving and conversion

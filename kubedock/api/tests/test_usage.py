@@ -72,8 +72,6 @@ class UsageResponseValidator(V):
         return self.validate(data, self.get_list_schema)
 
 
-@unittest.skip('New usage api is disabled, \'cause in kuberdock v36 don\'t have '
-               'whmcs addon adapted for the new api.')  # TODO: unskip
 class UsageTestCase(APITestCase):
     """Tests for /api/usage endpoint"""
     url = '/usage'
@@ -86,8 +84,8 @@ class UsageTestCase(APITestCase):
         self.adminauth = (self.admin.username, admin_password)
 
         # create test data
-        another_user = User(username='another_user', password='p-0',
-                            email='another_user@test.test').save()
+        another_user, _ = fixtures.user_fixtures(username='another_user',
+                                                 email='another_user@test.test')
         config = '{"containers":[{"kubes":1}]}'
         self.ips = [(Pod(id=str(uuid4()), owner_id=user.id, name='pod1',
                          kube_id=0, config=config).save(), u'192.168.43.132'),

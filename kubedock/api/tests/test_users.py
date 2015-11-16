@@ -1,4 +1,6 @@
 import unittest
+import logging
+import pytz
 from kubedock.testutils.testcases import APITestCase
 from kubedock.testutils import fixtures
 
@@ -27,8 +29,11 @@ class UserFullTestCase(APITestCase):
         self.assert403(self.open(auth=self.userauth))
         response = self.open(auth=self.adminauth)
         self.assert200(response)  # only Admin has permission
-        self.assertIn(self.user.to_dict(full=True), response.json['data'])
-        self.assertIn(self.admin.to_dict(full=True), response.json['data'])
+        user, admin = self.user.to_dict(full=True), self.admin.to_dict(full=True)
+        user['join_date'] = user['join_date'].replace(tzinfo=pytz.utc).isoformat()
+        admin['join_date'] = admin['join_date'].replace(tzinfo=pytz.utc).isoformat()
+        self.assertIn(user, response.json['data'])
+        self.assertIn(admin, response.json['data'])
 
     # @unittest.skip('')
     def test_post(self):
@@ -88,6 +93,8 @@ class UserFullTestCase(APITestCase):
     # @unittest.skip('')
     def test_delete(self):
         # delete
+        logging.getLogger('UserFullTestCase.delete').info(
+            'This test will work only with k8s.')
         url = '{0}/{1}'.format(self.url, self.user.id)
         self.assert401(self.open(url=url, method='DELETE'))
         self.assert403(self.open(url=url, method='DELETE', auth=self.userauth))

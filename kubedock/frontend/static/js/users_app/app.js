@@ -545,32 +545,17 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.first_name.addClass('error');
                     this.ui.first_name.notify("Maximum length should be 25 symbols");
                     break;
-                case !patternLatin.test(this.ui.first_name.val()) && this.ui.first_name.val() !== '':
-                    utils.scrollTo(this.ui.first_name);
-                    this.ui.first_name.notify("Username should contain letters of Latin alphabet only");
-                    this.ui.first_name.addClass('error');
-                    break;
                 /* last name */
                 case this.ui.last_name.val().length >= 26:
                     utils.scrollTo(this.ui.last_name);
                     this.ui.last_name.addClass('error');
                     this.ui.last_name.notify("Maximum length should be 25 symbols");
                     break;
-                case !patternLatin.test(this.ui.last_name.val()) && this.ui.last_name.val() !== '':
-                    utils.scrollTo(this.ui.last_name);
-                    this.ui.last_name.notify("Username should contain letters of Latin alphabet only");
-                    this.ui.last_name.addClass('error');
-                    break;
                 /* middle initials */
                 case this.ui.middle_initials.val().length >= 26:
                     utils.scrollTo(this.ui.middle_initials);
                     this.ui.middle_initials.addClass('error');
                     this.ui.middle_initials.notify("Maximum length should be 25 symbols");
-                    break;
-                case !patternLatin.test(this.ui.middle_initials.val()) && this.ui.middle_initials.val() !== '':
-                    utils.scrollTo(this.ui.middle_initials);
-                    this.ui.middle_initials.notify("Username should contain letters of Latin alphabet only");
-                    this.ui.middle_initials.addClass('error');
                     break;
                 /* password */
                 case !this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):
@@ -945,32 +930,17 @@ define(['marionette', 'paginator', 'utils'],
                     this.ui.first_name.addClass('error');
                     this.ui.first_name.notify("Maximum length should be 25 symbols");
                     break;
-                case !patternLatin.test(this.ui.first_name.val()) && this.ui.first_name.val() !== '':
-                    utils.scrollTo(this.ui.first_name);
-                    this.ui.first_name.notify("Username should contain letters of Latin alphabet only");
-                    this.ui.first_name.addClass('error');
-                    break;
                 /* last name */
                 case this.ui.last_name.val().length >= 26:
                     utils.scrollTo(this.ui.last_name);
                     this.ui.last_name.addClass('error');
                     this.ui.last_name.notify("Maximum length should be 25 symbols");
                     break;
-                case !patternLatin.test(this.ui.last_name.val()) && this.ui.last_name.val() !== '':
-                    utils.scrollTo(this.ui.last_name);
-                    this.ui.last_name.notify("Username should contain letters of Latin alphabet only");
-                    this.ui.last_name.addClass('error');
-                    break;
                 /* middle initials */
                 case this.ui.middle_initials.val().length >= 26:
                     utils.scrollTo(this.ui.middle_initials);
                     this.ui.middle_initials.addClass('error');
                     this.ui.middle_initials.notify("Maximum length should be 25 symbols");
-                    break;
-                case !patternLatin.test(this.ui.middle_initials.val()) && this.ui.middle_initials.val() !== '':
-                    utils.scrollTo(this.ui.middle_initials);
-                    this.ui.middle_initials.notify("Username should contain letters of Latin alphabet only");
-                    this.ui.middle_initials.addClass('error');
                     break;
                 /* password */
                 case this.ui.password.val() || (this.ui.password.val() !== this.ui.password_again.val()):

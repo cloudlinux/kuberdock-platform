@@ -542,7 +542,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                             label: 'time',
                             renderer: $.jqplot.DateAxisRenderer,
                         },
-                        yaxis: {label: this.model.get('ylabel')}
+                        yaxis: {label: this.model.get('ylabel'), min: 0}
                     },
                     seriesDefaults: {
                         showMarker: false,

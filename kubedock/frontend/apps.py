@@ -96,7 +96,7 @@ def get_value(value):
     varname, dflt, _ = kapi_papps.get_value(value)
     hs = None
     if varname is not None:
-        hs = hashlib.sha1(str(value)).hexdigest()
+        hs = hashlib.sha1(str(varname)).hexdigest()
     return dflt, hs
 
 
@@ -143,11 +143,28 @@ def generate(length=8):
 def find_custom(text):
     custom = kapi_papps.find_custom_vars(text)
     data = {}
+    definitions = set()
     for item in custom:
-        _, value, title = kapi_papps.get_value(item, strict=True)
+        try:
+            name, value, title = kapi_papps.get_value(item, strict=True)
+        except kapi_papps.AppParseError:
+            name = kapi_papps.get_reused_variable_name(item)
+            value = None
+            title = None
+        if not name:
+            continue
         if value == 'autogen':
             value = generate()
+        if title:
+            # Use only the first definition of a variable, all other
+            # definitions with the same name will be reusable variables
+            if name in definitions:
+                title = None
+                value = None
+            else:
+                definitions.add(name)
         data[item] = {
-            'title': title, 'value': value,
-            'hashsum': hashlib.sha1(item).hexdigest()}
+            'title': title, 'value': value, 'name': name,
+            'hashsum': hashlib.sha1(name).hexdigest()}
+
     return data

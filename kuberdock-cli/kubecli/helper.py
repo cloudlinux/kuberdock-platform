@@ -259,11 +259,5 @@ def create_user_config(args):
         else:
             raise SystemExit("Config '{0}' not found. Try to specify a custom "
                              "one with option '--config'".format(path))
-        if args.user:
-            conf.set('defaults', 'user', args.user)
-        if args.password:
-            conf.set('defaults', 'password', args.password)
-        if args.token:
-            conf.set('defaults', 'token', args.token)
         with open(default_path, 'wb') as config:
             conf.write(config)

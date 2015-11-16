@@ -53,9 +53,10 @@ class TestKubeCtl(unittest.TestCase):
         kctl.get()
         get_mock.assert_called_with(container.PODAPI_PATH)
         showlist_mock.assert_called_once_with([
-            {'name': 'a', 'status': 'running', 'labels': 'name=a',
-             'images': 'img1,imageless'},
-            {'name': 'b', 'status': '???', 'labels': '', 'images': ''}
+            {'name': 'a', 'status': 'running', u'labels': 'name=a',
+             'images': u'img1,imageless', 'template_id': '???'},
+            {'name': 'b', 'status': '???', 'labels': u'', 'images': u'',
+             'template_id': '???'}
         ])
 
     @mock.patch.object(container.KubeQuery, 'get')
@@ -260,10 +261,10 @@ class TestKuberDock(unittest.TestCase):
         get_mock.return_value = GET_KUBE_TYPES_RESPONSE
         kd = container.KuberDock()
         kd.kube_types()
-        showlist_mock.assert_called_once_with(
+        showlist_mock.assert_called_once_with(sorted(
             [{'name': name, 'id': value}
-             for name, value in GET_KUBE_TYPES_RESPONSE['data'].iteritems()]
-        )
+             for name, value in GET_KUBE_TYPES_RESPONSE['data'].iteritems()],
+            key=lambda x: x['id']))
 
     @mock.patch.object(container.PrintOut, 'show_list')
     @mock.patch.object(container.KubeQuery, 'get')
@@ -313,7 +314,7 @@ class TestKuberDock(unittest.TestCase):
         pod = get_mock.return_value['data'][0]
         command = {'command': 'start'}
         put_mock.assert_called_once_with(
-            container.PODAPI_PATH + pod['id'], json.dumps(command))
+            container.PODAPI_PATH + pod['id'], command)
         setdelayed_mock.assert_called_once_with()
 
     @mock.patch.object(container.KubeQuery, 'put')
@@ -333,7 +334,7 @@ class TestKuberDock(unittest.TestCase):
         pod = get_mock.return_value['data'][0]
         command = {'command': 'stop'}
         put_mock.assert_called_once_with(
-            container.PODAPI_PATH + pod['id'], json.dumps(command))
+            container.PODAPI_PATH + pod['id'], command)
 
     def test_forget(self):
         """Test for KuberDock.stop method."""

@@ -309,7 +309,7 @@
             <div id="custom-fields">
                 <div class="title">Set up resources amount</div>
                 <div class="body">
-                    {% for k, v in fields.iteritems() %}
+                    {% for k, v in fields.iteritems() if v.title %}
                         {% if v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube' %}
                         <div class="custom-field-item">
                             <label class="custom-field-title">{{ v.title }}</label>
@@ -349,7 +349,7 @@
             <div id="recource-fields">
                 <div class="title">Additional configuration</div>
                 <div class="body">
-                {% for k, v in fields.iteritems() %}
+                {% for k, v in fields.iteritems() if v.title %}
                     {% if v.hashsum not in mutables %}
                     <div class="custom-field-item">
                         <label class="custom-field-title">{{ v.title }}</label>

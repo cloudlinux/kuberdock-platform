@@ -75,6 +75,7 @@ CORRECT_VARIABLE_FORMAT_DESCRIPTION = \
 "$<VARIABLE_NAME|default:<word 'autogen' or some default value>|VAR_DESCRIPTION>$"
 VARIABLE_PATTERN = \
     re.compile(r'^\$([^\|\$]+)\|default:([^\|\$]+)\|([^\|\$]+)\$$')
+REUSED_VARIABLE_PATTERN = re.compile(r'\$([^\|\$]+)\$$')
 
 
 def validate_template(template):
@@ -100,7 +101,7 @@ def validate_template(template):
             u'common',
             u'Invalid yaml template: top level element must be list or dict'
         )
-    check_kube_type(app_root)
+    check_kube_type(parsed_template, app_root)
 
 
 def check_custom_variables(template):
@@ -112,12 +113,24 @@ def check_custom_variables(template):
     custom_vars = find_custom_vars(template)
     if not custom_vars:
         return
-    errors = []
+
+    valid_vars = {}
+    unknown_vars = []
     for var in custom_vars:
-        if not VARIABLE_PATTERN.match(var):
-            errors.append(var)
-    if errors:
-        raise_validation_error('customVars', errors)
+        try:
+            name, _, _ = get_value(var, True)
+            valid_vars[name] = var
+        except AppParseError:
+            unknown_vars.append({
+                'name': get_reused_variable_name(var),
+                'item': var
+            })
+    unknown_vars = [
+        item['item'] for item in unknown_vars
+        if item['name'] not in valid_vars
+    ]
+    if unknown_vars:
+        raise_validation_error('customVars', unknown_vars)
 
 
 def find_custom_vars(text):
@@ -125,25 +138,31 @@ def find_custom_vars(text):
     return custom
 
 
-def check_kube_type(app_root):
+def check_kube_type(yml, app_root):
     """Checks validity of kube type in application structure.
     :param app_struct: dict or list for application structure.
     :raise: APIError in case of invalid kube type.
 
     """
     key = 'kube_type'
-    if key not in app_root:
+    kd_key = 'kuberdock'
+    kuberdock = yml.get(kd_key, {})
+    if key not in kuberdock:
+        kuberdock = app_root.get(kd_key, {})
+    if key not in kuberdock:
         return
-    kube_type = app_root[key]
+    kube_type = kuberdock[key]
+    print "Checking kube type: {}".format(kube_type)
     _, value, _ = get_value(kube_type)
     try:
         value = int(value)
     except (TypeError, ValueError):
-        raise_validation_error('values', {'kube_type': 'Invalid kube type'})
+        raise_validation_error('values', {key: 'Invalid kube type'})
     kube = Kube.get_by_id(value)
+    print "kube for id {}: {}".format(value, kube)
     if not kube:
         raise_validation_error(
-            'values', {'kube_type': 'Specified kube does not exist'})
+            'values', {key: 'Specified kube does not exist'})
 
 
 def find_root(app_struct):
@@ -160,15 +179,27 @@ def find_root(app_struct):
 def get_value(value, strict=False):
     if not isinstance(value, basestring):
         if strict:
-            AppParseError(u'Invalid custom variable: {}'.format(value))
+            raise AppParseError(u'Invalid custom variable: {}'.format(value))
         return (None, value, None)
     m = VARIABLE_PATTERN.match(value)
     if m is None:
         if strict:
-            AppParseError(u'Invalid custom variable: {}'.format(value))
+            raise AppParseError(u'Invalid custom variable: {}'.format(value))
         return (None, value, None)
     varname, defaultvalue, description = m.groups()
     return (varname, defaultvalue, description)
+
+def get_reused_variable_name(value, strict=False):
+    if not isinstance(value, basestring):
+        if strict:
+            raise AppParseError(u'Invalid custom variable: {}'.format(value))
+        return None
+    m = REUSED_VARIABLE_PATTERN.match(value)
+    if m is None:
+        if strict:
+            raise AppParseError(u'Invalid custom variable: {}'.format(value))
+        return None
+    return m.groups()[0]
 
 
 def raise_validation_error(key, error):

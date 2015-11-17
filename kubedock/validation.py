@@ -472,9 +472,9 @@ package_schema = {
 
 kube_schema = {
     'name':  kube_name_schema,
-    'cpu': {'coerce': float, 'min': 0.01, 'max': 999, 'required': True},
+    'cpu': {'coerce': float, 'min': 0.01, 'max': 9.99, 'required': True},
     'memory': {'coerce': int, 'min': 1, 'max': 99999, 'required': True},
-    'disk_space': {'coerce': int, 'min': 0, 'max': 999, 'required': True},
+    'disk_space': {'coerce': int, 'min': 1, 'max': 999, 'required': True},
     'included_traffic': {
         'coerce': int, 'min': 0, 'max': 99999, 'required': True
     },

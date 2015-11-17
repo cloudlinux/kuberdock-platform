@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 9%{?dist}.cloudlinux
+Release: 9.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -112,6 +112,7 @@ rm -rf %{buildroot}
 
 %define sslcert %{_sysconfdir}/nginx/ssl/kubecert.crt
 %define sslkey %{_sysconfdir}/nginx/ssl/kubecert.key
+%define dhparam %{_sysconfdir}/nginx/ssl/dhparam.pem
 
 %define kd_vassal_source /var/opt/kuberdock/conf/kuberdock.ini
 %define kd_vassal %{_sysconfdir}/uwsgi/vassals/kuberdock.ini
@@ -146,6 +147,10 @@ root@${FQDN}
 EOF
 fi
 
+if [ ! -f %{dhparam} ] ; then
+%{_bindir}/openssl dhparam -rand /proc/apm:/proc/cpuinfo:/proc/dma:/proc/filesystems:/proc/interrupts:/proc/ioports:/proc/pci:/proc/rtc:/proc/uptime -out %{dhparam} 2048 2> /dev/null
+fi
+
 # Setting labels
 SESTATUS=$(sestatus|awk '/SELinux\sstatus/ {print $3}')
 if [ "$SESTATUS" != disabled ];then
@@ -176,6 +181,9 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Tue Nov 17 2015 Igor Savenko <bliss@cloudlinux.com> 0.4-9.1
+- restored accidentally removed fixes
+
 * Mon Nov 16 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-9
 - moved modules mocking to module level in test_podcollection.py and test_validation.py
 - test_validation fix

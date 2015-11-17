@@ -9,7 +9,7 @@
     </div>
     <div id="details_content" class="col-sm-9 no-padding">
         <div id="tab-content">
-            <label>Search from directories</label>
+            <label class="placeholder">Search images in DockerHub</label>
         <div>
     </div>
     <div class="clearfix">
@@ -35,12 +35,12 @@
     </div>
     <div class="login-user row">
         <div class="col-md-6">
-            <label>Enter username</label>
-            <input type="text" id="username">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="Enter registry name">
         </div>
         <div class="col-md-6">
-            <label>Enter password</label>
-            <input type="password" id="password">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter password">
         </div>
     </div>
     <div id="search-results-scroll">

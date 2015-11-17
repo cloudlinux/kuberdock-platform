@@ -184,7 +184,8 @@ define(['pods_app/app',
                 loader            : 'div#load-control',
                 searchControl     : 'div.search-control',
                 privateField      : '#private-image-field',
-                input             : 'input#search-image-field'
+                input             : 'input#search-image-field',
+                label             : 'label.placeholder'
             },
 
             events: {
@@ -238,6 +239,7 @@ define(['pods_app/app',
                     this.ui.privateWrapper.hide();
                     this.ui.loginPrivateUres.slideUp();
                     this.ui.searchImageButton.parent().show();
+                    this.ui.label.text('Search images in DockerHub');
                 } else if (val == "Other registries"){
                     this.ui.input.parent().hide();
                     this.ui.privateWrapper.show();
@@ -245,6 +247,7 @@ define(['pods_app/app',
                     this.ui.searchImageButton.parent().hide();
                     this.ui.privateField.attr('placeholder','[registry/]namespace/image');
                     this.ui.privateField.addClass('private-registry');
+                    this.ui.label.text('Select image from any registry');
                 } else {
                     this.ui.input.parent().hide();
                     this.ui.privateWrapper.show();
@@ -252,6 +255,7 @@ define(['pods_app/app',
                     this.ui.searchImageButton.parent().hide();
                     this.ui.privateField.attr('placeholder','namespace/image');
                     this.ui.privateField.removeClass('private-registry');
+                    this.ui.label.text('Select image from DockerHub');
                 }
             },
 

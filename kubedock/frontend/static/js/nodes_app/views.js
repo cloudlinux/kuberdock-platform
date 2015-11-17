@@ -298,7 +298,7 @@ define(['nodes_app/app', 'marionette', 'utils',
                     success: function(){
                         preloader.hide();
                         App.navigate('/', {trigger: true});
-                        $.notify('Node "' + val + '" successfully added', {
+                        $.notify('Node "' + val + '" is added successfully', {
                             autoHideDelay: 5000,
                             clickToHide: true,
                             globalPosition: 'bottom left',

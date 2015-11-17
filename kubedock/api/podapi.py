@@ -41,21 +41,21 @@ class PodsAPI(KubeUtils, MethodView):
 register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)
 
 
-@podapi.route('/<pod_id>/<container_id>/update', methods=['GET'],
-              endpoint='check_updates', strict_slashes=False)
-@KubeUtils.jsonwrap                # TODO: all these decorators should use
-@login_required_or_basic_or_token  # functools.wraps, otherwise endpoint name isn't
-@KubeUtils.pod_permissions         # a view func name, but a decorator inner func name
-def check_updates(pod_id, container_id):
-    user = KubeUtils._get_current_user()
-    return PodCollection(user).check_updates(pod_id, container_id)
-
-
-@podapi.route('/<pod_id>/<container_id>/update', methods=['POST'],
-              endpoint='update_container', strict_slashes=False)
+@podapi.route('/<pod_id>/<container_name>/update', methods=['GET'],
+              strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
 @KubeUtils.pod_permissions
-def update_container(pod_id, container_id):
+def check_updates(pod_id, container_name):
     user = KubeUtils._get_current_user()
-    return PodCollection(user).update_container(pod_id, container_id)
+    return PodCollection(user).check_updates(pod_id, container_name)
+
+
+@podapi.route('/<pod_id>/<container_name>/update', methods=['POST'],
+              strict_slashes=False)
+@KubeUtils.jsonwrap
+@login_required_or_basic_or_token
+@KubeUtils.pod_permissions
+def update_container(pod_id, container_name):
+    user = KubeUtils._get_current_user()
+    return PodCollection(user).update_container(pod_id, container_name)

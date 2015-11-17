@@ -39,13 +39,13 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'backbone-associations
             },
             checkForUpdate: function(){
                 return $.ajax({
-                    url: this.getPod().url() + '/' + this.get('containerID') + '/update',
+                    url: this.getPod().url() + '/' + this.id + '/update',
                     context: this,
                 }).done(function(rs){ this.updateIsAvailable = rs.data; });
             },
             update: function(){
                 return $.ajax({
-                    url: this.getPod().url() + '/' + this.get('containerID') + '/update',
+                    url: this.getPod().url() + '/' + this.id + '/update',
                     type: 'POST',
                     context: this,
                 }).done(function(){ this.updateIsAvailable = undefined; });

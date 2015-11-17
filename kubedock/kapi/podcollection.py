@@ -172,7 +172,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # current_app.logger.debug(rv)
         self._mark_pod_as_deleted(pod_id)
 
-    def check_updates(self, pod_id, container_id):
+    def check_updates(self, pod_id, container_name):
         """
         Check if image in registry differs from image in kubernetes
 
@@ -182,17 +182,19 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod = self.get_by_id(pod_id)
         try:
             container = (c for c in pod.containers
-                         if c['containerID'] == container_id).next()
+                         if c['name'] == container_name).next()
         except StopIteration:
-            raise APIError('Container with id {0} not found'.format(container_id))
+            raise APIError('Container with id {0} not found'.format(container_name))
         image = container['image']
-        image_id = container['imageID']
+        image_id = container.get('imageID')
+        if image_id is None:
+            return False
         image_id_in_registry = Image(image).get_id(self._get_secrets(pod))
         if image_id_in_registry is None:
             raise APIError('Image not found in registry')
         return image_id != image_id_in_registry
 
-    def update_container(self, pod_id, container_id):
+    def update_container(self, pod_id, container_name):
         """
         Update container image by restarting the pod.
 

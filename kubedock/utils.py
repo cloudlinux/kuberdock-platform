@@ -667,6 +667,7 @@ class KubeUtils(object):
 
     @classmethod
     def pod_permissions(cls, func):
+        @wraps(func)
         def inner(*args, **kwargs):
             rv = check_permission('get', 'pods')(func)
             return rv(*args, **kwargs)
@@ -674,6 +675,7 @@ class KubeUtils(object):
 
     @classmethod
     def pod_start_permissions(cls, func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             user = cls._get_current_user()
             params = cls._get_params()

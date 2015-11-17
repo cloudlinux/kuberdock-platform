@@ -69,21 +69,13 @@
                             <% } else { %>
                                 <% _.each(logs, function(serie){ %>
 
-                                <p class="container-logs-started">
-                                    <%- new Date(serie.start).toISOString() %>:
-                                    Started
-                                </p>
+                                <p class="container-logs-started"><%- new Date(serie.start).toISOString() %>: Started</p>
                                 <% _.each(serie.hits, function(line){ %>
                                     <p><%- new Date(line['@timestamp']).toISOString() %>: <%- line.log %></p>
                                 <% }) %>
                                 <% if (serie.end) { %>
-                                    <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>">
-                                        <%- new Date(serie.end).toISOString() %>:
-                                        <%- serie.exit_code ? 'Falied' : 'Exited successfully' %>
-                                    </p>
-                                    <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>-reason">
-                                        <%- serie.reason %>
-                                    </p>
+                                    <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>"><%- new Date(serie.end).toISOString() %>: <%- serie.exit_code ? 'Falied' : 'Exited successfully' %></p>
+                                    <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>-reason"><%- serie.reason %></p>
                                 <% } %>
 
                                 <% }) %>

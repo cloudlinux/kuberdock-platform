@@ -34,21 +34,30 @@ define(['pods_app/app',
             initialize: function(){
                 var that = this;
                 this.listenTo(this.steps, 'show', function(view){
-                    that.listenTo(view, 'step:getimage', that.getImage);
                     that.listenTo(view, 'image:selected', that.imageSelected);
-                    that.listenTo(view, 'step:portconf', that.portConf);
-                    that.listenTo(view, 'step:volconf', that.volConf);
-                    that.listenTo(view, 'step:envconf', that.envConf);
-                    that.listenTo(view, 'step:resconf', that.resConf);
-                    that.listenTo(view, 'step:otherconf', that.otherConf);
-                    that.listenTo(view, 'step:statsconf', that.statsConf);
-                    that.listenTo(view, 'step:logsconf', that.logsConf);
-                    that.listenTo(view, 'step:complete', that.completeConf);
                     that.listenTo(view, 'image:fetched', that.imageFetched);
                     that.listenTo(view, 'pager:clear', that.clearPager);
                     that.listenTo(view, 'pod:save', that.podSave);
                     that.listenTo(view, 'image:searchsubmit', that.imageSearchSubmit);
                     that.listenTo(view, 'image:getnextpage', that.imageGetNextPage);
+
+                    // NOTE: Container to operate with will be choosen in this way:
+                    // in create pod workflow, will be used podModel.lastEditedContainer
+                    // in show pod container workflow, will be used container model from controller
+                    // TODO: can we remove it?
+                    _([
+                        'step:getimage',
+                        'step:portconf',
+                        'step:volconf',
+                        'step:envconf',
+                        'step:resconf',
+                        'step:otherconf',
+                        'step:statsconf',
+                        'step:logsconf',
+                        'step:complete',
+                    ]).each(function(name){
+                        that.listenTo(view, name, _.bind(that.trigger, that, name));
+                    });
                 });
             },
             regions: {
@@ -57,35 +66,9 @@ define(['pods_app/app',
                 sidebar: '#sidebar',
                 footer: '#footer-steps'
             },
-            getImage: function(data){
-                this.trigger('step:getimage', data);
-            },
+
             imageSelected: function(image, auth){
                 this.trigger('image:selected', image, auth);
-            },
-            portConf: function(data){
-                this.trigger('step:portconf', typeof data === 'string' ? data : data.model);
-            },
-            volConf: function(data){
-                this.trigger('step:volconf', data.model);
-            },
-            envConf: function(data){
-                this.trigger('step:envconf', typeof data === 'string' ? data : data.model);
-            },
-            resConf: function(data){
-                this.trigger('step:resconf', data.model);
-            },
-            otherConf: function(data){
-                this.trigger('step:otherconf', data.model);
-            },
-            statsConf: function(data){
-                this.trigger('step:statsconf', data.model);
-            },
-            logsConf: function(data){
-                this.trigger('step:logsconf', data.model);
-            },
-            completeConf: function(data){
-                this.trigger('step:complete', data.model);
             },
             imageFetched: function(data){
                 this.trigger('image:fetched', data);
@@ -177,6 +160,7 @@ define(['pods_app/app',
             initialize: function(options){
                 this.registryURL = options.registryURL;
                 this.query = options.query;
+                this.pod = options.pod;
             },
 
             templateHelpers: function(){
@@ -188,7 +172,7 @@ define(['pods_app/app',
 
             ui: {
                 username          : '#username',
-                podsList          : '.podsList',
+                cancel            : '.podsList',
                 password          : '#password',
                 moreImage         : '.btn-more',
                 privateWrapper    : '.private',
@@ -206,7 +190,7 @@ define(['pods_app/app',
             events: {
                 'click @ui.selectImage'       : 'selectImage',
                 'click @ui.moreImage'         : 'loadNextPage',
-                'click @ui.podsList'          : 'showPodsList',
+                'click @ui.cancel'            : 'cancel',
                 'click @ui.searchImageButton' : 'onSearchClick',
                 'keypress @ui.input'          : 'onInputKeypress',
                 'keypress @ui.privateField'   : 'selectImageByEnterKey',
@@ -314,8 +298,17 @@ define(['pods_app/app',
                 this.ui.input.focus();
             },
 
-            showPodsList: function(){
-                Pods.navigate('pods', {trigger: true});
+            cancel: function(){
+                var containers = this.pod.get('containers');
+                if (this.pod.lastEditedContainer.isNew) {
+                    containers.remove(this.pod.lastEditedContainer.id);
+                    if (!containers.length) {
+                        Pods.navigate('pods', {trigger: true});
+                        return;
+                    }
+                    this.pod.lastEditedContainer = {id: containers.last().id, isNew: false};
+                }
+                this.trigger('step:complete');
             },
 
             childViewOptions: function(){
@@ -941,7 +934,7 @@ define(['pods_app/app',
 
                 !success ?
                 utils.notifyWindow('First symbol must be letter in variables name') :
-                this.trigger('step:complete', this);
+                this.trigger('step:complete');
             },
 
             addItem: function(evt){
@@ -1256,7 +1249,7 @@ define(['pods_app/app',
             templateHelpers: function() {
 
                 return {
-                    last_edited      : this.model.last_edited_container,
+                    last_edited      : this.model.lastEditedContainer.id,
                     isPublic         : this.isPublic,
                     isPerSorage      : this.isPerSorage,
                     cpu_data         : this.cpu_data,
@@ -1311,8 +1304,9 @@ define(['pods_app/app',
                 var name = $(evt.target).closest('tr').children('td:first').attr('id');
                 if (this.model.get('containers').length >= 2) {
                     this.model.get('containers').remove(name);
-                    if (name == this.model.last_edited_container) {
-                        this.model.last_edited_container = this.model
+                    if (name == this.model.lastEditedContainer.id) {
+                        this.model.lastEditedContainer.isNew = false;
+                        this.model.lastEditedContainer.id = this.model
                             .get('containers').last().id;
                     }
                     this.recalcTotal();
@@ -1338,20 +1332,20 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var tgt = evt.target,
                     name = $(tgt).closest('tr').children('td:first').attr('id');
-                this.model.last_edited_container = name;
-                this.trigger('step:portconf', name);
+                this.model.lastEditedContainer = {id: name, isNew: false};
+                this.trigger('step:portconf');
             },
 
             addItem: function(evt){
                 evt.stopPropagation();
-                this.model.last_edited_container = null;
+                this.model.lastEditedContainer = {id: null, isNew: true};
                 this.trigger('step:getimage');
             },
 
             // edit env vars of the last edited container
             goBack: function(evt){
                 evt.stopPropagation();
-                this.trigger('step:envconf', this.model.last_edited_container);
+                this.trigger('step:envconf');
             },
 
             toggleNode: function(evt){
@@ -1444,9 +1438,8 @@ define(['pods_app/app',
             },
 
             getCurrentContainer: function() {
-                var containers = this.model.get('containers'),
-                    last_edited = containers.get(this.model.last_edited_container);
-                return last_edited || containers.last();
+                var containers = this.model.get('containers');
+                return containers.get(this.model.lastEditedContainer.id);
             },
 
             onRender: function() {

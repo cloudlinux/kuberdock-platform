@@ -439,6 +439,5 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
         Pods.navigate('pods');
         controller.showPods();
     });
-
     return Pods.WorkFlow.Controller;
 });

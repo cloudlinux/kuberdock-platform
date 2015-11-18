@@ -691,28 +691,6 @@
                 position: absolute;
                 background: url('../img/servers.png') 0 0 no-repeat;
             }
-            .edit{
-                left: 0;
-                top: 74px;
-                color: #3197ee;
-                padding-left: 21px;
-                position: absolute;
-                &:before{
-                    top: 3px;
-                    left: 5px;
-                    width: 13px;
-                    content: '';
-                    height: 13px;
-                    position: absolute;
-                    background: url('../img/pencil-small.png') 0 0 no-repeat;
-                }
-                &:hover{
-                    cursor: pointer;
-                    &:before{
-                        background-position: 0 -14px;
-                    }
-                }
-            }
         }
     }
     span{
@@ -1564,6 +1542,29 @@
         }
     }
     #details_content{
+        .editContainerKubes{
+            border: none;
+            position: relative;
+            padding-right: 20px;
+            &:before{
+                top: 0;
+                right: 0;
+                bottom: 0;
+                margin: auto;
+                width: 13px;
+                content: '';
+                height: 13px;
+                position: absolute;
+                background: url('../img/pencil-small.png') 0 0 no-repeat;
+            }
+            &:hover{
+                color: #3197ee;
+                cursor: pointer;
+                &:before{
+                    background-position: 0 -14px;
+                }
+            }
+        }
         &.timelines-tab, &.monitoring-tab{
             #tab-content{
                 .clearfix;

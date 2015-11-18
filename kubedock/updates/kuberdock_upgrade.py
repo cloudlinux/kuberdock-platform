@@ -8,6 +8,7 @@ import json
 import argparse
 import requests
 import subprocess
+import traceback
 from datetime import datetime
 from importlib import import_module
 from fabric.api import env, output
@@ -200,15 +201,18 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
         except Exception as e:
             successful = False
             node.upgrade_status = UPDATE_STATUSES.failed
-            db_upd.print_log('Exception "{0}" during upgrade node {1}. {2}'
-                             .format(e.__class__.__name__, node.hostname, e))
+            db_upd.print_log(
+                'Exception raised during upgrade node {0}\n'
+                '{1}'.format(node.hostname, traceback.format_exc())
+            )
             try:
                 downgrade_node(db_upd, with_testing, env, e)
             except Exception as e:
                 node.upgrade_status = UPDATE_STATUSES.failed_downgrade
                 db_upd.print_log(
-                    'Exception "{0}" during downgrade node {1}. {2}'
-                    .format(e.__class__.__name__, node.hostname, e))
+                    'Exception raised during downgrade node {0}\n'
+                    '{1}'.format(node.hostname, traceback.format_exc())
+                )
             else:
                 # Check here if new master is compatible with old nodes
                 # set_schedulable(node.hostname, True, db_upd)
@@ -244,15 +248,19 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
     except Exception as e:
         db.session.rollback()
         db_upd.status = UPDATE_STATUSES.failed
-        db_upd.print_log('Error in update script '
-                         '{0}. {1}. Starting downgrade...'
-                         .format(db_upd.fname, e.__repr__()))
+        db_upd.print_log(
+            'Error in update script {0}\n'
+            '{1}'
+            'Starting downgrade...'.format(db_upd.fname, traceback.format_exc())
+        )
         try:
             downgrade_func(db_upd, with_testing, e)
         except Exception as e:
             db_upd.status = UPDATE_STATUSES.failed_downgrade
-            db_upd.print_log('Error downgrading script {0}. {1}'
-                             .format(db_upd.fname, e.__repr__()))
+            db_upd.print_log(
+                'Error downgrading script {0}\n'
+                '{1}'.format(db_upd.fname, traceback.format_exc())
+            )
             db_upd.print_log(FAILED_MESSAGE)
         else:
             helpers.restart_service(settings.KUBERDOCK_SERVICE)

@@ -6,12 +6,11 @@ from flask import current_app
 from . import pd_utils
 from .pod import Pod
 from .images import Image
-from .pstorage import CephStorage, AmazonStorage, NodeCommandError
+from .pstorage import get_storage_class_by_volume_info
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..core import db
 from ..billing import repr_limits, Kube
 from ..pods.models import PersistentDisk, PodIP, Pod as DBPod
-from ..users.models import User
 from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
                      unbind_ip)
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
@@ -531,23 +530,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # extract PDs from volumes
         drives = {}
         for v in volumes:
-            if 'rbd' in v:
-                storage = CephStorage()
-                if not v['rbd'].get('monitors'):
-                    v['rbd']['monitors'] = storage.get_monitors()
-                drive_name = v['rbd'].get('image')
-            elif 'awsElasticBlockStore' in v:
-                storage = AmazonStorage()
-                drive_name = v['awsElasticBlockStore'].get('drive')
-            else:
+            storage_cls = get_storage_class_by_volume_info(v)
+            if storage_cls is None:
                 continue
+            storage = storage_cls()
+            info = storage.extract_volume_info(v)
+            drive_name = info.get('drive_name')
             if drive_name is None:
                 raise APIError("Got no drive name")
 
-            persistent_disk = PersistentDisk.filter_by(drive_name=drive_name).first()
+            persistent_disk = PersistentDisk.filter_by(
+                drive_name=drive_name
+            ).first()
             if persistent_disk is None:
                 name = pd_utils.parse_pd_name(drive_name).drive
-                raise APIError('Persistent Disk {0} not found'.format(name), 404)
+                raise APIError('Persistent Disk {0} not found'.format(name),
+                               404)
             drives[drive_name] = (storage, persistent_disk)
         if not drives:
             return
@@ -563,13 +561,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # prepare drives
         for drive_name, (storage, persistent_disk) in drives.iteritems():
             storage.create(persistent_disk)
-            try:
-                vid = storage.makefs(persistent_disk)
-            except NodeCommandError:
-                msg = (u'Failed to make FS for drive "{0}" because of failed '
-                       u'node command'.format(drive_name))
-                current_app.logger.exception(msg)
-                raise APIError(msg)
+            vid = storage.makefs(persistent_disk)
             pod._update_volume_path(v['name'], vid)
 
     def _container_start(self, pod, data):

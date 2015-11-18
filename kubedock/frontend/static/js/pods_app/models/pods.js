@@ -97,13 +97,15 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'backbone-associations
                   relatedModel: Data.Container,
             }],
 
-            defaults: {
-                name: 'Nameless',
-                containers: [],
-                volumes: [],
-                replicas: 1,
-                restartPolicy: "Always",
-                node: null
+            defaults: function(){
+                return {
+                    name: 'Nameless',
+                    containers: [],
+                    volumes: [],
+                    replicas: 1,
+                    restartPolicy: "Always",
+                    node: null,
+                };
             },
 
             parse: unwrapper,

@@ -43,10 +43,10 @@ def get_dates(request):
     return (date_from, date_to)
 
 
-def filter_query_by_date(query, date_from, date_to):
+def filter_query_by_date(model, query, date_from, date_to):
     query = query.filter(
-        db.or_(ContainerState.start_time.between(date_from, date_to),
-                ContainerState.end_time.between(date_from, date_to)))
+        db.or_(model.start_time.between(date_from, date_to),
+               model.end_time.between(date_from, date_to)))
     return query
 
 
@@ -54,26 +54,26 @@ def get_pod_usage(user, date_from, date_to):
     rv = []
     for pod in user.pods:
         time_ = defaultdict(list)
-        query = db.session.query(ContainerState).filter(ContainerState.pod == pod)
-        query = filter_query_by_date(query, date_from, date_to)
+        query = db.session.query(ContainerState).filter(ContainerState.pod.contains(pod))
+        query = filter_query_by_date(ContainerState, query, date_from, date_to)
         states = query.all()
         for state in states:
             start = to_timestamp(state.start_time)
             end = (int(time.time()) if state.end_time is None else
-                to_timestamp(state.end_time))
+                   to_timestamp(state.end_time))
             time_[state.container_name].append({'kubes': state.kubes,
                                                 'start': start, 'end': end})
         rv.append({'id': pod.id,
-                'name': pod.name,
-                'kubes': pod.kubes,
-                'kube_id': pod.kube_id,
-                'time': time_})
+                   'name': pod.name,
+                   'kubes': pod.kubes,
+                   'kube_id': pod.kube_id,
+                   'time': time_})
     return rv
 
 
 def get_ip_states(user, date_from, date_to):
     query = db.session.query(IpState).filter(IpState.user.contains(user))
-    query = filter_query_by_date(query, date_from, date_to)
+    query = filter_query_by_date(IpState, query, date_from, date_to)
     ip_states = query.all()
     return [ip_state.to_dict() for ip_state in ip_states]
 
@@ -81,7 +81,7 @@ def get_ip_states(user, date_from, date_to):
 def get_pd_states(user, date_from, date_to):
     query = db.session.query(PersistentDiskState).filter(
         PersistentDiskState.user == user)
-    query = filter_query_by_date(query, date_from, date_to)
+    query = filter_query_by_date(PersistentDiskState, query, date_from, date_to)
     pd_states = query.all()
     return [pd_state.to_dict(exclude=['user_id']) for pd_state in pd_states]
 

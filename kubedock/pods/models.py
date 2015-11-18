@@ -402,6 +402,12 @@ class PersistentDisk(BaseModelMixin, db.Model):
         if self.drive_name is None:
             owner = self.owner if self.owner is not None else self.owner_id
             self.drive_name = pd_utils.compose_pdname(self.name, owner)
+        if self.name is None or self.owner is None:
+            name, user_id, username = pd_utils.parse_pd_name(self.drive_name)
+            if self.name is None:
+                self.name = name
+            if self.owner is None:
+                self.owner = User.get(username or user_id)
         if self.id is None:
             self.id = md5(self.drive_name).hexdigest()
 

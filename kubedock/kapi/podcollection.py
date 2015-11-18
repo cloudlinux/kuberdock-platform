@@ -368,6 +368,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.template_id = template_id
                 # TODO if remove _is_related then add podIP attribute here
                 # pod.service = json.loads(db_pod.config).get('service')
+                pod.volumes_original = db_pod_config.get('volumes_original')
                 pod.kube_type = db_pod_config.get('kube_type')
 
                 if db_pod_config.get('public_ip'):
@@ -522,11 +523,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 storage = CephStorage()
                 if not v['rbd'].get('monitors'):
                     v['rbd']['monitors'] = storage.get_monitors()
-                size = v['rbd'].get('size')
                 drive_name = v['rbd'].get('image')
             elif 'awsElasticBlockStore' in v:
                 storage = AmazonStorage()
-                size = v['awsElasticBlockStore'].get('size')
                 drive_name = v['awsElasticBlockStore'].get('drive')
             else:
                 continue
@@ -536,10 +535,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             persistent_disk = PersistentDisk.filter_by(drive_name=drive_name).first()
             if persistent_disk is None:
                 name = pd_utils.parse_pd_name(drive_name).drive
-                owner = User.query.filter_by(username=pod.owner).first()
-                persistent_disk = PersistentDisk(drive_name=drive_name,
-                                                 owner=owner, name=name,
-                                                 size=size).save()
+                raise APIError('Persistent Disk {0} not found'.format(name), 404)
             drives[drive_name] = (storage, persistent_disk)
         if not drives:
             return

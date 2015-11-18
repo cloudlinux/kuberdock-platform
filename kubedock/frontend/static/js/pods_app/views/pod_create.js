@@ -446,8 +446,14 @@ define(['pods_app/app',
                     });
                 }
 
+                var volumes = this.pod.get('volumes');
+                volumes = _.map(this.model.get('volumeMounts'), function(vm){
+                    return _.extend(_.clone(vm), _.findWhere(volumes, {name: vm.name}));
+                });
+
                 return {
                     parentID: this.pod.id,
+                    volumes: volumes,
                     updateIsAvailable: this.model.updateIsAvailable,
                     sourceUrl: this.model.get('sourceUrl'),
                     hasPersistent: this.pod.persistentDrives !== undefined,

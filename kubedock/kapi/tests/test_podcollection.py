@@ -477,9 +477,9 @@ class TestPodCollection(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
         self.pods = [{'id': 1, 'name': 'Unnamed-1', 'namespace': 'Unnamed-1-namespace-md5',
-                      'owner': 'user', 'containers': ''},
+                      'owner': 'user', 'containers': '', 'volumes': []},
                      {'id': 2, 'name': 'Unnamed-2', 'namespace': 'Unnamed-2-namespace-md5',
-                      'owner': 'user', 'containers': ''}]
+                      'owner': 'user', 'containers': '', 'volumes': []}]
 
         self.pods_output = copy.deepcopy(self.pods)
         for pod in self.pods_output:
@@ -1338,7 +1338,7 @@ class TestPodCollectionCheckUpdates(unittest.TestCase, TestCaseMixin):
         check_updates must raise an APIError
         """
         pod = fake_pod(id=str(uuid4()), containers=[
-            {'image': 'nginx', 'imageID': 'ceab6053', 'containerID': 'oduhrg94'}
+            {'image': 'nginx', 'imageID': 'ceab6053', 'name': 'oduhrg94'}
         ])
         get_by_id_mock.return_value = pod
 
@@ -1352,7 +1352,7 @@ class TestPodCollectionCheckUpdates(unittest.TestCase, TestCaseMixin):
         Image = podcollection.Image
         image, image_id, container_id = 'nginx', 'ceab60537ad2d', 'oduhrg94her4'
         pod = fake_pod(id=str(uuid4()), secrets=('secret-1', 'secret-2'), containers=[
-            {'image': image, 'imageID': image_id, 'containerID': container_id}
+            {'image': image, 'imageID': image_id, 'name': container_id}
         ])
         secrets_full = (('user1', 'password', 'regist.ry'),
                         ('user2', 'p-0', 'quay.io'))
@@ -1376,7 +1376,7 @@ class TestPodCollectionCheckUpdates(unittest.TestCase, TestCaseMixin):
         Image = podcollection.Image
         image, image_id, container_id = 'nginx', 'ceab60537ad2d', 'oduhrg94her4'
         pod = fake_pod(id=str(uuid4()), secrets=(), containers=[
-            {'image': image, 'imageID': image_id, 'containerID': container_id}
+            {'image': image, 'imageID': image_id, 'name': container_id}
         ])
         get_by_id_mock.return_value = pod
 

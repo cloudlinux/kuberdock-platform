@@ -31,6 +31,7 @@ class ContainerState(Base):
     __tablename__ = 'container_states'
     pod_id = sa.Column(sa.ForeignKey('pods.id'), nullable=False)
     pod_state_id = sa.Column(sa.ForeignKey('pod_states.id'), nullable=False)
+    docker_id = sa.Column(sa.String(length=80), primary_key=True, nullable=False)
     container_name = sa.Column(sa.String(length=255), primary_key=True, nullable=False)
     start_time = sa.Column(sa.DateTime, primary_key=True, nullable=False)
     end_time = sa.Column(sa.DateTime, nullable=True)

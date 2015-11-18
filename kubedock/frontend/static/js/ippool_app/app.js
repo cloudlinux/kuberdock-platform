@@ -77,15 +77,15 @@ define(['marionette', 'utils'], function (Marionette, utils) {
             template: '#network-item-more-template',
 
             ui: {
-                block_ip      : '.block_ip',
-                unblock_ip    : '.unblock_ip',
-                unbind_ip     : '.unbind_ip'
+                block_ip   : '.block_ip',
+                unblock_ip : '.unblock_ip',
+                unbind_ip  : '.unbind_ip'
             },
 
             events: {
-                'click @ui.block_ip'      : 'blockIP',
-                'click @ui.unblock_ip'    : 'unblockIP',
-                'click @ui.unbind_ip'     : 'unbindIP'
+                'click @ui.block_ip'   : 'blockIP',
+                'click @ui.unblock_ip' : 'unblockIP',
+                'click @ui.unbind_ip'  : 'unbindIP'
             },
 
             templateHelpers: function(){
@@ -112,13 +112,22 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 var alloc = this.model.get('allocation'),
                     ip = $(btn.currentTarget).data('ip'),
                     that = this;
+
                 _.each(alloc, function(itm){
                     if(itm[0] == ip) {
                         itm[2] = 'blocked';
-                        that.model.set('allocation', alloc);
-                        that.model.set('block_ip', ip);
-                        that.model.save();
-                        that.render();
+                        that.model.set({
+                            'allocation' : alloc,
+                            'block_ip'   : ip
+                        });
+                        that.model.save({wait: true},{
+                            success: function(data, response){
+                                that.render();
+                            },
+                            error: function(data, response){
+                                console.error(response);
+                            }
+                        });
                     }
                 });
             },
@@ -130,10 +139,18 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 _.each(alloc, function(itm){
                     if(itm[0] == ip) {
                         itm[2] = 'free';
-                        that.model.set('allocation', alloc);
-                        that.model.set('unblock_ip', ip);
-                        that.model.save();
-                        that.render();
+                        that.model.set({
+                            'allocation' : alloc,
+                            'unblock_ip' : ip
+                        });
+                        that.model.save( {wait: true},{
+                            success: function(data, response){
+                                that.render();
+                            },
+                            error: function(data, response){
+                                console.error(response);
+                            }
+                        });
                     }
                 });
             },
@@ -154,10 +171,18 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                                 buttonOk: function(){
                                     itm[2] = 'free';
                                     itm[1] = null;
-                                    that.model.set('allocation', alloc);
-                                    that.model.set('unbind_ip', ip);
-                                    that.model.save();
-                                    that.render();
+                                    that.model.set({
+                                        'allocation' : alloc,
+                                        'unbind_ip'  : ip
+                                    });
+                                    that.model.save({wait: true},{
+                                        success: function(data, response){
+                                            that.render();
+                                        },
+                                        error: function(data, response){
+                                            console.error(response);
+                                        }
+                                    });
                                 },
                                 buttonCancel: true
                             }

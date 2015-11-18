@@ -262,13 +262,14 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                         }
                     var model = new App.Data.Pod({ name: podName });
                     model.detached = true;
+                    model.lastEditedContainer = {id: null, isNew: true};
                     that.listenTo(model, 'remove:containers', function(container){
                         model.deleteVolumes(_.pluck(container.get('volumeMounts'), 'name'));
                     });
 
                     var newImageView = function(options){
                         imageView = new App.Views.NewItem.GetImageView(
-                            _.extend({registryURL: registryURL}, options)
+                            _.extend({pod:model, registryURL: registryURL}, options)
                         );
                         wizardLayout.steps.show(imageView);
                     };
@@ -330,17 +331,17 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                     that.listenTo(wizardLayout, 'clear:pager', function(){
                         wizardLayout.footer.empty();
                     });
-                    that.listenTo(wizardLayout, 'step:portconf', function(data){
-                        var containerModel = model.get('containers').get(data);
-                        model.last_edited_container = containerModel.id;
+                    that.listenTo(wizardLayout, 'step:portconf', function(){
+                        var container = model.lastEditedContainer.id;
                         wizardLayout.steps.show(
                             new App.Views.NewItem.WizardPortsSubView({
-                                model: containerModel,
+                                model: model.get('containers').get(container),
                             })
                         );
                     });
-                    that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        var containerModel = model.get('containers').get(data),
+                    that.listenTo(wizardLayout, 'step:envconf', function(){
+                        var container = model.lastEditedContainer.id,
+                            containerModel = model.get('containers').get(container),
                             image = containerModel.get('image');
                         if (!(containerModel.get('image') in model.origEnv)) {
                             model.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
@@ -391,9 +392,10 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
                             utils.notifyWindow(data);
                         }).done(function(data){
                             var newContainer = App.Data.Container.fromImage(data.data);
-                            model.get('containers').remove(model.last_edited_container);
+                            model.get('containers').remove(model.lastEditedContainer.id);
                             model.get('containers').add(newContainer);
-                            wizardLayout.trigger('step:portconf', newContainer);
+                            model.lastEditedContainer.id = newContainer.id;
+                            wizardLayout.trigger('step:portconf');
                         });
                     });
                     App.contents.show(wizardLayout);

@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 9.1%{?dist}.cloudlinux
+Release: 10%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,19 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Wed Nov 18 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.4-10
+- AC-1069, AC-1287, AC-1085; nested models support; refactoring
+- AC-1500: fix error that occurs, if update restarting container
+- AC-824: Show real ip status in ippool
+- AC-1525: Show full traceback if update-script fails
+- AC-1302: 'Cancel' button on 'Choose image' step should navigate to 'Final setup' after adding more containers to pod.
+- AC-1424:remove static_pages, refactor menu. Remove unused static_pages app. Refactoring menu. Add MenuItemRole table.
+- AC-1351: change error message for used PV
+- AC-1522: fix migration in 59th update-script
+- AC-1254: fix cpu to two digits after point
+- AC-1494: Fix restart kube-controller-manager after each update script. Refactoring of upgrade utility.
+- AC-1198: small fix in kube type validation
+
 * Tue Nov 17 2015 Igor Savenko <bliss@cloudlinux.com> 0.4-9.1
 - restored accidentally removed fixes
 

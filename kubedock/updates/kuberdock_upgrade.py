@@ -74,6 +74,8 @@ def get_applied_updates():
         [i.fname for i in Updates.query.filter_by(
             status=UPDATE_STATUSES.applied).all()])
 
+# TODO Add get_next_update, may be generator
+
 
 def set_schedulable(node_id, value, upd=None):
     """
@@ -167,10 +169,6 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
     :param with_testing: Boolean, whether testing repo is enabled during upgrade
     :return: Boolean, True if all nodes upgraded, False if one or more failed.
     """
-    if helpers.set_evicting_timeout('99m0s'):
-        db_upd.print_log("Can't set pods evicting interval.")
-        return False
-
     successful = True
     if db_upd.status == UPDATE_STATUSES.nodes_failed:
         nodes = db.session.query(Node).filter(
@@ -226,9 +224,6 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
         finally:
             db.session.add(node)
             db.session.commit()
-
-    if helpers.set_evicting_timeout('5m0s'):
-        db_upd.print_log("Can't bring back old pods evicting interval.")
     return successful
 
 
@@ -313,6 +308,7 @@ def do_cycle_updates(with_testing=False):
     """
     :return: False if no errors or script name at which was error
     """
+    # TODO refactor to 'get next update'
     to_apply = get_available_updates()
     last = get_applied_updates()
     if last:
@@ -329,15 +325,11 @@ def do_cycle_updates(with_testing=False):
     for upd in to_apply:
         if not run_script(upd, with_testing):
             is_failed = upd
+            print >> sys.stderr, "Update {0} has failed.".format(is_failed)
             break
 
-    if is_failed:
-        print >> sys.stderr, "Update {0} has failed.".format(is_failed)
-        sys.exit(2)
-    else:
-        helpers.restart_service(settings.KUBERDOCK_SERVICE)
-        helpers.set_maintenance(False)
-        print 'All update scripts are applied. ' + SUCCESSFUL_UPDATE_MESSAGE
+    if not is_failed:
+        print 'All update scripts are applied.'
     return is_failed
 
 
@@ -349,6 +341,46 @@ def prepare_repos(testing):
         yb.repos.enableRepo('kube-testing')
     yb.cleanMetadata()  # only after enabling repos to clean them too!
     return yb
+
+
+def ask_upgrade():
+    ans = raw_input('Do you want to upgrade it ? [y/n]:')
+    while ans not in ('y', 'yes', 'n', 'no',):
+        print 'Only y/yes or n/no answers accepted, please try again'
+        ans = raw_input('Do you want to upgrade it ? [y/n]:')
+    return ans in ('y', 'yes')
+
+
+def pre_upgrade():
+    """
+    Setup common things needed for upgrade. May be called multiple times
+    :return: Error or True if any error else False
+    """
+    helpers.set_maintenance(True)
+    if helpers.set_evicting_timeout('99m0s'):
+        print >> sys.stderr, "Can't set pods evicting interval."
+        print >> sys.stderr, "No new upgrades are applied. Exit."
+        print >> sys.stderr, FAILED_MESSAGE
+        return True     # means common error case
+    return False
+
+
+def post_upgrade(for_successful=True, reason=None):     # teardown
+    """
+    Teardown after upgrade
+    :return: Error or True if any error else False
+    """
+    if helpers.set_evicting_timeout('5m0s'):
+        print >> sys.stderr, "Can't bring back old pods evicting interval."
+        for_successful = False
+    if for_successful:
+        helpers.restart_service(settings.KUBERDOCK_SERVICE)
+        helpers.set_maintenance(False)
+        print SUCCESSFUL_UPDATE_MESSAGE
+    else:
+        if reason is not None:
+            print >> sys.stderr, reason
+        print >> sys.stderr, FAILED_MESSAGE
 
 
 def get_kuberdocks_toinstall(testing=False):
@@ -469,6 +501,7 @@ if __name__ == '__main__':
         else:
             helpers.set_maintenance(False)
         sys.exit(0)
+
     if args.command == CLI_COMMANDS.set_node_schedulable:
         if args.schedulable in ('on', '1'):
             set_schedulable(args.node, True)
@@ -483,12 +516,20 @@ if __name__ == '__main__':
 
     # All commands that need app context are follow here:
     with app.app_context():
+
         if AFTER_RELOAD:
             try:
                 os.unlink(settings.UPDATES_RELOAD_LOCK_FILE)
             except OSError:
                 pass
-            do_cycle_updates(args.use_testing)
+
+            # TODO Called again here just for compatibility (transition time)
+            # remove after beta5 + 1
+            if pre_upgrade():
+                post_upgrade(for_successful=False)
+
+            err = do_cycle_updates(args.use_testing)
+            post_upgrade(for_successful=not err)
             if not args.local:
                 print 'Restarting upgrade script to check next new package...'
                 # TODO Remove this workaround after few releases
@@ -497,9 +538,12 @@ if __name__ == '__main__':
                 else:
                     os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade'), sys.argv)
             sys.exit(0)     # if local install case
+
         if args.command == CLI_COMMANDS.resume_upgrade:
-            helpers.set_maintenance(True)
-            do_cycle_updates(args.use_testing)
+            if pre_upgrade():
+                sys.exit(3)
+            err = do_cycle_updates(args.use_testing)
+            post_upgrade(for_successful=not err)
             sys.exit(0)
 
         if args.command == CLI_COMMANDS.apply_one:
@@ -507,11 +551,10 @@ if __name__ == '__main__':
                                                args.script_file)):
                 print 'There is no such upgrade script in scripts directory'
                 sys.exit(0)
-            helpers.set_maintenance(True)
-            if run_script(args.script_file, args.use_testing):
-                helpers.restart_service(settings.KUBERDOCK_SERVICE)
-                helpers.set_maintenance(False)
-                print SUCCESSFUL_UPDATE_MESSAGE
+            if pre_upgrade():
+                sys.exit(3)
+            ok = run_script(args.script_file, args.use_testing)
+            post_upgrade(for_successful=ok)
             sys.exit(0)
 
         if args.command == CLI_COMMANDS.upgrade:
@@ -529,36 +572,29 @@ if __name__ == '__main__':
             else:
                 new_kuberdocks = get_kuberdocks_toinstall(args.use_testing)
             if new_kuberdocks:
+                pkg = new_kuberdocks[0]
                 if not args.reinstall:
-                    print 'Newer kuberdock package is available: {0}'\
-                          .format(new_kuberdocks[0])
-                ans = raw_input('Do you want to upgrade it ? [y/n]:')
-                while ans not in ('y', 'yes', 'n', 'no',):
-                    print 'Only y/yes or n/no answers accepted, ' \
-                          'please try again'
-                    ans = raw_input('Do you want to upgrade it ? [y/n]:')
-                if ans in ('y', 'yes'):
-                    helpers.set_maintenance(True)
-                    # use new_kuberdocks[0] instead because of execv:
-                    for pkg in new_kuberdocks:
-                        err = helpers.install_package(
-                            pkg, args.use_testing,
-                            action='reinstall' if args.reinstall else 'install')
-                        if err:
-                            print >> sys.stderr,\
-                                "Update package to {0} has failed.".format(pkg)
-                            print >> sys.stderr, FAILED_MESSAGE
-                            sys.exit(err)
-                        # Now, after successfully upgraded package:
-                        open(settings.UPDATES_RELOAD_LOCK_FILE, 'a').close()
-                        print 'Restarting this script from new package...'
-                        # TODO Remove this workaround after few releases
-                        if os.path.exists(__file__):
-                            os.execv(__file__,
-                                     sys.argv + [CLI_COMMANDS.after_reload])
-                        else:
-                            os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade'),
-                                     sys.argv + [CLI_COMMANDS.after_reload])
+                    print 'Newer kuberdock package is available: {0}'.format(pkg)
+                if ask_upgrade():
+                    if pre_upgrade():
+                        sys.exit(3)
+                    err = helpers.install_package(pkg, args.use_testing,
+                          action='reinstall' if args.reinstall else 'install')
+                    if err:
+                        post_upgrade(for_successful=False,
+                                     reason="Update package to {0} has failed."
+                                     .format(pkg))
+                        sys.exit(err)
+                    # Now, after successfully upgraded master package:
+                    open(settings.UPDATES_RELOAD_LOCK_FILE, 'a').close()
+                    print 'Restarting this script from new package...'
+                    # TODO Remove this workaround after few releases
+                    if os.path.exists(__file__):
+                        os.execv(__file__,
+                                 sys.argv + [CLI_COMMANDS.after_reload])
+                    else:
+                        os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade'),
+                                 sys.argv + [CLI_COMMANDS.after_reload])
                 else:
                     print 'Stop upgrading.'
                     sys.exit(0)

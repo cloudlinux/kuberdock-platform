@@ -10,7 +10,6 @@ from ..utils import APIError
 from ..kapi.predefined_apps import PredefinedApps
 from ..billing.models import Package, Kube
 from ..system_settings.models import SystemSettings
-from ..billing.models import Kube
 from ..kapi import predefined_apps as kapi_papps
 
 
@@ -34,7 +33,7 @@ def index(app_hash):
         if not package_exists(packages, package_id):
             package_id = 0
         template, kube_type, pre_desc = get_defaults(template, mutables, kubes)
-        has_simple = True if [v for v in fields.values() if v.get('hashsum') in mutables] else False
+        has_simple = True if [v for v in fields.values() if v.get('hashsum') not in mutables] else False
 
         return render_template('apps/index.html',
             name=name, jfields=jfields, billing_url=billing_url, packages=packages,
@@ -145,6 +144,7 @@ def find_custom(text):
     data = {}
     definitions = set()
     for item in custom:
+        hidden = False
         try:
             name, value, title = kapi_papps.get_value(item, strict=True)
         except kapi_papps.AppParseError:
@@ -155,6 +155,7 @@ def find_custom(text):
             continue
         if value == 'autogen':
             value = generate()
+            hidden = True
         if title:
             # Use only the first definition of a variable, all other
             # definitions with the same name will be reusable variables
@@ -164,7 +165,6 @@ def find_custom(text):
             else:
                 definitions.add(name)
         data[item] = {
-            'title': title, 'value': value, 'name': name,
+            'title': title, 'value': value, 'name': name, 'hidden': hidden,
             'hashsum': hashlib.sha1(name).hexdigest()}
-
     return data

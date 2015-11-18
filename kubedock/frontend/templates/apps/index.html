@@ -352,9 +352,11 @@
                 {% for k, v in fields.iteritems() if v.title %}
                     {% if v.hashsum not in mutables %}
                     <div class="custom-field-item">
+                        {% if not v.hidden %}
                         <label class="custom-field-title">{{ v.title }}</label>
+                        {% endif %}
                         <div class="custom-field-body">
-                            <input id="{{ v.hashsum }}" class="custom-field" type="text" value="{{ v.value }}">
+                            <input id="{{ v.hashsum }}" class="custom-field" type="{{ 'hidden' if v.hidden else 'text' }}" value="{{ v.value }}">
                         </div>
                     </div>
                     {% endif %}

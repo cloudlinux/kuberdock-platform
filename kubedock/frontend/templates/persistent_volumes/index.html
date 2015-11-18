@@ -5,9 +5,7 @@
 {% endblock %}
 
 {% block body %}
-    {% with items=MENU.navbar.get_items() %}
-    {% include "inc/navbar_menu.html" %}
-    {% endwith %}
+{% include "inc/navbar_menu.html" %}
 
     <div id="globalError"></div>
     <!-- contents container -->

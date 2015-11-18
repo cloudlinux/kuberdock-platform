@@ -27,7 +27,6 @@ def create_app(settings_override=None, fake_sessions=False):
     from .stats import stats
     from .users import users
     from .notifications import notifications
-    from .static_pages import static_pages
     from .usage import usage
     from .pricing import pricing
     from .ippool import ippool
@@ -40,7 +39,7 @@ def create_app(settings_override=None, fake_sessions=False):
     from .logs import logs
 
     for bp in (images, stream, nodes, stats, users, notifications, yamlapi,
-               static_pages, usage, pricing, ippool, settings, podapi, auth,
+               usage, pricing, ippool, settings, podapi, auth,
                pstorage, predefined_apps, logs):
         app.register_blueprint(bp)
 

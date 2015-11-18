@@ -1,8 +1,8 @@
-from ..static_pages.models import Menu
+from ..static_pages.models import MenuItem
 
 
 def pages_helpers():
     context = dict(
-        MENU=Menu.get_active(),
+        MENU=MenuItem.get_menu()
     )
     return context

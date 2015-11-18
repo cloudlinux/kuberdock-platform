@@ -22,12 +22,20 @@
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    {% for item in items %}
+                    {% for item in MENU %}
                     <li class="dropdown">
-                        {% with children=item.get_children() %}
-                        {% include 'inc/navbar_menu_item.html' %}
-                        {% endwith %}
-                    </li>
+                        {% if not item['childs'] %}
+                            <a href="{{ item['path']|default("#") }}">{{ item['name'] }}</a>
+                        {% else %}
+                            <a href="{{ item['path']|default("#") }}" class="dropdown-toggle" data-toggle="dropdown"> {{ item['name'] }} </a>
+                                <ul class="dropdown-menu">
+                                    {% for itm in item['childs'] %}
+                                        <li>
+                                            <a href="{{ itm['path']|default("#") }}">{{ itm['name'] }}</a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                        {% endif %}
                     {% endfor %}
                 </ul>
                 {% if not auth_by_id %}

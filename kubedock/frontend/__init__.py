@@ -27,7 +27,6 @@ def create_app(settings_override=None, fake_sessions=False):
     from .nodes import nodes
     from .users import users
     from .notifications import notifications
-    from .static_pages import static_pages
     from .ippool import ippool
     from .settings import settings
     from .predefined_apps import predefined_apps
@@ -35,7 +34,7 @@ def create_app(settings_override=None, fake_sessions=False):
     from .persistent_volumes import persistent_volumes
     from .apps import apps
 
-    for bp in main, auth, nodes, users, notifications, static_pages, ippool, \
+    for bp in main, auth, nodes, users, notifications, ippool, \
             settings, predefined_apps, public_ips, persistent_volumes, apps:
         app.register_blueprint(bp)
 

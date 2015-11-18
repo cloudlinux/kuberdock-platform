@@ -1412,7 +1412,7 @@ define(['pods_app/app',
                     kube_price = this.getKubePrice(kube_id),
                     total_kubes = this.model.getKubes();
 
-                this.cpu_data = total_kubes * kube.cpu + ' ' + kube.cpu_units;
+                this.cpu_data = (total_kubes * kube.cpu).toFixed(2) + ' ' + kube.cpu_units;
                 this.ram_data = total_kubes * kube.memory + ' ' + kube.memory_units;
                 this.hdd_data = total_kubes * kube.disk_space + ' ' + kube.disk_space_units;
 

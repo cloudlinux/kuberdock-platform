@@ -38,18 +38,14 @@ class CLI_COMMANDS:
 
 
 FAILED_MESSAGE = """\
-Cluster was left in a maintenance mode, \
-please contact to support team for help. \
-Use {0} {1} on|off to manually switch \
-cluster work mode (careful!)\
+Cluster was left in a maintenance mode, please contact to support team for help.
+Use {0} {1} on|off to manually switch cluster work mode (careful!)\
 """.format(os.path.basename(__file__), CLI_COMMANDS.set_maintenance)
 
 
 SUCCESSFUL_DOWNGRADE_MESSAGE = """\
-Downgrade looks successful but cluster was left in maintenance mode for you \
-to ensure that all works properly. \
-Use {0} {1} on|off to manually switch \
-cluster work mode (careful!)\
+Downgrade looks successful but please ensure that all works properly.
+Kuberdock has been restarted.\
 """.format(os.path.basename(__file__), CLI_COMMANDS.set_maintenance)
 
 
@@ -256,8 +252,7 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
                 'Error downgrading script {0}\n'
                 '{1}'.format(db_upd.fname, traceback.format_exc())
             )
-            db_upd.print_log(FAILED_MESSAGE)
-        else:
+        else:   # TODO don't sure about restart in this case
             helpers.restart_service(settings.KUBERDOCK_SERVICE)
             db_upd.print_log(SUCCESSFUL_DOWNGRADE_MESSAGE)
         return False

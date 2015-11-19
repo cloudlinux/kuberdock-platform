@@ -404,13 +404,14 @@
 
             function empty(n){while(n.firstChild){n.removeChild(n.firstChild)}}
 
-            function composeResources(kubeId){
+            function composeResources(kubeId, kubes){
+                if (kubes === undefined) kubes = 1;
                 empty(resourceList);
                 var kubeItem = getKubeById(kubeId),
                     data = ['c','m','d'].map(function(i){return document.createElement('div')});
-                data[0].appendChild(document.createTextNode('CPU:'+String.fromCharCode(160)+kubeItem.cpu+kubeItem.cpu_units));
-                data[1].appendChild(document.createTextNode('Memory:'+String.fromCharCode(160)+kubeItem.memory+kubeItem.memory_units));
-                data[2].appendChild(document.createTextNode('Disk:'+String.fromCharCode(160)+kubeItem.disk_space+kubeItem.disk_space_units));
+                data[0].appendChild(document.createTextNode('CPU:'+String.fromCharCode(160)+(kubeItem.cpu*kubes).toFixed(2)+kubeItem.cpu_units));
+                data[1].appendChild(document.createTextNode('Memory:'+String.fromCharCode(160)+Math.round(kubeItem.memory*kubes)+kubeItem.memory_units));
+                data[2].appendChild(document.createTextNode('Disk:'+String.fromCharCode(160)+Math.round(kubeItem.disk_space*kubes)+kubeItem.disk_space_units));
                 data.forEach(function(el){resourceList.appendChild(el)});
             }
 
@@ -420,15 +421,15 @@
             }
 
             function recalculate(tgt){
-                console.log(getKubeId());
                 if (tgt.id in mutables && mutables[tgt.id].type === 'kube') {
                     var price = getKubeById(getKubeId()).price || 0,
                         fixed = kubes.reduce(function(a, b){return (+a)+(+b)}, 0),
                         changing = Object.keys(mutables)
-                            .filter(function(k){return k !== tgt.id})
+                            .filter(function(k){return mutables[k].type === 'kube' && k !== tgt.id})
                             .map(function(k){return document.getElementById(k).value})
                             .reduce(function(a, b){return (+a)+(+b)}, 0);
                     displayTotal(getPackage(packageId).prefix + ((fixed + changing + (+tgt.value)) * price).toFixed(2));
+                    composeResources(getKubeId(), fixed + changing + (+tgt.value));
                 }
                 else if (tgt.id in mutables && mutables[tgt.id].type === 'kube_type') {
                     var price = getKubeById(+tgt.value).price || 0,
@@ -438,7 +439,7 @@
                             .map(function(k){return document.getElementById(k).value})
                             .reduce(function(a, b){return (+a)+(+b)}, 0);
                     displayTotal(getPackage(packageId).prefix + ((fixed + changing) * price).toFixed(2));
-                    composeResources(+tgt.value);
+                    composeResources(+tgt.value, fixed + changing);
                 }
             }
 
@@ -477,7 +478,7 @@
                         .map(function(k){return document.getElementById(k).value})
                         .reduce(function(a, b){return (+a)+(+b)}, 0);
                 displayTotal(getPackage(packageId).prefix + ((fixed + changing) * price));
-                composeResources(getKubeId());
+                composeResources(getKubeId(), fixed + changing);
             }());
 
             Array.prototype.forEach.call(customFields, function(f){

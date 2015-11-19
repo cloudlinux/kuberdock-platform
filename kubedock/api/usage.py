@@ -2,7 +2,8 @@ from flask import Blueprint, request
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token, KubeUtils
+from ..decorators import login_required_or_basic_or_token
+from ..utils import KubeUtils
 from ..users import User
 from ..usage.models import ContainerState, IpState, PersistentDiskState
 from ..core import db

@@ -8,7 +8,8 @@ import itertools
 import time
 import datetime
 from collections import defaultdict
-from ..utils import login_required_or_basic_or_token, all_request_params
+from ..decorators import login_required_or_basic_or_token
+from ..utils import all_request_params
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 

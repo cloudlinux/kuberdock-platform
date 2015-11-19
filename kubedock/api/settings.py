@@ -6,8 +6,8 @@ from flask.ext.login import current_user
 from ..core import db
 from ..rbac import check_permission, acl
 from ..rbac.models import Role, Resource, Permission
-from ..utils import (
-    login_required_or_basic_or_token, APIError, all_request_params)
+from ..decorators import login_required_or_basic_or_token
+from ..utils import APIError, all_request_params
 from ..users.utils import append_offset_to_timezone
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate

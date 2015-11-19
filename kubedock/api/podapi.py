@@ -1,7 +1,8 @@
 from flask import Blueprint
 from flask.views import MethodView
-from ..utils import login_required_or_basic_or_token, KubeUtils, register_api
-from ..utils import maintenance_protected
+from ..decorators import login_required_or_basic_or_token
+from ..decorators import maintenance_protected
+from ..utils import KubeUtils, register_api
 from ..kapi.podcollection import PodCollection
 from ..validation import check_new_pod_data
 

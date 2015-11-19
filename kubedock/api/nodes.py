@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token
-from ..utils import maintenance_protected
+from ..decorators import login_required_or_basic_or_token
+from ..decorators import maintenance_protected
 from ..validation import check_int_id, check_node_data, check_hostname
 from ..billing import Kube
 from . import APIError

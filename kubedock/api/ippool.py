@@ -1,6 +1,7 @@
 from flask import Blueprint
 
-from ..utils import login_required_or_basic_or_token, KubeUtils
+from ..decorators import login_required_or_basic_or_token
+from ..utils import KubeUtils
 from ..kapi.ippool import IpAddrPool
 from ..rbac import check_permission
 

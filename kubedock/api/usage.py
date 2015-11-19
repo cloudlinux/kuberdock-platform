@@ -20,8 +20,12 @@ usage = Blueprint('usage', __name__, url_prefix='/usage')
 @KubeUtils.jsonwrap
 def get_total_usage():
     date_from, date_to = get_dates(request)
-    return {user.username:
-            get_user_usage(user, date_from, date_to) for user in User.query}
+    rv = {}
+    for user in User.query:
+        user_usage = get_user_usage(user, date_from, date_to)
+        if user_usage:
+            rv[user.username] = user_usage
+    return rv
 
 
 @usage.route('/<login>', methods=['GET'])
@@ -43,7 +47,7 @@ def get_dates(request):
     return (date_from, date_to)
 
 
-def filter_query_by_date(model, query, date_from, date_to):
+def filter_query_by_date(query, model, date_from, date_to):
     query = query.filter(
         db.or_(model.start_time.between(date_from, date_to),
                model.end_time.between(date_from, date_to)))
@@ -54,26 +58,28 @@ def get_pod_usage(user, date_from, date_to):
     rv = []
     for pod in user.pods:
         time_ = defaultdict(list)
-        query = db.session.query(ContainerState).filter(ContainerState.pod.contains(pod))
-        query = filter_query_by_date(ContainerState, query, date_from, date_to)
+        query = db.session.query(ContainerState).filter(
+            ContainerState.pod.contains(pod))
+        query = filter_query_by_date(query, ContainerState, date_from, date_to)
         states = query.all()
         for state in states:
             start = to_timestamp(state.start_time)
             end = (int(time.time()) if state.end_time is None else
-                   to_timestamp(state.end_time))
+                to_timestamp(state.end_time))
             time_[state.container_name].append({'kubes': state.kubes,
                                                 'start': start, 'end': end})
-        rv.append({'id': pod.id,
-                   'name': pod.name,
-                   'kubes': pod.kubes,
-                   'kube_id': pod.kube_id,
-                   'time': time_})
+        if time_:
+            rv.append({'id': pod.id,
+                    'name': pod.name,
+                    'kubes': pod.kubes,
+                    'kube_id': pod.kube_id,
+                    'time': time_})
     return rv
 
 
 def get_ip_states(user, date_from, date_to):
     query = db.session.query(IpState).filter(IpState.user.contains(user))
-    query = filter_query_by_date(IpState, query, date_from, date_to)
+    query = filter_query_by_date(query, IpState, date_from, date_to)
     ip_states = query.all()
     return [ip_state.to_dict() for ip_state in ip_states]
 
@@ -81,15 +87,23 @@ def get_ip_states(user, date_from, date_to):
 def get_pd_states(user, date_from, date_to):
     query = db.session.query(PersistentDiskState).filter(
         PersistentDiskState.user == user)
-    query = filter_query_by_date(PersistentDiskState, query, date_from, date_to)
+    query = filter_query_by_date(query, PersistentDiskState, date_from, date_to)
     pd_states = query.all()
     return [pd_state.to_dict(exclude=['user_id']) for pd_state in pd_states]
 
 
 def get_user_usage(user, date_from, date_to):
-    return {'pods_usage': get_pod_usage(user, date_from, date_to),
-            'ip_usage': get_ip_states(user, date_from, date_to),
-            'pd_usage': get_pd_states(user, date_from, date_to)}
+    rv = {}
+    pods_usage = get_pod_usage(user, date_from, date_to)
+    if pods_usage:
+        rv['pods_usage'] = pods_usage
+    ip_usage = get_ip_states(user, date_from, date_to)
+    if ip_usage:
+        rv['ip_usage'] = ip_usage
+    pd_usage = get_pd_states(user, date_from, date_to)
+    if pd_usage:
+        rv['pd_usage'] = pd_usage
+    return rv
 
 
 def to_timestamp(date):

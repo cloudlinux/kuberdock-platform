@@ -38,7 +38,7 @@
                         {% endif %}
                     {% endfor %}
                 </ul>
-                {% if not auth_by_id %}
+
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown profile-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ current_user.username }}<b class="caret"></b></a>
@@ -46,11 +46,12 @@
                             {% if not current_user.is_administrator() %}
                             <li><a href="/settings/">Settings</a></li>
                             {% endif %}
-                             <li><a href="{{ url_for('auth.logout') }}">Logout </a></li>
+                            {% if not auth_by_id %}
+                            <li><a href="{{ url_for('auth.logout') }}">Logout </a></li>
+                            {% endif %}
                         </ul>
                     </li>
                 </ul>
-                {% endif %}
             </div><!--/.nav-collapse -->
         </div><!--/.container-fluid -->
     </div>

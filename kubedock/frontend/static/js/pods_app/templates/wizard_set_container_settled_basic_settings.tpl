@@ -100,11 +100,11 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    <% if (volumeMounts.length != 0) { %>
-                                        <% _.each(volumeMounts, function(v){ %>
+                                    <% if (volumes.length != 0) { %>
+                                        <% _.each(volumes, function(v){ %>
                                             <tr>
                                                 <td><%- v.mountPath %></td>
-                                                <td><%- v.name ? 'yes' : 'no' %></td>
+                                                <td><%- v.persistentDisk ? 'yes' : 'no' %></td>
                                             </tr>
                                         <% }) %>
                                     <% } else { %>

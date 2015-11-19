@@ -2,6 +2,7 @@ import json
 import os
 import shlex
 from uuid import uuid4
+from copy import deepcopy
 from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
 
@@ -91,8 +92,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         return pod
 
     def as_dict(self):
-        return dict([(k, v) for k, v in vars(self).items()
-                    if k not in ('volumes', 'namespace', 'secrets')])
+        data = vars(self).copy()
+        for field in ('namespace', 'secrets'):
+            data.pop(field, None)
+        data['volumes'] = data.pop('volumes_original', [])
+        return data
 
     def as_json(self):
         return json.dumps(self.as_dict())
@@ -105,6 +109,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
             return
+        self.volumes_original = deepcopy(self.volumes)
         for volume in self.volumes:
             if 'persistentDisk' in volume:
                 self._handle_persistent_storage(volume, owner)
@@ -115,24 +120,23 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def _handle_persistent_storage(volume, owner):
         pd = volume.pop('persistentDisk')
         name = pd.get('pdName')
-        drive_name = _get_pd_drive_name(name, owner)
-        size = pd.get('pdSize')
+
+        persistent_disk = PersistentDisk.filter_by(owner_id=owner.id,
+                                                   name=name).first()
+        if persistent_disk is None:
+            persistent_disk = PersistentDisk(name=name, owner_id=owner.id,
+                                             size=pd.get('pdSize', 1)).save()
+
         if CEPH:
             volume['rbd'] = {
-                'image': drive_name,
+                'image': persistent_disk.drive_name,
                 'keyring': '/etc/ceph/ceph.client.admin.keyring',
                 'fsType': 'xfs',
                 'user': 'admin',
-                'pool': 'rbd'
+                'pool': 'rbd',
+                'size': persistent_disk.size,
+                'monitors': CephStorage().get_monitors(),
             }
-            if size is not None:
-                volume['rbd']['size'] = size
-            try:
-                volume['rbd']['monitors'] = monitors
-            except NameError:  # will happen in the first iteration
-                cs = CephStorage()
-                monitors = cs.get_monitors()  # really slow operation
-                volume['rbd']['monitors'] = monitors
         elif AWS:
             try:
                 from ..settings import AVAILABILITY_ZONE
@@ -142,10 +146,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             volume['awsElasticBlockStore'] = {
                 'volumeID': 'aws://{0}/'.format(AVAILABILITY_ZONE),
                 'fsType': 'xfs',
-                'drive': drive_name,
+                'drive': persistent_disk.drive_name,
+                'size': persistent_disk.size,
             }
-            if size is not None:
-                volume['awsElasticBlockStore']['size'] = size
 
     def _handle_local_storage(self, volume):
         local_storage = volume.pop('localStorage')
@@ -307,14 +310,3 @@ def _del_docker_prefix(value):
     if not value:
         return value
     return value.split('docker://')[-1]
-
-
-def _get_pd_drive_name(name, owner):
-    """Returns persistent drive name for a user and PD name.
-    Also handles backward compatitbility with old drive names where drive names
-    were composed with user name
-    """
-    pd = PersistentDisk.query.filter_by(name=name, owner_id=owner.id).first()
-    if pd is None:
-        pd = PersistentDisk(name=name, owner_id=owner.id)
-    return pd.drive_name

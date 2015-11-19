@@ -8,6 +8,9 @@ from kubedock.rbac.models import Role
 from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import KUBERDOCK_INTERNAL_USER
 
+import random 
+import string 
+
 
 def initial_fixtures():
     """Almost the same stuff as manage.py createdb"""
@@ -65,19 +68,21 @@ def initial_fixtures():
     db.engine.execute("SELECT setval('packages_id_seq', 1, false)")
 
 
-def user_fixtures(**kwargs):
-    password = 'o3r2hdfe'
-    data = dict(username='test_user', password=password, active=True,
-                role_id=Role.filter_by(rolename='User').first().id,
-                package_id=0, email='mfkdeogn49ekj@test.test')
+def user_fixtures(admin=False, active=True, **kwargs):
+    random_str = lambda l: ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(l)) 
+    
+    username = 'user_' + random_str(8)
+    password = random_str(10)
+    role_id = Role.filter_by(
+            rolename='User' if not admin else 'Admin').first().id
+    email = random_str(10) + '@test.test'
+    
+    data = dict(username=username, password=password, active=active, 
+        role_id=role_id, package_id=0, email=email)
     user = User(**dict(data, **kwargs)).save()
     return user, password
 
 
 def admin_fixtures(**kwargs):
-    password = 'mdld0oenbf'
-    data = dict(username='test_admin', password=password, active=True,
-                role_id=Role.filter_by(rolename='Admin').first().id,
-                package_id=0, email='mdfldpnrfu3489e@test.test')
-    user = User(**dict(data, **kwargs)).save()
-    return user, password
+    return user_fixtures(admin=True, **kwargs)
+

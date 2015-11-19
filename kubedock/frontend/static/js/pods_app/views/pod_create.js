@@ -1136,39 +1136,27 @@ define(['pods_app/app',
             tagName: 'div',
 
             ui: {
-                ieditable : '.ieditable',
-                textarea  : '.container-logs',
-                stopItem  : '#stopContainer',
-                startItem : '#startContainer',
-                updateContainer: '.container-update',
-                checkForUpdate : '.check-for-update',
+                ieditable          : '.ieditable',
+                textarea           : '.container-logs',
+                stopItem           : '#stopContainer',
+                startItem          : '#startContainer',
+                updateContainer    : '.container-update',
+                checkForUpdate     : '.check-for-update',
+                editContainerKubes : '.editContainerKubes',
+                changeKubeQty      : 'button.send',
+                cancelChange       : 'button.cancel',
+                kubeVal            : '.editForm input',
             },
 
             events: {
-                'click @ui.stopItem'  : 'stopItem',
-                'click @ui.startItem' : 'startItem',
-                'click @ui.updateContainer': 'updateContainer',
-                'click @ui.checkForUpdate' : 'checkContainerForUpdate',
-            },
-
-            templateHelpers: function(){
-                var pod = this.model.getPod(),
-                    kubeType;
-                if (!pod.detached) {
-                    kube_id = pod.get('kube_type');
-                    _.each(kubeTypes, function(kube){
-                        if(parseInt(kube.id) == parseInt(kube_id))
-                            kubeType = kube;
-                    });
-                }
-                return {
-                    parentID: pod.id,
-                    updateIsAvailable: this.model.updateIsAvailable,
-                    sourceUrl: this.model.get('sourceUrl'),
-                    podName: pod.get('name'),
-                    kube_type: kubeType,
-                    restart_policy: pod.get('restartPolicy'),
-                };
+                'click @ui.stopItem'           : 'stopItem',
+                'click @ui.startItem'          : 'startItem',
+                'click @ui.updateContainer'    : 'updateContainer',
+                'click @ui.checkForUpdate'     : 'checkContainerForUpdate',
+                'click @ui.changeKubeQty'      : 'changeKubeQty',
+                'click @ui.editContainerKubes' : 'editContainerKubes',
+                'click @ui.cancelChange'       : 'closeChange',
+                'keyup @ui.kubeVal'            : 'kubeVal'
             },
 
             triggers: {
@@ -1192,29 +1180,26 @@ define(['pods_app/app',
                 this.getLogs();
             },
 
-            getLogs: function() {
-                var that = this;
-                this.model.getLogs(/*size=*/100).done(this.render)
-                    .fail(function(){ utils.notifyWindow('Log not found'); })
-                    .always(function(){
-                        this.set('timeout', setTimeout(that.getLogs, 10000)); });
-            },
-
-            startItem: function(){
-                App.WorkFlow.commandPod('start', this.model.getPod());
-            },
-            stopItem: function(){
-                App.WorkFlow.commandPod('stop', this.model.getPod());
-            },
-            updateContainer: function(){
-                App.WorkFlow.updateContainer(this.model);
-            },
-            checkContainerForUpdate: function(){
-                App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
-            },
-
-            onBeforeDestroy: function () {
-                clearTimeout(this.model.get('timeout'));
+            templateHelpers: function(){
+                var pod = this.model.getPod(),
+                    kubeType;
+                if (!pod.detached) {
+                    kube_id = pod.get('kube_type');
+                    _.each(kubeTypes, function(kube){
+                        if(parseInt(kube.id) == parseInt(kube_id))
+                            kubeType = kube;
+                    });
+                }
+                return {
+                    parentID: pod.id,
+                    updateIsAvailable: this.model.updateIsAvailable,
+                    sourceUrl: this.model.get('sourceUrl'),
+                    podName: pod.get('name'),
+                    kube_type: kubeType,
+                    restart_policy: pod.get('restartPolicy'),
+                    editKubesQty : this.model.editKubesQty,
+                    kubeVal : this.model.kubeVal
+                };
             },
 
             onBeforeRender: function () {
@@ -1237,6 +1222,57 @@ define(['pods_app/app',
                 else
                     jspAPI.scrollToY(this.logScroll);  // stay at the same position
             },
+
+            onBeforeDestroy: function () {
+                delete this.model.kubeVal;
+                delete this.model.editKubesQty;
+                clearTimeout(this.model.get('timeout'));
+            },
+
+            getLogs: function() {
+                var that = this;
+                this.model.getLogs(/*size=*/100).done(this.render)
+                    .fail(function(){ utils.notifyWindow('Log not found'); })
+                    .always(function(){
+                        this.set('timeout', setTimeout(that.getLogs, 10000)); });
+            },
+
+            editContainerKubes: function(){
+                this.model.editKubesQty = true;
+                this.model.kubeVal = this.model.get('kubes');
+                this.render();
+            },
+
+            kubeVal: function(){
+                this.model.kubeVal = this.ui.kubeVal.val();
+            },
+
+            changeKubeQty: function(){
+                //TODO add change Request
+                this.closeChange();
+            },
+
+            closeChange: function(){
+                delete this.model.kubeVal;
+                delete this.model.editKubesQty;
+                this.render();
+            },
+
+            startItem: function(){
+                App.WorkFlow.commandPod('start', this.model.getPod());
+            },
+
+            stopItem: function(){
+                App.WorkFlow.commandPod('stop', this.model.getPod());
+            },
+
+            updateContainer: function(){
+                App.WorkFlow.updateContainer(this.model);
+            },
+
+            checkContainerForUpdate: function(){
+                App.WorkFlow.checkContainerForUpdate(this.model).done(this.render);
+            }
         });
 
         NewItem.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({

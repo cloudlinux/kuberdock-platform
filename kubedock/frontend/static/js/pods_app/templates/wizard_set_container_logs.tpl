@@ -34,7 +34,6 @@
                     <div class="status-line <%- state %> curent-margin">Status: <%- state %>
                         <% if (state == "running"){ %>
                             <span id="stopContainer">Stop</span>
-                            <!-- AC-1279 -->
                             <% if (!updateIsAvailable) { %>
                                 <span class="check-for-update" title="Check <%- image %> for updates">Check for updates</span>
                             <% } else { %>
@@ -54,7 +53,13 @@
                             <div>Image: <%- image %></div>
                             <div>Kube type: <%- kube_type.name %></div>
                             <div>Restart policy: <%- restart_policy %></div>
-                            <div>Kubes: <span <!--class="editContainerKubes"-->><%- kubes %></span>
+                            <div class="editGroup">
+                                Kubes: <!-- <span class="editContainerKubes"> --><%- kubes %><!--</span>-->
+                                <div class="editForm <%- editKubesQty === undefined ? 'hide' : '' %>">
+                                    <input type="text" value="<%- kubeVal %>"/>
+                                    <button class="cancel">Cancel</button>
+                                    <button class="send">Apply</button>
+                                </div>
                             </div>
                         </div>
                         <div class="col-xs-6 servers">

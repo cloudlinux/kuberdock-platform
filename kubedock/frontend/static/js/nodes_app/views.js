@@ -503,10 +503,10 @@ define(['nodes_app/app', 'marionette', 'utils',
                 this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
             else  // stay at the same position
                 this.ui.textarea.scrollTop(this.logScroll);
-        },
 
-        onDomRefresh: function () {
-            this.ui.textarea.niceScroll({
+            if (this.niceScroll !== undefined)
+                this.niceScroll.remove();
+            this.niceScroll = this.ui.textarea.niceScroll({
                 cursorcolor: "#69AEDF",
                 cursorwidth: "12px",
                 cursorborder: "none",
@@ -520,7 +520,8 @@ define(['nodes_app/app', 'marionette', 'utils',
         onBeforeDestroy: function () {
             this.destroyed = true;
             clearTimeout(this.model.get('timeout'));
-            this.ui.textarea.niceScroll().hide();
+            if (this.niceScroll !== undefined)
+                this.niceScroll.remove();
         }
     });
 

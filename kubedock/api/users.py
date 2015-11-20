@@ -7,7 +7,8 @@ from sqlalchemy import not_
 from . import APIError
 from ..rbac import check_permission
 from ..rbac.models import Role
-from ..utils import login_required_or_basic_or_token, KubeUtils
+from ..decorators import login_required_or_basic_or_token
+from ..utils import KubeUtils
 from ..users.models import User, UserActivity
 from ..users.signals import user_logged_in_by_another
 from ..kapi.users import UserCollection

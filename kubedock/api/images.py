@@ -7,7 +7,8 @@ from ..core import db
 from ..models import ImageCache
 from ..validation import check_container_image_name, check_image_request
 from ..settings import DEFAULT_IMAGES_URL
-from ..utils import login_required_or_basic_or_token, KubeUtils
+from ..decorators import login_required_or_basic_or_token
+from ..utils import KubeUtils
 from ..kapi import images as kapi_images
 from ..rbac import check_permission
 

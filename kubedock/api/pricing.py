@@ -4,7 +4,8 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from ..core import db
 from ..rbac import check_permission
-from ..utils import login_required_or_basic_or_token, KubeUtils, register_api
+from ..decorators import login_required_or_basic_or_token
+from ..utils import KubeUtils, register_api
 from ..users import User
 from ..validation import check_pricing_api, package_schema, kube_schema, packagekube_schema
 from ..billing.models import Package, Kube, PackageKube

@@ -4,8 +4,8 @@ from flask import Blueprint, request
 from flask.ext.login import current_user
 
 from ..rbac import check_permission
-from ..utils import (login_required_or_basic_or_token, parse_datetime_str,
-                     KubeUtils)
+from ..decorators import login_required_or_basic_or_token
+from ..utils import parse_datetime_str, KubeUtils
 from ..kapi import es_logs, usage
 from ..users.models import User
 from ..pods.models import Pod

@@ -2,7 +2,8 @@ from flask import Blueprint
 from flask.views import MethodView
 
 from . import APIError
-from ..utils import login_required_or_basic_or_token, KubeUtils, register_api
+from ..decorators import login_required_or_basic_or_token
+from ..utils import KubeUtils, register_api
 from ..kapi import pstorage as ps
 from ..pods.models import PersistentDisk
 from ..settings import AWS, CEPH

@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app
 from flask.ext.login import current_user
 from ..core import ConnectionPool, EvtStream
-from ..utils import login_required_or_basic_or_token
+from ..decorators import login_required_or_basic_or_token
 
 stream = Blueprint('stream', __name__, url_prefix='/stream')
 

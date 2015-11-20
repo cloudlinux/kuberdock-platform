@@ -11,7 +11,10 @@
     -->
     <div class="node-logs">
         <% _.each(logs, function(line){ %>
-        <p><%- line['@timestamp'] %> <%- line['ident'] %>: <%- line['message'] %></p>
+            <p><%- line['@timestamp'] %> <%- line['ident'] %>: <%- line['message'] %></p>
         <% }) %>
+        <% if (logsError) { %>
+            <p><%- logsError %></p>
+        <% } %>
     </div>
 </div>

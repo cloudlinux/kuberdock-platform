@@ -58,6 +58,10 @@ class User(BaseModelMixin, UserMixin, db.Model):
             return cls.query.filter_by(deleted=False)
 
     @classmethod
+    def get_internal(cls):
+        return cls.get(0)
+
+    @classmethod
     def get(cls, uid):
         """Get User by id, username or User object."""
         if uid is None:

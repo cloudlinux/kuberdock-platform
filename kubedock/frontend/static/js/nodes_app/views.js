@@ -520,6 +520,7 @@ define(['nodes_app/app', 'marionette', 'utils',
         onBeforeDestroy: function () {
             this.destroyed = true;
             clearTimeout(this.model.get('timeout'));
+            this.ui.textarea.niceScroll().hide();
         }
     });
 

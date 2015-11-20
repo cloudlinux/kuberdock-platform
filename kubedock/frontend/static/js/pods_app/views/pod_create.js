@@ -1219,6 +1219,7 @@ define(['pods_app/app',
                 delete this.model.kubeVal;
                 delete this.model.editKubesQty;
                 clearTimeout(this.model.get('timeout'));
+                this.ui.textarea.niceScroll().hide();
             },
 
             getLogs: function() {

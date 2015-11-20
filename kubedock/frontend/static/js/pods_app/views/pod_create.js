@@ -12,7 +12,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/wizard_set_container_complete.tpl',
         'pods_app/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot',
-        'jqplot-axis-renderer', 'numeral', 'selectpicker', 'mousewheel', 'jscrollpane'],
+        'jqplot-axis-renderer', 'numeral', 'selectpicker', 'nicescroll'],
        function(Pods,
                 layoutWizardTpl,
                 breadcrumbHeaderTpl,
@@ -1202,25 +1202,17 @@ define(['pods_app/app',
                 };
             },
 
-            onBeforeRender: function () {
-                // remember scroll position
-                var el = this.ui.textarea,
-                    jspAPI = el.data ? el.data('jsp') : undefined,
-                    logScrollPercent = jspAPI ? jspAPI.getPercentScrolledY() : null;
-                if (logScrollPercent < 1)  // if not scrolled to the end, stay
-                    this.logScroll = jspAPI ? jspAPI.getContentPositionY() : null;
-                else  // otherwise stick to bottom
-                    this.logScroll = null;
-            },
-
             onRender: function () {
-                this.ui.textarea.jScrollPane();
-                var jspAPI = this.ui.textarea.data('jsp');
-                if (!jspAPI) return;
-                if (this.logScroll === null)
-                    jspAPI.scrollToPercentY(1);  // stick to bottom
-                else
-                    jspAPI.scrollToY(this.logScroll);  // stay at the same position
+                this.ui.textarea.niceScroll({
+                    cursorcolor: "#69AEDF",
+                    cursorwidth: "12px",
+                    cursorborder: "none",
+                    cursorborderradius: "none",
+                    background: "#E7F4FF",
+                    autohidemode: false,
+                    railoffset: 'bottom'
+                });
+                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
             },
 
             onBeforeDestroy: function () {

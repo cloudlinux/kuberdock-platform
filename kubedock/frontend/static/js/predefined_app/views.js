@@ -5,7 +5,7 @@ define(['app', 'marionette',
         'tpl!predefined_app/templates/app_list_item.tpl',
         'tpl!predefined_app/templates/app_list.tpl',
         'tpl!predefined_app/templates/app_load_form.tpl',
-        '../utils', 'bootstrap'],
+        '../utils', 'bootstrap', 'nicescroll'],
        function(App, Marionette,
                 mainTpl, breadcrumbsTpl, appListEmptyTpl,
                 appListItemTpl, appListTpl, appLoadFormTpl, utils){
@@ -116,11 +116,25 @@ define(['app', 'marionette',
 
             events: {
                 'click @ui.save'      : 'saveApp',
-                'change @ui.uploader' : 'handleUpload'
+                'change @ui.uploader' : 'handleUpload',
+                'click @ui.cancel'    : 'cancel'
             },
 
-            triggers: {
-                'click @ui.cancel' : 'app:cancel'
+            onShow: function(){
+                this.ui.display.niceScroll({
+                    cursorcolor: "#69AEDF",
+                    cursorwidth: "12px",
+                    cursorborder: "none",
+                    cursorborderradius: "none",
+                    background: "#E7F4FF",
+                    autohidemode: false,
+                    railoffset: 'bottom'
+                });
+            },
+
+            cancel: function(){
+                this.trigger('app:cancel');
+                this.ui.display.niceScroll().hide();
             },
 
             handleUpload: function(evt){
@@ -145,6 +159,7 @@ define(['app', 'marionette',
                 this.model.set({name: name,
                     template: template});
                 this.trigger('app:save', this.model);
+                this.ui.display.niceScroll().hide();
             }
         });
 

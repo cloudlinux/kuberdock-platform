@@ -22,10 +22,9 @@ requirejs.config({
         mask                   : 'lib/jquery.mask',
         utils                  : 'utils',
         selectpicker           : 'lib/bootstrap-select.min',
-        mousewheel             : 'lib/jquery.mousewheel',
-        jscrollpane            : 'lib/jquery.jscrollpane.min',
         jqplot                 : "lib/jquery.jqplot.min",
         "jqplot-axis-renderer" : "lib/jqplot.dateAxisRenderer.min",
+        nicescroll             : 'lib/jquery.nicescroll'
     },
     shim: {
         jquery: {
@@ -56,9 +55,6 @@ requirejs.config({
         },
         utils: {
             deps: ['backbone', 'jquery']
-        },
-        mousewheel: {
-            deps: ["jquery"]
         }
     },
     config: {

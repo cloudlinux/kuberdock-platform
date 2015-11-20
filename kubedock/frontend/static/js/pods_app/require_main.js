@@ -22,8 +22,7 @@ requirejs.config({
         selectpicker           : 'lib/bootstrap-select.min',
         numeral                : "lib/numeral/numeral.min",
         numeral_langs          : "lib/numeral/languages.min",
-        mousewheel             : 'lib/jquery.mousewheel',
-        jscrollpane            : 'lib/jquery.jscrollpane.min'
+        nicescroll             : 'lib/jquery.nicescroll'
     },
     shim: {
         jquery: {
@@ -49,9 +48,6 @@ requirejs.config({
         notify: {
             deps: ["jquery"],
             exports: 'jQuery.fn.notify'
-        },
-        mousewheel: {
-            deps: ["jquery"]
         }
     },
     config: {

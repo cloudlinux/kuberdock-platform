@@ -37,7 +37,8 @@ def get_usage(login):
     date_from, date_to = get_dates(request)
     user = User.query.filter_by(username=login).first()
     if user is None:
-        raise APIError('User with username {0} does not exist'.format(login))
+        raise APIError(
+            'User with username {0} does not exist'.format(login), 404)
     return get_user_usage(user, date_from, date_to)
 
 
@@ -51,7 +52,8 @@ def get_dates(request):
 def filter_query_by_date(query, model, date_from, date_to):
     query = query.filter(
         db.or_(model.start_time.between(date_from, date_to),
-               model.end_time.between(date_from, date_to)))
+               model.end_time.between(date_from, date_to),
+               db.and_(model.end_time == None, model.start_time < date_to)))
     return query
 
 

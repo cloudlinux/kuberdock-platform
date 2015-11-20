@@ -14,7 +14,8 @@ define(['nodes_app/app', 'marionette', 'utils',
         'tpl!nodes_app/templates/node_paginator.tpl',
         'tpl!nodes_app/templates/node_layout.tpl',
         'tpl!nodes_app/templates/node_item_graph.tpl',
-        'bootstrap', 'jqplot', 'jqplot-axis-renderer', 'selectpicker'],
+        'bootstrap', 'jqplot', 'jqplot-axis-renderer',
+        'selectpicker', 'nicescroll'],
        function(App, Marionette, utils,
                 nodeDetailedLayoutTpl,
                 nodeGeneralTabTpl,
@@ -473,8 +474,9 @@ define(['nodes_app/app', 'marionette', 'utils',
         },
 
         initialize: function() {
-            this.listenTo(App.nodesCollection, 'reset', this.render);
+            var that = this;
 
+            this.listenTo(App.nodesCollection, 'reset', this.render);
             this.model.set('logs', []);
             function get_logs() {
                 var hostname = this.model.get('hostname'),
@@ -492,6 +494,15 @@ define(['nodes_app/app', 'marionette', 'utils',
                         lines.reverse();
                         this.model.set('logs', lines);
                         this.render();
+                        that.ui.textarea.niceScroll({
+                            cursorcolor: "#69AEDF",
+                            cursorwidth: "12px",
+                            cursorborder: "none",
+                            cursorborderradius: "none",
+                            background: "#E7F4FF",
+                            autohidemode: false,
+                            railoffset: 'bottom'
+                        });
                         _.defer(function(caller){
                             caller.ui.textarea.scrollTop(caller.ui.textarea[0].scrollHeight);
                         }, this);

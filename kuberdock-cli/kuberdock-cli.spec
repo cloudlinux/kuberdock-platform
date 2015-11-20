@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 27%{?dist}.cloudlinux
+Release: 28%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,9 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Fri Nov 20 2015 Aleksandr Tishin <atishin@cloudlinux.com> 0.1-28
+- AC-1475: Remove authorization options in KCLI
+
 * Thu Nov 12 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com> 0.1-27
 - Removed old api param set_public_ip
 

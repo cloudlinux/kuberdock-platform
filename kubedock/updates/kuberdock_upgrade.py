@@ -8,7 +8,6 @@ import json
 import argparse
 import requests
 import subprocess
-import traceback
 from datetime import datetime
 from importlib import import_module
 from fabric.api import env, output
@@ -195,17 +194,17 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
         except Exception as e:
             successful = False
             node.upgrade_status = UPDATE_STATUSES.failed
-            db_upd.print_log(
-                'Exception raised during upgrade node {0}\n'
-                '{1}'.format(node.hostname, traceback.format_exc())
+            db_upd.capture_traceback(
+                'Exception raised during '
+                'upgrade node {0}'.format(node.hostname)
             )
             try:
                 downgrade_node(db_upd, with_testing, env, e)
             except Exception as e:
                 node.upgrade_status = UPDATE_STATUSES.failed_downgrade
-                db_upd.print_log(
-                    'Exception raised during downgrade node {0}\n'
-                    '{1}'.format(node.hostname, traceback.format_exc())
+                db_upd.capture_traceback(
+                    'Exception raised during '
+                    'downgrade node {0}'.format(node.hostname)
                 )
             else:
                 # Check here if new master is compatible with old nodes
@@ -239,18 +238,16 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
     except Exception as e:
         db.session.rollback()
         db_upd.status = UPDATE_STATUSES.failed
-        db_upd.print_log(
-            'Error in update script {0}\n'
-            '{1}'
-            'Starting downgrade...'.format(db_upd.fname, traceback.format_exc())
+        db_upd.capture_traceback(
+            'Error in update script {0}'.format(db_upd.fname),
+            'Starting downgrade...'
         )
         try:
             downgrade_func(db_upd, with_testing, e)
         except Exception as e:
             db_upd.status = UPDATE_STATUSES.failed_downgrade
-            db_upd.print_log(
-                'Error downgrading script {0}\n'
-                '{1}'.format(db_upd.fname, traceback.format_exc())
+            db_upd.capture_traceback(
+                'Error downgrading script {0}'.format(db_upd.fname)
             )
         else:   # TODO don't sure about restart in this case
             helpers.restart_service(settings.KUBERDOCK_SERVICE)

@@ -1,3 +1,5 @@
+import traceback
+
 from ..core import db
 from kubedock.models_mixin import BaseModelMixin
 
@@ -22,10 +24,25 @@ class Updates(BaseModelMixin, db.Model):
 
     def print_log(self, *msg):
         if len(msg) > 0:
-            m = [str(i).decode('utf-8') if isinstance(i, str) else unicode(i) for i in msg]
-            print u' '.join(m)
-            self.log = u' '.join([(self.log or u'')] + m + [u'\n'])
+            m = [i.decode('utf-8') if isinstance(i, str) else unicode(i) for i in msg]
+            print u'\n'.join(m)
+            self.log = u'\n'.join(([self.log] if self.log else []) + m) + u'\n'
             self.save()
+
+    def capture_traceback(self, header='', footer=''):
+        self.print_log(
+            '{0}{1}'
+            '=== Begin of captured traceback ===\n'
+            '{2}'
+            '=== End of captured traceback ==={3}'
+            '{4}'.format(
+                header,
+                '\n' if header else '',
+                traceback.format_exc(),
+                '\n' if footer else '',
+                footer
+            )
+        )
 
     def __repr__(self):
         return "<Update(fname='{0}', status='{1}')>".format(self.fname,

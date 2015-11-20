@@ -474,56 +474,51 @@ define(['nodes_app/app', 'marionette', 'utils',
         },
 
         initialize: function() {
-            var that = this;
-
+            _.bindAll(this, 'getLogs');
             this.listenTo(App.nodesCollection, 'reset', this.render);
-            this.model.set('logs', []);
-            function get_logs() {
-                var hostname = this.model.get('hostname'),
-                    size = 100,
-                    url = '/api/logs/node/' + hostname + '?size=' + size;
-                $.ajax({
-                    url: url,
-                    dataType : 'json',
-                    type: 'GET',
-                    context: this,
-                    success: function(data) {
-                        var lines = _.map(data.data.hits, function(line) {
-                            return line._source;
-                        });
-                        lines.reverse();
-                        this.model.set('logs', lines);
-                        this.render();
-                        that.ui.textarea.niceScroll({
-                            cursorcolor: "#69AEDF",
-                            cursorwidth: "12px",
-                            cursorborder: "none",
-                            cursorborderradius: "none",
-                            background: "#E7F4FF",
-                            autohidemode: false,
-                            railoffset: 'bottom'
-                        });
-                        _.defer(function(caller){
-                            caller.ui.textarea.scrollTop(caller.ui.textarea[0].scrollHeight);
-                        }, this);
-                    },
-                    statusCode: {
-                        404: function(xhr) {
-                            utils.notifyWindow('Logs aren\'t found');
-                        },
-                        200: function(xhr){
-                            if (xhr.data.hits.length == 0){
-                                this.ui.textarea.append('<p>Nothing to show because node log is empty.</p');
-                            }
-                        }
-                    }
-                });
-                this.model.set('timeout', setTimeout($.proxy(get_logs, this), 10000));
-            }
-            $.proxy(get_logs, this)();
+            this.getLogs();
+        },
+
+        getLogs: function() {
+            var that = this;
+            this.model.getLogs(/*size=*/100).always(function(){
+                // callbacks are called with model as a context
+                if (!this.destroyed) {
+                    this.set('timeout', setTimeout(that.getLogs, 10000));
+                    that.render();
+                }
+            });
+        },
+
+        onBeforeRender: function () {
+            var el = this.ui.textarea;
+            if (typeof el !== 'object' || (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
+                this.logScroll = null;  // stick to bottom
+            else
+                this.logScroll = el.scrollTop();  // stay at this position
+        },
+
+        onRender: function () {
+            if (this.logScroll === null)  // stick to bottom
+                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
+            else  // stay at the same position
+                this.ui.textarea.scrollTop(this.logScroll);
+        },
+
+        onDomRefresh: function () {
+            this.ui.textarea.niceScroll({
+                cursorcolor: "#69AEDF",
+                cursorwidth: "12px",
+                cursorborder: "none",
+                cursorborderradius: "none",
+                background: "#E7F4FF",
+                autohidemode: false,
+                railoffset: 'bottom'
+            });
         },
 
         onBeforeDestroy: function () {
+            this.destroyed = true;
             clearTimeout(this.model.get('timeout'));
         }
     });

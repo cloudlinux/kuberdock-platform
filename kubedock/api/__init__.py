@@ -52,7 +52,7 @@ def create_app(settings_override=None, fake_sessions=False):
 
 def on_app_error(e):
     return jsonify({'status': 'error', 'data': e.message,
-                    'type': getattr(e, 'type', 'CommonError')}), e.status_code
+                    'type': getattr(e, 'type', e.__class__.__name__)}), e.status_code
 
 
 def on_permission_denied(e):

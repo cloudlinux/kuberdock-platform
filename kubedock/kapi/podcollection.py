@@ -26,6 +26,9 @@ def get_user_namespaces(user):
 class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def __init__(self, owner=None):
+        """
+        :param owner: User model instance
+        """
         self.owner = owner
         namespaces = self._get_namespaces()
         self._get_pods(namespaces)

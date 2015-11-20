@@ -1,9 +1,17 @@
 """Utils to extract logs from elasticsearch services."""
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .elasticsearch_utils import execute_es_query
+from .podcollection import PodCollection, POD_STATUSES
+from .nodes import get_kuberdock_logs_pod_name
 from ..nodes.models import Node
+from ..users.models import User
 from ..usage.models import ContainerState as CS
+from ..utils import APIError
+
+
+class LogsPodIsNotRunning(APIError):
+    message = 'Logs service is collecting data. Wait few minutes please.'
 
 
 def get_container_logs(container_name, owner_id=None, size=100,
@@ -57,7 +65,7 @@ def get_node_logs(hostname, date, size=100, host=None):
     date = date or datetime.utcnow().date()
     index += date.strftime('%Y.%m.%d')
     logs = log_query(index, [{'term': {'host': hostname}}], host, size)
-    hits = logs.get('hits', [])
+    hits = [line['_source'] for line in logs.get('hits', [])]
     return {'total': logs.get('total', len(hits)), 'hits': hits}
 
 
@@ -94,4 +102,37 @@ def log_query(index, filters=None, host=None, size=100, start=None, end=None):
         'missing': '@timestamp',
         'unmapped_type': 'string',
     }}
-    return execute_es_query(index, query, size, order, host)
+    try:
+        result = execute_es_query(index, query, size, order, host)
+    except Exception:
+        if host and not check_logs_pod(host):
+            raise LogsPodIsNotRunning()
+        raise
+    return result
+
+
+def check_logs_pod(host):
+    """
+    Check if service pod with elasticsearch and fluentd is running
+    at least a minute on the node.
+
+    :param host: node hostname
+    :returns: True, if pod is running
+    """
+    node = Node.query.filter_by(ip=host).first()
+    if node is None or node.state != 'running':
+        return
+
+    for pod in PodCollection(User.get_internal()).get(False):
+        if pod.get('name') != get_kuberdock_logs_pod_name(node.hostname):
+            continue
+        if pod.get('status') != POD_STATUSES.running:
+            return
+        container_states = CS.query.filter(
+            CS.pod_state.has(pod_id=pod.get('id'), end_time=None),
+            CS.end_time.is_(None),
+            CS.start_time < (datetime.utcnow() - timedelta(minutes=1)),
+            CS.container_name.in_(['elasticsearch', 'fluentd']),
+        ).distinct(CS.container_name).order_by(CS.container_name).all()
+        return len(container_states) == 2
+    return

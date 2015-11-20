@@ -120,9 +120,16 @@ def get_user_role():
 
 
 class APIError(Exception):
-    def __init__(self, message, status_code=400):
-        self.message = message
-        self.status_code = status_code
+    message = 'Unknown error'
+    status_code = 400
+
+    def __init__(self, message=None, status_code=None, type=None):
+        if message is not None:
+            self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        if type is not None:
+            self.type = type
 
     def __str__(self):
         # Only message because this class may wrap other exception classes

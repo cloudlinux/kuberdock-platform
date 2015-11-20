@@ -29,6 +29,7 @@ class DBTestCase(FlaskTestCase):
     SECRET_KEY = 'testsecretkey'
     SQLALCHEMY_DATABASE_URI = ('postgresql+psycopg2://{0}:{1}@127.0.0.1:5432/'
                                '{2}'.format(DB_USER, DB_PASSWORD, DB_NAME))
+    fixtures = fixtures
 
     def create_app(self):
         return create_app(self)
@@ -54,7 +55,7 @@ class APITestCase(DBTestCase):
         from kubedock import sessions
         self.app.session_interface = sessions.ManagedSessionInterface(
             sessions.DataBaseSessionManager(self.SECRET_KEY), [], timedelta(days=1))
-        fixtures.initial_fixtures()
+        self.fixtures.initial_fixtures()
 
         from kubedock.rbac import acl
         acl.init_permissions()

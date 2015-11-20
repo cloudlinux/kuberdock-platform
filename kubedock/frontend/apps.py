@@ -74,7 +74,7 @@ def get_packages():
     packages = []
     kubes = {}
     for p in Package.query.all():
-        packages.append({'id': p.id, 'name': p.name, 'prefix': p.prefix, 'currency': p.currency})
+        packages.append(p.to_dict())
         for k in p.kubes:
             if p.id not in kubes:
                 kubes[p.id] = []

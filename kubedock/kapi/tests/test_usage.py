@@ -14,7 +14,6 @@ from kubedock.usage.models import PodState
 
 class TestPodStates(DBTestCase):
     def setUp(self):
-        fixtures.initial_fixtures()
         self.user, user_password = fixtures.user_fixtures()
         self.pod1 = pod_models.Pod(
             id=str(uuid4()),

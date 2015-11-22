@@ -22,7 +22,6 @@ class TestNodes(DBTestCase):
     def setUp(self):
         self.testhost = 'testhost1'
         super(TestNodes, self).setUp()
-        fixtures.initial_fixtures()
         self.original_install_log_dir = settings.NODE_INSTALL_LOG_FILE
         self.tempdir = tempfile.mkdtemp()
         settings.NODE_INSTALL_LOG_FILE = os.path.join(

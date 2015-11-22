@@ -10,7 +10,7 @@ from .. import images
 from ...settings import DEFAULT_REGISTRY
 from ...validation import (V, args_list_schema, env_schema, path_schema,
                            port_schema, protocol_schema)
-from ...testutils.testcases import DBTestCase
+from ...testutils.testcases import DBTestCase, attr
 
 schema = {
     'sourceUrl': {'type': str, 'required': True},
@@ -55,6 +55,7 @@ CUSTOM_AUTH = CUSTOM_USERNAME, CUSTOM_PASSWORD
 CUSTOM_PRIVATE_REPO = '{0}/mynginx'.format(CUSTOM_URL)
 
 
+@attr('docker_registry')
 class TestGetContainerConfig(DBTestCase):
     def validate(self, data):
         validator = V()
@@ -98,7 +99,7 @@ class TestGetContainerConfig(DBTestCase):
             self.validate(image.get_container_config(auth=CUSTOM_AUTH))
 
 
-# @unittest.skip('')
+@attr('docker_registry')
 class TestCheckImagesAvailability(DBTestCase):
     def test_default_registry_public(self):
         Image.check_images_availability(['nginx'])

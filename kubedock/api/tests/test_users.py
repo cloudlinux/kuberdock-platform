@@ -1,7 +1,7 @@
 import unittest
 import logging
 import pytz
-from kubedock.testutils.testcases import APITestCase
+from kubedock.testutils.testcases import APITestCase, attr
 from kubedock.testutils import fixtures
 
 from uuid import uuid4
@@ -91,6 +91,7 @@ class UserFullTestCase(APITestCase):
             self.assertEqual(value, getattr(user, field))
 
     # @unittest.skip('')
+    @attr('k8s')
     def test_delete(self):
         # delete
         logging.getLogger('UserFullTestCase.delete').info(

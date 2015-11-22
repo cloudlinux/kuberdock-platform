@@ -105,10 +105,6 @@ INVALID_TEMPLATE_KUBE_TYPE = VALID_TEMPLATE1.replace(
 
 class TestDBAwarePredefinedAppsUtils(DBTestCase):
     """Tests for kapi.predefined_apps wjere database is needed."""
-    def setUp(self):
-        super(TestDBAwarePredefinedAppsUtils, self).setUp()
-        fixtures.initial_fixtures()
-
     @mock.patch.object(kapi_papps, 'check_custom_variables')
     def test_validate_template(self, check_vars_mock):
         """Test kapi.predefined_apps.validate_template function"""

@@ -41,6 +41,11 @@ class Creator(Command):
         db.drop_all()
         db.create_all()
 
+        # WARNING:
+        # if you edit this method, make analogous changes in
+        # kubedock.testutils.fixtures.initial_fixtures
+        # TODO: merge two methods in one
+
         now = datetime.utcnow()
         now.replace(tzinfo=pytz.utc)
         available_updates = get_available_updates()

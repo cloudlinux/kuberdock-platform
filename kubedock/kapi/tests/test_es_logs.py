@@ -17,7 +17,6 @@ from .. import es_logs
 class TestContainerLogs(DBTestCase):
     """Tests for container logs (kapi.es_logs.get_container_logs)."""
     def setUp(self):
-        self.fixtures.initial_fixtures()
         self.user, user_password = self.fixtures.user_fixtures()
         self.pod_id = str(uuid4())
         self.index = 'docker-*'
@@ -39,7 +38,7 @@ class TestContainerLogs(DBTestCase):
             hostname='kdnode1',
         )
         self.container_state_1 = usage_models.ContainerState(
-            pod_state_id=1,
+            pod_state=self.pod_state,
             container_name=self.container_name,
             docker_id='p93urmqahdeef',
             start_time=datetime(2015, 2, 5),
@@ -48,13 +47,14 @@ class TestContainerLogs(DBTestCase):
             reason='SomeError: smth went wrong',
         )
         self.container_state_2 = usage_models.ContainerState(
-            pod_state_id=1,
+            pod_state=self.pod_state,
             container_name=self.container_name,
             docker_id='1wlsj2enhdfo4838',
             start_time=datetime(2015, 2, 6),
         )
         db.session.add_all([self.pod, self.pod_state,
                             self.container_state_1, self.container_state_2])
+        db.session.flush()
 
         patcher = mock.patch.object(es_logs, 'log_query')
         self.addCleanup(patcher.stop)
@@ -228,7 +228,6 @@ class TestCheckLogsPod(DBTestCase):
         from kubedock.users.models import User
         from kubedock.kapi.podcollection import POD_STATUSES
 
-        self.fixtures.initial_fixtures()
         self.node = Node(
             ip='12.13.14.15',
             hostname='test-node-1',
@@ -248,17 +247,19 @@ class TestCheckLogsPod(DBTestCase):
         self.get_kuberdock_logs_pod_name_mock = patcher.start()
         self.get_kuberdock_logs_pod_name_mock.return_value = self.pod.name
 
+        pod_state = usage_models.PodState(
+            pod_id=self.pod.id,
+            start_time=datetime(2015, 2, 5),
+            last_event_time=datetime.utcnow(),
+            last_event='MODIFIED',
+            hostname=self.node.hostname,
+        )
+
         db.session.add_all([
             self.node,
-            usage_models.PodState(
-                pod_id=self.pod.id,
-                start_time=datetime(2015, 2, 5),
-                last_event_time=datetime.utcnow(),
-                last_event='MODIFIED',
-                hostname=self.node.hostname,
-            ),
+            pod_state,
             usage_models.ContainerState(
-                pod_state_id=1,
+                pod_state=pod_state,
                 container_name='elasticsearch',
                 docker_id='om3xcnhonfao9nhc',
                 start_time=datetime(2015, 2, 5),
@@ -266,7 +267,7 @@ class TestCheckLogsPod(DBTestCase):
                 exit_code=2,
             ),
             usage_models.ContainerState(
-                pod_state_id=1,
+                pod_state=pod_state,
                 container_name='fluentd',
                 docker_id='aoncrh47rhwdcevf',
                 start_time=datetime(2015, 2, 5),
@@ -274,13 +275,13 @@ class TestCheckLogsPod(DBTestCase):
                 exit_code=2,
             ),
             usage_models.ContainerState(
-                pod_state_id=1,
+                pod_state=pod_state,
                 container_name='elasticsearch',
                 docker_id='p93urmqahdeef',
                 start_time=datetime.utcnow() - timedelta(minutes=1),
             ),
             usage_models.ContainerState(
-                pod_state_id=1,
+                pod_state=pod_state,
                 container_name='fluentd',
                 docker_id='1wlsj2enhdfo4838',
                 start_time=datetime.utcnow() - timedelta(minutes=1),

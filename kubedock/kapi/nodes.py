@@ -9,7 +9,7 @@ from datetime import datetime
 from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
 
-from ..utils import  send_event, from_binunit
+from ..utils import send_event, from_binunit, run_ssh_command
 from ..core import db
 from ..nodes.models import Node, NodeFlag, NodeFlagNames, NodeMissedAction
 from ..pods.models import Pod
@@ -58,6 +58,7 @@ def create_node(ip, hostname, kube_id,
         raise APIError('Looks like you are trying to add MASTER as NODE, '
                        'this kind of setups is not supported at this '
                        'moment')
+    _check_node_hostname(ip, hostname)
     node = Node(ip=ip, hostname=hostname, kube_id=kube_id, state='pending')
     logs_kubes = 1
     logcollector_kubes = logs_kubes
@@ -337,6 +338,17 @@ def _fix_missed_nodes(nodes, kuberenetes_nodes_hosts):
             add_node_to_db(m)
             res.append(m)
     return res
+
+
+def _check_node_hostname(ip, hostname):
+    status, message = run_ssh_command(ip, "uname -n")
+    if status:
+        raise APIError(
+            "Error while trying to get node name: {}".format(message))
+    uname_hostname = message.strip()
+    if uname_hostname != hostname:
+        raise APIError('Wrong node name. {} resolves itself by name {}'.format(
+            hostname, uname_hostname))
 
 
 def _node_is_active(x):

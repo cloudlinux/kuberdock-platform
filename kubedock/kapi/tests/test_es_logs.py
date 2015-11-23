@@ -187,14 +187,14 @@ class TestLogQuery(unittest.TestCase):
             pass
 
         self.es_query_mock.side_effect = ESError()
-        check_logs_pod_mock.return_value = True
+        check_logs_pod_mock.return_value = ''
         with self.assertRaises(ESError):
             self._check(start, end)
         check_logs_pod_mock.assert_called_once_with(self.host)
 
         check_logs_pod_mock.reset_mock()
         check_logs_pod_mock.return_value = False
-        with self.assertRaises(es_logs.LogsPodIsNotRunning):
+        with self.assertRaises(es_logs.LogsError):
             self._check(start, end)
         check_logs_pod_mock.assert_called_once_with(self.host)
 
@@ -291,18 +291,18 @@ class TestCheckLogsPod(DBTestCase):
 
     def test_node_not_found(self):
         wrong_host = '21.22.23.24'
-        self.assertFalse(es_logs.check_logs_pod(wrong_host))
+        self.assertNotEqual(es_logs.check_logs_pod(wrong_host), '')
 
     def test_node_in_troubles(self):
         self.node.state = 'anything but running'
         db.session.flush()
-        self.assertFalse(es_logs.check_logs_pod(self.node.ip))
+        self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
     def test_pod_not_found(self):
         self.PodCollectionMock.return_value.get.return_value = [
             {'name': 'wrong name'}
         ]
-        self.assertFalse(es_logs.check_logs_pod(self.node.ip))
+        self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
         self.PodCollectionMock.assert_called_once_with(self.internal_user)
         self.PodCollectionMock.return_value.get.assert_called_once_with(False)
@@ -311,7 +311,7 @@ class TestCheckLogsPod(DBTestCase):
         self.PodCollectionMock.return_value.get.return_value = [
             dict(self.pod.to_dict(), status='anything but running')
         ]
-        self.assertFalse(es_logs.check_logs_pod(self.node.ip))
+        self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
         self.PodCollectionMock.assert_called_once_with(self.internal_user)
         self.PodCollectionMock.return_value.get.assert_called_once_with(False)
@@ -319,7 +319,7 @@ class TestCheckLogsPod(DBTestCase):
     def test_container_is_running_less_than_a_minute(self):
         usage_models.ContainerState.query.filter_by(end_time=None)\
             .update({usage_models.ContainerState.start_time: datetime.utcnow()})
-        self.assertFalse(es_logs.check_logs_pod(self.node.ip))
+        self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
     def test_ok(self):
         self.assertTrue(es_logs.check_logs_pod(self.node.ip))

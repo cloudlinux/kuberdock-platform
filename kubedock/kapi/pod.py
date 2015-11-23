@@ -91,10 +91,15 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         return pod
 
     def as_dict(self):
+        # unneeded fields in API output
+        hide_fields = ['host', 'node', 'labels']
         data = vars(self).copy()
         for field in ('namespace', 'secrets'):
             data.pop(field, None)
         data['volumes'] = data.pop('volumes_original', [])
+        for field in hide_fields:
+            if field in data:
+                del data[field]
         return data
 
     def as_json(self):

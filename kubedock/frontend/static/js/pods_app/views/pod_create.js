@@ -1202,8 +1202,23 @@ define(['pods_app/app',
                 };
             },
 
+            onBeforeRender: function () {
+                var el = this.ui.textarea;
+                if (typeof el !== 'object' || (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
+                    this.logScroll = null;  // stick to bottom
+                else
+                    this.logScroll = el.scrollTop();  // stay at this position
+            },
+
             onRender: function () {
-                this.ui.textarea.niceScroll({
+                if (this.logScroll === null)  // stick to bottom
+                    this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
+                else  // stay at the same position
+                    this.ui.textarea.scrollTop(this.logScroll);
+
+                if (this.niceScroll !== undefined)
+                    this.niceScroll.remove();
+                this.niceScroll = this.ui.textarea.niceScroll({
                     cursorcolor: "#69AEDF",
                     cursorwidth: "12px",
                     cursorborder: "none",
@@ -1212,14 +1227,14 @@ define(['pods_app/app',
                     autohidemode: false,
                     railoffset: 'bottom'
                 });
-                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
             },
 
             onBeforeDestroy: function () {
                 delete this.model.kubeVal;
                 delete this.model.editKubesQty;
                 clearTimeout(this.model.get('timeout'));
-                this.ui.textarea.niceScroll().hide();
+                if (this.niceScroll !== undefined)
+                    this.niceScroll.remove();
             },
 
             getLogs: function() {

@@ -121,7 +121,9 @@ define(['app', 'marionette',
             },
 
             onShow: function(){
-                this.ui.display.niceScroll({
+                if (this.niceScroll !== undefined)
+                    this.niceScroll.remove();
+                this.niceScroll = this.ui.display.niceScroll({
                     cursorcolor: "#69AEDF",
                     cursorwidth: "12px",
                     cursorborder: "none",
@@ -134,7 +136,8 @@ define(['app', 'marionette',
 
             cancel: function(){
                 this.trigger('app:cancel');
-                this.ui.display.niceScroll().hide();
+                if (this.niceScroll !== undefined)
+                    this.niceScroll.remove();
             },
 
             handleUpload: function(evt){
@@ -159,7 +162,8 @@ define(['app', 'marionette',
                 this.model.set({name: name,
                     template: template});
                 this.trigger('app:save', this.model);
-                this.ui.display.niceScroll().hide();
+                if (this.niceScroll !== undefined)
+                    this.niceScroll.remove();
             }
         });
 

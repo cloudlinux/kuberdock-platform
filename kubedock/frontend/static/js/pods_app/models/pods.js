@@ -1,4 +1,5 @@
-define(['pods_app/app', 'backbone', 'backbone-paginator', 'backbone-associations', 'notify'], function(Pods, Backbone){
+define(['pods_app/app', 'pods_app/utils', 'backbone', 'backbone-paginator',
+        'backbone-associations', 'notify'], function(Pods, Utils, Backbone){
 
     Pods.module('Data', function(Data, App, Backbone, Marionette, $, _){
 
@@ -133,7 +134,42 @@ define(['pods_app/app', 'backbone', 'backbone-paginator', 'backbone-associations
             getKubes: function(){
                 return this.get('containers').reduce(
                     function(sum, c){ return sum + c.get('kubes'); }, 0);
-            }
+            },
+
+            recalcInfo: function(package) {
+                var containers = this.get('containers'),
+                    volumes = this.get('volumes'),
+                    kube = _.findWhere(kubeTypes, {id: this.get('kube_type')}),
+                    kubePrice = _.findWhere(packageKubes,
+                        {package_id: package.id, kube_id: kube.id}).kube_price,
+                    totalKubes = this.getKubes();
+
+                this.limits = {
+                    cpu: (totalKubes * kube.cpu).toFixed(2) + ' ' + kube.cpu_units,
+                    ram: totalKubes * kube.memory + ' ' + kube.memory_units,
+                    hdd: totalKubes * kube.disk_space + ' ' + kube.disk_space_units,
+                };
+
+                var allPorts = _.flatten(containers.pluck('ports'), true),
+                    allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
+                    total_size = _.reduce(allPersistentVolumes,
+                        function(sum, v) { return sum + v.pdSize; }, 0);
+                this.isPublic = _.any(_.pluck(allPorts, 'isPublic'));
+                this.isPerSorage = !!allPersistentVolumes.length;
+
+                var rawContainerPrices = containers.map(
+                    function(c) { return kubePrice * c.get('kubes'); });
+                this.containerPrices = _.map(rawContainerPrices,
+                    function(price) { return Utils.getFormattedPrice(package, price); });
+
+                var totalPrice = _.reduce(rawContainerPrices,
+                    function(sum, p) { return sum + p; });
+                if (this.isPublic)
+                    totalPrice += package.price_ip;
+                if (this.isPerSorage)
+                    totalPrice += package.price_pstorage * total_size;
+                this.totalPrice = Utils.getFormattedPrice(package, totalPrice);
+            },
         });
 
         Data.Image = Backbone.Model.extend({

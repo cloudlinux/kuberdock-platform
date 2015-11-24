@@ -6,7 +6,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/pod_item_controls.tpl',
         'tpl!pods_app/templates/pod_item_graph.tpl',
         'moment-timezone', 'pods_app/utils',
-        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral'
+        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer',
         ],
        function(Pods,
                 layoutPodItemTpl,
@@ -263,27 +263,26 @@ define(['pods_app/app',
             initialize: function(options){ this.graphs = options.graphs; },
 
             templateHelpers: function(){
-                var publicIP = this.model.has('labels')
-                        ? this.model.get('labels')['kuberdock-public-ip']
-                        : '',
-                    publicName = this.model.has('public_aws')
+                var publicName = this.model.has('public_aws')
                         ? this.model.get('public_aws')
                         : '',
                     graphs = this.graphs,
-                    kubeType = this.getKubeById(),
                     kubes = this.model.getKubes(),
-                    kubesPrice = this.getFormattedPrice(kubes * kubeType.kube_price),
-                    package = this.getUserPackage();
-                    var public_address = "%PUBLIC_ADDRESS%";
-                    var r = new RegExp("(" + public_address + ")", "gi");
-                    var public_ip = "Public address"
-                    if (this.model.get('public_ip')){
-                        public_ip = this.model.get('public_ip');
-                    }
-                    postDescription = postDescription.replace(r, public_ip);
+                    package = utils.getUserPackage(/*full=*/true),
+                    kubeType = _.findWhere(package.kubes,
+                        {id: this.model.get('kube_type')}),
                     hasPorts = this.model.get('containers').any(function(c) {
                         return c.get('ports') && c.get('ports').length;
-                    });
+                    }),
+                    public_address = "%PUBLIC_ADDRESS%",
+                    r = new RegExp("(" + public_address + ")", "gi"),
+                    publicIP = "Public address";
+
+                if (this.model.get('public_ip')){
+                    publicIP = this.model.get('public_ip');
+                }
+                postDescription = postDescription.replace(r, publicIP);
+                this.model.recalcInfo(package);
 
                 return {
                     hasPorts        : hasPorts,
@@ -293,7 +292,8 @@ define(['pods_app/app',
                     graphs          : graphs,
                     kubeType        : kubeType,
                     kubes           : kubes,
-                    kubesPrice      : kubesPrice,
+                    totalPrice      : this.model.totalPrice,
+                    limits          : this.model.limits,
                     podName         : this.model.get('name'),
                     package         : package,
                 };
@@ -357,29 +357,6 @@ define(['pods_app/app',
                     }
                 });
             },
-
-            getKubeById: function() {
-                var kubeId = this.model.get('kube_type'),
-                    packageKube = _.find(packageKubes, function(p) {
-                        return p.package_id == userPackage && p.kube_id == kubeId;
-                    }),
-                    kube = _.findWhere(kubeTypes, {id: kubeId});
-
-                return _.extend(packageKube || { kube_price: 0 }, kube);
-            },
-
-            getUserPackage: function() {
-                return _.find(packages, function(e) {
-                    return e.id == userPackage
-                });
-            },
-
-            getFormattedPrice: function(price, format) {
-                var package = this.getUserPackage();
-                format = typeof format !== 'undefined' ? format : '0.00';
-
-                return package.prefix + numeral(price).format(format) + package.suffix;
-            }
         });
 
         Item.PodGraphItem = Backbone.Marionette.ItemView.extend({

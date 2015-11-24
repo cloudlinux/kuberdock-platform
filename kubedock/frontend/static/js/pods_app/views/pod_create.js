@@ -12,7 +12,7 @@ define(['pods_app/app',
         'tpl!pods_app/templates/wizard_set_container_complete.tpl',
         'pods_app/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot',
-        'jqplot-axis-renderer', 'numeral', 'selectpicker', 'nicescroll'],
+        'jqplot-axis-renderer', 'selectpicker', 'nicescroll'],
        function(Pods,
                 layoutWizardTpl,
                 breadcrumbHeaderTpl,
@@ -1288,7 +1288,7 @@ define(['pods_app/app',
             tagName: 'div',
 
             initialize: function(){
-                this.package = this.getUserPackage();
+                this.package = utils.getUserPackage();
                 // kubeTypes is taken from index.html
                 var default_kube = _.findWhere(kubeTypes, {is_default: true});
                 if (default_kube === undefined) {
@@ -1297,27 +1297,25 @@ define(['pods_app/app',
                 if(!this.model.has('kube_type')){
                     this.model.attributes['kube_type'] = default_kube.id;
                 }
-                this.recalcTotal();
+                this.model.recalcInfo(this.package);
             },
 
             templateHelpers: function() {
 
                 return {
                     last_edited      : this.model.lastEditedContainer.id,
-                    isPublic         : this.isPublic,
-                    isPerSorage      : this.isPerSorage,
-                    cpu_data         : this.cpu_data,
-                    ram_data         : this.ram_data,
-                    hdd_data         : this.hdd_data,
-                    containerPrices  : this.containerPrices,
-                    total_price      : this.total_price,
+                    isPublic         : this.model.isPublic,
+                    isPerSorage      : this.model.isPerSorage,
+                    limits           : this.model.limits,
+                    containerPrices  : this.model.containerPrices,
+                    totalPrice       : this.model.totalPrice,
                     kube_types       : kubeTypes,
                     restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                     restart_policy   : this.model.get('restartPolicy'),
                     image_name_id    : this.model.get('lastAddedImageNameId'),
                     package          : this.package,
-                    price_ip         : this.getFormattedPrice(this.package.price_ip),
-                    price_pstorage   : this.getFormattedPrice(this.package.price_pstorage)
+                    price_ip         : utils.getFormattedPrice(this.package, this.package.price_ip),
+                    price_pstorage   : utils.getFormattedPrice(this.package, this.package.price_pstorage)
                 };
             },
 
@@ -1363,7 +1361,7 @@ define(['pods_app/app',
                         this.model.lastEditedContainer.id = this.model
                             .get('containers').last().id;
                     }
-                    this.recalcTotal();
+                    this.model.recalcInfo(this.package);
                     this.render();
                 } else {
                     utils.modalDialogDelete({
@@ -1420,7 +1418,7 @@ define(['pods_app/app',
                 var num = parseInt(evt.target.value);
                 this.getCurrentContainer().set('kubes', num);
 
-                this.recalcTotal();
+                this.model.recalcInfo(this.package);
                 this.render();
                 $('.kube-quantity button span').text(num);
             },
@@ -1430,7 +1428,7 @@ define(['pods_app/app',
                 var kube_id = parseInt(evt.target.value);
                 this.model.set('kube_type', kube_id);
 
-                this.recalcTotal();
+                this.model.recalcInfo(this.package);
                 this.render();
             },
 
@@ -1438,57 +1436,6 @@ define(['pods_app/app',
                 evt.stopPropagation();
                 var restart_policy = $(evt.target).val();
                 this.model.set('restartPolicy', restart_policy)
-            },
-
-            getKubePrice: function(kubeId) {
-                var packageKube = _.find(packageKubes, function(p) {
-                    return p.package_id === this.pid && p.kube_id === kubeId;
-                }, {pid: this.package.id});
-                return packageKube ? packageKube.kube_price : 0;
-            },
-
-            getUserPackage: function() {
-                return _.find(packages, function(p) {  // 'packages' && 'userPackage' is taken from index.html
-                    return p.id === userPackage
-                })
-            },
-
-            getFormattedPrice: function(price, format) {
-                format = typeof format !== 'undefined' ? format : '0.00';
-                return this.package.prefix + numeral(price).format(format) + this.package.suffix;
-            },
-
-            recalcTotal: function() {
-                var kube_id = this.model.get('kube_type'),
-                    containers = this.model.get('containers'),
-                    volumes = this.model.get('volumes'),
-                    kube = _.findWhere(kubeTypes, {id: kube_id}),
-                    kube_price = this.getKubePrice(kube_id),
-                    total_kubes = this.model.getKubes();
-
-                this.cpu_data = (total_kubes * kube.cpu).toFixed(2) + ' ' + kube.cpu_units;
-                this.ram_data = total_kubes * kube.memory + ' ' + kube.memory_units;
-                this.hdd_data = total_kubes * kube.disk_space + ' ' + kube.disk_space_units;
-
-                var allPorts = _.flatten(containers.pluck('ports'), true),
-                    allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
-                    total_size = _.reduce(allPersistentVolumes,
-                        function(sum, v) { return sum + v.pdSize; }, 0);
-                this.isPublic = _.some(_.pluck(allPorts, 'isPublic'));
-                this.isPerSorage = !!allPersistentVolumes.length;
-
-                var rawContainerPrices = containers.map(
-                    function(c) { return kube_price * c.get('kubes'); });
-                this.containerPrices = _.map(rawContainerPrices,
-                    function(price) { return this.getFormattedPrice(price); }, this);
-
-                var total_price = _.reduce(rawContainerPrices,
-                    function(sum, p) { return sum + p; });
-                if (this.isPublic)
-                    total_price += this.package.price_ip
-                if (this.isPerSorage)
-                    total_price += this.package.price_pstorage * total_size
-                this.total_price = this.getFormattedPrice(total_price)
             },
 
             getCurrentContainer: function() {

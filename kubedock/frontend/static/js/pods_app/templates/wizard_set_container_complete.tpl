@@ -66,9 +66,9 @@
                 </div>
             </div>
             <div class="col-md-5 col-xs-offset-1 servers">
-                <div>CPU: <span id="total_cpu"><%- cpu_data %></span></div>
-                <div>RAM: <span id="total_ram"><%- ram_data %></span></div>
-                <div>HDD: <span id="hdd_data"><%- hdd_data %></span></div>
+                <div>CPU: <span id="total_cpu"><%- limits.cpu %></span></div>
+                <div>RAM: <span id="total_ram"><%- limits.ram %></span></div>
+                <div>HDD: <span id="hdd_data"><%- limits.hdd %></span></div>
             </div>
             <div class="col-md-12 total-wrapper">
                 <table>
@@ -114,7 +114,7 @@
                         <% } %>
                         <tr>
                             <td class="total" colspan="3">
-                                Total price: <span id="total_price"><%- total_price %> / <%- package.period %></span>
+                                Total price: <span id="total_price"><%- totalPrice %> / <%- package.period %></span>
                             </td>
                         </tr>
                     </tbody>

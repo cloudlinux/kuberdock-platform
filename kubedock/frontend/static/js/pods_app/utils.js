@@ -1,4 +1,4 @@
-define(['moment-timezone'], function (moment) {
+define(['moment-timezone', 'numeral'], function (moment) {
     this.modalDialog = function(options){
         var modal = $('.modal'),
             modalDialog = modal.find('.modal-dialog');
@@ -90,6 +90,26 @@ define(['moment-timezone'], function (moment) {
             console.log(e);
         }
         return moment(dt).format(formatString);
+    };
+
+    // TODO: crate models Package and Kube; use backbone-associations for relations
+    this.getUserPackage = function(full) {
+        var package = _.findWhere(packages, {id: userPackage});
+        if (full) {
+            var kubes = _.indexBy(kubeTypes, 'id');
+            package.kubes = _.chain(packageKubes).where({package_id: package.id})
+                .each(function(packageKube){
+                    _.extend(packageKube, kubes[packageKube.kube_id]);
+                }).value();
+        }
+        return package;
+    };
+
+    // TODO: it should be a method of Package model
+    this.getFormattedPrice = function(package, price, format) {
+        format = format !== undefined ? format : '0.00';
+
+        return package.prefix + numeral(price).format(format) + package.suffix;
     };
 
     return this;

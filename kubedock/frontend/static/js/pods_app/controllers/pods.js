@@ -16,8 +16,11 @@ define(['pods_app/app', 'pods_app/utils', 'pods_app/models/pods'], function(Pods
             }
             return pod.command(cmd, {
                 wait: true,
-                complete: Utils.preloader.hide,
                 error: function(model, xhr){ Utils.notifyWindow(xhr); },
+                complete: function(){
+                    Utils.preloader.hide();
+                    WorkFlow.getCollection().trigger('pods:collection:fetched');
+                },
             });
         };
 

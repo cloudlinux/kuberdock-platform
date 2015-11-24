@@ -475,7 +475,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                         rest=True, ns=pod.namespace)
         self._raise_if_failure(rv, "Could not start '{0}' pod".format(
             pod.name.encode('ascii', 'replace')))
-        return {'status': POD_STATUSES.pending}
+
+        for container in pod.containers:
+            # TODO: create CONTAINER_STATUSES
+            container['state'] = POD_STATUSES.pending
+        pod.status = POD_STATUSES.pending
+        return pod.as_dict()
 
     def _stop_pod(self, pod, data=None, raise_=True):
         if pod.status != POD_STATUSES.stopped:
@@ -486,7 +491,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 self._stop_cluster(pod)
                 self._raise_if_failure(rv, "Could not stop a pod")
                 # return rv
-                return {'status': POD_STATUSES.stopped}
+                for container in pod.containers:
+                    # TODO: create CONTAINER_STATUSES
+                    container['state'] = POD_STATUSES.stopped
+                pod.status = POD_STATUSES.stopped
+                return pod.as_dict()
         elif raise_:
             raise APIError('Pod is already stopped')
 

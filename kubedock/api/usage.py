@@ -61,27 +61,26 @@ def get_pod_usage(user, date_from, date_to):
     rv = []
     for pod in user.pods:
         time_ = defaultdict(list)
-        query = db.session.query(ContainerState).filter(
-            ContainerState.pod.contains(pod))
+        query = ContainerState.query.filter(ContainerState.pod == pod)
         query = filter_query_by_date(query, ContainerState, date_from, date_to)
         states = query.all()
         for state in states:
             start = to_timestamp(state.start_time)
             end = (int(time.time()) if state.end_time is None else
-                to_timestamp(state.end_time))
+                   to_timestamp(state.end_time))
             time_[state.container_name].append({'kubes': state.kubes,
                                                 'start': start, 'end': end})
         if time_:
             rv.append({'id': pod.id,
-                    'name': pod.name,
-                    'kubes': pod.kubes,
-                    'kube_id': pod.kube_id,
-                    'time': time_})
+                       'name': pod.name,
+                       'kubes': pod.kubes,
+                       'kube_id': pod.kube_id,
+                       'time': time_})
     return rv
 
 
 def get_ip_states(user, date_from, date_to):
-    query = db.session.query(IpState).filter(IpState.user.contains(user))
+    query = IpState.query.filter(IpState.user == user)
     query = filter_query_by_date(query, IpState, date_from, date_to)
     ip_states = query.all()
     return [ip_state.to_dict() for ip_state in ip_states]

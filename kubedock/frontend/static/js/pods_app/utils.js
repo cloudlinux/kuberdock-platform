@@ -44,7 +44,7 @@ define(['moment-timezone', 'numeral'], function (moment) {
                   typeof b.responseJSON.data == 'string' ? b.responseJSON.data :
                   JSON.stringify(b.responseJSON.data);
         if (b && b.status == 401){
-            window.location = '/logout';
+            window.location = '/login';
         } else {
             $.notify(msg,{
                 autoHideDelay: 5000,

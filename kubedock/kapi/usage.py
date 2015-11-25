@@ -3,6 +3,7 @@ import datetime
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 from ..core import db
+from ..pods.models import Pod
 from ..usage.models import PodState, ContainerState
 from ..tasks import fix_pods_timeline_heavy
 
@@ -38,12 +39,15 @@ def update_containers_state(pod_id, containers, deleted=False):
     :param pod_id: id of the container's pod
     :param containers: k8s Pod.status.containerStatuses
     """
+    pod = Pod.query.get(pod_id)
+    containers_config = {container.get('name'): container
+                         for container in pod.get_dbconfig('containers', [])}
     pod_state = None
     for container in containers:
         if 'containerID' not in container:
             continue
         container_name = container['name']
-        kubes = container.get('kubes', 1)  # FIXME: kubes in k8s???
+        kubes = containers_config.get(container_name).get('kubes', 1)
 
         # k8s fires "MODIFIED" pod event when docker_id of container changes.
         # k8s provides us last state of previous docker container and the

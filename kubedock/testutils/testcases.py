@@ -53,6 +53,7 @@ class DBTestCase(FlaskTestCase):
                 super(DBTestCase, self).run(*args, **kwargs)
             finally:
                 self._transaction.rollback()
+        self._transaction.connection.invalidate()
         self._transaction.connection.close()
         self.db.session.remove()
 

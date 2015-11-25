@@ -11,7 +11,7 @@ def to_timestamp(dt):
     return int((dt - datetime(1970, 1, 1)).total_seconds())
 
 
-class ContainerState(db.Model):
+class ContainerState(BaseModelMixin, db.Model):
     __tablename__ = 'container_states'
     pod_state_id = db.Column(db.ForeignKey('pod_states.id'), nullable=False)
     container_name = db.Column(db.String(length=255), primary_key=True,
@@ -23,7 +23,7 @@ class ContainerState(db.Model):
     end_time = db.Column(db.DateTime, nullable=True)
     exit_code = db.Column(db.Integer, nullable=True)
     reason = db.Column(db.Text, nullable=True)
-    pod = db.relationship('Pod', secondary='pod_states',
+    pod = db.relationship('Pod', secondary='pod_states', uselist=False,
                           backref='container_states', viewonly=True)
     pod_state = db.relationship('PodState', backref='container_states')
 
@@ -54,7 +54,7 @@ class ContainerState(db.Model):
         return query
 
 
-class PodState(db.Model):
+class PodState(BaseModelMixin, db.Model):
     __tablename__ = 'pod_states'
     __table_args__ = (db.Index('ix_pod_id_start_time',
                                'pod_id', 'start_time', unique=True),)
@@ -160,7 +160,8 @@ class IpState(BaseModelMixin, db.Model):
     start_time = db.Column(db.DateTime, primary_key=True, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
     pod = db.relationship('Pod')
-    user = db.relationship('User', secondary='pods', backref='ip_states', viewonly=True)
+    user = db.relationship('User', secondary='pods', backref='ip_states',
+                           viewonly=True, uselist=False)
 
     def __repr__(self):
         return ("<IpState(pod_id='{0}', ip_address='{1}', start='{2}', end='{3}')>"

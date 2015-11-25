@@ -27,7 +27,7 @@ def get_container_logs(container_name, owner_id=None, size=100,
     """
     states = CS.in_range(start, end).filter(CS.container_name == container_name)
     if owner_id is not None:
-        states = states.filter(CS.pod.any(owner_id=owner_id)).all()
+        states = states.filter(CS.pod.has(owner_id=owner_id)).all()
 
     # TODO: get logs in one es query
     series = []

@@ -1,7 +1,10 @@
 """Unit tests for kapi.usage
 """
 import unittest
+import json
+import mock
 from uuid import uuid4
+from datetime import datetime
 
 from kubedock.core import db
 from kubedock.testutils import fixtures
@@ -115,6 +118,47 @@ class TestPodStates(DBTestCase):
         usage.save_pod_state(pod2_id, 'ADDED', host1)
         res = usage.select_pod_states_history(pod1_id)
         self.assertEqual(len(res), 3)
+
+
+@mock.patch.object(usage, 'fix_pods_timeline_heavy', mock.Mock())
+class TestUpdateContainerStates(DBTestCase):
+    def setUp(self):
+        self.containers = [{'name': '23edwed3', 'kubes': 3},
+                           {'name': 'gacs4frs', 'kubes': 5}]
+        self.pod = self.fixtures.pod(config=json.dumps({
+            'containers': self.containers,
+        }))
+        self.pod_state = usage.PodState(pod_id=self.pod.id,
+                                        start_time=datetime(2015, 11, 1)).save()
+        self.event_started = [{
+            'restartCount': 0,
+            'name': self.containers[0]['name'],
+            'image': '45.55.52.203:5000/test-rc-pd',
+            'imageID': 'docker://a5790f69b866b30aa808d753c43e0a',
+            'state': {'running': {'startedAt': '2015-11-25T12:42:45Z'}},
+            'ready': True,
+            'lastState': {},
+            'containerID': 'docker://41b699c3802b599be2656235f2'
+        }, {
+            'restartCount': 0,
+            'name': self.containers[1]['name'],
+            'image': '45.55.52.203:5000/test-rc-pd',
+            'imageID': 'docker://a5790f69b866b30aa808d753c43e0a',
+            'state': {'running': {'startedAt': '2015-11-25T12:42:47Z'}},
+            'ready': True,
+            'lastState': {},
+            'containerID': 'docker://f35fd17d8e36702f55b06ede7b'
+        }]
+
+    def test_kubes_are_saved(self):
+        CS = usage.ContainerState
+
+        usage.update_containers_state(self.pod.id, self.event_started)
+        for container in self.pod.get_dbconfig('containers'):
+            self.assertIsNotNone(CS.query.filter(
+                CS.container_name == container['name'],
+                CS.kubes == container['kubes'],
+            ).first())
 
 
 if __name__ == '__main__':

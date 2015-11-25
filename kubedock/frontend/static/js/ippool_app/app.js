@@ -49,8 +49,8 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 var that = this,
                     preloader = $('#page-preloader');
                 utils.modalDialogDelete({
-                    title: 'Delete subnet',
-                    body: "Are you sure want to delete subnet '" +
+                    title: 'Delete network',
+                    body: "Are you sure want to delete network '" +
                         this.model.get('network') + "'?",
                     small: true,
                     show: true,

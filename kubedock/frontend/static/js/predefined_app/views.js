@@ -136,6 +136,9 @@ define(['app', 'marionette',
 
             cancel: function(){
                 this.trigger('app:cancel');
+            },
+
+            onBeforeDestroy: function(){
                 if (this.niceScroll !== undefined)
                     this.niceScroll.remove();
             },
@@ -162,8 +165,6 @@ define(['app', 'marionette',
                 this.model.set({name: name,
                     template: template});
                 this.trigger('app:save', this.model);
-                if (this.niceScroll !== undefined)
-                    this.niceScroll.remove();
             }
         });
 

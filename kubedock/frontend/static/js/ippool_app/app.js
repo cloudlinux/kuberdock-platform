@@ -108,85 +108,40 @@ define(['marionette', 'utils'], function (Marionette, utils) {
                 }
             },
 
-            blockIP: function(btn){
-                var alloc = this.model.get('allocation'),
-                    ip = $(btn.currentTarget).data('ip'),
-                    that = this;
-
-                _.each(alloc, function(itm){
-                    if(itm[0] == ip) {
-                        itm[2] = 'blocked';
-                        that.model.set({
-                            'allocation' : alloc,
-                            'block_ip'   : ip
-                        });
-                        that.model.save({wait: true},{
-                            success: function(data, response){
-                                that.render();
-                            },
-                            error: function(data, response){
-                                console.error(response);
-                            }
-                        });
-                    }
+            commandIP: function(cmd, ip){
+                var data = {};
+                data[cmd + '_ip'] = ip;
+                return this.model.save(data, {
+                    wait: true,
+                    context: this,
+                    success: this.render,
+                    error: function(data, response){ console.error(response); },
+                    complete: function(){ this.model.set(cmd + '_ip', null); },
                 });
+            },
+
+            blockIP: function(btn){
+                var ip = $(btn.currentTarget).data('ip');
+                this.commandIP('block', ip);
             },
 
             unblockIP: function(btn){
-                var alloc = this.model.get('allocation'),
-                    ip = $(btn.currentTarget).data('ip'),
-                    that = this;
-                _.each(alloc, function(itm){
-                    if(itm[0] == ip) {
-                        itm[2] = 'free';
-                        that.model.set({
-                            'allocation' : alloc,
-                            'unblock_ip' : ip
-                        });
-                        that.model.save( {wait: true},{
-                            success: function(data, response){
-                                that.render();
-                            },
-                            error: function(data, response){
-                                console.error(response);
-                            }
-                        });
-                    }
-                });
+                var ip = $(btn.currentTarget).data('ip');
+                this.commandIP('unblock', ip);
             },
 
             unbindIP: function(btn){
-                var alloc = this.model.get('allocation'),
-                    ip = $(btn.currentTarget).data('ip'),
+                var ip = $(btn.currentTarget).data('ip'),
                     that = this;
 
-                _.each(alloc, function(itm){
-                    if(itm[0] == ip) {
-                        utils.modalDialog({
-                            title: 'Unbind IP-address',
-                            body: "Are you sure want to unbind IP '" + ip + "' address?",
-                            small: true,
-                            show: true,
-                            footer: {
-                                buttonOk: function(){
-                                    itm[2] = 'free';
-                                    itm[1] = null;
-                                    that.model.set({
-                                        'allocation' : alloc,
-                                        'unbind_ip'  : ip
-                                    });
-                                    that.model.save({wait: true},{
-                                        success: function(data, response){
-                                            that.render();
-                                        },
-                                        error: function(data, response){
-                                            console.error(response);
-                                        }
-                                    });
-                                },
-                                buttonCancel: true
-                            }
-                        });
+                utils.modalDialog({
+                    title: 'Unbind IP-address',
+                    body: "Are you sure want to unbind IP '" + ip + "' address?",
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: _.bind(this.commandIP, this, 'unbind', ip),
+                        buttonCancel: true
                     }
                 });
             }

@@ -173,41 +173,38 @@ class IPPool(BaseModelMixin, db.Model):
     def iterpages(self):
         return ip_network(self.network).iterpages()
 
-    def get_blocked_list(self, as_int=None):
-        blocked_list = []
+    def get_blocked_set(self, as_int=False):
+        blocked_set = set()
         try:
-            blocked_list = json.loads(self.blocked_list or "[]")
-            if as_int is None:
-                blocked_list = [str(ipaddress.ip_address(int(ip)))
-                                for ip in blocked_list]
-            blocked_list.sort()
+            blocked_set = self._to_ip_set(json.loads(self.blocked_list or "[]"),
+                                          int if as_int else str)
         except Exception, e:
-            current_app.logger.warning("IPPool.get_blocked_list failed: "
+            current_app.logger.warning("IPPool.get_blocked_set failed: "
                                        "{0}".format(e))
-        return blocked_list
+        return blocked_set
+
+    def _to_ip_set(self, ip, format=int):
+        """Convert singular IP or IP iterable in IP set
+
+        :param ip: ip string ('128.0.0.1'), ip as a number (2130706433),
+            or ip iterable (['128.0.0.1', 2130706434, 2130706435])
+        :param format: ip format in returned set (int by default)
+        :returns: set of IPs
+        """
+        if not isinstance(ip, (tuple, list, set)):
+            ip = [ip]
+        return set(format(ipaddress.ip_address(ip_)) for ip_ in ip)
 
     def block_ip(self, ip):
-        blocked_list = self.get_blocked_list(as_int=True)
-        if isinstance(ip, (tuple, list, set)):
-            for _ip in ip:
-                if _ip not in blocked_list:
-                    blocked_list.append(_ip)
-        else:
-            if ip not in blocked_list:
-                blocked_list.append(int(ipaddress.ip_address(ip)))
-        self.blocked_list = json.dumps(blocked_list)
+        self.blocked_list = json.dumps(list(
+            self.get_blocked_set(as_int=True) | self._to_ip_set(ip)
+        ))
         self.save()
 
     def unblock_ip(self, ip):
-        if isinstance(ip, basestring):
-            ip = int(ipaddress.ip_address(ip))
-        blocked_list = self.get_blocked_list(as_int=True)
-        if ip not in blocked_list:
-            return
-        ind = blocked_list.index(ip)
-        if ind >= 0:
-            del blocked_list[ind]
-        self.blocked_list = json.dumps(blocked_list)
+        self.blocked_list = json.dumps(list(
+            self.get_blocked_set(as_int=True) - self._to_ip_set(ip)
+        ))
         self.save()
 
     def hosts(self, as_int=None, exclude=None, allowed=None, page=None):
@@ -237,7 +234,7 @@ class IPPool(BaseModelMixin, db.Model):
     def free_hosts(self, as_int=None, page=None):
         ip_list = [pod.ip_address
                    for pod in PodIP.filter_by(network=self.network)]
-        ip_list = list(set(ip_list) | set(self.get_blocked_list(as_int=True)))
+        ip_list = list(set(ip_list) | self.get_blocked_set(as_int=True))
         _hosts = self.hosts(as_int=as_int, exclude=ip_list, page=page)
         return _hosts
 
@@ -245,12 +242,12 @@ class IPPool(BaseModelMixin, db.Model):
         pods = PodIP.filter_by(network=self.network)
         allocated_ips = {int(pod): pod.get_pod() for pod in pods}
         data = []
-        blocked_list = self.get_blocked_list(as_int=True)
+        blocked_set = self.get_blocked_set(as_int=True)
         hosts = self.hosts(as_int=True, page=page)
         for ip in hosts:
             pod = allocated_ips.get(ip)
             status = 'blocked' \
-                if ip in blocked_list else 'busy' if pod else 'free'
+                if ip in blocked_set else 'busy' if pod else 'free'
             if not as_int:
                 ip = str(ipaddress.ip_address(ip))
             data.append((ip, pod, status))
@@ -291,7 +288,7 @@ class IPPool(BaseModelMixin, db.Model):
             network=self.network,
             ipv6=self.ipv6,
             free_hosts=self.free_hosts(page=page),
-            blocked_list=self.get_blocked_list(),
+            blocked_list=list(self.get_blocked_set()),
             allocation=free_hosts_and_busy,
             page=page,
             pages=pages,

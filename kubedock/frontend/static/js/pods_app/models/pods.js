@@ -33,6 +33,8 @@ define(['pods_app/app', 'pods_app/utils', 'backbone', 'backbone-paginator',
                     kubes: 1,
                     terminationMessagePath: null,
                     sourceUrl: null,
+                    logs: [],
+                    logsError: null,
                 };
             },
             getPod: function(){
@@ -69,6 +71,12 @@ define(['pods_app/app', 'pods_app/utils', 'backbone', 'backbone-paginator',
                             }
                         });
                         this.set('logs', data.data);
+                        this.set('logsError', null);
+                    },
+                    error: function(xhr) {
+                        var data = xhr.responseJSON;
+                        if (data && data.data !== undefined)
+                            this.set('logsError', data.data);
                     },
                 });
             },
@@ -169,6 +177,20 @@ define(['pods_app/app', 'pods_app/utils', 'backbone', 'backbone-paginator',
                 if (this.isPerSorage)
                     totalPrice += package.price_pstorage * total_size;
                 this.totalPrice = Utils.getFormattedPrice(package, totalPrice);
+            },
+
+            save: function(attrs, options){
+                attrs || (attrs = _.clone(this.attributes));
+
+                if (attrs.containers){
+                    attrs.containers = attrs.containers.toJSON();
+                    _.each(attrs.containers, function(container){
+                        delete container.logs;
+                        delete container.logsError;
+                    });
+                }
+
+                return Backbone.Model.prototype.save.call(this, attrs, options);
             },
         });
 

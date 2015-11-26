@@ -4,14 +4,15 @@ from datetime import datetime, timedelta
 from .elasticsearch_utils import execute_es_query
 from .podcollection import PodCollection, POD_STATUSES
 from .nodes import get_kuberdock_logs_pod_name
+from ..core import ConnectionPool
 from ..nodes.models import Node
 from ..users.models import User
 from ..usage.models import ContainerState as CS
 from ..utils import APIError
 
 
-class LogsPodIsNotRunning(APIError):
-    message = 'Logs service is collecting data. Wait few minutes please.'
+class LogsError(APIError):
+    pass
 
 
 def get_container_logs(container_name, owner_id=None, size=100,
@@ -105,13 +106,33 @@ def log_query(index, filters=None, host=None, size=100, start=None, end=None):
     try:
         result = execute_es_query(index, query, size, order, host)
     except Exception:
-        if host and not check_logs_pod(host):
-            raise LogsPodIsNotRunning()
+        if host:
+            error = check_logs_pod(host)
+            if error:
+                raise LogsError(error)
         raise
     return result
 
 
 def check_logs_pod(host):
+    """
+    Wrapper for cache logging pod state in Redis
+
+    :param host: See _check_logs_pod
+    :return: See _check_logs_pod
+    """
+    redis = ConnectionPool.get_connection()
+    key = 'logging_state_{0}'.format(host)
+    value = redis.get(key)
+
+    if value is None:
+        value = _check_logs_pod(host)
+        redis.setex(key, 60, value)
+
+    return value
+
+
+def _check_logs_pod(host):
     """
     Check if service pod with elasticsearch and fluentd is running
     at least a minute on the node.
@@ -120,19 +141,34 @@ def check_logs_pod(host):
     :returns: True, if pod is running
     """
     node = Node.query.filter_by(ip=host).first()
-    if node is None or node.state != 'running':
-        return
+    if node is None:
+        return 'Node not found ({0})'.format(host)
+    elif node.state not in ('completed', 'running'):
+        return 'Node is in {0} state'.format(node.state)
+
+    pod_name = get_kuberdock_logs_pod_name(node.hostname)
 
     for pod in PodCollection(User.get_internal()).get(False):
-        if pod.get('name') != get_kuberdock_logs_pod_name(node.hostname):
+        if pod.get('name') != pod_name:
             continue
-        if pod.get('status') != POD_STATUSES.running:
-            return
+        pod_status = pod.get('status')
+        if pod_status == POD_STATUSES.pending:
+            return 'Logging service is starting. Please wait...'
+        elif pod_status == POD_STATUSES.failed:
+            return 'Failed to collect logs on {0}'.format(node.hostname)
+        elif pod_status == POD_STATUSES.stopped:
+            return 'Logging service stopped for {0}'.format(node.hostname)
+        elif pod_status != POD_STATUSES.running:
+            return 'Unknown logging service state ({0})'.format(pod_status)
         container_states = CS.query.filter(
             CS.pod_state.has(pod_id=pod.get('id'), end_time=None),
             CS.end_time.is_(None),
             CS.start_time < (datetime.utcnow() - timedelta(minutes=1)),
             CS.container_name.in_(['elasticsearch', 'fluentd']),
         ).distinct(CS.container_name).order_by(CS.container_name).all()
-        return len(container_states) == 2
-    return
+        if len(container_states) == 2:
+            return ''
+        else:
+            return ('Logging service start takes more than 1 minute for '
+                    '{0}'.format(node.hostname))
+    return 'No logging service enabled for {0}'.format(node.hostname)

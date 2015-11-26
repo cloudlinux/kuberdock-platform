@@ -1232,6 +1232,7 @@ define(['pods_app/app',
             onBeforeDestroy: function () {
                 delete this.model.kubeVal;
                 delete this.model.editKubesQty;
+                this.destroyed = true;
                 clearTimeout(this.model.get('timeout'));
                 if (this.niceScroll !== undefined)
                     this.niceScroll.remove();
@@ -1239,10 +1240,13 @@ define(['pods_app/app',
 
             getLogs: function() {
                 var that = this;
-                this.model.getLogs(/*size=*/100).done(this.render)
-                    .fail(function(){ utils.notifyWindow('Log not found'); })
-                    .always(function(){
-                        this.set('timeout', setTimeout(that.getLogs, 10000)); });
+                this.model.getLogs(/*size=*/100).always(function(){
+                    // callbacks are called with model as a context
+                    if (!this.destroyed) {
+                        this.set('timeout', setTimeout(that.getLogs, 10000));
+                        that.render();
+                    }
+                });
             },
 
             editContainerKubes: function(){

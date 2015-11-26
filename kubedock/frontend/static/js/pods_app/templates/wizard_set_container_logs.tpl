@@ -70,21 +70,20 @@
                     </div>
                     <div class="col-xs-12 no-padding container-logs-wrapper">
                         <div class="container-logs">
-                            <% if (!logs.length) { %>
-                                <p>Nothing to show because containers log is empty.</p>
-                            <% } else { %>
-                                <% _.each(logs, function(serie){ %>
+                            <% _.each(logs, function(serie){ %>
 
-                                <p class="container-logs-started"><%- new Date(serie.start).toISOString() %>: Started</p>
-                                <% _.each(serie.hits, function(line){ %>
-                                    <p><%- new Date(line['@timestamp']).toISOString() %>: <%- line.log %></p>
-                                <% }) %>
-                                <% if (serie.end) { %>
-                                    <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>"><%- new Date(serie.end).toISOString() %>: <%- serie.exit_code ? 'Falied' : 'Exited successfully' %></p>
-                                    <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>-reason"><%- serie.reason %></p>
-                                <% } %>
+                            <p class="container-logs-started"><%- new Date(serie.start).toISOString() %>: Started</p>
+                            <% _.each(serie.hits, function(line){ %>
+                                <p><%- new Date(line['@timestamp']).toISOString() %>: <%- line.log %></p>
+                            <% }) %>
+                            <% if (serie.end) { %>
+                                <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>"><%- new Date(serie.end).toISOString() %>: <%- serie.exit_code ? 'Falied' : 'Exited successfully' %></p>
+                                <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>-reason"><%- serie.reason %></p>
+                            <% } %>
 
-                                <% }) %>
+                            <% }) %>
+                            <% if (logsError) { %>
+                                <p><%- logsError %></p>
                             <% } %>
                         </div>
                     </div>

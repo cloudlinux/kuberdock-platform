@@ -4,6 +4,7 @@ from kubedock.testutils import fixtures
 
 from uuid import uuid4
 from time import sleep
+from datetime import datetime
 from ipaddress import ip_address
 
 from kubedock.validation import V
@@ -13,7 +14,7 @@ from kubedock.pods.models import Pod
 
 usage_per_user_schema = {
     'pods_usage': {
-        'type': list, 'required': True,
+        'type': list, 'required': False,
         'schema': {
             'type': dict, 'required': True,
             'schema': {
@@ -33,7 +34,7 @@ usage_per_user_schema = {
                                 'end': {'type': int, 'required': True},
                                 'kubes': {'type': int, 'required': True}}}}}}}},
     'pd_usage': {
-        'type': list, 'required': True,
+        'type': list, 'required': False,
         'schema': {
             'type': dict, 'required': True,
             'schema': {
@@ -42,7 +43,7 @@ usage_per_user_schema = {
                 'pd_name': {'type': str, 'required': True, 'empty': False},
                 'size': {'type': int, 'required': True}}}},
     'ip_usage': {
-        'type': list, 'required': True,
+        'type': list, 'required': False,
         'schema': {
             'type': dict, 'required': True,
             'schema': {
@@ -102,10 +103,13 @@ class UsageTestCase(APITestCase):
         sleep(1)
         IpState.end(self.ips[0][0].id, int(ip_address(self.ips[0][1])))
         PersistentDiskState.end(self.pds[0][0], self.pds[0][1])
+        self.stop_date = datetime.utcnow()
         self.user, self.another_user = user, another_user
 
     # @unittest.skip('')
     def test_get_by_user(self):
+        url = '{0}/{1}'.format(self.url, "FooBarUser")
+        self.assert404(self.open(url, auth=self.adminauth))
         url = '{0}/{1}'.format(self.url, self.user.username)
         self.assert401(self.open(url))
         self.assert403(self.open(url, auth=self.userauth))
@@ -134,6 +138,16 @@ class UsageTestCase(APITestCase):
         self.assertEqual(len(data[self.user.username]['ip_usage']), 2)
         self.assertEqual(len(data[self.another_user.username]['ip_usage']), 1)
         self.assertEqual(len(data[self.user.username]['pd_usage']), 2)
+        self.assertEqual(len(data[self.another_user.username]['pd_usage']), 1)
+
+    def test_date_filter(self):
+        url = '{0}/?date_from={1}'.format(self.url, self.stop_date.isoformat())
+        response = self.open(auth=self.adminauth)
+        response = self.open(url, auth=self.adminauth)
+        data = response.json['data']
+        self.assertEqual(len(data[self.user.username]['ip_usage']), 1)
+        self.assertEqual(len(data[self.another_user.username]['ip_usage']), 1)
+        self.assertEqual(len(data[self.user.username]['pd_usage']), 1)
         self.assertEqual(len(data[self.another_user.username]['pd_usage']), 1)
 
 

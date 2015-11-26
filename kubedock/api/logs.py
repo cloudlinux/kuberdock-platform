@@ -36,13 +36,14 @@ def api_get_container_logs(containerid):
     TODO: add ordering parameter support.
 
     """
+    user = KubeUtils._get_current_user()
     starttime = gettime_parameter(request.args, 'starttime')
     endtime = gettime_parameter(request.args, 'endtime')
     try:
         size = int(request.args.get('size', None))
     except (TypeError, ValueError):
         size = 100
-    owner = User.get(current_user.username)
+    owner = User.get(user.username)
 
     return es_logs.get_container_logs(containerid, owner.id,
                                       size, starttime, endtime)
@@ -67,8 +68,10 @@ def api_get_node_logs(hostname):
     date = request.args.get('date', None)
     if date:
         date = parse_datetime_str(date)
-    host = Node.query.filter_by(hostname=hostname).first().ip
-    return es_logs.get_node_logs(hostname, date, size, host=host)
+    node = Node.query.filter_by(hostname=hostname).first()
+    if not node:
+        raise APIError('Unknown node', 404)
+    return es_logs.get_node_logs(hostname, date, size, host=node.ip)
 
 
 @logs.route('/pod-states/<pod_id>/<depth>', methods=['GET'])
@@ -89,11 +92,11 @@ def api_get_pod_states(pod_id, depth):
         'last_event_time' - time of last kubernetes event for the pod
     """
     pod = Pod.query.filter(Pod.id == pod_id).first()
+    if not pod:
+        raise APIError(u'Unknown pod {}'.format(pod_id), 404)
     user = KubeUtils._get_current_user()
     if not(user.is_administrator() or user.id == pod.owner_id):
         raise APIError(u'Forbidden for current user', 403)
-    if not Pod:
-        raise APIError(u'Unknown pod {}'.format(pod_id), 404)
     try:
         depth = int(depth)
         if depth < 1:

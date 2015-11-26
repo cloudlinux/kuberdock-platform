@@ -1,7 +1,6 @@
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from ..core import db
-from ..settings import CEPH, AWS
 from ..utils import APIError
 from ..validation import UserValidator
 from ..billing.models import Package
@@ -10,7 +9,7 @@ from ..rbac.models import Role
 from ..users.models import User
 from ..users.utils import enrich_tz_with_offset
 from .podcollection import PodCollection
-from .pstorage import CephStorage, AmazonStorage
+from .pstorage import get_storage_class
 
 
 class ResourceReleaseError(APIError):
@@ -133,11 +132,14 @@ class UserCollection(object):
         user = User.get(uid)
 
         for pd in user.persistent_disks:
-            rv_ceph = CephStorage().delete_by_id(pd.id) if CEPH else 1
-            rv_aws = AmazonStorage().delete_by_id(pd.id) if AWS else 1
-            if not force and (CEPH or AWS) and (rv_ceph != 0 and rv_aws != 0):
-                raise ResourceReleaseError(u'Persistent Disk "{0}" is busy or does '
-                                           u'not exist.'.format(pd.name))
+            pd_cls = get_storage_class()
+            if pd_cls:
+                rv = pd_cls().delete_by_id(pd.id)
+                if not force and rv != 0:
+                    raise ResourceReleaseError(
+                        u'Persistent Disk "{0}" is busy or does '
+                        u'not exist.'.format(pd.name)
+                    )
             try:
                 pd.delete()
             except Exception:

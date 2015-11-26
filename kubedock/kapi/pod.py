@@ -3,14 +3,13 @@ import os
 import shlex
 from uuid import uuid4
 from copy import deepcopy
-from flask import current_app
 from .helpers import KubeQuery, ModelQuery, Utilities
 
-from .pstorage import CephStorage, AmazonStorage
+from .pstorage import get_storage_class
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
-                        AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX
+                        NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
 from ..pods.models import PersistentDisk
 
@@ -126,29 +125,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if persistent_disk is None:
             persistent_disk = PersistentDisk(name=name, owner_id=owner.id,
                                              size=pd.get('pdSize', 1)).save()
-
-        if CEPH:
-            volume['rbd'] = {
-                'image': persistent_disk.drive_name,
-                'keyring': '/etc/ceph/ceph.client.admin.keyring',
-                'fsType': 'xfs',
-                'user': 'admin',
-                'pool': 'rbd',
-                'size': persistent_disk.size,
-                'monitors': CephStorage().get_monitors(),
-            }
-        elif AWS:
-            try:
-                from ..settings import AVAILABILITY_ZONE
-            except ImportError:
-                return
-            # volumeID: aws://<availability-zone>/<volume-id>
-            volume['awsElasticBlockStore'] = {
-                'volumeID': 'aws://{0}/'.format(AVAILABILITY_ZONE),
-                'fsType': 'xfs',
-                'drive': persistent_disk.drive_name,
-                'size': persistent_disk.size,
-            }
+        pd_cls = get_storage_class()
+        if not pd_cls:
+            return
+        pd_cls().enrich_volume_info(volume, persistent_disk.size,
+                                    persistent_disk.drive_name)
 
     def _handle_local_storage(self, volume):
         local_storage = volume.pop('localStorage')

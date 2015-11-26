@@ -6,7 +6,6 @@ from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils, register_api
 from ..kapi import pstorage as ps
 from ..pods.models import PersistentDisk
-from ..settings import AWS, CEPH
 
 
 pstorage = Blueprint('pstorage', __name__, url_prefix='/pstorage')
@@ -17,11 +16,8 @@ class PersistentStorageAPI(KubeUtils, MethodView):
 
     @staticmethod
     def _resolve_storage():
-        if CEPH:
-            return ps.CephStorage
-        if AWS:
-            return ps.AmazonStorage
-        return ps.PersistentStorage
+        storage_cls = ps.get_storage_class()
+        return storage_cls or ps.PersistentStorage
 
     def get(self, device_id):
         params = self._get_params()

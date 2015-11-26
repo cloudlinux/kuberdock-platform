@@ -591,7 +591,8 @@ def modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app=None):
         result = handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app)
     else:
         result = handle_generic_node(ssh, service, cmd, pod_ip, public_ip, ports, app)
-    set_bridge_rules(ssh, service, cmd, pod_ip, app)
+    # TODO cut all stale functionality
+    #set_bridge_rules(ssh, service, cmd, pod_ip, app)
     ssh.close()
     return result
 

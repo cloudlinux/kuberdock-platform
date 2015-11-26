@@ -484,7 +484,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 host_port = p.get('hostPort', None) or p.get('containerPort')
                 port_name = 'c{0}-p{1}'.format(ci, pi)
                 if p.get('isPublic'):
-                    port_name += '-public'
+                    # TODO this will disable standard event based mechanism:
+                    port_name += '-public-old'
                 ports.append({
                     "name": port_name,
                     "port": host_port,

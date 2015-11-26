@@ -129,6 +129,11 @@ yum_wrapper -y install flannel-0.5.3
 check_status
 yum_wrapper -y install cadvisor
 check_status
+# TODO maybe not needed, make as dependency for kuberdock-node package
+yum_wrapper -y install python-requests
+yum_wrapper -y install python-ipaddress
+yum_wrapper -y install ipset
+check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
 AWS=${AWS}
@@ -164,6 +169,35 @@ mv /fslimit.py /var/lib/kuberdock/scripts/fslimit.py
 chmod +x /var/lib/kuberdock/scripts/fslimit.py
 check_status
 
+# 4.2 kuberdock kubelet plugin stuff
+echo "Setup network plugin..."
+PLUGIN_DIR=/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock
+mkdir -p "$PLUGIN_DIR"
+check_status
+PLUGIN_DST="$PLUGIN_DIR/kuberdock"
+PLUGIN_SRC=/node_network_plugin
+# TODO when merge to master we must implement copy this file/files from master
+mv "$PLUGIN_SRC.sh" "$PLUGIN_DST"
+mv "$PLUGIN_SRC.py" "$PLUGIN_DST.py"
+chmod +x "$PLUGIN_DST"
+
+# TODO add required-by kubelet or something similar
+cat > /etc/systemd/system/kuberdock-watcher.service << EOF
+[Unit]
+Description=KuberDock Network Plugin watcher
+After=flanneld.service
+Requires=flanneld.service
+
+[Service]
+ExecStart=/usr/bin/env python2 /usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/kuberdock.py watch
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl reenable kuberdock-watcher
+check_status
 
 
 # 5. configure Node config
@@ -173,7 +207,7 @@ sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KU
 sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
-sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false"|}' $KUBERNETES_CONF_DIR/kubelet
+sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock"|}' $KUBERNETES_CONF_DIR/kubelet
 sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile"|}' $KUBERNETES_CONF_DIR/proxy
 sed -i '/^KUBE_ALLOW_PRIV/ {s/--allow_privileged=false/--allow_privileged=true/}' $KUBERNETES_CONF_DIR/config
 check_status

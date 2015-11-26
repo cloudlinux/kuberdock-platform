@@ -12,6 +12,7 @@ from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
                         NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
 from ..pods.models import db, PersistentDisk
+from ..users.models import User
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
@@ -151,7 +152,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
-
+        owner = User.filter_by(username=self.owner).one()
         config = {
             "kind": "ReplicationController",
             "apiVersion": KUBE_API_VERSION,
@@ -170,7 +171,10 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 "template": {
                     "metadata": {
                         "labels": {
-                            "kuberdock-pod-uid": self.id
+                            "kuberdock-pod-uid": self.id,
+                            # TODO we must generate uid per user and use it for all user's pods
+                            # TODO why owner is unicode here? why not db obj
+                            "kuberdock-user-uid": str(owner.id),
                         }
                     },
                     "spec": {

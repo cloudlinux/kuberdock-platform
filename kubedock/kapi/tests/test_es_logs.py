@@ -193,7 +193,7 @@ class TestLogQuery(unittest.TestCase):
         check_logs_pod_mock.assert_called_once_with(self.host)
 
         check_logs_pod_mock.reset_mock()
-        check_logs_pod_mock.return_value = False
+        check_logs_pod_mock.return_value = 'Some error'
         with self.assertRaises(es_logs.LogsError):
             self._check(start, end)
         check_logs_pod_mock.assert_called_once_with(self.host)
@@ -236,6 +236,11 @@ class TestCheckLogsPod(DBTestCase):
         )
         self.internal_user = User.get_internal()
         self.pod = self.fixtures.pod(name='logs pod', status=POD_STATUSES.running)
+
+        # disable redis caching
+        patcher = mock.patch.object(es_logs, 'check_logs_pod', es_logs._check_logs_pod)
+        self.addCleanup(patcher.stop)
+        self.PodCollectionMock = patcher.start()
 
         patcher = mock.patch.object(es_logs, 'PodCollection')
         self.addCleanup(patcher.stop)
@@ -322,7 +327,7 @@ class TestCheckLogsPod(DBTestCase):
         self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
     def test_ok(self):
-        self.assertTrue(es_logs.check_logs_pod(self.node.ip))
+        self.assertEqual(es_logs.check_logs_pod(self.node.ip), '')
 
 
 if __name__ == '__main__':

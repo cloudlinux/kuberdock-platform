@@ -6,11 +6,9 @@ from hashlib import md5
 import mock
 
 from kubedock.core import db
-from kubedock.api import APIError
 from kubedock.kapi import pstorage
 from kubedock.settings import PD_SEPARATOR_USERID
 from kubedock.testutils.testcases import DBTestCase
-from kubedock.testutils import fixtures
 from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
 from kubedock.billing.models import Kube
 
@@ -79,8 +77,7 @@ class TestCephStorage(DBTestCase):
     """Tests for kapi.CephStorage class."""
     def setUp(self):
         super(TestCephStorage, self).setUp()
-        fixtures.initial_fixtures()
-        self.user, _ = fixtures.user_fixtures()
+        self.user, _ = self.fixtures.user_fixtures()
 
     @mock.patch.object(pstorage.CephStorage, '_get_raw_drives')
     def test__get_drives(self, raw_drives_mock):
@@ -93,8 +90,8 @@ class TestCephStorage(DBTestCase):
 
         name1 = 'one'
         name2 = 'two'
-        size1 = 2 * 1024 * 1024 * 1024 # 2 GB
-        size2 = 3 * 1024 * 1024 * 1024 # 3 GB
+        size1 = 2 * 1024 * 1024 * 1024  # 2 GB
+        size2 = 3 * 1024 * 1024 * 1024  # 3 GB
         node = '192.168.1.13'
         user = self.user
         raw_drives_mock.return_value = {

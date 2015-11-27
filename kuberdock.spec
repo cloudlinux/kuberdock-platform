@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 11%{?dist}.cloudlinux
+Release: 12%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,30 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Nov 27 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.4-12
+- AC-1426: Add style to pod/node logs && textarea in add preapp
+- AC-1555: package must include period
+- AC-1489: node logs are not displayed
+  From now on if kuberdock can not get logs and kuberdock-logs pod is not running
+  or running less than a minute, then error message will be different:
+  "Logs service is collecting data. Wait few minutes please.".
+  In frontend error message will show up in logs textarea, but not in bottom-left corner.
+  Stop requesting logs from server if user leaves "logs" tab.
+- AC-1525: Highlight the captured traceback in update
+- AC-1487: show period in total price preapp
+- AC-1564: check node hostname before add
+- use transactions in testutils.testcases.DBTestCase; nose attrib plugin suport
+- AC-1537: Container status should change according to user's action.
+- AC-1540: price is displayed including PD and Public IP on pod page
+- AC-1591: added unittests to api.logs, fixed minor errors in api.logs methods
+- AC-903: Delete message have one mask
+- AC-1535: Improve logs error handling
+- AC-1526: extended error handling in CephStorage, added timeouts for remote commands. Tests and refactoring for CephStorage
+- AC-1569: container states kube qty. fix; logout redirect fix; db tests fix
+- AC-1654: Add style to paginator
+- AC-900: ip block/unblock fix; also fixed some tests
+- AC-1539: Add PD > Checkbox should be disable without container path
+
 * Thu Nov 19 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Fedor Degtyarev <fdegtyarev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-11
 - Fixed duplicated message
 - fix in js: mutable in model defaults

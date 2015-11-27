@@ -245,7 +245,7 @@ define(['pods_app/app',
                     this.ui.privateWrapper.show();
                     this.ui.loginPrivateUres.slideDown();
                     this.ui.searchImageButton.parent().hide();
-                    this.ui.privateField.attr('placeholder','[registry/]namespace/image');
+                    this.ui.privateField.attr('placeholder','registry/namespace/image');
                     this.ui.privateField.addClass('private-registry');
                     this.ui.label.text('Select image from any registry');
                 } else {
@@ -567,33 +567,37 @@ define(['pods_app/app',
 
             togglePersistent: function(evt){
                 evt.stopPropagation();
-                var tgt = $(evt.target),
+                var that = this,
+                    tgt = $(evt.target),
                     index = tgt.closest('tr').index(),
-                    row = this.model.get('volumeMounts')[index],
-                    that = this;
+                    row = this.model.get('volumeMounts')[index];
 
-                this.toggleVolumeEntry(row);
-
-                if (this.pod.persistentDrives === undefined) {
-                    var pdCollection = new App.Data.PersistentStorageCollection();
-                        utils.preloader.show();
-                        pdCollection.fetch({
-                            wait: true,
-                            data: {'free-only': true},
-                            success: function(collection, response, opts){
-                                that.pod.persistentDrives = _.map(collection.models, function(m){
-                                    return that.transformKeys(m.attributes);
-                                });
-                                utils.preloader.hide();
-                                that.render();
-                            },
-                            error: function(){
-                                utils.preloader.hide();
-                            }
-                        });
-                }
-                else {
-                    this.render();
+                if (row.mountPath === null){
+                    utils.notifyWindow('Mount path must be set!');
+                    tgt.closest('tr').find('.editable-empty').click();
+                    return false
+                } else {
+                    this.toggleVolumeEntry(row);
+                    if (this.pod.persistentDrives === undefined) {
+                        var pdCollection = new App.Data.PersistentStorageCollection();
+                            utils.preloader.show();
+                            pdCollection.fetch({
+                                wait: true,
+                                data: {'free-only': true},
+                                success: function(collection, response, opts){
+                                    that.pod.persistentDrives = _.map(collection.models, function(m){
+                                        return that.transformKeys(m.attributes);
+                                    });
+                                    utils.preloader.hide();
+                                    that.render();
+                                },
+                                error: function(){
+                                    utils.preloader.hide();
+                                }
+                            });
+                    } else {
+                        this.render();
+                    }
                 }
             },
 
@@ -664,7 +668,6 @@ define(['pods_app/app',
                 for (var i=0; i<vm.length; i++) {
                     if (!vm[i].mountPath) {
                         utils.notifyWindow('Mount path must be set!');
-
                         return;
                     }
                     if (!vm[i].name) {

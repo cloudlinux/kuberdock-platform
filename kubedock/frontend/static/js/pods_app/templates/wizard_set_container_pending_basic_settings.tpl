@@ -32,7 +32,7 @@
                                 <th class="col-md-5">Container port</th>
                                 <th class="col-md-3">Protocol</th>
                                 <th class="col-md-2">Pod port</th>
-                                <th class="col-md-2">Public</th>
+                                <th class="col-md-2" title="Public IP will require additional payment">Public <sup>*</sup></th>
                             </tr>
                         </thead>
                         <tbody>

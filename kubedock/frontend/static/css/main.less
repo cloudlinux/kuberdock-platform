@@ -987,6 +987,30 @@ body{
     @import "predefined-app.less";
 
     /* edit form */
+
+
+    /* paginator */
+    .pager{
+        margin: 10px 0 30px;
+        li {
+            .border-radius(2px);
+            color: #141414;
+            font-size: 13px;
+            line-height: 13px;
+            padding: 10px 18px;
+            display: inline-block;
+            font-family: @bold;
+            margin-right: 3px;
+            &:hover{
+                .box-shadow-materials();
+                cursor: pointer;
+            }
+            &:last-child{
+                margin-right: 0;
+            }
+        }
+    }
+
     .ieditable, .iveditable{
         &:hover{
             cursor: pointer;

@@ -68,7 +68,7 @@
                                 <th>Container port</th>
                                 <th>Protocol</th>
                                 <th>Pod port</th>
-                                <th>Published</th>
+                                <th>Public</th>
                             </tr>
                         </thead>
                         <tbody>

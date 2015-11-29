@@ -1,10 +1,7 @@
 import unittest
 import mock
 import copy
-import sys
 import subprocess
-
-sys.modules['ipaddress'] = mock.Mock()
 
 from .. import collect
 

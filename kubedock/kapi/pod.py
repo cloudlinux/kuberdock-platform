@@ -11,7 +11,7 @@ from ..billing.models import Kube
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
                         NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
-from ..pods.models import PersistentDisk
+from ..pods.models import db, PersistentDisk
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
@@ -124,7 +124,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                                                    name=name).first()
         if persistent_disk is None:
             persistent_disk = PersistentDisk(name=name, owner_id=owner.id,
-                                             size=pd.get('pdSize', 1)).save()
+                                             size=pd.get('pdSize', 1))
+            db.session.add(persistent_disk)
         pd_cls = get_storage_class()
         if not pd_cls:
             return

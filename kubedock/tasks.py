@@ -7,7 +7,6 @@ import subprocess
 import time
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from distutils.util import strtobool
 
 # requests .json() errors handling workaround.
 # requests module uses simplejson as json by default
@@ -27,7 +26,7 @@ from .utils import (
 )
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
-from .models import Pod, ContainerState, PodState, User
+from .models import Pod, ContainerState, PodState
 from .nodes.models import NodeMissedAction, Node, NodeFlag, NodeFlagNames
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
@@ -334,37 +333,6 @@ def get_node_interface(data):
         iface = ipaddress.ip_interface(unicode(m.group('ip')))
         if ip in iface.network:
             return m.group('iface')
-
-
-@celery.task(ignore_result=True)
-def user_lock_task(user):
-    pod_collection = PodCollection(user)
-    for pod in pod_collection.get(as_json=False):
-        if pod.get('status') != POD_STATUSES.stopped:
-            pod_collection.update(pod['id'], {'command': 'stop'})
-        public_ip = (
-            pod.get('public_ip') or                           # stopped pod
-            pod.get('labels', {}).get('kuberdock-public-ip')  # running pod
-        )
-        if public_ip is not None:
-            pod_collection._free_ip(public_ip)
-
-
-@db.event.listens_for(User.active, 'set')
-def user_lock_event(target, value, oldvalue, initiator):
-    if not isinstance(value, bool):
-        value = bool(strtobool(value))
-    if value != oldvalue and not value:
-        user_lock_task.delay(target)
-        target.logout()
-
-
-@db.event.listens_for(User.suspended, 'set')
-def user_suspend_event(target, value, oldvalue, initiator):
-    if not isinstance(value, bool):
-        value = bool(strtobool(value))
-    if value != oldvalue and value is True:
-        user_lock_task.delay(target)
 
 
 @celery.task()

@@ -1,7 +1,8 @@
 import ipaddress
 
+from .podcollection import PodCollection
 from ..pods.models import IPPool, PodIP, ip_network
-from ..api import APIError
+from ..utils import APIError, atomic
 
 
 class IpAddrPool(object):
@@ -31,6 +32,7 @@ class IpAddrPool(object):
         except ValueError, e:
             raise APIError(str(e))
 
+    @atomic(nested=False)
     def update(self, network, params):
         net = IPPool.filter_by(network=network).first()
         if net is None:
@@ -43,13 +45,8 @@ class IpAddrPool(object):
             net.unblock_ip(unblock_ip)
         unbind_ip = params.get('unbind_ip')
         if unbind_ip:
-            self.unbind_address(unbind_ip)
+            PodCollection._remove_public_ip(ip=unbind_ip)
         return net.to_dict()
-
-    def unbind_address(self, addr):
-        ip = PodIP.filter_by(ip_address=int(ipaddress.ip_address(addr))).first()
-        if ip:
-            ip.delete()
 
     def get_user_addresses(self, user):
         pods = dict([(pod.id, pod.name)
@@ -59,6 +56,7 @@ class IpAddrPool(object):
                 'pod': pods[i.pod_id]
             } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
+    @atomic(nested=False)
     def delete(self, network):
         network = str(ip_network(network))
         if not IPPool.filter_by(network=network).first():
@@ -66,12 +64,11 @@ class IpAddrPool(object):
         pods_count = PodIP.filter_by(network=network).count()
         if pods_count > 0:
             raise APIError("You cannot delete this network '{0}' while "
-                            "some of IP-addresses of this network were "
-                            "assigned to Pods".format(network))
+                           "some of IP-addresses of this network were "
+                           "assigned to Pods".format(network))
         for obj in PodIP.filter_by(network=network):
-            obj.delete()
-        for obj in IPPool.filter_by(network=network):
-            obj.delete()
+            PodCollection._remove_public_ip(ip=obj)
+        IPPool.query.filter_by(network=network).delete()
 
     def _parse_autoblock(self, data):
         blocklist = set()

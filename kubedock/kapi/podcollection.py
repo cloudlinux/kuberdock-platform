@@ -1,3 +1,4 @@
+import ipaddress
 import json
 from uuid import uuid4
 from base64 import urlsafe_b64encode, urlsafe_b64decode
@@ -11,8 +12,9 @@ from .helpers import KubeQuery, ModelQuery, Utilities
 from ..core import db
 from ..billing import repr_limits, Kube
 from ..pods.models import PersistentDisk, PodIP, Pod as DBPod
+from ..usage.models import IpState
 from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
-                     unbind_ip)
+                     unbind_ip, atomic)
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
@@ -54,15 +56,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._make_namespace(pod.namespace)
         pod.secrets = [self._make_secret(pod.namespace, *secret)
                        for secret in secrets]
+
         set_public_ip = self.needs_public_ip(params)
+        db_pod = self._save_pod(pod, set_public_ip)
         if set_public_ip:
-            db_pod = self._save_pod(pod, set_public_ip)
             if getattr(db_pod, 'public_ip', None):
                 pod.public_ip = db_pod.public_ip
             if getattr(db_pod, 'public_aws', None):
                 pod.public_aws = db_pod.public_aws
-        else:
-            self._save_pod(pod, set_public_ip)
         pod._forge_dockers()
         return pod.as_dict()
 
@@ -96,17 +97,64 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return False
 
     @staticmethod
-    def _set_public_ip(pod, set_public_ip):
-        if set_public_ip:
-            conf = pod.get_dbconfig()
-            if AWS:
-                pod.public_aws = True
-                conf['public_aws'] = pod.public_aws
-            else:
-                pod.public_ip = str(PodIP.allocate_ip_address(pod.id))
-                conf['public_ip'] = pod.public_ip
-            pod.set_dbconfig(conf, False)
-            db.session.add(pod)
+    @atomic()
+    def _set_public_ip(pod):
+        """Assign some free IP address to the pod."""
+        conf = pod.get_dbconfig()
+        if AWS:
+            conf['public_aws'] = pod.public_aws = True
+        else:
+            podip = PodIP.allocate_ip_address(pod.id)
+            conf['public_ip'] = pod.public_ip = str(podip)
+            IpState.start(pod.id, podip)
+        pod.set_dbconfig(conf, save=False)
+
+    @staticmethod
+    @atomic()
+    def _remove_public_ip(pod_id=None, ip=None):
+        """Free ip (remove PodIP from database and change pod config).
+
+        :param pod_id: pod id
+        :param ip: ip as a string (u'1.2.3.4'), number (16909060), or PodIP instance
+        """
+        if not isinstance(ip, PodIP):
+            query = PodIP.query
+            if pod_id:
+                query = query.filter_by(pod_id=pod_id)
+            if ip:
+                query = query.filter_by(ip_address=int(ipaddress.ip_address(ip)))
+            ip = query.first()
+            if ip is None:
+                return
+        elif ip.pod.id != pod_id:
+            return
+
+        # TODO: AC-1662 unbind ip from nodes and delete service
+        pod = ip.pod
+        pod_config = pod.get_dbconfig()
+        pod_config['public_ip_before_freed'] = pod_config.pop('public_ip', None)
+        for container in pod_config['containers']:
+            for port in container['ports']:
+                port['isPublic_before_freed'] = port.pop('isPublic', None)
+        pod.set_dbconfig(pod_config, save=False)
+        IpState.end(pod_id, ip.ip_address)
+        db.session.delete(ip)
+
+    @classmethod
+    @atomic()
+    def _return_public_ip(cls, pod_id):
+        """If pod had public IP, and it was removed, return it back to the pod."""
+        pod = DBPod.query.get(pod_id)
+        pod_config = pod.get_dbconfig()
+
+        if pod_config.pop('public_ip_before_freed', None) is None:
+            return
+
+        for container in pod_config['containers']:
+            for port in container['ports']:
+                port['isPublic'] = port.pop('isPublic_before_freed', None)
+        pod.set_dbconfig(pod_config, save=False)
+        cls._set_public_ip(pod)
 
     def _save_pod(self, obj, set_public_ip):
         kube_type = getattr(obj, 'kube_type', Kube.get_default_kube_type())
@@ -127,7 +175,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod.owner = self.owner
         try:
             db.session.add(pod)
-            self._set_public_ip(pod, set_public_ip)
+            if set_public_ip:
+                self._set_public_ip(pod)
             db.session.commit()
             return pod
         except Exception as e:
@@ -169,7 +218,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             self._raise_if_failure(rv, "Could not remove a service")
 
         if hasattr(pod, 'public_ip'):
-            pod._free_ip(pod_id=pod_id)
+            self._remove_public_ip(pod_id=pod_id)
         rv = self._drop_namespace(pod.namespace)
         # current_app.logger.debug(rv)
         self._mark_pod_as_deleted(pod_id)

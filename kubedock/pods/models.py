@@ -10,7 +10,6 @@ from flask import current_app
 from ..core import db
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT
 from ..models_mixin import BaseModelMixin
-from ..usage.models import IpState
 from ..users.models import User
 from ..kapi import pd_utils
 
@@ -199,13 +198,11 @@ class IPPool(BaseModelMixin, db.Model):
         self.blocked_list = json.dumps(list(
             self.get_blocked_set(as_int=True) | self._to_ip_set(ip)
         ))
-        self.save()
 
     def unblock_ip(self, ip):
         self.blocked_list = json.dumps(list(
             self.get_blocked_set(as_int=True) - self._to_ip_set(ip)
         ))
-        self.save()
 
     def hosts(self, as_int=None, exclude=None, allowed=None, page=None):
         """
@@ -316,7 +313,7 @@ class PodIP(BaseModelMixin, db.Model):
 
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
                        primary_key=True, nullable=False)
-    pod = db.relationship(Pod)
+    pod = db.relationship(Pod, backref='ip')
     network = db.Column(db.ForeignKey('ippool.network'))
     ip_address = db.Column(db.BigInteger, nullable=False)
 
@@ -325,14 +322,6 @@ class PodIP(BaseModelMixin, db.Model):
 
     def __int__(self):
         return self.ip_address
-
-    def save(self):
-        IpState.start(self.pod_id, self.ip_address)
-        return super(PodIP, self).save()
-
-    def delete(self):
-        IpState.end(self.pod_id, self.ip_address)
-        return super(PodIP, self).delete()
 
     @classmethod
     def allocate_ip_address(cls, pid, ip_address=None):
@@ -356,9 +345,9 @@ class PodIP(BaseModelMixin, db.Model):
             ip_address = int(ipaddress.ip_address(ip_address))
         podip = cls.filter_by(pod_id=pid).first()
         if podip is None:
-            podip = cls.create(pod_id=pid, network=network.network,
-                               ip_address=ip_address)
-            podip.save()
+            podip = cls(pod_id=pid, network=network.network,
+                        ip_address=ip_address)
+            db.session.add(podip)
         else:
             current_app.logger.warning('PodIP {0} is already allocated'
                                        .format(podip.to_dict()))

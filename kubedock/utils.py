@@ -140,6 +140,55 @@ class APIError(Exception):
             self.__class__.__name__, self.message, self.status_code)
 
 
+class atomic(object):
+    """Wrap code in transaction. Can be used as decorator or context manager.
+
+    If the block of code is successfully completed, the transaction is committed.
+    If there is an exception, the transaction is rolled back.
+    Saves you from repeating `try-except-rollback` and adds `commit=True/False`
+    parameter to decorated functions.
+    You can find some usage examples in `.tests.utils.TestAtomic` or `.kapi.users`.
+
+    :param api_error: if not None, will be raised instead of any exception
+        that is not an APIError subclass.
+    :param nested: set it to `False` if you want this wrapper to use your
+        current transaction instead of creating a new nested one.
+        In case of a decorator, this behavior can be overridden by passing
+        `commit=True/False` into decorated function.
+    """
+    def __init__(self, api_error=None, nested=True):
+        self.api_error = api_error
+        self.nested = nested
+
+    def __call__(self, func):
+        @wraps(func)
+        def decorated(*args, **kwargs):
+            if 'commit' in kwargs:
+                self.nested = not kwargs.pop('commit')
+            with self:
+                return func(*args, **kwargs)
+        return decorated
+
+    def __enter__(self):
+        self.main_transaction = (db.session.begin_nested() if self.nested else
+                                 db.session.registry().transaction)
+
+    def _rollback(self, exception):
+        self.main_transaction.rollback()
+        if self.api_error and not isinstance(exception, APIError):
+            raise self.api_error
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value is not None:
+            self._rollback(exc_value)
+        else:
+            try:
+                self.main_transaction.commit()
+            except Exception as e:
+                self._rollback(e)
+                raise
+
+
 def hostname_to_ip(name):
     """
     Converts hostname to IP address

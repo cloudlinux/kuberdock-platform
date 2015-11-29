@@ -3,7 +3,7 @@ import socket
 import cerberus
 import cerberus.errors
 from copy import deepcopy
-
+from distutils.util import strtobool
 from sqlalchemy import func
 import pytz
 
@@ -19,6 +19,19 @@ from .users.utils import strip_offset_from_timezone
 
 
 SUPPORTED_VOLUME_TYPES = ['persistentDisk', 'localStorage']
+
+
+# Coerce functions
+
+
+def extbool(value):
+    """Bool or string with values ('0', '1', 'true', 'false', 'yes') to bool."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, basestring):
+        return bool(strtobool(value))
+    raise TypeError('Invalid type. Must be bool or string')
+
 
 """
 This schemas it's just a shortcut variables for convenience and reusability
@@ -162,12 +175,14 @@ create_user_schema = {
         'package_exists': True,
     },
     'active': {
-        'type': 'extbool',
+        'type': 'boolean',
         'required': True,
+        'coerce': extbool,
     },
     'suspended': {
-        'type': 'extbool',
+        'type': 'boolean',
         'required': False,
+        'coerce': extbool,
     },
     'timezone': {
         'type': 'string',
@@ -484,7 +499,7 @@ kube_schema = {
                      'allowed': ['MB']},
     'disk_space_units': {'type': 'string', 'maxlength': 3, 'empty': False,
                          'allowed': ['GB']},
-    'is_default': {'type': 'extbool', 'required': False}
+    'is_default': {'type': 'boolean', 'coerce': extbool, 'required': False}
 }
 
 packagekube_schema = {
@@ -500,8 +515,6 @@ class V(cerberus.Validator):
     """
     This class is for all custom and our app-specific validators and types,
     implement any new here.
-    Additionally supports type 'extbool' - extended bool, value may be a boolean
-    or one of ('true', 'false', '1', '0')
     """
     # TODO: add readable error messages for regexps in old schemas
     type_map = {str: 'string',
@@ -676,20 +689,6 @@ class V(cerberus.Validator):
                         self._error(field,
                                     'Unsupported volume type "{0}"'.format(k))
 
-    def _validate_type_extbool(self, field, value):
-        """Validate 'extended bool' it may be bool, string with values
-        ('0', '1', 'true', 'false')
-
-        """
-        if not isinstance(value, (bool, str, unicode)):
-            self._error(field, u'Invalid type. Must be bool or string')
-        if isinstance(value, (str, unicode)):
-            valid_values = ['true', 'false', '0', '1']
-            if value.lower() not in valid_values:
-                self._error(field,
-                            u'Invalid value "{}". Must be one of: {}'.format(
-                                value, valid_values))
-
 
 def check_int_id(id):
     try:
@@ -810,14 +809,11 @@ class UserValidator(V):
 
     def validate_user_create(self, data):
         data = _clear_timezone(data, ['timezone'])
-        self._api_validation(data, create_user_schema)
-        data = convert_extbools(data, create_user_schema)
-        return data
+        return self._api_validation(data, create_user_schema)
 
     def validate_user_update(self, data):
         data = _clear_timezone(data, ['timezone'])
-        self._api_validation(data, create_user_schema, update=True)
-        data = convert_extbools(data, create_user_schema)
+        data = self._api_validation(data, create_user_schema, update=True)
         if self.allow_unknown:  # filter unknown
             return {key: value for key, value in data.iteritems()
                     if key in create_user_schema}
@@ -846,30 +842,8 @@ def _clear_timezone(data, keys):
     return data
 
 
-def convert_extbools(data, schema):
-    """Converts values of extbool field types in data dict to booleans.
-    Returns data dict with converted values
-    """
-    for field, desc in schema.iteritems():
-        if field not in data:
-            continue
-        fieldtype = desc.get('type')
-        if fieldtype != 'extbool':
-            continue
-        value = data[field]
-        if isinstance(value, bool):
-            continue
-        if isinstance(value, (str, unicode)):
-            if value.lower() in ('true', '1'):
-                data[field] = True
-                continue
-        data[field] = False
-    return data
-
-
 def check_pricing_api(data, schema, *args, **kwargs):
     validated = V(allow_unknown=True)._api_validation(data, schema, *args, **kwargs)
     # purge unknown
     data = {field: value for field, value in validated.iteritems() if field in schema}
-    data = convert_extbools(data, schema)
     return data

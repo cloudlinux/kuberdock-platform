@@ -1,6 +1,7 @@
 import unittest
 import logging
 import pytz
+from ipaddress import ip_address
 from kubedock.testutils.testcases import APITestCase, attr
 from kubedock.testutils import fixtures
 
@@ -72,7 +73,7 @@ class UserFullTestCase(APITestCase):
         db.session.add(new_package)
         db.session.commit()
         data = dict(password='new_password', email='new_email@test.test',
-                    active=(not self.user.active), first_name='fn', last_name='ln',
+                    first_name='fn', last_name='ln',
                     middle_initials='mi', rolename='Admin',
                     package=new_package.name)
 
@@ -150,6 +151,97 @@ class UserFullTestCase(APITestCase):
         data = {'package': package1.name}
         self.assert400(self.open(url=url, method='PUT', json=data,
                                  auth=self.adminauth))  # only Admin has permission
+
+    @attr('k8s')
+    def test_suspend(self):
+        """AC-1608 In case of unsuspend, return all public IPs"""
+        from kubedock.kapi.podcollection import PodCollection
+        from kubedock.pods.models import PodIP, IPPool
+
+        user = self.user
+        url = '{0}/{1}'.format(self.url, user.id)
+
+        ippool = IPPool(network='192.168.1.252/30').save()
+        min_pod = {'restartPolicy': 'Always', 'kube_type': 0, 'containers': [{
+            'image': 'nginx', 'name': 'fk8i0gai',
+            'args': ['nginx', '-g', 'daemon off;'],
+            'ports': [{'protocol': 'tcp', 'isPublic': True, 'containerPort': 80}],
+        }]}
+
+        # pod-1
+        res = PodCollection(user).add(dict(min_pod, name='pod-1'), skip_check=False)
+        pod_1 = Pod.query.get(res['id'])
+        pod_1.with_ip_conf = {
+            'public_ip': res['public_ip'],
+            'containers': [{'ports': [{'isPublic': True}]}],
+        }
+        pod_1.without_ip_conf = {
+            'public_ip_before_freed': res['public_ip'],
+            'containers': [{'ports': [{'isPublic_before_freed': True}]}],
+        }
+
+        # pod-2
+        res = PodCollection(user).add(dict(min_pod, name='pod-2'), skip_check=False)
+        pod_2 = Pod.query.get(res['id'])
+        pod_2.with_ip_conf = {
+            'public_ip': res['public_ip'],
+            'containers': [{'ports': [{'isPublic': True}]}],
+        }
+        pod_2.without_ip_conf = {
+            'public_ip_before_freed': res['public_ip'],
+            'containers': [{'ports': [{'isPublic_before_freed': True}]}],
+        }
+
+        # helpers
+        def _has_public_ip(pod):
+            podip = PodIP.query.filter_by(pod_id=pod.id).first()
+            conf = pod.get_dbconfig()
+            port = conf['containers'][0]['ports'][0]
+            if podip is None:
+                self.assertFalse(port.get('isPublic'))
+                self.assertFalse(conf.get('public_ip'))
+                self.assertTrue(port.get('isPublic_before_freed'))
+                self.assertTrue(conf.get('public_ip_before_freed'))
+                return False
+            self.assertFalse(port.get('isPublic_before_freed'))
+            self.assertFalse(conf.get('public_ip_before_freed'))
+            self.assertTrue(port.get('isPublic'))
+            self.assertEqual(conf.get('public_ip'), unicode(ip_address(podip.ip_address)))
+            return True
+
+        def _count_pods_with_public_ip():
+            return _has_public_ip(pod_1) + _has_public_ip(pod_2)
+
+        # suspend user. Both ip must be freed
+        self.assertEqual(_count_pods_with_public_ip(), 2,
+                         'all pods must have public ip in the beginning')
+        data = {'suspended': True}
+        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
+        self.assert200(response)
+
+        self.assertEqual(_count_pods_with_public_ip(), 0,
+                         'all pods must lose public ip')
+
+        # unsuspend must be atomic, so if one pod cannot get public ip, all won't
+        ippool.block_ip(ippool.free_hosts(as_int=True)[0])
+        db.session.commit()
+
+        data = {'suspended': False}
+        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
+        self.assert500(response)
+        self.assertDictContainsSubset({'type': 'UserUpdateError'}, response.json)
+        self.assertEqual(_count_pods_with_public_ip(), 0, "operation must be "
+                         "atomic, so if one pod can't get public ip, all won't")
+
+        # unblock ip in ippool to be able to unsuspend user
+        ippool.unblock_ip(ippool.get_blocked_set(as_int=True).pop())
+        db.session.commit()
+
+        data = {'suspended': False}
+        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
+        self.assert200(response)
+        self.assertEqual(_count_pods_with_public_ip(), 2,
+                         'all pods must get their ip back')
 
 
 if __name__ == '__main__':

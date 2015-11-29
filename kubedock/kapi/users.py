@@ -1,14 +1,14 @@
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from ..core import db
-from ..utils import APIError
+from ..utils import APIError, atomic
 from ..validation import UserValidator
 from ..billing.models import Package
 from ..pods.models import Pod
 from ..rbac.models import Role
 from ..users.models import User
 from ..users.utils import enrich_tz_with_offset
-from .podcollection import PodCollection
+from .podcollection import PodCollection, POD_STATUSES
 from .pstorage import get_storage_class
 
 
@@ -50,6 +50,7 @@ class UserCollection(object):
         data.update({'id': user.id})
         return data
 
+    @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'), nested=False)
     @enrich_tz_with_offset(['timezone'])
     def update(self, user, data):
         """Update user
@@ -86,14 +87,25 @@ class UserCollection(object):
                 if user.pods.filter(Pod.kube_id.in_(kubes_in_old_only)).first() is not None:
                     raise APIError("New package doesn't have kube_types of some "
                                    "of user's pods")
-
             data['package'] = p
+
+        if 'suspended' in data and data['suspended'] != user.suspended and user.active:
+            if data['suspended']:
+                self._suspend_user(user)
+            else:
+                self._unsuspend_user(user)
+            user.suspended = data.pop('suspended')
+
+        if 'active' in data and data['active'] != user.active:
+            if data['active']:
+                if not user.suspended:
+                    self._unsuspend_user(user)
+            else:
+                user.logout(commit=False)
+                if not user.suspended:
+                    self._suspend_user(user)
+
         user.update(data)
-        try:
-            user.save()
-        except (IntegrityError, InvalidRequestError), e:
-            db.session.rollback()
-            raise APIError('Cannot update a user: {0}'.format(str(e)))
 
     @enrich_tz_with_offset(['timezone'])
     def update_profile(self, user, data):
@@ -122,7 +134,7 @@ class UserCollection(object):
         """
         user = self._convert_user(user)
         uid = user.id
-        user.logout()
+        user.logout(commit=False)
 
         pod_collection = PodCollection(user)
         for pod in pod_collection.get(as_json=False):
@@ -175,3 +187,19 @@ class UserCollection(object):
         if result is None:
             raise APIError('User "{0}" doesn\'t exist'.format(user), 404)
         return result
+
+    @staticmethod
+    @atomic()
+    def _suspend_user(user):
+        pod_collection = PodCollection(user)
+        for pod in pod_collection.get(as_json=False):
+            if pod.get('status') != POD_STATUSES.stopped:
+                pod_collection.update(pod['id'], {'command': 'stop'})
+            pod_collection._remove_public_ip(pod_id=pod['id'])
+
+    @staticmethod
+    @atomic()
+    def _unsuspend_user(user):
+        pod_collection = PodCollection(user)
+        for pod in pod_collection.get(as_json=False):
+            pod_collection._return_public_ip(pod['id'])

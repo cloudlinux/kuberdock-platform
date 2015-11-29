@@ -170,13 +170,14 @@ class IpState(BaseModelMixin, db.Model):
     @classmethod
     def start(cls, pod_id, ip_address):
         cls.end(pod_id, ip_address)  # just to make sure
-        cls(pod_id=pod_id, ip_address=ip_address, start_time=datetime.utcnow()).save()
+        db.session.add(cls(pod_id=pod_id, start_time=datetime.utcnow(),
+                           ip_address=int(ipaddress.ip_address(ip_address))))
 
     @classmethod
     def end(cls, pod_id, ip_address):
-        cls.query.filter_by(pod_id=pod_id, ip_address=ip_address, end_time=None)\
+        cls.query.filter_by(pod_id=pod_id, end_time=None,
+                            ip_address=int(ipaddress.ip_address(ip_address)))\
             .update({'end_time': datetime.utcnow()})
-        db.session.commit()
 
     def to_dict(self):
         return {'pod_id': self.pod_id,

@@ -271,7 +271,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def kubes(self):
         return sum([pod.kubes for pod in self.pods if not pod.is_deleted])
 
-    def logout(self):
+    def logout(self, commit=True):
         for session in SessionData.query.all():
             randval, hmac_digest, data = session.expand_data()
             if not data:
@@ -288,9 +288,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 # new_data['remember'] = 'clear'
                 session.data = randval, hmac_digest, new_data
 
-        db.session.commit()
-
-        user_logged_out.send(self.id)
+        user_logged_out.send(self.id, commit=False)
+        if commit:
+            db.session.commit()
 
     def __repr__(self):
         return "<User(username='{0}', email='{1}')>".format(self.username, self.email)
@@ -401,6 +401,9 @@ class SessionData(db.Model):
 
 #####################
 ### Users signals ###
+# TODO: by default signals shouldn't commit. It will break transaction in
+# the place where signal was sent.
+
 @user_logged_in.connect
 def user_logged_in_signal(args):
     user_id, remote_ip = args
@@ -411,10 +414,10 @@ def user_logged_in_signal(args):
 
 
 @user_logged_out.connect
-def user_logged_out_signal(user_id):
+def user_logged_out_signal(user_id, commit=True):
     # current_app.logger.debug('user_logged_out_signal {0}'.format(user_id))
     ua = UserActivity.create(action=UserActivity.LOGOUT, user_id=user_id)
-    ua.save()
+    ua.save(deferred_commit=not commit)
 
 
 @user_logged_in_by_another.connect

@@ -4,10 +4,13 @@ import sys
 import unittest
 import json
 import copy
+import ipaddress
 from random import randrange, choice
 
 from uuid import uuid4
 from collections import namedtuple
+
+from kubedock.testutils.testcases import DBTestCase
 
 from ..pod import Pod
 from .. import podcollection
@@ -221,7 +224,7 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         self.app.delete(str(uuid4()))
         self.assertTrue(unbind_.called)
 
-    @mock.patch.object(podcollection.ModelQuery, '_free_ip')
+    @mock.patch.object(podcollection.PodCollection, '_remove_public_ip')
     @mock.patch('kubedock.kapi.podcollection.current_app')
     def test_pod_assigned_IPs_are_marked_as_free(self, ca_, free_):
         """
@@ -248,7 +251,7 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         # Making actual call
         self.app.delete(str(uuid4()))
 
-        self.assertTrue(free_.called, "pod._free_ip is expected to be called")
+        self.assertTrue(free_.called, "pod._remove_public_ip is expected to be called")
 
     @mock.patch('kubedock.kapi.podcollection.current_app')
     @mock.patch.object(podcollection.PodCollection, '_drop_namespace')
@@ -1417,6 +1420,67 @@ class TestPodCollectionUpdateContainer(unittest.TestCase, TestCaseMixin):
         get_by_id_mock.assert_called_once_with(pod_id)
         stop_pod_mock.assert_called_once_with(pod)
         start_pod_mock.assert_called_once_with(pod)
+
+
+# TODO: AC-1662 unbind ip from nodes and delete service
+class TestRemoveAndReturnIP(DBTestCase):
+    def setUp(self):
+        from kubedock.pods.models import PodIP, IPPool
+        self.ip = ipaddress.ip_address(u'192.168.43.4')
+        self.with_ip_conf = {
+            'public_ip': unicode(self.ip),
+            'containers': [
+                {'ports': [{'isPublic': True}, {}, {'isPublic': False}]},
+                {'ports': [{'isPublic': True}, {}, {'isPublic': False}]},
+            ],
+        }
+        self.without_ip_conf = {
+            'public_ip_before_freed': unicode(self.ip),
+            'containers': [
+                {'ports': [{'isPublic_before_freed': True},
+                           {'isPublic_before_freed': None},
+                           {'isPublic_before_freed': False}]},
+                {'ports': [{'isPublic_before_freed': True},
+                           {'isPublic_before_freed': None},
+                           {'isPublic_before_freed': False}]},
+            ],
+        }
+        self.pod = self.fixtures.pod(config=json.dumps(self.with_ip_conf))
+        self.ippool = IPPool(network='192.168.43.0/29').save()
+        self.podip = PodIP(pod_id=self.pod.id, network=self.ippool.network,
+                           ip_address=int(self.ip)).save()
+
+    def _check_returned(self):
+        from kubedock.pods.models import PodIP
+        self.assertIsNotNone(PodIP.query.filter_by(pod=self.pod))
+
+    def _check_removed_and_retrun_back(self):
+        self.db.session.expire_all()
+        self.assertEqual(self.pod.get_dbconfig(), self.without_ip_conf)
+        self.assertTrue(self.db.inspect(self.podip).deleted)
+        podcollection.PodCollection._return_public_ip(pod_id=self.pod.id)
+        self._check_returned()
+
+    def test_remove_public_ip_by_pod_id(self):
+        podcollection.PodCollection._remove_public_ip(pod_id=self.pod.id)
+        self._check_removed_and_retrun_back()
+
+    def test_remove_public_ip_by_ip(self):
+        podcollection.PodCollection._remove_public_ip(ip=int(self.ip))
+        self._check_removed_and_retrun_back()
+
+    def test_remove_public_ip_by_both(self):
+        podcollection.PodCollection._remove_public_ip(pod_id=self.pod.id, ip=int(self.ip))
+        self._check_removed_and_retrun_back()
+
+    def test_failed_to_retrun(self):
+        podcollection.PodCollection._remove_public_ip(pod_id=self.pod.id, ip=int(self.ip))
+        self.ippool.block_ip(self.ippool.hosts(as_int=True))
+        with self.assertRaises(Exception):
+            podcollection.PodCollection._return_public_ip(pod_id=self.pod.id)
+        self.ippool.unblock_ip(self.ippool.hosts(as_int=True))
+        self.db.session.flush()
+        self._check_removed_and_retrun_back()
 
 
 if __name__ == '__main__':

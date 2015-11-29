@@ -1,10 +1,9 @@
-import ipaddress
 import json
 import random
 import requests
 import string
 from ..core import db
-from ..pods.models import Pod, PodIP
+from ..pods.models import Pod
 #from ..users.models import User
 #from ..users.signals import user_get_setting, user_set_setting
 from ..api import APIError
@@ -120,26 +119,6 @@ class ModelQuery(object):
             raise APIError("Conflict. Pod with name = '{0}' already exists. "
                            "Try another name.".format(self.name),
                            status_code=409)
-
-    def _free_ip(self, ip=None, pod_id=None):
-        if hasattr(self, 'public_ip'):
-            ip = self.public_ip
-        if ip is not None:
-            podip = PodIP.filter_by(ip_address=int(ipaddress.ip_address(ip)))
-            if pod_id is not None:  # free ip only if it's attached to this pod
-                podip = podip.filter_by(pod_id=pod_id)
-            podip = podip.first()
-            if podip is None:
-                return
-
-            pod = podip.pod
-            pod_config = pod.get_dbconfig()
-            pod_config.pop('public_ip', None)
-            for container in pod_config['containers']:
-                for port in container['ports']:
-                    port.pop('isPublic', None)
-            pod.set_dbconfig(pod_config, False)
-            podip.delete()
 
     def _mark_pod_as_deleted(self, pod_id):
         p = db.session.query(Pod).get(pod_id)

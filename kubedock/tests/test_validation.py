@@ -245,5 +245,19 @@ class TestUserEditValidation(TestUserCreateValidation):
     def assertRequired(self, *args, **kwargs):  # partial update allowed
         pass
 
+
+class TestExtbool(unittest.TestCase):
+    def test(self):
+        for value in (True, 'true', 'TruE', 'YeS', '1', 'y', 't', 'on'):
+            self.assertIsInstance(validation.extbool(value), bool)
+            self.assertTrue(validation.extbool(value))
+        for value in (False, 'false', 'FalSe', 'nO', '0', 'n', 'f', 'off'):
+            self.assertIsInstance(validation.extbool(value), bool)
+            self.assertFalse(validation.extbool(value))
+        with self.assertRaises(ValueError):
+            validation.extbool('invalid')
+        with self.assertRaises(TypeError):
+            validation.extbool({'a': 2})
+
 if __name__ == '__main__':
     test = unittest.main()

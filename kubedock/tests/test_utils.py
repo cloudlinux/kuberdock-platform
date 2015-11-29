@@ -6,6 +6,7 @@ import unittest
 import flask
 import mock
 
+from ..testutils.testcases import DBTestCase
 from ..utils import (
     APIError,
     get_api_url,
@@ -27,6 +28,139 @@ from ..utils import (
     unbind_ip,
     get_timezone,
 )
+
+
+class TestAtomic(DBTestCase):
+    class TargetAPIEror(APIError):
+        """Some APIError inside target code"""
+
+    class CreatePackageError(APIError):
+        """Common error that should be rised instead of any non-`APIError`"""
+        status_code = 500
+        message = "Couldn't create package."
+
+    def setUp(self):
+        from kubedock.utils import atomic
+        from kubedock.billing.models import Package
+
+        self.Package = Package
+        self.atomic = atomic
+
+        self.total_before = len(self.Package.query.all())
+        self.current_transaction = self.db.session.begin_nested()
+
+    def _target_with_exception(self):
+        self.db.session.begin_nested()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        self.db.session.commit()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        raise Exception('Exception inside target code')
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+
+    def _target_with_APIError(self):
+        self.db.session.begin_nested()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        self.db.session.commit()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        raise self.TargetAPIEror('APIError inside target code')
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+
+    def _target_without_exception(self):
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+
+        self.db.session.begin_nested()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        self.db.session.rollback()
+
+        self.db.session.begin_nested()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        self.db.session.commit()
+
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+
+    def test_with_exception(self):
+        """If some non-`APIError` was rised, raise `CreatePackageError` instead.
+
+        Also, rollback all changes.
+        """
+
+        with self.assertRaises(self.CreatePackageError):
+            with self.atomic(self.CreatePackageError()):
+                self._target_with_exception()
+
+        # Nothing's changed
+        self.assertEqual(self.total_before, len(self.Package.query.all()))
+        # Current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
+    def test_with_api_error(self):
+        """If some `APIError` was rised, don't stop it, but rollback all changes."""
+        with self.assertRaises(self.TargetAPIEror):  # original exception
+            with self.atomic(self.CreatePackageError()):
+                self._target_with_APIError()
+
+        # Nothing's changed
+        self.assertEqual(self.total_before, len(self.Package.query.all()))
+        # Current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
+    def test_ok(self):
+        """If everything is ok, preserve changes."""
+        with self.atomic(self.CreatePackageError()):
+            self._target_without_exception()
+
+        # There are some changes
+        self.assertEqual(self.total_before + 3, len(self.Package.query.all()))
+        # But current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
+    def test_ok_and_commit_current_transaction(self):
+        """If everything is ok, preserve changes and commit current transaction."""
+        with self.atomic(self.CreatePackageError(), nested=False):
+            self._target_without_exception()
+
+        # There are some changes
+        self.assertEqual(self.total_before + 3, len(self.Package.query.all()))
+        # Current thansaction was commited
+        self.assertFalse(self.current_transaction.is_active)
+
+    def test_ok_as_decrator(self):
+        """Test decorator form."""
+        decorator = self.atomic(self.CreatePackageError())
+        decorator(self._target_without_exception)()
+
+        # There are some changes
+        self.assertEqual(self.total_before + 3, len(self.Package.query.all()))
+        # But current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
+    def test_ok_and_commit_current_transaction_as_decrator(self):
+        """
+        Parameter `commit` in decorated function must override parameter `nested`
+        in `atomic` decorator.
+        """
+        decorator = self.atomic(self.CreatePackageError())
+        decorator(self._target_without_exception)(commit=True)
+
+        # There are some changes
+        self.assertEqual(self.total_before + 3, len(self.Package.query.all()))
+        # Current thansaction was commited
+        self.assertFalse(self.current_transaction.is_active)
+
+    def test_nested(self):
+        """Test nested usage."""
+        with self.assertRaises(self.TargetAPIEror):  # original exception
+            with self.atomic(self.CreatePackageError()):
+                with self.atomic(self.CreatePackageError()):
+                    with self.atomic(self.CreatePackageError()):
+                        self._target_without_exception()
+                    self._target_with_APIError()
+                self._target_without_exception()
+
+        # Nothing's changed
+        self.assertEqual(self.total_before, len(self.Package.query.all()))
+        # Current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
 
 
 class TestUtilsGetApiUrl(unittest.TestCase):

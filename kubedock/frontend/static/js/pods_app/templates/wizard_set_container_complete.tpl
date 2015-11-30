@@ -75,7 +75,7 @@
                     <thead>
                        <tr>
                            <th class="col-xs-5 no-padding">Name</th>
-                           <th class="col-xs-4 no-padding">Kybe</th>
+                           <th class="col-xs-4 no-padding">Number of kubes</th>
                            <th class="col-xs-2 no-padding">Price</th>
                            <th class="col-xs-1 no-padding"></th>
                        </tr>
@@ -97,7 +97,7 @@
                         <% }) %>
                         <% if (isPublic) { %>
                             <tr>
-                                <td><b>IP Adress:</b></td>
+                                <td><b>IP Address:</b></td>
                                 <td></td>
                                 <td><span id="ipaddress_price"><%- price_ip %> / <%- package.period %></td>
                                 <td></td>

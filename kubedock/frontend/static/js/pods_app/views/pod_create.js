@@ -498,9 +498,10 @@ define(['pods_app/app',
                 var tgt = $(evt.target),
                     volumes = this.pod.get('volumes');
                 if (this.hasOwnProperty('showPersistentAdd')) {
-                    var cells = tgt.closest('div').children('span'),
-                        pdName = cells.eq(0).children('input').first().val().trim(),
-                        pdSize = parseInt(cells.eq(1).children('input').first().val().trim());
+                    var cells = tgt.closest('tr').children('td');
+                        console.log(cells);
+                    var pdName = cells.eq(2).find('input').first().val().trim(),
+                        pdSize = parseInt(cells.eq(3).find('input').first().val().trim());
                     if (!pdName || !pdSize) return;
                     if (this.hasOwnProperty('currentIndex')) {
                         var vmEntry = this.model.get('volumeMounts')[this.currentIndex],

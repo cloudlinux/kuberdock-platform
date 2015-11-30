@@ -92,11 +92,6 @@ def get_all_nodes():
     return r.json().get('items') or []
 
 
-def get_node_by_host(host):
-    r = requests.get(get_api_url('nodes', host, namespace=False))
-    return r.json()
-
-
 def remove_node_by_host(host):
     r = requests.delete(get_api_url('nodes', host, namespace=False))
     return r.json()

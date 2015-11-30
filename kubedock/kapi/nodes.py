@@ -6,10 +6,12 @@ import socket
 from functools import wraps
 from datetime import datetime
 
+import requests
 from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
+from flask import current_app
 
-from ..utils import send_event, from_binunit, run_ssh_command
+from ..utils import send_event, from_binunit, run_ssh_command, get_api_url
 from ..core import db
 from ..nodes.models import Node, NodeFlag, NodeFlagNames, NodeMissedAction
 from ..pods.models import Pod
@@ -256,7 +258,7 @@ def get_one_node(node_id):
         raise APIError("Error. Node {0} doesn't exists".format(node_id),
                        status_code=404)
 
-    res = tasks.get_node_by_host(m.hostname)
+    res = _get_k8s_node_by_host(m.hostname)
     if res['status'] == 'Failure':
         raise APIError(
             "Error. Node exists in db but don't exists in kubernetes",
@@ -306,8 +308,21 @@ def redeploy_node(node_id):
     """Initiates node redeployment procedure."""
     node = Node.get_by_id(node_id)
     if not node:
-        raise APIError('Node not found')
+        raise APIError('Node not found', 404)
     tasks.add_new_node.delay(node.id, redeploy=True)
+
+
+def _get_k8s_node_by_host(host):
+    try:
+        r = requests.get(get_api_url('nodes', host, namespace=False))
+        res = r.json()
+        if not isinstance(res, dict) or 'status' not in res:
+            raise Exception(u'Invalid response: {}'.format(res))
+    except:
+        current_app.logger.exception('Failed to get node "%s" from kubernetes',
+                                     host)
+        return {'status': 'Failure'}
+    return res
 
 
 def _fix_missed_nodes(nodes, kuberenetes_nodes_hosts):
@@ -355,14 +370,14 @@ def _node_is_active(x):
     try:
         cond = _get_node_condition(x)
         return cond['type'] == 'Ready' and cond['status'] == 'True'
-    except KeyError:
+    except (TypeError, KeyError):
         return False
 
 
 def _get_node_condition(x):
     try:
         return x['status']['conditions'][0]
-    except KeyError:
+    except (TypeError, KeyError, IndexError):
         return {}
 
 

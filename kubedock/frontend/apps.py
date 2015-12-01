@@ -135,9 +135,9 @@ def get_defaults(app, mutables, kubes,
 
 
 def generate(length=8):
-    return ''.join(
-        random.choice(string.lowercase+string.digits+string.uppercase)
-            for i in range(length))
+    rv = ''.join(random.choice(string.lowercase+string.digits)
+                 for i in range(length-1))
+    return random.choice(string.lowercase) + rv
 
 
 def find_custom(text):

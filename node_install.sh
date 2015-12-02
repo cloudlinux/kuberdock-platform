@@ -328,17 +328,21 @@ EOF
 
 
 # 9. flush iptables rules and make new ones
+# get first interface from found ones
+FIRST_IFACE=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;exit}}')
+# get this interface ip address
+FIRST_IP=$(ip -o -4 address show $FIRST_IFACE|awk '/inet/ {sub(/\/.*$/, "", $4); print $4;exit;}')
 
 iptables -F
 
 for PORT in $(echo $PORTS|tr "," "\n");do
-    iptables -C INPUT -p tcp --dport $PORT -j REJECT > /dev/null 2>&1 || iptables -I INPUT -p tcp --dport $PORT -j REJECT
+    iptables -C INPUT -d $FIRST_IP -p tcp --dport $PORT -j REJECT > /dev/null 2>&1 || iptables -I INPUT -d $FIRST_IP -p tcp --dport $PORT -j REJECT
 done
 
 for PORT in $(echo $PORTS|tr "," "\n");do
-    iptables -C INPUT -p tcp -s $MASTER_IP --dport $PORT -j ACCEPT > /dev/null 2>&1 || iptables -I INPUT -p tcp -s $MASTER_IP --dport $PORT -j ACCEPT
+    iptables -C INPUT -p tcp -s $MASTER_IP -d $FIRST_IP --dport $PORT -j ACCEPT > /dev/null 2>&1 || iptables -I INPUT -p tcp -s $MASTER_IP -d $FIRST_IP --dport $PORT -j ACCEPT
     for IP in $(echo $IPS|tr "," "\n");do
-        iptables -C INPUT -p tcp -s $IP --dport $PORT -j ACCEPT > /dev/null 2>&1 || iptables -I INPUT -p tcp -s $IP --dport $PORT -j ACCEPT
+        iptables -C INPUT -p tcp -s $IP -d $FIRST_IP --dport $PORT -j ACCEPT > /dev/null 2>&1 || iptables -I INPUT -p tcp -s $IP -d $FIRST_IP --dport $PORT -j ACCEPT
     done
 done
 

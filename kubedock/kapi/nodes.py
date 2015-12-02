@@ -660,23 +660,31 @@ def process_rule(**kw):
     kw['action'] = {'insert': 'I', 'append': 'A', 'delete': 'D'}[action]
     kw['conj'] = {'insert': '||', 'append': '||', 'delete': '&&'}[action]
 
+    getnodeip = ('FIRST_IFACE=$(ip -o link show |'
+                 'awk -F: \'$3 ~ /LOWER_UP/ {gsub(/ /, "", $2);'
+                 'if ($2 != "lo"){print $2;exit}}\');'
+                 'FIRST_IP=$(ip -o -4 address show $FIRST_IFACE|'
+                 'awk \'/inet/ {sub(/\/.*$/, "", $4);'
+                 'print $4;exit;}\'); export $FIRST_IP;'
+                 'echo $FIRST_IP > /tmp/qqqq;')
+
     cmd = ('iptables -C INPUT -p tcp --dport {port}'
-           '{source} -j {target} > /dev/null 2>&1 '
+           '{source} -d $FIRST_IP -j {target} > /dev/null 2>&1 '
            '{conj} iptables -{action} INPUT -p tcp --dport {port}'
-           '{source} -j {target}')
+           '{source} -d $FIRST_IP -j {target}')
 
     try:
-        run(cmd.format(**kw))
+        run(getnodeip + cmd.format(**kw))
         if append_reject:
-            run(cmd.format(
+            run(getnodeip + cmd.format(
                 action='A', port=kw['port'], source='',
                 target='REJECT', conj='||'
             ))
         run('/sbin/service iptables save')
     except Exception:
-        message = ERROR_TOKEN + cmd.format(**kw) + ';'
+        message = ERROR_TOKEN + getnodeip + cmd.format(**kw) + ';'
         if append_reject:
-            message += (cmd.format(
+            message += (getnodeip + cmd.format(
                 action='A', port=kw['port'], source='',
                 target='REJECT', conj='||') + ';'
             )

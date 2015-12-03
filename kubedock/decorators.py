@@ -5,7 +5,7 @@ from flask.ext.login import current_user
 
 from .updates.helpers import get_maintenance
 from .users import User
-from .utils import APIError, get_user_role
+from .utils import APIError, PermissionDenied, NotAuthorized, get_user_role
 
 
 def login_required_or_basic_or_token(func):
@@ -28,9 +28,9 @@ def login_required_or_basic_or_token(func):
                     authenticated_user = User.query.filter_by(token=token).first()
 
             if authenticated_user is None or authenticated_user.deleted:
-                raise APIError('Not Authorized', status_code=401)
+                raise NotAuthorized()
             if not authenticated_user.active:
-                raise APIError('User is in inactive status', status_code=403)
+                raise PermissionDenied('User is in inactive status')
             g.user = authenticated_user
         return func(*args, **kwargs)
     return decorated_view

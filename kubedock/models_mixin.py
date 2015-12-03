@@ -3,8 +3,14 @@ from .core import db
 
 
 class BaseModelMixin(object):
-    def to_dict(self, include=None, exclude=None):
-        raise NotImplemented
+    def to_dict(self, include=None, exclude=()):
+        """Convert all model's columns to dict."""
+        data = {field: getattr(self, field)
+                for field in self.__mapper__.columns.keys()
+                if field not in exclude}
+        if include:
+            data.update(include)
+        return data
 
     def to_json(self, include=None, exclude=None):
         return json.dumps(self.to_dict(include=include, exclude=exclude))

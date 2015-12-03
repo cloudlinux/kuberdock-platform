@@ -5,7 +5,7 @@ import paramiko
 import redis
 from sse import Sse
 from paramiko.ssh_exception import AuthenticationException, SSHException
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_sqlalchemy_fix import SQLAlchemy
 from flask.ext.influxdb import InfluxDB
 from flask.ext.login import LoginManager
 from flask import current_app

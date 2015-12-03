@@ -1,14 +1,15 @@
 import unittest
 import base64
 import os
+import logging
 from datetime import timedelta
 from json import dumps as json_dumps
 
 from nose.plugins.attrib import attr
-from flask_sqlalchemy import SignallingSession, orm
 from flask_testing import TestCase as FlaskBaseTestCase
 
 from . import create_app, fixtures
+from kubedock import utils
 from kubedock.core import db
 
 
@@ -48,14 +49,14 @@ class DBTestCase(FlaskTestCase):
         return create_app(self)
 
     def run(self, *args, **kwargs):
-        with self._transaction:
-            try:
-                super(DBTestCase, self).run(*args, **kwargs)
-            finally:
-                self._transaction.rollback()
+        try:
+            super(DBTestCase, self).run(*args, **kwargs)
+        finally:
+            self._transaction.rollback()
         self._transaction.connection.invalidate()
         self._transaction.connection.close()
         self.db.session.remove()
+        self.db.engine.dispose()
 
     def _pre_setup(self, *args, **kwargs):
         super(DBTestCase, self)._pre_setup(*args, **kwargs)
@@ -67,17 +68,8 @@ class DBTestCase(FlaskTestCase):
         connection = db.engine.connect()
         self._transaction = connection.begin()
 
-        # Can't use just
-        # db.session = db.create_scoped_session(bind=connection)
-        # 'cause Flask-SQLAlchemy has a bug: it creates sessions without
-        # orm.sessionmaker. See:
-        # https://github.com/mitsuhiko/flask-sqlalchemy/issues/182
-        # https://github.com/mitsuhiko/flask-sqlalchemy/issues/147
-        class TestSignallingSession(SignallingSession):
-            def __init__(self, *args, **kwargs):
-                kwargs = dict(kwargs, bind=connection)
-                super(TestSignallingSession, self).__init__(db, *args, **kwargs)
-        db.session = orm.scoped_session(orm.sessionmaker(class_=TestSignallingSession))
+        db.session = db.create_scoped_session({'bind': connection})
+        utils.atomic.register()
 
         # To prevent closing root transaction, start the session in a SAVEPOINT...
         db.session.begin_nested()
@@ -108,6 +100,14 @@ class APITestCase(DBTestCase):
             sessions.DataBaseSessionManager(self.SECRET_KEY), [], timedelta(days=1))
         acl.init_permissions()
 
+        self.user, user_password = fixtures.user_fixtures()
+        self.admin, admin_password = fixtures.admin_fixtures()
+        self.userauth = (self.user.username, user_password)
+        self.adminauth = (self.admin.username, admin_password)
+
+        self.logger = logging.getLogger('APITestCase.open')
+        self.logger.setLevel(logging.DEBUG)
+
     def open(self, url=None, method='GET', json=None, auth=None, headers=None, **kwargs):
         if url is None:
             url = getattr(self, 'url', '/')
@@ -118,11 +118,28 @@ class APITestCase(DBTestCase):
                 '{0}:{1}'.format(*auth)
             )
         if json is not None:
-            data = json_dumps(json)
-            return self.client.open(url, method=method, data=data, headers=headers,
-                                    content_type='application/json', **kwargs)
+            kwargs.setdefault('data', json_dumps(json))
+            kwargs.setdefault('content_type', 'application/json')
+        response = self.client.open(url, method=method, headers=headers, **kwargs)
+        self.logger.debug('{0}:{1}\n\t{2}\n{3}: {4}'
+                          .format(url, method, json, response.status, response.data))
+        return response
 
-        return self.client.open(url, method=method, headers=headers, **kwargs)
+    def item_url(self, *args):
+        return '/'.join(map(str, (self.url,) + args))
+
+    def assertAPIError(self, response, status, type):
+        self.assertStatus(response, status)
+        msg = 'Wrong response: {0} expected. Got: {1}'.format(type, response.json)
+        self.assertEqual(response.json.get('type'), type, msg)
+
+    def admin_open(self, *args, **kwargs):
+        """Open as admin with permission check"""
+        self.assertAPIError(self.open(*args, **dict(kwargs, auth=None)),
+                            401, 'NotAuthorized')
+        self.assertAPIError(self.open(*args, **dict(kwargs, auth=self.userauth)),
+                            403, 'PermissionDenied')
+        return self.open(*args, **dict(kwargs, auth=self.adminauth))
 
 
 if __name__ == '__main__':

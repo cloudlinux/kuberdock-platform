@@ -21,6 +21,10 @@ from .users.utils import strip_offset_from_timezone
 SUPPORTED_VOLUME_TYPES = ['persistentDisk', 'localStorage']
 
 
+class ValidationError(APIError):
+    pass
+
+
 # Coerce functions
 
 
@@ -136,7 +140,7 @@ name_schema = {
     }
 }
 
-create_user_schema = {
+user_schema = {
     'username': {
         'type': 'username',
         'required': True,
@@ -478,8 +482,8 @@ package_schema = {
     'currency': {'type': 'string', 'maxlength': 16, 'empty': False},
     'period': {'type': 'string', 'maxlength': 16, 'empty': False,
                'allowed': ['hour', 'month', 'quarter', 'annuel']},
-    'prefix': {'type': 'string'},
-    'suffix': {'type': 'string'},
+    'prefix': {'type': 'string', 'maxlength': 16},
+    'suffix': {'type': 'string', 'maxlength': 16},
     'price_ip': positive_float_schema,
     'price_pstorage': positive_float_schema,
     'price_over_traffic': positive_float_schema,
@@ -551,7 +555,7 @@ class V(cerberus.Validator):
     def _api_validation(self, data, schema, **kwargs):
         validated = self.validated(data, schema, **kwargs)
         if validated is None:
-            raise APIError(self.errors)
+            raise ValidationError(self.errors)
         return validated
 
     def _validate_regex(self, re_obj, field, value):
@@ -809,14 +813,14 @@ class UserValidator(V):
 
     def validate_user_create(self, data):
         data = _clear_timezone(data, ['timezone'])
-        return self._api_validation(data, create_user_schema)
+        return self._api_validation(data, user_schema)
 
     def validate_user_update(self, data):
         data = _clear_timezone(data, ['timezone'])
-        data = self._api_validation(data, create_user_schema, update=True)
+        data = self._api_validation(data, user_schema, update=True)
         if self.allow_unknown:  # filter unknown
             return {key: value for key, value in data.iteritems()
-                    if key in create_user_schema}
+                    if key in user_schema}
         return data
 
     def _validate_type_username(self, field, value):

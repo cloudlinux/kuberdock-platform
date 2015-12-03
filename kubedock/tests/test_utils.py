@@ -9,6 +9,7 @@ import mock
 from ..testutils.testcases import DBTestCase
 from ..utils import (
     APIError,
+    atomic,
     get_api_url,
     compose_dnat,
     compose_mark,
@@ -40,14 +41,16 @@ class TestAtomic(DBTestCase):
         message = "Couldn't create package."
 
     def setUp(self):
-        from kubedock.utils import atomic
         from kubedock.billing.models import Package
 
         self.Package = Package
-        self.atomic = atomic
 
         self.total_before = len(self.Package.query.all())
         self.current_transaction = self.db.session.begin_nested()
+
+        patcher = mock.patch('kubedock.utils.current_app')
+        self.addCleanup(patcher.stop)
+        self.app_logger = patcher.start().logger
 
     def _target_with_exception(self):
         self.db.session.begin_nested()
@@ -78,15 +81,26 @@ class TestAtomic(DBTestCase):
 
         self.db.session.add(self.Package(name=self.fixtures.randstr()))
 
-    def test_with_exception(self):
-        """If some non-`APIError` was rised, raise `CreatePackageError` instead.
+    def _target_with_commit(self):
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        self.db.session.commit()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
 
-        Also, rollback all changes.
+    def _target_with_rollback(self):
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+        self.db.session.rollback()
+        self.db.session.add(self.Package(name=self.fixtures.randstr()))
+
+    def test_with_exception(self):
+        """
+        If some non-`APIError` was rised, rollback all changes,
+        and raise `CreatePackageError` instead.
         """
 
         with self.assertRaises(self.CreatePackageError):
-            with self.atomic(self.CreatePackageError()):
+            with atomic(self.CreatePackageError()):
                 self._target_with_exception()
+        self.assertEqual(self.app_logger.warn.call_count, 1)
 
         # Nothing's changed
         self.assertEqual(self.total_before, len(self.Package.query.all()))
@@ -96,7 +110,7 @@ class TestAtomic(DBTestCase):
     def test_with_api_error(self):
         """If some `APIError` was rised, don't stop it, but rollback all changes."""
         with self.assertRaises(self.TargetAPIEror):  # original exception
-            with self.atomic(self.CreatePackageError()):
+            with atomic(self.CreatePackageError()):
                 self._target_with_APIError()
 
         # Nothing's changed
@@ -106,7 +120,7 @@ class TestAtomic(DBTestCase):
 
     def test_ok(self):
         """If everything is ok, preserve changes."""
-        with self.atomic(self.CreatePackageError()):
+        with atomic(self.CreatePackageError()):
             self._target_without_exception()
 
         # There are some changes
@@ -116,7 +130,7 @@ class TestAtomic(DBTestCase):
 
     def test_ok_and_commit_current_transaction(self):
         """If everything is ok, preserve changes and commit current transaction."""
-        with self.atomic(self.CreatePackageError(), nested=False):
+        with atomic(self.CreatePackageError(), nested=False):
             self._target_without_exception()
 
         # There are some changes
@@ -126,7 +140,7 @@ class TestAtomic(DBTestCase):
 
     def test_ok_as_decrator(self):
         """Test decorator form."""
-        decorator = self.atomic(self.CreatePackageError())
+        decorator = atomic(self.CreatePackageError())
         decorator(self._target_without_exception)()
 
         # There are some changes
@@ -139,7 +153,7 @@ class TestAtomic(DBTestCase):
         Parameter `commit` in decorated function must override parameter `nested`
         in `atomic` decorator.
         """
-        decorator = self.atomic(self.CreatePackageError())
+        decorator = atomic(self.CreatePackageError())
         decorator(self._target_without_exception)(commit=True)
 
         # There are some changes
@@ -147,14 +161,38 @@ class TestAtomic(DBTestCase):
         # Current thansaction was commited
         self.assertFalse(self.current_transaction.is_active)
 
+    def test_main_transaction_commited(self):
+        """Prevent main transaction from beeng commited inside of atomic block."""
+        with self.assertRaises(atomic.UnexpectedCommit):
+            with atomic():
+                self._target_with_commit()
+        # Nothing's changed
+        self.assertEqual(self.total_before, len(self.Package.query.all()))
+        # Current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
+    def test_main_transaction_rolled_back(self):
+        """
+        Raise an exception if main transaction was rolled back
+        inside of atomic block
+        """
+        with self.assertRaises(atomic.UnexpectedRollback):
+            with atomic():
+                self._target_with_rollback()
+        # Nothing's changed
+        self.assertEqual(self.total_before, len(self.Package.query.all()))
+        # Current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
     def test_nested(self):
         """Test nested usage."""
         with self.assertRaises(self.TargetAPIEror):  # original exception
-            with self.atomic(self.CreatePackageError()):
-                with self.atomic(self.CreatePackageError()):
-                    with self.atomic(self.CreatePackageError()):
+            with atomic(self.CreatePackageError()):
+                with atomic(self.CreatePackageError()):
+                    with atomic(self.CreatePackageError()):
                         self._target_without_exception()
                     self._target_with_APIError()
+                self.assertEqual(self.app_logger.warn.call_count, 1)
                 self._target_without_exception()
 
         # Nothing's changed
@@ -415,7 +453,7 @@ class TestUtilsGetUserRole(unittest.TestCase):
 
         del g_mock.user.role
         self.assertEqual(get_user_role(), role3)
-        logout_user_mock.assert_called_once
+        logout_user_mock.assert_called_once_with()
 
 
 class TestUtilsGetAvailablePort(unittest.TestCase):

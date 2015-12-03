@@ -1,12 +1,9 @@
 import datetime
 
-from flask.ext.login import current_user
 from flask import jsonify
-from rbac.context import PermissionDenied
 
 from .. import factory
 from .. import sessions
-from ..rbac import get_user_role
 from ..utils import APIError
 
 
@@ -44,7 +41,6 @@ def create_app(settings_override=None, fake_sessions=False):
         app.register_blueprint(bp)
 
     app.errorhandler(404)(on_404)
-    app.errorhandler(PermissionDenied)(on_permission_denied)
     app.errorhandler(APIError)(on_app_error)
 
     return app
@@ -55,10 +51,5 @@ def on_app_error(e):
                     'type': getattr(e, 'type', e.__class__.__name__)}), e.status_code
 
 
-def on_permission_denied(e):
-    message = e.kwargs['message'] or 'Denied to {0}'.format(get_user_role())
-    return on_app_error(APIError(message, status_code=403))
-
-
 def on_404(e):
-    return on_app_error(APIError('Not found', status_code=404))
+    return on_app_error(APIError('Not found', status_code=404, type='NotFound'))

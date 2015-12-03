@@ -3,11 +3,10 @@ import logging
 import pytz
 from ipaddress import ip_address
 from kubedock.testutils.testcases import APITestCase, attr
-from kubedock.testutils import fixtures
 
 from uuid import uuid4
 from kubedock.core import db
-from kubedock.users.models import User
+from kubedock.users.models import User, UserActivity
 from kubedock.pods.models import Pod
 from kubedock.billing.models import Package, PackageKube, Kube
 
@@ -16,25 +15,22 @@ class UserFullTestCase(APITestCase):
     """Tests for /api/users/full endpoint"""
     url = '/users/full'
 
-    def setUp(self):
-        super(UserFullTestCase, self).setUp()
-        self.user, user_password = fixtures.user_fixtures()
-        self.admin, admin_password = fixtures.admin_fixtures()
-        self.userauth = (self.user.username, user_password)
-        self.adminauth = (self.admin.username, admin_password)
-
     # @unittest.skip('')
     def test_get(self):
         # get list
-        self.assert401(self.open())
-        self.assert403(self.open(auth=self.userauth))
-        response = self.open(auth=self.adminauth)
-        self.assert200(response)  # only Admin has permission
+        response = self.admin_open()
+        self.assert200(response)
         user, admin = self.user.to_dict(full=True), self.admin.to_dict(full=True)
         user['join_date'] = user['join_date'].replace(tzinfo=pytz.utc).isoformat()
         admin['join_date'] = admin['join_date'].replace(tzinfo=pytz.utc).isoformat()
         self.assertIn(user, response.json['data'])
         self.assertIn(admin, response.json['data'])
+
+        response = self.admin_open(self.item_url(12345))
+        self.assertAPIError(response, 404, 'UserNotFound')
+        response = self.admin_open(self.item_url(self.user.id))
+        self.assert200(response)
+        self.assertEqual(user, response.json['data'])
 
     # @unittest.skip('')
     def test_post(self):
@@ -44,24 +40,22 @@ class UserFullTestCase(APITestCase):
                     active=True, rolename='User', package='Standard package')
 
         # add
-        self.assert401(self.open(method='POST', json=data))
-        self.assert403(self.open(method='POST', json=data, auth=self.userauth))
-        response = self.open(method='POST', json=data, auth=self.adminauth)
-        self.assert200(response)  # only Admin has permission
-        self.assertDictContainsSubset(data, response.json['data'])
+        response = self.admin_open(method='POST', json=data)
+        self.assert200(response)
+        self.assertEqual(User.get(data['username']).to_dict(), response.json['data'])
 
         # check conversion of extended boolean fields
         data['username'] += '1'
         data['email'] = '1' + data['email']
         data['active'] = 'TrUe'
-        response = self.open(method='POST', json=data, auth=self.adminauth)
+        response = self.admin_open(method='POST', json=data)
         self.assert200(response)  # active is valid
         self.assertEqual(response.json['data']['active'], True)
 
         data['username'] += '1'
         data['email'] = '1' + data['email']
         data['suspended'] = '1'
-        response = self.open(method='POST', json=data, auth=self.adminauth)
+        response = self.admin_open(method='POST', json=data)
         self.assert200(response)  # suspended is valid
         self.assertEqual(response.json['data']['suspended'], True)
 
@@ -78,11 +72,8 @@ class UserFullTestCase(APITestCase):
                     package=new_package.name)
 
         # update
-        url = '{0}/{1}'.format(self.url, self.user.id)
-        self.assert401(self.open(url=url, method='PUT', json=data))
-        self.assert403(self.open(url=url, method='PUT', json=data, auth=self.userauth))
-        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
-        self.assert200(response)  # only Admin has permission
+        response = self.admin_open(self.item_url(self.user.id), 'PUT', data)
+        self.assert200(response)
 
         user = User.query.get(self.user.id)
         self.assertTrue(user.verify_password(data.pop('password')))
@@ -97,12 +88,8 @@ class UserFullTestCase(APITestCase):
         # delete
         logging.getLogger('UserFullTestCase.delete').info(
             'This test will work only with k8s.')
-        url = '{0}/{1}'.format(self.url, self.user.id)
-        self.assert401(self.open(url=url, method='DELETE'))
-        self.assert403(self.open(url=url, method='DELETE', auth=self.userauth))
-        response = self.open(url=url, method='DELETE', auth=self.adminauth)
-        self.assert200(response)  # only Admin has permission
 
+        self.assert200(self.admin_open(self.item_url(self.user.id), 'DELETE'))
         self.assertIsNone(User.not_deleted.filter_by(id=self.user.id).first())
 
     # @unittest.skip('')
@@ -113,22 +100,20 @@ class UserFullTestCase(APITestCase):
         then forbid this change.
         """
         user = self.user
-        url = '{0}/{1}'.format(self.url, user.id)
+        url = self.item_url(self.user.id)
         package0 = user.package
         package1 = Package(id=1, name='New package', first_deposit=0,
                            currency='USD', period='hour', prefix='$',
                            suffix=' USD')
         kube0, kube1, kube2 = Kube.public_kubes().all()
         # new package allows only standard kube
-        PackageKube(packages=package1, kubes=kube0, kube_price=0)
+        PackageKube(package=package1, kube=kube0, kube_price=0)
         db.session.commit()
 
         # change package: user still doesn't have pods
         data = {'package': package1.name}
-        self.assert401(self.open(url=url, method='PUT', json=data))
-        self.assert403(self.open(url=url, method='PUT', json=data, auth=self.userauth))
-        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
-        self.assert200(response)  # only Admin has permission
+        response = self.admin_open(url=url, method='PUT', json=data)
+        self.assert200(response)
 
         # add pod with kube type that exists in both packages (Standard kube)
         pod = Pod(id=str(uuid4()), name='test_change_package1',
@@ -138,8 +123,7 @@ class UserFullTestCase(APITestCase):
 
         # change package: both packages have this kube_type
         data = {'package': package0.name}
-        self.assert200(self.open(url=url, method='PUT', json=data,
-                                 auth=self.adminauth))  # only Admin has permission
+        self.assert200(self.admin_open(url=url, method='PUT', json=data))
 
         # add pod with kube type that exists only in current package
         pod = Pod(id=str(uuid4()), name='test_change_package2',
@@ -149,8 +133,7 @@ class UserFullTestCase(APITestCase):
 
         # change package: new package doesn't have kube_type of some of user's pods
         data = {'package': package1.name}
-        self.assert400(self.open(url=url, method='PUT', json=data,
-                                 auth=self.adminauth))  # only Admin has permission
+        self.assert400(self.admin_open(url=url, method='PUT', json=data))
 
     @attr('k8s')
     def test_suspend(self):
@@ -159,7 +142,7 @@ class UserFullTestCase(APITestCase):
         from kubedock.pods.models import PodIP, IPPool
 
         user = self.user
-        url = '{0}/{1}'.format(self.url, user.id)
+        url = self.item_url(self.user.id)
 
         ippool = IPPool(network='192.168.1.252/30').save()
         min_pod = {'restartPolicy': 'Always', 'kube_type': 0, 'containers': [{
@@ -216,7 +199,7 @@ class UserFullTestCase(APITestCase):
         self.assertEqual(_count_pods_with_public_ip(), 2,
                          'all pods must have public ip in the beginning')
         data = {'suspended': True}
-        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
+        response = self.admin_open(url=url, method='PUT', json=data)
         self.assert200(response)
 
         self.assertEqual(_count_pods_with_public_ip(), 0,
@@ -227,9 +210,8 @@ class UserFullTestCase(APITestCase):
         db.session.commit()
 
         data = {'suspended': False}
-        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
-        self.assert500(response)
-        self.assertDictContainsSubset({'type': 'UserUpdateError'}, response.json)
+        response = self.admin_open(url=url, method='PUT', json=data)
+        self.assertAPIError(response, 400, 'NoFreeIPs')
         self.assertEqual(_count_pods_with_public_ip(), 0, "operation must be "
                          "atomic, so if one pod can't get public ip, all won't")
 
@@ -238,10 +220,65 @@ class UserFullTestCase(APITestCase):
         db.session.commit()
 
         data = {'suspended': False}
-        response = self.open(url=url, method='PUT', json=data, auth=self.adminauth)
+        response = self.admin_open(url=url, method='PUT', json=data)
         self.assert200(response)
         self.assertEqual(_count_pods_with_public_ip(), 2,
                          'all pods must get their ip back')
+
+
+class TestUsers(APITestCase):
+    """Tests for /api/users endpoints"""
+    url = '/users'
+
+    def test_get(self):
+        response = self.admin_open(self.item_url())
+        self.assert200(response)
+        self.assertIn(self.user.to_dict(), response.json['data'])
+        self.assertIn(self.admin.to_dict(), response.json['data'])
+
+        response = self.admin_open(self.item_url(12345))
+        self.assertAPIError(response, 404, 'UserNotFound')
+        response = self.admin_open(self.item_url(self.user.id))
+        self.assert200(response)
+        self.assertEqual(self.user.to_dict(), response.json['data'])
+
+    def test_get_usernames(self):
+        response = self.admin_open(self.item_url('q') + '?s=mi')
+        self.assert200(response)
+        self.assertIn('admin', response.json['data'])
+        self.assertNotIn('kuberdock-internal', response.json['data'])
+
+    def test_get_roles(self):
+        response = self.admin_open(self.item_url('roles'))
+        self.assert200(response)
+        self.assertItemsEqual(['Admin', 'User', 'TrialUser'], response.json['data'])
+
+    def test_get_user_activities(self):
+        response = self.admin_open(self.item_url('a', 12345))
+        self.assertAPIError(response, 404, 'UserNotFound')
+
+        login = UserActivity(action=UserActivity.LOGIN_A, user_id=self.admin.id)
+        logout = UserActivity(action=UserActivity.LOGOUT_A, user_id=self.admin.id)
+        db.session.add_all([login, logout])
+        db.session.commit()
+
+        response = self.admin_open(self.item_url('a', self.admin.id))
+        self.assert200(response)
+        login_ts = {'ts': login.ts.replace(tzinfo=pytz.UTC).isoformat()}
+        logout_ts = {'ts': logout.ts.replace(tzinfo=pytz.UTC).isoformat()}
+        self.assertEqual(login.to_dict(include=login_ts), response.json['data'][-2])
+        self.assertEqual(logout.to_dict(include=logout_ts), response.json['data'][-1])
+
+    def test_editself(self):
+        url = self.item_url('editself')
+        data = {'password': str(uuid4())[:25]}
+
+        response = self.open(url, 'PATCH', data)
+        self.assertAPIError(response, 401, 'NotAuthorized')
+        response = self.open(url, 'PATCH', data, auth=self.userauth)
+        self.assert200(response)
+        response = self.open(url, 'PATCH', data, auth=self.userauth)
+        self.assertAPIError(response, 401, 'NotAuthorized')
 
 
 if __name__ == '__main__':

@@ -78,15 +78,15 @@ def get_packages():
         for k in p.kubes:
             if p.id not in kubes:
                 kubes[p.id] = []
-            kube = {'id': k.kubes.id,
-                    'name': k.kubes.name,
+            kube = {'id': k.kube.id,
+                    'name': k.kube.name,
                     'price': k.kube_price,
-                    'cpu': k.kubes.cpu,
-                    'cpu_units': k.kubes.cpu_units,
-                    'memory': k.kubes.memory,
-                    'memory_units': k.kubes.memory_units,
-                    'disk_space': k.kubes.disk_space,
-                    'disk_space_units': k.kubes.disk_space_units}
+                    'cpu': k.kube.cpu,
+                    'cpu_units': k.kube.cpu_units,
+                    'memory': k.kube.memory,
+                    'memory_units': k.kube.memory_units,
+                    'disk_space': k.kube.disk_space,
+                    'disk_space_units': k.kube.disk_space_units}
             kubes[p.id].append(kube)
     return packages, kubes
 

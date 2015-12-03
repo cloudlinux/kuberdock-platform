@@ -6,11 +6,7 @@ import string
 from .. import validation
 
 
-class APIError(Exception):
-    pass
-
 global_patchers = [
-    mock.patch.object(validation, 'APIError', APIError),
     mock.patch.object(validation, 'PredefinedApp'),
     mock.patch.object(validation, 'Kube'),
     mock.patch.object(validation, 'Package'),
@@ -35,6 +31,7 @@ def tearDownModule():
 V = validation.V
 UserValidator = validation.UserValidator
 User = validation.User
+ValidationError = validation.ValidationError
 
 
 class TestV(unittest.TestCase):
@@ -86,7 +83,7 @@ class TestUserCreateValidation(unittest.TestCase):
             data = template(**{field: value})
             try:
                 validator(data)
-            except APIError as e:
+            except ValidationError as e:
                 self.fail('Test "{0}" is a valid {1}: {2}'
                           .format(value, field, e.message))
 
@@ -94,13 +91,13 @@ class TestUserCreateValidation(unittest.TestCase):
         for value in invalid_values:
             data = template(**{field: value})
             msg = 'Test "{0}" is a valid {1}'.format(value, field)
-            with self.assertRaises(APIError, msg=msg):
+            with self.assertRaises(ValidationError, msg=msg):
                 validator(data)
 
     def assertRequired(self, validator, template, field):
         data = template()
         data.pop(field, None)
-        with self.assertRaises(APIError, msg='Test "{0}" is required'.format(field)):
+        with self.assertRaises(ValidationError, msg='Test "{0}" is required'.format(field)):
             validator(data)
 
     def test_username(self):

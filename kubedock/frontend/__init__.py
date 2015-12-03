@@ -1,12 +1,11 @@
 import datetime
 from flask import render_template
 from flask import jsonify
-from rbac.context import PermissionDenied
 
 from .. import factory
 from .. import sessions
 from ..rbac import acl, get_user_role
-from ..utils import APIError
+from ..utils import APIError, PermissionDenied
 from . import assets
 
 

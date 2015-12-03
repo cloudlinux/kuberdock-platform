@@ -1,13 +1,12 @@
 from flask import Blueprint, request
-from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from ..rbac import check_permission
 from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils
 from ..users import User
+from ..kapi.users import UserNotFound
 from ..usage.models import ContainerState, IpState, PersistentDiskState
 from ..core import db
-from . import APIError
 from collections import defaultdict
 import time
 from datetime import datetime
@@ -29,16 +28,15 @@ def get_total_usage():
     return rv
 
 
-@usage.route('/<login>', methods=['GET'])
+@usage.route('/<uid>', methods=['GET'])
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
-def get_usage(login):
+def get_usage(uid):
     date_from, date_to = get_dates(request)
-    user = User.query.filter_by(username=login).first()
+    user = User.get(uid)
     if user is None:
-        raise APIError(
-            'User with username {0} does not exist'.format(login), 404)
+        raise UserNotFound('User "{0}" does not exist'.format(uid))
     return get_user_usage(user, date_from, date_to)
 
 
@@ -87,8 +85,7 @@ def get_ip_states(user, date_from, date_to):
 
 
 def get_pd_states(user, date_from, date_to):
-    query = db.session.query(PersistentDiskState).filter(
-        PersistentDiskState.user == user)
+    query = PersistentDiskState.query.filter(PersistentDiskState.user == user)
     query = filter_query_by_date(query, PersistentDiskState, date_from, date_to)
     pd_states = query.all()
     return [pd_state.to_dict(exclude=['user_id']) for pd_state in pd_states]
@@ -110,9 +107,3 @@ def get_user_usage(user, date_from, date_to):
 
 def to_timestamp(date):
     return int((date - datetime(1970, 1, 1)).total_seconds())
-
-
-#def get_range(start, end):
-#    now = datetime.datetime.now()
-#    offset = int(time.time()-int(datetime.datetime(now.year, now.month, 1).strftime('%s')))
-#    return offset

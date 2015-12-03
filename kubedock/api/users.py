@@ -1,8 +1,5 @@
-import json
 from flask import Blueprint, request, current_app, session
 from flask.ext.login import login_user, current_user
-
-from sqlalchemy import not_
 
 from . import APIError
 from ..rbac import check_permission
@@ -11,7 +8,7 @@ from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils
 from ..users.models import User, UserActivity
 from ..users.signals import user_logged_in_by_another
-from ..kapi.users import UserCollection
+from ..kapi.users import UserCollection, UserNotFound
 
 
 users = Blueprint('users', __name__, url_prefix='/users')
@@ -22,30 +19,23 @@ users = Blueprint('users', __name__, url_prefix='/users')
 @check_permission('auth_by_another', 'users')
 @KubeUtils.jsonwrap
 def auth_another():
-    data = request.form
-    user_id = data['user_id']
-    # current_app.logger.debug('auth_another({0})'.format(user_id))
-    user = User.query.get(user_id)
+    data = KubeUtils._get_params()
+    uid = data['user_id']
+    user = User.query.get(uid)
     if user is None or user.deleted:
-        raise APIError('User with Id {0} does not exist'.format(user_id))
+        raise UserNotFound('User "{0}" does not exists'.format(uid))
     session['auth_by_another'] = session.get('auth_by_another', current_user.id)
-    user_logged_in_by_another.send((current_user.id, user_id))
+    user_logged_in_by_another.send((current_user.id, user.id))
     login_user(user)
-    # current_app.logger.debug('auth_another({0}) after'.format(current_user.id))
-
-
-@check_permission('get', 'users')
-def get_users_usernames(s, with_deleted=False):
-    users = User.query if with_deleted else User.not_deleted
-    return zip(*users.filter(User.username.contains(s)).values(User.username))[0]
 
 
 @users.route('/q', methods=['GET'])
 @login_required_or_basic_or_token
+@check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_usernames():
     with_deleted = request.args.get('with-deleted', False)
-    return get_users_usernames(request.args.get('s'), with_deleted)
+    return User.search_usernames(request.args.get('s'), with_deleted)
 
 
 @users.route('/roles', methods=['GET'])
@@ -53,45 +43,7 @@ def get_usernames():
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_roles():
-    roles = Role.query.filter(not_(Role.internal)).values(Role.rolename)
-    return zip(*roles)[0]
-
-
-def user_activities(user, date_from=None, date_to=None, to_dict=None,
-                    to_json=None):
-    """
-    Requests the activities list of the user
-    :param user: username, user Id, user object
-    :param date_from: activities from
-    :param date_to: activities to
-    :param to_dict: returns [obj.to_dict(), ...]
-    :param to_json: returns in JSON format
-    :return: queryset or list or JSON string
-    """
-    if isinstance(user, basestring):
-        user = User.get(user)
-    elif isinstance(user, int):
-        user = UserActivity.query.get(user)
-    if user is None:
-        raise APIError("User not found", 404)
-    try:
-        activities = UserActivity.query.filter(UserActivity.user_id == user.id)
-    except AttributeError:
-        current_app.logger.warning('UserActivity.get_user_activities '
-                                   'failed: {0}'.format(user))
-        raise APIError("User not found", 404)
-    if date_from:
-        activities = activities.filter(
-            UserActivity.ts >= '{0} 00:00:00'.format(date_from))
-    if date_to:
-        activities = activities.filter(
-            UserActivity.ts <= '{0} 23:59:59'.format(date_to))
-    if to_dict or to_json:
-        data = [a.to_dict() for a in activities]
-        if to_json:
-            data = json.dumps(data)
-        return data
-    return activities
+    return zip(*Role.query.filter(~Role.internal).values(Role.rolename))[0]
 
 
 @users.route('/a/<user>', methods=['GET'])
@@ -102,7 +54,7 @@ def get_user_activities(user):
     data = request.args
     data_from = data.get('date_from')
     date_to = data.get('date_to')
-    return user_activities(user, data_from, date_to, to_dict=True)
+    return UserCollection().get_activities(user, data_from, date_to, to_dict=True)
 
 
 @users.route('/logHistory', methods=['GET'])
@@ -131,7 +83,7 @@ def get_online_users():
 # TODO: put in MethodView
 
 
-@users.route('/', methods=['GET'])
+@users.route('/', methods=['GET'], strict_slashes=False)
 @users.route('/all', methods=['GET'])
 # TODO: remove endpoint /<uid>. Conflicts with a lot of other endpoints.
 @users.route('/<uid>', methods=['GET'])
@@ -144,12 +96,13 @@ def get_list(uid=None):
 
 
 @users.route('/full', methods=['GET'])
+@users.route('/full/<user>', methods=['GET'])
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
-def get_full_list():
+def get_full_list(user=None):
     with_deleted = request.args.get('with-deleted', False)
-    return UserCollection().get(with_deleted=with_deleted, full=True)
+    return UserCollection().get(user=user, with_deleted=with_deleted, full=True)
 
 
 @users.route('/', methods=['POST'], strict_slashes=False)

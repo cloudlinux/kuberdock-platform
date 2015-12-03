@@ -6,7 +6,7 @@ from ..validation import UserValidator
 from ..billing.models import Package
 from ..pods.models import Pod
 from ..rbac.models import Role
-from ..users.models import User
+from ..users.models import User, UserActivity
 from ..users.utils import enrich_tz_with_offset
 from .podcollection import PodCollection, POD_STATUSES
 from .pstorage import get_storage_class
@@ -15,6 +15,11 @@ from .pstorage import get_storage_class
 class ResourceReleaseError(APIError):
     """Occurs when some of user's resources couldn't be released."""
     type = 'ResourceReleaseError'
+
+
+class UserNotFound(APIError):
+    message = 'User not found'
+    status_code = 404
 
 
 class UserCollection(object):
@@ -33,22 +38,19 @@ class UserCollection(object):
         user = self._convert_user(user)
         return user.to_dict(full=full)
 
+    @atomic(APIError("Couldn't create user.", 500, 'UserCreateError'), nested=False)
     @enrich_tz_with_offset(['timezone'])
     def create(self, data):
         """Create user"""
         data = UserValidator().validate_user_create(data)
         temp = {key: value for key, value in data.iteritems()
                 if value != '' and key not in ('package', 'rolename',)}
-        try:
-            user = User(**temp)
-            user.role = Role.by_rolename(data['rolename'])
-            user.package = Package.by_name(data['package'])
-            user.save()
-        except (IntegrityError, InvalidRequestError), e:
-            raise APIError('Cannot create a user: {0}'.format(str(e)))
-
-        data.update({'id': user.id})
-        return data
+        user = User(**temp)
+        user.role = Role.by_rolename(data['rolename'])
+        user.package = Package.by_name(data['package'])
+        db.session.add(user)
+        db.session.flush()
+        return user.to_dict()
 
     @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'), nested=False)
     @enrich_tz_with_offset(['timezone'])
@@ -106,7 +108,10 @@ class UserCollection(object):
                     self._suspend_user(user)
 
         user.update(data)
+        db.session.flush()
+        return user.to_dict()
 
+    @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'), nested=False)
     @enrich_tz_with_offset(['timezone'])
     def update_profile(self, user, data):
         """Update user's profile
@@ -118,11 +123,8 @@ class UserCollection(object):
         user = self._convert_user(user)
         data = UserValidator(id=user.id, allow_unknown=True).validate_user_update(data)
         user.update(data, for_profile=True)
-        try:
-            user.save()
-        except (IntegrityError, InvalidRequestError), e:
-            db.session.rollback()
-            raise APIError('Cannot update a user: {0}'.format(str(e)))
+        db.session.flush()
+        return user.to_dict()
 
     def delete(self, user, force=False):
         """Release all user's resources and mark user as deleted.
@@ -148,10 +150,8 @@ class UserCollection(object):
             if pd_cls:
                 rv = pd_cls().delete_by_id(pd.id)
                 if not force and rv != 0:
-                    raise ResourceReleaseError(
-                        u'Persistent Disk "{0}" is busy or does '
-                        u'not exist.'.format(pd.name)
-                    )
+                    raise ResourceReleaseError(u'Persistent Disk "{0}" is busy or '
+                                               u'does not exist.'.format(pd.name))
             try:
                 pd.delete()
             except Exception:
@@ -164,8 +164,9 @@ class UserCollection(object):
             db.session.commit()
         except (IntegrityError, InvalidRequestError), e:
             db.session.rollback()
-            raise APIError('Cannot delete a user: {0}'.format(str(e)))
+            raise APIError('Cannot delete a user: {0}'.format(str(e)), 500)
 
+    @atomic(APIError("Couldn't undelete user.", 500, 'UserUndeleteError'), nested=False)
     def undelete(self, user):
         """Undelete user.
 
@@ -174,18 +175,35 @@ class UserCollection(object):
         """
         user = self._convert_user(user)
         user.deleted = False
-        try:
-            db.session.commit()
-        except (IntegrityError, InvalidRequestError), e:
-            db.session.rollback()
-            raise APIError('Cannot undelete a user: {0}'.format(str(e)))
+
+    def get_activities(self, user, date_from=None, date_to=None, to_dict=None):
+        """
+        Requests the activities list of the user
+        :param user: username, user Id, user object
+        :param date_from: activities from
+        :param date_to: activities to
+        :param to_dict: returns list of dicts
+        :returns: queryset or list or JSON string
+        """
+        user = UserCollection._convert_user(user)
+        activities = UserActivity.query.filter(UserActivity.user_id == user.id)
+        if date_from:
+            activities = activities.filter(
+                UserActivity.ts >= '{0} 00:00:00'.format(date_from))
+        if date_to:
+            activities = activities.filter(
+                UserActivity.ts <= '{0} 23:59:59'.format(date_to))
+
+        if to_dict:
+            return [a.to_dict() for a in activities]
+        return activities
 
     @staticmethod
     def _convert_user(user):
         """Transform id, username, or User to User."""
         result = User.get(user)
         if result is None:
-            raise APIError('User "{0}" doesn\'t exist'.format(user), 404)
+            raise UserNotFound('User "{0}" does not exists'.format(user))
         return result
 
     @staticmethod

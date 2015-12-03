@@ -11,7 +11,7 @@ from .pstorage import get_storage_class_by_volume_info
 from .helpers import KubeQuery, ModelQuery, Utilities
 from ..core import db
 from ..billing import repr_limits, Kube
-from ..pods.models import PersistentDisk, PodIP, Pod as DBPod
+from ..pods.models import PersistentDisk, PodIP, IPPool, Pod as DBPod
 from ..usage.models import IpState
 from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
                      unbind_ip, atomic)
@@ -22,6 +22,10 @@ DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 
 def get_user_namespaces(user):
     return {pod.namespace for pod in user.pods if not pod.is_deleted}
+
+
+class NoFreeIPs(APIError):
+    message = 'There are no free IP-addresses'
 
 
 class PodCollection(KubeQuery, ModelQuery, Utilities):
@@ -104,9 +108,18 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if AWS:
             conf['public_aws'] = pod.public_aws = True
         else:
-            podip = PodIP.allocate_ip_address(pod.id)
-            conf['public_ip'] = pod.public_ip = str(podip)
-            IpState.start(pod.id, podip)
+            ip_address = IPPool.get_free_host(as_int=True)
+            if ip_address is None:
+                raise NoFreeIPs()
+            network = IPPool.get_network_by_ip(ip_address)
+            if pod.ip is None:
+                db.session.add(PodIP(pod=pod, network=network.network,
+                                     ip_address=ip_address))
+            else:
+                current_app.logger.warning('PodIP {0} is already allocated'
+                                           .format(pod.ip.to_dict()))
+            conf['public_ip'] = pod.public_ip = str(pod.ip)
+            IpState.start(pod.id, pod.ip)
         pod.set_dbconfig(conf, save=False)
 
     @staticmethod

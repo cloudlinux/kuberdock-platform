@@ -6,20 +6,22 @@ import os
 import random
 import re
 import socket
+import sys
 import datetime
 
 from collections import namedtuple
-from flask import current_app, request, jsonify, g
+from flask import current_app, request, jsonify, g, has_app_context
 from flask.ext.login import current_user, logout_user
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
+from sqlalchemy.exc import SQLAlchemyError
+from traceback import format_exception
 
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .billing import Kube
 from .pods import Pod
 from .core import ssh_connect, db, ConnectionPool
-from .rbac import check_permission, PermissionDenied
 from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS, PODS_VERBOSE_LOG
 
 
@@ -140,6 +142,20 @@ class APIError(Exception):
             self.__class__.__name__, self.message, self.status_code)
 
 
+class PermissionDenied(APIError):
+    status_code = 403
+
+    def __init__(self, message=None, status_code=None, type=None):
+        if message is None:
+            message = 'Denied to {0}'.format(get_user_role())
+        super(PermissionDenied, self).__init__(message, status_code, type)
+
+
+class NotAuthorized(APIError):
+    message = 'Not Authorized'
+    status_code = 401
+
+
 class atomic(object):
     """Wrap code in transaction. Can be used as decorator or context manager.
 
@@ -156,37 +172,74 @@ class atomic(object):
         In case of a decorator, this behavior can be overridden by passing
         `commit=True/False` into decorated function.
     """
+    class UnexpectedCommit(SQLAlchemyError):
+        """Raised before commit inside atomic block happens."""
+
+    class UnexpectedRollback(SQLAlchemyError):
+        """Raised, if rollback inside atomic block happens."""
+
     def __init__(self, api_error=None, nested=True):
         self.api_error = api_error
         self.nested = nested
+        self.nested_override = None
 
     def __call__(self, func):
         @wraps(func)
         def decorated(*args, **kwargs):
             if 'commit' in kwargs:
-                self.nested = not kwargs.pop('commit')
+                self.nested_override = not kwargs.pop('commit')
             with self:
                 return func(*args, **kwargs)
         return decorated
 
     def __enter__(self):
-        self.main_transaction = (db.session.begin_nested() if self.nested else
-                                 db.session.registry().transaction)
+        # need to do only once per request
+        if getattr(g, 'atomics', None) is None:
+            g.atomics = []
 
-    def _rollback(self, exception):
-        self.main_transaction.rollback()
-        if self.api_error and not isinstance(exception, APIError):
+        # need to do every __enter__()
+        nested = self.nested if self.nested_override is None else self.nested_override
+        g.atomics.append(db.session.begin_nested() if nested else
+                         db.session.registry().transaction)
+        self.nested_override = None
+
+    def _rollback(self, transaction, exc_type, exc_value, traceback):
+        if not isinstance(exc_value, self.UnexpectedRollback):
+            transaction.rollback()
+        if self.api_error and not isinstance(exc_value, APIError):
+            current_app.logger.warn(
+                ''.join(format_exception(exc_type, exc_value, traceback)))
             raise self.api_error
 
     def __exit__(self, exc_type, exc_value, traceback):
+        transaction = g.atomics.pop()
         if exc_value is not None:
-            self._rollback(exc_value)
+            self._rollback(transaction, exc_type, exc_value, traceback)
         else:
             try:
-                self.main_transaction.commit()
-            except Exception as e:
-                self._rollback(e)
+                transaction.commit()
+            except Exception:
+                self._rollback(transaction, *sys.exc_info())
                 raise
+
+    @classmethod
+    def _unexpectedly_closed(cls, session, rolled_back=None):
+        msg = ("Prevented attempt to close main transaction inside `atomic` block.\n"
+               "This error may happen if you called `db.session.{0}()`, "
+               "but didn't call `db.session.begin_nested()`.")
+        if has_app_context() and getattr(g, 'atomics', None):
+            # check that the deepest transaction is ok
+            transaction = g.atomics[-1]
+            if rolled_back is None and session.transaction == transaction:
+                raise cls.UnexpectedCommit(msg.format('commit'))
+            elif rolled_back == transaction:
+                raise cls.UnexpectedRollback(msg.format('rollback'))
+
+    @classmethod
+    def register(cls):
+        db.event.listen(db.session, 'before_commit', cls._unexpectedly_closed)
+        db.event.listen(db.session, 'after_soft_rollback', cls._unexpectedly_closed)
+atomic.register()
 
 
 def hostname_to_ip(name):
@@ -666,14 +719,6 @@ class KubeUtils(object):
         def wrapper(*args, **kwargs):
             return jsonify({'status': 'OK', 'data': func(*args, **kwargs)})
         return wrapper
-
-    @classmethod
-    def pod_permissions(cls, func):
-        @wraps(func)
-        def inner(*args, **kwargs):
-            rv = check_permission('get', 'pods')(func)
-            return rv(*args, **kwargs)
-        return inner
 
     @classmethod
     def pod_start_permissions(cls, func):

@@ -27,7 +27,7 @@ def index():
     kube_types = []
     for pk in PackageKube.query.filter(PackageKube.package_id == current_user.package_id).all():
         package_kubes.append(pk.to_dict())
-        kube_types.append(pk.kubes.to_dict())
+        kube_types.append(pk.kube.to_dict())
     if current_user.username == KUBERDOCK_INTERNAL_USER:
         kube_types = [kube.to_dict() for kube in Kube.query]
 

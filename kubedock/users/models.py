@@ -81,6 +81,12 @@ class User(BaseModelMixin, UserMixin, db.Model):
             return json.dumps(users)
         return users
 
+    @classmethod
+    def search_usernames(cls, s, with_deleted=False):
+        users = cls.query if with_deleted else cls.not_deleted
+        usernames = list(users.filter(cls.username.contains(s)).values(cls.username))
+        return zip(*usernames)[0] if usernames else []
+
     @property
     def password(self):
         raise AttributeError('password is not a readable attribute')
@@ -112,7 +118,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         if exclude is None:
             exclude = []
         states = lambda x: dict(
-            pod_id=x.pod_id,
+            pod_id=x.pod.id,
             container_name=x.container_name,
             kubes=x.kubes,
             start_time=x.start_time,
@@ -151,10 +157,10 @@ class User(BaseModelMixin, UserMixin, db.Model):
             raise RuntimeWarning('Serialize user for profile or full, not both')
         if for_profile:
             valid = self.profile_fields + ['id']
-            data = dict([(k, v) for k, v in vars(self).items() if k in valid])
+            data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
             return data
         valid = self.profile_fields + ['id', 'username', 'active', 'suspended']
-        data = dict([(k, v) for k, v in vars(self).items() if k in valid])
+        data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
         data['rolename'] = self.role.rolename
         data['package'] = self.package.name if self.package else None
         if full:
@@ -238,8 +244,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return dict(
             id=pkg.id,
             name=pkg.name,
-            kube_id=[k.kube_id for k in pkg.kubes],
-            kube_info=[kube.kubes.to_dict() for kube in pkg.kubes],
+            kube_id=[package_kube.kube_id for package_kube in pkg.kubes],
+            kube_info=[package_kube.kube.to_dict() for package_kube in pkg.kubes],
             first_deposit=pkg.first_deposit,
             currency=pkg.currency,
             period=pkg.period

@@ -313,7 +313,7 @@ class PodIP(BaseModelMixin, db.Model):
 
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
                        primary_key=True, nullable=False)
-    pod = db.relationship(Pod, backref='ip')
+    pod = db.relationship(Pod, backref=db.backref('ip', uselist=False))
     network = db.Column(db.ForeignKey('ippool.network'))
     ip_address = db.Column(db.BigInteger, nullable=False)
 
@@ -322,36 +322,6 @@ class PodIP(BaseModelMixin, db.Model):
 
     def __int__(self):
         return self.ip_address
-
-    @classmethod
-    def allocate_ip_address(cls, pid, ip_address=None):
-        """
-        Allocate an IP-address to POD
-        :param pid: Pod Id
-        :return: PodIP object
-        """
-        pod = Pod.query.filter_by(id=pid).first()
-        if pod is None:
-            raise Exception("Wrong Pod Id '{0}".format(pid))
-        if ip_address is None:
-            ip_address = IPPool.get_free_host(as_int=True)
-            if ip_address is None:
-                raise Exception('There are no free IP-addresses')
-        network = IPPool.get_network_by_ip(ip_address)
-        if network is None:
-            raise Exception(
-                'Cannot find network by IP-address: {0}'.format(ip_address))
-        if isinstance(ip_address, basestring):
-            ip_address = int(ipaddress.ip_address(ip_address))
-        podip = cls.filter_by(pod_id=pid).first()
-        if podip is None:
-            podip = cls(pod_id=pid, network=network.network,
-                        ip_address=ip_address)
-            db.session.add(podip)
-        else:
-            current_app.logger.warning('PodIP {0} is already allocated'
-                                       .format(podip.to_dict()))
-        return podip
 
     def get_pod(self):
         return Pod.query.get(self.pod_id).name

@@ -1,11 +1,11 @@
 from functools import wraps
-from flask import g, current_app
-from flask.ext.login import current_user, logout_user
+from flask import current_app
 from rbac.acl import Registry as RegistryOrigin
-from rbac.context import IdentityContext, PermissionDenied
+from rbac.context import IdentityContext
 
 from .models import Resource, Role
 from ..core import cache
+from ..utils import PermissionDenied, get_user_role
 
 
 class Registry(RegistryOrigin):
@@ -60,6 +60,7 @@ class check_permission(object):
         self.operation = operation
         self.resource = resource
         self.exception_kwargs = exception_kwargs
+        self.exception_kwargs.setdefault('exception', PermissionDenied)
 
     def __call__(self, m):
         @wraps(m)
@@ -78,21 +79,6 @@ class check_permission(object):
 @rbac_context.set_roles_loader
 def roles_loader():
     yield get_user_role()
-
-
-# separate function because set_roles_loader decorator don't return function. Lib bug.
-def get_user_role():
-    rolename = 'AnonymousUser'
-    try:
-        rolename = current_user.role.rolename
-    except AttributeError:
-        try:
-            rolename = g.user.role.rolename
-        except AttributeError:
-            pass
-    if rolename == 'AnonymousUser':
-        logout_user()
-    return rolename
 
 
 class RoleWrapper(object):

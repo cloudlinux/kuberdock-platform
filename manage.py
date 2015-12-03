@@ -80,9 +80,9 @@ class Creator(Command):
                      period='hour', prefix='$', suffix=' USD')
 
         db.session.add(k_internal)
-        PackageKube(packages=p1, kubes=k1, kube_price=0)
-        PackageKube(packages=p1, kubes=k2, kube_price=0)
-        PackageKube(packages=p1, kubes=k3, kube_price=0)
+        PackageKube(package=p1, kube=k1, kube_price=0)
+        PackageKube(package=p1, kube=k2, kube_price=0)
+        PackageKube(package=p1, kube=k3, kube_price=0)
 
         db.session.commit()
 

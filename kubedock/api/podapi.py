@@ -5,14 +5,15 @@ from ..decorators import maintenance_protected
 from ..utils import KubeUtils, register_api
 from ..kapi.podcollection import PodCollection
 from ..validation import check_new_pod_data
+from ..rbac import check_permission
 
 
 podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
 
 class PodsAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, KubeUtils.pod_permissions, KubeUtils.pod_start_permissions,
-                  login_required_or_basic_or_token]
+    decorators = [KubeUtils.jsonwrap, check_permission('get', 'pods'),
+                  KubeUtils.pod_start_permissions, login_required_or_basic_or_token]
 
     def get(self, pod_id):
         #params = self._get_params()
@@ -46,7 +47,7 @@ register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)
               strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
-@KubeUtils.pod_permissions
+@check_permission('get', 'pods')
 def check_updates(pod_id, container_name):
     user = KubeUtils._get_current_user()
     return PodCollection(user).check_updates(pod_id, container_name)
@@ -56,7 +57,7 @@ def check_updates(pod_id, container_name):
               strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
-@KubeUtils.pod_permissions
+@check_permission('get', 'pods')
 def update_container(pod_id, container_name):
     user = KubeUtils._get_current_user()
     return PodCollection(user).update_container(pod_id, container_name)

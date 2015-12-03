@@ -6,13 +6,15 @@ from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils, register_api
 from ..kapi import pstorage as ps
 from ..pods.models import PersistentDisk
+from ..rbac import check_permission
 
 
 pstorage = Blueprint('pstorage', __name__, url_prefix='/pstorage')
 
 
 class PersistentStorageAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, KubeUtils.pod_permissions, login_required_or_basic_or_token]
+    decorators = [KubeUtils.jsonwrap, check_permission('get', 'pods'),
+                  login_required_or_basic_or_token]
 
     @staticmethod
     def _resolve_storage():

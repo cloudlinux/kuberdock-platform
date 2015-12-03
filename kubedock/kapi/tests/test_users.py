@@ -67,7 +67,8 @@ class TestUserUpdate(DBTestCase):
         UserCollection().update(self.user.id, {'active': True})
         self.assertFalse(unsuspend_mock.called)
 
-    def test_unsuspend_error(self, unsuspend_mock, suspend_mock, logout_mock):
+    @mock.patch('kubedock.utils.current_app')
+    def test_unsuspend_error(self, app_mock, unsuspend_mock, suspend_mock, logout_mock):
         """If error was rised during unsuspend, all changes must be rolled back."""
         UserCollection().update(self.user.id, {'suspended': True})
 
@@ -88,6 +89,7 @@ class TestUserUpdate(DBTestCase):
         except APIError as e:
             self.assertEqual(e.status_code, 500)
             self.assertEqual(e.type, 'UserUpdateError')
+            self.assertEqual(app_mock.logger.warn.call_count, 1)
         else:
             self.fail('UserUpdateError was not rised')
         unsuspend_mock.assert_called_once_with(self.user)

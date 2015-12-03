@@ -8,6 +8,7 @@ from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
 from kubedock.settings import KUBE_API_VERSION
 from kubedock.billing.models import Kube
+from kubedock.rbac import check_permission
 
 yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
 
@@ -15,7 +16,7 @@ yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
 class YamlAPI(KubeUtils, MethodView):
     decorators = (
         KubeUtils.jsonwrap,
-        KubeUtils.pod_permissions,
+        check_permission('create', 'pods'),
         KubeUtils.pod_start_permissions,
         login_required_or_basic_or_token
     )

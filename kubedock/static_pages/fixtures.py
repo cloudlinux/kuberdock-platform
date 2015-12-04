@@ -8,7 +8,7 @@ MENUS = [
         region=Menu.REGION_NAVBAR,
         name='Navbar menu',
         items=[
-            dict(name="Pods", path="/", ordering=0,
+            dict(name="Pods", path="/pods/", ordering=0,
                  roles=["User", "TrialUser"]),
             dict(name="Public IPs", path="/publicIPs/", ordering=1,
                  roles=["User", "TrialUser"]),
@@ -18,7 +18,7 @@ MENUS = [
             dict(name="Predefined Applications", path="/predefined-apps/",
                  ordering=2, roles=["Admin"]),
             dict(name="Settings", path="/settings/", ordering=4,
-                 roles=["Admin", "User", "TrialUser"]),
+                 roles=["Admin"]),
             dict(
                 name="Administration",
                 ordering=5,

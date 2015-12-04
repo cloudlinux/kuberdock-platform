@@ -13,14 +13,13 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.jqplot.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-select.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdowns-enhancement.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui.css') }}" >
         <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.jscrollpane.css') }}" >
 
         <link rel="stylesheet/less" type="text/css" href="{{ url_for('static', filename='css/main.less') }}">
         <script src="{{ url_for('static', filename='js/lib/less.min.js') }}" type="text/javascript"></script>
     </head>
     <body>
-
-{% include "inc/navbar_menu.html" %}
 
         <!-- contents container -->
         <div id="contents"></div>
@@ -52,7 +51,8 @@
         {% endblock %}
 
         {% block app_js_asset %}
-        <script data-main="{{ url_for('static', filename='js/pods_app/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
+        <script data-main="{{ url_for('static', filename='js/app_data/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
+{#
         <script type="text/javascript">
             var podCollectionData = {{ pod_collection|safe }},
                 containerCollection,
@@ -64,6 +64,10 @@
                 packageKubes = {{ package_kubes|tojson|safe }},
                 userPackage = {{ user_package|safe }},
                 postDescription = "{{ post_desc|safe }}";
+        </script>
+#}
+        <script type="text/javascript">
+            var backendData = {{ params|tojson|safe }};
         </script>
         {% endblock %}
         {% block users_app_js_asset %}{% endblock %}

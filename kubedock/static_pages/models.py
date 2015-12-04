@@ -76,7 +76,7 @@ class MenuItem(BaseModelMixin, db.Model):
         for child in children:
             parent_name = child.parent.name
             if parent_name in menu:
-                items = menu[parent_name].setdefault('childs', [])
+                items = menu[parent_name].setdefault('children', [])
                 items.append({'name': child.name, 'path': child.path})
         rv = []
         for name, data in menu.items():

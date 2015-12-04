@@ -126,6 +126,13 @@ def put_item(uid):
     return UserCollection().update(uid, data)
 
 
+@users.route('/editself', methods=['GET'])
+@login_required_or_basic_or_token
+@KubeUtils.jsonwrap
+def get_self():
+    return current_user.to_dict(for_profile=True)
+
+
 @users.route('/editself', methods=['PUT', 'PATCH'])
 @login_required_or_basic_or_token
 @KubeUtils.jsonwrap

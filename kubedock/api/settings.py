@@ -1,13 +1,14 @@
 import json
 from pytz import common_timezones
-from flask import Blueprint, request, jsonify, current_app
-from flask.ext.login import current_user
+from flask import Blueprint, request, jsonify
+#from flask.ext.login import current_user
+from flask.views import MethodView
 
 from ..core import db
 from ..rbac import check_permission, acl
 from ..rbac.models import Role, Resource, Permission
 from ..decorators import login_required_or_basic_or_token
-from ..utils import APIError, all_request_params
+from ..utils import APIError, all_request_params, KubeUtils, register_api
 from ..users.utils import append_offset_to_timezone
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
@@ -210,3 +211,40 @@ def delete_setting(name):
         'status': 'OK',
         'data': {}
     })
+
+class SystemSettingsAPI(KubeUtils, MethodView):
+    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+
+    @check_permission('read', 'system_settings')
+    def get(self, sid):
+        if sid is None:
+            return [dict(id=i.id, name=i.name, value=i.value)
+                        for i in SystemSettings.query.filter(
+                            SystemSettings.deleted==None).all()]
+        item = SystemSettings.query.get(sid)
+        if item is None:
+            raise APIError('No such setting', 404)
+        return {'id': item.id, 'name': item.name, 'value': item.value}
+
+    @check_permission('write', 'system_settings')
+    def post(self):
+        params = self._get_params()
+        name, value = map(params.get, ['name', 'value'])
+        if None not in (name, value):
+            SystemSettings.save_setting(name, value)
+
+    @check_permission('write', 'system_settings')
+    def put(self, sid):
+        params = self._get_params()
+        name, value = map(params.get, ['name', 'value'])
+        if None not in (name, value):
+            SystemSettings.save_setting(name, value)
+
+    @check_permission('delete', 'system_settings')
+    def delete(self, sid):
+        item = SystemSettings.query.get(sid)
+        if item is None:
+            raise APIError('No such setting', 404)
+        SystemSettings.delete_setting(item.name)
+
+register_api(settings, SystemSettingsAPI, 'settings', '/sysapi/', 'sid', 'int', strict_slashes=False)

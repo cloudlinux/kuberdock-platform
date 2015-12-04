@@ -1,0 +1,1 @@
+<td class="text-center" colspan="2">Public IPs aren't specified</td>

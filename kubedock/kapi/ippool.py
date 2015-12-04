@@ -28,7 +28,10 @@ class IpAddrPool(object):
                 for i in map(str, network.hosts()) if i[i.rfind('.')+1:] in autoblock]
             pool.block_ip(block_list)
             pool.save()
-            return {'network': str(network), 'autoblock': block_list}
+            return {'id': str(network),
+                    'network': str(network),
+                    'autoblock': block_list,
+                    'allocation': pool.free_hosts_and_busy(page=1)}
         except ValueError, e:
             raise APIError(str(e))
 

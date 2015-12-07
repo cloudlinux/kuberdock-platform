@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 12%{?dist}.cloudlinux
+Release: 13%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,13 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Mon Dec 07 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.4-13
+- AC-1330: Add new style to PD adding
+- AC-1608: suspend/unsuspend logic; returning ip to the pods; refactiorng
+- AC-595, AC-1514: billing api bugfix, refactoring, tests
+- AC-1548: web-interface moved to SPA paradigm
+- AC-1539: Add PD > Checkbox should be disable without container path - fix if path removed
+
 * Fri Nov 27 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com> 0.4-12
 - AC-1426: Add style to pod/node logs && textarea in add preapp
 - AC-1555: package must include period
@@ -995,7 +1002,7 @@ fi
 - AC-385: Reduce CPU value in 10 times for default kubes
 - Change logs url from 'es-proxy' to 'logs'
 
-* Thu May 29 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-53
+* Fri May 29 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>  0.1-53
 - Added lights to field status in nodelist table
 - AC-421: Show error message if login failed
 - Add bulk operation to podlist, fix checkbox position

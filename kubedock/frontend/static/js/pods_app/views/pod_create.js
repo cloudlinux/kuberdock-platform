@@ -573,7 +573,7 @@ define(['pods_app/app',
                     index = tgt.closest('tr').index(),
                     row = this.model.get('volumeMounts')[index];
 
-                if (row.mountPath === null){
+                if (!row.mountPath){
                     utils.notifyWindow('Mount path must be set!');
                     tgt.closest('tr').find('.editable-empty').click();
                     return false

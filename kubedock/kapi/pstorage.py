@@ -123,7 +123,9 @@ class PersistentStorage(object):
 
     def create(self, pd):
         """
-        Creates a new drive for a user and returns its ID
+        Tries to create a new persistent drive. Returns PersistentDisk
+        structure serialized to json.
+        If creating was failed, then return None.
 
         :param pd: kubedock.pods.models.PersistentDisk instance
         """
@@ -135,14 +137,12 @@ class PersistentStorage(object):
             current_app.logger.exception(msg)
             raise APIError(msg)
 
-        if rv_code == 0:
-            data = pd.to_dict()
-            if self._cached_drives is not None:
-                self._cached_drives.append(data)
-            return data
-        msg = 'Failed to create drive. Remote command failed.'
-        current_app.logger.exception(msg)
-        raise APIError(msg)
+        if rv_code != 0:
+            return None
+        data = pd.to_dict()
+        if self._cached_drives is not None:
+            self._cached_drives.append(data)
+        return data
 
     def delete(self, name, user):
         """
@@ -561,6 +561,9 @@ class CephStorage(PersistentStorage):
                 'rbd create {0} --size={1}'.format(name, mb_size)
             )
         except NodeCommandError:
+            current_app.logger.exception(
+                u'Failed to create CEPH drive "%s", size = %s',
+                name, size)
             return 1
         self.start_stat(size, sys_drive_name=name)
         return 0

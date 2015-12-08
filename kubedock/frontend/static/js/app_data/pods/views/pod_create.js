@@ -1369,7 +1369,7 @@ define(['app_data/app', 'app_data/model',
             evt.stopPropagation();
             var tgt = evt.target,
                 name = $(tgt).closest('tr').children('td:first').attr('id');
-            this.model.last_edited_container = name;
+            this.model.lastEditedContainer = {id: name};
             this.trigger('step:portconf', name);
         },
 

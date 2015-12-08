@@ -357,7 +357,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
             'nodes_page' : 'div#nodes-page',
             'redeploy'   : 'button#redeploy_node',
             'delete'     : 'button#delete_node',
-            'tabItem'    : 'ul.nav li'
+            'tabItem'    : 'nav-sidebar li'
         },
 
         events: {

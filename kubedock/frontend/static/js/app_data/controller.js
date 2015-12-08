@@ -152,18 +152,22 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
             var that = this;
             require(['app_data/pods/views/pod_create',
                      'app_data/pods/views/paginator',
-                     'app_data/pods/views/loading'], function(Views, Pager, Loading){
+                     'app_data/pods/views/loading',
+                     'app_data/menu/views'], function(Views, Pager, Loading, Menu){
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
                         parent_model = podCollection.fullCollection.get(id);
-                        model = parent_model.get('containers').get(name);
+                        model = parent_model.get('containers').get(name),
+                        navbar = new Menu.NavList({ collection: App.menuCollection });
 
                     var show = function(View){
                         return wizardLayout.steps.show(new View({model: model}));
                     };
 
-                    that.listenTo(wizardLayout, 'show',
-                        _.partial(show, Views.WizardLogsSubView));
+                    that.listenTo(wizardLayout, 'show', function(){
+                        wizardLayout.nav.show(navbar);
+                        wizardLayout.steps.show(new Views.WizardLogsSubView({model: model}));
+                    });
 
                     that.listenTo(wizardLayout, 'step:portconf',
                         _.partial(show, Views.WizardPortsSubView));
@@ -343,7 +347,6 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         }));
                     });
                     that.listenTo(wizardLayout, 'image:selected', function(image, auth){
-                        console.log('image:selected', image, auth);
                         utils.preloader.show();
                         $.ajax({
                             type: 'POST',

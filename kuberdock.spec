@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 13%{?dist}.cloudlinux
+Release: 13.1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,10 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Tue Dec 08 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.4-13.1
+- AC-1539: Hotfix empty path name
+- AC-1758: Container edit buttons lead to last container; couple of bugs fixed
+
 * Mon Dec 07 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.4-13
 - AC-1330: Add new style to PD adding
 - AC-1608: suspend/unsuspend logic; returning ip to the pods; refactiorng

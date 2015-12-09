@@ -111,7 +111,7 @@ function log {
       tail -n 100 "$LOG_FILE" > "$LOG_FILE.tmp"
       mv "$LOG_FILE.tmp" "$LOG_FILE"
     fi
-    echo "$@" >> "$LOG_FILE"
+    echo "$(date -uIns) $@" >> "$LOG_FILE"
   fi
 }
 
@@ -144,6 +144,17 @@ function teardown_pod {
     if [ ! $(ls "$DATA_DIR") ];then   # is empty
       rm -rf "$DATA_DIR"
     fi
+}
+
+
+function add_resolve {
+  log "Setup resolve \"$2\" for namespace $1"
+  for resolve in $2
+  do
+    curl -sS --cacert "$ETCD_CAFILE" --cert "$ETCD_CERTFILE" --key "$ETCD_KEYFILE" \
+      -X PUT "https://10.254.0.10:2379/v2/keys/skydns/kuberdock/svc/$1/$resolve" \
+      -d value="{\"host\":\"127.0.0.1\",\"priority\":10,\"weight\":10,\"ttl\":30,\"targetstrip\":0}"
+  done
 }
 
 
@@ -197,6 +208,9 @@ case "$ACTION" in
 
     add_rules "$POD_IP" "$USER_ID"
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"
+
+    RESOLVE=$(echo "$POD_SPEC" | grep kuberdock_resolve | awk '{gsub(/,$/,""); for(i=2; i<=NF; ++i) print $i}' | tr -d \" | xargs echo)
+    add_resolve "$NAMESPACE" "$RESOLVE"
 
     # Workaround 3. Recheck that pod still exists.
     # TODO what if api-server is down ?

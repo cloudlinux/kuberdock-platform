@@ -240,6 +240,7 @@ new_pod_schema = {
         'nullable': True,
         'template_exists': True,
     },
+    'kuberdock_resolve': {'type': 'string', 'required': False},
     'node': {
         'type': 'string',
         'nullable': True,

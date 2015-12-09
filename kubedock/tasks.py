@@ -189,6 +189,8 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
+        sftp.put('/etc/pki/etcd/etcd-dns.crt', '/etcd-dns.crt')
+        sftp.put('/etc/pki/etcd/etcd-dns.key', '/etcd-dns.key')
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\

@@ -153,6 +153,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
         owner = User.filter_by(username=self.owner).one()
+        kuberdock_resolve = getattr(self, 'kuberdock_resolve', '')
         config = {
             "kind": "ReplicationController",
             "apiVersion": KUBE_API_VERSION,
@@ -175,6 +176,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                             # TODO we must generate uid per user and use it for all user's pods
                             # TODO why owner is unicode here? why not db obj
                             "kuberdock-user-uid": str(owner.id),
+                        },
+                        "annotations": {
+                            "kuberdock_resolve": kuberdock_resolve,
                         }
                     },
                     "spec": {

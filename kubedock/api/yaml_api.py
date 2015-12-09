@@ -103,6 +103,7 @@ def process_pod(pod, rc, service):
         'replicas': replicas,
         'kube_type': kdSection.get('kube_type', Kube.get_default_kube_type()),
         'kuberdock_template_id': kdSection.get('kuberdock_template_id'),
+        'kuberdock_resolve': kdSection.get('kuberdock_resolve', ''),
     }
 
     if 'containers' in spec_body:

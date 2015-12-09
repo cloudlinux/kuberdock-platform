@@ -441,6 +441,13 @@ etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -
 do_and_log mv $etcd1.crt /etc/pki/etcd/
 do_and_log mv $etcd1.key.insecure /etc/pki/etcd/$etcd1.key
 
+# generate dns-pod's certificate
+etcd-ca new-cert --ip "10.254.0.10" --passphrase "" etcd-dns
+etcd-ca sign --passphrase "" etcd-dns
+etcd-ca export etcd-dns --insecure --passphrase "" | tar -xf -
+do_and_log mv etcd-dns.crt /etc/pki/etcd/
+do_and_log mv etcd-dns.key.insecure /etc/pki/etcd/etcd-dns.key
+
 # generate client's certificate
 etcd-ca new-cert --passphrase "" etcd-client
 etcd-ca sign --passphrase "" etcd-client

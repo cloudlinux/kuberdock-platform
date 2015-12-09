@@ -111,7 +111,7 @@ def _update_ipset(set_name, ip_list, set_type='hash:ip'):
 
 
 def update_ipset():
-    shared_ips = ['10.254.0.10']
+    shared_ips = ['10.254.0.1', '10.254.0.10']
     nodes_ips = set()
     etcd = ETCD()
     for user in etcd.users():

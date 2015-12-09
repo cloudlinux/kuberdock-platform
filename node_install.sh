@@ -158,6 +158,8 @@ check_status
 mv /ca.crt /etc/pki/etcd/
 mv /etcd-client.crt /etc/pki/etcd/
 mv /etcd-client.key /etc/pki/etcd/
+mv /etcd-dns.crt /etc/pki/etcd/
+mv /etcd-dns.key /etc/pki/etcd/
 check_status
 
 # 4.1 create and populate scripts directory

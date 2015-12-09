@@ -47,6 +47,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def add(self, params, skip_check=False):  # TODO: celery
         secrets = set()  # username, password, full_registry
         for container in params['containers']:
+            if not container.get('sourceUrl'):
+                container['sourceUrl'] = Image(container['image']).source_url
             secret = container.pop('secret', None)
             if secret is not None:
                 secrets.add((secret['username'], secret['password'],

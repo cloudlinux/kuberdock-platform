@@ -27,6 +27,7 @@ NODE_IP=$(ip -o ad | grep " $IFACE " | head -1 | awk '{print $4}' | cut -d/ -f1)
 DATA_DIR="$PLUGIN_DIR/$NAMESPACE"
 DATA_INFO="$DATA_DIR/$KUBERNETES_POD_ID"
 LOG_FILE="$PLUGIN_DIR/kuberdock.log"
+LOG_ENABLED="1"
 
 
 function rule_reject_pod_local_input {
@@ -105,7 +106,9 @@ function etcd_ {
 
 
 function log {
-  echo "$@" >> "$LOG_FILE"
+  if [ "$LOG_ENABLED" == "1" ];then
+    echo "$@" >> "$LOG_FILE"
+  fi
 }
 
 
@@ -117,6 +120,23 @@ function iptables_ {
       iptables -w ${action} ${@}
     fi
 }
+
+
+function teardown_pod {
+    log "Teardown Pod $POD_IP of user $USER_ID; PUBLCI_IP: $POD_PUBLIC_IP"
+    del_rules "$POD_IP" "$USER_ID"
+
+    if [ "$POD_PUBLIC_IP" != "" ];then
+      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE
+    fi
+
+    etcd_ DELETE "$USER_ID" "$POD_IP"
+    rm -rf "$DATA_INFO"
+    if [ ! $(ls "$DATA_DIR") ];then   # is empty
+      rm -rf "$DATA_DIR"
+    fi
+}
+
 
 case "$ACTION" in
   "init")
@@ -133,20 +153,34 @@ case "$ACTION" in
     iptables_ -I KUBERDOCK -t nat -m set ! --match-set kuberdock_cluster dst -j REDIRECT
     ;;
   "setup")
+
+    # TODO what if api-server is down ?
+    POD_SPEC=$(curl -f -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN")
+    # Protection from fast start/stop pod; Must be first check
+    if [ "$POD_SPEC" == "" ];then
+      log "Empty spec case. Skip setup"
+      exit
+    fi
+
+    if [ -d "$DATA_DIR" ];then  # Protection from absent teardown
+      log "Forced teardown"
+      OLD_POD="$(ls -1 $DATA_DIR)"
+      source "$DATA_DIR/$OLD_POD"
+      teardown_pod
+      rm -rf "$DATA_DIR/$OLD_POD"
+    fi
+
     POD_IP=$(docker inspect --format="{{.NetworkSettings.IPAddress}}" "$DOCKER_PAUSE_ID")
     SERVICE_IP=$(iptables -w -L -t nat | grep "$NAMESPACE" | head -1 | awk '{print $5}')
-    # TODO what if api-server is down ?
-    POD_SPEC=$(curl -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN")
     USER_ID=$(echo "$POD_SPEC" | grep kuberdock-user-uid | awk '{gsub(/,$/,""); print $2}' | tr -d \")
     POD_PUBLIC_IP=$(echo "$POD_SPEC" | grep kuberdock-public-ip | awk '{gsub(/,$/,""); print $2}' | tr -d \")
 
-    log "Setup Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID"
+    log "Setup Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID; PUBLCI_IP: $POD_PUBLIC_IP"
 
     mkdir -p "$DATA_DIR"
     echo "POD_IP=$POD_IP" > "$DATA_INFO"
     echo "USER_ID=$USER_ID" >> "$DATA_INFO"
 
-    log "PUBLCI_IP: $POD_PUBLIC_IP"
     if [ "$POD_PUBLIC_IP" != "" ];then
       echo "POD_PUBLIC_IP=$POD_PUBLIC_IP" >> "$DATA_INFO"
       /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE
@@ -154,17 +188,24 @@ case "$ACTION" in
 
     add_rules "$POD_IP" "$USER_ID"
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"
-    ;;
-  "teardown")
-    source "$DATA_INFO"
-    log "Teardown Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID"
-    del_rules "$POD_IP" "$USER_ID"
 
-    if [ "$POD_PUBLIC_IP" != "" ];then
-      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE
+    # Recheck that pod still exists. This is workaround for kubelet bugs
+    # TODO what if api-server is down ?
+    # TODO remove code duplication
+    POD_SPEC=$(curl -f -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN")
+    if [ "$POD_SPEC" == "" ];then
+      log "Pod already not exists. Make teardown"
+      teardown_pod
+      exit
     fi
 
-    etcd_ DELETE "$USER_ID" "$POD_IP"
-    rm -rf "$DATA_DIR"
+    ;;
+  "teardown")
+    if [ -f "$DATA_INFO" ];then
+      source "$DATA_INFO"
+      teardown_pod
+    else
+      log "Teardown called for not existed pod. Skip"
+    fi
     ;;
 esac

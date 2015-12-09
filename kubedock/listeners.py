@@ -6,6 +6,7 @@ from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
 from .core import ConnectionPool
+from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
 from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
 from .utils import (modify_node_ips, get_api_url, set_limit,
@@ -144,8 +145,9 @@ def send_pod_status_update(pod, pod_id, event_type, app):
                     unregistered_pod_warning(pod_id)
                     return
                 owner = db_pod.owner.id
-                send_event('pull_pods_state', 'ping')   # common for admins
-                send_event('pull_pods_state', 'ping', channel='user_%s' % owner)
+                send_event('pod:change', {'id': pod_id})   # common for admins
+                send_event('pod:change', {'id': pod_id},
+                           channel='user_{0}'.format(owner))
 
 
 def process_pods_event(data, app):
@@ -207,7 +209,8 @@ def get_node_state(node):
 def process_nodes_event(data, app):
     event_type = data['type']
     node = data['object']
-    key_ = 'node_state_' + node['metadata']['name']
+    hostname = node['metadata']['name']
+    key_ = 'node_state_' + hostname
 
     with app.app_context():
         redis = ConnectionPool.get_connection()
@@ -219,7 +222,10 @@ def process_nodes_event(data, app):
             deleted = event_type == 'DELETED'
             if prev_state != current or deleted:
                 redis.set(key_, 'DELETED' if deleted else current)
-                send_event('pull_nodes_state', 'ping')   # common ch for admins
+                # send update in common channel for all admins
+                node = Node.query.filter_by(hostname=hostname).first()
+                if node is not None:
+                    send_event('node:change', {'id': node.id})
 
 
 def prelist_version(url):

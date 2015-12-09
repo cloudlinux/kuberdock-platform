@@ -43,7 +43,7 @@ define(['app_data/app',
         template : podListEmptyTpl,
         tagName  : 'tr',
     });
-    
+
     // View for showing a single pod item as a container in pods list
     podList.PodListItem = Backbone.Marionette.ItemView.extend({
         template    : podListItemTpl,
@@ -75,6 +75,10 @@ define(['app_data/app',
             'click @ui.stop'       : 'stopItem',
             'click @ui.podPageBtn' : 'podPage',
             'click @ui.checkbox'   : 'toggleItem'
+        },
+
+        modelEvents: {
+            'change': 'render'
         },
 
         podPage: function(evt){

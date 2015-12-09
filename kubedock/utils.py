@@ -62,9 +62,7 @@ def send_event(event_name, data, to_file=None, channel='common'):
 
 
 def send_logs(node, data, to_file=None, channel='common'):
-    conn = ConnectionPool.get_connection()
-    conn.publish(channel, json.dumps(['install_logs',
-                                      {'for_node': node, 'data': data}]))
+    send_event('node:installLog', {'id': node, 'data': data}, channel=channel)
     if to_file is not None:
         try:
             to_file.write(data)
@@ -527,7 +525,8 @@ def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
 
             with app.app_context():
                 register_elb_name(service, elb.dns_name)
-                send_event('pull_pods_state', 'elb-ready')
+                pod = Pod.query.filter(Pod.ip == pod_ip).first()
+                send_event('pod:change', {'id': pod.id} if pod else None)
 
     elif cmd == 'del':
         if elb:

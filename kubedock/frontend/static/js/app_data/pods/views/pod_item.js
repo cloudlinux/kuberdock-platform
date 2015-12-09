@@ -103,6 +103,10 @@ define(['app_data/app',
             /*'click @ui.checkbox'           : 'checkItem'*/
         },
 
+        modelEvents: {
+            'change': 'render'
+        },
+
         /*startItem: function(){
             App.commandPod('start', this.model.get('parentID'));
         },
@@ -260,6 +264,10 @@ define(['app_data/app',
             'click @ui.close'      : 'closeMessage'
         },
 
+        modelEvents: {
+            'change': 'render',
+        },
+
         initialize: function(options){ this.graphs = options.graphs; },
 
         templateHelpers: function(){
@@ -346,7 +354,6 @@ define(['app_data/app',
                             success: function(){
                                 App.getPodCollection().done(function(col){
                                     col.remove(item);
-                                    App.navigate('pods', {trigger: true});
                                 });
                             },
                             error: function(model, response, options, data){
@@ -442,11 +449,8 @@ define(['app_data/app',
             return {pod: this.model};
         },
 
-        initialize: function(options){
-            var that = this;
-            App.getPodCollection().done(function(podCollection){
-                that.listenTo(podCollection, 'pods:collection:fetched', that.render);
-            });
+        modelEvents: {
+            'change': 'render'
         },
     });
 

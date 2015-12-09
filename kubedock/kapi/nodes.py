@@ -112,7 +112,8 @@ def create_node(ip, hostname, kube_id,
     node = add_node_to_db(node)
     _deploy_node(node, do_deploy, with_testing)
 
-    send_event('pull_nodes_state', 'ping')
+    # send update in common channel for all admins
+    send_event('node:change', {'id': node.id})
     return node
 
 
@@ -154,6 +155,68 @@ def delete_node(node_id):
         pass
 
 
+def get_install_log(node_status, hostname):
+    if node_status == 'running':
+        return ''
+    else:
+        try:
+            with open(NODE_INSTALL_LOG_FILE.format(hostname), 'r') as f:
+                return f.read()
+        except IOError:
+            return 'No install log available for this node.\n'
+
+
+def get_status(node, res=None):
+    """Get node status and reason.
+
+    :param node: node model from database
+    :param res: node from k8s
+    :return: status, reason
+    """
+    if res is not None:
+        if _node_is_active(res):
+            node_status = 'running'
+            node_reason = ''
+        else:
+            node_status = 'troubles'
+            condition = _get_node_condition(res)
+            if condition:
+                node_reason = (
+                    'Node state is {0}\n'
+                    'Reason: "{1}"\n'
+                    'Last transition time: {2}'.format(
+                        condition['status'],
+                        condition['reason'],
+                        condition['lastTransitionTime']
+                    )
+                )
+            else:
+                node_reason = (
+                    'Node is a member of KuberDock cluster but '
+                    'does not provide information about its condition\n'
+                    'Possible reasons:\n'
+                    '1) node is in installation progress on final step'
+                )
+    else:
+        if node.state == 'pending':
+            node_status = 'pending'
+            node_reason = (
+                'Node is not a member of KuberDock cluster\n'
+                'Possible reasons:\n'
+                'Node is in installation progress\n'
+            )
+        else:
+            node_status = 'troubles'
+            node_reason = (
+                'Node is not a member of KuberDock cluster\n'
+                'Possible reasons:\n'
+                '1) error during node installation\n'
+                '2) no connection between node and master '
+                '(firewall, node reboot, etc.)\n'
+            )
+    return node_status, node_reason
+
+
 def get_nodes_collection():
     """Returns information for all known nodes.
 
@@ -173,57 +236,8 @@ def get_nodes_collection():
     nodes = _fix_missed_nodes(nodes, kub_hosts)
     nodes_list = []
     for node in nodes:
-        if node.hostname in kub_hosts:
-            if _node_is_active(kub_hosts[node.hostname]):
-                node_status = 'running'
-                node_reason = ''
-            else:
-                node_status = 'troubles'
-                condition = _get_node_condition(kub_hosts[node.hostname])
-                if condition:
-                    node_reason = (
-                        'Node state is {0}\n'
-                        'Reason: "{1}"\n'
-                        'Last transition time: {2}'.format(
-                            condition['status'],
-                            condition['reason'],
-                            condition['lastTransitionTime']
-                        )
-                    )
-                else:
-                    node_reason = (
-                        'Node is a member of KuberDock cluster but '
-                        'does not provide information about its condition\n'
-                        'Possible reasons:\n'
-                        '1) node is in installation progress on final step'
-                    )
-        else:
-            if node.state == 'pending':
-                node_status = 'pending'
-                node_reason = (
-                    'Node is not a member of KuberDock cluster\n'
-                    'Possible reasons:\n'
-                    'Node is in installation progress\n'
-                )
-            else:
-                node_status = 'troubles'
-                node_reason = (
-                    'Node is not a member of KuberDock cluster\n'
-                    'Possible reasons:\n'
-                    '1) error during node installation\n'
-                    '2) no connection between node and master '
-                    '(firewall, node reboot, etc.)\n'
-                )
-
-        if node_status == 'running':
-            install_log = ''
-        else:
-            try:
-                install_log = open(
-                    NODE_INSTALL_LOG_FILE.format(node.hostname)
-                ).read()
-            except IOError:
-                install_log = 'No install log available for this node.\n'
+        node_status, node_reason = get_status(node, kub_hosts.get(node.hostname))
+        install_log = get_install_log(node_status, node.hostname)
 
         try:
             resources = kub_hosts[node.hostname]['status']['capacity']
@@ -249,34 +263,42 @@ def get_nodes_collection():
 
 
 def get_one_node(node_id):
-    """Selects information about a node. Information will be extended like in
-    get_nodes_collection function, except 'install_log' and 'reason' fields.
+    """Selects information about a node. See `get_nodes_collection` for more info.
     :return: dict
     """
-    m = Node.get_by_id(node_id)
-    if not m:
+    node = Node.get_by_id(node_id)
+    if not node:
         raise APIError("Error. Node {0} doesn't exists".format(node_id),
                        status_code=404)
 
-    res = _get_k8s_node_by_host(m.hostname)
-    if res['status'] == 'Failure':
-        raise APIError(
-            "Error. Node exists in db but don't exists in kubernetes",
-            status_code=404)
+    k8s_node = _get_k8s_node_by_host(node.hostname)
+    if k8s_node['status'] == 'Failure':
+        k8s_node = None
+        if node.state != 'pending':
+            raise APIError(
+                "Error. Node exists in db but don't exists in kubernetes",
+                status_code=404)
 
-    resources = res['status'].get('capacity', {})
+    node_status, node_reason = get_status(node, k8s_node)
+    install_log = get_install_log(node_status, node.hostname)
 
-    try:
-        resources['memory'] = from_binunit(resources['memory'])
-    except (KeyError, ValueError):
-        pass
+    if k8s_node is None:
+        resources = {}
+    else:
+        resources = k8s_node['status'].get('capacity', {})
+        try:
+            resources['memory'] = from_binunit(resources['memory'])
+        except (KeyError, ValueError):
+            pass
 
     data = {
-        'id': m.id,
-        'ip': m.ip,
-        'hostname': m.hostname,
-        'kube_type': m.kube.id,
-        'status': 'running' if _node_is_active(res) else 'troubles',
+        'id': node.id,
+        'ip': node.ip,
+        'hostname': node.hostname,
+        'kube_type': node.kube_id,
+        'status': node_status,
+        'reason': node_reason,
+        'install_log': install_log,
         'resources': resources
     }
     return data

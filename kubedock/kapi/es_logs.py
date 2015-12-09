@@ -148,7 +148,7 @@ def _check_logs_pod(host):
 
     pod_name = get_kuberdock_logs_pod_name(node.hostname)
 
-    for pod in PodCollection(User.get_internal()).get(False):
+    for pod in PodCollection(User.get_internal()).get(as_json=False):
         if pod.get('name') != pod_name:
             continue
         pod_status = pod.get('status')

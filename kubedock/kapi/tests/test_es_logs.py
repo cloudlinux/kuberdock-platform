@@ -310,7 +310,7 @@ class TestCheckLogsPod(DBTestCase):
         self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
         self.PodCollectionMock.assert_called_once_with(self.internal_user)
-        self.PodCollectionMock.return_value.get.assert_called_once_with(False)
+        self.PodCollectionMock.return_value.get.assert_called_once_with(as_json=False)
 
     def test_pod_not_running(self):
         self.PodCollectionMock.return_value.get.return_value = [
@@ -319,7 +319,7 @@ class TestCheckLogsPod(DBTestCase):
         self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
         self.PodCollectionMock.assert_called_once_with(self.internal_user)
-        self.PodCollectionMock.return_value.get.assert_called_once_with(False)
+        self.PodCollectionMock.return_value.get.assert_called_once_with(as_json=False)
 
     def test_container_is_running_less_than_a_minute(self):
         usage_models.ContainerState.query.filter_by(end_time=None)\

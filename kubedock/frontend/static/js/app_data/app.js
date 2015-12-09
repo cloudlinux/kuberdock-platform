@@ -141,10 +141,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     return pod.command(cmd, {
                         wait: true,
                         error: function(model, xhr){ Utils.notifyWindow(xhr); },
-                        complete: function(){
-                            Utils.preloader.hide();
-                            pod.collection.trigger('pods:collection:fetched');
-                        },
+                        complete: function(){ Utils.preloader.hide(); },
                     });
                 };
 
@@ -196,44 +193,56 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
             new Router({controller: controller});
 
             function eventHandler(nodes){
-                var source = new EventSource("/api/stream");
+                var source = new EventSource("/api/stream"), events;
+                var collectionChange = function(collectionGetter){
+                    return function(ev){
+                        collectionGetter.apply(that).done(function(collection){
+                            var data = JSON.parse(ev.data),
+                                item = collection.fullCollection.get(data.id);
+                            if (item) {
+                                item.fetch({statusCode: null}).fail(function(xhr){
+                                    if (xhr.status == 404)
+                                        collection.remove(item);
+                                });
+                            } else {  // it's a new item, or we've missed some event
+                                collection.fetch();
+                            }
+                        });
+                    };
+                };
 
                 if (typeof(EventSource) === undefined) {
                     console.log('ERROR: EventSource is not supported by browser');
                 }
                 else {
                     if (nodes) {
-                        source.addEventListener('pull_nodes_state', function (ev) {
-                            that.getNodeCollection().done(function(collection){
-                                collection.fetch();
-                            });
-                        }, false);
-                        source.addEventListener('install_logs', function (ev) {
-                            that.getNodeCollection().done(function(collection){
-                                var decoded = JSON.parse(ev.data),
-                                    node = collection.findWhere({'hostname': decoded.for_node});
-                                if (typeof(node) !== 'undefined') {
-                                    node.set('install_log', node.get('install_log') + decoded.data + '\n');
-                                    App.vent.trigger('update_console_log');
-                                }
-                            });
-                        }, false);
-                    }
-                    else {
-                        source.addEventListener('pull_pods_state', function(){
-                            that.getPodCollection().done(function(podCollection){
-                                podCollection.fetch({
-                                    success: function(collection, response, opts){
-                                        collection.trigger('pods:collection:fetched');
-                                    }
+                        events = {
+                            'node:change': collectionChange(that.getNodeCollection),
+                            // 'ippool:change': collectionChange(that.getIPPoolCollection),
+                            // 'user:change': collectionChange(that.getUserCollection),
+                            'node:installLog': function(ev){
+                                that.getNodeCollection().done(function(collection){
+                                    var decoded = JSON.parse(ev.data),
+                                        node = collection.get(decoded.id);
+                                    if (typeof(node) !== 'undefined')
+                                        node.appendLogs(decoded.data);
                                 });
-                            });
-                        },false);
+                            },
+                        };
+                    } else {
+                        events = {
+                            'pod:change': collectionChange(that.getPodCollection),
+                            // 'pd:change':
+                        };
                     }
+
+                    _.mapObject(events, function(handler, eventName){
+                        source.addEventListener(eventName, handler, false);
+                    });
                     source.onerror = function () {
                         console.info('SSE Error');
                         source.close();
-                        setTimeout(eventHandler, 5000)
+                        setTimeout(_.partial(eventHandler, nodes), 5000);
                     };
                 }
             }

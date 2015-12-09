@@ -70,32 +70,16 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         return;
                     }
 
+                    that.listenTo(model, 'remove destroy', function(){
+                        App.navigate('pods', {trigger: true});
+                    });
+
                     var navbar = new Menu.NavList({
                         collection: App.menuCollection
                     });
 
                     var masthead = new Views.PageHeader({
                         model: new Backbone.Model({name: model.get('name')})
-                    });
-
-                    that.listenTo(podCollection, 'pods:collection:fetched', function(){
-                        try {
-                            var model = App.getCollection().fullCollection.get(id);
-                            if (typeof itemLayout.controls === 'undefined' || typeof model === 'undefined') {
-                                return;
-                            }
-                            itemLayout.controls.show(new Views.ControlsPanel({
-                                graphs: graphsOn,
-                                model: model,
-                            }));
-                            if (!graphsOn) {
-                                itemLayout.info.show(new App.Views.Item.InfoPanel({
-                                    collection: model.get('containers'),
-                                }));
-                            }
-                        } catch(e) {
-                            console.log(e)
-                        }
                     });
 
                     that.listenTo(itemLayout, 'display:pod:stats', function(data){
@@ -156,13 +140,17 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                      'app_data/menu/views'], function(Views, Pager, Loading, Menu){
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
-                        parent_model = podCollection.fullCollection.get(id);
-                        model = parent_model.get('containers').get(name),
+                        pod = podCollection.fullCollection.get(id);
+                        model = pod.get('containers').get(name),
                         navbar = new Menu.NavList({ collection: App.menuCollection });
 
                     var show = function(View){
                         return wizardLayout.steps.show(new View({model: model}));
                     };
+
+                    that.listenTo(pod, 'remove destroy', function(){
+                        App.navigate('pods', {trigger: true});
+                    });
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.nav.show(navbar);
@@ -182,7 +170,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                     that.listenTo(wizardLayout, 'step:statsconf', function(){
                         var statCollection = new Model.StatsCollection();
                         statCollection.fetch({
-                            data: {unit: parent_model.id, container: model.id},
+                            data: {unit: pod.id, container: model.id},
                             reset: true,
                             success: function(){
                                 wizardLayout.steps.show(new Views.WizardStatsSubView({
@@ -439,6 +427,10 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                             //breadcrumbsModel = new Backbone.Model({hostname: node.get('hostname')});
                             //sidebarModel = new Backbone.Model({tab: tab, });
 
+                        that.listenTo(node, 'remove destroy', function(){
+                            App.navigate('nodes', {trigger: true});
+                        });
+
                         layoutView.nav.show(navbar);
                         //layoutView.breadcrumbs.show(new Views.Breadcrumbs({model: breadcrumbsModel}));
 
@@ -467,8 +459,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                                     success: function(){
                                         var view = new Views.NodeMonitoringTabView({
                                             collection: graphCollection,
-                                            hostname: hostname,
-                                            nodeId: nodeId
+                                            model: node,
                                         });
                                         //layoutView.sidebar.show(new Views.SideBar({model: sidebarModel, nodeId: nodeId}));
                                         layoutView.tabContent.show(view);

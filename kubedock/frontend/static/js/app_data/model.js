@@ -278,6 +278,10 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 statusCode: null,
             });
         },
+        appendLogs: function(data){
+            this.set('install_log', this.get('install_log') + data + '\n');
+            this.trigger('update_install_log');
+        }
     });
 
     data.NodeCollection = Backbone.PageableCollection.extend({

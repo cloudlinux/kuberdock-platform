@@ -137,7 +137,7 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         except subprocess.CalledProcessError as e:
             mes = 'Kuberdock needs correctly installed kubernetes' \
                   ' on master. {0}'.format(e.output)
-            send_logs(host, mes, log_file)
+            send_logs(node_id, mes, log_file)
             db_node.state = 'completed'
             db.session.commit()
             return mes
@@ -151,25 +151,25 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         except OSError as e:
             timezone = 'UTC'
             error_message = '{0}. Using "{1}"'.format(e, timezone)
-            send_logs(host, error_message, log_file)
+            send_logs(node_id, error_message, log_file)
 
         if redeploy:
-            send_logs(host, 'Redeploy.', log_file)
-            send_logs(host, 'Remove node {0} from kubernetes...'.format(host),
+            send_logs(node_id, 'Redeploy.', log_file)
+            send_logs(node_id, 'Remove node {0} from kubernetes...'.format(host),
                       log_file)
             result = remove_node_by_host(host)
-            send_logs(host, json.dumps(result, indent=2), log_file)
+            send_logs(node_id, json.dumps(result, indent=2), log_file)
 
-        send_logs(host, 'Current kubernetes package on master is'
-                        ' "{0}". Will install same package.'
-                        .format(current_master_kubernetes), log_file)
+        send_logs(node_id, 'Current kubernetes package on master is'
+                           ' "{0}". Will install same package.'
+                           .format(current_master_kubernetes), log_file)
 
-        send_logs(host, 'Connecting to {0} with ssh with user "root" ...'
+        send_logs(node_id, 'Connecting to {0} with ssh with user "root" ...'
                   .format(host), log_file)
         # If we want to got reed of color codes in output we have to use vt220
         ssh, error_message = ssh_connect(host)
         if error_message:
-            send_logs(host, error_message, log_file)
+            send_logs(node_id, error_message, log_file)
             db_node.state = 'completed'
             db.session.commit()
             return error_message
@@ -207,11 +207,11 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
             data = o.channel.recv(1024)
             while data:
                 for line in data.split('\n'):
-                    send_logs(host, line, log_file)
+                    send_logs(node_id, line, log_file)
                 data = o.channel.recv(1024)
             if (time.time() - s_time) > NODE_INSTALL_TIMEOUT_SEC:
                 err = 'Timeout during install. Installation has failed.'
-                send_logs(host, err, log_file)
+                send_logs(node_id, err, log_file)
                 ssh.exec_command('rm /node_install.sh')
                 ssh.close()
                 db_node.state = 'completed'
@@ -222,31 +222,33 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         ssh.exec_command('rm /node_install.sh')
         if s != 0:
             res = 'Installation script error. Exit status: {0}.'.format(s)
-            send_logs(host, res, log_file)
+            send_logs(node_id, res, log_file)
         else:
-            send_logs(host, 'Rebooting node...', log_file)
+            send_logs(node_id, 'Rebooting node...', log_file)
             ssh.exec_command('reboot')
             err = add_node_to_k8s(host, kube_type, is_ceph_installed)
             if err:
-                send_logs(host, 'ERROR adding node.', log_file)
-                send_logs(host, err, log_file)
+                send_logs(node_id, 'ERROR adding node.', log_file)
+                send_logs(node_id, err, log_file)
             else:
-                send_logs(host, 'Adding Node completed successful.',
+                send_logs(node_id, 'Adding Node completed successful.',
                           log_file)
-                send_logs(host, '===================================', log_file)
-                send_logs(host, '*** During reboot node may have status '
-                                '"troubles" and it will be changed '
-                                'automatically right after node reboot, '
-                                'when kubelet.service posts live status to '
-                                "master(if all works fine) and it's usually "
-                                'takes few minutes ***', log_file)
+                send_logs(node_id, '===================================', log_file)
+                send_logs(node_id, '*** During reboot node may have status '
+                                   '"troubles" and it will be changed '
+                                   'automatically right after node reboot, '
+                                   'when kubelet.service posts live status to '
+                                   "master(if all works fine) and it's usually "
+                                   'takes few minutes ***', log_file)
         ssh.close()
         db_node.state = 'completed'
         db.session.commit()
         if s != 0:
             # Until node has been rebooted we try to delay update
             # status on front. So we update it only in error case
-            send_event('pull_nodes_state', 'ping')  # after db_node commit only
+
+            # send update in common channel for all admins
+            send_event('node:change', {'id': db_node.id})
 
 
 def parse_pods_statuses(data):

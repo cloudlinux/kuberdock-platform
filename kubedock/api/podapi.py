@@ -18,7 +18,7 @@ class PodsAPI(KubeUtils, MethodView):
     def get(self, pod_id):
         #params = self._get_params()
         user = self._get_current_user()
-        return PodCollection(user).get(as_json=False)
+        return PodCollection(user).get(pod_id, as_json=False)
 
     @maintenance_protected
     def post(self):

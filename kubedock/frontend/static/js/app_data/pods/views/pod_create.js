@@ -395,6 +395,10 @@ define(['app_data/app', 'app_data/model',
             'click @ui.checkForUpdate' : 'checkContainerForUpdate',
         },
 
+        modelEvents: {
+            'change': 'render'
+        },
+
         initialize: function(options) {
             var that = this;
             App.getPodCollection().done(function(podCollection){
@@ -409,7 +413,6 @@ define(['app_data/app', 'app_data/model',
                         volumes.push({name: vm.name, localStorage: true});
                     }
                 });
-                that.listenTo(podCollection, 'pods:collection:fetched', that.render);
             });
         },
 
@@ -880,11 +883,14 @@ define(['app_data/app', 'app_data/model',
             'click .go-to-logs'      : 'step:logsconf',
         },
 
+        modelEvents: {
+            'change': 'render'
+        },
+
         initialize: function() {
             var that = this;
             App.getPodCollection().done(function(podCollection){
                 that.podCollection = podCollection;
-                that.listenTo(podCollection, 'pods:collection:fetched', this.render);
             });
         },
 
@@ -1075,13 +1081,6 @@ define(['app_data/app', 'app_data/model',
             return {container: this.model};
         },
 
-        initialize: function(options){
-            var that = this;
-            App.getPodCollection().done(function(podCollection){
-                that.listenTo(podCollection, 'pods:collection:fetched', that.render);
-            });
-        },
-
         events: {
             'click #stopContainer'    : 'stopContainer',
             'click #startContainer'   : 'startContainer',
@@ -1097,6 +1096,10 @@ define(['app_data/app', 'app_data/model',
             'click .go-to-other'     : 'step:otherconf',
             'click .go-to-stats'     : 'step:statsconf',
             'click .go-to-logs'      : 'step:logsconf'
+        },
+
+        modelEvents: {
+            'change': 'render'
         },
 
         templateHelpers: function(){
@@ -1176,17 +1179,12 @@ define(['app_data/app', 'app_data/model',
             'click .go-to-stats'     : 'step:statsconf'
         },
 
+        modelEvents: {
+            'change': 'render'
+        },
+
         initialize: function() {
-            var that = this;
             _.bindAll(this, 'getLogs');
-            App.getPodCollection().done(function(collection){
-                that.listenTo(collection, 'pods:collection:fetched', function(){
-                    if (!that.model.has('logs'))
-                        that.model.set('logs', []);
-                    that.render();
-                });
-            });
-            this.model.set('logs', []);
             this.getLogs();
         },
 

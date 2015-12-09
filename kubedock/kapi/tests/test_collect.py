@@ -76,7 +76,7 @@ class TestStatItem(unittest.TestCase):
         _PodCollection.return_value = mock_inst
         expected = {'total': 2, 'running': 1}
         pods = collect.get_pods()
-        mock_inst.get.assert_called_once_with(False)
+        mock_inst.get.assert_called_once_with(as_json=False)
         self.assertEqual(pods, expected,
             "Pods are expected to be {0} but got {1}".format(str(pods), str(expected)))
 

@@ -75,12 +75,12 @@ class TestNodes(DBTestCase):
         deploy_node_mock.assert_called_once_with(
             res, True, False
         )
-        send_event_mock.assert_called_once_with('pull_nodes_state', 'ping')
         gethostbyname_mock.assert_called_once_with(hostname)
         node = Node.get_by_name(hostname)
         self.assertIsNotNone(node)
         self.assertEqual(node.ip, ip)
         self.assertEqual(node.kube_id, default_kube_type)
+        send_event_mock.assert_called_once_with('node:change', {'id': node.id})
         check_node_hostname_mock.assert_called_once_with(node.ip, hostname)
 
         # add a node with the same IP
@@ -213,6 +213,8 @@ class TestNodes(DBTestCase):
             {
                 'id': node1.id,
                 'ip': node1.ip,
+                'install_log': '',
+                'reason': '',
                 'hostname': node1.hostname,
                 'kube_type': node1.kube_id,
                 'status': 'running',

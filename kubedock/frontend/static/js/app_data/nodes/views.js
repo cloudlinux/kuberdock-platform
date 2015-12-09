@@ -115,6 +115,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
             //'click @ui.configurationTab' : 'detailedConfigurationTab',
         },
 
+        modelEvents: {
+            'change': 'render'
+        },
+
         templateHelpers: function(){
             var model = this.model,
                 kubeType = '';
@@ -431,13 +435,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                             preloader.show();
                             model.destroy({
                                 wait: true,
-                                success: function(){
-                                    preloader.hide();
-                                    App.navigate('nodes', {trigger: true})
-                                },
-                                error: function(){
-                                    preloader.hide();
-                                }
+                                complete: function(){ preloader.hide(); },
                             });
                         },
                         buttonCancel: true
@@ -471,6 +469,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
             'click @ui.logSpollerButton' : 'logSpoller',
         },
 
+        modelEvents: {
+            'change': 'render'
+        },
+
         nodeLogsTab: function(){
             App.navigate('nodes/' + this.model.id + '/logs', {trigger: true});
         },
@@ -480,13 +482,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         initialize: function () {
-            this.listenTo(App.vent, 'update_console_log', this.render);
+            this.listenTo(this.model, 'update_install_log', this.render);
             this.listenTo(this.model.collection, 'reset', this.render);
         }
     });
 
     views.NodeStatsTabView = Backbone.Marionette.ItemView.extend({
-        template: nodeStatsTabTpl
+        template: nodeStatsTabTpl,
     });
 
     views.NodeLogsTabView = Backbone.Marionette.ItemView.extend({
@@ -494,6 +496,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
 
         ui: {
             textarea: '.node-logs'
+        },
+
+        modelEvents: {
+            'change': 'render'
         },
 
         initialize: function() {
@@ -559,20 +565,15 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         initialize: function(options) {
-            var that = this;
-            this.nodeId = options.nodeId;
-            App.getNodeCollection().done(function(nodeCollection){
-                that.listenTo(nodeCollection, 'reset', that.render);
-            });
-            //this.listenTo(App.nodesCollection, 'reset', this.render);
+            this.node = options.node;
+            this.listenTo(this.node.collection, 'reset', this.render);
         },
 
         makeGraph: function(){
             var that = this;
             App.getNodeCollection().done(function(nodeCollection){
                 var lines = that.model.get('lines'),
-                    node = nodeCollection.get(that.nodeId),
-                    running = node.get('status') === 'running',
+                    running = that.node.get('status') === 'running',
                     points = [],
                     options = {
                         title: that.model.get('title'),
@@ -655,9 +656,15 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
     });
 
-    views.NodeMonitoringTabView = Backbone.Marionette.CollectionView.extend({
+    views.NodeMonitoringTabView = Backbone.Marionette.CompositeView.extend({
+        template: nodeMonitoringTabTpl,
         childView: views.NodeMonitoringTabViewItem,
-        childViewOptions: function() { return { nodeId: this.options.nodeId }; },
+        childViewContainer: '.graphs',
+        childViewOptions: function() { return {node: this.model}; },
+
+        modelEvents: {
+            'change': 'render'
+        },
     });
 
     views.NodeTimelinesTabView = Backbone.Marionette.ItemView.extend({

@@ -28,6 +28,11 @@ class NoFreeIPs(APIError):
     message = 'There are no free IP-addresses'
 
 
+class PodNotFound(APIError):
+    message = 'Pod not found'
+    status_code = 404
+
+
 class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def __init__(self, owner=None):
@@ -71,23 +76,29 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod._forge_dockers()
         return pod.as_dict()
 
-    def get(self, as_json=True):
-        if self.owner is None:
-            pods = [p.as_dict() for p in self._collection.values()]
+    def get(self, pod_id=None, as_json=True):
+        if pod_id is None:
+            if self.owner is None:
+                pods = [p.as_dict() for p in self._collection.values()]
+            else:
+                pods = [p.as_dict() for p in self._collection.values()
+                        if getattr(p, 'owner', '') == self.owner.username]
         else:
-            pods = [p.as_dict() for p in self._collection.values() if getattr(p, 'owner', '') == self.owner.username]
+            pods = self._get_by_id(pod_id).as_dict()
         if as_json:
             return json.dumps(pods)
         return pods
 
-    def get_by_id(self, pod_id, as_json=False):
+    def _get_by_id(self, pod_id):
         try:
-            pod = [p for p in self._collection.values() if p.id == pod_id][0]
-            if as_json:
-                return pod.as_json()
-            return pod
-        except IndexError:
-            self._raise("No such item", 404)
+            if self.owner is None:
+                pod = (p for p in self._collection.values() if p.id == pod_id).next()
+            else:
+                pod = (p for p in self._collection.values() if p.id == pod_id and
+                       getattr(p, 'owner', '') == self.owner.username).next()
+        except StopIteration:
+            raise PodNotFound()
+        return pod
 
     @staticmethod
     def needs_public_ip(conf):
@@ -200,7 +211,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             raise APIError(str(e))
 
     def update(self, pod_id, data):
-        pod = self.get_by_id(pod_id)
+        pod = self._get_by_id(pod_id)
         command = data.get('command')
         if command is None:
             return
@@ -208,15 +219,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'start': self._start_pod,
             'stop': self._stop_pod,
             'resize': self._resize_replicas,
-            'container_start': self._container_start,
-            'container_stop': self._container_stop,
-            'container_delete': self._container_delete}
+            # 'container_start': self._container_start,
+            # 'container_stop': self._container_stop,
+            # 'container_delete': self._container_delete,
+        }
         if command in dispatcher:
             return dispatcher[command](pod, data)
         self._raise("Unknown command")
 
     def delete(self, pod_id, force=False):
-        pod = self.get_by_id(pod_id)
+        pod = self._get_by_id(pod_id)
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
         self._stop_pod(pod, raise_=False)
@@ -243,7 +255,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         :raise APIError: if pod not found or container not found in pod
             or image not found in registry
         """
-        pod = self.get_by_id(pod_id)
+        pod = self._get_by_id(pod_id)
         try:
             container = (c for c in pod.containers
                          if c['name'] == container_name).next()
@@ -264,7 +276,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         :raise APIError: if pod not found or if pod is not running
         """
-        pod = self.get_by_id(pod_id)
+        pod = self._get_by_id(pod_id)
         self._stop_pod(pod)
         return self._start_pod(pod)
 
@@ -566,21 +578,21 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if self._is_related(p['metadata']['labels'], {'kuberdock-pod-uid': pod.id}):
                 self._del(['pods', p['metadata']['name']], ns=pod.namespace)
 
-    def _do_container_action(self, action, data):
-        host = data.get('nodeName')
-        if not host:
-            return
-        rv = {}
-        containers = data.get('containers', '').split(',')
-        for container in containers:
-            command = 'docker {0} {1}'.format(action, container)
-            status, message = run_ssh_command(host, command)
-            if status != 0:
-                self._raise('Docker error: {0} ({1}).'.format(message, status))
-            if action in ('start', 'stop'):
-                send_event('pull_pod_state', message)
-            rv[container] = message or 'OK'
-        return rv
+    # def _do_container_action(self, action, data):
+    #     host = data.get('nodeName')
+    #     if not host:
+    #         return
+    #     rv = {}
+    #     containers = data.get('containers', '').split(',')
+    #     for container in containers:
+    #         command = 'docker {0} {1}'.format(action, container)
+    #         status, message = run_ssh_command(host, command)
+    #         if status != 0:
+    #             self._raise('Docker error: {0} ({1}).'.format(message, status))
+    #         if action in ('start', 'stop'):
+    #             send_event('pull_pod_state', message)
+    #         rv[container] = message or 'OK'
+    #     return rv
 
     @staticmethod
     def _process_persistent_volumes(pod, volumes):
@@ -626,14 +638,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             vid = storage.makefs(persistent_disk)
             pod._update_volume_path(v['name'], vid)
 
-    def _container_start(self, pod, data):
-        self._do_container_action('start', data)
+    # def _container_start(self, pod, data):
+    #     self._do_container_action('start', data)
 
-    def _container_stop(self, pod, data):
-        self._do_container_action('stop', data)
+    # def _container_stop(self, pod, data):
+    #     self._do_container_action('stop', data)
 
-    def _container_delete(self, pod, data):
-        self._do_container_action('rm', data)
+    # def _container_delete(self, pod, data):
+    #     self._do_container_action('rm', data)
 
     @staticmethod
     def _is_related(labels, selector):

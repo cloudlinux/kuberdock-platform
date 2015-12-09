@@ -32,7 +32,7 @@ def get_users_number(role='User'):
 
 def get_pods():
     data = {}
-    pods = PodCollection().get(False)
+    pods = PodCollection().get(as_json=False)
     data['total'] = len(pods)
     data['running'] = len([p for p in pods
         if p.get('status') != 'stopped'])

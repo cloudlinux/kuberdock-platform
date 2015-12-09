@@ -40,7 +40,7 @@ class YamlAPI(KubeUtils, MethodView):
             raise e
         except Exception as e:
             raise APIError('Unknown error during creating pod: {0}'.format(e))
-        send_event('pull_pods_state', 'ping', channel='user_%s' % user.id)
+        send_event('pod:change', res, channel='user_{0}'.format(user.id))
         return res
 
 register_api(yamlapi, YamlAPI, 'yamlapi', '/', 'pod_id', strict_slashes=False)

@@ -1,5 +1,4 @@
 import os
-import shutil
 import json
 import logging
 import operator
@@ -9,7 +8,7 @@ import collections
 import warnings
 
 from requests.auth import HTTPBasicAuth
-
+from functools import wraps
 
 class NullHandler(logging.Handler):
     def emit(self, record):
@@ -149,6 +148,7 @@ class PrintOut(object):
         self.fields = fields
         self.indent = indent
         self.as_json = as_json
+        PrintOut.instantiated = True
 
     def show_list(self, data):
         if self.as_json:
@@ -261,3 +261,17 @@ def create_user_config(args):
                              "one with option '--config'".format(path))
         with open(default_path, 'wb') as config:
             conf.write(config)
+
+
+def echo(func):
+    """
+    Decorator that checks if PrintOut class has been already instantiated
+    If no and output set to JSON --> print out a dumb message like {"status": "OK"}
+    """
+    @wraps(func)
+    def inner(*args, **kw):
+        func(*args, **kw)
+        if getattr(args[0], 'as_json', False):
+            if not getattr(PrintOut, 'instantiated', False):
+                print json.dumps({'status': 'OK'})
+    return inner

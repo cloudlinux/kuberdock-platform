@@ -1,23 +1,25 @@
 """Tests for helper.py classes"""
-import unittest
-import requests
-import json
-import os
-
+import mock
 import responses
+import os
+import unittest
 
-from kubecli.helper import KubeQuery
-from kubecli.helper import parse_config 
+from StringIO import StringIO
+
+from kubecli import helper
+from kubecli.container import container
+
 
 TEST_URL = 'http://localhost'
 TEST_USER = 'user1'
 TEST_PASSWORD = 'password1'
 
+
 class TestHelperKubeQuery(unittest.TestCase):
     """Tests for KubeQuery class."""
 
     def _get_default_query(self):
-        return KubeQuery(url=TEST_URL, user=TEST_USER, password=TEST_PASSWORD,
+        return helper.KubeQuery(url=TEST_URL, user=TEST_USER, password=TEST_PASSWORD,
                          jsonify_errors=True)
 
     @responses.activate
@@ -104,8 +106,8 @@ class TestHelperKubeQuery(unittest.TestCase):
 class TestParseConfig(unittest.TestCase):
     """Tests for configuration file parser"""
 
-    VALID_CONFIG = {'name': './valid_config.conf', 
-                    'settings': 
+    VALID_CONFIG = {'name': './valid_config.conf',
+                    'settings':
 '''
 [global]
 url = https://127.0.0.1
@@ -115,9 +117,9 @@ user = TrialUser
 password = TrialUser
 '''
     }
-    
+
     INVALID_CONFIG = {'name': './invalid_config',
-                      'settings': 
+                      'settings':
 '''
 url = https://127.0.0.1
 [defaults]
@@ -139,11 +141,42 @@ password = TrialUser
 
     def test_parse_invalid_config(self):
         with self.assertRaises(SystemExit):
-            data = parse_config(self.INVALID_CONFIG['name'])
+            helper.parse_config(self.INVALID_CONFIG['name'])
 
     def test_parse_valid_config(self):
-        data = parse_config(self.VALID_CONFIG['name'])
+        data = helper.parse_config(self.VALID_CONFIG['name'])
         self.assertEquals(type(data), type(dict()))
+
+
+@mock.patch.object(helper, 'PrintOut')
+@mock.patch.object(container.KuberDock, '_load')
+@mock.patch.object(container.KuberDock, '_save')
+@mock.patch('sys.stdout', new_callable=StringIO)
+class TestEchoDecorator(unittest.TestCase):
+
+    def test_bliss_json_true(self, _print, _save, _load, _printout):
+        _printout.instantiated = False
+        k = container.KuberDock(json=True)
+        k.set()
+        self.assertEqual('{"status": "OK"}\n', _print.getvalue())
+
+    def test_bliss_json_false(self, _print, _save, _load, _printout):
+        _printout.instantiated = True
+        k = container.KuberDock(json=False)
+        k.set()
+        self.assertEqual('', _print.getvalue())
+
+    def test_bliss_json_true_instantiated(self, _print, _save, _load, _printout):
+        _printout.instantiated = True
+        k = container.KuberDock(json=True)
+        k.set()
+        self.assertEqual('', _print.getvalue())
+
+    def test_bliss_json_false_non_instantiated(self, _print, _save, _load, _printout):
+        _printout.instantiated = False
+        k = container.KuberDock(json=False)
+        k.set()
+        self.assertEqual('', _print.getvalue())
 
 
 if __name__ == '__main__':

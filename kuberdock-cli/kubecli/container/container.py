@@ -9,7 +9,7 @@ import subprocess
 import warnings
 
 from ..image.image import Image
-from ..helper import KubeQuery, PrintOut
+from ..helper import KubeQuery, PrintOut, echo
 from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
     IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH, PREDEFINED_APPS_PATH)
 
@@ -84,7 +84,6 @@ class PodResource(object):
             raise SystemExit('No such item')
         pod_id = str(pod['id'])
         query = self.resource.query()
-        print "DELETE: {0}".format(PODAPI_PATH + pod_id)
         query.delete(PODAPI_PATH + pod_id)
         self.resource.printout("Deleted: {0}".format(pod_id))
         self.resource.ctl._set_delayed()
@@ -288,6 +287,7 @@ class KubeCtl(object):
         else:
             raise SystemExit(ERR_NO_SUCH_ITEM)
 
+    @echo
     def delete(self):
         """
         Gets a list of user pods, filter out one of them by name and deletes it.
@@ -297,6 +297,7 @@ class KubeCtl(object):
             raise SystemExit('Unknown resource')
         resource.delete()
 
+    @echo
     def create(self):
         """Creates resource"""
         resource = self._get_resource(True)
@@ -304,6 +305,7 @@ class KubeCtl(object):
             raise SystemExit('Unknown resource')
         resource.create()
 
+    @echo
     def update(self):
         """Updates resource"""
         resource = self._get_resource(True)
@@ -414,6 +416,7 @@ class KuberDock(KubeCtl):
     def create(self):
         self.set()
 
+    @echo
     def set(self):
         """Creates or updates temporary pod configuration on the local host"""
         if hasattr(self, 'image'):
@@ -426,6 +429,7 @@ class KuberDock(KubeCtl):
             self._delete_container_image()
             self._save()
 
+    @echo
     def save(self):
         """
         Sends POST request to KuberDock to save configured container
@@ -445,6 +449,7 @@ class KuberDock(KubeCtl):
         except TypeError, e:
             raise SystemExit(str(e))
 
+    @echo
     def list(self):
         """
         Lists all pending pods
@@ -467,7 +472,7 @@ class KuberDock(KubeCtl):
         printout = PrintOut(wants_header=True,
                             fields=(('id', 12), ('name', 32)),
                             as_json=self.as_json)
-        data = [{'name': k, 'id': v} for k, v in self._get_kube_types().iteritems()]        
+        data = [{'name': k, 'id': v} for k, v in self._get_kube_types().iteritems()]
         data.sort()
         printout.show_list(data)
 
@@ -479,6 +484,7 @@ class KuberDock(KubeCtl):
          'add': self.add_drive,
          'delete': self.delete_drive}.get(self.pdaction, self.list_drives)()
 
+    @echo
     def list_drives(self):
         """
         Returns list of user persistent drives
@@ -490,12 +496,14 @@ class KuberDock(KubeCtl):
         )
         printout.show_list(self._get_drives())
 
+    @echo
     def add_drive(self):
         """
         Creates a persistent drive for a user
         """
         self.query.post(PSTORAGE_PATH, {'name': self.name, 'size': self.size})
 
+    @echo
     def delete_drive(self):
         """
         Deletes a user persistent drive
@@ -506,6 +514,7 @@ class KuberDock(KubeCtl):
             raise SystemExit('No such drive')
         self.query.delete(PSTORAGE_PATH + filtered[0]['id'])
 
+    @echo
     def start(self):
         """Starts a pod with specified name"""
         printout = PrintOut(
@@ -526,6 +535,7 @@ class KuberDock(KubeCtl):
         printout.show(res)
         self._set_delayed()
 
+    @echo
     def stop(self):
         """Stops a pod with specified name"""
         printout = PrintOut(
@@ -540,6 +550,7 @@ class KuberDock(KubeCtl):
             self.query.put(PODAPI_PATH + pod['id'], command))
         printout.show_list(res)
 
+    @echo
     def forget(self):
         """
         Deletes one or all pending containers
@@ -548,6 +559,7 @@ class KuberDock(KubeCtl):
             return self._forget_one()
         return self._forget_all()
 
+    @echo
     def search(self):
         """Searches for images with specified name. Optionally there may be
         defined url for a registry where the search should be performed.
@@ -560,6 +572,7 @@ class KuberDock(KubeCtl):
         image = Image(vars(self), **self._args)
         image.get()
 
+    @echo
     def describe(self):
         """Describes pending pod."""
         if not os.path.exists(self._data_path):

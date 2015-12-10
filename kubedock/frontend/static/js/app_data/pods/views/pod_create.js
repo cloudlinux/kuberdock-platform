@@ -368,6 +368,8 @@ define(['app_data/app', 'app_data/model',
             restartPolicy  : '.restart-policy',
             addDriveCancel : '.add-drive-cancel',
             podPorts       : '.hostPort',
+            pdName         : '.pd-name',
+            pdSize         : '.pd-size',
 
             stopContainer  : '#stopContainer',
             startContainer : '#startContainer',
@@ -380,6 +382,8 @@ define(['app_data/app', 'app_data/model',
             'click @ui.nextStep'       : 'goNext',
             'click @ui.addPort'        : 'addItem',
             'click @ui.addDrive'       : 'addDrive',
+            'keypress @ui.pdName'      : 'addDrive',
+            'keypress @ui.pdSize'      : 'addDrive',
             'click @ui.addVolume'      : 'addVolume',
             'click @ui.publicIp'       : 'togglePublic',
             'click @ui.addDriveCancel' : 'cancelAddDrive',
@@ -461,6 +465,7 @@ define(['app_data/app', 'app_data/model',
                 updateIsAvailable: this.model.updateIsAvailable,
                 sourceUrl: this.model.get('sourceUrl'),
                 hasPersistent: this.pod.persistentDrives !== undefined,
+                persistentDrives: this.pod.persistentDrives,
                 showPersistentAdd: this.hasOwnProperty('showPersistentAdd')
                     ? this.showPersistentAdd
                     : false,
@@ -498,19 +503,20 @@ define(['app_data/app', 'app_data/model',
         },
 
         addDrive: function(evt){
+            if (evt.type === 'keypress' && evt.which !== 13) return;
             evt.stopPropagation();
             var tgt = $(evt.target),
                 volumes = this.pod.get('volumes');
+
             if (this.hasOwnProperty('showPersistentAdd')) {
-                var cells = tgt.closest('tr').children('td');
-                var pdName = cells.eq(2).find('input').first().val().trim(),
-                    pdSize = parseInt(cells.eq(3).find('input').first().val().trim());
+                var pdName = this.ui.pdName.val().trim(),
+                    pdSize = parseInt(this.ui.pdSize.val().trim());
                 if (!pdName || !pdSize) return;
                 if (this.hasOwnProperty('currentIndex')) {
                     var vmEntry = this.model.get('volumeMounts')[this.currentIndex],
                         vol = _.findWhere(volumes, {name: vmEntry.name});
                     this.releasePersistentDisk(vol);
-                    vol['persistentDisk'] = {pdName: pdName, pdSize: pdSize};
+                    vol.persistentDisk = {pdName: pdName, pdSize: pdSize};
                 }
                 delete this.showPersistentAdd;
             }
@@ -581,9 +587,8 @@ define(['app_data/app', 'app_data/model',
             if (!row.mountPath && persistentChechboxLength){
                 utils.notifyWindow('Mount path must be set!');
                 tr.find('.editable-empty').click();
-                return false
+                return false;
             } else {
-                this.toggleVolumeEntry(row);
                 if (this.pod.persistentDrives === undefined) {
                     var pdCollection = new Model.PersistentStorageCollection();
                         utils.preloader.show();
@@ -594,14 +599,15 @@ define(['app_data/app', 'app_data/model',
                                 that.pod.persistentDrives = _.map(collection.models, function(m){
                                     return that.transformKeys(m.attributes);
                                 });
-                                utils.preloader.hide();
+                                that.toggleVolumeEntry(row);
                                 that.render();
                             },
-                            error: function(){
+                            complete: function(){
                                 utils.preloader.hide();
                             }
                         });
                 } else {
+                    that.toggleVolumeEntry(row);
                     this.render();
                 }
             }

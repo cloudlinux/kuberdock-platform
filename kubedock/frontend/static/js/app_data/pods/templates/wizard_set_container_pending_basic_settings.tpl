@@ -122,15 +122,15 @@
                                                     <div class="input-wrap">
                                                         <input type="text" class="pd-name" placeholder="Name">
                                                     </div>
+                                                <% } else if (persistentDrives.length) { %>
+                                                    <span class="iveditable pdName">
+                                                        <%- v.persistentDisk.pdName || 'select' %>
+                                                        <span class="caret"></span>
+                                                    </span>
+                                                <% } else if (v.persistentDisk.pdName) { %>
+                                                    <span><%- v.persistentDisk.pdName %></span>
                                                 <% } else { %>
-                                                    <% if (v.persistentDisk.pdName) {%>
-                                                        <span class="iveditable pdName">
-                                                            <%- v.persistentDisk.pdName %>
-                                                            <span class="caret"></span>
-                                                        </span>
-                                                    <% } else { %>
-                                                        none
-                                                    <% } %>
+                                                    <span>No drives found</span>
                                                 <% } %>
                                             <% } else { %>
                                                 <span>No drives found</span>
@@ -143,10 +143,8 @@
                                                         <input type="text" class="pd-size" placeholder="Size">
                                                     </div>
                                                 <% } else { %>
-                                                    <%= v.persistentDisk.pdSize ? v.persistentDisk.pdSize : 'none' %>
+                                                    <%= v.persistentDisk.pdSize || '' %>
                                                 <% } %>
-                                            <% } else { %>
-                                                none
                                             <% } %>
                                         </td>
                                         <td class="actions">

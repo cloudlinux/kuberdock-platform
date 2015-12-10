@@ -690,7 +690,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         generalTab: function(){
-            App.navigate('users/profile/' + this.model.id + '/general/', {trigger: true});
+            App.navigate('users/profile/' + this.model.id + '/general', {trigger: true});
         },
 
         back: function(){
@@ -798,7 +798,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         logHistory: function(){
-           App.navigate('users/profile/' + this.model.id + '/logHistory/', {trigger: true});
+           App.navigate('users/profile/' + this.model.id + '/logHistory', {trigger: true});
         }
     });
 
@@ -954,7 +954,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                         wait: true,
                         patch: true,
                         success: function(model){
-                            App.navigate('users/profile/' + model.id + '/general/', {trigger: true});
+                            App.navigate('users/profile/' + model.id + '/general', {trigger: true});
                             $.notify( "Changes to user '" + model.get('username') + "' saved successfully", {
                                 autoHideDelay: 4000,
                                 globalPosition: 'bottom left',

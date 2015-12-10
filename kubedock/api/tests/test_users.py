@@ -11,9 +11,9 @@ from kubedock.pods.models import Pod
 from kubedock.billing.models import Package, PackageKube, Kube
 
 
-class UserFullTestCase(APITestCase):
-    """Tests for /api/users/full endpoint"""
-    url = '/users/full'
+class UserCRUDTestCase(APITestCase):
+    """Tests for /api/users/all endpoint"""
+    url = '/users/all'
 
     # @unittest.skip('')
     def test_get(self):
@@ -25,12 +25,24 @@ class UserFullTestCase(APITestCase):
         admin['join_date'] = admin['join_date'].replace(tzinfo=pytz.utc).isoformat()
         self.assertIn(user, response.json['data'])
         self.assertIn(admin, response.json['data'])
+        # short
+        response = self.admin_open(self.url + '?short=true')
+        self.assert200(response)
+        self.assertIn(self.user.to_dict(), response.json['data'])
+        self.assertIn(self.admin.to_dict(), response.json['data'])
 
+        # get one
         response = self.admin_open(self.item_url(12345))
         self.assertAPIError(response, 404, 'UserNotFound')
         response = self.admin_open(self.item_url(self.user.id))
         self.assert200(response)
         self.assertEqual(user, response.json['data'])
+        # short
+        response = self.admin_open(self.item_url(12345) + '?short=true')
+        self.assertAPIError(response, 404, 'UserNotFound')
+        response = self.admin_open(self.item_url(self.user.id) + '?short=true')
+        self.assert200(response)
+        self.assertEqual(self.user.to_dict(), response.json['data'])
 
     # @unittest.skip('')
     def test_post(self):
@@ -227,20 +239,8 @@ class UserFullTestCase(APITestCase):
 
 
 class TestUsers(APITestCase):
-    """Tests for /api/users endpoints"""
+    """Tests for /api/users/* endpoints"""
     url = '/users'
-
-    def test_get(self):
-        response = self.admin_open(self.item_url())
-        self.assert200(response)
-        self.assertIn(self.user.to_dict(), response.json['data'])
-        self.assertIn(self.admin.to_dict(), response.json['data'])
-
-        response = self.admin_open(self.item_url(12345))
-        self.assertAPIError(response, 404, 'UserNotFound')
-        response = self.admin_open(self.item_url(self.user.id))
-        self.assert200(response)
-        self.assertEqual(self.user.to_dict(), response.json['data'])
 
     def test_get_usernames(self):
         response = self.admin_open(self.item_url('q') + '?s=mi')

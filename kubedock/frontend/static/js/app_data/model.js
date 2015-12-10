@@ -319,7 +319,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.UserModel = Backbone.Model.extend({
-        urlRoot: '/api/users/full',
+        urlRoot: '/api/users/all',
         parse: unwrapper,
 
         deleteUserConfirmDialog: function(options, text, force){
@@ -364,7 +364,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.UsersCollection = Backbone.Collection.extend({
-        url: '/api/users/full',
+        url: '/api/users/all',
         model: data.UserModel,
         parse: unwrapper
     });
@@ -375,7 +375,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.UsersPageableCollection = Backbone.PageableCollection.extend({
-        url: '/api/users/full',
+        url: '/api/users/all',
         model: data.UserModel,
         parse: unwrapper,
         mode: 'client',

@@ -1,11 +1,13 @@
 from flask import Blueprint, request, current_app, session
 from flask.ext.login import login_user, current_user
+from flask.views import MethodView
 
 from . import APIError
 from ..rbac import check_permission
 from ..rbac.models import Role
 from ..decorators import login_required_or_basic_or_token
-from ..utils import KubeUtils
+from ..utils import KubeUtils, register_api
+from ..validation import extbool
 from ..users.models import User, UserActivity
 from ..users.signals import user_logged_in_by_another
 from ..kapi.users import UserCollection, UserNotFound
@@ -79,51 +81,31 @@ def get_online_users():
     return User.get_online_collection()
 
 
-# Users CRUD views
-# TODO: put in MethodView
+class UsersAPI(KubeUtils, MethodView):
+    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
+    @check_permission('get', 'users')
+    def get(self, uid=None):
+        full = not extbool(KubeUtils._get_params().get('short', False))
+        with_deleted = request.args.get('with-deleted')
+        return UserCollection().get(user=uid, with_deleted=with_deleted, full=full)
 
-@users.route('/', methods=['GET'], strict_slashes=False)
-@users.route('/all', methods=['GET'])
-# TODO: remove endpoint /<uid>. Conflicts with a lot of other endpoints.
-@users.route('/<uid>', methods=['GET'])
-@login_required_or_basic_or_token
-@check_permission('get', 'users')
-@KubeUtils.jsonwrap
-def get_list(uid=None):
-    with_deleted = request.args.get('with-deleted', False)
-    return UserCollection().get(uid, with_deleted=with_deleted)
+    @check_permission('create', 'users')
+    def post(self):
+        data = KubeUtils._get_params()
+        return UserCollection().create(data)
 
+    @check_permission('edit', 'users')
+    def put(self, uid):
+        data = KubeUtils._get_params()
+        return UserCollection().update(uid, data)
+    patch = put
 
-@users.route('/full', methods=['GET'])
-@users.route('/full/<user>', methods=['GET'])
-@login_required_or_basic_or_token
-@check_permission('get', 'users')
-@KubeUtils.jsonwrap
-def get_full_list(user=None):
-    with_deleted = request.args.get('with-deleted', False)
-    return UserCollection().get(user=user, with_deleted=with_deleted, full=True)
-
-
-@users.route('/', methods=['POST'], strict_slashes=False)
-@users.route('/full', methods=['POST'], strict_slashes=False)
-@login_required_or_basic_or_token
-@check_permission('create', 'users')
-@KubeUtils.jsonwrap
-def create_item():
-    data = KubeUtils._get_params()
-    return UserCollection().create(data)
-
-
-# TODO: remove endpoint /<uid>. Conflicts with a lot of other endpoints.
-@users.route('/<uid>', methods=['PUT', 'PATCH'])
-@users.route('/full/<uid>', methods=['PUT', 'PATCH'])
-@login_required_or_basic_or_token
-@check_permission('edit', 'users')
-@KubeUtils.jsonwrap
-def put_item(uid):
-    data = KubeUtils._get_params()
-    return UserCollection().update(uid, data)
+    @check_permission('delete', 'users')
+    def delete(self, uid):
+        force = KubeUtils._get_params().get('force', False)
+        return UserCollection().delete(uid, force)
+register_api(users, UsersAPI, 'podapi', '/all/', 'uid', strict_slashes=False)
 
 
 @users.route('/editself', methods=['GET'])
@@ -140,17 +122,6 @@ def edit_self():
     uid = KubeUtils._get_current_user().id
     data = KubeUtils._get_params()
     return UserCollection().update_profile(uid, data)
-
-
-# TODO: remove endpoint /<uid>. Conflicts with a lot of other endpoints.
-@users.route('/<uid>', methods=['DELETE'])
-@users.route('/full/<uid>', methods=['DELETE'])
-@login_required_or_basic_or_token
-@check_permission('delete', 'users')
-@KubeUtils.jsonwrap
-def delete_item(uid):
-    force = KubeUtils._get_params().get('force', False)
-    return UserCollection().delete(uid, force)
 
 
 @users.route('/undelete/<uid>', methods=['POST'])

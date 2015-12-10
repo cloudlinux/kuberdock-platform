@@ -466,6 +466,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.status = POD_STATUSES.stopped
 
             for container in pod.containers:
+                if container['state'] == 'terminated':
+                    if container.get('exitCode') == 0:
+                        container['state'] = 'succeeded'
+                    else:
+                        container['state'] = 'failed'
                 container.pop('resources', None)
                 container['limits'] = repr_limits(container['kubes'],
                                                   db_pod_config['kube_type'])

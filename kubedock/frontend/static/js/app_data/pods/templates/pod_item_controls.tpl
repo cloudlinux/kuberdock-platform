@@ -3,7 +3,7 @@
         <h3>Congratulations!</h3>
         <p>
             <% if (postDescription) { %>
-                <%- postDescription %>
+                <%= postDescription %>
             <% } else {%>
                 We just want to inform you that your application "<%- podName %>" now deploying and will be started in a few minutes. <br>
                 The application will be available via

@@ -6,7 +6,7 @@ define(['app_data/app',
         'tpl!app_data/pods/templates/pod_item_controls.tpl',
         'tpl!app_data/pods/templates/pod_item_graph.tpl',
         'moment-timezone', 'app_data/utils',
-        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral'],
+        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral', 'bbcode'],
        function(App,
                 layoutPodItemTpl,
                 pageHeaderTitleTpl,
@@ -294,7 +294,7 @@ define(['app_data/app',
 
             return {
                 hasPorts        : hasPorts,
-                postDescription : backendData.postDescription,
+                postDescription : this.encodeBBCode(backendData.postDescription),
                 publicIP        : publicIP,
                 publicName      : publicName,
                 graphs          : graphs,
@@ -303,7 +303,7 @@ define(['app_data/app',
                 totalPrice      : this.model.totalPrice,
                 limits          : this.model.limits,
                 podName         : this.model.get('name'),
-                'package'         : pkg,
+                package         : pkg
             };
         },
 
@@ -364,6 +364,11 @@ define(['app_data/app',
                     buttonCancel: true
                 }
             });
+        },
+
+        encodeBBCode: function(val) {
+            var parser = new BBCodeParser(BBCodeParser.defaultTags());
+            return parser.parseString(val);
         }
     });
 

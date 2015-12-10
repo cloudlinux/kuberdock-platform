@@ -11,6 +11,7 @@ class PredefinedApp(BaseModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     name = db.Column(db.String(255), default='', nullable=False)
     qualifier = db.Column(db.String(40), default='', nullable=False, index=True)
+    origin = db.Column(db.String(255), default='unknown', nullable=False)
     template = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
@@ -34,6 +35,7 @@ class PredefinedApp(BaseModelMixin, db.Model):
             'id': self.id,
             'name': self.name,
             'qualifier': self.qualifier,
+            'origin': self.origin,
             'template': self.template,
             'user_id': self.user_id,
             'cteated': self.created,

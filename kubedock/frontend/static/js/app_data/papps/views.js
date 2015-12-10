@@ -112,7 +112,8 @@ define(['app_data/app', 'marionette',
                 'display'  : 'textarea#app-contents',
                 'appname'  : 'input#app-name',
                 'save'     : 'button.save-app',
-                'cancel'   : '.cancel-app'
+                'cancel'   : '.cancel-app',
+                'origin'   : 'input#app-origin'
             },
 
             events: {
@@ -138,13 +139,13 @@ define(['app_data/app', 'marionette',
                 env.stopPropagation();
                 env.preventDefault();
                 var name = this.ui.appname.val(),
+                    origin = this.ui.origin.val(),
                     template = this.ui.display.val();
                 if ((!name) || (!template)) {
                     utils.notifyWindow('Name and template is expected to be filled');
                     return;
                 }
-                this.model.set({name: name,
-                    template: template});
+                this.model.set({name: name, origin: origin, template: template});
                 this.trigger('app:save', this.model);
             }
         });

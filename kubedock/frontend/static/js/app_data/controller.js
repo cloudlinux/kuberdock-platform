@@ -639,12 +639,6 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                     navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsData = {buttonID: 'add_pod',  buttonLink: '/#newapp',
                                        buttonTitle: 'Add new application', showControls: true};
-                appCollection.fetch({
-                    wait: true,
-                    success: function(){
-                       App.contents.show(mainLayout);
-                    }
-                });
 
                 that.listenTo(mainLayout, 'app:showloadcontrol', function(id){
                     var breadcrumbsModel = new Backbone.Model(_.extend(
@@ -677,7 +671,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         context.appCollection.add(context.model);
                     }
                     context.mainLayout.main.show(new Views.AppList({
-                        collection: context.appCollection
+                        collection: context.appCollection.filterByOrigin()
                     }));
                 };
 
@@ -748,7 +742,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                     model.save(null, {
                             wait: true,
                             url: model.url() + '?' + $.param({validate: true}),
-                            success: function() {successModelSaving(context);},
+                            success: function() {successModelSaving(context)},
                             error: function(model, response, options){
                                 errorModelSaving(context, response);
                             }
@@ -765,8 +759,15 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel});
                     mainLayout.nav.show(navbar);
                     mainLayout.breadcrumbs.show(breadcrumbsView);
-                    mainLayout.main.show(new Views.AppList({collection: appCollection}));
+                    appCollection.fetch({
+                        wait: true,
+                        success: function(collection, resp, opts){
+                            mainLayout.main.show(new Views.AppList({collection: collection.filterByOrigin()}));
+                        }
+                    });
+
                 });
+                App.contents.show(mainLayout);
             });
         },
 

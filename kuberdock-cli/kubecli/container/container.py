@@ -145,11 +145,12 @@ class PodResource(object):
 
 
 class TemplateResource(object):
-    def __init__(self, ctl, id=None, filename=None, name=None, json=False,
-                 printout=False, **_):
+    def __init__(self, ctl, id=None, filename=None, name=None, origin='unknown',
+                 json=False, printout=False, **_):
         self.app_id = id
         self.fin = filename
         self.name = name
+        self.origin = origin
         self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
 
     def get(self):
@@ -172,6 +173,7 @@ class TemplateResource(object):
             raise SystemExit('Empty file content')
         query = self.resource.query()
         answer = query.post(PREDEFINED_APPS_PATH, {'template': yaml_content,
+                                                   'origin': self.origin,
                                                    'name': self.name})
         if answer.get('status', None) != 'OK':
             raise SystemExit(u'Failed To create pod: {0}'.format(str(answer)))
@@ -212,8 +214,9 @@ class TemplateResource(object):
 
 
 class TemplatesResource(object):
-    def __init__(self, ctl, page=None, printout=False, json=json, **_):
+    def __init__(self, ctl, page=None, origin=None, printout=False, json=json, **_):
         self.page = page
+        self.origin = origin
         self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
 
     def get(self):
@@ -225,6 +228,8 @@ class TemplatesResource(object):
         if answer.get('status') != 'OK':
             raise SystemExit('Failed to get list of predefined apps templates')
         data = query.unwrap(answer)
+        if self.origin is not None:
+            data = [i for i in data if i.get('origin', 'unknown') == self.origin]
         self.resource.printout(data)
         return data
 

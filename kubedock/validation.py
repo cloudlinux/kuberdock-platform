@@ -341,6 +341,10 @@ new_pod_schema = {
                     'type': 'dict',
                     'required': False
                 },
+                'lifecycle': {
+                    'type': 'dict',
+                    'required': False
+                },
                 'command': args_list_schema,
                 'args': args_list_schema,
                 'kubes': {'type': 'integer',

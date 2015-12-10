@@ -67,7 +67,7 @@ DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 DOCKER_IMG_CACHE_TIMEOUT = timedelta(hours=4)
 
 ID_PATH = '/var/lib/kuberdock/installation-id'
-STAT_URL = 'http://127.0.0.1/'
+STAT_URL = 'https://cln.cloudlinux.com/api/cln/event/kb/checkin'
 
 CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {

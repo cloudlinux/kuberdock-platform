@@ -28,6 +28,7 @@ from ..utils import (
     modify_node_ips,
     unbind_ip,
     get_timezone,
+    NODE_TOBIND_EXTERNAL_IPS,
 )
 
 
@@ -541,13 +542,13 @@ class TestUtilsHandleGenericNode(unittest.TestCase):
         self.assertTrue(res)
 
         calls = [
-            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh add 192.168.168.168/32 enp0s3'),
-            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh add 192.168.168.168/32 enp0s3'),
-            mock.call('iptables -t nat -C PREROUTING -i enp0s3 -p tcp -d 192.168.168.168/32 --dport 80 -j DNAT --to-destination 10.254.10.10:8080'),
-            mock.call('iptables -t nat -C PREROUTING -i enp0s3 -p udp -d 192.168.168.168/32 --dport 514 -j DNAT --to-destination 10.254.10.10:514'),
-            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh del 192.168.168.168/32 enp0s3'),
-            mock.call('iptables -t nat -D PREROUTING -i enp0s3 -p tcp -d 192.168.168.168/32 --dport 80 -j DNAT --to-destination 10.254.10.10:8080'),
-            mock.call('iptables -t nat -D PREROUTING -i enp0s3 -p udp -d 192.168.168.168/32 --dport 514 -j DNAT --to-destination 10.254.10.10:514')
+            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh add 192.168.168.168/32 {0}'.format(NODE_TOBIND_EXTERNAL_IPS)),
+            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh add 192.168.168.168/32 {0}'.format(NODE_TOBIND_EXTERNAL_IPS)),
+            mock.call('iptables -t nat -C PREROUTING -i {0} -p tcp -d 192.168.168.168/32 --dport 80 -j DNAT --to-destination 10.254.10.10:8080'.format(NODE_TOBIND_EXTERNAL_IPS)),
+            mock.call('iptables -t nat -C PREROUTING -i {0} -p udp -d 192.168.168.168/32 --dport 514 -j DNAT --to-destination 10.254.10.10:514'.format(NODE_TOBIND_EXTERNAL_IPS)),
+            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh del 192.168.168.168/32 {0}'.format(NODE_TOBIND_EXTERNAL_IPS)),
+            mock.call('iptables -t nat -D PREROUTING -i {0} -p tcp -d 192.168.168.168/32 --dport 80 -j DNAT --to-destination 10.254.10.10:8080'.format(NODE_TOBIND_EXTERNAL_IPS)),
+            mock.call('iptables -t nat -D PREROUTING -i {0} -p udp -d 192.168.168.168/32 --dport 514 -j DNAT --to-destination 10.254.10.10:514'.format(NODE_TOBIND_EXTERNAL_IPS))
         ]
         ssh.exec_command.assert_has_calls(calls)
 

@@ -55,8 +55,10 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         },
         getLogs: function(size){
             size = size || 100;
+            var pod_id = this.getPod().id,
+                name = this.get('name');
             return $.ajax({
-                url: '/api/logs/container/' + this.get('name') + '?size=' + size,
+                url: '/api/logs/container/' + pod_id + '/' + name + '?size=' + size,
                 context: this,
                 success: function(data){
                     var seriesByTime = _.indexBy(this.get('logs'), 'start');
@@ -148,8 +150,9 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             var containers = this.get('containers'),
                 volumes = this.get('volumes'),
                 kube = _.findWhere(backendData.kubeTypes, {id: this.get('kube_type')}),
-                kubePrice = _.findWhere(backendData.packageKubes,
-                    {package_id: pkg.id, kube_id: kube.id}).kube_price,
+                pkgKube = _.findWhere(backendData.packageKubes,
+                    {package_id: pkg.id, kube_id: kube.id}),
+                kubePrice = pkgKube ? pkgKube.kube_price : 0,
                 totalKubes = this.getKubes();
 
             this.limits = {

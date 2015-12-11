@@ -12,7 +12,7 @@ define(['app_data/app', 'app_data/model',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
         'app_data/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot',
-        'jqplot-axis-renderer', 'numeral', 'selectpicker'],
+        'jqplot-axis-renderer', 'nicescroll', 'numeral', 'selectpicker'],
        function(App, Model,
                 layoutWizardTpl,
                 breadcrumbHeaderTpl,
@@ -1214,6 +1214,33 @@ define(['app_data/app', 'app_data/model',
                 editKubesQty : this.model.editKubesQty,
                 kubeVal : this.model.kubeVal
             };
+        },
+
+        onBeforeRender: function () {
+            var el = this.ui.textarea;
+            if (typeof el !== 'object' || (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
+                this.logScroll = null;  // stick to bottom
+            else
+                this.logScroll = el.scrollTop();  // stay at this position
+        },
+
+        onRender: function () {
+            if (this.logScroll === null)  // stick to bottom
+                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
+            else  // stay at the same position
+                this.ui.textarea.scrollTop(this.logScroll);
+
+            if (this.niceScroll !== undefined)
+                this.niceScroll.remove();
+            this.niceScroll = this.ui.textarea.niceScroll({
+                cursorcolor: "#69AEDF",
+                cursorwidth: "12px",
+                cursorborder: "none",
+                cursorborderradius: "none",
+                background: "#E7F4FF",
+                autohidemode: false,
+                railoffset: 'bottom'
+            });
         },
 
         onBeforeDestroy: function () {

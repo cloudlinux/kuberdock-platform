@@ -16,10 +16,10 @@ from . import APIError
 logs = Blueprint('logs', __name__, url_prefix='/logs')
 
 
-@logs.route('/container/<containerid>', methods=['GET'])
+@logs.route('/container/<pod_id>/<container_id>', methods=['GET'])
 @login_required_or_basic_or_token
 @KubeUtils.jsonwrap
-def api_get_container_logs(containerid):
+def api_get_container_logs(pod_id, container_id):
     """Return logs from specified container.
     Optional parameters (submitted via ?key=value&...):
         starttime - minimum log time to select
@@ -45,7 +45,7 @@ def api_get_container_logs(containerid):
         size = 100
     owner = User.get(user.username)
 
-    return es_logs.get_container_logs(containerid, owner.id,
+    return es_logs.get_container_logs(pod_id, container_id, owner.id,
                                       size, starttime, endtime)
 
 

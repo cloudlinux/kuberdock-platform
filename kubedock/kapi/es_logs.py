@@ -15,17 +15,19 @@ class LogsError(APIError):
     pass
 
 
-def get_container_logs(container_name, owner_id=None, size=100,
+def get_container_logs(pod_id, container_name, owner_id=None, size=100,
                        start=None, end=None):
     """Get logs from specified container.
 
+    :param pod_id: kuberdock pod id
     :param container_name: kuberdock container id
     :param owner_id: owner of the containers
     :param start: minimum log time to select (see log_query doc)
     :param end: maximum log time to select (see log_query doc)
     :param size: limits selection to this number (100 by default) (see log_query doc)
     """
-    states = CS.in_range(start, end).filter(CS.container_name == container_name)
+    states = CS.in_range(start, end).filter(CS.container_name == container_name,
+                                            CS.pod_state.has(pod_id=pod_id))
     if owner_id is not None:
         states = states.filter(CS.pod.has(owner_id=owner_id)).all()
 

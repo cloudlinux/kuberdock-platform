@@ -277,8 +277,10 @@ define(['app_data/app',
                 graphs = this.graphs,
                 kubes = this.model.getKubes(),
                 pkg = utils.getUserPackage(/*full=*/true),
-                kubeType = _.findWhere(pkg.kubes,
-                    {id: this.model.get('kube_type')}),
+                kubeId = this.model.get('kube_type'),
+                kubeType = _.findWhere(pkg.kubes, {id: kubeId}) ||
+                    _.findWhere(backendData.kubeTypes,
+                                {id: kubeId}), // internal kube may not have pkg
                 hasPorts = this.model.get('containers').any(function(c) {
                     return c.get('ports') && c.get('ports').length;
                 }),

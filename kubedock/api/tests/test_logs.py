@@ -27,13 +27,13 @@ class TestLogsAPI(APITestCase):
 
     @mock.patch.object(api_logs.es_logs, 'get_container_logs')
     def test_get_container_log(self, es_logs_mock):
+        pod_id, container_name = '123', '456'
+        url = self.url + '/container/{0}/{1}'.format(pod_id, container_name)
+
         es_logs_mock.return_value = {'1': 2}
-        response = self.open(
-            self.url + '/container/123',
-            auth=self.userauth
-        )
+        response = self.open(url, auth=self.userauth)
         es_logs_mock.assert_called_once_with(
-            u'123', self.user.id, 100, None, None)
+            pod_id, container_name, self.user.id, 100, None, None)
         self.assert200(response)
         self.assertEqual(response.json, {u'status': u'OK', u'data': {u'1': 2}})
 
@@ -42,19 +42,19 @@ class TestLogsAPI(APITestCase):
         size = 233
         params = {'starttime': starttime, 'endtime': endtime, 'size': size}
         response = self.open(
-            self.url + '/container/123?{}'.format(
+            url + '?{}'.format(
                 '&'.join(str(key) + '=' + str(value)
                          for key, value in params.iteritems())
             ),
             auth=self.userauth
         )
         es_logs_mock.assert_called_with(
-            u'123', self.user.id, size,
+            pod_id, container_name, self.user.id, size,
             datetime.datetime(2015, 1, 1, 12, 12, 12),
             datetime.datetime(2015, 1, 2, 12, 12, 12))
         self.assert200(response)
 
-        response = self.open(self.url + '/container/123')
+        response = self.open(url)
         self.assert401(response)
 
     @mock.patch.object(api_logs.es_logs, 'get_node_logs')

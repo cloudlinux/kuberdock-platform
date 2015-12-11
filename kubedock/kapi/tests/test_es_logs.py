@@ -91,8 +91,8 @@ class TestContainerLogs(DBTestCase):
     def test_without_range(self):
         """Test method call without time restrictions."""
         size, start, end = 101, None, None
-        res = es_logs.get_container_logs(self.container_name, self.user.id, size,
-                                         start, end)
+        res = es_logs.get_container_logs(self.pod_id, self.container_name,
+                                         self.user.id, size, start, end)
 
         self.log_query_mock.assert_has_calls([
             mock.call(self.index, self.get_filters(self.container_state_2.docker_id),
@@ -107,8 +107,8 @@ class TestContainerLogs(DBTestCase):
         """Test time restrictions."""
         size = 101
         start, end = datetime(2015, 2, 5, 6), datetime(2015, 2, 5, 18)
-        res = es_logs.get_container_logs(self.container_name, self.user.id, size,
-                                         start, end)
+        res = es_logs.get_container_logs(self.pod_id, self.container_name,
+                                         self.user.id, size, start, end)
 
         self.log_query_mock.assert_called_once_with(
             self.index, self.get_filters(self.container_state_1.docker_id),
@@ -120,8 +120,8 @@ class TestContainerLogs(DBTestCase):
     def test_size(self):
         """Test size restrictions."""
         size, start, end = 3, None, None  # last 3 lines
-        res = es_logs.get_container_logs(self.container_name, self.user.id, size,
-                                         start, end)
+        res = es_logs.get_container_logs(self.pod_id, self.container_name,
+                                         self.user.id, size, start, end)
 
         self.log_query_mock.assert_called_once_with(
             self.index, self.get_filters(self.container_state_2.docker_id),

@@ -62,7 +62,7 @@
                             <% }) %>
                         <% } else { %>
                              <tr>
-                                <td colspan="4" class="text-center disabled-color-text">To add port click on a button below</td>
+                                <td colspan="5" class="text-center disabled-color-text">To add port click on a button below</td>
                             </tr>
                         <% } %>
                         </tbody>

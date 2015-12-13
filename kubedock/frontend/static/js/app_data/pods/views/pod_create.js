@@ -570,12 +570,14 @@ define(['app_data/app', 'app_data/model',
             evt.stopPropagation();
             var that = this,
                 tgt = $(evt.target),
-                index = tgt.closest('tr').index(),
-                row = this.model.get('volumeMounts')[index];
+                tr = tgt.closest('tr'),
+                index = tr.index(),
+                row = this.model.get('volumeMounts')[index],
+                persistentChechboxLength = tr.find('input:checked').length;
 
-            if (!row.mountPath){
+            if (!row.mountPath && persistentChechboxLength){
                 utils.notifyWindow('Mount path must be set!');
-                tgt.closest('tr').find('.editable-empty').click();
+                tr.find('.editable-empty').click();
                 return false
             } else {
                 this.toggleVolumeEntry(row);

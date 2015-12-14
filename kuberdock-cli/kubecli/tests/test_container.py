@@ -1,7 +1,6 @@
 """Tests for container.container.py classes"""
 import os
 import unittest
-import requests
 import json
 import tempfile
 import shutil
@@ -154,8 +153,6 @@ class TestKuberDock(unittest.TestCase):
             data = json.load(fin)
         self.assertEqual(data['name'], name)
         self.assertEqual(data['restartPolicy'], "Always")
-
-        restartPolicy = "Never"
 
         kd = container.KuberDock(name=name, action='set',
             restartPolicy="Never",

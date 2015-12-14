@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 13.1%{?dist}.cloudlinux
+Release: 13.2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,18 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Mon Dec 14 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com> 0.4-13.2
+- AC-1600: unittests for kapi.nodes
+- AC-1695:autogen start with char and lowercase all
+- AC-1601: unittests for kapi.pd_utils
+- AC-1502: cleaned pod API output
+- AC-1674: Restrict elasticsearch ports only for nodes' ips, not all ports. Deprecated my old script, which is not used now
+- AC-1674: Added a migration script to correct the iptables rules on old kuberdock installations
+- AC-1599: unittests for kapi.ippool
+- allow lifecycle in yaml
+- AC-1677: Rename delete confirmation button
+- AC-1539: Add smalfix to uncheck persistent if mounth path is empty
+
 * Tue Dec 08 2015 Igor Savenko <bliss@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.4-13.1
 - AC-1539: Hotfix empty path name
 - AC-1758: Container edit buttons lead to last container; couple of bugs fixed

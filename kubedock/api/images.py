@@ -5,7 +5,7 @@ from functools import wraps
 
 from ..core import db
 from ..models import ImageCache
-from ..validation import check_container_image_name, check_image_request
+from ..validation import check_image_search, check_image_request
 from ..settings import DEFAULT_IMAGES_URL
 from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils
@@ -48,7 +48,7 @@ def search_image():
     refresh_cache = request.args.get('refresh_cache', 'no').lower() in ('1', 'true')
     repo_url = _get_repo_url(request.args)
 
-    check_container_image_name(search_key)
+    check_image_search(search_key)
     query_key = '{0}?{1}:{2}'.format(repo_url, search_key, page)
     query = db.session.query(ImageCache).get(query_key)
 

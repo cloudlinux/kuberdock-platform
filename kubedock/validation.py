@@ -43,13 +43,22 @@ This schemas it's just a shortcut variables for convenience and reusability
 # ===================================================================
 PATH_LENGTH = 512
 
-container_image_name = r"^[a-zA-Z0-9_]+[a-zA-Z0-9/:_!.\-]*$"
 container_image_name_schema = {
     'type': 'string',
     'empty': False,
     'required': True,
     'maxlength': 128,
-    'regex': container_image_name,
+    'regex': {
+        'regex': r'^[a-zA-Z0-9_]+[a-zA-Z0-9/:_!.\-]*$',
+        'message': 'image URL must be in format [registry/]image[:tag]',
+    },
+}
+
+image_search_schema = {
+    'type': 'string',
+    'empty': False,
+    'required': True,
+    'maxlength': 128,
 }
 
 ascii_string = {
@@ -80,7 +89,10 @@ hostname_schema = {
     'empty': False,
     'required': True,
     'maxlength': 255,
-    'regex': hostname_regex,
+    'regex': {
+        'regex': hostname_regex,
+        'msg': 'invalid hostname'
+    },
     'resolvable': True,
 }
 
@@ -713,12 +725,12 @@ def check_kube_indb(kube_type):
         raise APIError('Forbidden kube type: {0}'.format(kube_type))
 
 
-def check_container_image_name(searchkey):
+def check_image_search(searchkey):
     validator = V()
     if not validator.validate(
-            {'Container image name': searchkey},
-            {'Container image name': container_image_name_schema}):
-        raise APIError(validator.errors)
+            {'searchkey': searchkey},
+            {'searchkey': image_search_schema}):
+        raise ValidationError(validator.errors['searchkey'])
 
 
 def check_image_request(params):

@@ -328,7 +328,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 body: text,
                 small: true,
                 show: true,
-                type: 'deleteAnyway',
+                type: force ? 'deleteAnyway' : 'delete' ,
                 footer: {
                     buttonOk: function(){ that.deleteUser(options, force); },
                     buttonCancel: true

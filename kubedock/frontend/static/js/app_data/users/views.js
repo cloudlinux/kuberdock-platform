@@ -27,7 +27,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 usersLayoutTpl){
 
     var views = {};
-    
+
     views.PaginatorView = Backbone.Marionette.ItemView.extend({
         template: paginatorTpl,
         initialize: function(options) {
@@ -247,11 +247,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         createUser: function(){
             App.navigate('users/create', {trigger: true});
         },
-        
+
         activity: function(){
             App.navigate('users/activity', {trigger: true});
         },
-        
+
         online: function(){
             App.navigate('users/online', {trigger: true});
         }
@@ -402,7 +402,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
             this.roles = options.roles;
             this.packages = options.packages;
         },
-        
+
         templateHelpers: function(){
             var roles = _.filter(this.roles, function(r){return r !== 'HostingPanel'});
                 packages = this.packages;
@@ -412,7 +412,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 defaultRole: 'User'
             }
         },
-        
+
         ui: {
             'username'        : 'input#username',
             'first_name'      : 'input#firstname',
@@ -469,12 +469,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                     username = that.ui.username.val(),
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i,
                     patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i;
-    
+
                 _.each(users, function(user){
                     if (user.get('username') == that.ui.username.val()) existsUsername = true;
                     if (user.get('email') == that.ui.email.val()) existsEmail = true;
                 });
-    
+
                 switch (true) {
                 /* username */
                 case that.ui.username.val() == '':
@@ -705,7 +705,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         initialize: function(options){
             this.kubeTypes = options.kubeTypes;
         },
-        
+
         ui: {
             'users_page'          : 'div#users-page',
             'delete_user_btn'     : 'button#delete_user',
@@ -873,18 +873,18 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                     'middle_initials' : that.ui.middle_initials.val(),
                     'timezone'        : that.ui.timezone.val(),
                 };
-    
+
                 var existsEmail = false,
                     users = userCollection.models,
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i,
                     patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i;
-    
+
                     if (that.model.get('email') !== that.ui.email.val()){
                         _.each(users, function(user){
                             if (user.get('email') == that.ui.email.val()) existsEmail = true;
                         });
                     }
-    
+
                 switch (true) {
                 /* first name */
                 case that.ui.first_name.val().length >= 26:
@@ -949,7 +949,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                     if (that.ui.password.val())  // update only if specified
                         data.password = that.ui.password.val();
                     that.model.set(data);
-    
+
                     that.model.save(that.model.changedAttributes(), {
                         wait: true,
                         patch: true,
@@ -982,6 +982,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
             pager : 'div#pager'
         }
     });
-        
+
     return views;
 });

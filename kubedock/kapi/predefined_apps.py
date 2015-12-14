@@ -69,13 +69,14 @@ class PredefinedApps(object):
 
 #:Custom variable pattern
 # Everything in form '$sometext$' will be treated as custom variable definition
-CUSTOM_VAR_PATTERN = re.compile(r'\$[^\$]+\$')
+# Escaped $ signs will not be treated as variable pattern
+CUSTOM_VAR_PATTERN = re.compile(r'[^\\](\$[^\$\\]+\$)')
 # Valid variable must be in form:
 CORRECT_VARIABLE_FORMAT_DESCRIPTION = \
 "$<VARIABLE_NAME|default:<word 'autogen' or some default value>|VAR_DESCRIPTION>$"
 VARIABLE_PATTERN = \
-    re.compile(r'^\$([^\|\$]+)\|default:([^\|\$]+)\|([^\|\$]+)\$$')
-REUSED_VARIABLE_PATTERN = re.compile(r'\$([^\|\$]+)\$$')
+    re.compile(r'^\$([^\|\$\\]+)\|default:([^\|\$\\]+)\|([^\|\$\\]+)\$$')
+REUSED_VARIABLE_PATTERN = re.compile(r'^\$([^\|\$\\]+)\$$')
 
 
 def validate_template(template):
@@ -204,3 +205,10 @@ def get_reused_variable_name(value, strict=False):
 
 def raise_validation_error(key, error):
     raise APIError({'validationError': {key: error}})
+
+
+def unescape(text):
+    """Removes escaping characters '\' from escaped delimiters of custom
+    variables: '\$' -> '$'.
+    """
+    return text.replace(r'\$', r'$')

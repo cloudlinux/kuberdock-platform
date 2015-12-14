@@ -491,9 +491,13 @@
                     return;
                 }
                 var yml = templateField.value;
-                yml = yml.replace(/\$[^$]+\$/g, function(field){
-                    return document.getElementById(fields[field].hashsum).value;
-                });
+                for (var field in fields) {
+                    if (fields.hasOwnProperty(field)) {
+                        yml = yml.split(field).join(
+                            document.getElementById(fields[field].hashsum).value
+                        );
+                    }
+                }
                 var url = billingUrl
                     + '?yaml=' + encodeURIComponent(yml)
                     + '&pkgid=' + packageId;

@@ -18,7 +18,7 @@ kuberdock:
   kube_type: $KUBETYPE|default:0|Kube type$
   name: Wordpress app
   package_id: 1
-  postDescription: Some test %PUBLIC_ADDRESS%
+  postDescription: Some \$test %PUBLIC_ADDRESS%
   preDescription: Some pre description
   template_id: 1
 metadata:

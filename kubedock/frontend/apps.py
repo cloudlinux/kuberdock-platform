@@ -35,6 +35,8 @@ def index(app_hash):
         template, kube_type, pre_desc = get_defaults(template, mutables, kubes)
         has_simple = True if [v for v in fields.values() if v.get('hashsum') not in mutables] else False
 
+        template = kapi_papps.unescape(template)
+
         return render_template('apps/index.html',
             name=name, jfields=jfields, billing_url=billing_url, packages=packages,
             template=template, jmutables=json.dumps(mutables), kubes=json.dumps(kubes),

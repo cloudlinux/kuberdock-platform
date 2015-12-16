@@ -69,6 +69,7 @@ class DBTestCase(FlaskTestCase):
         self._transaction = connection.begin()
 
         db.session = db.create_scoped_session({'bind': connection})
+        utils.atomic.unregister()  # can be removed if SQLAlchemy >= 0.9.8
         utils.atomic.register()
 
         # To prevent closing root transaction, start the session in a SAVEPOINT...

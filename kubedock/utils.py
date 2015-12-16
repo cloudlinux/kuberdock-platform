@@ -15,7 +15,7 @@ from flask.ext.login import current_user, logout_user
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
 from traceback import format_exception
 
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
@@ -237,6 +237,14 @@ class atomic(object):
     def register(cls):
         db.event.listen(db.session, 'before_commit', cls._unexpectedly_closed)
         db.event.listen(db.session, 'after_soft_rollback', cls._unexpectedly_closed)
+
+    @classmethod
+    def unregister(cls):
+        try:
+            db.event.remove(db.session, 'before_commit', cls._unexpectedly_closed)
+            db.event.remove(db.session, 'after_soft_rollback', cls._unexpectedly_closed)
+        except InvalidRequestError:  # ok, it is not registered
+            pass
 atomic.register()
 
 

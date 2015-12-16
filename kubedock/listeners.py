@@ -254,9 +254,11 @@ def listen_fabric(watch_url, list_url, func, verbose=1):
                 try:
                     if not last_saved:
                         last_saved = prelist_version(list_url)
-                        redis.set(redis_key, last_saved)
                     ws = create_connection(watch_url + '&resourceVersion={0}'
                                            .format(last_saved))
+                    # Only after connection to ensure last_saved was correct
+                    # before save it to redis
+                    redis.set(redis_key, last_saved)
                 except WebSocketException as e:
                     print e.__repr__()
                     gevent.sleep(0.1)

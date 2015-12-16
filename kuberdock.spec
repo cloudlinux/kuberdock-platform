@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 13.2%{?dist}.cloudlinux
+Release: 13.3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,23 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Wed Dec 16 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-13.3
+- AC-1568: image search must accept any symbols; small improvements    
+- Regex-validation should have human-readable messages.
+- AC-1773 Allow multistrings in pre-apps
+- AC-653: SSE; small refactoring; bugfix
+- AC-1715: move API users endpoint; bugfix
+- AC-1816: small workaround for tests
+- AC-1692 Use bbcode in postDescription
+- AC-1735: statuses fix
+- AC-1759: PD dialog doesn't allow to choose from exising volumes
+- AC-1451: filter by pod_id too; scrollbar fix; internal kube fix
+  Now if two containers in different pods have the same container_name, their logs won't mix.
+  Fixed niceScroll in container's logs page.
+  Fixed a few errors with internal kube.
+- AC-1718: generate sourceUrl, if it was not specified
+- AC-1741: KCLI: set YAML origin
+
 * Mon Dec 14 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com> 0.4-13.2
 - AC-1600: unittests for kapi.nodes
 - AC-1695:autogen start with char and lowercase all

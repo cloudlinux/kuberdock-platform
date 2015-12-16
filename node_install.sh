@@ -174,14 +174,11 @@ echo "Setup network plugin..."
 PLUGIN_DIR=/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock
 mkdir -p "$PLUGIN_DIR"
 check_status
-PLUGIN_DST="$PLUGIN_DIR/kuberdock"
-PLUGIN_SRC=/node_network_plugin
-# TODO when merge to master we must implement copy this file/files from master
-mv "$PLUGIN_SRC.sh" "$PLUGIN_DST"
-mv "$PLUGIN_SRC.py" "$PLUGIN_DST.py"
-chmod +x "$PLUGIN_DST"
+mv "/node_network_plugin.sh" "$PLUGIN_DIR/kuberdock"
+mv "/node_network_plugin.py" "$PLUGIN_DIR/kuberdock.py"
+chmod +x "$PLUGIN_DIR/kuberdock"
+check_status
 
-# TODO add required-by kubelet or something similar
 cat > /etc/systemd/system/kuberdock-watcher.service << EOF
 [Unit]
 Description=KuberDock Network Plugin watcher

@@ -107,6 +107,8 @@ function etcd_ {
 
 function log {
   if [ "$LOG_ENABLED" == "1" ];then
+    tail -n 100 "$LOG_FILE" > "$LOG_FILE.tmp"   # limit log to 100 lines
+    mv "$LOG_FILE.tmp" "$LOG_FILE"
     echo "$@" >> "$LOG_FILE"
   fi
 }
@@ -154,6 +156,7 @@ case "$ACTION" in
     ;;
   "setup")
 
+    # Workaround 1
     # TODO what if api-server is down ?
     POD_SPEC=$(curl -f -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN")
     # Protection from fast start/stop pod; Must be first check
@@ -162,6 +165,7 @@ case "$ACTION" in
       exit
     fi
 
+    # Workaround 2
     if [ -d "$DATA_DIR" ];then  # Protection from absent teardown
       log "Forced teardown"
       OLD_POD="$(ls -1 $DATA_DIR)"
@@ -189,7 +193,7 @@ case "$ACTION" in
     add_rules "$POD_IP" "$USER_ID"
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"
 
-    # Recheck that pod still exists. This is workaround for kubelet bugs
+    # Workaround 3. Recheck that pod still exists.
     # TODO what if api-server is down ?
     # TODO remove code duplication
     POD_SPEC=$(curl -f -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN")

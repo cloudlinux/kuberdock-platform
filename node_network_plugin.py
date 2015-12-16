@@ -159,7 +159,7 @@ def setup_public_ip(public_ip, pod_ip, iface, namespace):
     ports = get_ports_info(namespace)
     for proto, port in ports:
         if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, port, pod_ip, port).split(' ')):
-            subprocess.call(PUBLIC_IP_RULE.format('A', public_ip, proto, port, pod_ip, port).split(' '))
+            subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, port, pod_ip, port).split(' '))
     if ports:
         modify_ip('add', public_ip, iface)
 

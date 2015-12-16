@@ -39,6 +39,9 @@ def parser(subs):
     get_templates.add_argument(
         '--page', required=False, help='Page number'
     )
+    get_templates.add_argument(
+        '-o', '--origin', required=False, help='Filter out received templates by origin'
+    )
 
     desc = action.add_parser('describe')
     desc_resource = desc.add_subparsers(
@@ -103,6 +106,12 @@ def parser(subs):
         '-n', '--name',
         required=True,
         help=name_help
+    )
+
+    create_template.add_argument(
+        '-o', '--origin',
+        default='unknown',
+        help="Sets origin for determining the app visibility scope"
     )
 
     update = action.add_parser('update')

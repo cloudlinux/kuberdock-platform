@@ -87,8 +87,8 @@ class TestKubeCtl(unittest.TestCase):
         self.assertRaises(SystemExit, kctl.delete)
 
     @mock.patch.object(container.KubeQuery, 'post')
-    def test_create(self, post_mock):
-        """Test for KubeCtl.create method."""
+    def test_create_pod(self, post_mock):
+        """Test for KubeCtl.create (pod) method."""
         post_mock.return_value = {'status': 'OK'}
         with tempfile.TemporaryFile(mode='w+') as f:
             f.write('one\n')
@@ -98,6 +98,23 @@ class TestKubeCtl(unittest.TestCase):
             kctl.create()
         post_mock.assert_called_once_with(container.POD_CREATE_API_PATH,
                 {'data': 'one\ntwo'})
+
+    @mock.patch.object(container.KubeQuery, 'post')
+    def test_create_template(self, post_mock):
+        """Test for KubeCtl.create (template) method."""
+        post_mock.return_value = {'status': 'OK'}
+        with tempfile.TemporaryFile(mode='w+') as f:
+            f.write('one\n')
+            f.write('two')
+            f.seek(0)
+            kctl = container.KubeCtl(json=False, filename=f,
+                                     resource='template',
+                                     origin='cpanel',
+                                     name='test')
+            kctl.create()
+        post_mock.assert_called_once_with(container.PREDEFINED_APPS_PATH,
+                {'template': 'one\ntwo', 'origin': 'cpanel', 'name': 'test'})
+
 
 class TestKuberDock(unittest.TestCase):
     """Tests for container.KuberDock class"""

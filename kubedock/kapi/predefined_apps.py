@@ -36,13 +36,13 @@ class PredefinedApps(object):
             raise APIError('Not found', status_code=404)
         return app.to_dict()
 
-    def create(self, name, template, validate=False):
+    def create(self, name, template, origin, validate=False):
         if template is None:
             raise APIError('Template not specified')
         if validate:
             validate_template(template)
         app = PredefinedAppModel(
-            user_id=self.user, name=name, template=template
+            user_id=self.user, name=name, template=template, origin=origin
         )
         app.save()
         return app.to_dict()

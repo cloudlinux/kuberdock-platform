@@ -34,6 +34,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         user = self._get_current_user()
         params = self._get_params()
         name = params.get('name')
+        origin = params.get('origin')
         validate = params.get('validate') or False
         if name is None:
             raise APIError('template name not provided')
@@ -43,8 +44,10 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
             if template is None:
                 raise APIError('template not provided')
             template = template.stream.read()
-        return kapi_apps.PredefinedApps(user).create(name=name, template=template,
-                                           validate=validate)
+        return kapi_apps.PredefinedApps(user).create(name=name,
+                                                     template=template,
+                                                     origin=origin,
+                                                     validate=validate)
 
     @KubeUtils.jsonwrap
     @maintenance_protected

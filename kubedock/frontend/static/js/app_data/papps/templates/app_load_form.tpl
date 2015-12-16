@@ -3,6 +3,7 @@
         <div>
             <label for="app-name">Enter App name</label>
             <input type="text" id="app-name" placeholder="Enter app name" value="<%= name %>">
+            <input type="hidden" id="app-origin" value="<%= origin %>">
         </div>
         <label class="upload" for"app-upload">Upload yaml
             <input type="file" id="app-upload">

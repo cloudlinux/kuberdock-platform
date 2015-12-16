@@ -411,7 +411,8 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         defaults: {
             name: '',
             template: '',
-            qualifier: ''
+            qualifier: '',
+            origin: 'kuberdock'
         },
         urlRoot: '/api/predefined-apps',
         parse: unwrapper
@@ -425,6 +426,21 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         state: {
             pageSize: 10
         },
+        initialize: function(models){
+            this.filtered = new Backbone.PageableCollection(models);
+            this.listenTo(this, 'add', this.refilter);
+            this.listenTo(this, 'remove', this.refilter);
+        },
+        filterByOrigin: function(){
+            var filtered = this.fullCollection.filter(function(model){
+                return _.contains(['kuberdock', 'unknown'], model.get('origin'))
+            });
+            this.filtered.reset(filtered);
+            return this.filtered;
+        },
+        refilter: function(){
+            this.filterByOrigin();
+        }
     });
 
     data.CurrentUserModel = Backbone.Model.extend({

@@ -169,11 +169,12 @@ mv /fslimit.py /var/lib/kuberdock/scripts/fslimit.py
 chmod +x /var/lib/kuberdock/scripts/fslimit.py
 check_status
 
+
+
 # 4.2 kuberdock kubelet plugin stuff
 echo "Setup network plugin..."
 PLUGIN_DIR=/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock
-mkdir -p "$PLUGIN_DIR"
-check_status
+mkdir -p "$PLUGIN_DIR/data"
 mv "/node_network_plugin.sh" "$PLUGIN_DIR/kuberdock"
 mv "/node_network_plugin.py" "$PLUGIN_DIR/kuberdock.py"
 chmod +x "$PLUGIN_DIR/kuberdock"
@@ -197,11 +198,12 @@ systemctl reenable kuberdock-watcher
 check_status
 
 
+
 # 5. configure Node config
 echo "Configuring kubernetes..."
 sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
 # TODO maybe unneeded and insecure:
-sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
+#sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock"|}' $KUBERNETES_CONF_DIR/kubelet

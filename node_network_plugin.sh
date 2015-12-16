@@ -24,7 +24,7 @@ TOKEN=$(grep token /etc/kubernetes/configfile | grep -oP '[a-zA-Z0-9]+$')
 # TODO must be taken from some node global.env for all settings
 IFACE=$(cut -d '=' -f 2 <<< $FLANNEL_OPTIONS)
 NODE_IP=$(ip -o ad | grep " $IFACE " | head -1 | awk '{print $4}' | cut -d/ -f1)
-DATA_DIR="$PLUGIN_DIR/$NAMESPACE"
+DATA_DIR="$PLUGIN_DIR/data/$NAMESPACE"
 DATA_INFO="$DATA_DIR/$KUBERNETES_POD_ID"
 LOG_FILE="$PLUGIN_DIR/kuberdock.log"
 LOG_ENABLED="1"
@@ -107,10 +107,17 @@ function etcd_ {
 
 function log {
   if [ "$LOG_ENABLED" == "1" ];then
-    tail -n 100 "$LOG_FILE" > "$LOG_FILE.tmp"   # limit log to 100 lines
-    mv "$LOG_FILE.tmp" "$LOG_FILE"
+    if [ $(wc -l < "$LOG_FILE") -ge 100 ];then    # limit log to 100 lines
+      tail -n 100 "$LOG_FILE" > "$LOG_FILE.tmp"
+      mv "$LOG_FILE.tmp" "$LOG_FILE"
+    fi
     echo "$@" >> "$LOG_FILE"
   fi
+}
+
+
+function get_pod_spec {
+  curl -f -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN"
 }
 
 
@@ -149,8 +156,6 @@ case "$ACTION" in
     iptables_ -I FORWARD -t filter -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK-PUBLIC-IP
-    # for access from the same node:
-    iptables_ -I OUTPUT -t nat -j KUBERDOCK-PUBLIC-IP
     /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" init
     iptables_ -I KUBERDOCK -t nat -m set ! --match-set kuberdock_cluster dst -j REDIRECT
     ;;
@@ -158,7 +163,7 @@ case "$ACTION" in
 
     # Workaround 1
     # TODO what if api-server is down ?
-    POD_SPEC=$(curl -f -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN")
+    POD_SPEC=$(get_pod_spec)
     # Protection from fast start/stop pod; Must be first check
     if [ "$POD_SPEC" == "" ];then
       log "Empty spec case. Skip setup"
@@ -195,8 +200,7 @@ case "$ACTION" in
 
     # Workaround 3. Recheck that pod still exists.
     # TODO what if api-server is down ?
-    # TODO remove code duplication
-    POD_SPEC=$(curl -f -sS -k "$API_SERVER/api/v1/namespaces/$NAMESPACE/pods/$KUBERNETES_POD_ID" --header "Authorization: Bearer $TOKEN")
+    POD_SPEC=$(get_pod_spec)
     if [ "$POD_SPEC" == "" ];then
       log "Pod already not exists. Make teardown"
       teardown_pod

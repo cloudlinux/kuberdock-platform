@@ -40,7 +40,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     upd.print_log(run("""sed -i '/^KUBELET_ARGS/ {s|"\(.*\) --network-plugin=kuberdock"|"\\1"|}' /etc/kubernetes/kubelet"""))
     upd.print_log(run("""sed -i '/^KUBELET_ARGS/ {s|"\(.*\) --register-node=false"|"\\1 --register-node=false --network-plugin=kuberdock"|}' /etc/kubernetes/kubelet"""))
 
-    upd.print_log(run("mkdir -p {0}".format(PLUGIN_DIR)))
+    upd.print_log(run("mkdir -p {0}/data".format(PLUGIN_DIR)))
     upd.print_log(put('/var/opt/kuberdock/node_network_plugin.sh',
                       PLUGIN_DIR + 'kuberdock',
                       mode=0755))

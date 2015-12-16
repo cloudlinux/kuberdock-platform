@@ -50,7 +50,8 @@ except ImportError:
     pass
 else:
     if uwsgi.worker_id() == 1:
-        g = gevent.spawn(listeners.listen_endpoints, back_app)
+        # TODO cut all stale functionality
+        # g = gevent.spawn(listeners.listen_endpoints, back_app)
         h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
 
@@ -58,7 +59,7 @@ if __name__ == "__main__":
 
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN'):
-        g = gevent.spawn(listeners.listen_endpoints, back_app)
+        # g = gevent.spawn(listeners.listen_endpoints, back_app)
         h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
 

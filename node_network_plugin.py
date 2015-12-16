@@ -140,36 +140,31 @@ def get_ports_info(pod_uid):
 
 
 def modify_ip(cmd, ip, iface):
-    if cmd not in ('add', 'del',):
-        print >> sys.stderr, 'Unknown command for ip addr. Skip call.'
-        return 1
     if subprocess.call(['ip', 'addr', cmd, ip + '/32', 'dev', iface]):
         print >> sys.stderr, 'Error {0} ip: {1} on iface: {2}'\
             .format(cmd, ip, iface)
-        return 2
+        return 1
     if cmd == 'add':
         subprocess.call(['arping', '-I', iface, '-A', ip, '-c', '10', '-w', '1'])
+    return 0
 
 
-def compose_public_ip_rule():
-    pass
-
-
-def setup_public_ip(public_ip, pod_ip, iface, namespace):
+def handle_public_ip(action, public_ip, pod_ip, iface, namespace):
+    if action not in ('add', 'del',):
+        print >> sys.stderr, 'Unknown action for public ip. Skip call.'
+        return 1
     ports = get_ports_info(namespace)
-    for proto, port in ports:
-        if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, port, pod_ip, port).split(' ')):
-            subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, port, pod_ip, port).split(' '))
-    if ports:
-        modify_ip('add', public_ip, iface)
-
-
-def remove_public_ip(public_ip, pod_ip, iface, namespace):
-    ports = get_ports_info(namespace)
-    for proto, port in ports:
-        subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, port, pod_ip, port).split(' '))
-    if ports:
-        modify_ip('del', public_ip, iface)
+    if not ports:
+        return 2
+    if action == 'add':
+        for proto, port in ports:
+            if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, port, pod_ip, port).split(' ')):
+                subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, port, pod_ip, port).split(' '))
+    elif action == 'del':
+        for proto, port in ports:
+            subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, port, pod_ip, port).split(' '))
+    modify_ip(action, public_ip, iface)
+    return 0
 
 
 def init():
@@ -211,11 +206,13 @@ def watch():
 
 def main(action, *args):
     if action == 'init':
+        # TODO must be called after each restart service and flush/restore
+        # correct iptables rules and chains (incl. public ip chains)
         init()
     elif action == 'setup':
-        setup_public_ip(*args)
+        handle_public_ip('add', *args)
     elif action == 'teardown':
-        remove_public_ip(*args)
+        handle_public_ip('del', *args)
     elif action == 'update':
         update_ipset()
     elif action == 'watch':

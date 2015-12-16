@@ -750,7 +750,7 @@ def register_api(bp, view, endpoint, url, pk='id', pk_type='string', **kwargs):
     bp.add_url_rule(url, view_func=view_func, methods=['POST'], **kwargs)
     bp.add_url_rule('{0}<{1}:{2}>'.format(url, pk_type, pk),
                     view_func=view_func,
-                    methods=['GET', 'PUT', 'DELETE'], **kwargs)
+                    methods=['GET', 'PUT', 'PATCH', 'DELETE'], **kwargs)
 
 
 def from_binunit(value, unit='Byte', precision=None, rtype=None):

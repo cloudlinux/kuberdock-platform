@@ -7,6 +7,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
+        <script src="{{ url_for('static', filename='js/lib/bbCodeParser.min.js') }}" type="text/javascript"></script>
 {#
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.min.css') }}">
@@ -500,9 +501,16 @@
                 }
                 var url = billingUrl
                     + '?yaml=' + encodeURIComponent(yml)
-                    + '&pkgid=' + packageId;
+                    + '&pkgid=' + packageId
+                    + '&referer=' + window.location.href;
                 window.location = url;
             }
+
+            window.onload = function(e) {
+                var parser = new BBCodeParser(BBCodeParser.defaultTags());
+                var preDescription = document.getElementById('pre-description');
+                preDescription.innerHTML = parser.parseString(preDescription.innerHTML);
+            };
         </script>
     </body>
 </html>

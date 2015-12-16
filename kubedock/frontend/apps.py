@@ -32,7 +32,7 @@ def index(app_hash):
         packages, kubes_data = get_packages()
         if not package_exists(packages, package_id):
             package_id = 0
-        template, kube_type, pre_desc = get_defaults(template, mutables, kubes)
+        kube_type, pre_desc = get_defaults(template, mutables, kubes)
         has_simple = True if [v for v in fields.values() if v.get('hashsum') not in mutables] else False
 
         template = kapi_papps.unescape(template)
@@ -132,8 +132,7 @@ def get_defaults(app, mutables, kubes,
                 kubes.append(kube_num)
             else:
                 mutables[hashsum] = {'type': 'kube'}
-    return yaml.safe_dump(
-        yml, width=1000, default_flow_style=False), kube_type, pre_desc
+    return kube_type, pre_desc
 
 
 def generate(length=8):

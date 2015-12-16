@@ -26,12 +26,10 @@
 <td><%- kubes %></td>
 <td class="actions">
     <% if (status) { %>
-        <% if ( status == 'running') { %>
+        <% if (_.contains(['running', 'waiting', 'pending'], status)) { %>
             <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
-        <% } else if ( status == 'stopped' ) { %>
+        <% } else if (_.contains(['stopped', 'succeeded', 'failed'], status)) { %>
             <span class="start-btn" title="Start <%- name %> pod">Start</span>
-        <% } else if ( status == 'waiting' || status == 'pending' ) { %>
-            <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } %>
     <% } else { %>
         <span class="start-btn" title="Start <%- name %> pod">Start</span>

@@ -205,7 +205,7 @@
                             cursor: pointer;
                         }
                     }
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.terminated{
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination, &.terminated, &.failed, &.succeeded{
                         position: relative;
                         padding-left: 29px;
                         text-transform: capitalize;
@@ -229,9 +229,9 @@
                             background-color: #f5544d;
                         }
                     }
-                    &.terminated{
+                    &.terminated, &.succeeded, &.failed{
                         &:before{
-                            background-color: #C3C3C3;
+                            background-color: #c3c3c3;
                         }
                     }
                     &.pending, &.waiting{
@@ -730,6 +730,11 @@
         &.stopped, &.troubles{
             &:before{
                 background-color: #f5544d;
+            }
+        }
+        &.terminated, &.succeeded, &.failed{
+            &:before{
+                background-color: #c3c3c3;
             }
         }
         &.pending, &.waiting{

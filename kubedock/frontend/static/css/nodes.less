@@ -70,7 +70,7 @@
                                 background-position: 0 -18px;
                         }
                     }
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination, &.terminated, &.failed, &.succeeded{
                         position: relative;
                         padding-left: 22px;
                         &:before{
@@ -296,6 +296,11 @@
             &:before{
                 background-color: #f25552;
                 border: 1px solid #bc2322;
+            }
+        }
+        &.terminated, &.succeeded, &.failed{
+            &:before{
+                background-color: #c3c3c3;
             }
         }
         &.pending{

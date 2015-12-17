@@ -5,14 +5,18 @@ import requests
 from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
+from flask import current_app
 from .core import ConnectionPool
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
-from .settings import SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG
+from .users.models import User
+from .settings import (
+    SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG, KUBERDOCK_INTERNAL_USER)
 from .utils import (modify_node_ips, get_api_url, set_limit,
                     unregistered_pod_warning, send_event,
                     pod_without_id_warning, unbind_ip)
 from .kapi.usage import save_pod_state, update_containers_state
+from .kapi.podcollection import PodCollection
 
 
 MAX_ETCD_VERSIONS = 1000
@@ -228,6 +232,75 @@ def process_nodes_event(data, app):
                     send_event('node:change', {'id': node.id})
 
 
+def process_events_event(data, app):
+    """Process events from 'events' endpoint. At now only looks for
+    involved object 'Pod' and reason 'failedScheduling' - we have to detect
+    situation when scheduler can't find a node for a pod. It may be occured,
+    for example, when there no nodes with enough resources.
+    We will stop that pod and send notification for a user.
+
+    """
+    event_type = data['type']
+    # Ignore all types except 'ADDED'. For some (unknown?) reason kubernetes
+    # send multiple events with type 'DELETED' when failed pod was deleted
+    if event_type != 'ADDED':
+        return
+    event = data['object']
+    obj = event['involvedObject']
+    if obj.get('kind') != 'Pod':
+        return
+    reason = event['reason']
+    if reason != 'failedScheduling':
+        return
+    pod_id = obj.get('namespace')
+    reason = event['message']
+    if 'PodFitsResources' in reason:
+        reason = 'There are no enough resources for the pod'
+    elif 'MatchNodeSelector' in reason:
+        reason = 'There are no suitable nodes for the pod'
+    else:
+        return
+
+    with app.app_context():
+        pod = Pod.query.get(pod_id)
+        pod_name = pod.name
+        if pod is None:
+            unregistered_pod_warning(pod_id)
+            return
+        user = User.query.filter(User.id == pod.owner_id).first()
+        if user is None:
+            current_app.logger.warning(
+                'Unknown user for pod %s',
+                pod_id
+            )
+            return
+
+        if user.username == KUBERDOCK_INTERNAL_USER:
+            return
+
+        # personalized user message
+        message = 'Failed to start pod "{0}", reason: {1}'.format(
+            pod_name, reason
+        )
+        send_event('notify:error', {'message': message},
+                   channel='user_{0}'.format(user.id))
+
+        # message for admins
+        message = 'Failed to start pod "{0}", user "{1}", reason: {2}'.format(
+            pod_name, user.username, reason
+        )
+        send_event('notify:error', {'message': message})
+        try:
+            pods = PodCollection(user)
+            params = {'command': 'stop'}
+            pods.update(pod_id, params)
+        except:
+            current_app.logger.exception(
+                'Failed to stop pod %s, %s',
+                pod_id, pod_name
+            )
+
+
 def prelist_version(url):
     res = requests.get(url)
     if res.ok:
@@ -313,4 +386,11 @@ listen_nodes = listen_fabric(
     get_api_url('nodes', namespace=False),
     process_nodes_event,
     0
+)
+
+listen_events = listen_fabric(
+    get_api_url('events', namespace=False, watch=True),
+    get_api_url('events', namespace=False),
+    process_events_event,
+    1
 )

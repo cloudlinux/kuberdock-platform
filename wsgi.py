@@ -54,6 +54,7 @@ else:
         # g = gevent.spawn(listeners.listen_endpoints, back_app)
         h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
+        e = gevent.spawn(listeners.listen_events, back_app)
 
 if __name__ == "__main__":
 
@@ -62,6 +63,7 @@ if __name__ == "__main__":
         # g = gevent.spawn(listeners.listen_endpoints, back_app)
         h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
+        e = gevent.spawn(listeners.listen_events, back_app)
 
     @run_with_reloader
     def run_server():

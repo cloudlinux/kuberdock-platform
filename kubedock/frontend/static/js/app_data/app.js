@@ -186,8 +186,8 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
 
     App.on('start', function(){
         var that = this;
-        require(['app_data/controller', 'app_data/router'],
-                function(Controller, Router){
+        require(['app_data/controller', 'app_data/router', 'app_data/utils'],
+                function(Controller, Router, Utils){
 
             var controller = new Controller();
             new Router({controller: controller});
@@ -235,6 +235,12 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                             // 'pd:change':
                         };
                     }
+
+                    events['notify:error'] = function(ev) {
+                        console.log(ev);
+                        var data = JSON.parse(ev.data);
+                        Utils.notifyWindow(data.message);
+                    };
 
                     _.mapObject(events, function(handler, eventName){
                         source.addEventListener(eventName, handler, false);

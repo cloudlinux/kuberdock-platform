@@ -57,9 +57,6 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     run('systemctl daemon-reload')
     upd.print_log(run('systemctl reenable kuberdock-watcher'))
 
-    upd.print_log('Rebooting node...')
-    run('(sleep 2; reboot) &', pty=False)
-
 
 def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
     upd.print_log('Sorry, no downgrade provided')

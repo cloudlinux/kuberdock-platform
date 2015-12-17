@@ -1,4 +1,4 @@
-from fabric.api import local, put
+from fabric.api import local, put, run
 
 from kubedock.users.models import User
 from kubedock.pods.models import Pod
@@ -38,6 +38,9 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     upd.print_log('Copy etcd-dns cert/key to node {0}'.format(env.host_string))
     put('/etc/pki/etcd/etcd-dns.crt', '/etc/pki/etcd/etcd-dns.crt')
     put('/etc/pki/etcd/etcd-dns.key', '/etc/pki/etcd/etcd-dns.key')
+
+    upd.print_log('Rebooting node...')
+    run('(sleep 2; reboot) &', pty=False)
 
 
 def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):

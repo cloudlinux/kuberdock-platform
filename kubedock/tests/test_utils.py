@@ -594,6 +594,7 @@ class TestUtilsSetBridgeRules(unittest.TestCase):
 
 class TestUtilsModifyNodeIPs(unittest.TestCase):
 
+    @unittest.skip('because of migration to network plugin')
     @mock.patch('kubedock.utils.set_bridge_rules')
     @mock.patch('kubedock.utils.handle_generic_node')
     @mock.patch('kubedock.utils.handle_aws_node')

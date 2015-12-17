@@ -91,7 +91,7 @@ hostname_schema = {
     'maxlength': 255,
     'regex': {
         'regex': hostname_regex,
-        'msg': 'invalid hostname'
+        'message': 'invalid hostname'
     },
     'resolvable': True,
 }

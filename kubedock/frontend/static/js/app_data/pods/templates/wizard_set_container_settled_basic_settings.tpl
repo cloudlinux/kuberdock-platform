@@ -97,6 +97,8 @@
                                         <tr>
                                             <th>Container path</th>
                                             <th>Persistent</th>
+                                            <th>Name</th>
+                                            <th>GB</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -104,12 +106,19 @@
                                         <% _.each(volumes, function(v){ %>
                                             <tr>
                                                 <td><%- v.mountPath %></td>
-                                                <td><%- v.persistentDisk ? 'yes' : 'no' %></td>
+                                            <% if(v.persistentDisk) { %>
+                                                <td>yes</td>
+                                                <td><%- v.persistentDisk.pdName %></td>
+                                                <td><%- v.persistentDisk.pdSize %></td>
+                                            <% } else { %>
+                                                <td>no</td>
+                                                <td></td>
+                                                <td></td>
                                             </tr>
-                                        <% }) %>
+                                        <% }}) %>
                                     <% } else { %>
                                         <tr>
-                                            <td colspan="2" class="text-center disabled-color-text">Volumes are not specified</td>
+                                            <td colspan="4" class="text-center disabled-color-text">Volumes are not specified</td>
                                         </tr>
                                     <% } %>
                                     </tbody>

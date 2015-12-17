@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
+define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/public_ips/templates/public_ips_list.tpl',
         'tpl!app_data/public_ips/templates/public_ips_empty.tpl',
         'tpl!app_data/public_ips/templates/public_ips_item.tpl',

@@ -8,7 +8,7 @@ define(['app_data/app', 'marionette',
         'tpl!app_data/settings/templates/notification_create.tpl',
         'tpl!app_data/settings/templates/general_settings.tpl',
         'tpl!app_data/settings/templates/general_settings_item.tpl',
-        'utils', 'bootstrap', 'bootstrap3-typeahead'],
+        'app_data/utils', 'bootstrap', 'bootstrap3-typeahead'],
        function(App, Marionette,
                 settingsLayoutTpl, permissionsTpl, permissionItemTpl,
                 userEditTpl, notificationSettingsTpl, notificationItemTpl,
@@ -47,29 +47,20 @@ define(['app_data/app', 'marionette',
         },
 
         submitSettings: function(){
-            var changed = this.collection.filter(function(m){ return m.hasChanged('value') }),
-                notifyOpts = {autoHideDelay: defaultHideDelay, globalPosition: 'bottom left'};
+            var changed = this.collection.filter(function(m){ return m.hasChanged('value') });
             if (changed.length) {
                 _.each(changed, function(m){
-                    m.save(null, {
-                        wait: true,
-//                        patch: true,
-                        success: function(model, resp, opts){
-                            $.notify(model.get('label') + ' changed successfully',
-                                     _.extend(notifyOpts, {className: 'success'}));
-                        },
-                        error: function(model, resp){
-                            $.notify('Could not change ' + model.get('label'),
-                                     _.extend(notifyOpts, {className: 'error'}));
-                        }
-                    })
+                    m.save(null, {wait: true})
+                        .fail(utils.notifyWindow)
+                        .done(function(){
+                            utils.notifyWindow(m.get('label') + ' changed successfully',
+                                               'success');
+                        });
                 });
             }
             else {
-                $.notify('Data has not been changed.',
-                         _.extend(notifyOpts, {className: 'success'}));
+                utils.notifyWindow('Data has not been changed.', 'success');
             }
-
         }
     });
 
@@ -229,9 +220,8 @@ define(['app_data/app', 'marionette',
                         url: '/api/settings/timezone',
                         data: {'s': that.ui.timezone.val()},
                         cache: false,
-                        success: function(responce){
-                            process(responce.data);
-                        }
+                        success: function(responce){ process(responce.data); },
+                        error: utils.notifyWindow,
                     });
                 }
             });
@@ -299,8 +289,7 @@ define(['app_data/app', 'marionette',
         },
 
         onSave: function(){
-            var that = this,
-                data = {
+            var data = {
                     'first_name': this.ui.first_name.val(),
                     'last_name': this.ui.last_name.val(),
                     'middle_initials': this.ui.middle_initials.val(),
@@ -329,24 +318,14 @@ define(['app_data/app', 'marionette',
             }
             if (this.ui.password.val())  // update only if specified
                 data.password = this.ui.password.val();
-            this.model.set(data);
 
-            this.model.save(this.model.changedAttributes(), {
-                wait: true,
-                patch: true,
-                success: function(model){
-                    that.model.in_edit = false;
-                    that.render();
-                    $.notify('Profile changed successfully', {
-                        autoHideDelay: defaultHideDelay,
-                        globalPosition: 'bottom left',
-                        className: 'success'
-                    });
-                },
-                error: function(model){
-                    model.set(model.previousAttributes());
-                }
-            });
+            this.model.save(data, {wait: true, patch: true, context: this})
+                .fail(utils.notifyWindow)
+                .done(function(){
+                    this.model.in_edit = false;
+                    this.render();
+                    utils.notifyWindow('Profile changed successfully', 'success');
+                });
         }
     });
 
@@ -384,16 +363,12 @@ define(['app_data/app', 'marionette',
                 checked = $el.is(':checked');
             $.ajax({
                 url: '/api/settings/permissions/' + pid,
-                dataType: 'JSON',
                 type: 'PUT',
                 data: {'allow': checked},
                 success: function(rs){
-                    $.notify('Permission changed successfully', {
-                        autoHideDelay: 10000,
-                        globalPosition: 'bottom left',
-                        className: 'success'
-                    });
-                }
+                    utils.notifyWindow('Permission changed successfully', 'success');
+                },
+                error: utils.notifyWindow,
             });
         }
     });

@@ -364,6 +364,31 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 }
             });
         },
+        loginConfirmDialog: function(options){
+            var that = this;
+            utils.modalDialog({
+                title: "Authorize by " + this.get('username'),
+                body: "Are you sure you want to authorize by user '" +
+                    this.get('username') + "'?",
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){ that.login(options); },
+                    buttonCancel: true
+                }
+            });
+        },
+        login: function(options){
+            utils.preloader.show();
+            return $.ajax(_.extend({
+                url: '/api/users/loginA',
+                type: 'POST',
+                data: {user_id: this.id},
+                success: function(){ window.location.href = '/'; },
+                complete: utils.preloader.hide,
+                error: utils.notifyWindow,
+            }, options));
+        },
     });
 
     data.UsersCollection = Backbone.Collection.extend({

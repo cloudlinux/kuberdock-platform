@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
+define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/pstorage/templates/pv_list.tpl',
         'tpl!app_data/pstorage/templates/pv_list_empty.tpl',
         'tpl!app_data/pstorage/templates/pv_list_item.tpl',
@@ -30,8 +30,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         terminateVolume: function(){
-            var that = this,
-                preloader = $('#page-preloader');
+            var that = this;
 
             if (this.model.get('in_use')) {
                 utils.notifyWindow('Persistent volume is used');
@@ -43,17 +42,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            preloader.show();
-                            that.model.destroy({
-                                wait: true,
-                                success: function(){
-                                    preloader.hide();
-                                    that.remove();
-                                },
-                                error: function(){
-                                    preloader.hide();
-                                }
-                            });
+                            utils.preloader.show();
+                            that.model.destroy({wait: true})
+                                .always(utils.preloader.hide)
+                                .fail(utils.notifyWindow)
+                                .done(function(){ that.remove(); });
                         },
                         buttonCancel: true
                     }
@@ -77,6 +70,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
             main: 'div#details_content'
         },
     });
-    
+
     return views;
 });

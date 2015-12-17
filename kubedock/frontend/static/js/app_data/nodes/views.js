@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
+define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/nodes/templates/node_detailed_layout.tpl',
         'tpl!app_data/nodes/templates/node_general_tab.tpl',
         'tpl!app_data/nodes/templates/node_stats_tab.tpl',
@@ -133,7 +133,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
 
         deleteNode: function() {
             var that = this,
-                preloader = $('#page-preloader'),
                 name = that.model.get('hostname');
 
             utils.modalDialogDelete({
@@ -143,16 +142,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 show: true,
                 footer: {
                     buttonOk: function() {
-                        preloader.show();
-                        that.model.destroy({
-                            wait: true,
-                            success: function(){
-                                preloader.hide();
-                            },
-                            error: function(){
-                                preloader.hide();
-                            }
-                        });
+                        utils.preloader.show();
+                        that.model.destroy({wait: true})
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow);
                     },
                     buttonCancel: true
                 }
@@ -296,7 +289,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
 
         complete: function () {
             var that = this,
-                preloader = $('#page-preloader'),
                 val = this.ui.node_name.val(),
                 pattern =  /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;
 
@@ -311,7 +303,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                         this.ui.node_name.focus();
                         break;
                     default:
-                        preloader.show();
+                        utils.preloader.show();
                         nodeCollection.create({
                             hostname: val,
                             status: 'pending',
@@ -319,19 +311,18 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                             install_log: ''
                         }, {
                             wait: true,
-                            success: function(){
-                                preloader.hide();
+                            complete: utils.preloader.hide,
+                            success:  function(){
                                 App.navigate('nodes', {trigger: true});
-                                $.notify('Node "' + val + '" is added successfully', {
-                                    autoHideDelay: 5000,
-                                    clickToHide: true,
-                                    globalPosition: 'bottom left',
-                                    className: 'success',
-                                });
+                                utils.notifyWindow(
+                                    'Node "' + val + '" is added successfully',
+                                    'success'
+                                );
                             },
-                            error: function(){
+                            error: function(collection, response){
+                                utils.notifyWindow(response);
                                 preloader.hide();
-                            }
+                            },
                         });
                 }
             });
@@ -419,8 +410,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         deleteNode: function() {
-            var that = this,
-                preloader = $('#page-preloader');
+            var that = this;
 
             App.getNodeCollection().done(function(nodeCollection){
                 var model = nodeCollection.get(that.nodeId),
@@ -432,11 +422,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            preloader.show();
-                            model.destroy({
-                                wait: true,
-                                complete: function(){ preloader.hide(); },
-                            });
+                            utils.preloader.show();
+                            model.destroy({wait: true})
+                                .always(utils.preloader.hide)
+                                .fail(utils.notifyWindow);
                         },
                         buttonCancel: true
                     }

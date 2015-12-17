@@ -2,6 +2,7 @@ from flask import Blueprint
 from flask.views import MethodView
 
 from . import APIError
+from ..core import db
 from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils, register_api
 from ..kapi import pstorage as ps
@@ -10,6 +11,15 @@ from ..rbac import check_permission
 
 
 pstorage = Blueprint('pstorage', __name__, url_prefix='/pstorage')
+
+
+class PDNotFound(APIError):
+    message = 'Persistent disk not found.'
+    status_code = 404
+
+
+class PDIsUsed(APIError):
+    message = 'Persistent disk is used.'
 
 
 class PersistentStorageAPI(KubeUtils, MethodView):
@@ -49,12 +59,21 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         pass
 
     def delete(self, device_id):
+        pd = PersistentDisk.query.filter_by(id=device_id).first()
+        if pd is None:
+            raise PDNotFound()
+        if pd.pod_id is not None:
+            raise PDIsUsed()
+
         cls = self._resolve_storage()
-        result = cls().delete_by_id(device_id)
+        if cls().delete_by_id(device_id) != 0:
+            raise APIError("Couldn't delete drive.", type='DeleteDriveError')
+
         try:
-            PersistentDisk.query.filter_by(id=device_id).delete()
+            db.session.delete(pd)
+            db.session.commit()
         except Exception:
-            raise APIError('Couldn\'t delete persistent disk.')
-        return result
+            raise APIError("Couldn't delete persistent disk.", 500, 'DeletePDError')
+
 
 register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id', strict_slashes=False)

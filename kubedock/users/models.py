@@ -117,13 +117,6 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def pods_to_dict(self, exclude=None):
         if exclude is None:
             exclude = []
-        states = lambda x: dict(
-            pod_id=x.pod.id,
-            container_name=x.container_name,
-            kubes=x.kubes,
-            start_time=x.start_time,
-            end_time=x.end_time
-        )
         return [
             dict(
                 id=p.id,
@@ -134,8 +127,6 @@ class User(BaseModelMixin, UserMixin, db.Model):
                 status=p.status,
                 kubes=p.kubes,
                 containers_count=p.containers_count,
-                states=([] if 'states' in exclude else
-                        [states(state) for state in p.container_states])
             ) for p in self.pods if not p.is_deleted
         ]
 

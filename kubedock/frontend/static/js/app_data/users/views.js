@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
+define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/users/templates/paginator.tpl',
         'tpl!app_data/users/templates/user_item.tpl',
         'tpl!app_data/users/templates/online_user_item.tpl',
@@ -95,20 +95,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 footer: {
                     buttonOk: function(){
                         utils.preloader.show();
-                        that.model.save({
-                            active: false
-                        },{
-                            wait: true,
-                            patch: true,
-                            success: function(){
-                                utils.preloader.hide();
-                                that.render();
-                            },
-                            error: function(model, response){
-                                utils.preloader.hide();
-                                utils.notifyWindow(response.statusText);
-                            }
-                        });
+                        that.model.save({active: false}, {wait: true, patch: true})
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow)
+                            .done(that.render);
                     },
                     buttonCancel: true
                 }
@@ -116,16 +106,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         activatedUser: function(){
-            var that = this;
-            this.model.save({
-                    active: true
-                },{
-                    wait: true,
-                    patch: true,
-                    success: function(){
-                        that.render();
-                    }
-                });
+            utils.preloader.show();
+            this.model.save({active: true}, {wait: true, patch: true})
+                .always(utils.preloader.hide)
+                .fail(utils.notifyWindow)
+                .done(this.render);
         },
 
         profileUser_btn: function(){
@@ -285,7 +270,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 dataType: 'JSON',
                 success: function(rs){
                     console.log(rs)
-                    utils.preloader.hide();
                     if(rs.data){
                         that.ui.tbody.empty();
                         if(rs.data.length == 0){
@@ -306,9 +290,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                         }
                     }
                 },
-                error: function(){
-                    utils.preloader.hide();
-                }
+                complete: utils.preloader.hide,
+                error: utils.notifyWindow,
             });
         },
 
@@ -330,9 +313,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                         url: '/api/users/q',
                         data: {'s': that.ui.username.val()},
                         cache: false,
-                        success: function(rs){
-                            process(rs.data);
-                        }
+                        success: function(rs){ process(rs.data); },
+                        error: utils.notifyWindow,
                     })
                 },
                 updater: function(v){
@@ -421,9 +403,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                         url: '/api/settings/timezone',
                         data: {'s': that.ui.timezone.val()},
                         cache: false,
-                        success: function(responce){
-                            process(responce.data);
-                        }
+                        success: function(response){ process(response.data); },
+                        error: utils.notifyWindow,
                     });
                 }
             });
@@ -540,19 +521,15 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                         'package'         : that.ui.package_select.val(),
                     }, {
                         wait: true,
+                        complete: utils.preloader.hide,
                         success: function(){
-                            utils.preloader.hide();
-                            App.navigate('users', {trigger: true})
-                            $.notify('User "' + username + '" created successfully', {
-                                autoHideDelay: 4000,
-                                globalPosition: 'bottom left',
-                                className: 'success'
-                            });
+                            App.navigate('users', {trigger: true});
+                            utils.notifyWindow('User "' + username + '" created successfully',
+                                               'success');
                         },
-                        error: function(model, response){
-                            utils.preloader.hide();
-                            utils.notifyWindow(response.statusText);
-                        }
+                        error: function(collection, response){
+                            utils.notifyWindow(response);
+                        },
                     });
                 }
             });
@@ -606,44 +583,17 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                                 '<td>' + itm[3] + '</td>'
                             ))
                         });
-                        utils.preloader.hide();
                     } else {
                         that.ui.tb.append($('<tr>').append('<td colspan="4" class="text-center">There is no login history for this user</td>'));
-                        utils.preloader.hide();
                     }
-                }
+                },
+                complete: utils.preloader.hide,
+                error: utils.notifyWindow,
             });
         },
 
         login_this_user: function(){
-            var that = this;
-            utils.modalDialog({
-                title: "Authorize by " + this.model.get('username'),
-                body: "Are you sure you want to authorize by user '" +
-                    this.model.get('username') + "'?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        utils.preloader.show();
-                        $.ajax({
-                            url: '/api/users/loginA',
-                            type: 'POST',
-                            data: {user_id: that.model.id},
-                            dataType: 'JSON',
-                            success: function(rs){
-                                if(rs.status == 'OK')
-                                    window.location.href = '/';
-                                utils.preloader.hide();
-                            },
-                            error: function(){
-                                utils.preloader.hide();
-                            }
-                        });
-                    },
-                    buttonCancel: true
-                }
-            });
+            this.model.loginConfirmDialog();
         },
 
         delete_user: function(){
@@ -720,34 +670,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         login_this_user: function(){
-            var that = this;
-            utils.modalDialog({
-                title: "Authorize by " + this.model.get('username'),
-                body: "Are you sure want to authorize by user '" +
-                    this.model.get('username') + "'?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        utils.preloader.show();
-                        $.ajax({
-                            url: '/api/users/loginA',
-                            type: 'POST',
-                            data: {user_id: that.model.id},
-                            dataType: 'JSON',
-                            success: function(rs){
-                                if(rs.status == 'OK')
-                                    window.location.href = '/';
-                                utils.preloader.hide();
-                            },
-                            error: function(){
-                                utils.preloader.hide();
-                            }
-                        });
-                    },
-                    buttonCancel: true
-                }
-            });
+            this.model.loginConfirmDialog();
         },
 
         delete_user: function(){
@@ -792,9 +715,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                         url: '/api/settings/timezone',
                         data: {'s': that.ui.timezone.val()},
                         cache: false,
-                        success: function(responce){
-                            process(responce.data);
-                        }
+                        success: function(responce){ process(responce.data); },
+                        error: utils.notifyWindow,
                     });
                 }
             });
@@ -917,23 +839,17 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 default:
                     if (that.ui.password.val())  // update only if specified
                         data.password = that.ui.password.val();
-                    that.model.set(data);
 
-                    that.model.save(that.model.changedAttributes(), {
-                        wait: true,
-                        patch: true,
-                        success: function(model){
-                            App.navigate('users/profile/' + model.id + '/general', {trigger: true});
-                            $.notify( "Changes to user '" + model.get('username') + "' saved successfully", {
-                                autoHideDelay: 4000,
-                                globalPosition: 'bottom left',
-                                className: 'success'
-                            });
-                        },
-                        error: function(model){
-                            model.set(model.previousAttributes());
-                        }
-                    });
+                    that.model.save(data, {wait: true, patch: true})
+                        .fail(utils.notifyWindow)
+                        .done(function(){
+                            App.navigate('users/profile/' + that.model.id + '/general/',
+                                         {trigger: true});
+                            utils.notifyWindow(
+                                'Changes to user "' + that.model.get('username') +
+                                    '" saved successfully',
+                                'success');
+                        });
                 }
             });
         },

@@ -1,14 +1,14 @@
-define(['app_data/app', 'marionette',
+define(['app_data/app', 'app_data/utils', 'marionette',
         'tpl!app_data/papps/templates/main.tpl',
         'tpl!app_data/papps/templates/breadcrumbs.tpl',
         'tpl!app_data/papps/templates/app_list_empty.tpl',
         'tpl!app_data/papps/templates/app_list_item.tpl',
         'tpl!app_data/papps/templates/app_list.tpl',
         'tpl!app_data/papps/templates/app_load_form.tpl',
-        'utils', 'bootstrap'],
-       function(App, Marionette,
+        'bootstrap'],
+       function(App, utils, Marionette,
                 mainTpl, breadcrumbsTpl, appListEmptyTpl,
-                appListItemTpl, appListTpl, appLoadFormTpl, utils){
+                appListItemTpl, appListTpl, appLoadFormTpl){
 
         var views = {};
 
@@ -192,8 +192,7 @@ define(['app_data/app', 'marionette',
 
             deleteItem: function(){
                 var that = this,
-                    name = this.model.get('name'),
-                    preloader = $('#page-preloader');
+                    name = this.model.get('name');
 
                 utils.modalDialogDelete({
                     title: 'Delete "' + name + '"',
@@ -202,23 +201,16 @@ define(['app_data/app', 'marionette',
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            preloader.show();
-                            that.model.destroy({
-                                wait: true,
-                                success: function(){
-                                    preloader.hide();
+                            utils.preloader.show();
+                            that.model.destroy({wait: true})
+                                .always(utils.preloader.hide)
+                                .fail(utils.notifyWindow)
+                                .done(function(){
                                     that.remove();
-                                    $.notify('Predefined application "' + name + '" is removed', {
-                                        autoHideDelay: 5000,
-                                        clickToHide: true,
-                                        globalPosition: 'bottom left',
-                                        className: 'success',
-                                    });
-                                },
-                                error: function(){
-                                    preloader.hide();
-                                }
-                            });
+                                    utils.notifyWindow('Predefined application "' +
+                                                           name + '" is removed',
+                                                       'success');
+                                });
                             that.render();
                         },
                         buttonCancel: true

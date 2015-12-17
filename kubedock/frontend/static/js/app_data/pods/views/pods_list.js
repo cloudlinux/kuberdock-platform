@@ -228,12 +228,13 @@ define(['app_data/app',
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        for (var i in items) {items[i].destroy({
-                            wait: true,
-                            error: function(model, response){
-                                utils.notifyWindow(response);
-                            }
-                        })}
+                        utils.preloader.show();
+                        var deferreds = _.map(items, function(item) {
+                            return item.destroy({wait: true})
+                                .fail(utils.notifyWindow);
+                        }, this);
+                        $.when.apply($, deferreds).always(utils.preloader.hide);
+
                         that.collection.fullCollection.checkedNumber = 0;
                         that.collection.fullCollection.allChecked = false;
                         that.render();
@@ -256,15 +257,14 @@ define(['app_data/app',
         sendCommand: function(command){
             var items = this.collection.fullCollection.filter(function(i){return i.is_checked});
 
-            for (var i in items) {
-                items[i].save({command: command}, {
-                    error: function(model, response){
-                        utils.notifyWindow(response);
-                    }
-                });
-                items[i].is_checked = false;
+            utils.preloader.show();
+            var deferreds = _.map(items, function(item) {
+                item.is_checked = false;
                 this.collection.fullCollection.checkedNumber--;
-            }
+                return item.command(command).fail(utils.notifyWindow);
+            }, this);
+            $.when.apply($, deferreds).always(utils.preloader.hide);
+
             this.collection.fullCollection.allChecked = false;
             this.render();
         },

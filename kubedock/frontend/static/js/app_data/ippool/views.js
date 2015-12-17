@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
+define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/ippool/templates/network_empty.tpl',
         'tpl!app_data/ippool/templates/network_item.tpl',
         'tpl!app_data/ippool/templates/network_item_more.tpl',
@@ -47,9 +47,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         },
 
         deleteNetwork_btn: function(evt){
-            evt.stopPropagation()
-            var that = this,
-                preloader = $('#page-preloader');
+            evt.stopPropagation();
+            var that = this;
             utils.modalDialogDelete({
                     title: 'Delete network',
                     body: "Are you sure want to delete network '" +
@@ -58,16 +57,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        preloader.show();
-                        that.model.destroy({
-                            wait: true,
-                            success: function(){
-                                preloader.hide();
-                            },
-                            error: function(){
-                                preloader.hide();
-                            }
-                        });
+                        utils.preloader.show();
+                        that.model.destroy({wait: true})
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow);
                     },
                     buttonCancel: true
                 }
@@ -113,13 +106,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         commandIP: function(cmd, ip){
             var data = {};
             data[cmd + '_ip'] = ip;
-            return this.model.save(data, {
-                wait: true,
-                context: this,
-                success: this.render,
-                error: function(data, response){ console.error(response); },
-                complete: function(){ this.model.set(cmd + '_ip', null); },
-            });
+            return this.model.save(data, {wait: true, context: this})
+                .always(function(){ this.model.set(cmd + '_ip', null); })
+                .done(this.render)
+                .fail(utils.notifyWindow);
         },
 
         blockIP: function(btn){
@@ -243,8 +233,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                 ok = true;
             App.getIPPoolCollection().done(function(ipCollection){
                 // temp validation
-                var preloader = $('#page-preloader');
-                    network = that.ui.network.val();
+                var network = that.ui.network.val();
                 if(network.length == 0 || network.split('.').length < 4){
                     that.ui.network.notify('Wrong IP-address');
                     ok = false;
@@ -256,19 +245,19 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                     ok = false;
                 }
                 if (ok) {
-                    preloader.show();
+                    utils.preloader.show();
                     ipCollection.create({
                         'network': network,
                         'autoblock': that.ui.autoblock.val()
                     }, {
                         wait: true,
+                        complete: utils.preloader.hide,
                         success: function(){
-                            preloader.hide();
-                            App.navigate('ippool', {trigger: true})
+                            App.navigate('ippool', {trigger: true});
                         },
-                        error:  function(){
-                            preloader.hide();
-                        }
+                        error: function(collection, response){
+                            utils.notifyWindow(response);
+                        },
                     });
                 }
             });

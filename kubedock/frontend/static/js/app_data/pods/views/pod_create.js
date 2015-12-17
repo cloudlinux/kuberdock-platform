@@ -603,20 +603,16 @@ define(['app_data/app', 'app_data/model',
                 if (this.pod.persistentDrives === undefined) {
                     var pdCollection = new Model.PersistentStorageCollection();
                         utils.preloader.show();
-                        pdCollection.fetch({
-                            wait: true,
-                            data: {'free-only': true},
-                            success: function(collection, response, opts){
-                                that.pod.persistentDrives = _.map(collection.models, function(m){
+                        pdCollection.fetch({wait: true, data: {'free-only': true}})
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow)
+                            .done(function(){
+                                that.pod.persistentDrives = pdCollection.map(function(m){
                                     return that.transformKeys(m.attributes);
                                 });
                                 that.toggleVolumeEntry(row);
                                 that.render();
-                            },
-                            complete: function(){
-                                utils.preloader.hide();
-                            }
-                        });
+                            });
                 } else {
                     that.toggleVolumeEntry(row);
                     this.render();

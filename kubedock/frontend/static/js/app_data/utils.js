@@ -2,68 +2,6 @@ define(['moment-timezone', 'notify'], function(moment){
 
     var utils = {};
 
-    var _ajaxStatusCodes = {
-        statusCode: {
-            400: function(xhr){
-                var err = xhr.statusText;
-                if(xhr.responseJSON && xhr.responseJSON.data)
-                    err = xhr.responseJSON.data;
-                if(typeof err === "object")
-                    err = JSON.stringify(err);
-                $.notify(err, {
-                    autoHideDelay: 5000,
-                    clickToHide: true,
-                    globalPosition: 'bottom left',
-                    className: 'error'
-                });
-            },
-            401: function (xhr) {
-                var err = xhr.statusText;
-                if(xhr.responseJSON && xhr.responseJSON.data)
-                    err = xhr.responseJSON.data;
-                if(typeof err === "object")
-                    err = JSON.stringify(err);
-                $.notify(err, {
-                    autoHideDelay: 5000,
-                    globalPosition: 'bottom left',
-                    className: 'error'
-                });
-
-                // Redirect to the login page.
-                    window.location.href = "/login";
-            },
-            403: function (xhr) {
-                // 403 -- Access denied
-//                    Backbone.history.navigate("login", true);
-            },
-            404: function(xhr){
-                $('body').html(
-                    '404 Page not found'
-                );
-            },
-            500: function(xhr){
-                var err = xhr.statusText;
-                if(xhr.responseJSON && xhr.responseJSON.data)
-                    err = xhr.responseJSON.data;
-                if(typeof err === "object")
-                    err = JSON.stringify(err);
-                $.notify(err, {
-                    autoHideDelay: 5000,
-                    globalPosition: 'bottom left',
-                    className: 'error'
-                });
-            }
-        }
-    };
-
-    $.ajaxSetup.call($, _ajaxStatusCodes);
-
-    Backbone.ajax = function() {
-        // Invoke $.ajaxSetup in the context of Backbone.$
-        Backbone.$.ajaxSetup.call(Backbone.$, _ajaxStatusCodes);
-        return Backbone.$.ajax.apply(Backbone.$, arguments);
-    };
-
     utils.modalDialog = function(options){
         var modal = $('.modal'),
             modalDialog = modal.find('.modal-dialog');
@@ -145,19 +83,34 @@ define(['moment-timezone', 'notify'], function(moment){
         return D.join(sep);
     };
 
-    utils.notifyWindow = function(b, type){
-        var msg = typeof b == "string" ? b :
-                  !(b.responseJSON && b.responseJSON.data) ? b.responseText :
-                  typeof b.responseJSON.data == 'string' ? b.responseJSON.data :
-                  JSON.stringify(b.responseJSON.data);
-        if (b && b.status == 401){
-            window.location = '/logout'
+    /**
+     * Notify. Can be safely used as $.ajax handler.
+     * @param data - Message as a string, or jsXHR object.
+     * @param type - Optional message type in case if data is a string, or
+        if you want to change default behaviour for jsXHR object.
+     */
+    utils.notifyWindow = function(data, type){
+        var msg;
+        if (typeof data == "string") {
+            msg = data;
+        } else if (!data.responseJSON || !data.responseJSON.data) {
+            msg = data.responseText;
+        } else {
+            msg = typeof data.responseJSON.data == 'string' ? data.responseJSON.data :
+                JSON.stringify(data.responseJSON.data);
+            if (!type)
+                type = data.responseJSON.status == 'ok' ? 'success' : 'error';
+        }
+        type = type || 'error';
+
+        if (data && data.status == 401){
+            window.location = '/login';
         } else {
             $.notify(msg,{
                 autoHideDelay: 5000,
                 clickToHide: true,
                 globalPosition: 'bottom left',
-                className: type || 'error',
+                className: type,
             });
         }
     };

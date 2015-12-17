@@ -349,18 +349,14 @@ define(['app_data/app',
                 footer: {
                     buttonOk: function(){
                         utils.preloader.show();
-                        item.destroy({
-                            wait: true,
-                            complete: utils.preloader.hide,
-                            success: function(){
+                        item.destroy({wait: true})
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow)
+                            .done(function(){
                                 App.getPodCollection().done(function(col){
                                     col.remove(item);
                                 });
-                            },
-                            error: function(model, response, options, data){
-                                utils.notifyWindow(response);
-                            }
-                        });
+                            });
                     },
                     buttonCancel: true
                 }

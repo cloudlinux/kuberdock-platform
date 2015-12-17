@@ -1,4 +1,4 @@
-define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
+define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils, Model){
     //"use strict";
 
     var controller = Marionette.Object.extend({
@@ -39,15 +39,15 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                 });
 
                 that.listenTo(listLayout, 'collection:filter', function(data){
-                    if (data.length < 2) {
-                        var collection = App.getCollection();
-                    }
-                    else {
-                        var collection = new Model.PodCollection(App.getCollection().searchIn(data));
-                    }
-                    view = new Views.PodCollection({collection: collection});
-                    listLayout.list.show(view);
-                    listLayout.pager.show(new Pager.PaginatorView({view: view}));
+                    App.getPodCollection().done(function(collection){
+                        if (data.length > 2) {
+                            collection = new Model.PodCollection(
+                                collection.searchIn(data));
+                        }
+                        var view = new Views.PodCollection({collection: collection});
+                        listLayout.list.show(view);
+                        listLayout.pager.show(new Pager.PaginatorView({view: view}));
+                    });
                 });
 
                 App.contents.show(listLayout);
@@ -99,10 +99,10 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                                     collection: statCollection
                                 }));
                             },
-                            error: function(){
-                                console.log('failed to fetch graphs');
-                            }
-                        })
+                            error: function(collection, response){
+                                utils.notifyWindow(response);
+                            },
+                        });
                     });
 
                     that.listenTo(itemLayout, 'display:pod:list', function(data){
@@ -178,9 +178,9 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                                     collection:statCollection
                                 }));
                             },
-                            error: function(){
-                                console.log('failed to fetch graphs');
-                            }
+                            error: function(collection, response){
+                                utils.notifyWindow(response);
+                            },
                         });
                     });
                     that.listenTo(wizardLayout, 'step:logsconf',
@@ -193,7 +193,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
         createPod: function(){
             "use strict";
             var that = this;
-            require(['utils',
+            require(['app_data/utils',
                      'app_data/pods/views/pod_create',
                      'app_data/pods/views/paginator',
                      'app_data/pods/views/loading',
@@ -313,20 +313,15 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         utils.preloader.show();
                         podCollection.fullCollection.create(data, {
                             wait: true,
+                            complete: utils.preloader.hide,
                             success: function(model){
                                 model.detached = false;
-                                utils.preloader.hide();
                                 App.navigate('pods');
                                 that.showPods();
                             },
-                            error: function(model, response, options){
-                                console.log('could not save data');
-                                var body = response.responseJSON
-                                    ? JSON.stringify(response.responseJSON.data)
-                                    : response.responseText;
-                                utils.preloader.hide();
-                                utils.notifyWindow(body);
-                            }
+                            error: function(model, response){
+                                utils.notifyWindow(response);
+                            },
                         });
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(){
@@ -341,9 +336,11 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                             contentType: 'application/json; charset=utf-8',
                             url: '/api/images/new',
                             data: JSON.stringify({image: image, auth: auth})
-                        }).always(utils.preloader.hide).fail(function(data){
-                            utils.notifyWindow(data);
-                        }).done(function(data){
+                        }).always(
+                            utils.preloader.hide
+                        ).fail(
+                            utils.notifyWindow
+                        ).done(function(data){
                             var newContainer = Model.Container.fromImage(data.data);
                             model.get('containers').remove(model.lastEditedContainer.id);
                             model.get('containers').add(newContainer);
@@ -464,8 +461,8 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                                         //layoutView.sidebar.show(new Views.SideBar({model: sidebarModel, nodeId: nodeId}));
                                         layoutView.tabContent.show(view);
                                     },
-                                    error: function(){
-                                        console.log('could not get graphs');
+                                    error: function(collection, response){
+                                        utils.notifyWindow(response);
                                     }
                                 });
                             } break;
@@ -526,7 +523,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         layout_view.pager.show(activities_list_pager);
                     });
                     App.contents.show(layout_view);
-                }
+                },
             });
         },
 
@@ -639,6 +636,9 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                     navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsData = {buttonID: 'add_pod',  buttonLink: '/#newapp',
                                        buttonTitle: 'Add new application', showControls: true};
+                appCollection.fetch({wait: true})
+                    .done(function(){ App.contents.show(mainLayout); })
+                    .fail(utils.notifyWindow);
 
                 that.listenTo(mainLayout, 'app:showloadcontrol', function(id){
                     var breadcrumbsModel = new Backbone.Model(_.extend(
@@ -717,12 +717,9 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         type: 'saveAnyway',
                         footer: {
                             buttonOk: function(){
-                                context.model.save(null, {
-                                    wait: true,
-                                    success: function() {
-                                        successModelSaving(context);
-                                    }
-                                });
+                                context.model.save(null, {wait: true})
+                                    .done(function(){ successModelSaving(context); })
+                                    .fail(utils.notifyWindow);
                             },
                             buttonCancel: true
                         }
@@ -742,14 +739,10 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                     // be asked about saving template with errors. If user
                     // have confirm, then the model will be saved without
                     // validation flag.
-                    model.save(null, {
-                            wait: true,
-                            url: model.url() + '?' + $.param({validate: true}),
-                            success: function() {successModelSaving(context)},
-                            error: function(model, response, options){
-                                errorModelSaving(context, response);
-                            }
-                        });
+                    var url = model.url() + '?' + $.param({validate: true});
+                    model.save(null, {wait: true, url: url})
+                        .done(function(){ successModelSaving(context); })
+                        .fail(function(xhr){ errorModelSaving(context, xhr); });
                 });
 
                 that.listenTo(mainLayout, 'app:cancel', function(){
@@ -837,9 +830,9 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                             layoutView.nav.show(navbar);
                             layoutView.main.show(new Views.ProfileEditView({ model: model }))
                         },
-                        error: function(){
-                            console.log("Could not fetch user collection");
-                        }
+                        error: function(model, response){
+                            utils.notifyWindow(response);
+                        },
                     });
                 });
                 App.contents.show(layoutView);
@@ -913,7 +906,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
         showPersistentVolumes: function(){
             var that = this;
             require(['app_data/pstorage/views', 'app_data/menu/views'], function(Views, Menu){
-                var layoutView = new Views.SettingsLayout()
+                var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
                     var pvCollection = new Model.PersistentStorageCollection();
@@ -923,9 +916,9 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         success: function(collection, resp, opts){
                             layoutView.main.show(new Views.PersistentVolumesView({collection: collection}));
                         },
-                        error: function(){
-                            console.log("Could not fetch persistent volumes");
-                        }
+                        error: function(model, response){
+                            utils.notifyWindow(response);
+                        },
                     });
                 });
                 App.contents.show(layoutView);
@@ -945,9 +938,9 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                         success: function(collection, resp, opts){
                             layoutView.main.show(new Views.PublicIPsView({collection: collection}));
                         },
-                        error: function(){
-                            console.log("Could not fetch public IPs");
-                        }
+                        error: function(model, response){
+                            utils.notifyWindow(response);
+                        },
                     });
                 });
                 App.contents.show(layoutView);

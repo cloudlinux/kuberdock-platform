@@ -25,7 +25,11 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                                 wait: true,
                                 success: function(collection, response, options){
                                     deferred.resolveWith(that, [collection]);
-                                }
+                                },
+                                error: function(collection, response) {
+                                    Utils.notifyWindow(response);
+                                    deferred.rejectWith(that, [response]);
+                                },
                             });
                         }
                     }
@@ -48,7 +52,11 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                                 wait: true,
                                 success: function(collection, response, options){
                                     deferred.resolveWith(that, [collection]);
-                                }
+                                },
+                                error: function(collection, response) {
+                                    Utils.notifyWindow(response);
+                                    deferred.rejectWith(that, [response]);
+                                },
                             });
                         }
                     }
@@ -66,7 +74,11 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                             wait: true,
                             success: function(collection, response, options){
                                 deferred.resolveWith(that, [collection]);
-                            }
+                            },
+                            error: function(collection, response) {
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            },
                         });
                     }
                     return deferred.promise();
@@ -75,9 +87,15 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 that.getKubeTypes = function(){
                     var deferred = $.Deferred();
                     if (typeof kubeTypes === 'undefined') {
-                        $.get('/api/pricing/kubes', function(data){
-                            deferred.resolveWith(that, [_.has(data, 'data') ? data['data'] : data]);
-                        });
+                        $.get('/api/pricing/kubes')
+                            .done(function(data){
+                                deferred.resolveWith(
+                                    that,  [_.has(data, 'data') ? data.data : data]);
+                            })
+                            .fail(function(response){
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            });
                     }
                     else {
                         deferred.resolveWith(that, [kubeTypes]);
@@ -88,9 +106,15 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 that.getRoles = function(){
                     var deferred = $.Deferred();
                     if (typeof roles === 'undefined') {
-                        $.get('/api/users/roles', function(data){
-                            deferred.resolveWith(that, [_.has(data, 'data') ? data['data'] : data]);
-                        });
+                        $.get('/api/users/roles')
+                            .done(function(data){
+                                deferred.resolveWith(
+                                    that,  [_.has(data, 'data') ? data.data : data]);
+                            })
+                            .fail(function(response){
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            });
                     }
                     else {
                         deferred.resolveWith(that, [roles]);
@@ -101,9 +125,15 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 that.getPackages = function(){
                     var deferred = $.Deferred();
                     if (typeof packages === 'undefined') {
-                        $.get('/api/pricing/packages', function(data){
-                            deferred.resolveWith(that, [_.has(data, 'data') ? data['data'] : data]);
-                        });
+                        $.get('/api/pricing/packages')
+                            .done(function(data){
+                                deferred.resolveWith(
+                                    that,  [_.has(data, 'data') ? data.data : data]);
+                            })
+                            .fail(function(response){
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            });
                     }
                     else {
                         deferred.resolveWith(that, [packages]);
@@ -122,7 +152,11 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                             wait: true,
                             success: function(collection, response, options){
                                 deferred.resolveWith(that, [collection]);
-                            }
+                            },
+                            error: function(collection, response) {
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            },
                         });
                     }
                     return deferred.promise();
@@ -139,12 +173,16 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                             wait: true,
                             success: function(collection, response, options){
                                 deferred.resolveWith(that, [collection]);
-                            }
+                            },
+                            error: function(collection, response){
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            },
                         });
                     }
                     return deferred.promise();
                 };
-                
+
                 that.commandPod = function(cmd, pod){
                     if (pod.constructor !== Model.Pod) {
                         console.log("Pod Model instance is expected!");
@@ -155,18 +193,17 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         return;
                     }
                     Utils.preloader.show();
-                    return pod.command(cmd, {
-                        wait: true,
-                        error: function(model, xhr){ Utils.notifyWindow(xhr); },
-                        complete: function(){ Utils.preloader.hide(); },
-                    });
+                    return pod.command(cmd, {wait: true})
+                        .always(Utils.preloader.hide)
+                        .fail(Utils.notifyWindow);
                 };
 
                 that.updateContainer = function(containerModel){
                     var performUpdate = function () {
                         Utils.preloader.show();
-                        return containerModel.update().always(Utils.preloader.hide)
-                            .fail(function(xhr){ Utils.notifyWindow(xhr); });
+                        return containerModel.update()
+                            .always(Utils.preloader.hide)
+                            .fail(Utils.notifyWindow);
                     };
 
                     Utils.modalDialog({
@@ -180,8 +217,9 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
 
                 that.checkContainerForUpdate = function(containerModel){
                     Utils.preloader.show();
-                    return containerModel.checkForUpdate().always(Utils.preloader.hide)
-                        .fail(function(xhr){ Utils.notifyWindow(xhr); })
+                    return containerModel.checkForUpdate()
+                        .always(Utils.preloader.hide)
+                        .fail(Utils.notifyWindow)
                         .done(function(rs){
                             if (!rs.data)
                                 Utils.notifyWindow('No updates found', 'success');

@@ -428,30 +428,30 @@ echo "NODE_TOBIND_FLANNEL=$NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 #6 Setting up etcd
 log_it echo 'Generating etcd-ca certificates...'
 do_and_log mkdir /etc/pki/etcd
-etcd-ca init --passphrase ""
-etcd-ca export --insecure --passphrase "" | tar -xf -
+etcd-ca --depot-path /root/.etcd-ca init --passphrase ""
+etcd-ca --depot-path /root/.etcd-ca export --insecure --passphrase "" | tar -xf -
 do_and_log mv ca.crt /etc/pki/etcd/
 do_and_log rm -f ca.key.insecure
 
 # first instance of etcd cluster
 etcd1=$(uname -n)
-etcd-ca new-cert --ip "127.0.0.1,$MASTER_IP" --passphrase "" $etcd1
-etcd-ca sign --passphrase "" $etcd1
-etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -
+etcd-ca --depot-path /root/.etcd-ca new-cert --ip "127.0.0.1,$MASTER_IP" --passphrase "" $etcd1
+etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" $etcd1
+etcd-ca --depot-path /root/.etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -
 do_and_log mv $etcd1.crt /etc/pki/etcd/
 do_and_log mv $etcd1.key.insecure /etc/pki/etcd/$etcd1.key
 
 # generate dns-pod's certificate
-etcd-ca new-cert --ip "10.254.0.10" --passphrase "" etcd-dns
-etcd-ca sign --passphrase "" etcd-dns
-etcd-ca export etcd-dns --insecure --passphrase "" | tar -xf -
+etcd-ca --depot-path /root/.etcd-ca new-cert --ip "10.254.0.10" --passphrase "" etcd-dns
+etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" etcd-dns
+etcd-ca --depot-path /root/.etcd-ca export etcd-dns --insecure --passphrase "" | tar -xf -
 do_and_log mv etcd-dns.crt /etc/pki/etcd/
 do_and_log mv etcd-dns.key.insecure /etc/pki/etcd/etcd-dns.key
 
 # generate client's certificate
-etcd-ca new-cert --passphrase "" etcd-client
-etcd-ca sign --passphrase "" etcd-client
-etcd-ca export etcd-client --insecure --passphrase "" | tar -xf -
+etcd-ca --depot-path /root/.etcd-ca new-cert --passphrase "" etcd-client
+etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" etcd-client
+etcd-ca --depot-path /root/.etcd-ca export etcd-client --insecure --passphrase "" | tar -xf -
 do_and_log mv etcd-client.crt /etc/pki/etcd/
 do_and_log mv etcd-client.key.insecure /etc/pki/etcd/etcd-client.key
 
@@ -868,7 +868,7 @@ do_cleanup()
                  /etc/yum.repos.d/kube-cloudlinux-testing.repo
 
     log_it echo "Remove dirs..."
-    for i in /var/run/kubernetes /etc/kubernetes /var/run/flannel ~/.etcd-ca \
+    for i in /var/run/kubernetes /etc/kubernetes /var/run/flannel /root/.etcd-ca \
              /var/opt/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
              /etc/etcd/etcd.conf /var/lib/etcd; do
         rm -rf $i

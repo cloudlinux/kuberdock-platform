@@ -7,6 +7,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 DEBUG = True
 TEST = False
+PRE_START_HOOK_ENABLED = False
 FLASKY_ADMIN = os.environ.get('AC_FLASKY_ADMIN', 'igor.bliss@gmail.com')
 
 DB_ENGINE = 'postgresql+psycopg2' # more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects

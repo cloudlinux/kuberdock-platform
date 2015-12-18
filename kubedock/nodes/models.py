@@ -6,6 +6,7 @@ from ..utils import UPDATE_STATUSES
 
 HOSTNAME_LENGTH = 255
 
+
 class Node(db.Model):
     __tablename__ = 'nodes'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True,

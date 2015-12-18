@@ -1,10 +1,12 @@
 import datetime
 
 from flask import jsonify
+from fabric.api import env, run, put, output
 
 from .. import factory
 from .. import sessions
 from ..utils import APIError
+from kubedock.settings import PRE_START_HOOK_ENABLED, SSH_KEY_FILENAME
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -43,12 +45,34 @@ def create_app(settings_override=None, fake_sessions=False):
     app.errorhandler(404)(on_404)
     app.errorhandler(APIError)(on_app_error)
 
+    if PRE_START_HOOK_ENABLED:
+        pre_start_hook(app)
+
     return app
 
 
+def pre_start_hook(app):
+    from ..nodes.models import Node
+    # env.warn_only = True
+    env.user = 'root'
+    env.key_filename = SSH_KEY_FILENAME
+    output.stdout = False
+    output.running = False
+    PLUGIN_DIR = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
+    with app.app_context():
+        for node in Node.query.all():
+            env.host_string = node.hostname
+            put('./node_network_plugin.sh', PLUGIN_DIR + 'node_network_plugin.sh')
+            put('./node_network_plugin.py', PLUGIN_DIR + 'node_network_plugin.py')
+            run('systemctl restart kuberdock-watcher')
+
+
 def on_app_error(e):
-    return jsonify({'status': 'error', 'data': e.message,
-                    'type': getattr(e, 'type', e.__class__.__name__)}), e.status_code
+    return jsonify({
+        'status': 'error',
+        'data': e.message,
+        'type': getattr(e, 'type', e.__class__.__name__)
+    }), e.status_code
 
 
 def on_404(e):

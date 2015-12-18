@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 13.3%{?dist}.cloudlinux
+Release: 13.4%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,17 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Dec 18 2015 Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>,  0.4-13.4
+- Fixed listeneres bug with rare incorrect redis value
+- Kuberdock net plugin with pods isolation and public ip
+- Workaround for kubelet net events order
+- Migration to network plugin. Small fixes
+- AC-1568: small bugfix
+- Fix skip test in test_utils.py because of network plugin migration
+- AC-1688: Fix dns pod access to kubernetes master
+- AC-1706: Implement pod internal DNS resolving
+- AC-1704: added processing for failed pods start when there are no resources
+
 * Wed Dec 16 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-13.3
 - AC-1568: image search must accept any symbols; small improvements    
 - Regex-validation should have human-readable messages.

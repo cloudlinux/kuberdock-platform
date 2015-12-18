@@ -76,6 +76,13 @@
                         <option value="0">Locked</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label class="custom">
+                        <input type="checkbox" id="suspended" name="suspended" class="checkbox">
+                        <span></span>
+                    </label>
+                    <label class="checkbox-label">Suspended</label>
+                </div>
             </div>
             <div class="buttons pull-right">
                 <button id="user-cancel-btn" type="submit">Cancel</button>

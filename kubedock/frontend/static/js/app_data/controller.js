@@ -570,7 +570,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
         },
 
         showEditUser: function(userId){
-            console.log(userId);
             var that = this;
             require(['app_data/users/views', 'app_data/menu/views'], function(Views, Menu){
                 var layoutView = new Views.UsersLayout(),

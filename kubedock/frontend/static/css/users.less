@@ -103,7 +103,7 @@
                             background-position: 0 -15px;
                         }
                     }
-                    &.active, &.locked{
+                    &.active, &.locked, &.suspended{
                         position: relative;
                         padding-left: 22px;
                         &:before{
@@ -126,6 +126,11 @@
                     &.locked{
                         &:before{
                             background-color: #f5544d;
+                        }
+                    }
+                    &.suspended{
+                        &:before{
+                            background-color: #fbed50;
                         }
                     }
                 }
@@ -251,6 +256,18 @@
             &:focus{
                 .transition(color 500ms ease);
                 border-color: #188eed;
+            }
+        }
+        .checkbox-label{
+            position: relative;
+            display: inline-block;
+            top: -2px;
+            left: 10px;
+            font-weight: normal;
+        }
+        label.custom{
+            span {
+                background-color: #ffffff;
             }
         }
     }

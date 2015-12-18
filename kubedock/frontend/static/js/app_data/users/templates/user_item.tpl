@@ -4,7 +4,15 @@
 <td><%- email ? email : 'No email' %></td>
 <td><%- package  %></td>
 <td><%- rolename  %></td>
-<td><span class="<%- active ? 'active' : 'locked' %>"><%- active ? 'Active' : 'Locked' %></span></td>
+<td>
+<% if(!active) { %>
+    <span class="locked">Locked</span>
+<% } else if(suspended) { %>
+    <span class="suspended">Suspended</span>
+<% } else { %>
+    <span class="active">Active</span>
+<% } %>
+</td>
 <td class="actions">
     <% if (active) { %>
         <span class="blockUser" title="Lock user <%- username %>"></span>

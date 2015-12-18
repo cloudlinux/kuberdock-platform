@@ -348,6 +348,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'email'           : 'input#email',
             'timezone'        : 'input#timezone',
             'user_status'     : 'select#status-select',
+            'user_suspend'    : 'input#suspended',
             'role_select'     : 'select#role-select',
             'package_select'  : 'select#package-select',
             'users_page'      : 'div#users-page',
@@ -358,12 +359,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         events: {
-            'click @ui.users_page'      : 'back',
-            'click @ui.user_cancel_btn' : 'back',
-            'click @ui.user_add_btn'    : 'onSave',
-            'focus @ui.input'           : 'removeError',
-            'input @ui.input'           : 'changeValue',
-            'change @ui.selectpicker'   : 'changeValue'
+            'click @ui.users_page'                  : 'back',
+            'click @ui.user_cancel_btn'             : 'back',
+            'click @ui.user_add_btn'                : 'onSave',
+            'focus @ui.input'                       : 'removeError',
+            'input @ui.input'                       : 'changeValue',
+            'change @ui.selectpicker'               : 'changeValue',
+            'change @ui.input[type="checkbox"]'     : 'changeValue'
         },
 
         onRender: function(){
@@ -490,7 +492,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         'password'        : that.ui.password.val(),
                         'email'           : that.ui.email.val(),
                         'timezone'        : that.ui.timezone.val(),
-                        'active'          : (that.ui.user_status.val() == 1 ? true : false),
+                        'active'          : (that.ui.user_status.val() == 1),
+                        'suspended'       : that.ui.user_suspend.prop('checked'),
                         'rolename'        : that.ui.role_select.val(),
                         'package'         : that.ui.package_select.val(),
                     }, {
@@ -673,10 +676,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var that = this;
             this.ui.first_name.val(this.model.get('first_name'));
             this.ui.last_name.val(this.model.get('last_name'));
-            this.ui.middle_initials.val(this.model.get('middle_initials'))
+            this.ui.middle_initials.val(this.model.get('middle_initials'));
             this.ui.email.val(this.model.get('email'));
             this.ui.timezone.val(this.model.get('timezone'));
             this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
+            this.ui.user_suspend.prop('checked', (this.model.get('suspended') == true));
             this.ui.role_select.val(this.model.get('rolename'));
             this.ui.package_select.val(this.model.get('package'));
             this.ui.user_add_btn.html('Save');
@@ -701,6 +705,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             oldData = {
                 'email'           : this.model.get('email'),
                 'active'          : this.model.get('active'),
+                'suspended'       : this.model.get('suspended'),
                 'rolename'        : this.model.get('rolename'),
                 'package'         : this.model.get('package'),
                 'first_name'      : this.model.get('first_name'),
@@ -711,7 +716,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             },
             newData = {
                 'email'           : this.ui.email.val(),
-                'active'          : (this.ui.user_status.val() == 1 ? true : false),
+                'active'          : (this.ui.user_status.val() == 1),
+                'suspended'       : this.ui.user_suspend.prop('checked'),
                 'rolename'        : this.ui.role_select.val(),
                 'package'         : this.ui.package_select.val(),
                 'first_name'      : this.ui.first_name.val(),
@@ -730,7 +736,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             App.getUserCollection().done(function(userCollection){
                 var data = {
                     'email'           : that.ui.email.val(),
-                    'active'          : (that.ui.user_status.val() == 1 ? true : false),
+                    'active'          : (that.ui.user_status.val() == 1),
+                    'suspended'       : that.ui.user_suspend.prop('checked'),
                     'rolename'        : that.ui.role_select.val(),
                     'package'         : that.ui.package_select.val(),
                     'first_name'      : that.ui.first_name.val(),

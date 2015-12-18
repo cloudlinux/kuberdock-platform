@@ -2,16 +2,18 @@ import pytz
 from flask import Blueprint, jsonify
 from ..core import db
 from ..stats import StatWrap5Min
-from ..kubedata.kubestat import KubeUnitResolver
+from ..pods.models import Pod
+from ..kubedata.kubestat import KubeUnitResolver, KubeStat
 import operator
 import itertools
 import time
 import datetime
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from ..decorators import login_required_or_basic_or_token
-from ..utils import all_request_params
+from ..utils import all_request_params, APIError, from_binunit
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
+
 
 @stats.route('/', methods=['GET'])
 @login_required_or_basic_or_token
@@ -21,18 +23,31 @@ def unit_stat():
     container = params.get('container')
     node = params.get('node')
 
-    #start = request.args.get('start')
-    #end = request.args.get('end')
+    # start = request.args.get('start')
+    # end = request.args.get('end')
     start = time.time() - 3600  # An hour distance
 
+    limits = None
     if node is None:
         items = KubeUnitResolver().by_unit(uuid)
-        items_list= map(operator.itemgetter(2), itertools.chain(*items.values()))
-        if uuid is not None and container is None:
-            data, disks = get_unit_data(items_list, start)
-        else:
-            data, disks = get_container_data(items_list, container, start)
+        items_list = map(operator.itemgetter(2), itertools.chain(*items.values()))
+        if uuid is not None:
+            pod = Pod.query.get(uuid)
+            if pod is None:
+                raise APIError('Pod not found', 404, 'PodNotFound')
+
+            limits = pod.get_limits(container)
+            if container is None:
+                data, disks = get_unit_data(items_list, start)
+            else:
+                data, disks = get_container_data(items_list, container, start)
     else:
+        capacity = dict(KubeStat._get_nodes_info()).get(node)
+        if capacity is not None:
+            limits = namedtuple('Limits', ['cpu', 'memory'])(
+                capacity['cores'],
+                from_binunit(capacity['memory'], 'MiB', rtype=int),
+            )
         data, disks = get_node_data(node, start)
 
     metrics = [
@@ -47,15 +62,22 @@ def unit_stat():
          'seriesColors': ['#50f460', '#4bb2c5'],
          'lines': 2, 'points': []}]
 
-    for record in sorted(data, key=operator.itemgetter(0)):
+    if limits is not None:
+        for graph in metrics[:2]:
+            graph['series'].insert(0, {'label': 'limit' if node is None else 'available'})
+            graph['lines'] += 1
+
+    for record in sorted(data):
         timetick = datetime.datetime.fromtimestamp(record[0], pytz.UTC)
-        metrics[0]['points'].append([timetick, record[1]])
-        metrics[1]['points'].append([timetick, record[2]])
+        metrics[0]['points'].append([timetick, record[1]] if limits is None else
+                                    [timetick, limits.cpu * 100, record[1]])
+        metrics[1]['points'].append([timetick, record[2]] if limits is None else
+                                    [timetick, limits.memory, record[2]])
         metrics[2]['points'].append([timetick, record[3], record[4]])
 
     if disks:
         disk_metrics = {}
-        for record in sorted(disks.items(), key=operator.itemgetter(0)):
+        for record in sorted(disks.items()):
             timetick = datetime.datetime.fromtimestamp(record[0], pytz.UTC)
             disk_data = process_disks(record[1], timetick, ['/dev/rbd'])
             for key, value in disk_data.items():
@@ -67,6 +89,9 @@ def unit_stat():
                         'lines': 2, 'points': []}
                 disk_metrics[key]['points'].append(value)
         metrics.extend(disk_metrics.values())
+
+    if node is None and uuid is not None:
+        metrics.pop()  # FIXME: Network monitoring is not working, docker 1.6.2 bug
 
     return jsonify({
         'status': 'OK',

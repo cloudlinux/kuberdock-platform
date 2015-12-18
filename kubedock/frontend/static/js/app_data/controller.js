@@ -140,7 +140,7 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                      'app_data/menu/views'], function(Views, Pager, Loading, Menu){
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
-                        pod = podCollection.fullCollection.get(id);
+                        pod = podCollection.fullCollection.get(id),
                         model = pod.get('containers').get(name),
                         navbar = new Menu.NavList({ collection: App.menuCollection });
 

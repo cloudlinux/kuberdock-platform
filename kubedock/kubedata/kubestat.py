@@ -287,7 +287,7 @@ class KubeStat(object):
                             'host': host,
                             'unit_name': self._containers_map.get(unit, '/'),
                             'container': item,
-                            'cpu': round(float(r['cpu']) / 6000000000, 2),
+                            'cpu': round(float(r['cpu']) / 600000000, 2),
                             'memory': round(r['mem'] / 1048576, 2),
                             'rxb': r['rxb'],
                             'txb': r['txb']}

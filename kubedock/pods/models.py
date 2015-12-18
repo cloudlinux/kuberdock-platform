@@ -34,8 +34,20 @@ class Pod(BaseModelMixin, db.Model):
     @property
     def kubes(self):
         return sum(
-            [c.get('kubes', 1) for c in json.loads(self.config)['containers']]
+            [c.get('kubes', 1) for c in self.get_dbconfig('containers')]
         )
+
+    def get_limits(self, container=None):
+        if container is None:
+            kubes = self.kubes
+        else:
+            containers = self.get_dbconfig('containers')
+            try:
+                kubes = (c.get('kubes', 1) for c in containers
+                         if c.get('name') == container).next()
+            except StopIteration:
+                return None
+        return self.kube.to_limits(kubes)
 
     @property
     def is_deleted(self):

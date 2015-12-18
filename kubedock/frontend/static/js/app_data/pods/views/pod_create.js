@@ -1029,6 +1029,7 @@ define(['app_data/app', 'app_data/model',
         onShow: function(){
             var lines = this.model.get('lines'),
                 running = this.container.get('state') === 'running',
+                series = this.model.get('series'),
                 options = {
                 title: this.model.get('title'),
                 axes: {
@@ -1041,10 +1042,15 @@ define(['app_data/app', 'app_data/model',
                         smooth: true
                     }
                 },
+                series: series,
                 grid: {
                     background: '#ffffff',
                     drawBorder: false,
                     shadow: false
+                },
+                legend: {
+                    show: true,
+                    placement: 'insideGrid'
                 },
                 noDataIndicator: {
                     show: true,
@@ -1063,11 +1069,8 @@ define(['app_data/app', 'app_data/model',
             };
 
             var points = [];
-            for (var i=0; i<lines; i++) {
-                if (points.length < i+1) {
-                    points.push([]);
-                }
-            }
+            for (var i=0; i<lines;i++)
+                points.push([]);
 
             // If there is only one point, jqplot will display ugly plot with
             // weird grid and no line.
@@ -1076,16 +1079,11 @@ define(['app_data/app', 'app_data/model',
                 this.model.get('points').splice(0);
 
             this.model.get('points').forEach(function(record){
-                for (var i=0; i<lines; i++) {
-                    points[i].push([record[0], record[i+1]]);
-                }
+                var time = utils.localizeDatetime(record[0]);
+                for (var i=0; i<lines; i++)
+                    points[i].push([time, record[i+1]]);
             });
-            try {
-                this.ui.chart.jqplot(points, options);
-            }
-            catch(e){
-                console.log('Cannot display graph');
-            }
+            this.ui.chart.jqplot(points, options);
         }
     });
 

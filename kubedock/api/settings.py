@@ -8,7 +8,7 @@ from ..core import db
 from ..rbac import check_permission, acl
 from ..rbac.models import Role, Resource, Permission
 from ..decorators import login_required_or_basic_or_token
-from ..utils import APIError, all_request_params, KubeUtils, register_api
+from ..utils import APIError, KubeUtils, register_api
 from ..users.utils import append_offset_to_timezone
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
@@ -167,84 +167,34 @@ def get_timezone():
     return jsonify({'status': 'OK', 'data': timezones_list})
 
 
-@settings.route('/system', methods=['GET'])
-@login_required_or_basic_or_token
-@check_permission('read', 'system_settings')
-def get_all_settings():
-    return jsonify({
-        'status': 'OK',
-        'data': SystemSettings.get_all(as_dict=True)
-    })
-
-
-@settings.route('/system/<name>', methods=['GET'])
-@login_required_or_basic_or_token
-@check_permission('read', 'system_settings')
-def get_setting(name):
-    return jsonify({
-        'status': 'OK',
-        'data': SystemSettings.read_setting(name)
-    })
-
-
-@settings.route('/system/<name>', methods=['POST'])
-@login_required_or_basic_or_token
-@check_permission('write', 'system_settings')
-def save_setting(name):
-    params = all_request_params()
-    if not params or not 'value' in params:
-        raise APIError("Must be specified 'value' parameter in request")
-    value = params['value']
-    SystemSettings.save_setting(name, value)
-    return jsonify({
-        'status': 'OK',
-        'data': {name: value}
-    })
-
-
-@settings.route('/system/<name>', methods=['DELETE'])
-@login_required_or_basic_or_token
-@check_permission('delete', 'system_settings')
-def delete_setting(name):
-    SystemSettings.delete_setting(name)
-    return jsonify({
-        'status': 'OK',
-        'data': {}
-    })
-
 class SystemSettingsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
-    @check_permission('read', 'system_settings')
     def get(self, sid):
         if sid is None:
-            return [dict(id=i.id, name=i.name, value=i.value)
-                        for i in SystemSettings.query.filter(
-                            SystemSettings.deleted==None).all()]
-        item = SystemSettings.query.get(sid)
-        if item is None:
-            raise APIError('No such setting', 404)
-        return {'id': item.id, 'name': item.name, 'value': item.value}
+            return SystemSettings.get_all()
+        return SystemSettings.get(sid)
 
     @check_permission('write', 'system_settings')
     def post(self):
-        params = self._get_params()
-        name, value = map(params.get, ['name', 'value'])
-        if None not in (name, value):
-            SystemSettings.save_setting(name, value)
-
+        pass
+    
     @check_permission('write', 'system_settings')
     def put(self, sid):
         params = self._get_params()
-        name, value = map(params.get, ['name', 'value'])
-        if None not in (name, value):
-            SystemSettings.save_setting(name, value)
-
+        value = params.get('value')
+        if value is not None:
+            SystemSettings.set(sid, value)
+            
+    @check_permission('write', 'system_settings')
+    def patch(self, sid):
+        params = self._get_params()
+        value = params.get('value')
+        if value is not None:
+            SystemSettings.set(sid, value)
+    
     @check_permission('delete', 'system_settings')
     def delete(self, sid):
-        item = SystemSettings.query.get(sid)
-        if item is None:
-            raise APIError('No such setting', 404)
-        SystemSettings.delete_setting(item.name)
+        pass
 
 register_api(settings, SystemSettingsAPI, 'settings', '/sysapi/', 'sid', 'int', strict_slashes=False)

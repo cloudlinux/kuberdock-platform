@@ -850,17 +850,9 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                     navbar = new Menu.NavList({collection: App.menuCollection});
                     settingsCollection = new Model.SettingsCollection();
                 that.listenTo(layoutView, 'show', function(){
-                    settingsCollection.fetch({
-                        wait: true,
-                        success: function(collection, resp, opts){
-                            model = collection.findWhere({name: 'billing_apps_link'});
-                            if (model === undefined) model = new Model.SettingsModel({name: 'billing_apps_link'});
-                            layoutView.nav.show(navbar);
-                            layoutView.main.show(new Views.GeneralView({ model: model }));
-                        },
-                        error: function(){
-                            console.log('Could not fetch settings data');
-                        }
+                    layoutView.nav.show(navbar);
+                    App.getSystemSettingsCollection().done(function(settingsCollection){
+                        layoutView.main.show(new Views.GeneralView({ collection: settingsCollection }));
                     });
                 });
                 App.contents.show(layoutView);

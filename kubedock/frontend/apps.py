@@ -20,7 +20,7 @@ def index(app_hash):
     package_id = int(request.args.get('pkgid', '0'))
     try:
         app = PredefinedApps().get_by_qualifier(app_hash)
-        billing_url = SystemSettings.read_setting('billing_apps_link')
+        billing_url = SystemSettings.get_by_name('billing_apps_link')
         if billing_url is None:
             billing_url = ''
         mutables = {}

@@ -504,28 +504,40 @@ define(['app_data/app', 'app_data/model',
 
         addDrive: function(evt){
             if (evt.type === 'keypress' && evt.which !== 13) return;
+            var that =  this;
             evt.stopPropagation();
-            var tgt = $(evt.target),
-                volumes = this.pod.get('volumes');
+            App.getSystemSettingsCollection().done(function(settingsCollection){
+                var tgt = $(evt.target),
+                    volumes = that.pod.get('volumes');
 
-            if (this.hasOwnProperty('showPersistentAdd')) {
-                var pdName = this.ui.pdName.val().trim(),
-                    pdSize = parseInt(this.ui.pdSize.val().trim());
-                if (!pdName || !pdSize) return;
-                if (this.hasOwnProperty('currentIndex')) {
-                    var vmEntry = this.model.get('volumeMounts')[this.currentIndex],
-                        vol = _.findWhere(volumes, {name: vmEntry.name});
-                    this.releasePersistentDisk(vol);
-                    vol.persistentDisk = {pdName: pdName, pdSize: pdSize};
+                if (that.hasOwnProperty('showPersistentAdd')) {
+                    var pdName = that.ui.pdName.val().trim(),
+                        pdSize = parseInt(that.ui.pdSize.val().trim());
+                    if (!pdName || !pdSize) return;
+                    var pdSizeLimit = settingsCollection.findWhere({name: 'persitent_disk_max_size'});
+                    if (pdSizeLimit !== undefined && pdSize > Number(pdSizeLimit.get('value'))) {
+                        utils.notifyWindow('Your disk size ('
+                            + pdSize
+                            + ') exceeds the limit ('
+                            + pdSizeLimit.get('value')
+                            + ')');
+                        return;
+                    }
+                    if (that.hasOwnProperty('currentIndex')) {
+                        var vmEntry = that.model.get('volumeMounts')[that.currentIndex],
+                            vol = _.findWhere(volumes, {name: vmEntry.name});
+                        that.releasePersistentDisk(vol);
+                        vol.persistentDisk = {pdName: pdName, pdSize: pdSize};
+                    }
+                    delete that.showPersistentAdd;
                 }
-                delete this.showPersistentAdd;
-            }
-            else {
-                this.currentIndex = tgt.closest('tr').index();
-                var itemName = this.model.get('volumeMounts')[this.currentIndex].name;
-                this.showPersistentAdd = itemName;
-            }
-            this.render();
+                else {
+                    that.currentIndex = tgt.closest('tr').index();
+                    var itemName = that.model.get('volumeMounts')[that.currentIndex].name;
+                    that.showPersistentAdd = itemName;
+                }
+                that.render();
+            });
         },
 
         composeVolumeEntries: function(){

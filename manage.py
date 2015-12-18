@@ -17,6 +17,7 @@ from kubedock.models import User, Pod
 from kubedock.billing.models import Package, Kube, PackageKube
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
+from kubedock.system_settings.models import SystemSettings
 from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import (
     KUBERDOCK_INTERNAL_USER, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
@@ -83,6 +84,24 @@ class Creator(Command):
         PackageKube(package=p1, kube=k1, kube_price=0)
         PackageKube(package=p1, kube=k2, kube_price=0)
         PackageKube(package=p1, kube=k3, kube_price=0)
+
+        bla = SystemSettings(name='billing_apps_link',
+                            label='Link to billing system script',
+                            description='Link to predefined application request processing script',
+                            placeholder = 'http://whmcs.com/script.php')
+
+        pds = SystemSettings(name='persitent_disk_max_size',
+                        value='10',
+                        label='Persistent disk maximum size',
+                        description='maximum capacity of a user container persistent disk',
+                        placeholder = 'Enter value to limit PD size')
+
+        dms = SystemSettings(name='default_smtp_server',
+                    label='Default SMTP server',
+                    description='Default SMTP server',
+                    placeholder = 'Default SMTP server')
+
+        db.session.add_all([bla, pds, dms])
 
         db.session.commit()
 

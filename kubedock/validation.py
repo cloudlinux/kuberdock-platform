@@ -13,6 +13,7 @@ from .billing.models import Kube, Package
 from .users.models import User
 from .nodes.models import Node
 from .rbac.models import Role
+from .system_settings.models import SystemSettings
 from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
                        MAX_KUBES_PER_CONTAINER)
 from .users.utils import strip_offset_from_timezone
@@ -775,12 +776,25 @@ def check_change_pod_data(data):
         raise APIError(validator.errors)
 
 
+def check_persistent_disk_size(data):
+    pd = SystemSettings.query.filter_by(name='persitent_disk_max_size').first()
+    if pd is None:
+        return
+    pd_limit = int(pd.value)
+    for vol in data.get('volumes', []):
+        pd_size = vol.get('persistentDisk', {}).get('pdSize', 0)
+        if pd_size > pd_limit:
+            raise APIError('Size of persistent disk ({0}) '
+                           'exceeds the limit ({1})'.format(pd_size, pd_limit))
+
+
 def check_new_pod_data(data, user=None):
     validator = V(user=None if user is None else user.username)
     if not validator.validate(data, new_pod_schema):
         raise APIError(validator.errors)
     kube_type = data.get('kube_type', Kube.get_default_kube_type())
     check_kube_indb(kube_type)
+    check_persistent_disk_size(data)
 
 
 def check_internal_pod_data(data, user=None):

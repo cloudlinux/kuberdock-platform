@@ -492,22 +492,6 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         parse: unwrapper
     });
 
-    data.PersistentStorageModel = Backbone.Model.extend({
-        defaults: {
-            name   : 'Nameless',
-            size   : 0,
-            in_use : false,
-            pod    : ''
-        },
-        parse: unwrapper
-    });
-
-    data.PersistentStorageCollection = Backbone.Collection.extend({
-        url: '/api/pstorage',
-        model: data.PersistentStorageModel,
-        parse: unwrapper
-    });
-
     data.UserAddressModel = Backbone.Model.extend({
         defaults: {
             pod    : ''

@@ -128,6 +128,23 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     return deferred.promise();
                 };
 
+                that.getSystemSettingsCollection = function(){
+                    var deferred = $.Deferred();
+                    if (_.has(that, 'systemSettingsCollection')) {
+                        deferred.resolveWith(that, [that.systemSettingsCollection]);
+                    }
+                    else {
+                        that.systemSettingsCollection = new Model.SettingsCollection();
+                        that.systemSettingsCollection.fetch({
+                            wait: true,
+                            success: function(collection, response, options){
+                                deferred.resolveWith(that, [collection]);
+                            }
+                        });
+                    }
+                    return deferred.promise();
+                };
+                
                 that.commandPod = function(cmd, pod){
                     if (pod.constructor !== Model.Pod) {
                         console.log("Pod Model instance is expected!");

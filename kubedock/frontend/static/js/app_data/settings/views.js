@@ -7,38 +7,69 @@ define(['app_data/app', 'marionette',
         'tpl!app_data/settings/templates/notification_item.tpl',
         'tpl!app_data/settings/templates/notification_create.tpl',
         'tpl!app_data/settings/templates/general_settings.tpl',
+        'tpl!app_data/settings/templates/general_settings_item.tpl',
         'utils', 'bootstrap', 'bootstrap3-typeahead'],
        function(App, Marionette,
                 settingsLayoutTpl, permissionsTpl, permissionItemTpl,
                 userEditTpl, notificationSettingsTpl, notificationItemTpl,
-                notificationCreateTpl, generalSettingsTpl, utils){
+                notificationCreateTpl, generalSettingsTpl, generalSettingsItemTpl,
+                utils){
 
     var views = {},
         defaultHideDelay = 4000;
 
-    views.GeneralView = Marionette.CompositeView.extend({
-        // Wants rewriting to use BB collections
-        template: generalSettingsTpl,
+    views.GeneralItemView = Marionette.ItemView.extend({
+        template: generalSettingsItemTpl,
+        tagName: 'div',
+        className: 'link-wrapper',
 
         ui: {
-            'billingAppsLink' : '#billingAppsLink',
+            itemField: 'input.settings-item'
         },
+
+        events: {
+            'change @ui.itemField': 'fieldChange'
+        },
+
+        fieldChange: function(evt){
+            evt.stopPropagation();
+            this.model.set({value: $(evt.target).val()});
+        }
+    });
+
+    views.GeneralView = Marionette.CompositeView.extend({
+        template: generalSettingsTpl,
+        childView: views.GeneralItemView,
+        childViewContainer: 'div#settings-list',
 
         events: {
             'click [type="submit"]': 'submitSettings'
         },
 
         submitSettings: function(){
-            this.model.save({value: this.ui.billingAppsLink.val()}, {
-                wait: true,
-                success: function(){
-                    $.notify('Billing link changed successfully', {
-                        autoHideDelay: defaultHideDelay,
-                        globalPosition: 'bottom left',
-                        className: 'success'
-                   });
-                }
-            });
+            var changed = this.collection.filter(function(m){ return m.hasChanged('value') }),
+                notifyOpts = {autoHideDelay: defaultHideDelay, globalPosition: 'bottom left'};
+            if (changed.length) {
+                _.each(changed, function(m){
+                    m.save(null, {
+                        wait: true,
+                        patch: true,
+                        success: function(model, resp, opts){
+                            $.notify(model.get('label') + ' changed successfully',
+                                     _.extend(notifyOpts, {className: 'success'}));
+                        },
+                        error: function(model, resp){
+                            $.notify('Could not change ' + model.get('label'),
+                                     _.extend(notifyOpts, {className: 'error'}));
+                        }
+                    })
+                });
+            }
+            else {
+                $.notify('Data has not been changed.',
+                         _.extend(notifyOpts, {className: 'success'}));
+            }
+
         }
     });
 

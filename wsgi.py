@@ -36,6 +36,7 @@ except (TypeError, AttributeError):
 
 
 from kubedock import frontend, api, listeners
+from kubedock.settings import PRE_START_HOOK_ENABLED
 
 front_app = frontend.create_app()
 back_app = api.create_app()
@@ -55,6 +56,8 @@ else:
         h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
         e = gevent.spawn(listeners.listen_events, back_app)
+        if PRE_START_HOOK_ENABLED:
+            j = gevent.spawn(api.pre_start_hook, back_app)
 
 if __name__ == "__main__":
 
@@ -64,6 +67,8 @@ if __name__ == "__main__":
         h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
         e = gevent.spawn(listeners.listen_events, back_app)
+        if PRE_START_HOOK_ENABLED:
+            j = gevent.spawn(api.pre_start_hook, back_app)
 
     @run_with_reloader
     def run_server():

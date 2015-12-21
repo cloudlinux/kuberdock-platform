@@ -6,7 +6,7 @@ from fabric.api import env, run, put, output
 from .. import factory
 from .. import sessions
 from ..utils import APIError
-from kubedock.settings import PRE_START_HOOK_ENABLED, SSH_KEY_FILENAME
+from kubedock.settings import SSH_KEY_FILENAME
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -45,9 +45,6 @@ def create_app(settings_override=None, fake_sessions=False):
     app.errorhandler(404)(on_404)
     app.errorhandler(APIError)(on_app_error)
 
-    if PRE_START_HOOK_ENABLED:
-        pre_start_hook(app)
-
     return app
 
 
@@ -62,8 +59,8 @@ def pre_start_hook(app):
     with app.app_context():
         for node in Node.query.all():
             env.host_string = node.hostname
-            put('./node_network_plugin.sh', PLUGIN_DIR + 'node_network_plugin.sh')
-            put('./node_network_plugin.py', PLUGIN_DIR + 'node_network_plugin.py')
+            put('./node_network_plugin.sh', PLUGIN_DIR + 'kuberdock')
+            put('./node_network_plugin.py', PLUGIN_DIR + 'kuberdock.py')
             run('systemctl restart kuberdock-watcher')
 
 

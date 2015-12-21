@@ -526,8 +526,14 @@ do_and_log systemctl restart etcd
 
 
 # Start early or curl connection refused
-do_and_log systemctl enable influxdb
-do_and_log systemctl restart influxdb
+influx=$(systemctl list-unit-files --type=service --no-pager | grep influx)
+if [ -n "$influx" ];then
+    do_and_log systemctl enable influxdb
+    do_and_log systemctl restart influxdb
+else
+    do_and_log /sbin/chkconfig influxdb on
+    do_and_log /etc/init.d/influxdb restart
+fi
 
 
 

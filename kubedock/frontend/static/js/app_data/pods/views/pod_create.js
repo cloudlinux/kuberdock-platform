@@ -1402,7 +1402,7 @@ define(['app_data/app', 'app_data/model',
                     show: true,
                     footer: {
                         buttonOk: function(){
-                            Pods.navigate('pods', {trigger: true});
+                            App.navigate('pods', {trigger: true});
                         },
                         buttonCancel: true
                     }

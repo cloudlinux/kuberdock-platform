@@ -195,6 +195,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
 
         initialize: function(options){
             this.searchString = options.searchString;
+            this.counter = 1;
         },
 
         filterCollection: function(){

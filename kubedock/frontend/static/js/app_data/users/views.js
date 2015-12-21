@@ -188,53 +188,22 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
             'click @ui.th'                     : 'toggleSort'
         },
 
-        //initialize: function() {
-        //    this.fakeCollection = this.collection.fullCollection.clone();
-        //
-        //    this.listenTo(this.collection, 'reset', function (col, options) {
-        //        options = _.extend({ reindex: true }, options || {});
-        //        if(options.reindex && options.from == null && options.to == null) {
-        //            this.fakeCollection.reset(col.models);
-        //        }
-        //    });
-        //    this.counter = 1;
-        //},
-        //
-        //toggleSort: function(e) {
-        //    var target = $(e.target),
-        //        targetClass = target.attr('class');
-        //
-        //    this.collection.setSorting(targetClass, this.counter);
-        //    this.collection.fullCollection.sort();
-        //    this.counter = this.counter * (-1)
-        //    target.find('.caret').toggleClass('rotate').parent()
-        //          .siblings().find('.caret').removeClass('rotate');
-        //},
-        //
-        //filter: function() {
-        //    var value = this.ui.user_search[0].value,
-        //        valueLength = value.length;
-        //
-        //    if (valueLength >= 2){
-        //        this.collection.fullCollection.reset(_.filter(this.fakeCollection.models, function(e) {
-        //            if(e.get('username').indexOf( value || '') >= 0) return e
-        //        }), { reindex: false });
-        //    } else{
-        //        this.collection.fullCollection.reset(this.fakeCollection.models, { reindex: false});
-        //    }
-        //    this.collection.getFirstPage();
-        //},
-        //
-        //editSelectedUser: function(e){
-        //    _.each(this.collection.models,function(entry){
-        //        if (entry.get('checked')){
-        //            App.navigate('/edit/' + entry.id + '/', {trigger: true});
-        //            return true;
-        //        }
-        //    });
-        //    e.stopPropagation();
-        //},
-        //
+
+        initialize: function() {
+            this.counter = 1;
+        },
+
+        toggleSort: function(e) {
+            var target = $(e.target),
+                targetClass = target.attr('class');
+
+            this.collection.setSorting(targetClass, this.counter);
+            this.collection.fullCollection.sort();
+            this.counter = this.counter * (-1)
+            target.find('.caret').toggleClass('rotate').parent()
+                  .siblings().find('.caret').removeClass('rotate');
+        },
+
         //showSearch: function(){
         //    this.ui.navSearch.addClass('active');
         //    this.ui.user_search.focus();

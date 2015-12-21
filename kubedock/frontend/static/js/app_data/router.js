@@ -36,6 +36,7 @@ define(['marionette'], function(Marionette){
             'persistent-volumes'              : 'showPersistentVolumes',
             'persistent_volumes'              : 'showPersistentVolumes',
             'publicIPs'                       : 'showIPs',
+            '*nothingSimilar'                 : 'pageNotFound'
         }
     });
     return router;

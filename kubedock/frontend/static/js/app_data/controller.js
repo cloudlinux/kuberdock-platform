@@ -45,7 +45,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         listLayout.pager.show(new Pager.PaginatorView({view: view}));
                     });
                 });
-
                 App.contents.show(listLayout);
             });
         },
@@ -1114,6 +1113,19 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         App.message.empty();
                     }
                 });
+            });
+        },
+        
+        pageNotFound: function(){
+            var that = this;
+            require(['app_data/misc/views', 'app_data/menu/views'], function(Views, Menu){
+                var layoutView = new Views.PageLayout(),
+                    navbar = new Menu.NavList({collection: App.menuCollection});
+                that.listenTo(layoutView, 'show', function(){
+                    layoutView.nav.show(navbar);
+                    layoutView.main.show(new Views.PageNotFound());
+                });
+                App.contents.show(layoutView);
             });
         }
     });

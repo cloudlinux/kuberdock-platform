@@ -66,6 +66,7 @@ define(['app_data/app',
         ui: {
             start      : '.start-btn',
             stop       : '.stop-btn',
+            remove     : '.terminate-btn',
             checkbox   : 'label.custom span',
             podPageBtn : '.poditem-page-btn'
         },
@@ -73,6 +74,7 @@ define(['app_data/app',
         events: {
             'click @ui.start'      : 'startItem',
             'click @ui.stop'       : 'stopItem',
+            'click @ui.remove'     : 'deleteItem',
             'click @ui.podPageBtn' : 'podPage',
             'click @ui.checkbox'   : 'toggleItem'
         },
@@ -89,6 +91,23 @@ define(['app_data/app',
         startItem: function(evt){
             evt.stopPropagation();
             App.commandPod('start', this.model).always(this.render);
+        },
+
+        deleteItem: function(evt){
+            evt.stopPropagation();
+            var that = this;
+            utils.modalDialogDelete({
+                title: "Delete",
+                body: 'Are you sure want to delete "' + that.model.get('name') + '" pod?',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        that.model.destroy();
+                    },
+                    buttonCancel: true
+               }
+           });
         },
 
         stopItem: function(evt){

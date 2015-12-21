@@ -34,4 +34,5 @@
     <% } else { %>
         <span class="start-btn" title="Start <%- name %> pod">Start</span>
     <% } %>
+    <span class="terminate-btn" title="Delete <%- name %> pod">Delete</span>
 </td>

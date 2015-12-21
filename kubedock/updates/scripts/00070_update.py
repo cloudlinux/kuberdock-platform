@@ -19,7 +19,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
 
     user = User.filter_by(username=KUBERDOCK_INTERNAL_USER).one()
 
-    dns_pod = Pod.filter_by(name='kuberdock-dns', owner=user).one()
+    dns_pod = Pod.filter_by(name='kuberdock-dns', owner=user).first()
 
     if dns_pod:
         PodCollection(user).delete(dns_pod.id, force=True)

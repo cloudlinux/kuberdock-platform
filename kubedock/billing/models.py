@@ -1,3 +1,4 @@
+from collections import namedtuple
 from ..core import db
 from ..models_mixin import BaseModelMixin
 #from ..nodes.models import Node
@@ -12,6 +13,8 @@ INTERNAL_SERVICE_KUBE_TYPE = -1
 #: Special kube types for internal usage
 # Pods with these kube types must be excluded from billing.
 NOT_PUBLIC_KUBE_TYPES = {INTERNAL_SERVICE_KUBE_TYPE}
+
+Limits = namedtuple('Limits', ['cpu', 'memory', 'disk_space'])
 
 
 class PackageKube(BaseModelMixin, db.Model):
@@ -74,6 +77,9 @@ class Kube(BaseModelMixin, db.Model):
     @classmethod
     def get_by_id(cls, kubeid):
         return cls.query.filter(cls.id == kubeid).first()
+
+    def to_limits(self, kubes=1):
+        return Limits(kubes * self.cpu, kubes * self.memory, kubes * self.disk_space)
 
     @classmethod
     def get_by_name(cls, name, *additional_filters):

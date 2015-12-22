@@ -383,7 +383,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         parse: unwrapper,
         mode: 'client',
         state: {
-            pageSize: 100
+            pageSize: 20
         }
     });
 

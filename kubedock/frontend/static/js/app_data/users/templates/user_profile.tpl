@@ -30,7 +30,7 @@
         </div>
         <div id="details_content" class="col-sm-10">
             <div class="row placeholders">
-                <div class="tab-content col-xs-12 no-padding-right">
+                <div class="tab-content col-xs-12">
                     <div class="tab-pane fade in active" id="userGeneralTab">
                         <% if (username || join_date || last_login || last_activity || package) { %>
                             <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6">
@@ -55,7 +55,7 @@
                                 </div>
                             </div>
                         <% } %>
-                        <div class="col-xs-12">
+                        <div class="col-xs-12 no-padding">
                             <table id="user-profile-general-table" class="table">
                                 <thead>
                                     <tr>

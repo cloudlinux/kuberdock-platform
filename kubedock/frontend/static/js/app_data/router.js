@@ -22,6 +22,7 @@ define(['marionette'], function(Marionette){
                                                     ? 'showGeneralSettings'
                                                     : 'editProfileSettings',
             'settings/general'                : 'showGeneralSettings',
+            'settings/license'                : 'showLicense',
             'settings/profile'                : 'editProfileSettings',
             'settings/permissions'            : 'showPermissionSettings',
             'settings/notifications'          : 'showNotificationSettings',

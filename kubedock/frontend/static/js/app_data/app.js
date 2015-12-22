@@ -185,6 +185,27 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     return deferred.promise();
                 };
 
+                that.getLicenseModel = function(){
+                    var deferred = $.Deferred();
+                    if (_.has(that, 'licenseModel')) {
+                        deferred.resolveWith(that, [that.licenseModel]);
+                    }
+                    else {
+                        that.LicenseModel = new Model.LicenseModel();
+                        that.LicenseModel.fetch({
+                            wait: true,
+                            success: function(collection, response, options){
+                                deferred.resolveWith(that, [collection]);
+                            },
+                            error: function(collection, response){
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            },
+                        });
+                    }
+                    return deferred.promise();
+                };
+
                 that.commandPod = function(cmd, pod){
                     if (pod.constructor !== Model.Pod) {
                         console.log("Pod Model instance is expected!");

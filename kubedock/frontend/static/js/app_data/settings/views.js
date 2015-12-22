@@ -8,12 +8,13 @@ define(['app_data/app', 'marionette',
         'tpl!app_data/settings/templates/notification_create.tpl',
         'tpl!app_data/settings/templates/general_settings.tpl',
         'tpl!app_data/settings/templates/general_settings_item.tpl',
-        'app_data/utils', 'bootstrap', 'bootstrap3-typeahead'],
+        'tpl!app_data/settings/templates/license.tpl',
+        'app_data/utils', 'bootstrap', 'bootstrap3-typeahead', 'bootstrap-editable'],
        function(App, Marionette,
                 settingsLayoutTpl, permissionsTpl, permissionItemTpl,
                 userEditTpl, notificationSettingsTpl, notificationItemTpl,
                 notificationCreateTpl, generalSettingsTpl, generalSettingsItemTpl,
-                utils){
+                licenseTpl, utils){
 
     var views = {},
         defaultHideDelay = 4000;
@@ -61,6 +62,31 @@ define(['app_data/app', 'marionette',
             else {
                 utils.notifyWindow('Data has not been changed.', 'success');
             }
+        }
+    });
+
+    views.LicenseView = Marionette.ItemView.extend({
+        template: licenseTpl,
+
+        ui: {
+            peditable : '.peditable'
+        },
+
+        onRender: function(){
+            var that = this;
+            this.ui.peditable.editable({
+                type: 'text',
+                mode: 'inline',
+                success: function(response, newValue) {
+                    that.model.set({name: newValue});
+                    $.notify('New instalattion ID "' + newValue + '" is saved', {
+                        autoHideDelay: 5000,
+                        clickToHide: true,
+                        globalPosition: 'bottom left',
+                        className: 'success',
+                    });
+                },
+            });
         }
     });
 
@@ -394,6 +420,7 @@ define(['app_data/app', 'marionette',
             var tgt = $(evt.target);
             //if (!tgt.hasClass('active')) $('#page-preloader').show();
             if (tgt.hasClass('general')) App.navigate('settings/general', {trigger: true});
+            if (tgt.hasClass('license')) App.navigate('settings/license', {trigger: true});
             else if (tgt.hasClass('profile')) App.navigate('settings/profile', {trigger: true});
             else if (tgt.hasClass('permissions')) App.navigate('settings/permissions', {trigger: true});
             else if (tgt.hasClass('notifications')) App.navigate('settings/notifications', {trigger: true});

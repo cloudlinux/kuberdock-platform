@@ -17,6 +17,9 @@
                     <li class="general">
                         General
                     </li>
+                    <li class="license">
+                        License
+                    </li>
                     <% } %>
                     <li class="profile">
                         Profile

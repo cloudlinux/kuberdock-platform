@@ -1009,6 +1009,127 @@ body{
 
     /* edit form */
 
+    /* edit inputs */
+
+    .editGroup{
+        position: relative;
+        .editable-unsaved{
+            font-weight: 400;
+        }
+        .editable-container.editable-inline{
+            position: absolute;
+            left: 0px;
+            height: initial !important;
+            background-color: rgb(248, 248, 248);
+            .form-inline{
+                .control-group{
+                    .editable-input{
+                        input{
+                            &.input-sm{
+                                height: 36px;
+                                padding-right: 100px !important;
+                            }
+                        }
+                    }
+                    .editable-buttons{
+                        top: 0;
+                        bottom: 0;
+                        right: 6px;
+                        margin: auto;
+                        height: 27px;
+                        position: absolute;
+                        .editable-submit{
+                            .border-radius(2px);
+                            .box-sizing(padding-box);
+                            .box-shadow(0px 2px 4px 0px rgba(0, 0, 0, 0.35));
+                            padding: 0;
+                            width: 77px;
+                            height: 25px;
+                            font-size: 12px;
+                            position: initial;
+                            line-height: 12px;
+                            font-family: @semibold;
+                            text-transform: uppercase;
+                        }
+                    }
+                }
+            }
+        }
+        .editForm{
+            .clearfix;
+            input{
+                .box-shadow-materials();
+                .border-radius(none);
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 1;
+                width: 100%;
+                margin: auto;
+                border: none;
+                height: 36px;
+                color: #1d1d1d;
+                font-size: 12px;
+                line-height: 1.5;
+                max-width: 251px;
+                position: absolute;
+                padding: 5px 70px 5px 10px;
+            }
+            button{
+                .border-radius(2px);
+                .box-shadow(0px 2px 4px 0px rgba(0, 0, 0, 0.35));
+                top: 0;
+                bottom: 0;
+                padding: 0;
+                width: 25px;
+                z-index: 2;
+                color: #fff;
+                margin: auto;
+                border: none;
+                height: 25px;
+                position: absolute;
+                text-transform: lowercase;
+                &.send{
+                    left: 220px;
+                    background: #2c99f1;
+                    border-color: #2c99f1;
+                }
+                &.cancel{
+                    left: 188px;
+                    color: #1d1d1d;
+                    border-color: #fcfcfc;
+                    background-color: #fcfcfc;
+                }
+            }
+        }
+        .edit-field,
+        .editContainerKubes{
+            border: none;
+            margin-right: 0 !important;
+            height: initial !important;
+            position: relative;
+            padding-right: 20px;
+            display: inline-block;
+            &:before{
+                top: 0;
+                right: 0;
+                bottom: 0;
+                margin: auto;
+                width: 13px;
+                content: '';
+                height: 13px;
+                position: absolute;
+                background: url('../img/pencil-small.png') 0 0 no-repeat;
+            }
+            &:hover{
+                color: #3197ee;
+                cursor: pointer;
+                &:before{
+                    background-position: 0 -14px;
+                }
+            }
+        }
+    }
 
     /* paginator */
     .pager{

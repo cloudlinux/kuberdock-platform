@@ -855,6 +855,23 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             });
         },
 
+        showLicense: function(){
+            console.log('got that');
+            var that = this;
+            require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
+                var layoutView = new Views.SettingsLayout(),
+                    navbar = new Menu.NavList({collection: App.menuCollection});
+                    licenseModel = new Model.LicenseModel();
+                that.listenTo(layoutView, 'show', function(){
+                    layoutView.nav.show(navbar);
+                    App.getLicenseModel().done(function(license){
+                        layoutView.main.show(new Views.LicenseView({ model: license }));
+                    });
+                });
+                App.contents.show(layoutView);
+            });
+        },
+
         showNetworks: function(){
             var that = this;
             require(['app_data/ippool/views', 'app_data/menu/views'], function(Views, Menu){

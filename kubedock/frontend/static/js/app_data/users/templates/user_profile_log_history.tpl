@@ -28,11 +28,11 @@
                 <li class="logHistory active">Login history</li>
             </ul>
         </div>
-        <div id="details_content" class="col-xs-12 col-sm-12 col-md-10">
+        <div id="details_content" class="col-xs-12 col-sm-12 col-md-10 no-padding">
             <div class="row placeholders">
-                <div class="tab-content col-xs-12 no-padding-right">
+                <div class="tab-content col-xs-12">
                     <div class="tab-pane fade in active" id="userLogsTab">
-                        <div class="col-xs-12 no-padding-right">
+                        <div class="col-xs-12 no-padding">
                             <table id="user-profile-logs-table" class="table">
                                 <thead>
                                     <tr>

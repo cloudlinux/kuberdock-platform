@@ -1,5 +1,5 @@
 <div class="breadcrumbs-wrapper">
-    <div class="container breadcrumbs no-padding-right" id="breadcrumbs">
+    <div class="container breadcrumbs" id="breadcrumbs">
         <ul class="breadcrumb">
             <li class="active">Users</li>
         </ul>
@@ -21,8 +21,8 @@
         </div>
         <div id="details_content" class="col-sm-10">
             <div class="row placeholders">
-                <div class="tab-content col-xs-12 no-padding-right">
-                    <table id="userslist-table" class="table col-sm-12">
+                <div class="tab-content col-xs-12">
+                    <table id="userslist-table" class="table col-sm-12 no-padding">
                         <thead>
                             <tr>
                                <th class="username">Name<span class="caret"></span></th>

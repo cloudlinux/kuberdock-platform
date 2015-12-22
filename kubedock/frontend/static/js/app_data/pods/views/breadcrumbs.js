@@ -31,7 +31,8 @@ define(['app_data/app',
             },
 
             closeSearch: function(){
-                this.ui.navSearch.removeClass('active');
+                if (this.ui.pod_search.val().trim() === '')
+                    this.ui.navSearch.removeClass('active');
             }
         });
 

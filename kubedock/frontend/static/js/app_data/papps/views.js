@@ -18,7 +18,8 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             regions: {
                 nav: '#nav',
                 breadcrumbs: '#breadcrumbs',
-                main: '#main'
+                main: '#main',
+                pager: '#footer',
             },
 
             initialize: function(){

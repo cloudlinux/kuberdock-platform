@@ -10,8 +10,10 @@
     <% if (showControls){ %>
     <div class="control-group">
         <a id="<%- buttonID %>" href="<%- buttonLink %>"><%- buttonTitle %></a>
+        <!--
         <div class="nav-search" id="nav-search"></div>
         <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
+        -->
     </div>
     <% } %>
 </div>

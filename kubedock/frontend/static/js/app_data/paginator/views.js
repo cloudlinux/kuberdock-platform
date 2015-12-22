@@ -1,7 +1,7 @@
-define(['app_data/app', 'tpl!app_data/pods/templates/paginator.tpl'], function(Pods, paginatorTpl){
-    
+define(['app_data/app', 'tpl!app_data/paginator/paginator.tpl'], function(App, paginatorTpl){
+
     var paginator = {};
-    
+
     paginator.PaginatorView = Backbone.Marionette.ItemView.extend({
         template: paginatorTpl,
 
@@ -29,7 +29,7 @@ define(['app_data/app', 'tpl!app_data/pods/templates/paginator.tpl'], function(P
             this.render();
         }
     });
-    
+
     return paginator;
 
 });

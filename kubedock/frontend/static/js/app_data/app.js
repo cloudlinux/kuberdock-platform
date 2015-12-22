@@ -17,7 +17,8 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     else {
                         that.podCollection = new Model.PodCollection();
                         if (backendData.podCollection !== undefined) {
-                            that.podCollection.reset(backendData.podCollection);
+                            that.podCollection.fullCollection.reset(
+                                backendData.podCollection);
                             deferred.resolveWith(that, [that.podCollection]);
                         }
                         else {
@@ -44,7 +45,8 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     else {
                         that.nodeCollection = new Model.NodeCollection();
                         if (backendData.nodeCollection) {
-                            that.nodeCollection.reset(backendData.nodeCollection);
+                            that.nodeCollection.fullCollection.reset(
+                                backendData.nodeCollection);
                             deferred.resolveWith(that, [that.nodeCollection]);
                         }
                         else {

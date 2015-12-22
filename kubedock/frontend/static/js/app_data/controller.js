@@ -7,7 +7,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             var that = this;
             require(['app_data/pods/views/pods_list',
                      'app_data/pods/views/breadcrumbs',
-                     'app_data/pods/views/paginator',
+                     'app_data/paginator/views',
                      'app_data/menu/views'], function(Views, Misc, Pager, Menu){
                 var listLayout = new Views.PodListLayout(),
                     breadcrumbsData = {breadcrumbs: [{name: 'Pods'}],
@@ -19,18 +19,12 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     navbar = new Menu.NavList({collection: App.menuCollection});
 
                 that.listenTo(listLayout, 'show', function(){
-                    App.getPodCollection().done(function(podCollection){
+                    App.getPodCollection().done(function(collection){
                         listLayout.nav.show(navbar);
                         listLayout.header.show(breadcrumbs);
-                        var podCollectionView = new Views.PodCollection({
-                            collection: podCollection
-                        });
-                        listLayout.list.show(podCollectionView);
-                        listLayout.pager.show(
-                            new Pager.PaginatorView({
-                                view: podCollectionView
-                            })
-                        );
+                        var view = new Views.PodCollection({collection: collection});
+                        listLayout.list.show(view);
+                        listLayout.pager.show(new Pager.PaginatorView({view: view}));
                     });
                 });
 
@@ -57,7 +51,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
         showPodItem: function(id){
             var that = this;
             require(['app_data/pods/views/pod_item',
-                     'app_data/pods/views/paginator',
+                     'app_data/paginator/views',
                      'app_data/menu/views'], function(Views, Pager, Menu){
                 App.getPodCollection().done(function(podCollection){
                     var itemLayout = new Views.PodItemLayout(),
@@ -135,7 +129,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
         showPodContainer: function(id, name){
             var that = this;
             require(['app_data/pods/views/pod_create',
-                     'app_data/pods/views/paginator',
+                     'app_data/paginator/views',
                      'app_data/pods/views/loading',
                      'app_data/menu/views'], function(Views, Pager, Loading, Menu){
                 App.getPodCollection().done(function(podCollection){
@@ -195,7 +189,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             var that = this;
             require(['app_data/utils',
                      'app_data/pods/views/pod_create',
-                     'app_data/pods/views/paginator',
+                     'app_data/paginator/views',
                      'app_data/pods/views/loading',
                      'app_data/menu/views'], function(utils, Views, Pager, Loading, Menu){
                 App.getPodCollection().done(function(podCollection){
@@ -529,7 +523,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
         showUsers: function(){
             var that = this;
-            require(['app_data/users/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/users/views',
+                     'app_data/paginator/views',
+                     'app_data/menu/views',
+            ], function(Views, Pager, Menu){
                 var layoutView = new Views.UsersLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -537,7 +534,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     App.getUserCollection().done(function(userCollection){
                         var userCollectionView = new Views.UsersListView({ collection: userCollection });
                         layoutView.main.show(userCollectionView);
-                        layoutView.pager.show(new Views.PaginatorView({ view: userCollectionView }));
+                        layoutView.pager.show(new Pager.PaginatorView({ view: userCollectionView }));
                     });
                 });
                 App.contents.show(layoutView);
@@ -630,7 +627,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
         listPredefinedApps: function(){
             var that = this;
-            require(['app_data/papps/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/papps/views',
+                     'app_data/paginator/views',
+                     'app_data/menu/views',
+            ], function(Views, Pager, Menu){
                 var appCollection = new Model.AppCollection(),
                     mainLayout = new Views.MainLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
@@ -652,6 +652,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         appModel = (id !== undefined) ? appCollection.get(id) : new Model.AppModel();
                     mainLayout.breadcrumbs.show(breadcrumbsView);
                     mainLayout.main.show(new Views.AppLoader({model: appModel}));
+                    mainLayout.pager.empty();
                 });
 
                 var successModelSaving = function(context) {
@@ -659,23 +660,19 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                             _.clone(context.breadcrumbsData), {breadcrumbs: [{name: 'Predefined Apps'}]})),
                         breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel});
 
-                    $.notify(
+                    utils.notifyWindow(
                         'Predefined application "' + context.model.attributes.name +
-                        '" is ' + (context.isNew ? 'added':'updated'),
-                        {
-                            autoHideDelay: 5000,
-                            clickToHide: true,
-                            globalPosition: 'bottom left',
-                            className: 'success'
-                        }
+                            '" is ' + (context.isNew ? 'added' : 'updated'),
+                        'success'
                     );
                     context.mainLayout.breadcrumbs.show(breadcrumbsView);
                     if (context.isNew) {
                         context.appCollection.add(context.model);
                     }
-                    context.mainLayout.main.show(new Views.AppList({
-                        collection: context.appCollection.filterByOrigin()
-                    }));
+                    var view = new Views.AppList(
+                        {collection: appCollection.filterByOrigin()});
+                    mainLayout.main.show(view);
+                    mainLayout.pager.show(new Pager.PaginatorView({view: view}));
                 };
 
                 var getValidationError = function(data) {
@@ -757,9 +754,12 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     mainLayout.breadcrumbs.show(breadcrumbsView);
                     appCollection.fetch({
                         wait: true,
-                        success: function(collection, resp, opts){
-                            mainLayout.main.show(new Views.AppList({collection: collection.filterByOrigin()}));
-                        }
+                        success: function(){
+                            var view = new Views.AppList(
+                                {collection: appCollection.filterByOrigin()});
+                            mainLayout.main.show(view);
+                            mainLayout.pager.show(new Pager.PaginatorView({view: view}));
+                        },
                     });
 
                 });

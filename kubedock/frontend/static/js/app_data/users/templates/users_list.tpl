@@ -5,8 +5,10 @@
         </ul>
         <div class="control-group">
             <button id="create_user">Create user</button>
+            <!--
             <div class="nav-search" id="nav-search"></div>
             <input type="text" placeholder="Search" class="nav-search-input" id="nav-search-input" autocomplete="off">
+            -->
         </div>
     </div>
 </div>

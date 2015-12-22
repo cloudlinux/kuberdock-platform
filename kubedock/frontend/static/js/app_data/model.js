@@ -449,18 +449,19 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         parse: unwrapper,
         mode: 'client',
         state: {
-            pageSize: 10
+            pageSize: 8
         },
         initialize: function(models){
-            this.filtered = new Backbone.PageableCollection(models);
+            this.filtered = new Backbone.PageableCollection(
+                models, {mode: 'client', state: this.state});
             this.listenTo(this, 'add', this.refilter);
             this.listenTo(this, 'remove', this.refilter);
         },
         filterByOrigin: function(){
             var filtered = this.fullCollection.filter(function(model){
-                return _.contains(['kuberdock', 'unknown'], model.get('origin'))
+                return _.contains(['kuberdock', 'unknown'], model.get('origin'));
             });
-            this.filtered.reset(filtered);
+            this.filtered.fullCollection.reset(filtered);
             return this.filtered;
         },
         refilter: function(){

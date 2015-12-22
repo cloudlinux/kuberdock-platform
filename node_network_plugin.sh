@@ -132,7 +132,7 @@ function iptables_ {
 
 
 function teardown_pod {
-    log "Teardown Pod $POD_IP of user $USER_ID; PUBLCI_IP: $POD_PUBLIC_IP"
+    log "Teardown Pod $POD_IP of user $USER_ID; PUBLCI_IP: \"$POD_PUBLIC_IP\""
     del_rules "$POD_IP" "$USER_ID"
 
     if [ "$POD_PUBLIC_IP" != "" ];then
@@ -148,7 +148,6 @@ function teardown_pod {
 
 
 function add_resolve {
-  log "Setup resolve \"$2\" for namespace $1"
   for resolve in $2
   do
     curl -sS --cacert "$ETCD_CAFILE" --cert "$ETCD_CERTFILE" --key "$ETCD_KEYFILE" \
@@ -168,7 +167,8 @@ case "$ACTION" in
     iptables_ -I PREROUTING -t nat -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK-PUBLIC-IP
     /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" init
-    iptables_ -I KUBERDOCK -t nat -m set ! --match-set kuberdock_cluster dst -j REDIRECT
+    iptables_ -I KUBERDOCK -t filter -i docker0 ! -o docker0 -m set ! --match-set kuberdock_cluster dst -j ACCEPT
+    iptables_ -I KUBERDOCK -t nat -m set ! --match-set kuberdock_cluster dst -j ACCEPT
     ;;
   "setup")
 
@@ -194,8 +194,9 @@ case "$ACTION" in
     SERVICE_IP=$(iptables -w -L -t nat | grep "$NAMESPACE" | head -1 | awk '{print $5}')
     USER_ID=$(echo "$POD_SPEC" | grep kuberdock-user-uid | awk '{gsub(/,$/,""); print $2}' | tr -d \")
     POD_PUBLIC_IP=$(echo "$POD_SPEC" | grep kuberdock-public-ip | awk '{gsub(/,$/,""); print $2}' | tr -d \")
+    RESOLVE=$(echo "$POD_SPEC" | grep kuberdock_resolve | awk '{gsub(/,$/,""); for(i=2; i<=NF; ++i) print $i}' | tr -d \" | xargs echo)
 
-    log "Setup Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID; PUBLCI_IP: $POD_PUBLIC_IP"
+    log "Setup Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID; PUBLIC_IP: \"$POD_PUBLIC_IP\"; resolve: \"$RESOLVE\""
 
     mkdir -p "$DATA_DIR"
     echo "POD_IP=$POD_IP" > "$DATA_INFO"
@@ -209,8 +210,10 @@ case "$ACTION" in
     add_rules "$POD_IP" "$USER_ID"
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"
 
-    RESOLVE=$(echo "$POD_SPEC" | grep kuberdock_resolve | awk '{gsub(/,$/,""); for(i=2; i<=NF; ++i) print $i}' | tr -d \" | xargs echo)
-    add_resolve "$NAMESPACE" "$RESOLVE"
+    if [ ! -z "$RESOLVE" ]
+    then
+      add_resolve "$NAMESPACE" "$RESOLVE"
+    fi
 
     # Workaround 3. Recheck that pod still exists.
     # TODO what if api-server is down ?

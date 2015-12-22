@@ -16,10 +16,10 @@
         <div class="col-sm-3 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
                 <li role="presentation" class="stats go-to-logs">Logs</li>
-                <li role="presentation" class="go-to-stats">Monitoring</li>
+                <li role="presentation" class="monitoring go-to-stats">Monitoring</li>
                 <!-- <li role="presentation" class="go-to-volumes">Timelines</li> -->
                 <li role="presentation" class="configuration active">General</li>
-                <li role="presentation" class="go-to-envs">Variables</li>
+                <li role="presentation" class="variables go-to-envs">Variables</li>
                 <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
 <!--                     <li role="presentation" class="configuration active">Configuration
                     <ul class="nav sub-nav">

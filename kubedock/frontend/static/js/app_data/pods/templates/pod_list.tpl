@@ -1,6 +1,6 @@
 <div class="col-md-12 no-padding">
     <div class="podsControl" style="display:<%- checked ? 'block' : 'none' %>">
-        <span class="count"><%- checked %><%- checked ? ' Items' : ' Item' %></span>
+        <span class="count"><%- checked %><%- (checked > 1) ? ' Items' : ' Item' %></span>
         <span class="runPods">Run</span>
         <span class="stopPods">Stop</span>
         <span class="removePods">Delete</span>

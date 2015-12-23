@@ -77,10 +77,9 @@ define(['app_data/app',
 
             return {
                 kubes: kubes ? kubes : 0,
-                startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' :
-                        utils.localizeDatetime(startedAt),
+                startedAt: startedAt ? utils.localizeDatetime(startedAt) : 'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
-            }
+            };
         },
 
         ui: {

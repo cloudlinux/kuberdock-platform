@@ -643,7 +643,10 @@ define(['app_data/app', 'utils', 'app_data/model'], function(App, utils, Model){
                 that.listenTo(mainLayout, 'app:showloadcontrol', function(id){
                     var breadcrumbsModel = new Backbone.Model(_.extend(
                             _.clone(breadcrumbsData),
-                            {breadcrumbs: [{name: 'Predefined Apps'}, {name: 'Add new application'}]},
+                            {breadcrumbs: [{name: 'Predefined Apps'},
+                                           {name: id === undefined ?
+                                                  'Add new application' :
+                                                  'Edit application'}]},
                             {showControls: false})),
                         breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel}),
                         appModel = (id !== undefined) ? appCollection.get(id) : new Model.AppModel();

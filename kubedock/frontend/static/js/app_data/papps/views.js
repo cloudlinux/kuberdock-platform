@@ -125,6 +125,12 @@ define(['app_data/app', 'marionette',
                 'click @ui.cancel' : 'app:cancel'
             },
 
+            templateHelpers: function(){
+                return {
+                    isNew: this.model.id === undefined,
+                };
+            },
+
             handleUpload: function(evt){
                 var file = evt.target.files[0],
                     reader = new FileReader(),

@@ -58,6 +58,7 @@ function get_setname {
 # TODO comment all input '$1' params
 function add_rules {
   set=$(get_setname $2)
+  ipset create $set hash:ip  # workaround for non-existent ip set
   if ! rule_reject_pod_local_input C $1 $set
   then
     rule_reject_pod_local_input A $1 $set
@@ -207,8 +208,8 @@ case "$ACTION" in
       /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE
     fi
 
-    add_rules "$POD_IP" "$USER_ID"
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"
+    add_rules "$POD_IP" "$USER_ID"
 
     if [ ! -z "$RESOLVE" ]
     then

@@ -13,7 +13,7 @@ from ..users.utils import append_offset_to_timezone
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
 from ..system_settings.models import SystemSettings
-
+from ..validation import check_system_settings
 
 settings = Blueprint('settings', __name__, url_prefix='/settings')
 
@@ -178,21 +178,15 @@ class SystemSettingsAPI(KubeUtils, MethodView):
     @check_permission('write', 'system_settings')
     def post(self):
         pass
-    
+
     @check_permission('write', 'system_settings')
     def put(self, sid):
         params = self._get_params()
         value = params.get('value')
+        check_system_settings(params)
         if value is not None:
             SystemSettings.set(sid, value)
-            
-    @check_permission('write', 'system_settings')
-    def patch(self, sid):
-        params = self._get_params()
-        value = params.get('value')
-        if value is not None:
-            SystemSettings.set(sid, value)
-    
+
     @check_permission('delete', 'system_settings')
     def delete(self, sid):
         pass

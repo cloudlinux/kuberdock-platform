@@ -93,7 +93,7 @@ class Creator(Command):
         pds = SystemSettings(name='persitent_disk_max_size',
                         value='10',
                         label='Persistent disk maximum size',
-                        description='maximum capacity of a user container persistent disk',
+                        description='maximum capacity of a user container persistent disk in GB',
                         placeholder = 'Enter value to limit PD size')
 
         dms = SystemSettings(name='default_smtp_server',

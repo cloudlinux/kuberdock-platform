@@ -515,12 +515,11 @@ define(['app_data/app', 'app_data/model',
                         pdSize = parseInt(that.ui.pdSize.val().trim());
                     if (!pdName || !pdSize) return;
                     var pdSizeLimit = settingsCollection.findWhere({name: 'persitent_disk_max_size'});
-                    if (pdSizeLimit !== undefined && pdSize > Number(pdSizeLimit.get('value'))) {
-                        utils.notifyWindow('Your disk size ('
-                            + pdSize
-                            + ') exceeds the limit ('
+                    if (pdSizeLimit !== undefined && (pdSize < 1 || pdSize > Number(pdSizeLimit.get('value')))) {
+                        utils.notifyWindow('Max size of persistent volume '
+                            + 'should be more than zero and less than '
                             + pdSizeLimit.get('value')
-                            + ')');
+                            + ' GB');
                         return;
                     }
                     if (that.hasOwnProperty('currentIndex')) {

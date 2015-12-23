@@ -529,6 +529,9 @@ packagekube_schema = {
     'id': positive_integer_schema
 }
 
+persistent_disk_max_size_schema = {
+    'coerce': int, 'min': 1, 'max': 999
+}
 
 # ===================================================================
 
@@ -782,10 +785,12 @@ def check_persistent_disk_size(data):
         return
     pd_limit = int(pd.value)
     for vol in data.get('volumes', []):
-        pd_size = vol.get('persistentDisk', {}).get('pdSize', 0)
-        if pd_size > pd_limit:
-            raise APIError('Size of persistent disk ({0}) '
-                           'exceeds the limit ({1})'.format(pd_size, pd_limit))
+        if 'persistentDisk' not in vol:
+            continue
+        pd_size = vol['persistentDisk'].get('pdSize', 1)
+        if pd_size < 1 or pd_size > pd_limit:
+            raise APIError('Max size of persistent volume '
+                           'should be more than zero and less than {} GB'.format(pd_limit))
 
 
 def check_new_pod_data(data, user=None):
@@ -805,6 +810,15 @@ def check_internal_pod_data(data, user=None):
     if Kube.get_internal_service_kube_type() != kube_type:
         raise APIError('Internal pod must be of type {0}'.format(
             Kube.get_internal_service_kube_type()))
+
+
+def check_system_settings(data):
+    validator = V()
+    if data.get('name') != 'persitent_disk_max_size':
+        return
+    if not validator.validate({'value': data.get('value')},
+            {'value': persistent_disk_max_size_schema}):
+        raise APIError('Incorrect value for PD size limit')
 
 
 class UserValidator(V):

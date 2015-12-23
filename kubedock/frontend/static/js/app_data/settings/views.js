@@ -53,7 +53,7 @@ define(['app_data/app', 'marionette',
                 _.each(changed, function(m){
                     m.save(null, {
                         wait: true,
-                        patch: true,
+//                        patch: true,
                         success: function(model, resp, opts){
                             $.notify(model.get('label') + ' changed successfully',
                                      _.extend(notifyOpts, {className: 'success'}));

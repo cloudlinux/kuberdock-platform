@@ -16,6 +16,7 @@ import sqlalchemy as sa
 Session = sa.orm.sessionmaker()
 Base = sa.ext.declarative.declarative_base()
 
+
 class SystemSettings(Base):
     __tablename__ = 'system_settings'
 
@@ -28,16 +29,18 @@ class SystemSettings(Base):
 
 
 def upgrade():
+    session = Session(bind=op.get_bind())
+
     op.drop_column('system_settings', 'created')
     op.drop_column('system_settings', 'deleted')
     op.add_column('system_settings', sa.Column('label', sa.Text, nullable=True))
     op.add_column('system_settings', sa.Column('description', sa.Text, nullable=True))
     op.add_column('system_settings', sa.Column('placeholder', sa.String, nullable=True))
-    op.create_unique_constraint('uq_system_settings_name', 'system_settings', ['name'])
     
-    session = Session(bind=op.get_bind())
-    billing_link = session.query(SystemSettings).filter_by(name='billing_apps_link').first()
+    billing_link = session.query(SystemSettings).filter_by(name='billing_apps_link').order_by(SystemSettings.id.desc()).first()
     if billing_link is not None:
+        last = billing_link.id
+        session.query(SystemSettings).filter(SystemSettings.id!=last).delete()
         billing_link.label = 'Link to billing system script'
         billing_link.description = 'Link to predefined application request processing script'
         billing_link.placeholder = 'http://whmcs.com/script.php'
@@ -50,7 +53,7 @@ def upgrade():
     pd = SystemSettings(name='persitent_disk_max_size',
                         value='10',
                         label='Persistent disk maximum size',
-                        description='maximum capacity of a user container persistent disk',
+                        description='maximum capacity of a user container persistent disk in GB',
                         placeholder = 'Enter value to limit PD size')
     session.add(pd)
     ms = SystemSettings(name='default_smtp_server',
@@ -59,6 +62,7 @@ def upgrade():
                     placeholder = 'Default SMTP server')
     session.add(ms)
     session.commit()
+    op.create_unique_constraint('uq_system_settings_name', 'system_settings', ['name'])
 
 
 def downgrade():
@@ -68,4 +72,4 @@ def downgrade():
     op.drop_column('system_settings', 'description')
     op.drop_column('system_settings', 'placeholder')
     op.drop_constraint('uq_system_settings_name', 'system_settings')
-    
+

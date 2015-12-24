@@ -281,7 +281,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
         events:{
             'click @ui.nodeCancelBtn'   : 'cancel',
             'click @ui.nodeAddBtn'      : 'complete',
-            'change @ui.nodeTypeSelect'   : 'changeKubeType',
+            'change @ui.nodeTypeSelect' : 'changeKubeType',
         },
 
         changeKubeType: function(evt) {
@@ -329,9 +329,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'utils',
                                     className: 'success',
                                 });
                             },
-                            error: function(model, response){
+                            error: function(){
                                 preloader.hide();
-                                utils.notifyWindow(response.responseJSON.data);
                             }
                         });
                 }

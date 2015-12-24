@@ -478,7 +478,8 @@
                         .filter(function(k){return mutables[k].type === 'kube'})
                         .map(function(k){return document.getElementById(k).value})
                         .reduce(function(a, b){return (+a)+(+b)}, 0);
-                displayTotal(getPackage(packageId).prefix + ((fixed + changing) * price + ' ' + getPackage(packageId).currency + ' / ' + getPackage(packageId).period));
+                displayTotal(getPackage(packageId).prefix + (((fixed + changing) * price).toFixed(2) + ' '
+                        + getPackage(packageId).currency + ' / ' + getPackage(packageId).period));
                 composeResources(getKubeId(), fixed + changing);
             }());
 

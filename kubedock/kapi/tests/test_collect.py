@@ -17,12 +17,15 @@ class TestStatItem(unittest.TestCase):
         u'num_cores': 4,
         u'network_devices': [{u'mtu': 1500, u'name': u'eth0'}],
         u'memory_capacity': 1929428992,
-        u'cpu_frequency_khz': 3392292}
+        u'cpu_frequency_khz': 3392292,
+        u'machine_id': 1}
 
     _EXTENDED_NODE_DATA = {'disks': [
             {u'device': u'/dev/vda1', u'capacity': 10433613824},
             {u'device': u'/dev/vdb', u'capacity': 53660876800}],
-            'cores': 4, 'clock': 3392292, 'nics': 1, 'memory': 1929428992}
+            'cores': 4, 'clock': 3392292, 'nics': 1, 'node-id': 1
+            #, 'memory': 1929428992
+            }
 
     _USERS_DATA = [{'username': 'kuberdock-internal', 'rolename': 'User'},
                    {'username': 'admin', 'rolename': 'Admin'},
@@ -45,7 +48,6 @@ class TestStatItem(unittest.TestCase):
         expected = [mock.call(fmt.format(n)) for n in self._NODES_DATA]
         received = [copy.deepcopy(self._EXTENDED_NODE_DATA)
                         for i in range(len(self._NODES_DATA))]
-
         nodes = collect.extend_nodes([{'_ip': n} for n in self._NODES_DATA])
         self.assertEqual(_req.get.call_args_list, expected,
                          "requests get params differ from expected ones")

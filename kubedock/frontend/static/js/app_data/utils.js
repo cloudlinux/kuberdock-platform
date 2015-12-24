@@ -155,6 +155,7 @@ define(['moment-timezone', 'notify'], function(moment){
     };
 
     utils.localizeDatetime = function(dt, tz, formatString){
+        if (!dt) return dt;
         formatString = formatString || 'YYYY-MM-DD HH:mm:ss';
         try {
             return moment(dt).tz(tz).format(formatString);

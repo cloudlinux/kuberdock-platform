@@ -19,23 +19,21 @@ except ImportError:
     JSONDecodeError = ValueError
 
 from .core import ConnectionPool, db, ssh_connect
-from .factory import make_celery
 from .utils import (
     update_dict, get_api_url, send_event, send_logs, POD_STATUSES,
     get_timezone,
 )
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
-from .models import Pod, ContainerState, PodState
+from .models import Pod, ContainerState, PodState, PersistentDisk, User
 from .nodes.models import NodeMissedAction, Node, NodeFlag, NodeFlagNames
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     PORTS_TO_RESTRICT, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
-from .kapi.podcollection import PodCollection
 from .kapi.collect import collect, send
+from .kapi.users import delete_persistent_drives
 
-
-celery = make_celery()
+from .kd_celery import celery
 
 
 def get_pods_nodelay(pod_id=None, namespace=None):
@@ -434,3 +432,12 @@ def is_ceph_installed_on_node(hostname):
     if error_message:
         return
     return _check_ceph_via_ssh(ssh)
+
+
+@celery.task(rate_limit="1/m")
+def clean_drives_for_deleted_users():
+    ids = [
+        item.id for item in db.session.query(PersistentDisk.id).join(
+            User).filter(User.deleted == True)
+    ]
+    delete_persistent_drives(ids)

@@ -1,10 +1,12 @@
 import re
+import string
+import random
 
 import yaml
 
 from ..utils import APIError
 from ..predefined_apps.models import PredefinedApp as PredefinedAppModel
-from ..billing.models import Kube
+from ..validation import ValidationError, V, predefined_app_schema
 
 
 class AppParseError(Exception):
@@ -83,7 +85,8 @@ def validate_template(template):
     """Validates saving template text.
     Now checks:
         - validity of custom variables in template;
-        - kube type. If it is specified, then it must be one of existing types.
+        - plans section, including kube type check.
+            If it is specified, then it must be one of existing types.
 
     """
     check_custom_variables(template)
@@ -91,18 +94,21 @@ def validate_template(template):
         parsed_template = yaml.safe_load(template)
     except (yaml.scanner.ScannerError, yaml.parser.ParserError):
         raise_validation_error(u'common', u'Invalid yaml format')
-    try:
-        app_root = find_root(parsed_template)
-    except AppParseError as err:
-        raise_validation_error(
-            u'common', u'Invalid application structure: {}'.format(str(err))
-        )
     if not isinstance(parsed_template, (dict, list)):
         raise_validation_error(
             u'common',
             u'Invalid yaml template: top level element must be list or dict'
         )
-    check_kube_type(parsed_template, app_root)
+
+    filled_template = yaml.safe_load(fill(template, parse_fields(template)))
+    try:
+        find_root(filled_template)
+    except AppParseError as err:
+        raise_validation_error(
+            u'common', u'Invalid application structure: {}'.format(str(err))
+        )
+
+    check_plans(filled_template)
 
 
 def check_custom_variables(template):
@@ -139,31 +145,52 @@ def find_custom_vars(text):
     return custom
 
 
-def check_kube_type(yml, app_root):
-    """Checks validity of kube type in application structure.
+def check_plans(yml):
+    """Checks validity of plans in application structure.
     :param app_struct: dict or list for application structure.
     :raise: APIError in case of invalid kube type.
 
     """
-    key = 'kube_type'
-    kd_key = 'kuberdock'
-    kuberdock = yml.get(kd_key, {})
-    if key not in kuberdock:
-        kuberdock = app_root.get(kd_key, {})
-    if key not in kuberdock:
-        return
-    kube_type = kuberdock[key]
-    print "Checking kube type: {}".format(kube_type)
-    _, value, _ = get_value(kube_type)
-    try:
-        value = int(value)
-    except (TypeError, ValueError):
-        raise_validation_error('values', {key: 'Invalid kube type'})
-    kube = Kube.get_by_id(value)
-    print "kube for id {}: {}".format(value, kube)
-    if not kube:
-        raise_validation_error(
-            'values', {key: 'Specified kube does not exist'})
+    validator = V(allow_unknown=True)
+    validator.validate(yml, predefined_app_schema)
+    if validator.errors:
+        # TODO: remove legacy error schema.
+        # See TODO for raise_validation_error
+        key, val = validator.errors.items()[0]
+        raise_validation_error(key, val)
+
+    error = lambda msg: raise_validation_error('appPackages', msg)
+
+    plans = yml['kuberdock']['appPackages']
+    if len([plan for plan in plans if plan.get('recommended')]) != 1:
+        error('Exactly one appPackage must be recommended.')
+
+    pod = find_root(yml)
+    for plan in plans:
+        for podPlan in plan.get('pods', []):
+            if podPlan['name'] != yml['metadata']['name']:
+                error('Pod {0} not found in spec'.format(podPlan['name']))
+
+            names = set(c['name'] for c in pod['containers'])
+            used = set()
+            for containersPlan in podPlan.get('containers', []):
+                if containersPlan['name'] not in names:
+                    error('Container "{0}"" not found in pod "{1}"'
+                          .format(containersPlan['name'], podPlan['name']))
+                if containersPlan['name'] in used:
+                    error('Dublicate container name in appPackage: "{0}"'
+                          .format(containersPlan['name']))
+                used.add(containersPlan['name'])
+
+            names = set(c['name'] for c in pod.get('volumes', []))
+            used = set()
+            for pdPlan in podPlan.get('persistentDisks', []):
+                if pdPlan['name'] not in names:
+                    error('Volume "{0}" not found in pod "{1}"'
+                          .format(pdPlan['name'], podPlan['name']))
+                if pdPlan['name'] in used:
+                    error('Dublicate volume name in appPackage: "{0}"'.format(pdPlan['name']))
+                used.add(pdPlan['name'])
 
 
 def find_root(app_struct):
@@ -177,7 +204,44 @@ def find_root(app_struct):
     raise AppParseError("Not found 'spec' section")
 
 
-def get_value(value, strict=False):
+def generate(length=8, symbols=string.lowercase+string.digits):
+    rv = ''.join(random.choice(symbols) for i in range(length-1))
+    return random.choice(string.lowercase) + rv
+
+
+def parse_fields(text):
+    custom = find_custom_vars(text)
+    fields = {}
+    for item in custom:
+        hidden = False
+        name, value, title = get_value(item, with_reused=True)
+        if not name:
+            continue
+        if value == 'autogen':
+            value = generate()
+            hidden = True
+        elif value is not None and value.lower() == 'user_domain_list':
+            value = item
+            hidden = True
+        if name in fields:
+            field = fields[name]
+            field['occurrences'].append(item)
+            if field['value'] is None:  # $VAR_NAME$ was before full definition
+                field['value'], field['title'], field['hidden'] = value, title, hidden
+        else:
+            fields[name] = {'title': title, 'value': value, 'name': name,
+                            'hidden': hidden, 'occurrences': [item]}
+    return fields
+
+
+def fill(template, fields):
+    for field in fields.values():
+        for text in field['occurrences']:
+            template = template.replace(text, field['value'], 1)
+    return template
+
+
+def get_value(value, strict=False, with_reused=False):
     if not isinstance(value, basestring):
         if strict:
             raise AppParseError(u'Invalid custom variable: {}'.format(value))
@@ -186,9 +250,12 @@ def get_value(value, strict=False):
     if m is None:
         if strict:
             raise AppParseError(u'Invalid custom variable: {}'.format(value))
+        if with_reused:
+            return get_reused_variable_name(value, strict), None, None
         return (None, value, None)
     varname, defaultvalue, description = m.groups()
     return (varname, defaultvalue, description)
+
 
 def get_reused_variable_name(value, strict=False):
     if not isinstance(value, basestring):
@@ -203,8 +270,11 @@ def get_reused_variable_name(value, strict=False):
     return m.groups()[0]
 
 
+# TODO: this is a weird schema. If you need to specify,
+# that this is a validation error, use APIError.type
+# If you need to validate smth, use stuff in kubedock.validation
 def raise_validation_error(key, error):
-    raise APIError({'validationError': {key: error}})
+    raise ValidationError({'validationError': {key: error}})
 
 
 def unescape(text):

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Choose a plan for {{ name }}!</title>
+        <meta charset="utf8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
+        <script src="{{ url_for('static', filename='js/lib/bbCodeParser.min.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/lib/js-yaml.min.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/PA.js') }}" type="text/javascript"></script>
+{#
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.jqplot.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-select.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdowns-enhancement.min.css') }}">
+
+        <link rel="stylesheet/less" type="text/css" href="{{ url_for('static', filename='css/main.less') }}">
+
+        <script src="{{ url_for('static', filename='js/lib/less.min.js') }}" type="text/javascript"></script>
+#}
+    <style type="text/css">
+    html, body, div, span, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    abbr, address, cite, code,
+    del, dfn, em, img, ins, kbd, q, samp,
+    small, strong, sub, sup, var,
+    b, i,
+    dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend,
+    table, caption, tbody, tfoot, thead, tr, th, td,
+    article, aside, canvas, details, figcaption, figure,
+    footer, header, hgroup, menu, nav, section, summary,
+    time, mark, audio, video {
+        margin:0;
+        padding:0;
+        border:0;
+        outline:0;
+        font-size:100%;
+        vertical-align:baseline;
+        background:transparent;
+    }
+    body {line-height:1;}
+    article,aside,details,figcaption,figure,
+    footer,header,hgroup,menu,nav,section {display:block;}
+    nav ul {list-style:none;}
+    blockquote, q {quotes:none;}
+    blockquote:before, blockquote:after,
+    q:before, q:after {
+        content:'';
+        content:none;
+    }
+    a {
+        margin:0;
+        padding:0;
+        font-size:100%;
+        vertical-align:baseline;
+        background:transparent;
+    }
+    ins {
+        background-color:#ff9;
+        color:#000;
+        text-decoration:none;
+    }
+    mark {
+        background-color:#ff9;
+        color:#000;
+        font-style:italic;
+        font-weight:bold;
+    }
+    del {text-decoration: line-through;}
+    abbr[title], dfn[title] {
+        border-bottom:1px dotted;
+        cursor:help;
+    }
+    table {
+        border-collapse:collapse;
+        border-spacing:0;
+    }
+    hr {
+        display:block;
+        height:1px;
+        border:0;
+        border-top:1px solid #cccccc;
+        margin:1em 0;
+        padding:0;
+    }
+    input, select {vertical-align:middle;}
+
+    /* custom styles */
+    @font-face {
+        font-family: 'open_sansregular';
+        src: url('../static/fonts/opensans-regular-webfont.eot');
+        src: url('../static/fonts/opensans-regular-webfont.eot?#iefix') format('embedded-opentype'),
+             url('../static/fonts/opensans-regular-webfont.woff2') format('woff2'),
+             url('../static/fonts/opensans-regular-webfont.woff') format('woff'),
+             url('../static/fonts/opensans-regular-webfont.ttf') format('truetype'),
+             url('../static/fonts/opensans-regular-webfont.svg#open_sansregular') format('svg');
+        font-weight: normal;
+        font-style: normal;
+    }
+    body{
+        background-color: #f8f8f8;
+        font-family: 'open_sansregular';
+    }
+    header{
+        min-height: 52px;
+        text-align: center;
+        margin-bottom: 28px;
+        padding: 10px 0 17px;
+        border-bottom: 8px solid #0070c2;
+    }
+    .container{
+        width: 100%;
+        margin: 0 auto;
+        max-width: 757px;
+    }
+    .plans h2,
+    #app-header,
+    #pre-description{
+        display: block;
+        color: #1d1d1d;
+        font-size: 14px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+    #pre-description{
+        padding: 0;
+        font-size: 12px;
+        text-align: left;
+        line-height: 16px;
+        font-weight: normal;
+        text-transform: none;
+    }
+    .container #custom-fields,
+    .container #recource-fields{
+        margin-bottom: 23px;
+        background-color: #fff;
+        -webkit-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        -moz-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+    }
+    .container #custom-fields .custom-field-item{
+        max-width: 50%;
+    }
+    .container #custom-fields .title,
+    .container #recource-fields .title{
+        color: #1d1d1d;
+        font-size: 16px;
+        line-height: 18px;
+        background-color: #fff;
+        text-transform: capitalize;
+        padding: 23px 40px 22px 45px;
+        border-bottom: 1px solid #dfdfdf;
+    }
+    .container #recource-fields .title{
+        position: relative;
+        padding: 23px 40px 22px 83px;
+    }
+    .container #recource-fields .title:before{
+        top: 0;
+        bottom: 0;
+        content: '';
+        left: 45px;
+        width: 25px;
+        margin: auto;
+        height: 24px;
+        position: absolute;
+        background: url('../static/img/gear.png') 0 0 no-repeat;
+    }
+    .container #custom-fields .body,
+    .container #recource-fields .body{
+        background-color: #fff;
+        padding: 23px 45px 45px 45px;
+    }
+    .container #custom-fields label,
+    .container #recource-fields label{
+        display: block;
+        color: #1d1d1d;
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-transform: capitalize;
+    }
+    .container #custom-fields .body select,
+    .container #custom-fields .body input,
+    .container #recource-fields .body input,
+    .container #recource-fields .body select{
+        outline: 0;
+        height: 49px;
+        padding: 0 20px;
+        min-width: 285px;
+        font-size: 13px;
+        margin-bottom: 30px;
+        border: 1px solid #e5e5e5;
+    }
+    .container #recource-fields .custom-field-item:last-child input,
+    .container #recource-fields .custom-field-item:last-child select,
+    .container #custom-fields .custom-field-item:last-child input,
+    .container #custom-fields .custom-field-item:last-child select{
+        margin-bottom: 0;
+    }
+    .container #custom-fields .body input:focus,
+    .container #recource-fields .body input:focus{
+        -webkit-transition: color 500ms ease;
+        -moz-transition: color 500ms ease;
+        -ms-transition: color 500ms ease;
+        -o-transition: color 500ms ease;
+        border-color: #188eed;
+    }
+    .container #custom-fields .body select,
+    .container #recource-fields .body select{
+        min-width: 325px;
+        background-color: #ffffff;
+    }
+    #total-price {
+        float: right;
+        display: block;
+        color: #121010;
+        font-size: 26px;
+        line-height: 37px;
+        margin-right: 45px;
+        margin-bottom: 23px;
+    }
+    .submit-button{
+        -webkit-border-radius: 2px;
+        -moz-border-radius: 2px;
+        border-radius: 2px;
+        -moz-background-clip: padding;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        -webkit-transition: all 300ms;
+        -moz-transition: all 300ms;
+        -ms-transition: all 300ms;
+        -o-transition: all 300ms;
+        -webkit-box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        -moz-box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        border: none;
+        color: #fff;
+        height: 37px;
+        padding: 0 31px;
+        font-size: 12px;
+        min-width: 105px;
+        line-height: 37px;
+        text-align: center;
+        text-transform: uppercase;
+        background-color: #2490EA;
+        font-family: "open_sansregular";
+    }
+    #controls{
+        margin-bottom: 23px;
+    }
+    .submit-button:hover{
+        -webkit-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        -moz-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        cursor: pointer;
+    }
+    #resource-list {
+        position: relative;
+        margin-bottom: 23px;
+        background-color: #fcfcfc;
+        border: 1px solid #ebebeb;
+        padding: 20px 17px 20px 114px;
+    }
+    #resource-list:before{
+        top: 0;
+        bottom: 0;
+        left: 18px;
+        width: 80px;
+        content: '';
+        height: 66px;
+        margin: auto;
+        position: absolute;
+        background: url('../static/img/servers.png') center no-repeat;
+    }
+    #resource-list > div{
+        color: #323232;
+        font-size: 13px;
+        line-height: 23px;
+    }
+    .clearfix:before,
+    .clearfix:after{
+      content:"";
+      display:table;
+    }
+    .clearfix:after{
+      clear:both;
+    }
+    .clearfix {
+      zoom:1; /* For IE 6/7 (trigger hasLayout) */
+    }
+
+    /* plans section */
+    .plans {
+        font-size: 0;
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 33px;
+        background-color: #fff;
+        -webkit-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        -moz-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+    }
+    .plans .header{
+        padding: 26px 26px;
+        border-bottom: 1px solid #dfdfdf;
+    }
+    .plans .header h2{
+        float: left;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+    .plans .header span{
+        float: right;
+        color: #00462b;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 14px;
+        position: relative;
+        padding-left: 33px;
+    }
+    .plans .header span:before{
+        top: 0;
+        left: 0;
+        bottom: 0;
+        content: '';
+        width: 19px;
+        margin: auto;
+        height: 25px;
+        position: absolute;
+        background: url('../static/img/lamp-icon.png') 0 0 no-repeat;
+    }
+    .plan{
+        width: 189px;
+        position: relative;
+        padding: 28px 1% 40px;
+/*        margin-bottom: 33px;*/
+        display: inline-block;
+        margin-top: 33px;
+        vertical-align: top;
+    }
+    .plan,
+    .plan *{
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+    }
+    .plan.recommended{
+        background: white;
+        border: 1px solid #e0e0e0;
+    }
+    .plan.recommended .title{
+        top: -12px;
+        left: 0;
+        padding: 3px 0;
+        right: 0;
+        color: #fff;
+        margin: auto;
+        width: 119px;
+        font-size: 12px;
+        font-weight: 800;
+        position: absolute;
+        text-align: center;
+        text-transform: uppercase;
+        background-color: #e65583;
+    }
+    .plan .plan-img-wrapper{
+        width: 119px;
+        padding-top: 15px;
+        position: relative;
+        margin: 0 auto 18px;
+        background: url('../static/img/chocolate.png') 0 0 no-repeat;
+    }
+    .plan:nth-child(2) .plan-img-wrapper{
+        margin-top: 90px;
+        padding-top: 30px;
+    }
+    .plan:nth-child(3) .plan-img-wrapper{
+        margin-top: 60px;
+        padding-top: 60px;
+    }
+    .plan:nth-child(4) .plan-img-wrapper{
+        margin-top: 30px;
+        padding-top: 90px;
+    }
+    .plan:nth-child(5) .plan-img-wrapper{
+        margin-top: 0;
+        padding-top: 120px;
+    }
+    .plan .plan-img-wrapper .plan-name {
+        top: -10px;
+        z-index: 1;
+        right: -15px;
+        height: 47px;
+        color: #fffefe;
+        min-width: 47px;
+        padding: 0 10px;
+        font-size: 17px;
+        line-height: 47px;
+        position: absolute;
+        text-align: center;
+        background-color: #3d8acd;
+        display: inline-block;
+        -webkit-border-radius: 50px;
+        -moz-border-radius: 50px;
+        border-radius: 50px;
+    }
+    .plan.recommended .plan-img-wrapper .plan-name{
+        background-color: #e65583;
+    }
+    .plan .plan-img-wrapper .price-wrapper {
+        height: 133px;
+        margin: 0 auto;
+        position: relative;
+        background: url('../static/img/price-area.png') 0 0 no-repeat;
+    }
+    .plan .plan-img-wrapper .price-wrapper .plan-price{
+        color: #fff;
+        font-size: 19px;
+        padding-top: 50%;
+        line-height: 26px;
+        word-spacing: -4px;
+        text-align: right;
+        padding-right: 10%;
+        margin-bottom: 5px;
+    }
+    .plan .plan-img-wrapper .price-wrapper .plan-period,
+    .plan .plan-img-wrapper .price-wrapper .plan-price-suffix{
+        color: #fff;
+        font-size: 14px;
+    }
+    .text-right{
+        text-align: right;
+        padding-right: 10%;
+    }
+    .plans .plan .plan-goodfor{
+        color: #e65583;
+        font-size: 13px;
+        text-align: left;
+        font-weight: 600;
+        padding: 0 0 0 10px;
+        margin-bottom: 15px;
+    }
+    .plans .plan .plan-goodfor span{
+        font-size: 17px;
+    }
+    .plans .plan .show-more{
+        margin: 0 10px;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 400;
+        text-align: left;
+        position: relative;
+        padding-left: 27px;
+    }
+    .plans .plan .show-more:before{
+        top: 0;
+        left: 0;
+        bottom: 0;
+        content: '';
+        width: 18px;
+        margin: auto;
+        height: 18px;
+        position: absolute;
+        background: url('../static/img/item-arrow.png') 0 0 no-repeat;
+    }
+    .plans .plan .show-more.rotate:before{
+        transform: rotate(90deg) ;
+        -webkit-transform: rotate(90deg) ;
+        -moz-transform: rotate(90deg) ;
+        -o-transform: rotate(90deg) ;
+        -ms-transform: rotate(90deg) ;
+    }
+    .plans .plan .plan-details{
+        display: none;
+        margin-top: 15px;
+        font-size: 12px;
+        padding: 15px 0 10px 12px;
+        border: 1px solid #e0e0e0;
+    }
+    .plans .plan .plan-details.show{
+        display: block;
+    }
+    .plans .plan .plan-details p{
+        color: #000;
+        font-size: 13px;
+        word-spacing: -1px;
+        margin-bottom: 5px;
+        letter-spacing: 0px;
+    }
+    @-moz-document url-prefix(){
+        .plans .plan .plan-details p{
+            font-size: 12px;
+        }
+        .plans .plan .plan-goodfor span{
+            font-size: 15px;
+        }
+    }
+    .plan .plan-details{
+        padding: 10px;
+        text-align: left;
+    }
+    .plan .buttons{
+        left: 0;
+        right: 0;
+        padding-top: 18px;
+        text-align: center;
+        margin-bottom: -18px;
+        position: absolute;
+    }
+    .plan.recommended .buttons .submit-button{
+        background-color: #e65583;
+    }
+    </style>
+    </head>
+    <body>
+        <header>
+            <a href="/"><img alt="CloudLinux Kuberdock" class="logo" src="{{ url_for('static', filename='img/logo2.png') }}"></a>
+        </header>
+        <div class="container">
+            <div id="masthead">
+                <div id="app-header"><span>Buy {{ name }}</span></div>
+                <div id="pre-description"></div>
+            </div>
+            <div class="plans">
+                <div class="header clearfix">
+                    <h2>Choose package:</h2>
+                    <span>You can choose another package at any time</span>
+                </div>
+                {% for plan in plans %}
+                <div class='plan {% if plan.recommended %}recommended{% endif %}'>
+                    {% if plan.recommended %}<span class="title">recommended</span>{% endif %}
+                    <div class="plan-img-wrapper">
+                        <div class="plan-name">{{ plan.name }}</div>
+                        <div class="price-wrapper">
+                            <div class='plan-price'>35$</div>
+                            <div class="text-right">
+                                <span class='plan-price-suffix'></span>
+                                <span class='plan-period'>/mounth</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% if plan.goodFor %}
+                    <div class='plan-goodfor'>Good for<br/><span>{{ plan.goodFor }}</span></div>
+                    {% endif %}
+                    <div class="show-more">Show details</div>
+                    <div class='plan-details'>
+                        <p><b>CPU:</b> <span class='plan-cpu'></span></p>
+                        <p><b>Мemory:</b> <span class='plan-memory'></span></p>
+                        <p><b>Storage:</b> <span class='plan-disk'></span></p>
+                        <p><b>Persistent Storage:</b> <span class='plan-pd'></span></p>
+                        <p><b>Public IP:</b><span class='plan-public'> yes</span></p>
+                    </div>
+                    <form class="buttons" method="GET">
+                        <input type="hidden" name="pkgid" value="{{ package.id }}">
+                        <input type="hidden" name="plan" value="{{ loop.index0 }}">
+                        <button class="submit-button">Choose package</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <script type="text/javascript">
+            'use strict';
+            function setRes(el, resource, text){
+                el = el.getElementsByClassName(resource)[0];
+                while(el.firstChild)
+                    el.removeChild(el.firstChild);
+                el.appendChild(document.createTextNode(text));
+            }
+
+            function recalculate(app){
+                var domPlans = document.getElementsByClassName('plan'),
+                    filled = jsyaml.safeLoad(app.fill());
+                filled.kuberdock.appPackages.forEach(function(appPackage, i){
+                    appPackage = app.fillAppPackageWithDefaults(appPackage, filled);
+                    var info = app.calculateInfo(appPackage),
+                        print = info.print,
+                        domPlan = domPlans[i];
+                    setRes(domPlan, 'plan-price', print.price.prefix +
+                        String.fromCharCode(160) + print.price.value.toFixed(2));
+                    setRes(domPlan, 'plan-price-suffix', print.price.suffix);
+                    setRes(domPlan, 'plan-cpu', print.cpu);
+                    setRes(domPlan, 'plan-memory', print.memory);
+                    setRes(domPlan, 'plan-disk', print.diskSpace);
+                    setRes(domPlan, 'plan-pd', print.pd);
+                    setRes(domPlan, 'plan-period', '/' + print.period);
+                    var ipEl = domPlan.getElementsByClassName('plan-public')[0].parentNode,
+                        pdEl = domPlan.getElementsByClassName('plan-pd')[0].parentNode;
+                    ipEl.style.display = info.publicIP ? null : 'none';
+                    pdEl.style.display = info.totalPD ? null : 'none';
+                });
+            }
+
+            window.onload = function(e) {
+                var app = new PA({
+                    defaultKubeType: {{ default_kube_type_id|tojson|safe }},
+                    userPackage: {{ package|tojson|safe }},
+                    template: {{ template|tojson|safe }},
+                });
+
+                var yml = jsyaml.safeLoad(app.fill()),
+                    el = document.getElementById('pre-description');
+                if (yml.kuberdock.preDescription) {
+                    var parser = new BBCodeParser(BBCodeParser.defaultTags());
+                    el.innerHTML = parser.parseString(yml.kuberdock.preDescription);
+                } else {
+                    el.parentNode.removeChild(el);
+                }
+
+                recalculate(app);
+
+                /* show/hide details */
+                var more = document.querySelectorAll('.show-more')
+                for (var i = 0; i < more.length; i++){
+                    more[i].addEventListener("click", function(){
+                        if (this.textContent == 'Show details'){
+                            this.parentNode.querySelectorAll('.plan-details')[0].className += ' show';
+                            this.className += ' rotate';
+                            this.textContent = 'Hide details';
+                        } else {
+                            this.parentNode.querySelectorAll('.plan-details')[0].className = 'plan-details';
+                            this.className = 'show-more';
+                            this.textContent = 'Show details';
+                        }
+                    });
+                }
+
+            };
+        </script>
+    </body>
+</html>

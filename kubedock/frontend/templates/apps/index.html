@@ -8,6 +8,8 @@
 
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
         <script src="{{ url_for('static', filename='js/lib/bbCodeParser.min.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/lib/js-yaml.min.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/PA.js') }}" type="text/javascript"></script>
 {#
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.min.css') }}">
@@ -115,22 +117,23 @@
         margin: 0 auto;
         max-width: 757px;
     }
-    #app-header, #pre-description{
+    #app-header,
+    #pre-description{
         display: block;
         color: #1d1d1d;
         font-size: 14px;
         font-weight: bold;
+        text-align: center;
         margin-bottom: 15px;
         text-transform: capitalize;
-        text-align: center;
     }
     #pre-description{
-        text-align: justify;
-        font-weight: normal;
         font-size: 12px;
+        text-align: left;
         line-height: 16px;
+        margin-bottom: 18px;
+        font-weight: normal;
         text-transform: none;
-        padding: 0 20px;
     }
     .container #custom-fields,
     .container #recource-fields{
@@ -213,16 +216,20 @@
         min-width: 325px;
         background-color: #ffffff;
     }
-    #total-price {
+    .plan-price,
+    .plan-period{
         float: right;
         display: block;
         color: #121010;
         font-size: 26px;
         line-height: 37px;
-        margin-right: 45px;
         margin-bottom: 23px;
     }
-    #submit-button{
+    .plan-period{
+        margin-right: 45px;
+    }
+    #submit-button,
+    #back-button{
         -webkit-border-radius: 2px;
         -moz-border-radius: 2px;
         border-radius: 2px;
@@ -238,7 +245,6 @@
         box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
         float: right;
         border: none;
-        color: #fff;
         height: 37px;
         padding: 0 31px;
         font-size: 12px;
@@ -247,13 +253,22 @@
         text-align: center;
         margin-right: 45px;
         text-transform: uppercase;
-        background-color: #2490EA;
         font-family: "open_sansregular";
+    }
+     #submit-button{
+        color: #fff;
+        background-color: #2490EA;
+    }
+    #back-button{
+        color: #1d1d1d;
+        margin-right: 10px;
+        background-color: #fcfcfc;
     }
     #controls{
         margin-bottom: 23px;
     }
-    #submit-button:hover{
+    #submit-button:hover,
+    #back-button:hover{
         -webkit-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
         -moz-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
         box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
@@ -277,10 +292,11 @@
         position: absolute;
         background: url('../static/img/servers.png') center no-repeat;
     }
+    #resource-list > p,
     #resource-list > div{
         color: #323232;
         font-size: 13px;
-        line-height: 23px;
+        line-height: 19px;
     }
     .clearfix:before,
     .clearfix:after {
@@ -297,25 +313,26 @@
     </head>
     <body>
         <header>
-            <a href="/"><img alt="CloudLinux Kuberdock" class="logo" src="{{ url_for('static', filename='img/logo2.png') }}"></a>
+            <a href="/">
+                <img alt="CloudLinux Kuberdock" class="logo"
+                    src="{{ url_for('static', filename='img/logo2.png') }}">
+            </a>
         </header>
         <div class="container">
             <div id="masthead">
                 <div id="app-header"><span>{{ name }}</span></div>
-                {% if pre_desc %}
-                <div id="pre-description">{{ pre_desc }}</div>
-                {% endif %}
+                <div id="pre-description"></div>
             </div>
-            {% if mutables %}
+            {% if plan_fields %}
             <div id="custom-fields">
                 <div class="title">Set up resources amount</div>
                 <div class="body">
-                    {% for k, v in fields.iteritems() if v.title %}
-                        {% if v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube' %}
+                    {% for name, v in fields.iteritems() %}
+                        {% if name in plan_fields and plan_fields[name] == 'kube' %}
                         <div class="custom-field-item">
                             <label class="custom-field-title">{{ v.title }}</label>
                             <div class="custom-field-body">
-                                <select id="{{ v.hashsum }}" class="custom-field">
+                                <select id="field-{{ name }}" class="custom-field">
                                     {% for row in range(1, 11) %}
                                         {% if row == v.value|int %}
                                         <option selected="selected" value="{{ row }}">{{ row }}</option>
@@ -326,19 +343,28 @@
                                 </select>
                             </div>
                         </div>
-                        {% elif v.hashsum in mutables and mutables[v.hashsum]['type'] == 'kube_type' %}
+                        {% elif name in plan_fields and plan_fields[name] == 'kubeType' %}
                         <div class="custom-field-item">
                             <label class="custom-field-title">{{ v.title }}</label>
                             <div class="custom-field-body">
-                                <select id="{{ v.hashsum }}" class="custom-field">
-                                    {% for row in kubes_data[package_id] %}
-                                        {% if row.id == kube_type|int %}
+                                <select id="field-{{ name }}" class="custom-field">
+                                    {% for row in package.kubes %}
+                                        {% if row.id == v.value|int %}
                                         <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
                                         {% else %}
                                         <option value="{{ row.id }}">{{ row.name }}</option>
                                         {% endif %}
                                     {% endfor %}
                                 </select>
+                            </div>
+                        </div>
+                        {% elif name in plan_fields and plan_fields[name] == 'pdSize' %}
+                        <div class="custom-field-item">
+                            <label class="custom-field-title">{{ v.title }}</label>
+                            <div class="custom-field-body">
+                                <input id="field-{{ name }}" class="custom-field"
+                                    type="number" value="{{ v.value }}"
+                                    min="1" max="{{ max_pd_size }}" step="1">
                             </div>
                         </div>
                         {% endif %}
@@ -350,14 +376,16 @@
             <div id="recource-fields">
                 <div class="title">Additional configuration</div>
                 <div class="body">
-                {% for k, v in fields.iteritems() if v.title %}
-                    {% if v.hashsum not in mutables %}
+                {% for name, v in fields.iteritems() %}
+                    {% if name not in plan_fields %}
                     <div class="custom-field-item">
                         {% if not v.hidden %}
                         <label class="custom-field-title">{{ v.title }}</label>
                         {% endif %}
                         <div class="custom-field-body">
-                            <input id="{{ v.hashsum }}" class="custom-field" type="{{ 'hidden' if v.hidden else 'text' }}" value="{{ v.value }}">
+                            <input id="field-{{ name }}" class="custom-field"
+                                type="{{ 'hidden' if v.hidden else 'text' }}"
+                                value="{{ v.value }}">
                         </div>
                     </div>
                     {% endif %}
@@ -365,152 +393,143 @@
                 </div>
             </div>
             {% endif %}
-            <div id="resource-list"></div>
-            <input type="hidden" value="{{ template }}" id="template-data">
+            <div id="resource-list">
+                <p>CPU: <span class='plan-cpu'></span></p>
+                <p>Мemory: <span class='plan-memory'></span></p>
+                <p>Storage: <span class='plan-disk'></span></p>
+                <p>Persistent Storage: <span class='plan-pd'></span></p>
+                <p><span class='plan-public'>Public IP: yes</span></p>
+            </div>
             <div id="select-controls">
-                {#
-                <div>
-                    <label for="package-selector">Select package</label>
-                    <select id="package-selector">
-                        {% for package in packages %}
-                        <option value="{{ package.id }}">{{ package.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                #}
             </div>
             <div class="clearfix">
-                <div id="total-price"></div>
+                <div class="plan-period"></div>
+                <div class="plan-price"></div>
             </div>
             <div id="controls" class="clearfix">
                 <button id="submit-button">Order now</button>
+                <button id="back-button">Choose different package</button>
             </div>
         </div>
         <script type="text/javascript">
-            'use strict;'
-            var fields = {{ jfields|safe }},
-                mutables = {{ jmutables|safe }},
-                kubes = {{ kubes|safe }},
-                kubeType = {{ kube_type|int }},
-                packageId = {{ package_id|int }},
-                kubesData = {{ jkubes_data|safe }},
-                packages = {{ jpackages|safe }},
-                templateField = document.getElementById('template-data'),
-                packageSelector = document.getElementById('package-selector'),
-                billingUrl = {{ '"{0}"'.format(billing_url)|safe }},
-                submitButton = document.getElementById('submit-button'),
-                customFields = document.getElementsByClassName('custom-field'),
-                totalPrice = document.getElementById('total-price'),
-                resourceList = document.getElementById('resource-list');
-
-            function empty(n){while(n.firstChild){n.removeChild(n.firstChild)}}
-
-            function composeResources(kubeId, kubes){
-                if (kubes === undefined) kubes = 1;
-                empty(resourceList);
-                var kubeItem = getKubeById(kubeId),
-                    data = ['c','m','d'].map(function(i){return document.createElement('div')});
-                data[0].appendChild(document.createTextNode('CPU:'+String.fromCharCode(160)+(kubeItem.cpu*kubes).toFixed(2)+kubeItem.cpu_units));
-                data[1].appendChild(document.createTextNode('Memory:'+String.fromCharCode(160)+Math.round(kubeItem.memory*kubes)+kubeItem.memory_units));
-                data[2].appendChild(document.createTextNode('Disk:'+String.fromCharCode(160)+Math.round(kubeItem.disk_space*kubes)+kubeItem.disk_space_units));
-                data.forEach(function(el){resourceList.appendChild(el)});
-            }
-
-            function displayTotal(value) {
-                empty(totalPrice);
-                totalPrice.appendChild(document.createTextNode('Total:'+String.fromCharCode(160)+value));
-            }
-
-            function recalculate(tgt){
-                if (tgt.id in mutables && mutables[tgt.id].type === 'kube') {
-                    var price = getKubeById(getKubeId()).price || 0,
-                        fixed = kubes.reduce(function(a, b){return (+a)+(+b)}, 0),
-                        changing = Object.keys(mutables)
-                            .filter(function(k){return mutables[k].type === 'kube' && k !== tgt.id})
-                            .map(function(k){return document.getElementById(k).value})
-                            .reduce(function(a, b){return (+a)+(+b)}, 0);
-                    displayTotal(getPackage(packageId).prefix + ((fixed + changing + (+tgt.value)) * price).toFixed(2));
-                    composeResources(getKubeId(), fixed + changing + (+tgt.value));
-                }
-                else if (tgt.id in mutables && mutables[tgt.id].type === 'kube_type') {
-                    var price = getKubeById(+tgt.value).price || 0,
-                        fixed = kubes.reduce(function(a, b){return (+a)+(+b)}, 0),
-                        changing = Object.keys(mutables)
-                            .filter(function(k){return mutables[k].type === 'kube'})
-                            .map(function(k){return document.getElementById(k).value})
-                            .reduce(function(a, b){return (+a)+(+b)}, 0);
-                    displayTotal(getPackage(packageId).prefix + ((fixed + changing) * price).toFixed(2));
-                    composeResources(+tgt.value, fixed + changing);
-                }
-            }
-
-            function getPackage(packageId){
-                for (var i in packages) {
-                    if (packages[i].id === packageId) {
-                        return packages[i];
-                    }
-                }
-            }
-
-            function getKubeId(){
-                for (var id in mutables) {
-                    if (mutables[id].type == 'kube_type') {
-                        return +document.getElementById(id).value;
-                    }
-                }
-                return kubeType;
-            }
-
-            function getKubeById(kubeId){
-                for (var i in kubesData) {
-                    for (var j in kubesData[i]) {
-                        if (kubesData[i][j].id == kubeId) {
-                            return kubesData[i][j];
-                        }
-                    }
-                }
-            }
-
-            (function(){
-                var price = getKubeById(getKubeId()).price || 0,
-                    fixed = kubes.reduce(function(a, b){return (+a)+(+b)}, 0),
-                    changing = Object.keys(mutables)
-                        .filter(function(k){return mutables[k].type === 'kube'})
-                        .map(function(k){return document.getElementById(k).value})
-                        .reduce(function(a, b){return (+a)+(+b)}, 0);
-                displayTotal(getPackage(packageId).prefix + (((fixed + changing) * price).toFixed(2) + ' '
-                        + getPackage(packageId).currency + ' / ' + getPackage(packageId).period));
-                composeResources(getKubeId(), fixed + changing);
-            }());
-
-            Array.prototype.forEach.call(customFields, function(f){
-                f.onchange = function(evt){recalculate(evt.target)}
-            });
-
-            submitButton.onclick = function(evt){
-                if (!billingUrl) {
-                    alert('Billing URL not set!');
-                    return;
-                }
-                var yml = templateField.value;
-                for (var field in fields) {
-                    if (fields.hasOwnProperty(field)) {
-                        yml = yml.split(field).join(
-                            document.getElementById(fields[field].hashsum).value
-                        );
-                    }
-                }
-                var url = billingUrl
-                    + '?yaml=' + encodeURIComponent(yml)
-                    + '&pkgid=' + packageId
-                    + '&referer=' + window.location.href;
-                window.location = url;
-            }
-
+            'use strict';
             window.onload = function(e) {
-                var parser = new BBCodeParser(BBCodeParser.defaultTags());
-                var preDescription = document.getElementById('pre-description');
-                preDescription.innerHTML = parser.parseString(preDescription.innerHTML);
+                function setRes(el, resource, text){
+                    el = el.getElementsByClassName(resource)[0];
+                    while(el.firstChild)
+                        el.removeChild(el.firstChild);
+                    el.appendChild(document.createTextNode(text));
+                }
+
+                function getValues(){
+                    var values = Object.create(null);
+                    Array.prototype.forEach.call(customFields, function(field){
+                        values[field.id.substr('field-'.length).toUpperCase()] = field.value;
+                    });
+                    return values;
+                }
+
+                function recalculate(app, appPackageID, values){
+                    var filled = jsyaml.safeLoad(app.fill(values)),
+                        appPackage = filled.kuberdock.appPackages[appPackageID],
+                        domPlan = document.getElementById('resource-list');
+                    appPackage = app.fillAppPackageWithDefaults(appPackage, filled);
+
+                    var info = app.calculateInfo(appPackage);
+                    setRes(document, 'plan-price', info.print.price.full);
+                    setRes(document, 'plan-period', '/' + info.print.period);
+                    setRes(domPlan, 'plan-cpu', info.print.cpu);
+                    setRes(domPlan, 'plan-memory', info.print.memory);
+                    setRes(domPlan, 'plan-disk', info.print.diskSpace);
+                    setRes(domPlan, 'plan-pd', info.print.pd);
+                    var ipEl = domPlan.getElementsByClassName('plan-public')[0].parentNode,
+                        pdEl = domPlan.getElementsByClassName('plan-pd')[0].parentNode;
+                    ipEl.style.display = info.publicIP ? null : 'none';
+                    pdEl.style.display = info.totalPD ? null : 'none';
+                }
+
+                //
+                // init
+                //
+
+                var appPackageID = {{ appPackageID|int }},
+                    billingUrl = {{ billing_url|tojson|safe }},
+                    customFields = document.getElementsByClassName('custom-field'),
+                    submitButton = document.getElementById('submit-button'),
+                    backButton = document.getElementById('back-button'),
+                    app = new PA({
+                        defaultKubeType: {{ default_kube_type_id|tojson|safe }},
+                        userPackage: {{ package|tojson|safe }},
+                        template: {{ template|tojson|safe }},
+                    });
+
+                if (!customFields.length)
+                    submitButton.click();
+
+                var yml = jsyaml.safeLoad(app.fill()),
+                    el = document.getElementById('pre-description');
+
+                if (yml.kuberdock.appPackages.length === 1){
+                    backButton.parentNode.removeChild(backButton);
+                }
+                if (yml.kuberdock.preDescription) {
+                    var parser = new BBCodeParser(BBCodeParser.defaultTags());
+                    el.innerHTML = parser.parseString(yml.kuberdock.preDescription);
+                } else {
+                    el.parentNode.removeChild(el);
+                }
+
+
+                recalculate(app, appPackageID, getValues());
+
+                //
+                // events
+                //
+
+                Array.prototype.forEach.call(customFields, function(f){
+                    f.onchange = function(evt){
+                        recalculate(app, appPackageID, getValues());
+                    };
+                });
+
+                submitButton.onclick = function(evt){
+                    if (!billingUrl) {
+                        alert('Billing URL not set!');
+                        {#
+                        var yml = app.templateToApp(appPackageID, getValues()),
+                            desc = yml.kuberdock.postDescription,
+                            r = new XMLHttpRequest();
+                        console.log(jsyaml.safeDump(yml));
+                        console.log(yml);
+                        r.onreadystatechange = function(){
+                            if (r.readyState == 4) {
+                                console.log(r);
+                                if(r.status != 200) return;
+                                var id = JSON.parse(r.response).data.id;
+                                window.location = '/?postDescription=' +
+                                                  encodeURIComponent(desc) +
+                                                  '#pods/' + id;
+                            }
+                        };
+                        r.open('POST', '/api/yamlapi/', true);
+                        r.setRequestHeader("Content-type", "application/json");
+                        r.send(window.JSON.stringify({data: jsyaml.safeDump(yml)}));
+                        #}
+                        return;
+                    }
+
+                    var yml = app.templateToApp(appPackageID, getValues()),
+                        url = billingUrl
+                            + '?yaml=' + encodeURIComponent(jsyaml.safeDump(yml))
+                            + '&pkgid=' + app.userPackage.id
+                            + '&referer=' + window.location.href;
+                    window.location = url;
+                };
+
+                backButton.onclick = function(evt){
+                    window.location = window.location.href.replace(
+                        /(&plan=\d+|plan=\d+&?)/, '');
+                };
             };
         </script>
     </body>

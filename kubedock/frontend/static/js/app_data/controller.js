@@ -648,7 +648,9 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                                   'Edit application'}]},
                             {showControls: false})),
                         breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel}),
-                        appModel = (id !== undefined) ? appCollection.get(id) : new Model.AppModel();
+                        appModel = (id !== undefined) ?
+                            appCollection.fullCollection.get(id) :
+                            new Model.AppModel();
                     mainLayout.breadcrumbs.show(breadcrumbsView);
                     mainLayout.main.show(new Views.AppLoader({model: appModel}));
                     mainLayout.pager.empty();

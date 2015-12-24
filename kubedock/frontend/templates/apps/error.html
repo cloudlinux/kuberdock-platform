@@ -125,6 +125,11 @@
         padding: 23px 45px 23px 45px;
         font-family: "open_sanslight";
     }
+    .item .body > span{
+        display: inline-block;
+        white-space: pre;
+        text-align: left;
+    }
     @font-face {
         font-family: 'open_sanslight';
         src: url('../static/fonts/opensans-light-webfont.eot');
@@ -156,7 +161,7 @@
         <div class="container">
             <div class="item">
                 <div class="title">Application error</div>
-                <div class="body">{{ message }}</div>
+                <div class="body"><span>{{ message }}</span></div>
             </div>
         </div>
     </body>

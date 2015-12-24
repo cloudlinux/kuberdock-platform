@@ -158,7 +158,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         secrets = getattr(self, 'secrets', [])
         # TODO why self.owner is unicode string here? why not db obj?
         owner = User.filter_by(username=self.owner).one()
-        kuberdock_resolve = getattr(self, 'kuberdock_resolve', '')
+        kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
         config = {
             "kind": "ReplicationController",
             "apiVersion": KUBE_API_VERSION,

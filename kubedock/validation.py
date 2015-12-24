@@ -222,7 +222,11 @@ env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
 protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
-kube_type_schema = {'type': 'integer', 'coerce': int}
+kubes_qty_schema = {'type': 'integer', 'min': 1, 'max': MAX_KUBES_PER_CONTAINER}
+container_name_schema = {'type': 'string', 'empty': False, 'maxlength': 255}
+pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0, 'pd_size_max': True}
+kube_type_schema = {'type': 'integer', 'coerce': int, 'kube_type_in_db': True}
+volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False, 'maxlength': 255}
 new_pod_schema = {
     'name': pod_name_schema,
     'clusterIP': {
@@ -239,7 +243,7 @@ new_pod_schema = {
         'nullable': True,
         'template_exists': True,
     },
-    'kuberdock_resolve': {'type': 'string', 'required': False},
+    'kuberdock_resolve': {'type': 'list', 'schema': {'type': 'string'}},
     'node': {
         'type': 'string',
         'nullable': True,
@@ -254,12 +258,7 @@ new_pod_schema = {
         'schema': {
             'type': 'dict',
             'schema': {
-                'name': {
-                    'type': 'string',
-                    'empty': False,
-                    'maxlength': 255,
-                    'volume_type_required': True,
-                },
+                'name': dict(volume_name_schema, volume_type_required=True),
                 'persistentDisk': {
                     'type': 'dict',
                     'nullable': True,
@@ -268,10 +267,7 @@ new_pod_schema = {
                         'pdName': {
                             'type': 'string'
                         },
-                        'pdSize': {
-                            'type': 'integer',
-                            'nullable': True,
-                        },
+                        'pdSize': pdsize_schema,
                         'used': {
                             'type': 'boolean',
                             'required': False,
@@ -359,19 +355,13 @@ new_pod_schema = {
                 },
                 'command': args_list_schema,
                 'args': args_list_schema,
-                'kubes': {'type': 'integer',
-                          'min': 1,
-                          'max': MAX_KUBES_PER_CONTAINER},
+                'kubes': kubes_qty_schema,
                 'image': container_image_name_schema,
                 'parentID': {
                     'type': 'string',
                     'required': False
                 },
-                'name': {
-                    'type': 'string',
-                    'empty': False,
-                    'maxlength': 255
-                },
+                'name': container_name_schema,
                 'env': env_schema,
                 'ports': {
                     'type': 'list',
@@ -531,6 +521,89 @@ persistent_disk_max_size_schema = {
     'coerce': int, 'min': 1, 'max': 999
 }
 
+app_package_schema = {
+    'name': {
+        'type': 'string',
+        'empty': False,
+        'required': True,
+        'maxlength': 32,
+    },
+    'recommended': {
+        'type': 'boolean',
+        'coerce': extbool,
+    },
+    'goodFor': {
+        'type': 'string',
+        'maxlength': 64,
+    },
+    'publicIP': {
+        'type': 'boolean',
+        'coerce': extbool,
+    },
+    'pods': {
+        'type': 'list',
+        'maxlength': 1,  # we don't support multiple pods in one app yet
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'name': pod_name_schema,
+                'kubeType': kube_type_schema,
+                'containers': {
+                    'type': 'list',
+                    'empty': False,
+                    'schema': {
+                        'type': 'dict',
+                        'schema': {
+                            'name': container_name_schema,
+                            'kubes': kubes_qty_schema,
+                        },
+                    },
+                },
+                'persistentDisks': {
+                    'type': 'list',
+                    'schema': {
+                        'type': 'dict',
+                        'schema': {
+                            'name': volume_name_schema,
+                            'pdSize': pdsize_schema,
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
+predefined_apps_kuberdock_schema = {
+    'preDescription': {'type': 'string'},
+    'postDescription': {'type': 'string'},
+    'packageID': {
+        'type': 'integer',
+        'coerce': int,
+        # 'package_id_exists': True,
+    },
+    'appPackages': {
+        'type': 'list',
+        'required': True,
+        'empty': False,
+        'maxlength': 4,
+        'schema': {
+            'type': 'dict',
+            'schema': app_package_schema,
+        },
+    }
+}
+predefined_app_schema = {
+    'kuberdock': {
+        'type': 'dict',
+        'required': True,
+        'schema': predefined_apps_kuberdock_schema,
+    }
+}
+
+
+node_schema = {'hostname': hostname_schema, 'kube_type': kube_type_schema}
+
+
 # ===================================================================
 
 
@@ -672,6 +745,14 @@ class V(cerberus.Validator):
                                    "\"{0}\" does not include kube type with id "
                                    "\"{1}\"".format(package.name, value))
 
+    def _validate_kube_type_in_db(self, exists, field, value):
+        if exists:
+            kube = Kube.query.get(value)
+            if not kube:
+                self._error(field, 'No such kube_type: "{0}"'.format(value))
+            elif not kube.is_public() and self.user != KUBERDOCK_INTERNAL_USER:
+                self._error(field, 'Forbidden kube type: "{0}"'.format(value))
+
     def _validate_pd_backend_required(self, pd_backend_required, field, value):
         if pd_backend_required and not (AWS or CEPH):
             self._error(field, 'persistent storage backend wasn\'t configured')
@@ -723,20 +804,29 @@ class V(cerberus.Validator):
                         self._error(field,
                                     'Unsupported volume type "{0}"'.format(k))
 
+    def _validate_pd_size_max(self, exists, field, value):
+        if exists:
+            max_size = SystemSettings.get_by_name('persitent_disk_max_size')
+            if max_size and int(value) > int(max_size):
+                self._error(field, ('Persistent disk size must be less or equal '
+                                    'to "{0}" GB').format(max_size))
+
+    def _validate_package_exists(self, exists, field, value):
+        if exists:
+            if Package.by_name(value) is None:
+                self._error(field, "Package doesn't exists")
+
+    def _validate_package_id_exists(self, exists, field, value):
+        if exists:
+            if Package.query.get(int(value)) is None:
+                self._error(field, "Package doesn't exists")
+
 
 def check_int_id(id):
     try:
         int(id)
     except ValueError:
         raise APIError('Invalid id')
-
-
-def check_kube_indb(kube_type):
-    kube = Kube.query.get(kube_type)
-    if not kube:
-        raise APIError('No such kube_type: {0}'.format(kube_type))
-    if not kube.is_public():
-        raise APIError('Forbidden kube type: {0}'.format(kube_type))
 
 
 def check_image_search(searchkey):
@@ -752,16 +842,9 @@ def check_image_request(params):
 
 
 def check_node_data(data):
-    validator = V(allow_unknown=True)
-    if not validator.validate(data, {
-            'hostname': hostname_schema,
-            'kube_type': {'type': 'integer', 'min': 0, 'required': True},
-        }):
-        raise APIError(validator.errors)
+    V(allow_unknown=True)._api_validation(data, node_schema)
     if is_ip(data['hostname']):
-        raise APIError('Please add nodes by hostname, not by ip')
-    kube_type = data.get('kube_type', Kube.get_default_kube_type())
-    check_kube_indb(kube_type)
+        raise ValidationError('Please add nodes by hostname, not by ip')
 
 
 def is_ip(addr):
@@ -788,27 +871,10 @@ def check_change_pod_data(data):
         raise APIError(validator.errors)
 
 
-def check_persistent_disk_size(data):
-    pd = SystemSettings.query.filter_by(name='persitent_disk_max_size').first()
-    if pd is None:
-        return
-    pd_limit = int(pd.value)
-    for vol in data.get('volumes', []):
-        if 'persistentDisk' not in vol:
-            continue
-        pd_size = vol['persistentDisk'].get('pdSize', 1)
-        if pd_size < 1 or pd_size > pd_limit:
-            raise APIError('Max size of persistent volume '
-                           'should be more than zero and less than {} GB'.format(pd_limit))
-
-
 def check_new_pod_data(data, user=None):
     validator = V(user=None if user is None else user.username)
     if not validator.validate(data, new_pod_schema):
         raise APIError(validator.errors)
-    kube_type = data.get('kube_type', Kube.get_default_kube_type())
-    check_kube_indb(kube_type)
-    check_persistent_disk_size(data)
 
 
 def check_internal_pod_data(data, user=None):
@@ -859,11 +925,6 @@ class UserValidator(V):
         if exists:
             if Role.by_rolename(value) is None:
                 self._error(field, "Role doesn't exists")
-
-    def _validate_package_exists(self, exists, field, value):
-        if exists:
-            if Package.by_name(value) is None:
-                self._error(field, "Package doesn't exists")
 
     def validate_user_create(self, data):
         data = _clear_timezone(data, ['timezone'])

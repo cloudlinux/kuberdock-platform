@@ -29,8 +29,8 @@
             } %>
                 <li role="presentation" class="general <%- s.general %> nodeGeneralTab">General</li>
                 <!-- <li role="presentation" class="stats <%- s.stats %> nodeStatsTab">Stats</li> -->
-                <li role="presentation" class="<%- s.logs %> nodeLogsTab">Logs</li>
-                <li role="presentation" class="<%- s.monitoring %> nodeMonitoringTab">Monitoring</li>
+                <li role="presentation" class="stats <%- s.logs %> nodeLogsTab">Logs</li>
+                <li role="presentation" class="monitoring <%- s.monitoring %> nodeMonitoringTab">Monitoring</li>
                 <!-- <li role="presentation" class="<%- s.timelines %> nodeTimelinesTab">Timelines</li>
                 <li role="presentation" class="configuration <%- s.configuration %> nodeConfigurationTab">Configuration</li> -->
             </ul>

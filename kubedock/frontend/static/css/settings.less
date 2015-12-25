@@ -1,4 +1,6 @@
-#publicIPs-table, #persistent-volumes-table{
+#publicIPs-table,
+#persistent-volumes-table,
+#license-table{
     .box-shadow-materials();
     margin-bottom: 0;
     thead{
@@ -35,6 +37,12 @@
     tbody{
         tr{
             background-color: #fff;
+            &.atention{
+                background-color: #fff0f0;
+                &:hover{
+                    background-color: #fff0f0;
+                }
+            }
             &:hover{
                 background-color: #f5fafe;
                 td{
@@ -67,6 +75,9 @@
                 font-family: @regular;
                 &:first-child{
                     padding-left: 24px;
+                }
+                &.critical{
+                    color: #f25555;
                 }
                 a, span, button{
                     min-height: 12px;
@@ -351,6 +362,82 @@
                     line-height: 23px;
                     margin-bottom: 20px
                 }
+            }
+        }
+    }
+}
+#item-controls{
+    &.licenseTab{
+        .license-status-line{
+            font-size: 0;
+            margin-bottom: 0;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e5e5;
+            span{
+                height: 23px;
+                line-height: 23px;
+                position: relative;
+                font-family: @regular;
+                &:first-child {
+                    color: #4e5665;
+                    padding-left: 11px;
+                    margin-right: 25px;
+                    &:before{
+                        content: none;
+                    }
+                }
+                &:last-child{
+                    margin-right: 0;
+                }
+                &.icon{
+                    padding-left: 25px;
+                    position: relative;
+                    &:before{
+                        top: 0;
+                        left: 0;
+                        bottom: 0;
+                        content: '';
+                        margin: auto;
+                        position: absolute;
+                    }
+                    &.active{
+                        padding-left: 20px;
+                        &:before{
+                            width: 12px;
+                            height: 12px;
+                            background-color: #97cd75;
+                            -webkit-border-radius: 50%;
+                            -moz-border-radius: 50%;
+                            border-radius: 50%;
+                        }
+                    }
+                    &.clock{
+                        &:before{
+                            width: 17px;
+                            height: 17px;
+                            background: url('../img/cklock-icon.png') 0 0 no-repeat;
+                        }
+                    }
+                    &.award{
+                        &:before{
+                            width: 17px;
+                            height: 23px;
+                            background: url('../img/award-icon.png') 0 0 no-repeat;
+                        }
+                    }
+                }
+                &:hover{
+                    color: #4e5664;
+                    cursor: default;
+                }
+            }
+        }
+        .servers{
+            &:before{
+                left: 40px;
+                width: 43px;
+                height: 43px;
+                background: url('../img/kuberdock-gray-ico.png') 0 0 no-repeat;
             }
         }
     }

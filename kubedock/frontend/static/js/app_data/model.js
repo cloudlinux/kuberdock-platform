@@ -541,5 +541,10 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         model: data.MenuModel
     });
 
+    data.LicenseModel = Backbone.Model.extend({
+        parse: unwrapper,
+        url: '/api/pricing/license'
+    });
+
     return data;
 });

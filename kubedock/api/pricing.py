@@ -314,3 +314,30 @@ def _add_kube_type_to_package(package_id, kube_id, kube_price):
 
 def _remove_is_default_kube_flags():
     Kube.query.update({Kube.is_default: None}, synchronize_session='fetch')
+
+
+
+@pricing.route('/license', methods=['GET'], strict_slashes=False)
+@KubeUtils.jsonwrap
+@login_required_or_basic_or_token
+@check_permission('read', 'system_settings')
+def get_license():
+    return {
+        'status': 'active',
+        'expiration': '2020-12-31',
+        'type': 'standard',
+        'installationID': '1234567890abcdef',
+        'platform': 'generic',
+        'storage': 'ceph',
+        'version':{
+            'KuberDock': '0.4-13-4',
+            'kubernetes': '1.0.3',
+            'docker': '1.6.2'},
+        'data': {
+            'nodes': [10, 8],
+            'cores': [48, 40],
+            'memory': [512, 448],
+            'containers': ['unlimited', 340],
+            'pods': [220, 174],
+            'apps': ['unlimited', 93],
+            'persistentVolume': ['unlimited', 1332]}}

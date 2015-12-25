@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 13.4%{?dist}.cloudlinux
+Release: 14%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,33 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Fri Dec 25 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Fedor Degtyarev <fdegtyarev@cloudlinux.com> 0.4-14
+- AC-1745; Kuberdock pre_start_hook
+- AC-1474: limit max PD size
+- Fix 00070_update.py exception if DNS-pod doesn't exists
+- AC-810: User list items pagination and sorting.
+- Fix node monitoring&users pages size & paddings between containers
+- AC-1876; AC-1830
+- AC-476: display limits on monitoring graphs; bugfix
+- AC-1879: Firefox design fix in add PD fields; AC-1685: small font size fix on node&pod page;
+- AC-1864: Allow containers to access the Internet; +fixes
+- AC-1829: Add icons to monitoring&variables links in container page;
+- AC-1542: predefined apps UI and grammar mistakes
+- AC-1891: small UI fix on pods page
+- AC-1669 - show Error if not resolvable node hostname
+- AC-1886: Fix iptables rules creation for very first pod
+- container list container image tag is hidden via JS replace
+- Add delete pod item in podlist table
+- AC-1573, AC-1774, AC-1802: errors duplication fix; some other bgfix
+- Fixed search on Pods page
+- Fixed preloader for group actions on Pod page
+- Delete request for busy PD will return 400 (not 200, as before)
+- AC-1806: predefined apps pagination; hid broken filters (PA, users)
+- Add icons to logs&monitoring links in node detailed page
+- AC-1908: fix Preloader error on addnode page
+- workaround for utils localtime routine: if passed either null or underined immediate return
+- AC-1847
+
 * Fri Dec 18 2015 Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>,  0.4-13.4
 - Fixed listeneres bug with rare incorrect redis value
 - Kuberdock net plugin with pods isolation and public ip

@@ -483,13 +483,15 @@ class CephStorage(PersistentStorage):
         if self._is_mapped(drive):      # If defice is already mapped it means
             return None                 # it's in use. Exit
         dev = self._map_drive(drive)    # mapping drive
-        if self._get_fs(dev):           # if drive already has filesystem
-            return None                 # whatever it be return
-        self._create_fs(dev, fs)        # make fs
-        # sometimes immediate unmap after mkfs returns 16 exit code,
-        # to prevent this just wait a little
-        time.sleep(5)
-        self._unmap_drive(dev)
+        try:
+            if self._get_fs(dev):           # if drive already has filesystem
+                return None                 # whatever it be return
+            self._create_fs(dev, fs)        # make fs
+            # sometimes immediate unmap after mkfs returns 16 exit code,
+            # to prevent this just wait a little
+            time.sleep(5)
+        finally:
+            self._unmap_drive(dev)
         return None
 
     def _create_fs(self, device, fs=DEFAULT_FILESYSTEM):
@@ -561,8 +563,9 @@ class CephStorage(PersistentStorage):
                 'rbd create {0} --size={1}'.format(name, mb_size)
             )
         except NodeCommandError:
-            current_app.logger.exception(
-                u'Failed to create CEPH drive "%s", size = %s',
+            current_app.logger.warning(
+                u'Failed to create CEPH drive "%s", size = %s. '
+                u'Possibly it already exists',
                 name, size)
             return 1
         self.start_stat(size, sys_drive_name=name)

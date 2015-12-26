@@ -525,15 +525,24 @@ do_and_log systemctl restart etcd
 
 
 
+# Systemd to sysvinit backwards compatibility has been broken
+# after updating to centos 7.2.
+# so we need to create an influxdb unit-file at the moment
+cat > /etc/systemd/system/influxdb.service << EOF
+[Unit]
+Description=InfluxDB Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/influxdb -pidfile /opt/influxdb/shared/influxdb.pid -config /opt/influxdb/shared/config.toml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
 # Start early or curl connection refused
-influx=$(systemctl list-unit-files --type=service --no-pager | grep influx)
-if [ -n "$influx" ];then
-    do_and_log systemctl enable influxdb
-    do_and_log systemctl restart influxdb
-else
-    do_and_log /sbin/chkconfig influxdb on
-    do_and_log /etc/init.d/influxdb restart
-fi
+do_and_log systemctl reenable influxdb
+do_and_log systemctl restart influxdb
 
 
 
@@ -814,6 +823,11 @@ do_cleanup()
     for i in flanneld redis influxdb etcd;do
         log_it systemctl stop $i
     done
+
+    # '\n' because curl is a previous command
+    log_it echo -e "\nDeleting custom influxdb.service..."
+    log_it rm /etc/systemd/system/influxdb.service
+    log_it systemctl daemon-reload
 
     log_it echo "Trying to remove postgres role and database..."
     su -c 'dropdb kuberdock && dropuser kuberdock' - postgres

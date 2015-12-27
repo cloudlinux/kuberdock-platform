@@ -222,6 +222,7 @@ env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
 protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
+kube_type_schema = {'type': 'integer', 'coerce': int}
 new_pod_schema = {
     'name': pod_name_schema,
     'clusterIP': {
@@ -230,11 +231,8 @@ new_pod_schema = {
         'internal_only': True,
     },
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
-    'kube_type': {
-        'type': 'integer',
-        'required': True,
-        'kube_type_exists': True,
-    },
+    'kube_type': dict(kube_type_schema, kube_type_in_user_package=True,
+                      kube_type_exists=True, required=True),
     'kuberdock_template_id': {
         'type': 'integer',
         'min': 0,
@@ -662,6 +660,17 @@ class V(cerberus.Validator):
                 self._error(field, "Pod can't be created, because cluster has "
                                    "no nodes with such kube type, please "
                                    "contact administrator.")
+
+    def _validate_kube_type_in_user_package(self, exists, field, value):
+        if exists and self.user:
+            if self.user == KUBERDOCK_INTERNAL_USER and \
+                    value == Kube.get_internal_service_kube_type():
+                return
+            package = User.get(self.user).package
+            if value not in [k.kube_id for k in package.kubes]:
+                self._error(field, "Pod can't be created, because your package "
+                                   "\"{0}\" does not include kube type with id "
+                                   "\"{1}\"".format(package.name, value))
 
     def _validate_pd_backend_required(self, pd_backend_required, field, value):
         if pd_backend_required and not (AWS or CEPH):

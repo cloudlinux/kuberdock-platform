@@ -78,7 +78,7 @@ define(['pods_app/app',
                 return {
                     kubes: kubes ? kubes : 0,
                     startedAt: typeof(startedAt) == 'undefined' ? 'Stopped' :
-                            utils.localizeDatetime(startedAt),
+                            utils.localizePodDatetime(startedAt),
                     updateIsAvailable: this.model.updateIsAvailable,
                 }
             },
@@ -394,8 +394,8 @@ define(['pods_app/app',
                             'Collecting data... plot will be dispayed in a few minutes.',
                         axes: {
                             xaxis: {
-                                min: utils.localizeDatetime(new Date(+new Date() - 1000*60*20)),
-                                max: utils.localizeDatetime(new Date()),
+                                min: utils.localizePodDatetime(new Date(+new Date() - 1000*60*20)),
+                                max: utils.localizePodDatetime(new Date()),
                                 tickOptions: {formatString:'%H:%M'},
                                 tickInterval: '5 minutes',
                             },
@@ -420,7 +420,7 @@ define(['pods_app/app',
                 this.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
                         points[i].push([
-                            utils.localizeDatetime(record[0]),
+                            utils.localizePodDatetime(record[0]),
                             record[i+1]
                         ]);
                     }

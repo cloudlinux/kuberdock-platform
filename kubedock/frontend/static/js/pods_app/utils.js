@@ -74,7 +74,10 @@ define(['moment-timezone', 'numeral'], function (moment) {
         }, 500);
     };
 
-    this.localizeDatetime = function(dt, tz, formatString){
+    // Quick fix. Name localizeDatetime conflicts with upper utils function.
+    // TODO: replace usage of this function in views/pod_item.js with upper
+    // utils module.
+    this.localizePodDatetime = function(dt, tz, formatString){
         formatString = formatString || 'YYYY-MM-DD HH:mm:ss';
         if (tz === undefined && typeof userProfile != 'undefined') {
             tz = userProfile.timezone;

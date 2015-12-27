@@ -6,7 +6,7 @@
         <span class="removePods">Delete</span>
     </div>
     <table id="podlist-table" class="table">
-        <thead>
+        <thead class="<%- checked ? 'pods-checked' : '' %>">
             <tr>
                 <th class="checkboxes">
                     <label class="custom">

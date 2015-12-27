@@ -6,6 +6,14 @@
         &.min-opacity{
             .opacity(0);
         }
+        &.pods-checked{
+            th {
+                .opacity(0);
+                &.checkboxes{
+                    .opacity(1);
+                }
+            }
+        }
         tr{
             border-color: transparent;
             th{
@@ -417,12 +425,12 @@
 }
 .podsControl{
     z-index: 1;
-    width: 95%;
+    width: 93%;
     height: 50px;
     display: none;
+    margin-left: 50px;
     line-height: 52px;
     position: absolute;
-    right: 0px;
     background-color: #F8F8F8;
     .count{
         color: #1d1d1d;

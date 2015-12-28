@@ -38,6 +38,6 @@ class PredefinedApp(BaseModelMixin, db.Model):
             'origin': self.origin,
             'template': self.template,
             'user_id': self.user_id,
-            'cteated': self.created,
+            'created': self.created,
             'modified': self.modified,
         }

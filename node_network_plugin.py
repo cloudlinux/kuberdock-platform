@@ -168,10 +168,10 @@ def handle_public_ip(action, public_ip, pod_ip, iface, namespace, pod_spec_file)
             if not is_public:
                 continue
             container_port = port_spec.get('containerPort')
-            proto = port_spec.get('protocol')
-            if not container_port or not proto:
+            if not container_port:
                 glog('Something went wrong and bad spec of pod has come. Skip')
                 return 5
+            proto = port_spec.get('protocol', 'tcp')
             host_port = port_spec.get('hostPort', None) or container_port
             if action == 'add':
                 if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, host_port, pod_ip, container_port).split(' ')):

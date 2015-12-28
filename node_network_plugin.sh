@@ -186,7 +186,7 @@ case "$ACTION" in
     # Workaround 2
     if [ -d "$DATA_DIR" ];then  # Protection from absent teardown
       log "Forced teardown"
-      OLD_POD="$(ls -1 $DATA_DIR)"
+      OLD_POD="$(ls -1 $DATA_DIR | head -1)"
       source "$DATA_DIR/$OLD_POD"
       teardown_pod
       rm -rf "$DATA_DIR/$OLD_POD"

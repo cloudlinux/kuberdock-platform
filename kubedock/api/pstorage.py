@@ -69,11 +69,5 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         if cls().delete_by_id(device_id) != 0:
             raise APIError("Couldn't delete drive.", type='DeleteDriveError')
 
-        try:
-            db.session.delete(pd)
-            db.session.commit()
-        except Exception:
-            raise APIError("Couldn't delete persistent disk.", 500, 'DeletePDError')
-
 
 register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id', strict_slashes=False)

@@ -1,0 +1,1 @@
+<span class="message-description"><%- description %></span><span class="message-target"><%- target %></span>

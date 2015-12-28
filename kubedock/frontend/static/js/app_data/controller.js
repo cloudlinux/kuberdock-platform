@@ -962,6 +962,46 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 App.contents.show(layoutView);
             });
         },
+        
+        showNotifications: function(){
+            require(['app_data/misc/views'], function(Views){
+                App.getNotificationCollection().done(function(notificationCollection){
+                    if (notificationCollection.length) {
+                        var notificationView = new Views.MessageList({collection: notificationCollection});
+                        App.message.show(notificationView);
+                    }
+                });
+            });
+        },
+        
+        attachNotification: function(data){
+            var that = this;
+            require(['app_data/misc/views'], function(Views){
+                App.getNotificationCollection().done(function(notificationCollection){
+                    notificationCollection.add(data);
+                    var notificationView = new Views.MessageList({collection: notificationCollection});
+                    App.message.show(notificationView);
+                });
+            });
+        },
+        
+        detachNotification: function(data){
+            if (!App.message.hasView()) { return; }
+            var that = this;
+            require(['app_data/misc/views'], function(Views){
+                App.getNotificationCollection().done(function(notificationCollection){
+                    'use strict';
+                    notificationCollection.remove(data.id);
+                    if (notificationCollection.length) {
+                        var notificationView = new Views.MessageList({collection: notificationCollection});
+                        App.message.show(notificationView);
+                    }
+                    else {
+                        App.message.empty();
+                    }
+                });
+            });
+        }
     });
     return controller;
 });

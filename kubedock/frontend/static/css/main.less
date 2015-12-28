@@ -1006,6 +1006,7 @@ body{
     @import "ippool.less";
     @import "settings.less";
     @import "predefined-app.less";
+    @import "message.less";
 
     /* edit form */
 
@@ -1452,10 +1453,7 @@ body{
     /* end select styles */
 }
 @-moz-document url-prefix() {
-  body .podsControl/*, body .containersControl*/{
-    height: 49px;
-  }
-/*  body #imagelist-table thead tr.main-table-head.min-opacity th{
-    height: 49px
-  }*/
+    body .podsControl{
+        height: 49px;
+    }
 }

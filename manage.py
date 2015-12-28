@@ -18,6 +18,7 @@ from kubedock.billing.models import Package, Kube, PackageKube
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
 from kubedock.system_settings.models import SystemSettings
+from kubedock.notifications.models import Notification
 from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import (
     KUBERDOCK_INTERNAL_USER, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
@@ -96,12 +97,16 @@ class Creator(Command):
                         description='maximum capacity of a user container persistent disk in GB',
                         placeholder = 'Enter value to limit PD size')
 
-        dms = SystemSettings(name='default_smtp_server',
-                    label='Default SMTP server',
-                    description='Default SMTP server',
-                    placeholder = 'Default SMTP server')
 
-        db.session.add_all([bla, pds, dms])
+        db.session.add_all([bla, pds])
+
+        m1 = Notification(type='warning',
+                         message='LICENSE_EXPIRED',
+                         description='Your license has been expired.')
+        m2 = Notification(type='warning',
+                         message='NO_LICENSE',
+                         description='License not found.')
+        db.session.add_all([m1, m2])
 
         db.session.commit()
 

@@ -204,8 +204,6 @@ check_status
 # 5. configure Node config
 echo "Configuring kubernetes..."
 sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
-# TODO maybe unneeded and insecure:
-#sed -i "/^KUBELET_ADDRESS/ {s/127.0.0.1/0.0.0.0/}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s"|}' $KUBERNETES_CONF_DIR/kubelet
@@ -213,14 +211,7 @@ sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile"|}' $K
 sed -i '/^KUBE_ALLOW_PRIV/ {s/--allow_privileged=false/--allow_privileged=true/}' $KUBERNETES_CONF_DIR/config
 check_status
 
-OLD_KUBELET_PATH=/usr/lib/systemd/system/kubelet.service
-NEW_KUBELET_PATH=/etc/systemd/system/kubelet.service
-if [ -e $OLD_KUBELET_PATH ];then
-    grep -q Type=idle $OLD_KUBELET_PATH
-    if [ $? -ne 0 ];then
-        cp -f $OLD_KUBELET_PATH $NEW_KUBELET_PATH && sed -i '/Requires=docker.service/a Type=idle' $NEW_KUBELET_PATH
-    fi
-fi
+
 
 # 6. configure Flannel
 cat > /etc/sysconfig/flanneld << EOF

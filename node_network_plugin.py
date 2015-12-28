@@ -1,9 +1,12 @@
 #!/usr/bin/env python2
 
+from __future__ import print_function
+
 import re
+import os
+import sys
 import json
 import subprocess
-import sys
 from ConfigParser import ConfigParser
 from StringIO import StringIO
 
@@ -14,7 +17,14 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 PUBLIC_IP_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t nat -d {1} ' \
-                 '-p {2} --dport {3} -j DNAT --to-destination {4}:{3}'
+                 '-p {2} --dport {3} -j DNAT --to-destination {4}:{5}'
+
+# Possibly to stderr if in daemon mode or to our log-file
+LOG_TO = sys.stdout
+
+
+def glog(*args):
+    print(*args, file=LOG_TO)
 
 
 class ETCD(object):
@@ -127,42 +137,47 @@ def update_ipset():
     _update_ipset('kuberdock_nodes', nodes_ips)
 
 
-def get_ports_info(pod_uid):
-    try:
-        s = subprocess.check_output(['iptables', '-w', '-L', '-nt', 'nat'])
-    except subprocess.CalledProcessError as e:
-        print >> sys.stderr, e
-        return []
-    patt = re.compile(r'^DNAT .*/\* {0}.*/.*-public.* \*/ (.+) dpt:(\d+) .*$'
-                      .format(pod_uid), re.MULTILINE)
-    res = patt.findall(s.strip('\n'))
-    return res
-
-
 def modify_ip(cmd, ip, iface):
     if subprocess.call(['ip', 'addr', cmd, ip + '/32', 'dev', iface]):
-        print >> sys.stderr, 'Error {0} ip: {1} on iface: {2}'\
-            .format(cmd, ip, iface)
+        glog('Error {0} ip: {1} on iface: {2}'.format(cmd, ip, iface))
         return 1
     if cmd == 'add':
         subprocess.call(['arping', '-I', iface, '-A', ip, '-c', '10', '-w', '1'])
     return 0
 
 
-def handle_public_ip(action, public_ip, pod_ip, iface, namespace):
+def handle_public_ip(action, public_ip, pod_ip, iface, namespace, pod_spec_file):
     if action not in ('add', 'del',):
-        print >> sys.stderr, 'Unknown action for public ip. Skip call.'
+        glog('Unknown action for public ip. Skip call.')
         return 1
-    ports = get_ports_info(namespace)
-    if not ports:
+    if not os.path.exists(pod_spec_file):
+        glog('Pod spec file is not exists. Skip call')
         return 2
-    if action == 'add':
-        for proto, port in ports:
-            if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, port, pod_ip, port).split(' ')):
-                subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, port, pod_ip, port).split(' '))
-    elif action == 'del':
-        for proto, port in ports:
-            subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, port, pod_ip, port).split(' '))
+    with open(pod_spec_file) as f:
+        try:
+            ports_s = json.load(f)['metadata']['annotations']['kuberdock-pod-ports']
+            ports = json.loads(ports_s)
+        except (TypeError, ValueError, KeyError) as e:
+            glog('Error loading ports from spec "{0}" Skip call.'.format(e))
+            return 3
+    if not ports:
+        return 4
+    for container in ports:
+        for port_spec in container:
+            is_public = port_spec.get('isPublic', False)
+            if not is_public:
+                continue
+            container_port = port_spec.get('containerPort')
+            proto = port_spec.get('protocol')
+            if not container_port or not proto:
+                glog('Something went wrong and bad spec of pod has come. Skip')
+                return 5
+            host_port = port_spec.get('hostPort', None) or container_port
+            if action == 'add':
+                if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, host_port, pod_ip, container_port).split(' ')):
+                    subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, host_port, pod_ip, container_port).split(' '))
+            elif action == 'del':
+                subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, host_port, pod_ip, container_port).split(' '))
     modify_ip(action, public_ip, iface)
     return 0
 
@@ -186,7 +201,7 @@ def init():
     update_ipset()
 
 
-def _watcher(callback, args=None, path=None):
+def watch(callback, args=None, path=None):
     if args is None:
         args = ()
     etcd = ETCD(path)
@@ -197,11 +212,6 @@ def _watcher(callback, args=None, path=None):
             break
         else:
             callback(*args)
-
-
-# TODO useless abstraction
-def watch():
-    _watcher(update_ipset)
 
 
 def main(action, *args):
@@ -216,7 +226,7 @@ def main(action, *args):
     elif action == 'update':
         update_ipset()
     elif action == 'watch':
-        watch()
+        watch(update_ipset)
 
 
 if __name__ == '__main__':

@@ -148,10 +148,15 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             path = os.path.join(NODE_LOCAL_STORAGE_PREFIX, self.id, volume['name'])
         volume['hostPath'] = {'path': path}
 
+    # We can't use pod's ports from spec because we strip hostPort from them
+    def _dump_ports(self):
+        return json.dumps([c.get('ports', []) for c in self.containers])
+
     def prepare(self):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
+        # TODO why self.owner is unicode string here? why not db obj?
         owner = User.filter_by(username=self.owner).one()
         kuberdock_resolve = getattr(self, 'kuberdock_resolve', '')
         config = {
@@ -173,12 +178,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     "metadata": {
                         "labels": {
                             "kuberdock-pod-uid": self.id,
-                            # TODO we must generate uid per user and use it for all user's pods
-                            # TODO why owner is unicode here? why not db obj
                             "kuberdock-user-uid": str(owner.id),
                         },
                         "annotations": {
                             "kuberdock_resolve": kuberdock_resolve,
+                            "kuberdock-pod-ports": self._dump_ports(),
                         }
                     },
                     "spec": {

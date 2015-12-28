@@ -137,11 +137,12 @@ function teardown_pod {
     del_rules "$POD_IP" "$USER_ID"
 
     if [ "$POD_PUBLIC_IP" != "" ];then
-      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE
+      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $DATA_INFO-spec
     fi
 
     etcd_ DELETE "$USER_ID" "$POD_IP"
     rm -rf "$DATA_INFO"
+    rm -rf "$DATA_INFO-spec"
     if [ ! $(ls "$DATA_DIR") ];then   # is empty
       rm -rf "$DATA_DIR"
     fi
@@ -202,10 +203,11 @@ case "$ACTION" in
     mkdir -p "$DATA_DIR"
     echo "POD_IP=$POD_IP" > "$DATA_INFO"
     echo "USER_ID=$USER_ID" >> "$DATA_INFO"
+    echo "$POD_SPEC" > "$DATA_INFO-spec"
 
     if [ "$POD_PUBLIC_IP" != "" ];then
       echo "POD_PUBLIC_IP=$POD_PUBLIC_IP" >> "$DATA_INFO"
-      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE
+      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $DATA_INFO-spec
     fi
 
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"

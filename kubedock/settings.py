@@ -1,6 +1,8 @@
 import os
 from datetime import timedelta
 
+from celery.schedules import crontab
+
 DEFAULT_TIMEZONE = 'UTC'
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -83,6 +85,11 @@ CELERYBEAT_SCHEDULE = {
         'task': 'kubedock.tasks.fix_pods_timeline',
         'schedule': timedelta(minutes=5)
     },
+    # twice per day clean up persistent drives for deleted users
+    'clean-deleted-users-persistent-drives': {
+        'task': 'kubedock.tasks.clean_drives_for_deleted_users',
+        'schedule': crontab(hour='1,13')
+    }
     #'send-stat': {
     #    'task': 'kubedock.tasks.send_stat',
     #    'schedule': timedelta(minutes=1)

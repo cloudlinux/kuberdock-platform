@@ -1,15 +1,18 @@
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
+from flask import current_app
+
 from ..core import db
 from ..utils import APIError, atomic
 from ..validation import UserValidator
 from ..billing.models import Package
-from ..pods.models import Pod
+from ..pods.models import Pod, PersistentDisk
 from ..rbac.models import Role
 from ..users.models import User, UserActivity
 from ..users.utils import enrich_tz_with_offset
 from .podcollection import PodCollection, POD_STATUSES
 from .pstorage import get_storage_class
+from ..kd_celery import celery
 
 
 class ResourceReleaseError(APIError):
@@ -141,23 +144,20 @@ class UserCollection(object):
         pod_collection = PodCollection(user)
         for pod in pod_collection.get(as_json=False):
             pod_collection.delete(pod['id'])
-        # now, when we deleted all pods, events will rape db session a little bit
-        # get new, clean user instance to prevent a lot of various SA errors
+        # Now, when we have deleted all pods, events will rape db session a
+        # little bit.
+        # Get new, clean user instance to prevent a lot of various SA errors
         user = User.get(uid)
 
-        for pd in user.persistent_disks:
-            pd_cls = get_storage_class()
-            if pd_cls:
-                rv = pd_cls().delete_by_id(pd.id)
-                if not force and rv != 0:
-                    raise ResourceReleaseError(u'Persistent Disk "{0}" is busy or '
-                                               u'does not exist.'.format(pd.name))
-            try:
-                pd.delete()
-            except Exception:
-                if not force:
-                    raise ResourceReleaseError(u'Couldn\'t delete Persistent Disk '
-                                               u'"{1}" from db'.format(pd.name))
+        # Add some delay for deleting drives to allow kubernetes unmap drives
+        # after a pod was deleted. Also in some cases this delay is not enough,
+        # for example DBMS in container may save data to PD for a long time.
+        # So there is a regular procedure to clean such undeleted drives
+        # tasks.clean_drives_for_deleted_users.
+        delete_persistent_drives.apply_async(
+            ([pd.id for pd in user.persistent_disks],),
+            countdown=10
+        )
 
         user.deleted = True
         try:
@@ -221,3 +221,36 @@ class UserCollection(object):
         pod_collection = PodCollection(user)
         for pod in pod_collection.get(as_json=False):
             pod_collection._return_public_ip(pod['id'])
+
+
+
+@celery.task()
+def delete_persistent_drives(pd_ids):
+    if not pd_ids:
+        return
+    pd_cls = get_storage_class()
+    to_delete = []
+    if pd_cls:
+        for pd_id in pd_ids:
+            rv = pd_cls().delete_by_id(pd_id)
+            if rv != 0:
+                current_app.logger.warning(u'Persistent Disk id:"{0}" is busy or '
+                                           u'does not exist.'.format(pd_id))
+                continue
+            to_delete.append(pd_id)
+    else:
+        to_delete = pd_ids
+
+    if not to_delete:
+        return
+
+    try:
+        db.session.query(PersistentDisk).filter(
+            PersistentDisk.id.in_(to_delete)
+        ).delete(synchronize_session=False)
+        db.session.commit()
+    except:
+        current_app.logger.exception(
+            u'Failed to delete Persistent Disks from DB: "%s" from db',
+            to_delete
+        )

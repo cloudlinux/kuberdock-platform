@@ -49,7 +49,7 @@ def search_image():
     repo_url = _get_repo_url(request.args)
 
     check_image_search(search_key)
-    query_key = '{0}?{1}:{2}'.format(repo_url, search_key, page)
+    query_key = u'{0}?{1}:{2}'.format(repo_url, search_key, page)
     query = db.session.query(ImageCache).get(query_key)
 
     # if query is saved in DB and it's not older than 1 day return it

@@ -111,6 +111,8 @@ def process_pod(pod, rc, service):
         for c in containers:
             for p in c.get('ports', []):
                 p.pop('name', '')
+                if 'podPort' in p:
+                    p['hostPort'] = p.pop('podPort')
         new_pod['containers'] = containers
 
     if 'volumes' in spec_body:

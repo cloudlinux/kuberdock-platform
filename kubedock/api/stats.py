@@ -90,9 +90,6 @@ def unit_stat():
                 disk_metrics[key]['points'].append(value)
         metrics.extend(disk_metrics.values())
 
-    if node is None and uuid is not None:
-        metrics.pop()  # FIXME: Network monitoring is not working, docker 1.6.2 bug
-
     return jsonify({
         'status': 'OK',
         'data': metrics})

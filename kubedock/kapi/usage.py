@@ -109,8 +109,8 @@ def update_containers_state(pod_id, containers, deleted=False):
 
             # fix overlaping
             try:
-                prev_cs = ContainerState.query.filter(
-                    ContainerState.pod_state.has(pod_id=pod_id),
+                prev_cs = ContainerState.query.join(PodState).filter(
+                    PodState.pod_id == pod_id,
                     ContainerState.container_name == container_name,
                     ContainerState.start_time < start,
                     db.or_(ContainerState.end_time > start,

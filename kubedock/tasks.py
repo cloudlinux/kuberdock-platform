@@ -345,8 +345,8 @@ def fix_pods_timeline():
     now = datetime.utcnow().replace(microsecond=0)
 
     for cs in css:
-        cs_next = ContainerState.query.filter(
-            ContainerState.pod_state.has(pod_id=cs.pod_state.pod_id),
+        cs_next = ContainerState.query.join(PodState).filter(
+            PodState.pod_id == cs.pod_state.pod_id,
             ContainerState.container_name == cs.container_name,
             ContainerState.start_time > cs.start_time,
         ).order_by(ContainerState.start_time).first()

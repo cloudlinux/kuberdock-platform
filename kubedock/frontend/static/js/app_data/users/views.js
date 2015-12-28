@@ -817,7 +817,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     that.model.save(data, {wait: true, patch: true})
                         .fail(utils.notifyWindow)
                         .done(function(){
-                            App.navigate('users/profile/' + that.model.id + '/general/',
+                            App.navigate('users/profile/' + that.model.id + '/general',
                                          {trigger: true});
                             utils.notifyWindow(
                                 'Changes to user "' + that.model.get('username') +

@@ -11,7 +11,8 @@ import warnings
 from ..image.image import Image
 from ..helper import KubeQuery, PrintOut, echo
 from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
-    IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH, PREDEFINED_APPS_PATH)
+    IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH, PREDEFINED_APPS_PATH,
+    REGISTER_PATH)
 
 
 # Some common error messages
@@ -268,6 +269,12 @@ class KubeCtl(object):
                 except UnicodeWarning:
                     if i['name'].encode('UTF-8') == self.name:
                         return i
+
+    @echo
+    def register(self):
+        res = self.query.post(REGISTER_PATH, '', True)
+        if res.get('status').lower() != 'ok':
+            raise SystemExit(str(res))
 
     def get(self):
         """

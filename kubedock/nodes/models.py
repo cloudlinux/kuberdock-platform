@@ -140,3 +140,15 @@ class NodeFlagNames(object):
     """
     # Ceph client is installed on the node
     CEPH_INSTALLED = 'ceph_installed'
+
+
+class RegisteredHost(db.Model):
+    __tablename__ = 'registered_hosts'
+    id = db.Column(db.Integer, primary_key=True, nullable=False, autoincrement=True)
+    host = db.Column(db.String, nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=True)
+    time_stamp = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return "<RegisteredHost(host='{0}', description='{1}')>".format(
+            self.host, self.description)

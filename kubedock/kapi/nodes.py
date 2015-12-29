@@ -25,6 +25,7 @@ from ..settings import (
     SSH_KEY_FILENAME, ERROR_TOKEN)
 from ..validation import check_internal_pod_data
 from .podcollection import PodCollection
+from .licensing import is_valid as license_valid
 from .. import tasks
 
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
@@ -404,6 +405,8 @@ def _get_node_condition(x):
 
 
 def _deploy_node(dbnode, do_deploy, with_testing):
+    if not license_valid():
+        raise APIError("Action forbidden. Please check your license")
     nodes = [key for key in Node.get_ip_to_hostame_map() if key != dbnode.ip]
     if do_deploy:
         tasks.add_new_node.delay(dbnode.id, with_testing, nodes)

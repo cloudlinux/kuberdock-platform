@@ -7,6 +7,7 @@ from random import choice
 from datetime import datetime
 import uuid
 import json
+import subprocess
 
 from kubedock.api import create_app
 from kubedock.kapi.nodes import create_node
@@ -27,6 +28,7 @@ from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
 from kubedock.updates.kuberdock_upgrade import get_available_updates
 from kubedock.updates.helpers import get_maintenance
 from kubedock import tasks
+from kubedock.kapi import licensing
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.script.commands import InvalidCommand
@@ -263,6 +265,18 @@ class NodeInfoCmd(Command):
         print json.dumps(node.to_dict())
 
 
+class AuthKey(Command):
+    """Returns auth key. Generates it if not created yet"""
+
+    def run(self):
+        try:
+            key = licensing.get_auth_key()
+        except APIError:
+            key = licensing.generate_auth_key()
+            subprocess.call(['chown', 'nginx', licensing.LICENSE_PATH])
+        print key
+
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -283,6 +297,7 @@ manager.add_command('add_node', NodeManager())
 manager.add_command('reset-password', ResetPass())
 manager.add_command('node-flag', NodeFlagCmd())
 manager.add_command('node-info', NodeInfoCmd())
+manager.add_command('auth-key', AuthKey())
 
 
 if __name__ == '__main__':

@@ -603,7 +603,7 @@ cd $KUBERDOCK_DIR
 ADMIN_PASSWORD="CHANGE_ME"
 ADMIN_PASSWORD=$(tr -dc 'A-Za-z0-9-_*' < /dev/urandom | head -c10)
 do_and_log python manage.py createdb $ADMIN_PASSWORD
-
+do_and_log python manage.py auth-key 1> /dev/null
 
 
 #11. Start services

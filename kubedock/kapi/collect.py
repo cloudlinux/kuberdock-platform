@@ -12,7 +12,7 @@ import json
 from flask import current_app
 import ipaddress
 
-from kubedock.core import db, ssh_connect
+from kubedock.core import db, ssh_connect, ConnectionPool
 from kubedock.settings import (
     AWS, ID_PATH, STAT_URL, CEPH, KUBERDOCK_INTERNAL_USER)
 from kubedock.kapi.users import UserCollection
@@ -23,6 +23,7 @@ from kubedock.usage.models import PersistentDiskState, PodState
 from kubedock.pods.models import Pod, IPPool, PodIP
 from kubedock.users.models import User
 from kubedock.predefined_apps.models import PredefinedApp
+from kubedock.kapi import licensing
 
 
 def get_users_number(role='User'):
@@ -58,7 +59,6 @@ def extend_nodes(nodes):
     fmt = 'http://{0}:4194/api/v1.3/machine'
     cadvisor_key_map = {
         'filesystems': 'disks',
-        'num_cores': 'cores',
         'cpu_frequency_khz': 'clock',
         'machine_id': 'node-id'
     }
@@ -83,6 +83,7 @@ def extend_nodes(nodes):
         if o.channel.recv_exit_status() == 0:
             node['kuberdock'] = o.read()
 
+        node['cores'] = get_node_cores_number(ssh)
         node['kernel'] = get_node_kernel_version(ssh)
         node['cpu'] = get_node_cpu_usage(ssh)
         extend_node_memory_info(ssh, node)
@@ -90,6 +91,19 @@ def extend_nodes(nodes):
         node['docker'] = get_node_package_version(ssh, 'docker')
         node['la'] = get_node_load_avg(ssh)
     return nodes
+
+
+def get_node_cores_number(ssh):
+    _, o, _ = ssh.exec_command(
+        'nproc --all'
+    )
+    res = 0
+    if o.channel.recv_exit_status() == 0:
+        try:
+            res = int(o.read())
+        except:
+            pass
+    return res
 
 
 def get_node_package_version(ssh, package):
@@ -256,11 +270,16 @@ def get_persistent_volume_info():
 
 
 def get_pods_info():
+    internal_user_id = db.session.query(User.id).filter(
+        User.username == KUBERDOCK_INTERNAL_USER
+    ).first().id
     total_count = db.session.query(db.func.count(Pod.id)).filter(
-        Pod.status != 'deleted'
+        Pod.status != 'deleted',
+        Pod.owner_id != internal_user_id,
     ).scalar()
     running_count = db.session.query(db.func.count(PodState.id)).filter(
-        PodState.end_time == None
+        PodState.end_time == None,
+        Pod.owner_id != internal_user_id,
     ).scalar()
     return {
         'running': running_count,
@@ -306,10 +325,11 @@ def get_containers_summary(top_number=10):
 
 def collect(patt=re.compile(r"""-.*$""")):
     data = {}
+    license_data = licensing.get_license_info() or {}
     data['nodes'] = extend_nodes(fetch_nodes())
     for pkg in 'kubernetes-master', 'kuberdock':
         data[patt.sub('', pkg)] = get_version(pkg)
-    data['installation-id'] = get_installation_id()
+    data['installation-id'] = license_data.get('installationID', '')
     data['storage'] = get_storage()
     data['users'] = get_users_number()
     data['admins'] = get_users_number(role='Admin')
@@ -317,9 +337,7 @@ def collect(patt=re.compile(r"""-.*$""")):
     data['updates'] = get_updates()
 
     data['platform'] = get_current_platform()
-    # TODO: replace with real authentication key when some licensing schema will
-    # be implemented.
-    data['auth-key'] = 'notimplementedyet'
+    data['auth-key'] = license_data.get('auth_key', '')
     if data['nodes']:
         data['docker'] = data['nodes'][0]['docker']
     else:
@@ -331,6 +349,7 @@ def collect(patt=re.compile(r"""-.*$""")):
     data['top-10-containers'] = get_containers_summary()
     return data
 
+
 def send(data):
     r = requests.post(
         STAT_URL,
@@ -339,14 +358,30 @@ def send(data):
     )
     #TODO: process licensing information in server response when some licensing
     # schema will be implemented
+    answer = {'status': 'ERROR'}
     if r.status_code != 200:
-        current_app.logger.warn('could not upload stat')
+        msg = 'Failed to send request to CLN server.'
+        current_app.logger.exception(msg + ' %s: %s', r.status_code, r.text)
+        answer['data'] = msg
     else:
         try:
             res = r.json()
         except:
-            current_app.logger.exception('Invalid answer from cln')
-        if not res.get('success'):
-            current_app.logger.warn(
-                'Failed to upload stat. Answer: {}'.format(res)
-            )
+            msg = 'Invalid answer from CLN.'
+            current_app.logger.exception(msg + ' %s', r.text)
+            answer['data'] = msg
+        else:
+            if not res.get('success'):
+                msg = 'Failed to upload stat. Answer: {}'.format(res)
+                current_app.logger.warn(msg)
+                answer['data'] = msg
+            else:
+                answer['status'] = 'OK'
+                answer['data'] = 'License information was updated successfully'
+                licensing.update_license_data(res.get('data', {}))
+    redis = ConnectionPool.get_connection()
+    try:
+        redis.set('KDCOLLECTION', json.dumps(data))
+    except:
+        pass
+    return answer

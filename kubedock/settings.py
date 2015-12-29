@@ -70,7 +70,7 @@ DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 DOCKER_IMG_CACHE_TIMEOUT = timedelta(hours=4)
 
 ID_PATH = '/var/lib/kuberdock/installation-id'
-STAT_URL = 'https://cln.cloudlinux.com/api/cln/event/kb/checkin'
+STAT_URL = 'https://cln.cloudlinux.com/api/kd/validate.json'
 
 CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {
@@ -89,11 +89,11 @@ CELERYBEAT_SCHEDULE = {
     'clean-deleted-users-persistent-drives': {
         'task': 'kubedock.tasks.clean_drives_for_deleted_users',
         'schedule': crontab(hour='1,13')
+    },
+    'send-stat': {
+        'task': 'kubedock.tasks.send_stat',
+        'schedule': timedelta(hours=24)
     }
-    #'send-stat': {
-    #    'task': 'kubedock.tasks.send_stat',
-    #    'schedule': timedelta(minutes=1)
-    #}
 }
 
 ONLINE_LAST_MINUTES = 5

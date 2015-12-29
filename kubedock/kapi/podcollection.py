@@ -9,6 +9,7 @@ from .pod import Pod
 from .images import Image
 from .pstorage import get_storage_class_by_volume_info
 from .helpers import KubeQuery, ModelQuery, Utilities
+from .licensing import is_valid as license_valid
 from ..core import db
 from ..billing import repr_limits, Kube
 from ..pods.models import PersistentDisk, PodIP, IPPool, Pod as DBPod
@@ -530,6 +531,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
+        if not license_valid():
+            raise APIError("Action forbidden. Please check your license")
         if pod.status == POD_STATUSES.running or \
            pod.status == POD_STATUSES.pending:
             raise APIError("Pod is not stopped, we can't run it")

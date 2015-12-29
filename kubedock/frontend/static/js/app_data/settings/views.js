@@ -77,6 +77,9 @@ define(['app_data/app', 'marionette',
             this.ui.peditable.editable({
                 type: 'text',
                 mode: 'inline',
+                pk: 1,
+                name: 'installationID',
+                url: '/api/pricing/license/installation_id',
                 success: function(response, newValue) {
                     that.model.set({name: newValue});
                     $.notify('New instalattion ID "' + newValue + '" is saved', {
@@ -84,6 +87,15 @@ define(['app_data/app', 'marionette',
                         clickToHide: true,
                         globalPosition: 'bottom left',
                         className: 'success',
+                    });
+                },
+                error: function(response, newValue) {
+                    that.model.set({name: newValue});
+                    $.notify(response.responseText, {
+                        autoHideDelay: 5000,
+                        clickToHide: true,
+                        globalPosition: 'bottom left',
+                        className: 'error',
                     });
                 },
             });

@@ -1,15 +1,18 @@
 from flask import Blueprint, current_app
 from flask.views import MethodView
+import json
 
-from ..core import db
+from ..core import db, ConnectionPool
 from ..rbac import check_permission
 from ..decorators import login_required_or_basic_or_token
-from ..utils import KubeUtils, register_api, atomic
+from ..utils import KubeUtils, register_api, atomic, all_request_params
 from ..users import User
 from ..validation import check_pricing_api, package_schema, kube_schema, packagekube_schema
 from ..billing.models import Package, Kube, PackageKube
 from ..pods.models import Pod
 from . import APIError
+from ..kapi import licensing
+from ..kapi import collect
 
 
 pricing = Blueprint('pricing', __name__, url_prefix='/pricing')
@@ -316,28 +319,94 @@ def _remove_is_default_kube_flags():
     Kube.query.update({Kube.is_default: None}, synchronize_session='fetch')
 
 
-
 @pricing.route('/license', methods=['GET'], strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
 @check_permission('read', 'system_settings')
 def get_license():
-    return {
-        'status': 'active',
-        'expiration': '2020-12-31',
-        'type': 'standard',
-        'installationID': '1234567890abcdef',
-        'platform': 'generic',
-        'storage': 'ceph',
-        'version':{
-            'KuberDock': '0.4-13-4',
-            'kubernetes': '1.0.3',
-            'docker': '1.6.2'},
+    data = licensing.get_license_info() or {}
+    result = {}
+    redis = ConnectionPool.get_connection()
+
+    installation_data = None
+    try:
+        installation_data = json.loads(redis.get('KDCOLLECTION'))
+    except:
+        pass
+
+    if not installation_data:
+        installation_data = collect.collect()
+        try:
+            redis.set('KDCOLLECTION', json.dumps(installation_data))
+        except:
+            pass
+
+    cores = []
+    memory = []
+    containers = []
+    for node in installation_data.get('nodes', []):
+        try:
+            cores.append(int(node['cores']))
+        except:
+            pass
+        try:
+            memory.append(int(node['memory']['total']))
+        except:
+            pass
+        try:
+            containers.append(int(node['containers']['total']))
+        except:
+            pass
+    result = {
+        'status': 'unknown',
+        'expiration': '',
+        'type': '',
+        'installationID': data.get('installationID', ''),
+        'platform': installation_data.get('platform'),
+        'storage': installation_data.get('storage'),
+        'version': {
+            'KuberDock': installation_data.get('kuberdock'),
+            'kubernetes': installation_data.get('kubernetes'),
+            'docker': installation_data.get('docker')
+        },
         'data': {
-            'nodes': [10, 8],
-            'cores': [48, 40],
-            'memory': [512, 448],
-            'containers': ['unlimited', 340],
-            'pods': [220, 174],
-            'apps': ['unlimited', 93],
-            'persistentVolume': ['unlimited', 1332]}}
+            'nodes': [0, len(installation_data.get('nodes', []))],
+            'cores': [0, sum(cores)],
+            'memory': [0, sum(memory) / (1024 ** 3)],  # Gb
+            'containers': [0, sum(containers)],
+            'pods': [
+                0, installation_data.get('pods', {}).get('total', 0)
+            ],
+            'apps': [
+                0, installation_data.get('predefined-apps', {}).get('count', 0)
+            ],
+            'persistentVolume': [
+                0,
+                installation_data.get('persistent-volumes', {}).get('count', 0)
+            ]
+        }
+    }
+    data = data.get('data')
+    if data:
+        lc_data = data.get('license')
+        result['status'] = lc_data['status']
+        result['expiration'] = lc_data['expiration']
+        result['type'] = lc_data['type']
+        default_value = 'unlimited'
+        for key, value in result['data'].iteritems():
+            value[0] = lc_data.get(key, default_value)
+    return result
+
+
+@pricing.route('/license/installation_id', methods=['POST'], strict_slashes=False)
+@KubeUtils.jsonwrap
+@login_required_or_basic_or_token
+@check_permission('write', 'system_settings')
+def set_installation_id():
+    params = all_request_params()
+    installation_id = params.get('value')
+    licensing.update_installation_id(installation_id)
+    res = collect.send(collect.collect())
+    if res['status'] != 'OK':
+        raise APIError(res['data'])
+    return res['data']

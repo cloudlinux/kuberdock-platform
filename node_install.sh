@@ -127,8 +127,12 @@ yum_wrapper -y install ${CUR_MASTER_KUBERNETES}
 check_status
 yum_wrapper -y install flannel-0.5.3
 check_status
-yum_wrapper -y install cadvisor
-check_status
+# TODO remove when cadvisor in stable
+yum_wrapper -y install kuberdock-cadvisor
+if [ $? -ne 0 ];then
+    yum_wrapper -y install cadvisor
+    check_status
+fi
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests
 yum_wrapper -y install python-ipaddress

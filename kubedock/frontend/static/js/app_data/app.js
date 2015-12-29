@@ -8,6 +8,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
         initialize: function(){
             var that = this;
             require(['app_data/model', 'app_data/utils'], function(Model, Utils){
+                that.storage = window.localStorage || window.sessionStorage || {};
                 that.menuCollection = new Model.MenuCollection(backendData.menu);
                 that.getPodCollection = function(){
                     var deferred = $.Deferred();

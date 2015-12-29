@@ -248,10 +248,8 @@ define(['app_data/app',
             message: '.message-wrapper'
         },
         onShow: function(){
-            if (backendData.postDescription){
+            if (this.model.postDescription)
                 this.ui.close.parents('.message-wrapper').slideDown();
-
-            }
         },
 
         events: {
@@ -267,7 +265,22 @@ define(['app_data/app',
             'change': 'render',
         },
 
-        initialize: function(options){ this.graphs = options.graphs; },
+        initialize: function(options){
+            this.graphs = options.graphs;
+
+            // if got postDescription, save it
+            if (backendData.postDescription){
+                var r = /(%PUBLIC_ADDRESS%)/gi,
+                    publicIP = this.model.get('public_ip') || "...";
+                App.storage['postDescription.' + this.model.id] =
+                    backendData.postDescription.replace(r, publicIP);
+                delete backendData.postDescription;
+            }
+            // if have saved postDescription, put it in model
+            var postDescription = App.storage['postDescription.' + this.model.id];
+            if (postDescription)
+                this.model.postDescription = postDescription;
+        },
 
         templateHelpers: function(){
             var publicName = this.model.has('public_aws')
@@ -282,21 +295,14 @@ define(['app_data/app',
                                 {id: kubeId}), // internal kube may not have pkg
                 hasPorts = this.model.get('containers').any(function(c) {
                     return c.get('ports') && c.get('ports').length;
-                }),
-                public_address = "%PUBLIC_ADDRESS%",
-                r = new RegExp("(" + public_address + ")", "gi"),
-                publicIP = "Public address";
+                });
 
-            if (this.model.get('public_ip')){
-                publicIP = this.model.get('public_ip');
-            }
-            backendData.postDescription = backendData.postDescription.replace(r, publicIP);
             this.model.recalcInfo(pkg);
 
             return {
                 hasPorts        : hasPorts,
-                postDescription : this.encodeBBCode(backendData.postDescription),
-                publicIP        : publicIP,
+                postDescription : this.encodeBBCode(this.model.postDescription),
+                publicIP        : this.model.get('public_ip'),
                 publicName      : publicName,
                 graphs          : graphs,
                 kubeType        : kubeType,
@@ -308,6 +314,11 @@ define(['app_data/app',
             };
         },
 
+        onDomRefresh: function(){
+            if (this.model.postDescription)
+                this.ui.close.parents('.message-wrapper').show();
+        },
+
         statsItem: function(evt){
             evt.stopPropagation();
             this.trigger('display:pod:stats', this.model);
@@ -315,12 +326,8 @@ define(['app_data/app',
 
         closeMessage: function(){
             this.ui.close.parents('.message-wrapper').slideUp();
-            backendData.postDescription = '';
-
-        },
-
-        onBeforeDestroy: function(){
-            this.closeMessage();
+            delete this.model.postDescription;
+            delete App.storage['postDescription.' + this.model.id];
         },
 
         listItem: function(evt){
@@ -364,8 +371,10 @@ define(['app_data/app',
         },
 
         encodeBBCode: function(val) {
-            var parser = new BBCodeParser(BBCodeParser.defaultTags());
-            return parser.parseString(val);
+            if (val !== undefined) {
+                var parser = new BBCodeParser(BBCodeParser.defaultTags());
+                return parser.parseString(val);
+            }
         }
     });
 

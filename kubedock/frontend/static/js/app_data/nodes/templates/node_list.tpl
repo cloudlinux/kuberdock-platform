@@ -16,7 +16,7 @@
             <tr class="tablesorter-headerRow">
                 <th class="hostname">Node<b class="caret"></b></th>
                 <th class="ip">IP<b class="caret"></b></th>
-                <th class="kube_type">Kube type<b class="caret"></b></th>
+                <th class="kube_type">Kube Type<b class="caret"></b></th>
                 <!-- <th class="hostname">Kube capacity<b class="caret"></b><br>(used/max)</th> -->
                 <!-- <th>Average<b class="caret"></b><br>CPU usage</th> -->
                 <!-- <th>Active pods<b class="caret"></b><br>(containers)</th> -->

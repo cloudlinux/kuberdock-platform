@@ -40,8 +40,8 @@
                 <div>Pod IP: <%- (typeof(podIP) !== 'undefined') ? podIP : 'Internal ip is not assigned yet'%></div>
             <% } %>
             <div>Restart policy: <%- restartPolicy %></div>
-            <div>Kube type: <%- kubeType.name %></div>
-            <div>Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
+            <div>Kube Type: <%- kubeType.name %></div>
+            <div>Number of Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
             <div>Price: <%- totalPrice %> / <%- package.period %></div>
             <!--
             <div class="edit">Edit pod</div>

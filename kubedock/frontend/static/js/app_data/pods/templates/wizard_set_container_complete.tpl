@@ -28,7 +28,7 @@
                 </div>
                 <div class="row kube-type-wrapper">
                     <% if (containers.length > 1){ %>
-                    <label class="col-xs-8">Kube type</label>
+                    <label class="col-xs-8">Kube Type</label>
                     <div class="col-xs-7">
                         <select class="kube_type selectpicker" id="extra-options" disabled>
                             <% _.each(kube_types, function(k_type){ %>
@@ -39,7 +39,7 @@
                     <div class="col-xs-1 no-padding edit-kube-type"></div>
                     <% } else { %>
                     <div class="col-xs-8">
-                        <label>Kube type</label>
+                        <label>Kube Type</label>
                         <select class="kube_type selectpicker" id="extra-options">
                             <% _.each(kube_types, function(kube_type){ %>
                             <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
@@ -47,7 +47,7 @@
                         </select>
                     </div>
                     <% } %>
-                    <label>Kubes:</label>
+                    <label>Number of Kubes:</label>
                     <div class="col-xs-4 no-padding">
                         <select class="kube-quantity selectpicker">
                             <option value="1">1</option>

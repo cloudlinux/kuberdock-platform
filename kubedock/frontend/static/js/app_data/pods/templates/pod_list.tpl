@@ -17,8 +17,8 @@
                 <th class="name">Pod name<b class="caret"></th>
                 <th class="replicas">Replicated<b class="caret"></b></th>
                 <th class="status">Status<b class="caret"></b></th>
-                <th class="kube_type">Kube type<b class="caret"></th>
-                <th>Kubes quantity</th>
+                <th class="kube_type">Kube Type<b class="caret"></th>
+                <th>Number of Kubes</th>
                 <th>Actions</th>
             </tr>
         </thead>

@@ -51,10 +51,10 @@
                     <div class="col-xs-10">
                         <div class="info col-xs-6">
                             <div>Image: <%- image %></div>
-                            <div>Kube type: <%- kube_type.name %></div>
+                            <div>Kube Type: <%- kube_type.name %></div>
                             <div>Restart policy: <%- restart_policy %></div>
                             <div class="editGroup">
-                                Kubes: <!-- <span class="editContainerKubes"> --><%- kubes %><!--</span>-->
+                                Number of Kubes: <!-- <span class="editContainerKubes"> --><%- kubes %><!--</span>-->
                                 <div class="editForm <%- editKubesQty === undefined ? 'hide' : '' %>">
                                     <input type="text" value="<%- kubeVal %>"/>
                                     <button class="cancel">Cancel</button>

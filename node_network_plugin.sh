@@ -20,6 +20,7 @@ else
 fi
 
 API_SERVER=$(cut -d '=' -f 2 <<< $KUBELET_API_SERVER)
+MASTER_IP=$(echo $API_SERVER | grep -oP '\d+\.\d+\.\d+\.\d+')
 TOKEN=$(grep token /etc/kubernetes/configfile | grep -oP '[a-zA-Z0-9]+$')
 # TODO must be taken from some node global.env for all settings
 IFACE=$(cut -d '=' -f 2 <<< $FLANNEL_OPTIONS)
@@ -159,6 +160,86 @@ function add_resolve {
 }
 
 
+# Reject version
+function protect_cluster_reject {
+    # MARKS:
+    # 1 - traffic to reject/drop
+    # 2 - traffic for public ip (will be added and used later)
+
+    iptables -w -N KUBERDOCK -t mangle
+    iptables_ -I PREROUTING -j KUBERDOCK -t mangle
+
+    # Before other
+    iptables -w -N KUBERDOCK-PUBLIC-IP -t mangle
+    iptables_ -I PREROUTING -j KUBERDOCK-PUBLIC-IP -t mangle
+
+    iptables_ -A KUBERDOCK -t mangle -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+    # Don't know corrct place for this rule;
+    # Alternatively we can add ACCEPT RULE for each public rule in chain above
+    iptables_ -A KUBERDOCK -t mangle -m mark --mark 2 -j ACCEPT
+
+    # before 'accept kuberdock_cluster':
+    iptables_ -A KUBERDOCK -t mangle -i docker0 -d "$NODE_IP" -j MARK --set-mark 1
+    # This is one not works, and don't know why (maybe next rule pass unwanted traffic):
+    # iptables_ -A KUBERDOCK -t mangle -i docker0 ! -d "$NODE_IP" -j ACCEPT
+
+    # if this one rule used then only after ssh rule and other
+#    iptables_ -A KUBERDOCK -t mangle -m set ! --match-set kuberdock_cluster src -j MARK --set-mark 1
+    iptables_ -A KUBERDOCK -t mangle -m set --match-set kuberdock_cluster src -j ACCEPT
+
+    iptables_ -A KUBERDOCK -t mangle -s "$MASTER_IP" -j ACCEPT
+    iptables_ -A KUBERDOCK -t mangle -d "$NODE_IP" -p tcp --dport 22 -j ACCEPT
+    iptables_ -A KUBERDOCK -t mangle -p icmp --icmp-type echo-request -j ACCEPT
+
+    # Reject all other
+    iptables_ -A KUBERDOCK -t mangle -j MARK --set-mark 1
+
+    # Reject all bad packets
+    # TODO I saw cases where this rules appears after docker rules due
+    # services start ordering. So this is not robust
+    # TODO create chaines for them
+    iptables_ -I INPUT -t filter -m mark --mark 1 -j REJECT
+    iptables_ -I FORWARD -t filter -m mark --mark 1 -j REJECT
+}
+
+
+# Drop version. Simpier and more robust (clean mangle table only)
+function protect_cluster_drop {
+    # MARKS:
+    # 1 - traffic to reject/drop
+    # 2 - traffic for public ip (will be added and used later)
+
+    iptables -w -N KUBERDOCK -t mangle
+    iptables_ -I PREROUTING -j KUBERDOCK -t mangle
+
+    # Before other chaines
+    iptables -w -N KUBERDOCK-PUBLIC-IP -t mangle
+    iptables_ -I PREROUTING -j KUBERDOCK-PUBLIC-IP -t mangle
+
+    iptables_ -A KUBERDOCK -t mangle -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+    # Don't know corrct place for this rule
+    # Alternatively we can add ACCEPT RULE for each public rule in chain above
+    iptables_ -A KUBERDOCK -t mangle -m mark --mark 2 -j ACCEPT
+
+    # before 'accept kuberdock_cluster':
+    iptables_ -A KUBERDOCK -t mangle -i docker0 -d "$NODE_IP" -j DROP
+    # This is not works, and don't know why (maybe next rule pass unwanted traffic):
+    # iptables_ -A KUBERDOCK -t mangle -i docker0 ! -d "$NODE_IP" -j ACCEPT
+
+    iptables_ -A KUBERDOCK -t mangle -m set --match-set kuberdock_cluster src -j ACCEPT
+
+    iptables_ -A KUBERDOCK -t mangle -s "$MASTER_IP" -j ACCEPT
+    iptables_ -A KUBERDOCK -t mangle -d "$NODE_IP" -p tcp --dport 22 -j ACCEPT
+    iptables_ -A KUBERDOCK -t mangle -p icmp --icmp-type echo-request -j ACCEPT
+
+    # Reject all other
+    iptables_ -A KUBERDOCK -t mangle -j DROP
+}
+
+
+
 case "$ACTION" in
   "init")
     rm -f "$LOG_FILE"
@@ -171,6 +252,7 @@ case "$ACTION" in
     /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" init
     iptables_ -I KUBERDOCK -t filter -i docker0 ! -o docker0 -m set ! --match-set kuberdock_cluster dst -j ACCEPT
     iptables_ -I KUBERDOCK -t nat -m set ! --match-set kuberdock_cluster dst -j ACCEPT
+    protect_cluster_drop
     ;;
   "setup")
 

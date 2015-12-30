@@ -63,6 +63,7 @@ def pre_start_hook(app):
             put('./node_network_plugin.sh', PLUGIN_DIR + 'kuberdock')
             put('./node_network_plugin.py', PLUGIN_DIR + 'kuberdock.py')
             run('systemctl restart kuberdock-watcher')
+            print 'Kuberdock node parts are updated'
 
 
 def on_app_error(e):

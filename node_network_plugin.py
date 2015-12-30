@@ -19,6 +19,14 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 PUBLIC_IP_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t nat -d {1} ' \
                  '-p {2} --dport {3} -j DNAT --to-destination {4}:{5}'
 
+PUBLIC_IP_MANGLE_RULE = \
+    'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t mangle -d {1} ' \
+    '-p {2} --dport {3} -j MARK --set-mark 2'
+
+# MARKS:
+# 1 - traffic to reject/drop
+# 2 - traffic for public ip (will be added and used later)
+
 # Possibly to stderr if in daemon mode or to our log-file
 LOG_TO = sys.stdout
 
@@ -176,8 +184,11 @@ def handle_public_ip(action, public_ip, pod_ip, iface, namespace, pod_spec_file)
             if action == 'add':
                 if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, host_port, pod_ip, container_port).split(' ')):
                     subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, host_port, pod_ip, container_port).split(' '))
+                if subprocess.call(PUBLIC_IP_MANGLE_RULE.format('C', public_ip, proto, host_port).split(' ')):
+                    subprocess.call(PUBLIC_IP_MANGLE_RULE.format('I', public_ip, proto, host_port).split(' '))
             elif action == 'del':
                 subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, host_port, pod_ip, container_port).split(' '))
+                subprocess.call(PUBLIC_IP_MANGLE_RULE.format('D', public_ip, proto, host_port).split(' '))
     modify_ip(action, public_ip, iface)
     return 0
 

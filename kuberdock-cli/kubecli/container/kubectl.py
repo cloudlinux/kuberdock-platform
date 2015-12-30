@@ -17,6 +17,8 @@ def parser(subs):
         description="Valid actions for targets",
         dest="action")
 
+    action.add_parser('register')
+
     get = action.add_parser('get')
     get_resource = get.add_subparsers(
         help="Resource",

@@ -44,7 +44,7 @@ class ETCD(object):
         self.cert = config['etcd_certfile']
         self.key = config['etcd_keyfile']
         if path is None:
-            path = '/'.join([config['flannel_etcd_key'].strip('/'), 'users'])
+            path = '/'.join([config['flannel_etcd_key'].strip('/'), 'plugin'])
         self.path = path
 
     def _url(self, *args):
@@ -74,7 +74,7 @@ class ETCD(object):
 
     def pods(self, user):
         pods_list = []
-        for k, v in self._get(user).items():
+        for k, v in self._get('users', user).items():
             try:
                 value = json.loads(v['value'])
             except ValueError:
@@ -84,11 +84,15 @@ class ETCD(object):
         return pods
 
     def users(self):
-        users = map(int, self._get())
+        users = map(int, self._get('users'))
         return users
 
     def delete(self, user, pod):
-        requests.delete(self._url(user, pod), **self._args())
+        requests.delete(self._url('users', user, pod), **self._args())
+
+    def registered_hosts(self):
+        registered_hosts = list(self._get('registered_hosts'))
+        return registered_hosts
 
     def wait(self):
         requests.get(
@@ -142,6 +146,7 @@ def update_ipset():
             if value['node']:
                 nodes_ips.add(value['node'])
         _update_ipset(set_name, user_ip_list)
+    nodes_ips.update(etcd.registered_hosts())
     _update_ipset('kuberdock_nodes', nodes_ips)
 
 

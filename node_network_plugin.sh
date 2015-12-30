@@ -89,7 +89,7 @@ function del_rules {
 
 
 function etcd_ {
-  args="${FLANNEL_ETCD}/v2/keys${FLANNEL_ETCD_KEY}users/"
+  args="${FLANNEL_ETCD}/v2/keys${FLANNEL_ETCD_KEY}plugin/users/"
   if [ ! -z "$2" ]
   then
     args+="$2/"

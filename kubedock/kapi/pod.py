@@ -224,6 +224,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 continue
 
     def _prepare_container(self, data, kube_type=None, volumes=None):
+        data = deepcopy(data)
         # Strip non-kubernetes params
         data.pop('sourceUrl', None)
 

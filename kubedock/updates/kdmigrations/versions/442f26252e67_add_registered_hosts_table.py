@@ -16,10 +16,10 @@ import sqlalchemy as sa
 
 def upgrade():
     op.create_table('registered_hosts',
-        sa.Column(sa.Integer, primary_key=True, nullable=False, autoincrement=True),
-        sa.Column(sa.String, nullable=False, unique=True),
-        sa.Column(sa.Text, nullable=True),
-        sa.Column(sa.DateTime, nullable=False))
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False, autoincrement=True),
+        sa.Column('host', sa.String, nullable=False, unique=True),
+        sa.Column('description', sa.Text, nullable=True),
+        sa.Column('time_stamp', sa.DateTime, nullable=False))
 
 
 def downgrade():

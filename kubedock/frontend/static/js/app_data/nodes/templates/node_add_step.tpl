@@ -11,7 +11,7 @@
 </div>
 <div class="col-lg-12">
     <div class="col-lg-6">
-        <label for="extra-options">Kube type</label>
+        <label for="extra-options">Kube Type</label>
         <select class="kube_type selectpicker" id="extra-options">
         <% _.each(kubeTypes, function(t){ %>
             <option value="<%= t.id %>"><%= t.name %></option>

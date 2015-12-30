@@ -21,19 +21,19 @@
             </div>
             <div class="navbar-collapse collapse">
                 <ul id="menu-items" class="nav navbar-nav"></ul>
-                <% if (!backendData.impersonated){ %>
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown profile-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown"><%- backendData.current_username || 'administrator' %><b class="caret"></b></a>
                         <ul class="dropdown-menu">
                             <% if (!backendData.administrator){ %>
-                            <li><a class="routable" href="/settings/">Settings</a></li>
+                                <li><a class="routable" href="/settings/">Settings</a></li>
                             <% } %>
-                             <li><a href="/logout">Logout </a></li>
+                            <% if (!backendData.impersonated){ %>
+                                <li><a href="/logout">Logout </a></li>
+                            <% } %>
                         </ul>
                     </li>
                 </ul>
-                <% } %>
             </div>
         </div>
     </div>

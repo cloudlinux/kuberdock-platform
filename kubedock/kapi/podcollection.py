@@ -238,10 +238,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         service_name = pod.get_config('service')
         if service_name:
-            service = self._get(['services', service_name], ns=pod.namespace)
-            state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
-            if state.get('assigned-to'):
-                unbind_ip(service_name, state, service, 0, current_app)
+            # service = self._get(['services', service_name], ns=pod.namespace)
+            # state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
+            # if state.get('assigned-to'):
+            #     unbind_ip(service_name, state, service, 0, current_app)
             rv = self._del(['services', service_name], ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a service")
 
@@ -500,12 +500,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 # 'generateName': pod.name.lower() + '-service-',
                 'generateName': 'service-',
                 'labels': {'name': pod.id[:54] + '-service'},
-                'annotations': {
-                    'public-ip-state': json.dumps({
-                        'assigned-public-ip': getattr(pod, 'public_ip',
-                                                      getattr(pod, 'public_aws', None))
-                    })
-                },
+                # 'annotations': {
+                #     'public-ip-state': json.dumps({
+                #         'assigned-public-ip': getattr(pod, 'public_ip',
+                #                                       getattr(pod, 'public_aws', None))
+                #     })
+                # },
             },
             'spec': {
                 'selector': {'kuberdock-pod-uid': pod.id},

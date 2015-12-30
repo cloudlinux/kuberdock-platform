@@ -400,15 +400,34 @@
                         margin: auto;
                         position: absolute;
                     }
-                    &.active{
+                    &.active, &.unknown, &.locked, &.suspended, &.ok, &.expired{
                         padding-left: 20px;
                         &:before{
+                            .border-radius(50%);
                             width: 12px;
                             height: 12px;
+                        }
+                    }
+                    &.active, &.ok{
+                        padding-left: 20px;
+                        &:before{
                             background-color: #97cd75;
-                            -webkit-border-radius: 50%;
-                            -moz-border-radius: 50%;
-                            border-radius: 50%;
+
+                        }
+                    }
+                    &.unknown{
+                        &:before{
+                            background-color: #bac1c7;
+                        }
+                    }
+                    &.locked, &.none{
+                        &:before{
+                            background-color: #f5544d;
+                        }
+                    }
+                    &.suspended, &.expired{
+                        &:before{
+                            background-color: #ffb704;
                         }
                     }
                     &.clock{

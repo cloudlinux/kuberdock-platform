@@ -27,12 +27,14 @@
 <td class="actions">
     <% if (status) { %>
         <% if (_.contains(['running', 'waiting', 'pending'], status)) { %>
-            <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
+            <span class="stop-btn" title="Stop <%- name %> pod"></span>
         <% } else if (_.contains(['stopped', 'succeeded', 'failed'], status)) { %>
-            <span class="start-btn" title="Start <%- name %> pod">Start</span>
+            <span class="start-btn" title="Run <%- name %> pod"></span>
         <% } %>
     <% } else { %>
-        <span class="start-btn" title="Start <%- name %> pod">Start</span>
+        <span class="start-btn" title="Run <%- name %> pod"></span>
     <% } %>
-    <span class="terminate-btn" title="Delete <%- name %> pod">Delete</span>
+    <% if (status !== 'pending') { %>
+        <span class="terminate-btn" title="Delete <%- name %> pod"></span>
+    <% } %>
 </td>

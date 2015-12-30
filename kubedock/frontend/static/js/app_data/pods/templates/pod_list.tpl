@@ -1,9 +1,9 @@
 <div class="col-md-12 no-padding">
     <div class="podsControl" style="display:<%- checked ? 'block' : 'none' %>">
         <span class="count"><%- checked %><%- (checked > 1) ? ' Items' : ' Item' %></span>
-        <span class="runPods">Run</span>
-        <span class="stopPods">Stop</span>
-        <span class="removePods">Delete</span>
+        <span class="runPods" title="Run">Run</span>
+        <span class="stopPods" title="Stop">Stop</span>
+        <span class="removePods" title="Delete">Delete</span>
     </div>
     <table id="podlist-table" class="table">
         <thead class="<%- checked ? 'pods-checked' : '' %>">

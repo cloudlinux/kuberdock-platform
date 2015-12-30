@@ -8,6 +8,7 @@ from ..settings import TEST, KUBERDOCK_INTERNAL_USER
 from ..utils import all_request_params
 
 from kubedock.static_pages.models import MenuItem
+from kubedock.kapi.notifications import read_role_events
 from ..kapi import nodes as kapi_nodes
 
 
@@ -28,6 +29,7 @@ def index():
     params['impersonated'] = False if session.get('auth_by_another') is None else True
     params['menu'] = MenuItem.get_menu()
     params['current_username'] = current_user.username
+    params['adviseCollection'] = read_role_events(current_user.role)
     return render_template('index.html', params=params)
 
 def return_pods():

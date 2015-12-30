@@ -2,7 +2,8 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
     "use strict";
     var App = new Backbone.Marionette.Application({
         regions: {
-            contents: '#contents'
+            contents: '#contents',
+            message: '#message-popup'
         },
 
         initialize: function(){
@@ -207,6 +208,23 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     return deferred.promise();
                 };
 
+                that.getNotificationCollection = function(){
+                    var deferred = $.Deferred();
+                    if (_.has(that, 'notificationCollection')) {
+                        deferred.resolveWith(that, [that.notificationCollection]);
+                    }
+                    else {
+                        that.notificationCollection = new Backbone.Collection();
+                        if (backendData.adviseCollection) {
+                            that.notificationCollection.reset(
+                                backendData.adviseCollection);
+                            deferred.resolveWith(that, [that.notificationCollection]);
+                        }
+                        deferred.resolveWith(that, [that.notificationCollection]);
+                    }
+                    return deferred.promise();
+                };
+
                 that.commandPod = function(cmd, pod){
                     if (pod.constructor !== Model.Pod) {
                         console.log("Pod Model instance is expected!");
@@ -321,6 +339,16 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         Utils.notifyWindow(data.message);
                     };
 
+                    events['advise:show'] = function(ev) {
+                        var data = JSON.parse(ev.data);
+                        controller.attachNotification(data);
+                    };
+
+                    events['advise:hide'] = function(ev) {
+                        var data = JSON.parse(ev.data);
+                        controller.detachNotification(data);
+                    };
+
                     _.mapObject(events, function(handler, eventName){
                         source.addEventListener(eventName, handler, false);
                     });
@@ -336,6 +364,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 Backbone.history.start({root: '/'});
 
                 eventHandler(backendData.destination === 'nodes');
+                controller.showNotifications();
                 //console.log('impersontated', backendData.impersonated ? true : false);
                 if (App.getCurrentRoute() === "") {
                     if (backendData.destination === 'nodes') {

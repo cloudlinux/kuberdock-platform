@@ -117,13 +117,18 @@ fi
 echo "Installing kubernetes..."
 yum_wrapper -y install ${CUR_MASTER_KUBERNETES}
 check_status
+yum_wrapper -y install docker
+check_status
 yum_wrapper -y install flannel-0.5.3
 check_status
 # TODO remove when cadvisor in stable
 yum_wrapper -y install kuberdock-cadvisor
 if [ $? -ne 0 ];then
+    OLD_CADVISOR="yes"
     yum_wrapper -y install cadvisor
     check_status
+else
+OLD_CADVISOR="no"
 fi
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests
@@ -358,10 +363,18 @@ check_status
 systemctl reenable kube-proxy
 check_status
 
+if [ $OLD_CADVISOR == 'yes' ];then
 CADVISOR_CONF=/etc/sysconfig/cadvisor
+else
+CADVISOR_CONF=/etc/sysconfig/kuberdock-cadvisor
+fi
 sed -i "/^CADVISOR_STORAGE_DRIVER/ {s/\"\"/\"influxdb\"/}" $CADVISOR_CONF
 sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/${MASTER_IP}/}" $CADVISOR_CONF
+if [ $OLD_CADVISOR == 'yes' ];then
 systemctl reenable cadvisor
+else
+systemctl reenable kuberdock-cadvisor
+fi
 check_status
 
 # 11. install kernel

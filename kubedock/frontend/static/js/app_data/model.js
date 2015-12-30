@@ -73,7 +73,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                         }
                     });
                     this.set('logs', data.data);
-                    this.set('logsError', null);
+                    this.set('logsError', data.data.length ? null : 'Logs not found');
                 },
                 error: function(xhr) {
                     var data = xhr.responseJSON;

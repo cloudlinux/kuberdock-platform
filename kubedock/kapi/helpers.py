@@ -171,12 +171,28 @@ class Utilities(object):
         :param return_value: dict
         :param message: string
         """
-        pass
-        #if message is None:
-        #    message = 'An error occurred'
-        #status = return_value.get('status')
-        #if status is not None and status.lower() not in ['success', 'working']:
-        #    self._raise(message)
+        if not isinstance(return_value, dict):
+            current_app.logger.warning(
+                u'Unknown answer format from kuberdock: %s',
+                unicode(return_value)
+            )
+        else:
+            # TODO: handle kubernetes error (APIError?) and test that
+            # it will not break anything
+            if return_value.get('kind') != u'Status':
+                return
+            status = return_value.get('status')
+            if not isinstance(status, basestring):
+                current_app.logger.warning(
+                    u'Unknown kubernetes status answer: %s',
+                    unicode(return_value)
+                )
+                return
+            if status.lower() not in ('success', 'working'):
+                current_app.logger.error(
+                    u'Error in kubernetes answer: %s',
+                    unicode(return_value)
+                )
 
     @staticmethod
     def _make_name_from_image(image):

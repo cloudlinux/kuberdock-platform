@@ -75,7 +75,7 @@
                     <thead>
                        <tr>
                            <th class="col-xs-5 no-padding">Name</th>
-                           <th class="col-xs-4 no-padding">Number of kubes</th>
+                           <th class="col-xs-4 no-padding">Number of Kubes</th>
                            <th class="col-xs-2 no-padding">Price</th>
                            <th class="col-xs-1 no-padding"></th>
                        </tr>

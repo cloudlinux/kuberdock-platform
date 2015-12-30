@@ -197,7 +197,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
 
                 utils.modalDialogDelete({
                     title: 'Delete "' + name + '"',
-                    body: 'Are you sure want to delete "' + name + '" predefined application?',
+                    body: 'Are you sure you want to delete "' + name + '" predefined application?',
                     small: true,
                     show: true,
                     footer: {

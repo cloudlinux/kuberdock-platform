@@ -51,7 +51,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var that = this;
             utils.modalDialogDelete({
                     title: 'Delete network',
-                    body: "Are you sure want to delete network '" +
+                    body: "Are you sure you want to delete network '" +
                         this.model.get('network') + "'?",
                 small: true,
                 show: true,
@@ -128,7 +128,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
             utils.modalDialog({
                 title: 'Unbind IP-address',
-                body: "Are you sure want to unbind IP '" + ip + "' address?",
+                body: "Are you sure you want to unbind IP '" + ip + "' address?",
                 small: true,
                 show: true,
                 footer: {

@@ -39,7 +39,7 @@ define(['marionette', 'paginator'],
 
             deleteTemplate_btn: function(){
                 var n = App.Data.templates.get(this.model.id).attributes.name;
-                if(!confirm('Are you sure want to delete "' + n + '" event template?'))
+                if(!confirm('Are you sure you want to delete "' + n + '" event template?'))
                     return false;
                 this.model.destroy({wait: true});
             },

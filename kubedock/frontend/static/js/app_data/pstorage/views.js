@@ -37,7 +37,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             } else {
                 utils.modalDialogDelete({
                     title: "Delete persistent volume?",
-                    body: "Are you sure want to delete this persistent volume?",
+                    body: "Are you sure you want to delete this persistent volume?",
                     small: true,
                     show: true,
                     footer: {

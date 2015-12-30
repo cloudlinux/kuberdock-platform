@@ -137,7 +137,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
             utils.modalDialogDelete({
                 title: "Delete " + name + "?",
-                body: "Are you sure want to delete node '" + name + "'?",
+                body: "Are you sure you want to delete node '" + name + "'?",
                 small: true,
                 show: true,
                 footer: {
@@ -395,7 +395,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
             utils.modalDialog({
                 title: "Re-install " + name + "?",
-                body: "Are you sure want to re-install node '" + name + "'?",
+                body: "Are you sure you want to re-install node '" + name + "'?",
                 small: true,
                 show: true,
                 footer: {
@@ -417,7 +417,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     name = model.get('hostname');
                 utils.modalDialogDelete({
                     title: "Delete " + name + "?",
-                    body: "Are you sure want to delete node '" + name + "'?",
+                    body: "Are you sure you want to delete node '" + name + "'?",
                     small: true,
                     show: true,
                     footer: {

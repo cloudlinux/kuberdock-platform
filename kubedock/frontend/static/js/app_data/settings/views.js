@@ -303,7 +303,7 @@ define(['app_data/app', 'marionette',
             var that = this;
             utils.modalDialogDelete({
                 title: "Terminate account?",
-                body: "Are you sure want to terminate your account ?",
+                body: "Are you sure you want to terminate your account ?",
                 small: true,
                 show: true,
                 footer: {

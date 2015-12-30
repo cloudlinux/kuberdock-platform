@@ -108,7 +108,7 @@ define(['nodes_app/app', 'marionette', 'utils',
 
             utils.modalDialogDelete({
                 title: "Delete " + name + "?",
-                body: "Are you sure want to delete node '" + name + "'?",
+                body: "Are you sure you want to delete node '" + name + "'?",
                 small: true,
                 show: true,
                 footer: {
@@ -378,7 +378,7 @@ define(['nodes_app/app', 'marionette', 'utils',
 
             utils.modalDialog({
                 title: "Re-install " + name + "?",
-                body: "Are you sure want to re-install node '" + name + "'?",
+                body: "Are you sure you want to re-install node '" + name + "'?",
                 small: true,
                 show: true,
                 footer: {
@@ -399,7 +399,7 @@ define(['nodes_app/app', 'marionette', 'utils',
 
             utils.modalDialogDelete({
                 title: "Delete " + name + "?",
-                body: "Are you sure want to delete node '" + name + "'?",
+                body: "Are you sure you want to delete node '" + name + "'?",
                 small: true,
                 show: true,
                 footer: {

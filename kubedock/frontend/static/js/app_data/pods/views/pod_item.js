@@ -124,7 +124,7 @@ define(['app_data/app',
                 name = that.model.get('name');
             utils.modalDialogDelete({
                 title: "Delete container?",
-                body: "Are you sure want to delete container '" + name + "'?",
+                body: "Are you sure you want to delete container '" + name + "'?",
                 small: true,
                 show: true,
                 footer: {

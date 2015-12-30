@@ -13,7 +13,7 @@ define(['marionette', 'paginator', 'utils'],
 
             deleteUserConfirmDialog: function(options, text, force){
                 var that = this;
-                text = text || ('Are you sure want to delete user "' +
+                text = text || ('Are you sure you want to delete user "' +
                                 this.get('username') + '"?');
 
                 utils.modalDialog({
@@ -145,7 +145,7 @@ define(['marionette', 'paginator', 'utils'],
                 var that = this;
                 utils.modalDialog({
                     title: "Block " + this.model.get('username'),
-                    body: "Are you sure want to block user '" +
+                    body: "Are you sure you want to block user '" +
                         this.model.get('username') + "'?",
                     small: true,
                     show: true,

@@ -327,7 +327,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
         deleteUserConfirmDialog: function(options, text, force){
             var that = this;
-            text = text || ('Are you sure want to delete user "' +
+            text = text || ('Are you sure you want to delete user "' +
                             this.get('username') + '"?');
 
             utils.modalDialog({

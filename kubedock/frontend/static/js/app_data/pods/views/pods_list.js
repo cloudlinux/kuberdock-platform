@@ -98,7 +98,7 @@ define(['app_data/app',
             var that = this;
             utils.modalDialogDelete({
                 title: "Delete",
-                body: 'Are you sure want to delete "' + that.model.get('name') + '" pod?',
+                body: 'Are you sure you want to delete "' + that.model.get('name') + '" pod?',
                 small: true,
                 show: true,
                 footer: {
@@ -217,9 +217,9 @@ define(['app_data/app',
                 that = this,
                 items = that.collection.fullCollection.filter(function(i){return i.is_checked});
             if (items.length > 1){
-                body = 'Are you sure want to delete selected pods?';
+                body = 'Are you sure you want to delete selected pods?';
             } else {
-                body = 'Are you sure want to delete "' + items[0].get('name') + '" pod?';
+                body = 'Are you sure you want to delete "' + items[0].get('name') + '" pod?';
             }
             utils.modalDialogDelete({
                 title: "Delete",

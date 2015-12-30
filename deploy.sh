@@ -415,6 +415,8 @@ if [ "$SESTATUS" != disabled ];then
     do_and_log semanage port -a -t http_port_t -p tcp 9200
 fi
 
+#4.3 nginx config fix
+cp $KUBERDOCK_DIR/conf/nginx.conf /etc/nginx/nginx.conf
 
 
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)

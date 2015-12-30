@@ -29,11 +29,11 @@
         <% if ( status == 'running') { %>
             <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } else if ( status == 'stopped' ) { %>
-            <span class="start-btn" title="Start <%- name %> pod">Start</span>
+            <span class="start-btn" title="Run <%- name %> pod">Start</span>
         <% } else if ( status == 'waiting' || status == 'pending' ) { %>
             <span class="stop-btn" title="Stop <%- name %> pod">Stop</span>
         <% } %>
     <% } else { %>
-        <span class="start-btn" title="Start <%- name %> pod">Start</span>
+        <span class="start-btn" title="Run <%- name %> pod">Start</span>
     <% } %>
 </td>

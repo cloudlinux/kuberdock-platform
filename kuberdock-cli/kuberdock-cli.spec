@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 28%{?dist}.cloudlinux
+Release: 29%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,11 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Wed Dec 30 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-29
+- AC-603: Return status when JSON enabled.
+- AC-1741: set YAML origin. Added test for kcli. Added filtering by origin.
+- AC-1922: Implemented 'register' functionality
+
 * Fri Nov 20 2015 Aleksandr Tishin <atishin@cloudlinux.com> 0.1-28
 - AC-1475: Remove authorization options in KCLI
 

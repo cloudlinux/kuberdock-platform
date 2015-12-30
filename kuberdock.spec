@@ -1,7 +1,7 @@
 Version: 0.4
 Name: kuberdock
 Summary: KuberDock
-Release: 14%{?dist}.cloudlinux
+Release: 15%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,42 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Wed Dec 30 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.4-15
+- AC-1817: More convenient GC settings
+- AC-1913: fixed CEPH drive unmapping during initial FS creation.
+- AC-1907: exception replaced with warning on failed ceph drive creation.
+- AC-1775: store postDescription; image search bugfix
+- AC-1835: Fix fix_pods_timeline
+- Fixed influxdb on CentOS 7.2
+- AC-1891: fix table head on pods page
+- edit user: move to profile page after saving changes
+- AC-1915: Fixes publicIP with podPort chaned and fixes publicIP unbind in some cases
+- Change kubes params
+- container&pod network graphs are back
+- AC-1894: fixed deleting of persistent drives during user deleting
+- AC-1671: Display PD size on container page
+- AC-1840: Add suspended status on user page
+- AC-1898 Change hostPort to podPort for yaml api
+- Fixed public ip with empty protocol in spec
+- validate that user's package includes pod's kube type
+- AC-1926: Rename kubes to Number of Kubes
+- AC-1922: Implemented server-side register functionality: when request made from admin account REMOTE_ADDR is saved to database
+- Add backward compatible new kubedock-cadvisor
+- AC-1846: administrator notification block.
+- AC-1781, AC-1903: plans for predefined apps
+- AC-1556: Display corresponding status for suspended user
+- AC-1931: Placeholder must be gray
+- AC-1925: Move data/stats icon in pod page;
+- AC-1062: Add title to action buttons in podlist; Hide remove icon if pod is pending
+- AC-1905: implemented license information saving and retrieving. InstallationID saving.
+- AC-1609: actions on license invalidation
+- AC-903: Delete message must have one mask
+- Cluster network isolation
+- AC-1916: Map registered hosts to etcd
+- AC-1933: redirect http to https
+- Cut old public ip parts (not all, but most garbage)
+- Show user settings if logged as admin
+
 * Fri Dec 25 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Fedor Degtyarev <fdegtyarev@cloudlinux.com> 0.4-14
 - AC-1745; Kuberdock pre_start_hook
 - AC-1474: limit max PD size

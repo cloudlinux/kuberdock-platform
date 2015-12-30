@@ -1,9 +1,21 @@
 <div id="item-controls" class="licenseTab">
     <div class="license-status-line">
         <span><b>License Status</b></span>
-        <span class="icon <%= status %>"><%= status %></span>
-        <span class="icon clock">Expiration date: <%= expiration %></span>
-        <span class="icon award">License type: <%= type %></span>
+        <span class="icon <%= status %>"><%= status ? status : 'unknown'%></span>
+        <span class="icon clock">Expiration date:
+            <% if (expiration){ %>
+                <% expiration %>
+            <% } else { %>
+                unknown
+            <% }%>
+        </span>
+        <span class="icon award">License type:
+            <% if (type){ %>
+                <% type %>
+            <% } else { %>
+                unknown
+            <% }%>
+        </span>
     </div>
     <div class="row">
         <div class="col-xs-10 col-xs-offset-2">
@@ -18,10 +30,7 @@
                 <div><b>KuberDock version:</b> <%= version.KuberDock %></div>
                 <div><b>Kubernetes version:</b> <%= version.kubernetes %></div>
                 <div><b>Docker version:</b> <%= version.docker %></div>
-                <div>&nbsp;</div>
-                <div><b>Support:</b></div>
-                <div><a href="mailto:helpdesk@kuberdock.com">helpdesk@kuberdock.com</a></div>
-                <div><a href="https://helpdesk.cloudlinux.com" target="_blank">helpdesk.cloudlinux.com</a></div>
+                <div><b>Support:</b> <a href="mailto:helpdesk@kuberdock.com">helpdesk@kuberdock.com</a></div>
             </div>
         </div>
     </div>

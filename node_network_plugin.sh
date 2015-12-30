@@ -179,6 +179,9 @@ function protect_cluster_reject {
     # Alternatively we can add ACCEPT RULE for each public rule in chain above
     iptables_ -A KUBERDOCK -t mangle -m mark --mark 2 -j ACCEPT
 
+    # Needed for rsyslog for example
+    iptables_ -A KUBERDOCK -t mangle -i lo -d 127.0.0.1 -j ACCEPT
+
     # before 'accept kuberdock_cluster':
     iptables_ -A KUBERDOCK -t mangle -i docker0 -d "$NODE_IP" -j MARK --set-mark 1
     # This is one not works, and don't know why (maybe next rule pass unwanted traffic):
@@ -222,6 +225,9 @@ function protect_cluster_drop {
     # Don't know corrct place for this rule
     # Alternatively we can add ACCEPT RULE for each public rule in chain above
     iptables_ -A KUBERDOCK -t mangle -m mark --mark 2 -j ACCEPT
+
+    # Needed for rsyslog for example
+    iptables_ -A KUBERDOCK -t mangle -i lo -d 127.0.0.1 -j ACCEPT
 
     # before 'accept kuberdock_cluster':
     iptables_ -A KUBERDOCK -t mangle -i docker0 -d "$NODE_IP" -j DROP

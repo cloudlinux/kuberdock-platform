@@ -69,19 +69,21 @@
                     <% }) %>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="status-select">Status</label>
+                <div class="form-group clearfix">
+                    <label for="status-select" class="pull-left">Status</label>
+                    <label class="custom pull-right">
+                        <input type="checkbox" id="suspended" name="suspended" class="checkbox">
+                        <span></span>
+                    </label>
+                    <label class="checkbox-label pull-right" for="suspended">Suspended</label>
+
                     <select id="status-select" name="status-select" class="selectpicker">
                         <option selected="selected" value="1">Active</option>
                         <option value="0">Locked</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="custom">
-                        <input type="checkbox" id="suspended" name="suspended" class="checkbox">
-                        <span></span>
-                    </label>
-                    <label class="checkbox-label">Suspended</label>
+
                 </div>
             </div>
             <div class="buttons pull-right">

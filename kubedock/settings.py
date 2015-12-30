@@ -114,6 +114,8 @@ NODE_INSTALL_TIMEOUT_SEC = 30*60    # 30 min
 
 NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
+ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/v2/keys/kuberdock/network/registered_hosts'
+
 # Import hoster settings in update case
 
 import ConfigParser

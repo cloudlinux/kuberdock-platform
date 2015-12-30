@@ -858,3 +858,9 @@ def get_timezone(default_tz=None):
     if default_tz:
         return default_tz
     raise OSError('Time zone cannot be determined')
+
+
+def update_nginx_proxy_restriction(accept_ips):
+    pass
+    # modification of shared-etcd.conf and shared-kubernetes.conf need to be
+    # done here to allow access only from accept_ips

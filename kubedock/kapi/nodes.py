@@ -63,46 +63,6 @@ def create_node(ip, hostname, kube_id,
                        'moment')
     _check_node_hostname(ip, hostname)
     node = Node(ip=ip, hostname=hostname, kube_id=kube_id, state='pending')
-    logs_kubes = 1
-    logcollector_kubes = logs_kubes
-    logstorage_kubes = logs_kubes
-    node_resources = kubes_to_limits(
-        logs_kubes, Kube.get_internal_service_kube_type()
-    )['resources']
-    logs_memory_limit = node_resources['limits']['memory']
-    if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
-        logs_kubes = int(math.ceil(
-            float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
-        ))
-
-    if logs_kubes > 1:
-        # allocate total log cubes to log collector and to log
-        # storage/search containers as 1 : 3
-        total_kubes = logs_kubes * 2
-        logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
-        logstorage_kubes = total_kubes - logcollector_kubes
-    ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
-    logs_podname = get_kuberdock_logs_pod_name(hostname)
-    internal_ku_token = ku.get_token()
-    logs_config = get_kuberdock_logs_config(
-        hostname, logs_podname,
-        Kube.get_internal_service_kube_type(),
-        logcollector_kubes,
-        logstorage_kubes,
-        MASTER_IP,
-        internal_ku_token
-    )
-    check_internal_pod_data(logs_config, ku)
-    logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
-    PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
-
-    dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
-                                              owner=ku).first()
-    if not dns_pod:
-        dns_config = get_dns_pod_config()
-        check_internal_pod_data(dns_config, ku)
-        dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
-        PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 
     try:
         # clear old log before it pulled by SSE event
@@ -112,6 +72,51 @@ def create_node(ip, hostname, kube_id,
 
     node = add_node_to_db(node)
     _deploy_node(node, do_deploy, with_testing)
+
+    ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
+    logs_podname = get_kuberdock_logs_pod_name(hostname)
+    logs_pod = db.session.query(Pod).filter_by(name=logs_podname,
+                                               owner=ku).first()
+    if not logs_pod:
+        logs_kubes = 1
+        logcollector_kubes = logs_kubes
+        logstorage_kubes = logs_kubes
+        node_resources = kubes_to_limits(
+            logs_kubes, Kube.get_internal_service_kube_type()
+        )['resources']
+        logs_memory_limit = node_resources['limits']['memory']
+        if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
+            logs_kubes = int(math.ceil(
+                float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
+            ))
+
+        if logs_kubes > 1:
+            # allocate total log cubes to log collector and to log
+            # storage/search containers as 1 : 3
+            total_kubes = logs_kubes * 2
+            logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
+            logstorage_kubes = total_kubes - logcollector_kubes
+        internal_ku_token = ku.get_token()
+
+        logs_config = get_kuberdock_logs_config(
+            hostname, logs_podname,
+            Kube.get_internal_service_kube_type(),
+            logcollector_kubes,
+            logstorage_kubes,
+            MASTER_IP,
+            internal_ku_token
+        )
+        check_internal_pod_data(logs_config, ku)
+        logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
+        PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
+
+    dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
+                                              owner=ku).first()
+    if not dns_pod:
+        dns_config = get_dns_pod_config()
+        check_internal_pod_data(dns_config, ku)
+        dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
+        PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
 
     # send update in common channel for all admins
     send_event('node:change', {'id': node.id})
@@ -405,8 +410,6 @@ def _get_node_condition(x):
 
 
 def _deploy_node(dbnode, do_deploy, with_testing):
-    if not license_valid():
-        raise APIError("Action forbidden. Please check your license")
     nodes = [key for key in Node.get_ip_to_hostame_map() if key != dbnode.ip]
     if do_deploy:
         tasks.add_new_node.delay(dbnode.id, with_testing, nodes)

@@ -190,6 +190,7 @@ fi
 - Compatible fix of deps and cadvisor
 - Added notifications
 - AC-1910: fixed view of pods stat-graphics
+- Updated kuberdock deps versions(just epoch)
 
 * Wed Dec 30 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.4-15
 - AC-1817: More convenient GC settings

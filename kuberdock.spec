@@ -1,7 +1,7 @@
-Version: 0.4
+Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 15%{?dist}.cloudlinux
+Release: 0%{?dist}.rc.1.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -181,6 +181,16 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Thu Dec 31 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 1.0-0
+- Add style to license status
+- AC-1659: Do not create internal pods if node failed to add
+- Fixed localhost isolation
+- AC-1936: fix start pod response
+- fix empty logs
+- Compatible fix of deps and cadvisor
+- Added notifications
+- AC-1910: fixed view of pods stat-graphics
+
 * Wed Dec 30 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.4-15
 - AC-1817: More convenient GC settings
 - AC-1913: fixed CEPH drive unmapping during initial FS creation.

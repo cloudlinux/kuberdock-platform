@@ -108,7 +108,10 @@ class Creator(Command):
         m2 = Notification(type='warning',
                          message='NO_LICENSE',
                          description='License not found.')
-        db.session.add_all([m1, m2])
+        m3 = Notification(type='info',
+                         message='CLN_NOTIFICATION',
+                         description='')
+        db.session.add_all([m1, m2, m3])
 
         db.session.commit()
 

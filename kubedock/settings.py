@@ -10,7 +10,6 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEBUG = True
 TEST = False
 PRE_START_HOOK_ENABLED = False
-FLASKY_ADMIN = os.environ.get('AC_FLASKY_ADMIN', 'igor.bliss@gmail.com')
 
 DB_ENGINE = 'postgresql+psycopg2' # more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects
 DB_USER = 'kuberdock'
@@ -24,7 +23,7 @@ MAX_KUBES_PER_CONTAINER = 10
 
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 #SQLALCHEMY_ECHO=True
-SECRET_KEY = os.environ.get('SECRET_KEY', '37bliss91')
+SECRET_KEY = os.environ.get('SECRET_KEY', '0987654321')
 
 KUBERDOCK_INTERNAL_USER = 'kuberdock-internal'
 TRIAL_KUBES = 10
@@ -136,24 +135,6 @@ if cp.read(KUBERDOCK_SETTINGS_FILE):
             NODE_TOBIND_EXTERNAL_IPS = cp.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
         if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
             NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
-
-#import ConfigParser
-#config = ConfigParser.RawConfigParser(
-#    defaults=dict([(k, v) for k, v in globals().items() if k[0].isupper()])
-#)
-#try:
-#    config.read('/etc/sysconfig/kuberdock/kuberdock.conf')
-#    if not config.has_section('main'):
-#        config.add_section('main')
-#    DB_USER = config.get('main', 'DB_USER')
-#    DB_PASSWORD = config.get('main', 'DB_PASSWORD')
-#    DB_NAME = config.get('main', 'DB_NAME')
-#    MASTER_IP = config.get('main', 'MASTER_IP')
-#    MASTER_TOBIND_FLANNEL = config.get('main', 'MASTER_TOBIND_FLANNEL')
-#    NODE_TOBIND_EXTERNAL_IPS = config.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
-#    NODE_TOBIND_FLANNEL = config.get('main', 'NODE_TOBIND_FLANNEL')
-#except ConfigParser.Error as e:
-#    print 'ConfigParser Error: ', e
 
 
 # Import local settings

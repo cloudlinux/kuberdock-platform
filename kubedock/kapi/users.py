@@ -12,6 +12,7 @@ from ..users.models import User, UserActivity
 from ..users.utils import enrich_tz_with_offset
 from .podcollection import PodCollection, POD_STATUSES
 from .pstorage import get_storage_class
+from .licensing import is_valid as license_valid
 from ..kd_celery import celery
 
 
@@ -45,6 +46,8 @@ class UserCollection(object):
     @enrich_tz_with_offset(['timezone'])
     def create(self, data):
         """Create user"""
+        if not license_valid():
+            raise APIError("Action forbidden. Please check your license")
         data = UserValidator().validate_user_create(data)
         temp = {key: value for key, value in data.iteritems()
                 if value != '' and key not in ('package', 'rolename',)}

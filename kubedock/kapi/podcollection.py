@@ -46,6 +46,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._merge()
 
     def add(self, params, skip_check=False):  # TODO: celery
+        if not skip_check and not license_valid():
+            raise APIError("Action forbidden. Please check your license")
         secrets = set()  # username, password, full_registry
         for container in params['containers']:
             if not container.get('sourceUrl'):
@@ -531,8 +533,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
-        if not license_valid():
-            raise APIError("Action forbidden. Please check your license")
         if pod.status == POD_STATUSES.running or \
            pod.status == POD_STATUSES.pending:
             raise APIError("Pod is not stopped, we can't run it")

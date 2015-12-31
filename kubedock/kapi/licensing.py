@@ -13,18 +13,18 @@ LICENSE_PATH = '/var/opt/kuberdock/.license'
 
 
 PUBLIC_KEY =\
-"""MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzB4O9iGYFP+PhtDhnxwb
-QmF8LGRlqY8Hxw3e/3vjlpm1VlYzHEmpanIK8GA8vX2sKzkL5p4wV23AitLzFETT
-HlrIqFHUKxR2gnC4K5LromgPepxRj5foUu5qb+jzpD+YLcGbzKNdFIeRwiP3L1Uq
-kAz7HN5iJvAXX0hN2C83YvEJWsbHn3HwcZXB0T5kkhAn1zdRXvdlaY3TD4058f5I
-FY0PS2gkislqf1y8li5yAhWTwlSu/jXCoYkZfZQ1YirUfmV9r78+YprJgo6LQnXo
-N16nW0Lz6mOJt67q0X6nzqCuTTbLBdr7ruhEr/+/ufK1HAGZ7wqqi999svSDfGrm
-lMTnZTJtsgOm7gWkLdAddKE3hzhMaS7siRJfR25EO1U4x0D4TqLtP6SK2hMxkVXa
-orB8QAnZu28xjiubfmP6650g+l8gFVy8M5Dyj20eJque6lNxymTwedlpWz2AZAJx
-LYI+aE4N5YAIrL/7gbWQUzJO3yDSRO1EB/SH61/KNwqiNXJhvPIb22UlvFP40eRC
-Zz4fBYSOYCH2/AhoFGuPRtPcqiWl2Ph750jWfmZKF3pzCqzJ0pj3ndydqbFurQh7
-csoqSsSYRxagHPjoFdJhZrIzwf2zui+nWtG6OhdGrqC9MMp2THWuT9hLKqqVloMw
-NulHZIiWZzQOKsgxeTEkTzUCAwEAAQ=="""
+"""MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAsULvbFc8v7+HiQo5o4yn
+qgg0nAikdVmsS7QUf5zsFIjkfYeHCUEDuLO3mzXrXzLuXjm1LHQPGtlxNhaB7PDz
+azH2Uzw5mYNawKz8lJa93Iw3gz9BtIhGHdKWtEPPMXxGo5icQYZOKsLIiO3pQh3v
+ihcQywHu8iNjE7fJ3+8wPpv7qfeNS2FG3BBYsFxOVARKKTWWLIQ2CF9KaJDSUoGs
+97pQ3UIivOw7YrZDvtZyPJcBQg+GpVlyKyzU8WmBPMHoBFWHDaRQXngz4b5pQaYD
+yZNYIHK3nqflSLxU1Xlifd2TTO+2bel6TwtdKOl8BE8Ol/od5gw/2vmKqfNtCcXg
+OFwhe6xnKTBiBvbl7VlW/zYhThMdcapNaKx/TAIb+Jmi9m4sY0vz+vMObjWpBinD
+FWaCMwORE4Nhe2QbCgpkeS+frcDJf8v4Y1AouAFtj2pckZmtX8c7LYC5AzF2X/np
+jRW8L+Z72hq239pjpuyp/9gdLUpp3zoicjCiMO7YlqumMj5Vvu9thqc3Y2FW4K18
+sXFeu/R1hNPgQs1nPArvBreRchJMtI4P+FesS16yxRl6pMO+ewMoLuGHYhT6x+PW
+gxE7c6xbS5KegtqUImADWdk6zw/QYnCPwef59b24U2w11FD549epea7XUIHavUwC
+aZUeyc+SFioGW+5zbzhU3DMCAwEAAQ=="""
 
 
 def get_auth_key():
@@ -59,11 +59,26 @@ def update_license_data(license_data):
         tzinfo=pytz.UTC
     ).isoformat()
     data['data'] = license_data
+    _check_license(data)
+    _check_notifications(data)
+    _save_license(data)
+
+
+def _check_license(data):
     if is_status_ok(data):
         detach_admin('NO_LICENSE')
     else:
         attach_admin('NO_LICENSE', ' Please visit http://kuberdock.com')
-    _save_license(data)
+
+
+def _check_notifications(data):
+    detach_admin('CLN_NOTIFICATION')
+    notification = data.get('data', {}).get('license', {}).get('notification')
+    if notification:
+        message = notification.get('message', 'default message')
+        url = notification.get('url', 'http://kuberdock.com')
+        target = '{0} {1}'.format(message, url)
+        attach_admin('CLN_NOTIFICATION', target)
 
 
 def update_installation_id(installation_id):
@@ -86,7 +101,7 @@ def is_timestamp_ok(lic):
         return False
     updated = dateutil.parser.parse(updated)
     now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-    if (now - updated).seconds > 259200: # 3 days
+    if (now - updated).days > 3:
         return False
     return True
 

@@ -67,6 +67,14 @@ define(['app_data/app', 'marionette',
 
     views.LicenseView = Marionette.ItemView.extend({
         template: licenseTpl,
+        templateHelpers: {
+            formatDate: function(dt) {
+                if (dt) {
+                    return utils.localizeDatetimeForUser(dt);
+                }
+                return 'unknown';
+            },
+        },
 
         ui: {
             peditable : '.peditable'

@@ -3,15 +3,11 @@
         <span><b>License Status</b></span>
         <span class="icon <%= status %>"><%= status ? status : 'unknown'%></span>
         <span class="icon clock">Expiration date:
-            <% if (expiration){ %>
-                <% expiration %>
-            <% } else { %>
-                unknown
-            <% }%>
+            <%= formatDate(expiration) %>
         </span>
         <span class="icon award">License type:
             <% if (type){ %>
-                <% type %>
+                <%= type %>
             <% } else { %>
                 unknown
             <% }%>

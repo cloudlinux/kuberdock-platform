@@ -8,11 +8,15 @@ from ..kapi.users import UserNotFound
 from ..usage.models import ContainerState, IpState, PersistentDiskState
 from ..core import db
 from collections import defaultdict
+from . import APIError
 import time
+import dateutil.parser
 from datetime import datetime
 
 usage = Blueprint('usage', __name__, url_prefix='/usage')
 
+DATE_FROM = 'date_from'
+DATE_TO = 'date_to'
 
 @usage.route('/', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
@@ -42,8 +46,18 @@ def get_usage(uid):
 
 def get_dates(request):
     data = request.args
-    date_from = data.get('date_from', datetime.utcfromtimestamp(0).isoformat())
-    date_to = data.get('date_to', datetime.utcnow().isoformat())
+    date_from = datetime.fromtimestamp(0)
+    date_to = datetime.utcnow()
+    if DATE_FROM in data:
+        try:
+            date_from = dateutil.parser.parse(data[DATE_FROM])
+        except Exception as e:
+            raise APIError('{}: {}'.format(DATE_FROM, e.message))
+    if DATE_TO in data:
+        try:
+            date_to = dateutil.parser.parse(data[DATE_TO])
+        except Exception as e:
+            raise APIError('{}: {}'.format(DATE_TO, e.message))
     return (date_from, date_to)
 
 

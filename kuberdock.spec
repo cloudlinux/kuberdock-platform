@@ -61,6 +61,7 @@ Requires: python-webassets >= 0.10.1
 Requires: python-wsgiref >= 0.1.2
 Requires: python-psycogreen >= 1.0
 Requires: python-botocore
+Requires: python-dateutil
 Requires: python-boto
 Requires: python-alembic
 Requires: python-flask-migrate >= 1.4.0

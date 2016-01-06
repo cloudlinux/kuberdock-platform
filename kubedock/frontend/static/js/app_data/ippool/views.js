@@ -158,7 +158,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         childViewContainer : "tbody.networks-list",
 
         initialize: function(){
-            if (this.collection.length != 0) {
+            if (this.collection.length != 0 && !this.collection.any(function(m){return m.checked})) {
                 this.collection.models[0].checked = true;
             }
         }
@@ -168,17 +168,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         template: ippoolRightTpl,
         childView: views.NetworkItemMore,
         childViewContainer: "div.right"
-
-        //onBeforeRender: function(){
-        //    App.Data.networks.fetch()
-        //},
-
-        //initialize: function(){
-        //    App.Data.networksClone = new Backbone.Collection(
-        //        App.Data.networks.filter(function(item){ return item.checked; })
-        //    );
-        //    this.collection = App.Data.networksClone;
-        //}
     });
 
     views.AsideView = Backbone.Marionette.ItemView.extend({
@@ -294,24 +283,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var target = $(e.currentTarget),
                 id = target.attr('data-id');
             this.trigger('ippool:network:picked', id);
-            //    models = App.Data.networks.models,
-            //    collection = App.Data.networksClone;
-            //
-            //this.$('.networks-list tr').removeClass('checked');
-            //target.addClass('checked');
-            //
-            //collection.reset();
-            //
-            //_.each(models, function(model,index){
-            //    if (model.get('network') == id) {
-            //        collection.add(model);
-            //        model.checked = true;
-            //    }
-            //    else {
-            //        model.checked = false;
-            //    }
-            //});
-        },
+        }
     });
 
     return views;

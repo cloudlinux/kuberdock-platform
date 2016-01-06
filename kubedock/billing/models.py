@@ -74,6 +74,17 @@ class Kube(BaseModelMixin, db.Model):
     def __repr__(self):
         return "<Kube(id='{0}', name='{1}')>".format(self.id, self.name)
 
+    @property
+    def available(self):
+        """True if there are nodes for this kube type in the cluster."""
+        return (self.id == Kube.get_internal_service_kube_type() or
+                bool(self.nodes))
+
+    def to_dict(self, include=None, exclude=()):
+        return super(Kube, self).to_dict(
+            include=dict(include or {}, available=self.available),
+            exclude=exclude)
+
     @classmethod
     def get_by_id(cls, kubeid):
         return cls.query.filter(cls.id == kubeid).first()

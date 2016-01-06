@@ -104,6 +104,21 @@ def get_api_url(*args, **kwargs):
     return url
 
 
+def k8s_json_object_hook(obj):
+    """Convert things like datetime to native python types.
+
+    Example:
+        response = requests.get('https://localhost:8080/api/v1/pods')
+        pods = response.json(object_hook=k8s_json_object_hook)
+    """
+    for key, value in obj.iteritems():
+        if isinstance(value, basestring):
+            dt = parse_datetime_str(value)
+            if dt is not None:
+                obj[key] = dt
+    return obj
+
+
 # separate function because set_roles_loader decorator don't return function. Lib bug.
 def get_user_role():
     rolename = 'AnonymousUser'

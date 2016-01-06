@@ -1,17 +1,11 @@
 from flask import current_app
-import datetime
+from datetime import datetime
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
-from ..core import db
+from ..core import db, ConnectionPool
 from ..pods.models import Pod
 from ..usage.models import PodState, ContainerState
-from ..tasks import fix_pods_timeline_heavy
-
-DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
-
-
-def save_pod_state(pod_id, event_type, host):
-    PodState.save_state(pod_id, event_type, host)
+from ..utils import atomic
 
 
 def select_pod_states_history(pod_id, depth=0):
@@ -33,29 +27,55 @@ def select_pod_states_history(pod_id, depth=0):
     return [item.to_dict() for item in query]
 
 
-def update_containers_state(pod_id, containers, deleted=False):
-    """Update and fix container states using data from k8s pod event.
+@atomic(nested=False)
+def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time=None):
+    """Update and fix container and pod states using data from k8s pod resource.
+    Works well even if `k8s_pod_status`es are processed in a wrong order.
 
     :param pod_id: id of the container's pod
-    :param containers: k8s Pod.status.containerStatuses
+    :param k8s_pod_status: k8s Pod.status
+    :param event_type: k8s event type or None
+    :param host: optional, node hostname (will be saved in PodState)
+    :param event_time: optional, used as the best version of "current" time
+    :returns: set of updated/created ContainerState
     """
+    updated_CS = set()
+    event_time = event_time or datetime.utcnow().replace(microsecond=0)
+    pod_start_time = k8s_pod_status.get('startTime')
+    if pod_start_time is None:
+        return updated_CS
+    needs_heavy_timeline_fix = False
+    deleted = event_type == 'DELETED'
+
+    # get or create pod state
+    pod_state = PodState.query.filter(PodState.start_time == pod_start_time,
+                                      PodState.pod_id == pod_id).first()
+    if pod_state is None:
+        current_app.logger.debug('create PS: {0} {1}'.format(pod_id, host,
+                                                             pod_start_time))
+        pod_state = PodState(pod_id=pod_id, hostname=host, start_time=pod_start_time)
+        db.session.add(pod_state)
+    if event_type is not None and (pod_state.last_event_time is None or
+                                   event_time >= pod_state.last_event_time):
+        pod_state.last_event = event_type
+        pod_state.last_event_time = event_time
+
+    # get data from our db
     pod = Pod.query.get(pod_id)
     containers_config = {container.get('name'): container
                          for container in pod.get_dbconfig('containers', [])}
-    pod_state = None
-    for container in containers:
+
+    # process container states
+    for container in (k8s_pod_status.get('containerStatuses') or []):
         if 'containerID' not in container:
             continue
         container_name = container['name']
         kubes = containers_config.get(container_name).get('kubes', 1)
 
         # k8s fires "MODIFIED" pod event when docker_id of container changes.
+        # (container restart in the same pod)
         # k8s provides us last state of previous docker container and the
         # current state of a new one.
-
-        # if we will read only "state", we may miss the moment when container
-        # terminates; if we will read only "lastState", we definitely will miss
-        # the moment when container starts... so, read both
         for state_type, state in (container['lastState'].items() +
                                   container['state'].items()):
             docker_id_source = (state if state_type == 'terminated' else container)
@@ -64,38 +84,40 @@ def update_containers_state(pod_id, containers, deleted=False):
             start = state.get('startedAt')
             if start is None:
                 continue
-            start = datetime.datetime.strptime(start, DATETIME_FORMAT)
+
+            # get or create CS
             cs = ContainerState.query.filter(
                 ContainerState.container_name == container_name,
                 ContainerState.docker_id == docker_id,
                 ContainerState.kubes == kubes,
                 ContainerState.start_time == start,
             ).first()
-            end = state.get('finishedAt')
-            if end is not None:
-                end = datetime.datetime.strptime(end, DATETIME_FORMAT)
-            elif state_type == 'terminated' or deleted:
-                end = datetime.datetime.utcnow().replace(microsecond=0)
-            if cs:
-                cs.end_time = end
-            else:
-                pod_state = pod_state or PodState.query.filter(
-                    PodState.pod_id == pod_id,
-                    PodState.start_time <= start,
-                ).order_by(PodState.start_time.desc()).first()
-                if pod_state is None:
-                    current_app.logger.warn('PodState for {0} not found'.format(pod_id))
-                    continue
-
+            if cs is None:
                 cs = ContainerState(
                     pod_state=pod_state,
                     container_name=container_name,
                     docker_id=docker_id,
                     kubes=kubes,
                     start_time=start,
-                    end_time=end,
                 )
                 db.session.add(cs)
+            updated_CS.add(cs)
+
+            # find end_time:
+            # the best option is sate.finishedAt, it must be right
+            # the next best option is cs.end_time (we might get it from previous
+            # run or some other source)
+            cs.end_time = state.get('finishedAt') or cs.end_time
+            if cs.end_time is None and (state_type == 'terminated' or deleted):
+                cs.end_time = event_time
+
+            # extend pod state so all container states fit
+            # pod_state.start_time = min(pod_state.start_time, start)
+            if deleted and (pod_state.end_time is None or
+                            pod_state.end_time < cs.end_time):
+                pod_state.end_time = cs.end_time
+
+            # get exit_code and reason
             if state_type == 'terminated':
                 cs.exit_code = state.get('exitCode')
                 reason, message = state.get('reason'), state.get('message')
@@ -117,12 +139,69 @@ def update_containers_state(pod_id, containers, deleted=False):
                            ContainerState.end_time.is_(None)),
                 ).one()
             except MultipleResultsFound:
-                fix_pods_timeline_heavy.delay()
+                needs_heavy_timeline_fix = True
             except NoResultFound:
                 pass
             else:
                 prev_cs.fix_overlap(start)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+                updated_CS.add(prev_cs)
+    prev_ps = PodState.query.filter(PodState.pod_id == pod_id,
+                                    PodState.start_time < pod_state.start_time,
+                                    db.or_(PodState.end_time > pod_state.start_time,
+                                           PodState.end_time.is_(None))).first()
+    if prev_ps:
+        PodState.close_other_pod_states(pod_id, pod_state.start_time, commit=False)
+
+    if deleted and (pod_state.end_time is None or
+                    k8s_pod_status.get('phase') == 'Failed'):
+        pod_state.end_time = event_time
+
+    if needs_heavy_timeline_fix:
+        updated_CS.update(fix_pods_timeline_heavy())
+
+    return updated_CS
+
+
+def fix_pods_timeline_heavy():
+    """
+    Fix time lines overlapping
+    This task should not be performed during normal operation
+    :returns: set of updated ContainerStates
+    """
+    updated_CS = set()
+    redis = ConnectionPool.get_connection()
+
+    if redis.get('fix_pods_timeline_heavy'):
+        return updated_CS
+
+    redis.setex('fix_pods_timeline_heavy', 3600, 'true')
+
+    # t0 = datetime.now()
+
+    cs1 = db.aliased(ContainerState, name='cs1')
+    ps1 = db.aliased(PodState, name='ps1')
+    cs2 = db.session.query(ContainerState, PodState.pod_id).join(PodState).subquery()
+    cs_query = db.session.query(cs1, cs2.c.start_time).join(
+        ps1, ps1.id == cs1.pod_state_id
+    ).join(
+        cs2, db.and_(ps1.pod_id == cs2.c.pod_id,
+                     cs1.container_name == cs2.c.container_name)
+    ).filter(
+        cs1.start_time < cs2.c.start_time,
+        db.or_(cs1.end_time > cs2.c.start_time,
+               cs1.end_time.is_(None))
+    ).order_by(
+        ps1.pod_id, cs1.container_name, db.desc(cs1.start_time), cs2.c.start_time
+    )
+
+    prev_cs = None
+    for cs1_obj, cs2_start_time in cs_query:
+        if cs1_obj is not prev_cs:
+            cs1_obj.fix_overlap(cs2_start_time)
+            updated_CS.add(cs1_obj)
+        prev_cs = cs1_obj
+
+    # print('fix_pods_timeline_heavy: {0}'.format(datetime.now() - t0))
+
+    redis.delete('fix_pods_timeline_heavy')
+    return updated_CS

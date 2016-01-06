@@ -18,9 +18,10 @@ try:
 except ImportError:
     JSONDecodeError = ValueError
 
-from .core import ConnectionPool, db, ssh_connect
+from flask import current_app
+from .core import db, ssh_connect
 from .utils import (
-    update_dict, get_api_url, send_event, send_logs, POD_STATUSES,
+    update_dict, get_api_url, send_event, send_logs, k8s_json_object_hook,
     get_timezone,
 )
 from .stats import StatWrap5Min
@@ -33,6 +34,7 @@ from .settings import (
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion)
+from .kapi.usage import update_states
 
 from .kd_celery import celery
 
@@ -263,6 +265,14 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
 
 
 def parse_pods_statuses(data):
+    """
+    Get pod statuses from k8s pods list and database.
+
+    :param data: k8s PodList
+    :returns: dict -> with keys - kuberdock pod ids and values - structure
+        like Pod.status, but with nodeName, kuberdock pod id and
+        number of kubes for each container in Pod.status.containerStatuses.
+    """
     db_pods = {}
     for pod_id, pod_config in Pod.query.filter(
             Pod.status != 'deleted').values(Pod.id, Pod.config):
@@ -272,21 +282,21 @@ def parse_pods_statuses(data):
             if 'kubes' in container:
                 kubes[container['name']] = container['kubes']
         db_pods[pod_id] = {'kubes': kubes}
-    items = data.get('items')
-    res = []
-    for item in items:
+
+    res = {}
+    for item in data.get('items'):
+        pod_id = item['metadata'].get('labels', {}).get('kuberdock-pod-uid')
+        if pod_id not in db_pods:  # skip deleted or alien pods
+            continue
+
         current_state = item['status']
-        try:
-            pod_id = item['metadata']['labels']['kuberdock-pod-uid']
-        except KeyError:
-            pod_id = item['metadata']['name']   # don't match our needs at all
-        if pod_id in db_pods:
-            current_state['uid'] = pod_id
-            if 'containerStatuses' in current_state:
-                for container in current_state['containerStatuses']:
-                    if container['name'] in db_pods[pod_id]['kubes']:
-                        container['kubes'] = db_pods[pod_id]['kubes'][container['name']]
-            res.append(current_state)
+        current_state['nodeName'] = item['spec'].get('nodeName')
+        current_state['uid'] = pod_id
+        if 'containerStatuses' in current_state:
+            for container in current_state['containerStatuses']:
+                if container['name'] in db_pods[pod_id]['kubes']:
+                    container['kubes'] = db_pods[pod_id]['kubes'][container['name']]
+        res[pod_id] = current_state
     return res
 
 
@@ -345,74 +355,51 @@ def get_node_interface(data):
 
 @celery.task()
 def fix_pods_timeline():
+    """
+    Create ContainerStates that wasn't created and
+    close the ones that must be closed.
+    """
+    t = [time.time()]
     css = ContainerState.query.filter(ContainerState.end_time.is_(None))
-    pods_list = requests.get(get_api_url('pods', namespace=False)).json()
-    pods_list = parse_pods_statuses(pods_list)
-    pod_ids = [pod['uid'] for pod in pods_list]
+    t.append(time.time())
+    # get pods from k8s
+    pods = requests.get(get_api_url('pods', namespace=False))
+    pods = parse_pods_statuses(pods.json(object_hook=k8s_json_object_hook))
     now = datetime.utcnow().replace(microsecond=0)
+    t.append(time.time())
+
+    updated_CS = set()
+    # TODO: use /api/v1/events too (or instead this)
+    # helps in the case when pods listener doesn't work or works too slow
+    for pod_id, k8s_pod in pods.iteritems():
+        updated_CS.update(update_states(
+            pod_id, k8s_pod, host=k8s_pod['nodeName'], event_time=now))
+    t.append(time.time())
 
     for cs in css:
+        if cs in updated_CS:
+            # pod was found in db and k8s, and k8s have info about this container
+            continue  # ContainerState was fixed in update_states()
         cs_next = ContainerState.query.join(PodState).filter(
             PodState.pod_id == cs.pod_state.pod_id,
             ContainerState.container_name == cs.container_name,
             ContainerState.start_time > cs.start_time,
         ).order_by(ContainerState.start_time).first()
         if cs_next:
-            cs.end_time = cs_next.start_time
-        elif cs.pod_state.pod_id not in pod_ids:
+            cs.fix_overlap(cs_next.start_time)
+        elif pods.get(cs.pod_state.pod_id) is None:
+            # it's the last CS and pod not found in k8s
             cs.end_time = now
+            cs.reason = 'Pod was stopped.'
 
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
-
-
-@celery.task()
-def fix_pods_timeline_heavy():
-    """
-    Fix time lines overlapping
-    This task should not be performed during normal operation
-    """
-    redis = ConnectionPool.get_connection()
-
-    if redis.get('fix_pods_timeline_heavy'):
-        return
-
-    redis.setex('fix_pods_timeline_heavy', 3600, 'true')
-
-    t0 = datetime.now()
-
-    cs1 = db.aliased(ContainerState, name='cs1')
-    ps1 = db.aliased(PodState, name='ps1')
-    cs2 = db.session.query(ContainerState, PodState.pod_id).join(PodState).subquery()
-    cs_query = db.session.query(cs1, cs2.c.start_time).join(
-        ps1, ps1.id == cs1.pod_state_id
-    ).join(
-        cs2, db.and_(ps1.pod_id == cs2.c.pod_id,
-                     cs1.container_name == cs2.c.container_name)
-    ).filter(
-        cs1.start_time < cs2.c.start_time,
-        db.or_(cs1.end_time > cs2.c.start_time,
-               cs1.end_time.is_(None))
-    ).order_by(
-        ps1.pod_id, cs1.container_name, db.desc(cs1.start_time), cs2.c.start_time
-    )
-
-    prev_cs = None
-    for cs1_obj, cs2_start_time in cs_query:
-        if cs1_obj is not prev_cs:
-            cs1_obj.fix_overlap(cs2_start_time)
-        prev_cs = cs1_obj
-
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-
-    print('fix_pods_timeline_heavy: {0}'.format(datetime.now() - t0))
-
-    redis.delete('fix_pods_timeline_heavy')
+        raise
+    t.append(time.time())
+    current_app.logger.debug('Fixed pods timeline: {0}'.format(
+        ['{0:.3f}'.format(t2-t1) for t1, t2 in zip(t[:-1], t[1:])]))
 
 
 def add_k8s_node_labels(nodename, labels):

@@ -14,13 +14,14 @@ from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 from kubedock.testutils import create_app
 
 from ..pod import Pod
-from .. import podcollection
+from .. import podcollection, helpers
 from ...utils import POD_STATUSES, APIError
 
 
 global_patchers = [
     mock.patch.object(podcollection, 'current_app'),
-    mock.patch.object(podcollection, 'license_valid')
+    mock.patch.object(podcollection, 'license_valid'),
+    mock.patch.object(helpers, 'current_app'),
 ]
 
 

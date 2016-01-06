@@ -1,6 +1,7 @@
 import unittest
 import logging
 import pytz
+import mock
 from ipaddress import ip_address
 from kubedock.testutils.testcases import APITestCase, attr
 
@@ -45,6 +46,7 @@ class UserCRUDTestCase(APITestCase):
         self.assertEqual(self.user.to_dict(), response.json['data'])
 
     # @unittest.skip('')
+    @mock.patch('kubedock.kapi.users.license_valid', lambda *a, **kw: True)
     def test_post(self):
         data = dict(username='test_post_users',
                     first_name='', last_name='', middle_initials='',

@@ -1,7 +1,9 @@
+import traceback
 import gevent
 import json
 import os
 import requests
+from datetime import datetime
 from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
@@ -14,8 +16,8 @@ from .settings import (
     SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG, KUBERDOCK_INTERNAL_USER)
 from .utils import (modify_node_ips, get_api_url, set_limit,
                     unregistered_pod_warning, send_event,
-                    pod_without_id_warning, unbind_ip)
-from .kapi.usage import save_pod_state, update_containers_state
+                    pod_without_id_warning, unbind_ip, k8s_json_object_hook)
+from .kapi.usage import update_states
 from .kapi.podcollection import PodCollection
 from . import tasks
 
@@ -158,9 +160,12 @@ def send_pod_status_update(pod, pod_id, event_type, app):
 def process_pods_event(data, app):
     if PODS_VERBOSE_LOG >= 2:
         print 'POD EVENT', data
+    event_time = datetime.utcnow()  # TODO: is there a better way to get event time?
     event_type = data['type']
     pod = data['object']
     pod_id = pod['metadata'].get('labels', {}).get('kuberdock-pod-uid')
+    deleted = event_type == 'DELETED'
+
     if pod_id is None:
         with app.app_context():
             pod_without_id_warning(pod['metadata']['name'],
@@ -169,23 +174,18 @@ def process_pods_event(data, app):
 
     send_pod_status_update(pod, pod_id, event_type, app)
 
+    # save states in database
     with app.app_context():
         if Pod.query.get(pod_id) is None:
             unregistered_pod_warning(pod_id)
             return
 
         host = pod['spec'].get('nodeName')
-        if host is not None:
-            save_pod_state(pod_id, event_type, host)
 
-        if event_type in ('MODIFIED', 'DELETED'):
-            if event_type == 'DELETED' or \
-                    pod['status']['phase'].lower() in ('succeeded', 'failed'):
-                PersistentDisk.free(pod_id)
-            containers = pod['status'].get('containerStatuses', [])
-            if containers:
-                update_containers_state(pod_id, containers,
-                                        deleted=(event_type == 'DELETED'))
+        if deleted or pod['status'].get('phase', '').lower() in ('succeeded', 'failed'):
+            PersistentDisk.free(pod_id)
+        update_states(pod_id, pod['status'], event_type=event_type,
+                      host=host, event_time=event_time)
 
     if event_type == 'MODIFIED':
         # fs limits
@@ -317,7 +317,7 @@ def prelist_version(url):
                         'Request result is {0}'.format(res.text))
 
 
-def listen_fabric(watch_url, list_url, func, verbose=1):
+def listen_fabric(watch_url, list_url, func, verbose=1, k8s_json_object_hook=None):
     fn_name = func.func_name
     redis_key = 'LAST_EVENT_' + fn_name
 
@@ -347,7 +347,7 @@ def listen_fabric(watch_url, list_url, func, verbose=1):
                     if verbose >= 3:
                         print '==EVENT CONTENT {0} ==: {1}'.format(
                             fn_name, content)
-                    data = json.loads(content)
+                    data = json.loads(content, object_hook=k8s_json_object_hook)
                     if data['type'].lower() == 'error' and \
                        '401' in data['object']['message']:
                         # Rewind to earliest possible
@@ -367,8 +367,8 @@ def listen_fabric(watch_url, list_url, func, verbose=1):
             except Exception as e:
                 if not (isinstance(e, WebSocketConnectionClosedException) and
                         e.message == 'Connection is already closed.'):
-                    print e.__repr__(), '...restarting listen {0}...'\
-                        .format(fn_name)
+                    print('{0}\n...restarting listen {1}...'
+                          .format(traceback.format_exc(), fn_name))
                 gevent.sleep(0.2)
     return result
 
@@ -377,7 +377,10 @@ listen_pods = listen_fabric(
     get_api_url('pods', namespace=False, watch=True),
     get_api_url('pods', namespace=False),
     process_pods_event,
-    PODS_VERBOSE_LOG
+    PODS_VERBOSE_LOG,
+    # TODO: remove param, use it for all listeners
+    # (it converts things like datetime from k8s API to native python types)
+    k8s_json_object_hook=k8s_json_object_hook,
 )
 
 listen_endpoints = listen_fabric(

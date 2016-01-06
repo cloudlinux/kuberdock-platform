@@ -114,32 +114,28 @@ class PodState(BaseModelMixin, db.Model):
         return entity
 
     @classmethod
-    def close_other_pod_states(cls, pod_id, start_time, hostname):
-        """Closes all not closed PodState with the given pod_id, which belongs
-        to another host names. Or those which belongs to the same host name
-        and have start_time less then given (for some reasons it may occurs,
+    def close_other_pod_states(cls, pod_id, start_time, commit=True):
+        """Closes all not closed PodState with the given pod_id, which
+        have start_time less then given (for some reasons it may occurs,
         though it's incorrect situation).
 
         """
-        current_time = datetime.utcnow()
-        cls.query.filter(
+        count = cls.query.filter(
             cls.pod_id == pod_id,
-            cls.end_time == None,
-            db.or_(
-                cls.hostname != hostname,
-                db.and_(
-                    cls.hostname == hostname,
-                    cls.start_time < start_time
-                )
-            )
+            cls.end_time.is_(None),
+            cls.start_time < start_time,
         ).update({
-            cls.end_time: current_time
+            cls.end_time: start_time
         })
-        try:
-            db.session.commit()
-        except:
-            db.session.rollback()
-            raise
+        if count:
+            current_app.logger.warn('{0} unclosed PodStates found'.format(count))
+
+        if commit:
+            try:
+                db.session.commit()
+            except:
+                db.session.rollback()
+                raise
 
     def to_dict(self):
         return {

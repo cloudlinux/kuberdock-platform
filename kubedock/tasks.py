@@ -126,6 +126,7 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
 def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
 
     db_node = Node.get_by_id(node_id)
+    initial_evt_sent = False
     host = db_node.hostname
     kube_type = db_node.kube_id
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
@@ -208,6 +209,11 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         while not o.channel.exit_status_ready():
             data = o.channel.recv(1024)
             while data:
+                # Here we want to send update event to all browsers but only
+                # after any update from a node has come.
+                if not initial_evt_sent:
+                    send_event('node:change', {'id': db_node.id})
+                    initial_evt_sent = True
                 for line in data.split('\n'):
                     send_logs(node_id, line, log_file)
                 data = o.channel.recv(1024)

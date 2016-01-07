@@ -261,10 +261,14 @@ check_status
 # 7. Setting kernel parameters
 sysctl -w net.ipv4.ip_nonlocal_bind=1
 sysctl -w net.ipv4.ip_forward=1
+sysctl -w net.bridge.bridge-nf-call-iptables=1
+sysctl -w net.bridge.bridge-nf-call-ip6tables=1
 check_status
 cat > /etc/sysctl.d/75-kuberdock.conf << EOF
 net.ipv4.ip_nonlocal_bind = 1
 net.ipv4.ip_forward = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 
 

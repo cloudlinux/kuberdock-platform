@@ -8,6 +8,8 @@ from kubedock.kapi.notifications import attach_admin, detach_admin
 import pytz
 
 from ..utils import APIError
+from ..validation import V
+
 
 LICENSE_PATH = '/var/opt/kuberdock/.license'
 
@@ -82,6 +84,8 @@ def _check_notifications(data):
 
 
 def update_installation_id(installation_id):
+    V()._api_validation({'installation_id': installation_id},
+                        {'installation_id': {'type': 'string', 'empty': False}})
     data = _load_license()
     if data is None:
         return

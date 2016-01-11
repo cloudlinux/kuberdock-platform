@@ -86,9 +86,14 @@
                             position: absolute;
                         }
                     }
-                    &.free, &.busy{
+                    &.free{
                         &:before{
                             background-color: #97cd75;
+                        }
+                    }
+                    &.busy{
+                        &:before{
+                            background-color: #ffb704;
                         }
                     }
                     &.blocked{
@@ -96,7 +101,10 @@
                             background-color: #f5544d;
                         }
                     }
-                    &#deleteNetwork, &.block_ip, &.unblock_ip, &.unbind_ip{
+                    &.block_ip,
+                    &.unbind_ip,
+                    &.unblock_ip,
+                    &#deleteNetwork{
                         top: 2px;
                         left: 7px;
                         width: 20px;

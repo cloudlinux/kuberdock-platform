@@ -893,14 +893,17 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 });
                 that.listenTo(layoutView, 'ippool:network:picked', function(id){
                     App.getIPPoolCollection().done(function(ippoolCollection){
+                        var item = ippoolCollection.findWhere({id: id});
                         layoutView.nav.show(navbar);
                         layoutView.main.show(new Views.BreadcrumbView());
                         layoutView.aside.show(new Views.AsideView());
-                        layoutView.left.show(new Views.LeftView({
-                            collection: ippoolCollection
-                        }));
+                        ippoolCollection.each(function(m){
+                            m.checked = false;
+                        });
+                        item.checked = true;
+                        layoutView.left.show(new Views.LeftView({collection: ippoolCollection}));
                         layoutView.right.show(new Views.RightView({
-                            collection: new Model.NetworkCollection(ippoolCollection.findWhere({id: id}))
+                            collection: new Model.NetworkCollection(item)
                         }));
                     });
                 });

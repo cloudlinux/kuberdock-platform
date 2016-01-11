@@ -107,6 +107,7 @@ define(['moment-timezone', 'notify'], function(moment){
             window.location = '/login';
         } else {
             $.notify(msg,{
+                autoHide: type == 'error' ? false : true,
                 autoHideDelay: 5000,
                 clickToHide: true,
                 globalPosition: 'bottom left',

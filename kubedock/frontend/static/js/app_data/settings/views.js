@@ -88,6 +88,12 @@ define(['app_data/app', 'marionette',
                 pk: 1,
                 name: 'installationID',
                 url: '/api/pricing/license/installation_id',
+                validate: function(newValue) {
+                    if (!newValue.trim()) {
+                        utils.notifyWindow('Empty installation ID is not allowed.');
+                        return ' ';  // return string - means validation not passed
+                    }
+                },
                 success: function(response, newValue) {
                     that.model.set({name: newValue});
                     $.notify('New instalattion ID "' + newValue + '" is saved', {

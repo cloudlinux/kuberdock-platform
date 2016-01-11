@@ -192,7 +192,8 @@ def get_version(package, patt=re.compile(r"""(\d[\d\.\-]+\d)(?=\.?\D)""")):
     """
     try:
         rv = subprocess.check_output(['rpm', '-q', package])
-        return patt.search(rv).group(1)
+        version = patt.search(rv).groups()
+        return version[0] if len(version) == 1 else version
     except (subprocess.CalledProcessError, AttributeError):
         return 'unknown'
 
@@ -323,12 +324,14 @@ def get_containers_summary(top_number=10):
     ]
 
 
-def collect(patt=re.compile(r"""-.*$""")):
+def collect(kd_version_patt=re.compile(r"""(\d[\d\.\-]+\d)(?=[\.\w]+?rc\.(\d+))?""")):
     data = {}
     license_data = licensing.get_license_info() or {}
     data['nodes'] = extend_nodes(fetch_nodes())
-    for pkg in 'kubernetes-master', 'kuberdock':
-        data[patt.sub('', pkg)] = get_version(pkg)
+    data['kubernetes'] = get_version('kubernetes-master')
+    kd_version = get_version('kuberdock', patt=kd_version_patt)
+    data['kuberdock'] = (kd_version if isinstance(kd_version, basestring) else
+                         '{0} RC{1}'.format(*kd_version))
     data['installation-id'] = license_data.get('installationID', '')
     data['storage'] = get_storage()
     data['users'] = get_users_number()

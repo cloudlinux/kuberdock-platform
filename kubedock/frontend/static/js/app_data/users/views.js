@@ -582,7 +582,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         edit_user: function(){
-            App.navigate('users/edit/' + this.model.id + '/', {trigger: true});
+            App.navigate('users/edit/' + this.model.id, {trigger: true});
         },
 
         generalTab: function(){

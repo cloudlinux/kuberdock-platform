@@ -7,6 +7,7 @@ from sqlalchemy.sql import not_
 from ..users import User
 from ..users.signals import user_logged_in, user_logged_out
 from ..core import login_manager
+from ..api.users import auth_another
 
 
 auth = Blueprint('auth', __name__)
@@ -29,13 +30,22 @@ def load_users_from_request(request):
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated():
-        return redirect(url_for('main.index'))
     username = request.form.get('login-form-username-field')
     passwd = request.form.get('login-form-password-field')
-    token = request.args.get('token')
+    token = request.args.get('token', request.form.get('token'))
     if token:
         username = token.split('|', 1)[0] or None
+
+    if current_user.is_authenticated():
+        if token and current_user.username != username:
+            if current_user.is_administrator():
+                user = User.filter(User.username == username).first()
+                auth_another(user.id)
+            else:
+                logout()
+        else:
+            return redirect(url_for('main.index'))
+
     if username is not None and (passwd is not None or token is not None):
         user = User.query.filter_by(username=username).first()
         error = 'Invalid credentials provided'

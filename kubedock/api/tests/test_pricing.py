@@ -7,6 +7,8 @@ from kubedock.billing.models import Package, Kube, INTERNAL_SERVICE_KUBE_TYPE
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
 
+from kubedock.api.pricing import _format_package_version
+
 
 def randstr(length=8, symbols=ascii_letters + digits):
     return ''.join(choice(symbols) for i in range(length))
@@ -330,6 +332,22 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
         url = Url.package_kube(self.package.id, self.kube.id)
         response = self.admin_open(url, 'DELETE')
         self.assertAPIError(response, 400, 'KubeInUse')
+
+
+class TestUtils(unittest.TestCase):
+    """Tests for helper functions."""
+
+    def test_format_package_version(self):
+        version = '1.0-1.el7.centos.rc.1.cloudlinux.noarch'
+        self.assertEqual(_format_package_version(version), '1.0-1.rc.1')
+
+        version = 'qwerty'
+        self.assertEqual(_format_package_version(version), version)
+
+        version = '1.0.3-0.1.git61c6ac5.el7.centos.2.x86_64'
+        self.assertEqual(_format_package_version(version), '1.0.3-0.1')
+
+        self.assertIsNone(_format_package_version(None))
 
 
 if __name__ == '__main__':

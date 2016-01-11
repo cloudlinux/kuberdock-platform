@@ -1,6 +1,7 @@
 from flask import Blueprint, current_app
 from flask.views import MethodView
 import json
+import re
 
 from ..core import db, ConnectionPool
 from ..rbac import check_permission
@@ -319,6 +320,35 @@ def _remove_is_default_kube_flags():
     Kube.query.update({Kube.is_default: None}, synchronize_session='fetch')
 
 
+def _format_package_version(
+        version,
+        major_pattern=re.compile(r'^(\d+[\.\d\-]+\d+)(.*)'),
+        minor_pattern=re.compile(r'(\.rc\.\d+)')):
+    """We have to convert version strings like
+    '1.0-0.el7.centos.rc.1.cloudlinux' to '1.0-0.rc.1' to show it for an end
+    user.
+    Also convert versions like '1.0.3-0.1.git61c6ac5.el7.centos.2' to
+    '1.0.3-0.1'
+    :param version: version string which, for example, can be get by executing
+        rpm -q --qf "%{VERSION}-%{RELEASE}" packagename
+    major_pattern - RE patter which extracts first version part (digits,
+        dots, dashes until letters) and rest of the version string
+    minor_pattern - RE pattern which tries to extract special release signs
+        from rest of the version string returned by major pattern.
+    """
+    if not version:
+        return version
+    match = major_pattern.match(version)
+    if not match:
+        return version
+    major_v, rest_part = match.groups()
+    if rest_part:
+        match = minor_pattern.search(rest_part)
+        if not match:
+            return major_v
+    return major_v + ''.join(x for x in match.groups() if x is not None)
+
+
 @pricing.route('/license', methods=['GET'], strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
@@ -354,7 +384,7 @@ def get_license():
         except:
             pass
         try:
-            containers.append(int(node['containers']['total']))
+            containers.append(int(node['user_containers']['running']))
         except:
             pass
     result = {
@@ -365,14 +395,23 @@ def get_license():
         'platform': installation_data.get('platform'),
         'storage': installation_data.get('storage'),
         'version': {
-            'KuberDock': installation_data.get('kuberdock'),
-            'kubernetes': installation_data.get('kubernetes'),
-            'docker': installation_data.get('docker')
+            'KuberDock': _format_package_version(
+                installation_data.get('kuberdock')
+            ),
+            'kubernetes': _format_package_version(
+                installation_data.get('kubernetes')
+            ),
+            'docker': _format_package_version(
+                installation_data.get('docker')
+            )
         },
         'data': {
             'nodes': [0, len(installation_data.get('nodes', []))],
             'cores': [0, sum(cores)],
-            'memory': [0, sum(memory) / (1024 ** 3)],  # Gb
+            'memory': [
+                0,
+                "{0:.1f}".format(float(sum(memory)) / (1024 ** 3)) # Gb
+            ],
             'containers': [0, sum(containers)],
             'pods': [
                 0, installation_data.get('pods', {}).get('total', 0)

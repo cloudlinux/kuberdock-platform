@@ -74,13 +74,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         ui: {
             block_ip      : '.block_ip',
             unblock_ip    : '.unblock_ip',
-            unbind_ip     : '.unbind_ip'
+            /*unbind_ip     : '.unbind_ip'*/
         },
 
         events: {
             'click @ui.block_ip'      : 'blockIP',
             'click @ui.unblock_ip'    : 'unblockIP',
-            'click @ui.unbind_ip'     : 'unbindIP'
+            /*'click @ui.unbind_ip'     : 'unbindIP'*/
         },
 
         templateHelpers: function(){
@@ -122,7 +122,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.commandIP('unblock', ip);
         },
 
-        unbindIP: function(btn){
+/*        unbindIP: function(btn){
             var ip = $(btn.currentTarget).data('ip'),
                 that = this;
 
@@ -136,7 +136,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     buttonCancel: true
                 }
             });
-        }
+        }*/
     });
 
     views.BreadcrumbView = Backbone.Marionette.ItemView.extend({

@@ -5,7 +5,6 @@
             <tr>
                 <th class="col-xs-6">IP</th>
                 <th class="col-xs-6">Status</th>
-                <!-- <th>Assigned</th> -->
             </tr>
         </thead>
         <tbody class="networks-list-more">
@@ -17,7 +16,7 @@
                     <td>
                         <% if(itm[2] == 'busy') { %>
                             <span class="<%- itm[2] %>">"<%- itm[1] %>"</span>
-                            <span class="unbind_ip pull-right" data-ip="<%- itm[0] %>"></span>
+                            <!-- <span class="unbind_ip pull-right" data-ip="<%- itm[0] %>"></span> -->
                         <% } else { %>
                             <span class="<%- itm[1] ? itm[1] : itm[2] %>"><%- itm[1] ? itm[1] : itm[2] %></span>
                         <% }%>
@@ -27,9 +26,6 @@
                             <span class="block_ip pull-right" data-ip="<%- itm[0] %>"></span>
                         <% } %>
                     </td>
-                    <!-- <td>
-                        yes or no
-                    </td> -->
                 </tr>
             <% }); %>
         </tbody>

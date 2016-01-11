@@ -31,8 +31,12 @@
                     <label class="col-xs-8">Kube Type</label>
                     <div class="col-xs-7">
                         <select class="kube_type selectpicker" id="extra-options" disabled>
-                            <% _.each(kube_types, function(k_type){ %>
-                            <option value="<%- k_type.id %>"<%= k_type.id === kube_type ? ' selected' : '' %>><%- k_type.name %></option>
+                            <% _.each(kube_types, function(kube_type){ %>
+                            <option value="<%- kube_type.id %>"
+                            <%= kube_type.id === kube_type ? ' selected' : '' %>
+                            <%= kube_type.available ? 'disabled' : ''%>>
+                                <%- kube_type.name %>
+                            </option>
                             <% }) %>
                         </select>
                     </div>
@@ -42,7 +46,11 @@
                         <label>Kube Type</label>
                         <select class="kube_type selectpicker" id="extra-options">
                             <% _.each(kube_types, function(kube_type){ %>
-                            <option value="<%- kube_type.id %>"><%- kube_type.name %></option>
+                                <option value="<%- kube_type.id %>"
+                                <%= kube_type.available ? '' : 'disabled'%>
+                                <%= kube_type.id === kube_type ? ' selected' : '' %>>
+                                    <%- kube_type.name %>
+                                </option>
                             <% }) %>
                         </select>
                     </div>

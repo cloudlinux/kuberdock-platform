@@ -17,6 +17,7 @@ from .utils import (modify_node_ips, get_api_url, set_limit,
                     pod_without_id_warning, unbind_ip)
 from .kapi.usage import save_pod_state, update_containers_state
 from .kapi.podcollection import PodCollection
+from . import tasks
 
 
 MAX_ETCD_VERSIONS = 1000
@@ -215,17 +216,22 @@ def process_nodes_event(data, app):
     node = data['object']
     hostname = node['metadata']['name']
     key_ = 'node_state_' + hostname
-
+    pending_key = 'node_unknown_state:' + hostname
     with app.app_context():
         redis = ConnectionPool.get_connection()
         prev_state = redis.get(key_)
-        if not prev_state:
-            redis.set(key_, get_node_state(node))
-        else:
-            current = get_node_state(node)
-            deleted = event_type == 'DELETED'
-            if prev_state != current or deleted:
-                redis.set(key_, 'DELETED' if deleted else current)
+        curr_state = get_node_state(node)
+        if prev_state != curr_state:
+            if 'unknown' in curr_state.lower():
+                # update event after we've learnt node state
+                if not redis.exists(pending_key):
+                    tasks.check_if_node_down.delay(hostname, curr_state)
+            else:
+                if event_type == 'DELETED':
+                    redis.set(key_, 'DELETED')
+                else:
+                    redis.delete(pending_key)
+                    redis.set(key_, curr_state)
                 # send update in common channel for all admins
                 node = Node.query.filter_by(hostname=hostname).first()
                 if node is not None:

@@ -69,6 +69,14 @@
                     <% }) %>
                     </select>
                 </div>
+                <!-- <div class="form-group">
+                    <label for="package-select">Frendly timezon</label>
+                    <select class="selectize" placeholder="Select timezone">
+                        <% _.each(timezones, function(t){ %>
+                            <option value="<%= t %>"><%= t %></option>
+                        <% }) %>
+                    </select>
+                </div> -->
                 <div class="form-group clearfix">
                     <label for="status-select" class="pull-left">Status</label>
                     <label class="custom pull-right">

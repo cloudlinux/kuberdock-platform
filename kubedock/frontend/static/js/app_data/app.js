@@ -107,6 +107,25 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     return deferred.promise();
                 };
 
+                that.getTimezones = function(){
+                    var deferred = $.Deferred();
+                    if (!_.has(that, 'timezoneList')) {
+                        $.get('/api/settings/timezone-list')
+                            .done(function(data){
+                                that.timezoneList = _.has(data, 'data') ? data.data : data;
+                                deferred.resolveWith(that,  [that.timezoneList]);
+                            })
+                            .fail(function(response){
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(that, [response]);
+                            });
+                    }
+                    else {
+                        deferred.resolveWith(that, [that.timezoneList]);
+                    }
+                    return deferred.promise();
+                };
+                
                 that.getRoles = function(){
                     var deferred = $.Deferred();
                     if (typeof roles === 'undefined') {

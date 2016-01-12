@@ -10,7 +10,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/users/templates/user_profile_log_history.tpl',
         'tpl!app_data/users/templates/user_profile.tpl',
         'tpl!app_data/users/templates/users_layout.tpl',
-        'bootstrap', 'jquery-ui', 'jqplot', 'jqplot-axis-renderer', 'selectpicker', 'bootstrap3-typeahead'],
+        'bootstrap', 'jquery-ui', 'jqplot', 'jqplot-axis-renderer', 'selectpicker', 'bootstrap3-typeahead', 'selectize'],
        function(App, Controller, Marionette, utils,
                 userItemTpl,
                 onlineUserItemTpl,
@@ -326,15 +326,18 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         initialize: function(options){
             this.roles = options.roles;
             this.packages = options.packages;
+            this.timezones = options.timezones;
         },
 
         templateHelpers: function(){
             var roles = _.filter(this.roles, function(r){return r !== 'HostingPanel'});
-                packages = this.packages;
+                packages = this.packages,
+                timezones = this.timezones;
             return {
                 roles: roles,
                 packages: packages,
-                defaultRole: 'User'
+                defaultRole: 'User',
+                timezones: timezones
             }
         },
 
@@ -355,7 +358,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'user_add_btn'    : 'button#user-add-btn',
             'user_cancel_btn' : 'button#user-cancel-btn',
             'selectpicker'    : '.selectpicker',
-            'input'           : 'input'
+            'input'           : 'input',
+            'selectize'       : '.selectize'
         },
 
         events: {
@@ -371,6 +375,15 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         onRender: function(){
             var that = this;
             this.ui.selectpicker.selectpicker();
+
+            this.ui.selectize.selectize({
+                sortField: {
+                    field: 'text',
+                    direction: 'asc'
+                },
+                dropdownParent: 'body'
+            });
+
             this.ui.timezone.val('UTC (+0000)');
             this.ui.timezone.typeahead({
                 autoSelect: false,
@@ -379,7 +392,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         url: '/api/settings/timezone',
                         data: {'s': that.ui.timezone.val()},
                         cache: false,
-                        success: function(response){ process(response.data); },
+                        success: function(response){
+                            process(response.data);
+                            console.log(response);
+                        },
                         error: utils.notifyWindow,
                     });
                 }

@@ -1,5 +1,6 @@
 import json
-from pytz import common_timezones
+from pytz import common_timezones, timezone
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 #from flask.ext.login import current_user
 from flask.views import MethodView
@@ -165,6 +166,15 @@ def get_timezone():
                 break
 
     return jsonify({'status': 'OK', 'data': timezones_list})
+
+
+@settings.route('/timezone-list', methods=['GET'])
+@login_required_or_basic_or_token
+@check_permission('get_timezone', 'settings')
+def get_all_timezones():
+    data = ['{0} ({1})'.format(tz, datetime.now(timezone(tz)).strftime('%z'))
+                for tz in common_timezones]
+    return jsonify({'status': 'OK', 'data': data})
 
 
 class SystemSettingsAPI(KubeUtils, MethodView):

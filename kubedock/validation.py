@@ -117,9 +117,9 @@ email_literal_regex = re.compile(
 # regexps since 2.6, and this regex is participating in further deepcopy of
 # schemas.
 envvar_name_regex = {
-    'regex': r'^[A-Z_]+[A-Z0-9_]*',
-    'message': 'Should be Upper case latin letters, digits, undescores, and '\
-               'not starts with digits'
+    'regex': r'^[A-Za-z_]+[A-Za-z0-9_]*',
+    'message': 'Latin letters, digits, undescores are expected only. ' \
+               'Must not start with digit'
 }
 
 

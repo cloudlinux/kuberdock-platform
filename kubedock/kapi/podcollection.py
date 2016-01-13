@@ -12,7 +12,8 @@ from .helpers import KubeQuery, ModelQuery, Utilities
 from .licensing import is_valid as license_valid
 from ..core import db
 from ..billing import repr_limits, Kube
-from ..pods.models import PersistentDisk, PodIP, IPPool, Pod as DBPod
+from ..pods.models import (
+    PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
 from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
                      unbind_ip, atomic)
@@ -634,6 +635,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 raise APIError('Persistent Disk {0} not found'.format(name),
                                404)
             drives[drive_name] = (storage, persistent_disk)
+            if persistent_disk.state != PersistentDiskStatuses.CREATED:
+                persistent_disk.state = PersistentDiskStatuses.PENDING
         if not drives:
             return
 
@@ -646,10 +649,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 .format(already_taken.name, already_taken.pod.name))
 
         # prepare drives
-        for drive_name, (storage, persistent_disk) in drives.iteritems():
-            storage.create(persistent_disk)
-            vid = storage.makefs(persistent_disk)
-            pod._update_volume_path(v['name'], vid)
+        try:
+            for drive_name, (storage, persistent_disk) in drives.iteritems():
+                storage.create(persistent_disk)
+                vid = storage.makefs(persistent_disk)
+                persistent_disk.state = PersistentDiskStatuses.CREATED
+                pod._update_volume_path(v['name'], vid)
+        except:
+            # free already taken drives in case of exception
+            PersistentDisk.free_drives(drives.keys())
+            raise
 
     # def _container_start(self, pod, data):
     #     self._do_container_action('start', data)

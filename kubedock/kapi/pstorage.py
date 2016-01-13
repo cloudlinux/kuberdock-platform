@@ -14,12 +14,13 @@ from flask import current_app
 
 from ..core import db
 from ..nodes.models import Node, NodeFlagNames
-from ..pods.models import Pod
+from ..pods.models import Pod, PersistentDisk, PersistentDiskStatuses
 from ..users.models import User
 from ..usage.models import PersistentDiskState
 from ..settings import SSH_KEY_FILENAME, CEPH, AWS
 from . import pd_utils
 from ..utils import APIError
+from ..kd_celery import celery
 
 
 NODE_COMMAND_TIMEOUT = 60
@@ -33,6 +34,65 @@ class NodeCommandError(Exception):
 class NoNodesError(Exception):
     """Exception raises when there is no nodes for current storage backend."""
     pass
+
+
+def delete_drive_by_id(drive_id):
+    """Marks drive in DB as deleted and asynchronously calls deletion from
+    storage backend.
+    """
+    PersistentDisk.mark_todelete(drive_id)
+    delete_persistent_drives_task.delay([drive_id], mark_only=True)
+
+
+@celery.task()
+def delete_persistent_drives_task(pd_ids, mark_only=False):
+    return delete_persistent_drives(pd_ids, mark_only=mark_only)
+
+def delete_persistent_drives(pd_ids, mark_only=False):
+    if not pd_ids:
+        return
+    pd_cls = get_storage_class()
+    to_delete = []
+    if pd_cls:
+        for pd_id in pd_ids:
+            rv = pd_cls().delete_by_id(pd_id)
+            if rv != 0:
+                current_app.logger.warning(
+                    u'Persistent Disk id:"{0}" is busy or '
+                    u'does not exist.'.format(pd_id))
+                continue
+            to_delete.append(pd_id)
+    else:
+        to_delete = pd_ids
+
+    if not to_delete:
+        return
+
+    try:
+        if mark_only:
+            db.session.query(PersistentDisk).filter(
+                PersistentDisk.id.in_(to_delete)
+            ).update(
+                {PersistentDisk.state: PersistentDiskStatuses.DELETED},
+                synchronize_session=False
+            )
+        else:
+            db.session.query(PersistentDisk).filter(
+                PersistentDisk.id.in_(to_delete)
+            ).delete(synchronize_session=False)
+        db.session.commit()
+    except:
+        current_app.logger.exception(
+            u'Failed to delete Persistent Disks from DB: "%s"',
+            to_delete
+        )
+
+
+def remove_drives_marked_for_deletion():
+    """Collects and deletes drives marked as deleted and deletes them."""
+    ids = [item.id for item in PersistentDisk.get_todelete_query()]
+    if ids:
+        delete_persistent_drives(ids, mark_only=True)
 
 
 class PersistentStorage(object):
@@ -54,12 +114,29 @@ class PersistentStorage(object):
         if self._cached_drives is None:
             try:
                 self._cached_drives = self._get_drives()
+                self._cached_drives = self._filter_missed_drives(
+                    self._cached_drives
+                )
             except NodeCommandError:
                 current_app.logger.exception(
                     'Failed to get drive list from node')
                 raise APIError('Remote command failed. '
                                'Can not retrieve drive list from remote host')
         return self._cached_drives
+
+    def _filter_missed_drives(self, drives):
+        """Removes drives from given list which are deleted or marked for
+        deletion, or missed in database.
+        """
+        if not drives:
+            return drives
+        query = PersistentDisk.get_all_query()
+        query = query.with_entities(PersistentDisk.id)
+        query = query.filter(
+            PersistentDisk.id.in_(item['id'] for item in drives)
+        )
+        valid_ids = {item.id for item in query}
+        return [item for item in drives if item['id'] in valid_ids]
 
     def get_node_ip(self):
         if self._cached_node_ip is None:

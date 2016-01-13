@@ -11,9 +11,10 @@ from kubedock.settings import PD_SEPARATOR_USERID
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
 from kubedock.billing.models import Kube
+from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses
 
 
-class TestPstorageFuncs(unittest.TestCase):
+class TestPstorageFuncs(DBTestCase):
     """Tests for kapi.pstorage independent functions."""
 
     @mock.patch.object(pstorage, 'run_remote_command')
@@ -71,6 +72,36 @@ class TestPstorageFuncs(unittest.TestCase):
         exec_run_mock.return_value = 'some unknown result'
         with self.assertRaises(pstorage.NodeCommandError):
             pstorage._get_mapped_ceph_drives_for_node()
+
+    @mock.patch.object(pstorage, 'get_storage_class')
+    def test_delete_persistent_drives(self, getsc_mock):
+        """Test for pstorage.delete_persistent_drives function"""
+        user, _ = self.fixtures.user_fixtures()
+        pd = PersistentDisk(
+            name='q', owner_id=user.id, size=1
+        )
+        db.session.add(pd)
+        db.session.commit()
+
+        ps_delete_by_id_mock = getsc_mock.return_value.return_value.delete_by_id
+
+        ps_delete_by_id_mock.return_value = 1
+
+        pstorage.delete_persistent_drives([pd.id])
+        pds = db.session.query(PersistentDisk).all()
+        self.assertEqual(len(pds), 1)
+        self.assertEqual(pds[0].state, pd.state)
+
+        ps_delete_by_id_mock.return_value = 0
+        pstorage.delete_persistent_drives([pd.id], mark_only=True)
+        pds = db.session.query(PersistentDisk).all()
+        self.assertEqual(len(pds), 1)
+        self.assertEqual(pds[0].state, PersistentDiskStatuses.DELETED)
+
+        ps_delete_by_id_mock.return_value = 0
+        pstorage.delete_persistent_drives([pd.id])
+        pds = db.session.query(PersistentDisk).all()
+        self.assertEqual(pds, [])
 
 
 class TestCephStorage(DBTestCase):

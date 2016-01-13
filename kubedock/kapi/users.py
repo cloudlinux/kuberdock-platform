@@ -11,9 +11,8 @@ from ..rbac.models import Role
 from ..users.models import User, UserActivity
 from ..users.utils import enrich_tz_with_offset
 from .podcollection import PodCollection, POD_STATUSES
-from .pstorage import get_storage_class
+from .pstorage import get_storage_class, delete_persistent_drives_task
 from .licensing import is_valid as license_valid
-from ..kd_celery import celery
 
 
 class ResourceReleaseError(APIError):
@@ -157,7 +156,7 @@ class UserCollection(object):
         # for example DBMS in container may save data to PD for a long time.
         # So there is a regular procedure to clean such undeleted drives
         # tasks.clean_drives_for_deleted_users.
-        delete_persistent_drives.apply_async(
+        delete_persistent_drives_task.apply_async(
             ([pd.id for pd in user.persistent_disks],),
             countdown=10
         )
@@ -224,36 +223,3 @@ class UserCollection(object):
         pod_collection = PodCollection(user)
         for pod in pod_collection.get(as_json=False):
             pod_collection._return_public_ip(pod['id'])
-
-
-
-@celery.task()
-def delete_persistent_drives(pd_ids):
-    if not pd_ids:
-        return
-    pd_cls = get_storage_class()
-    to_delete = []
-    if pd_cls:
-        for pd_id in pd_ids:
-            rv = pd_cls().delete_by_id(pd_id)
-            if rv != 0:
-                current_app.logger.warning(u'Persistent Disk id:"{0}" is busy or '
-                                           u'does not exist.'.format(pd_id))
-                continue
-            to_delete.append(pd_id)
-    else:
-        to_delete = pd_ids
-
-    if not to_delete:
-        return
-
-    try:
-        db.session.query(PersistentDisk).filter(
-            PersistentDisk.id.in_(to_delete)
-        ).delete(synchronize_session=False)
-        db.session.commit()
-    except:
-        current_app.logger.exception(
-            u'Failed to delete Persistent Disks from DB: "%s" from db',
-            to_delete
-        )

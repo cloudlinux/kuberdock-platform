@@ -59,15 +59,16 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         pass
 
     def delete(self, device_id):
-        pd = PersistentDisk.query.filter_by(id=device_id).first()
+        pd = PersistentDisk.get_all_query().filter(
+            PersistentDisk.id == device_id
+        ).first()
         if pd is None:
             raise PDNotFound()
+        if pd.owner_id != self._get_current_user().id:
+            raise APIError(403, 'Volume does not belong to current user')
         if pd.pod_id is not None:
             raise PDIsUsed()
-
-        cls = self._resolve_storage()
-        if cls().delete_by_id(device_id) != 0:
-            raise APIError("Couldn't delete drive.", type='DeleteDriveError')
+        ps.delete_drive_by_id(device_id)
 
 
 register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id', strict_slashes=False)

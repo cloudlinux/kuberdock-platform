@@ -349,6 +349,18 @@ class PodIP(BaseModelMixin, db.Model):
         )
 
 
+class PersistentDiskStatuses(object):
+    #: Drive was created in database and waits for creation in storage backend
+    PENDING = 0
+    #: Drive was created in DB and in storage backend
+    CREATED = 1
+    #: Drive must be deleted from storage backend
+    TODELETE = 2
+    #: Drive was deleted from backend storage. If it will be recreated, then
+    # disk state must be changed to CREATED
+    DELETED = 3
+
+
 class PersistentDisk(BaseModelMixin, db.Model):
     __tablename__ = 'persistent_disk'
     __table_args__ = (
@@ -363,6 +375,7 @@ class PersistentDisk(BaseModelMixin, db.Model):
     owner = db.relationship(User, backref='persistent_disks')
     size = db.Column(db.Integer, nullable=False)
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=True)
+    state = db.Column(db.Integer, default=PersistentDiskStatuses.PENDING, nullable=False)
     pod = db.relationship(Pod, backref='persistent_disks')
 
     def __init__(self, *args, **kwargs):
@@ -398,7 +411,19 @@ class PersistentDisk(BaseModelMixin, db.Model):
 
     @classmethod
     def free(cls, pod_id):
-        return cls.filter_by(pod_id=pod_id).update({cls.pod_id: None})
+        return cls.filter_by(pod_id=pod_id).update(
+            {cls.pod_id: None},
+            synchronize_session=False
+        )
+
+    @classmethod
+    def free_drives(cls, drives):
+        if not drives:
+            return
+        cls.filter(cls.drive_name.in_(drives)).update(
+            {cls.pod_id: None},
+            synchronize_session=False
+        )
 
     def to_dict(self):
         return dict(id=self.id,
@@ -408,6 +433,32 @@ class PersistentDisk(BaseModelMixin, db.Model):
                     size=self.size,
                     pod=self.pod_id,
                     in_use=self.pod_id is not None)
+
+    @classmethod
+    def mark_todelete(cls, drive_id):
+        db.session.query(cls).filter(
+            cls.id == drive_id, cls.pod_id == None
+        ).update(
+            {cls.state: PersistentDiskStatuses.TODELETE},
+            synchronize_session=False
+        )
+        db.session.commit()
+
+    @classmethod
+    def get_todelete_query(cls):
+        return db.session.query(cls).filter(
+            cls.state == PersistentDiskStatuses.TODELETE
+        )
+
+    @classmethod
+    def get_all_query(cls, include_deleted=False):
+        query = db.session.query(cls)
+        if not include_deleted:
+            query = query.filter(
+                ~cls.state.in_([PersistentDiskStatuses.TODELETE,
+                                PersistentDiskStatuses.DELETED])
+            )
+        return query
 
 
 class PrivateRegistryFailedLogin(BaseModelMixin, db.Model):

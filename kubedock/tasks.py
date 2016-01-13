@@ -31,7 +31,8 @@ from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     PORTS_TO_RESTRICT, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
 from .kapi.collect import collect, send
-from .kapi.users import delete_persistent_drives
+from .kapi.pstorage import (
+    delete_persistent_drives, remove_drives_marked_for_deletion)
 
 from .kd_celery import celery
 
@@ -441,6 +442,11 @@ def is_ceph_installed_on_node(hostname):
 
 
 @celery.task(rate_limit="1/m")
+def clean_deleted_drives():
+    clean_drives_for_deleted_users()
+    remove_drives_marked_for_deletion()
+
+
 def clean_drives_for_deleted_users():
     ids = [
         item.id for item in db.session.query(PersistentDisk.id).join(

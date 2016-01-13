@@ -9,7 +9,7 @@ define(['app_data/app', 'marionette',
         'tpl!app_data/settings/templates/general_settings.tpl',
         'tpl!app_data/settings/templates/general_settings_item.tpl',
         'tpl!app_data/settings/templates/license.tpl',
-        'app_data/utils', 'bootstrap', 'bootstrap3-typeahead', 'bootstrap-editable'],
+        'app_data/utils', 'bootstrap', 'bootstrap-editable', 'selectpicker'],
        function(App, Marionette,
                 settingsLayoutTpl, permissionsTpl, permissionItemTpl,
                 userEditTpl, notificationSettingsTpl, notificationItemTpl,
@@ -223,6 +223,10 @@ define(['app_data/app', 'marionette',
     views.ProfileEditView = Backbone.Marionette.ItemView.extend({
         template: userEditTpl,
 
+        initialize: function(options){
+            this.timezones = options.timezones;
+        },
+
         ui: {
             'first_name'       : 'input#firstname',
             'last_name'        : 'input#lastname',
@@ -230,7 +234,7 @@ define(['app_data/app', 'marionette',
             'password'         : 'input#password',
             'password_again'   : 'input#password-again',
             'email'            : 'input#email',
-            'timezone'         : 'input#timezone',
+            'timezone'         : 'select#timezone',
             'save'             : 'button#template-save-btn',
             'back'             : 'button#template-back-btn',
             'editBtn'          : '#template-edit-btn',
@@ -242,19 +246,22 @@ define(['app_data/app', 'marionette',
             'click @ui.back'       : 'back',
             'click @ui.save'       : 'onSave',
             'click @ui.editBtn'    : 'editTemplate',
-            'input @ui.input'     : 'changeValue',
+            'change @ui.input'     : 'changeValue',
+            'change @ui.timezone'  : 'changeValue',
             'focus @ui.input'      : 'removeError',
             /*'click @ui.deleteBtn'  : 'deleteProfile',*/
         },
 
         templateHelpers: function(){
+            var timezones = this.timezones;
             return {
                 edit: this.model.in_edit,
                 first_name: this.model.get('first_name'),
                 last_name: this.model.get('last_name'),
                 middle_initials: this.model.get('middle_initials'),
                 email: this.model.get('email'),
-                timezone: this.model.get('timezone')
+                timezone: this.model.get('timezone'),
+                timezones : timezones
             }
         },
 
@@ -265,18 +272,7 @@ define(['app_data/app', 'marionette',
             this.ui.middle_initials.val(this.model.get('middle_initials'));
             this.ui.email.val(this.model.get('email'));
             this.ui.timezone.val(this.model.get('timezone'));
-            this.ui.timezone.typeahead({
-                autoSelect: false,
-                source: function(query, process){
-                    $.ajax({
-                        url: '/api/settings/timezone',
-                        data: {'s': that.ui.timezone.val()},
-                        cache: false,
-                        success: function(responce){ process(responce.data); },
-                        error: utils.notifyWindow,
-                    });
-                }
-            });
+            this.ui.timezone.selectpicker();
         },
 
         changeValue: function(){
@@ -299,7 +295,6 @@ define(['app_data/app', 'marionette',
             };
 
             equal = _.isEqual(oldData, newData)
-
             equal === false ? this.ui.save.show() : this.ui.save.hide();
         },
 

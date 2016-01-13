@@ -577,10 +577,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     $.when(App.getUserCollection(), App.getKubeTypes(),
-                           App.getRoles(), App.getPackages()).done(function(userCollection, kubeTypes, roles, packages){
+                           App.getRoles(), App.getPackages(), App.getTimezones()).done(function(userCollection, kubeTypes, roles, packages, timezones){
                         var model = userCollection.fullCollection.get(Number(userId)),
                             view = new Views.UsersEditView({ model: model, kubeTypes: kubeTypes,
-                                                           roles: roles, packages: packages });
+                                                           roles: roles, packages: packages, timezones: timezones});
                         layoutView.main.show(view);
                         $('#pager').hide();
                         $('#user-header h2').text('Edit');
@@ -825,16 +825,18 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     navbar = new Menu.NavList({collection: App.menuCollection}),
                     userModel = new Model.CurrentUserModel();
                 that.listenTo(layoutView, 'show', function(){
-                    userModel.fetch({
-                        wait: true,
-                        success: function(model, resp, opts){
-                            layoutView.nav.show(navbar);
-                            layoutView.main.show(new Views.ProfileEditView({ model: model }))
-                        },
-                        error: function(model, response){
-                            utils.notifyWindow(response);
-                        },
-                    });
+                    App.getTimezones().done(function(timezones){
+                        userModel.fetch({
+                            wait: true,
+                            success: function(model, resp, opts){
+                                layoutView.nav.show(navbar);
+                                layoutView.main.show(new Views.ProfileEditView({ model: model, timezones : timezones}))
+                            },
+                            error: function(model, response){
+                                utils.notifyWindow(response);
+                            },
+                        });
+                    })
                 });
                 App.contents.show(layoutView);
             });
@@ -857,7 +859,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
         },
 
         showLicense: function(){
-            console.log('got that');
             var that = this;
             require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
                 var layoutView = new Views.SettingsLayout(),
@@ -967,7 +968,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 App.contents.show(layoutView);
             });
         },
-        
+
         showNotifications: function(){
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
@@ -978,7 +979,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 });
             });
         },
-        
+
         attachNotification: function(data){
             var that = this;
             require(['app_data/misc/views'], function(Views){
@@ -989,7 +990,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 });
             });
         },
-        
+
         detachNotification: function(data){
             if (!App.message.hasView()) { return; }
             var that = this;

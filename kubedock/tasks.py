@@ -447,3 +447,23 @@ def clean_drives_for_deleted_users():
             User).filter(User.deleted == True)
     ]
     delete_persistent_drives(ids)
+
+
+
+@celery.task(ignore_result=True)
+def check_if_node_down(hostname, status):
+    node = Node.query.filter_by(hostname=hostname).first()
+    if node is None:
+        return
+    redis = ConnectionPool.get_connection()
+    redis.set('node_unknown_state:'+hostname, 1)
+    redis.expire('node_unknown_state:'+hostname, 180)
+    ssh, error_message = ssh_connect(hostname, timeout=3)
+    if error_message:
+        redis.set('node_state_' + hostname, status)
+        send_event('node:change', {'id': node.id})
+        return
+    i, o, e = ssh.exec_command('systemctl restart kubelet')
+    if o.channel.recv_exit_status() != 0:
+        redis.set('node_state_' + hostname, status)
+        send_event('node:change', {'id': node.id})

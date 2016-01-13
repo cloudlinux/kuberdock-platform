@@ -142,13 +142,17 @@ class UsageTestCase(APITestCase):
 
     def test_date_filter(self):
         url = '{0}/?date_from={1}'.format(self.url, self.stop_date.isoformat())
-        response = self.open(auth=self.adminauth)
         response = self.open(url, auth=self.adminauth)
         data = response.json['data']
         self.assertEqual(len(data[self.user.username]['ip_usage']), 1)
         self.assertEqual(len(data[self.another_user.username]['ip_usage']), 1)
         self.assertEqual(len(data[self.user.username]['pd_usage']), 1)
         self.assertEqual(len(data[self.another_user.username]['pd_usage']), 1)
+
+    def test_date_error(self):
+        url = '{0}/?date_from={1}'.format(self.url, '2016-01-00T00:00:00')
+        response = self.open(url, auth=self.adminauth)
+        self.assertAPIError(response, 400, 'APIError')
 
 
 if __name__ == '__main__':

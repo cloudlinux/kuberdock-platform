@@ -236,8 +236,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod = self._get_by_id(pod_id)
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
+        # we call _stop_pod here explicitly to be uncoupled with namespaces
+        # _stop_pod explicitly remove rc and all its pods
         self._stop_pod(pod, raise_=False)
 
+        # we remove service also manually
         service_name = pod.get_config('service')
         if service_name:
             # service = self._get(['services', service_name], ns=pod.namespace)
@@ -249,8 +252,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         if hasattr(pod, 'public_ip'):
             self._remove_public_ip(pod_id=pod_id)
+        # all deleted asynchronously, now delete namespace, that will ensure
+        # delete all content
         rv = self._drop_namespace(pod.namespace)
-        # current_app.logger.debug(rv)
         self._mark_pod_as_deleted(pod_id)
 
     def check_updates(self, pod_id, container_name):
@@ -422,8 +426,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     break
             else:
                 pod.replicas = 1
-                current_app.logger.warn('Pod doesn\'t have Replication Controller:'
-                                        '{0}'.format(item))
 
             if pod.sid not in pod_index:
                 self._collection[pod.id, pod.namespace] = pod

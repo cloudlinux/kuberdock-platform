@@ -67,6 +67,7 @@ else:
         if PRE_START_HOOK_ENABLED:
             j = gevent.spawn(api.pre_start_hook, back_app)
         k = gevent.spawn(api.populate_registered_hosts, back_app)
+        l = gevent.spawn(listeners.listen_extended_statuses)
 
 if __name__ == "__main__":
 
@@ -79,6 +80,7 @@ if __name__ == "__main__":
         if PRE_START_HOOK_ENABLED:
             j = gevent.spawn(api.pre_start_hook, back_app)
         k = gevent.spawn(api.populate_registered_hosts, back_app)
+        l = gevent.spawn(listeners.listen_extended_statuses)
 
     @run_with_reloader
     def run_server():

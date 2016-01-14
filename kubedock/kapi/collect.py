@@ -79,15 +79,14 @@ def extend_nodes(nodes):
         ssh, error_message = ssh_connect(_ip)
         if error_message:
             continue
-        _, o, _ = ssh.exec_command('rpm -q kuberdock')
-        if o.channel.recv_exit_status() == 0:
-            node['kuberdock'] = o.read()
 
         node['cores'] = get_node_cores_number(ssh)
         node['kernel'] = get_node_kernel_version(ssh)
         node['cpu'] = get_node_cpu_usage(ssh)
         extend_node_memory_info(ssh, node)
         node['containers'] = get_node_container_counts(ssh)
+        node['pods'] = get_node_pods_count(ssh)
+        node['user_containers'] = get_node_user_containers_counts(ssh)
         node['docker'] = get_node_package_version(ssh, 'docker')
         node['la'] = get_node_load_avg(ssh)
     return nodes
@@ -168,13 +167,13 @@ def extend_node_memory_info(ssh, node):
 
 def get_node_container_counts(ssh):
     counters = {}
-    _, o, _ = ssh.exec_command('docker ps|wc -l')
+    _, o, _ = ssh.exec_command('docker ps --format "{{.ID}}"|wc -l')
     if o.channel.recv_exit_status() == 0:
         try:
             counters['running'] = int(o.read())
         except:
             pass
-    _, o, _ = ssh.exec_command('docker ps -a|wc -l')
+    _, o, _ = ssh.exec_command('docker ps -a --format "{{.ID}}"|wc -l')
     if o.channel.recv_exit_status() == 0:
         try:
             counters['total'] = int(o.read())
@@ -183,7 +182,41 @@ def get_node_container_counts(ssh):
     return counters
 
 
-def get_version(package, patt=re.compile(r"""(\d[\d\.\-]+\d)(?=\.?\D)""")):
+def get_node_user_containers_counts(ssh):
+    """Counts only running containers which belong to a user (not system or
+    internal kuberdock user)
+    """
+    counters = {}
+    # Use format to prevent table headers in docker ps output;
+    # exclude kuberdock service containers and kubernetes service containers
+    _, o, _ = ssh.exec_command(
+        'docker ps --format "{{.ID}} {{.Image}}"|'
+        'grep -v -E "^\w+[[:space:]]+(kuberdock/(elasticsearch|fluentd)|gcr.io/google_containers/)"|'
+        'wc -l'
+    )
+    if o.channel.recv_exit_status() == 0:
+        try:
+            counters['running'] = int(o.read())
+        except:
+            pass
+    return counters
+
+
+def get_node_pods_count(ssh):
+    res = 0
+    _, o, _ = ssh.exec_command(
+        '''docker ps --format '{{.Label "io.kubernetes.pod.name"}}'|'''
+        '''uniq|wc -l'''
+    )
+    if o.channel.recv_exit_status() == 0:
+        try:
+            res = int(o.read())
+        except:
+            pass
+    return res
+
+
+def get_version(package):
     """
     Get RPM package version
     :param package: string -> RPM package name
@@ -191,39 +224,13 @@ def get_version(package, patt=re.compile(r"""(\d[\d\.\-]+\d)(?=\.?\D)""")):
     :return: string -> version of the given package or None if missing
     """
     try:
-        rv = subprocess.check_output(['rpm', '-q', package])
-        version = patt.search(rv).groups()
-        return version[0] if len(version) == 1 else version
+        rv = subprocess.check_output(
+            ['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', package]
+        )
+        return rv
     except (subprocess.CalledProcessError, AttributeError):
         return 'unknown'
 
-
-def read_or_write_id(data=None):
-    """
-    Read system ID from file or write it to file
-    :param path: string -> path to file
-    :param data: string -> new system ID to write
-    :return: string -> retrieved id or None if
-    """
-    try:
-        with open(ID_PATH, 'w' if data is None else 'r') as f:
-            if data is None:
-                return f.read().rstrip()
-            f.write(data)
-    except IOError:
-        return
-
-def get_installation_id():
-    inst_id = read_or_write_id()
-    if inst_id:
-        return inst_id
-    try:
-        inst_id = subprocess.check_output(['dbus-uuidgen', '--get'])
-        inst_id = inst_id.rstrip()
-        read_or_write_id(inst_id)
-        return inst_id
-    except (subprocess.CalledProcessError, OSError):
-        return
 
 def get_storage():
     if CEPH:
@@ -324,14 +331,12 @@ def get_containers_summary(top_number=10):
     ]
 
 
-def collect(kd_version_patt=re.compile(r"""(\d[\d\.\-]+\d)(?=[\.\w]+?rc\.(\d+))?""")):
+def collect():
     data = {}
     license_data = licensing.get_license_info() or {}
     data['nodes'] = extend_nodes(fetch_nodes())
     data['kubernetes'] = get_version('kubernetes-master')
-    kd_version = get_version('kuberdock', patt=kd_version_patt)
-    data['kuberdock'] = (kd_version if isinstance(kd_version, basestring) else
-                         '{0} RC{1}'.format(*kd_version))
+    data['kuberdock'] = get_version('kuberdock')
     data['installation-id'] = license_data.get('installationID', '')
     data['storage'] = get_storage()
     data['users'] = get_users_number()

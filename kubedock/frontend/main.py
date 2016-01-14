@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session
+from flask import Blueprint, render_template, session, request
 from flask.ext.login import current_user, login_required
 
 #from ..utils import JSONDefaultEncoder
@@ -10,6 +10,7 @@ from ..utils import all_request_params
 from kubedock.static_pages.models import MenuItem
 from kubedock.kapi.notifications import read_role_events
 from ..kapi import nodes as kapi_nodes
+from .auth import login
 
 
 main = Blueprint('main', __name__)
@@ -18,6 +19,8 @@ main = Blueprint('main', __name__)
 @main.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
+    if request.form.get('token'):
+        login()
     if current_user.is_administrator():
         params = return_nodes()
         params['destination'] = 'nodes'

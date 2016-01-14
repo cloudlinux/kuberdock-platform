@@ -20,9 +20,9 @@ users = Blueprint('users', __name__, url_prefix='/users')
 @login_required_or_basic_or_token
 @check_permission('auth_by_another', 'users')
 @KubeUtils.jsonwrap
-def auth_another():
+def auth_another(uid=None):
     data = KubeUtils._get_params()
-    uid = data['user_id']
+    uid = uid if uid else data['user_id']
     user = User.query.get(uid)
     if user is None or user.deleted:
         raise UserNotFound('User "{0}" does not exists'.format(uid))

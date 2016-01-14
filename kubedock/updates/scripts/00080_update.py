@@ -3,7 +3,7 @@ from kubedock.updates import helpers
 
 def upgrade(upd, with_testing, *args, **kwargs):
     upd.print_log('Upgrading db...')
-    helpers.upgrade_db(revision='27ac98113841')
+    helpers.upgrade_db(revision='4078673e3670')
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):

@@ -305,6 +305,8 @@ fi
 check_status
 chcon -Rt svirt_sandbox_file_t /var/lib/elasticsearch
 check_status
+mv "/make_elastic_config.py" "/var/lib/elasticsearch"
+chmod +x "/var/lib/elasticsearch/make_elastic_config.py"
 
 # prjquota enable
 if [ ! -d /var/lib/docker/overlay ]; then

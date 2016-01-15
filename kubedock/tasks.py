@@ -181,6 +181,7 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         node_interface = get_node_interface(o.read())
         sftp = ssh.open_sftp()
         sftp.put('fslimit.py', '/fslimit.py')
+        sftp.put('make_elastic_config.py', '/make_elastic_config.py')
         sftp.put('node_install.sh', '/node_install.sh')
         sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
         sftp.put('node_network_plugin.py', '/node_network_plugin.py')

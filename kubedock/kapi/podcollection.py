@@ -144,6 +144,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _remove_public_ip(pod_id=None, ip=None):
         """Free ip (remove PodIP from database and change pod config).
 
+        Needed for suspend user feature. When user is suspended all his pods
+        will be stopped and IP must be freed.
+        We remove `public_ip` and `isPublic` flags, but mark that this pod had
+        public IP (and public ports) before, to be able to "unsuspend" user
+        without any damage to his pods.
+
         :param pod_id: pod id
         :param ip: ip as a string (u'1.2.3.4'), number (16909060), or PodIP instance
         """
@@ -173,7 +179,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     @classmethod
     @atomic()
     def _return_public_ip(cls, pod_id):
-        """If pod had public IP, and it was removed, return it back to the pod."""
+        """
+        If pod had public IP, and it was removed, return it back to the pod.
+
+        For more info see `_remove_public_ip` docs.
+        """
         pod = DBPod.query.get(pod_id)
         pod_config = pod.get_dbconfig()
 

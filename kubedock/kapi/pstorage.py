@@ -9,7 +9,7 @@ from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
 from hashlib import md5
 from StringIO import StringIO
-from fabric.exceptions import CommandTimeout
+from fabric.exceptions import CommandTimeout, NetworkError
 from flask import current_app
 
 from ..core import db
@@ -396,7 +396,7 @@ class PersistentStorage(object):
 def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False):
     try:
         result = run(command, timeout=timeout)
-    except CommandTimeout:
+    except (CommandTimeout, NetworkError):
         raise NodeCommandError(
             'Timeout reached while execute remote command'
         )

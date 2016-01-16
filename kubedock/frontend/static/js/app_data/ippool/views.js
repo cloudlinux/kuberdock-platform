@@ -278,6 +278,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'click @ui.tr' : 'onCheckItem'
         },
 
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
+        },
+
         onCheckItem: function (e) {
             e.stopPropagation();
             var target = $(e.currentTarget),

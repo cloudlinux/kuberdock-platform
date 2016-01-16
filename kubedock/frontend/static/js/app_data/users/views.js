@@ -824,6 +824,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             nav   : 'div#nav',
             main  : 'div#main',
             pager : 'div#pager'
+        },
+
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
         }
     });
 

@@ -254,6 +254,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'click @ui.nodes_page' : 'breadcrumbClick'
         },
 
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
+        },
+
         breadcrumbClick: function(){
            App.navigate('nodes', {trigger: true})
         }
@@ -371,12 +379,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             });
         },
 
-        // commented out by bliss
-        //childEvents: {
-        //    render: function() {
-        //      console.log('A child view has been rendered.');
-        //    }
-        //},
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
+        },
 
         changeTab: function (evt) {
             evt.preventDefault();
@@ -679,6 +688,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.listenTo(this.main, 'show', function(view){
                 that.listenTo(view, 'collection:name:filter', that.filterNodeByName);
             });
+        },
+
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
         },
 
         filterNodeByName: function(value){

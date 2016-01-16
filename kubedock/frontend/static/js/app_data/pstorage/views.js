@@ -60,6 +60,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         childView          : views.PersistentVolumesItemView,
         emptyView          : views.PersistentVolumesEmptyView,
         childViewContainer : 'tbody',
+
+        onShow: function(){
+            utils.preloader.hide();
+        },
     });
 
 
@@ -68,6 +72,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         regions: {
             nav : 'div#nav',
             main: 'div#details_content'
+        },
+
+        onBeforeShow: function(){
+            utils.preloader.show();
         },
     });
 

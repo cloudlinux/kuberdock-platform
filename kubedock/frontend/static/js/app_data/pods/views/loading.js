@@ -1,3 +1,4 @@
+/* TODO remove if not use */
 define(['app_data/app', 'jquery-spin'], function(App){
     var loading = {};
     loading.LoadingView = Backbone.Marionette.ItemView.extend({

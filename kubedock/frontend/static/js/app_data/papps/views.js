@@ -34,6 +34,14 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 });
             },
 
+            onBeforeShow: function(){
+                utils.preloader.show();
+            },
+
+            onShow: function(){
+                utils.preloader.hide();
+            },
+
             ui: {
                 'cancel' : '.cancel-app'
             },

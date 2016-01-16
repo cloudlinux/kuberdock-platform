@@ -169,7 +169,6 @@ define(['app_data/app', 'marionette',
     });
 
     views.NotificationEditView = views.NotificationCreateView.extend({
-
         onRender: function(){
             var curEventKeys = eventsKeysList[this.ui.event.val()];
             this.ui.event_keys.html(curEventKeys.join('<br/>'));
@@ -198,7 +197,6 @@ define(['app_data/app', 'marionette',
                 }
             });
         }
-
     });
 
     views.NotificationItemView = Marionette.ItemView.extend({
@@ -436,10 +434,17 @@ define(['app_data/app', 'marionette',
             'click @ui.tabButton' : 'changeTab'
         },
 
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
+        },
+
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
-            //if (!tgt.hasClass('active')) $('#page-preloader').show();
             if (tgt.hasClass('general')) App.navigate('settings/general', {trigger: true});
             if (tgt.hasClass('license')) App.navigate('settings/license', {trigger: true});
             else if (tgt.hasClass('profile')) App.navigate('settings/profile', {trigger: true});

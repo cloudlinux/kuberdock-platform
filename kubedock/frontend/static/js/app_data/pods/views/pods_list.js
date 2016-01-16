@@ -12,6 +12,13 @@ define(['app_data/app',
     podList.PodListLayout = Backbone.Marionette.LayoutView.extend({
         template: layoutPodListTpl,
 
+        regions: {
+            nav: '#layout-nav',
+            header: '#layout-header',
+            list: '#layout-list',
+            pager: '#layout-footer'
+        },
+
         initialize: function(){
             var that = this;
             this.listenTo(this.list, 'show', function(view){
@@ -23,20 +30,21 @@ define(['app_data/app',
             });
         },
 
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
+        },
+
         clearPager: function(){
             this.trigger('pager:clear');
         },
 
         collectionFilter: function(data){
             this.trigger('collection:filter', data);
-        },
-
-        regions: {
-            nav: '#layout-nav',
-            header: '#layout-header',
-            list: '#layout-list',
-            pager: '#layout-footer'
-        },
+        }
     });
 
     podList.PodListEmpty = Backbone.Marionette.ItemView.extend({

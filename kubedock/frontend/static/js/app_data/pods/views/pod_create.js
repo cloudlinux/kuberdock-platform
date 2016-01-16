@@ -67,6 +67,12 @@ define(['app_data/app', 'app_data/model',
             sidebar: '#sidebar',
             footer : '#footer-steps'
         },
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+        onShow: function(){
+            utils.preloader.hide();
+        },
         imageSelected: function(image, auth){
             this.trigger('image:selected', image, auth);
         },

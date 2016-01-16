@@ -44,6 +44,15 @@ define(['app_data/app',
                 that.listenTo(view, 'display:pod:list', that.showPodList);
             });
         },
+
+        onBeforeShow: function(){
+            utils.preloader.show();
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
+        },
+
         showPodStats: function(data){
             this.trigger('display:pod:stats', data);
         },

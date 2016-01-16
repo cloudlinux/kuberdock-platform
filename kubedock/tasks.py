@@ -185,6 +185,7 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         sftp.put('node_install.sh', '/node_install.sh')
         sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
         sftp.put('node_network_plugin.py', '/node_network_plugin.py')
+        sftp.put('docker-cleaner.sh', '/docker-cleaner.sh')
         sftp.put('pd.sh', '/pd.sh')
         sftp.put('/etc/kubernetes/configfile_for_nodes', '/configfile')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')

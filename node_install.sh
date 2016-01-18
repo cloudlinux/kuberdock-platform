@@ -24,6 +24,7 @@ check_status()
     fi
 }
 
+echo "Node OS: $(cat /etc/redhat-release)"
 
 if [[ $(getenforce) != 'Enforcing' ]];then
     echo "Seems like SELinux is disabled on this node."\

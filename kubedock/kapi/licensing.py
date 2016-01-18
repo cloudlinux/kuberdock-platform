@@ -124,6 +124,7 @@ def _load_license():
     except:
         return None
 
+
 def _save_license(data):
     with open(LICENSE_PATH, 'w') as fout:
         json.dump(data, fout)

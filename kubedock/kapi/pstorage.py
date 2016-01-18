@@ -429,6 +429,7 @@ def run_remote_command(host_string, command, timeout=NODE_COMMAND_TIMEOUT,
                   warn_only=True):
         return execute_run(command, timeout=timeout, jsonresult=jsonresult)
 
+
 def get_all_ceph_drives(host):
     drive_list = run_remote_command(host,
                                     'rbd list --long --format=json',

@@ -643,10 +643,11 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         self.mock_methods(podcollection.PodCollection, '_get_namespaces', '_get_pods', '_merge')
         self.pod_collection = podcollection.PodCollection(U())
 
+    @mock.patch.object(podcollection.PersistentDisk, 'free')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_stop_cluster')
     @mock.patch.object(podcollection.PodCollection, '_raise_if_failure')
-    def test_pod_normal_stop(self, rif, stop_cluster, del_):
+    def test_pod_normal_stop(self, rif, stop_cluster, del_, free_pd_mock):
         """
         Test _stop_pod in usual case
         :type del_: mock.Mock
@@ -671,6 +672,8 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
                                      ns=pod.namespace)
         stop_cluster.assert_called_once_with(pod)
         self.assertEquals(rif.called, True)
+
+        free_pd_mock.assert_called_once_with(pod.id)
 
         self.assertEqual(pod.status, POD_STATUSES.stopped)
         self.assertEqual(pod.containers[0]['state'], POD_STATUSES.stopped)

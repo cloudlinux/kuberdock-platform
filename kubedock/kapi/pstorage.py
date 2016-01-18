@@ -112,17 +112,35 @@ class PersistentStorage(object):
         method _get_drives.
         """
         if self._cached_drives is None:
-            try:
-                self._cached_drives = self._get_drives()
-                self._cached_drives = self._filter_missed_drives(
-                    self._cached_drives
-                )
-            except NodeCommandError:
-                current_app.logger.exception(
-                    'Failed to get drive list from node')
-                raise APIError('Remote command failed. '
-                               'Can not retrieve drive list from remote host')
+            self._cached_drives = self._get_drives_from_db()
+            # TODO: cleanup _ged_drives() & _filter_missed_drives methods
+            # from nested classes. Earlier drives were collected from
+            # storage backend. Now we have them in our DB.
         return self._cached_drives
+
+    def _get_drives_from_db(self, user_id=None):
+        query = PersistentDisk.get_all_query()
+        if user_id is not None:
+            query = query.filter(PersistentDisk.owner_id == user_id)
+            users = {user_id: User.get(user_id)}
+        else:
+            users = {
+                item.id: item for item in
+                db.session.query(User).filter(User.deleted == False)
+            }
+        query = query.order_by(PersistentDisk.name)
+        res = [
+            {
+                'name': item.name,
+                'drive_name': item.drive_name,
+                'owner': users[item.owner_id].username,
+                'size': item.size,
+                'id': item.id,
+                'in_use': item.pod_id is not None
+            }
+            for item in query
+        ]
+        return res
 
     def _filter_missed_drives(self, drives):
         """Removes drives from given list which are deleted or marked for

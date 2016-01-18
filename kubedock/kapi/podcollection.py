@@ -580,6 +580,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return pod.as_dict()
 
     def _stop_pod(self, pod, data=None, raise_=True):
+        # Call PD release in all cases. If the pod was already stopped and PD's
+        # were not released, then it will free them. If PD's already free, then
+        # this call will do nothing.
+        PersistentDisk.free(pod.id)
         if pod.status != POD_STATUSES.stopped:
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
@@ -645,6 +649,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 raise APIError('Persistent Disk {0} not found'.format(name),
                                404)
             drives[drive_name] = (storage, persistent_disk)
+            if persistent_disk.state == PersistentDiskStatuses.TODELETE:
+                # This status means that the drive is in deleting process now.
+                # We can't be sure that drive exists or has been deleted at the
+                # moment of starting pod.
+                raise APIError(
+                    'Persistent drive "{}" is deleting now. '
+                    'Wait some time and try again later'.format(
+                        persistent_disk.name
+                    )
+                )
             if persistent_disk.state != PersistentDiskStatuses.CREATED:
                 persistent_disk.state = PersistentDiskStatuses.PENDING
         if not drives:

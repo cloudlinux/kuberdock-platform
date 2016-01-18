@@ -42,7 +42,7 @@ Requires: python-anyjson >= 0.3.3
 Requires: python-argparse >= 1.2.1
 Requires: python-billiard >= 3.3.0.18
 Requires: python-blinker >= 1.3
-Requires: python-celery >= 3.1.15
+Requires: python-celery == 1:3.1.19
 Requires: python-ecdsa >= 0.11
 Requires: python-gevent >= 1:1.0.2
 Requires: python-greenlet >= 0.4.2

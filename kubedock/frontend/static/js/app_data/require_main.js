@@ -28,8 +28,7 @@ requirejs.config({
         mask                   : 'lib/jquery.mask',
         dde                    : 'lib/dropdowns-enhancement',
         nicescroll             : 'lib/jquery.nicescroll',
-        bbcode                 : "lib/bbCodeParser.min",
-        selectize              : "lib/selectize",
+        bbcode                 : "lib/bbCodeParser.min"
     },
     shim: {
         jquery: {

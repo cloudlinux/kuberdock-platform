@@ -1016,7 +1016,6 @@ body{
         }
     }
     /*end alert messages */
-    @import "selectize.less";
     @import "pods.less";
     @import "nodes.less";
     @import "users.less";
@@ -1390,6 +1389,10 @@ body{
                 background-color: #fff;
                 border-color: #e5e5e5;
             }
+            .no-results{
+                font-size: 13px;
+                background-color: transparent;
+            }
             .dropdown-menu{
                 .box-shadow(none);
                 .border-radius(0);
@@ -1397,6 +1400,14 @@ body{
                 margin: -1px 0 0;
                 border: 1px solid #e5e5e5;
                 > li{
+                    &.active{
+                        a{
+                            color: #3197ee;
+                            font-weight: normal;
+                            border-color: #3197ee;
+                            background-color: #f5fafe;
+                        }
+                    }
                     > a{
                         color: #3d464d;
                         font-size: 13px;
@@ -1411,6 +1422,7 @@ body{
                             background-color: #f5fafe;
                         }
                     }
+
                     &.selected{
                         a{
                             font-weight: bold;
@@ -1470,74 +1482,6 @@ body{
         }
     }
     /* end select styles */
-}
-
-select{
-    &.selectize{
-        + .selectize-control{
-            &.selectize{
-                .selectize-input{
-                    .border-radius(0);
-                    .box-shadow(none);
-                    width: 100%;
-                    height: 51px;
-                    display: block;
-                    padding: 0 20px;
-                    background-color: #fff;
-                    border: 1px solid #e5e5e5;
-                    &:after{
-                        top: 50%;
-                        width: 8px;
-                        right: 26px;
-                        height: 6px;
-                        margin-top: -3px;
-                        color: transparent;
-                        position: absolute;
-                        display: inline-block;
-                        vertical-align: middle;
-                        border-top: 7px solid #4e5665;
-                        border-right: 4.6px solid transparent;
-                        border-left: 4.5px solid transparent;
-                    }
-                    &.dropdown-active{
-                        &:after{
-                            .rotate(180deg);
-                        }
-                        &:before{
-                            content: none;
-                            background: transparent;
-                        }
-                    }
-                    .item{
-                        height: 51px;
-                        font-size: 14px;
-                        line-height: 51px;
-                    }
-                }
-            }
-        }
-    }
-}
-.selectize-dropdown{
-    &.selectize{
-        .box-shadow(none);
-        border: 1px solid #e5e5e5;
-        [data-selectable], .optgroup-header{
-            color: #3d464d;
-            font-size: 13px;
-            padding: 15px 20px;
-            text-decoration: none;
-            font-family: "open_sansregular";
-            border-left: 3px solid transparent;
-            &:hover, &.selected, &.active{
-                color: #3197ee;
-                font-weight: normal;
-                border-color: #3197ee;
-                background-color: #f5fafe;
-            }
-        }
-
-    }
 }
 @-moz-document url-prefix() {
     body .podsControl{

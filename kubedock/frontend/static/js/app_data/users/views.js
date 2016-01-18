@@ -10,7 +10,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/users/templates/user_profile_log_history.tpl',
         'tpl!app_data/users/templates/user_profile.tpl',
         'tpl!app_data/users/templates/users_layout.tpl',
-        'bootstrap', 'jquery-ui', 'jqplot', 'jqplot-axis-renderer', 'selectpicker', 'bootstrap3-typeahead', 'selectize'],
+        'bootstrap', 'jquery-ui', 'jqplot', 'jqplot-axis-renderer', 'selectpicker', 'bootstrap3-typeahead'],
        function(App, Controller, Marionette, utils,
                 userItemTpl,
                 onlineUserItemTpl,
@@ -349,7 +349,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'password'        : 'input#password',
             'password_again'  : 'input#password-again',
             'email'           : 'input#email',
-            'timezone'        : 'input#timezone',
+            'timezone'        : 'select#timezone',
             'user_status'     : 'select#status-select',
             'user_suspend'    : 'input#suspended',
             'role_select'     : 'select#role-select',
@@ -358,8 +358,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'user_add_btn'    : 'button#user-add-btn',
             'user_cancel_btn' : 'button#user-cancel-btn',
             'selectpicker'    : '.selectpicker',
-            'input'           : 'input',
-            'selectize'       : '.selectize'
+            'input'           : 'input'
         },
 
         events: {
@@ -369,37 +368,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'focus @ui.input'                       : 'removeError',
             'input @ui.input'                       : 'changeValue',
             'change @ui.selectpicker'               : 'changeValue',
-            'change @ui.input[type="checkbox"]'     : 'changeValue'
+            'change @ui.input[type="checkbox"]'     : 'changeValue',
+            'change @ui.timezone'                   : 'changeValue'
         },
 
         onRender: function(){
             var that = this;
-            this.ui.selectpicker.selectpicker();
-
-            this.ui.selectize.selectize({
-                sortField: {
-                    field: 'text',
-                    direction: 'asc'
-                },
-                dropdownParent: 'body'
-            });
-
             this.ui.timezone.val('UTC (+0000)');
-            this.ui.timezone.typeahead({
-                autoSelect: false,
-                source: function(query, process){
-                    $.ajax({
-                        url: '/api/settings/timezone',
-                        data: {'s': that.ui.timezone.val()},
-                        cache: false,
-                        success: function(response){
-                            process(response.data);
-                            console.log(response);
-                        },
-                        error: utils.notifyWindow,
-                    });
-                }
-            });
+            this.ui.selectpicker.selectpicker();
         },
 
         onSave: function(){
@@ -416,7 +392,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     if (user.get('username') == that.ui.username.val()) existsUsername = true;
                     if (user.get('email') == that.ui.email.val()) existsEmail = true;
                 });
-
                 switch (true) {
                 /* username */
                 case that.ui.username.val() == '':
@@ -515,7 +490,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     }, {
                         wait: true,
                         complete: utils.preloader.hide,
-                        success: function(){
+                        success: function(data, response){
                             App.navigate('users', {trigger: true});
                             utils.notifyWindow('User "' + username + '" created successfully',
                                                'success');
@@ -694,26 +669,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.ui.last_name.val(this.model.get('last_name'));
             this.ui.middle_initials.val(this.model.get('middle_initials'));
             this.ui.email.val(this.model.get('email'));
-            this.ui.timezone.val(this.model.get('timezone'));
+            this.ui.timezone.val(this.model.get('timezone'))
             this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
             this.ui.user_suspend.prop('checked', (this.model.get('suspended') == true));
             this.ui.role_select.val(this.model.get('rolename'));
             this.ui.package_select.val(this.model.get('package'));
             this.ui.user_add_btn.html('Save');
             this.ui.selectpicker.selectpicker();
-
-            this.ui.timezone.typeahead({
-                autoSelect: false,
-                source: function(query, process){
-                    $.ajax({
-                        url: '/api/settings/timezone',
-                        data: {'s': that.ui.timezone.val()},
-                        cache: false,
-                        success: function(responce){ process(responce.data); },
-                        error: utils.notifyWindow,
-                    });
-                }
-            });
         },
 
         changeValue: function(){

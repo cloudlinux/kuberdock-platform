@@ -34,6 +34,7 @@ class CLI_COMMANDS:
     # not documented for user. It's for internal use only:
     after_reload = '--after-reload'
     apply_one = 'apply-one'
+    concat_updates = 'concat-updates'
 
 
 FAILED_MESSAGE = """\
@@ -457,6 +458,25 @@ def parse_cmdline():
         dest='script_file',
         help='Update script file name (without path)')
 
+    concat_updates_cmd = subparsers.add_parser(
+        CLI_COMMANDS.concat_updates,
+        help='Concat update to one file')
+    concat_updates_cmd.add_argument(
+        '--new_update',
+        dest='new_update',
+        nargs='?',
+        help='Name of new update file (without path)')
+    concat_updates_cmd.add_argument(
+        '--first_update',
+        dest='first_update',
+        nargs='?',
+        help='Name of first update file to concat (without path)')
+    concat_updates_cmd.add_argument(
+        '--last_update',
+        dest='last_update',
+        nargs='?',
+        help='Name of last update file to concat (without path)')
+
     # for default subparser
     if filter(lambda x: not x.startswith('__') and x in CLI_COMMANDS.__dict__.values(), sys.argv[1:]):
         return root_parser.parse_args()
@@ -471,6 +491,28 @@ def setup_fabric():
     env.warn_only = True
     output.stdout = False
     output.aborts = False
+
+
+def concat_updates(first_update=None, last_update=None, new_update=None):
+    updates = get_available_updates()
+    if not first_update:
+        first_update = get_applied_updates()[0]
+    if not last_update:
+        last_update = updates[-1]
+    if not new_update:
+        new_update = "%05d_update.py" % (int(updates[-1][:5])+1)
+    new_update_file = os.path.join(settings.UPDATES_PATH, new_update)
+    with open(new_update_file, 'w') as newf:
+        sb = updates[updates.index(first_update):updates.index(last_update)+1]
+        for update in sb:
+            update_file = os.path.join(settings.UPDATES_PATH, update)
+            with open(update_file) as f:
+                newf.write("# {update}{sep}".format(
+                    update=update, sep=2*os.linesep))
+                newf.write(f.read())
+            os.remove(update_file)
+            print "remove: {}".format(update)
+    print "create: {}".format(new_update_file)
 
 
 if __name__ == '__main__':
@@ -592,3 +634,6 @@ if __name__ == '__main__':
                     sys.exit(0)
             else:
                 print 'Kuberdock is up to date.'
+
+        if args.command == CLI_COMMANDS.concat_updates:
+            concat_updates(args.first_update, args.last_update, args.new_update)

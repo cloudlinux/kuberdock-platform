@@ -681,14 +681,28 @@ define(['app_data/app', 'app_data/model',
         goNext: function(evt){
             var that = this,
                 volumes = this.pod.get('volumes'),
-                vm = this.model.get('volumeMounts');
+                vm = this.model.get('volumeMounts'),
+                pattern = /^[A-Za-z_/-]*$/;
 
             /* mountPath and persistent disk check */
             for (var i=0; i<vm.length; i++) {
+
+                vm[i].mountPath = vm[i].mountPath.replace(/\s+/g, '');
+
                 if (!vm[i].mountPath) {
                     utils.notifyWindow('Mount path must be set!');
                     return;
+                } else if (vm[i].mountPath.length < 2){
+                    utils.notifyWindow('Mount path minimum length is 3 symbols');
+                    return;
+                } else if (vm[i].mountPath.length > 30){
+                    utils.notifyWindow('Mount path maximum length is 30 symbols');
+                    return;
+                } else if (!pattern.test(vm[i].mountPath) ){
+                    utils.notifyWindow('Mount path should contain letters of Latin alphabet or "/", "_", "-" sumbols');
+                    return;
                 }
+
                 if (!vm[i].name) {
                     var itemName = vm[i].mountPath.charAt(0) === '/'
                         ? vm[i].mountPath.substring(1)

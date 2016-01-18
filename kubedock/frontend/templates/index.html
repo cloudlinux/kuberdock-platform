@@ -51,7 +51,6 @@
         {% endblock %}
 
         {% block app_js_asset %}
-        <script data-main="{{ url_for('static', filename='js/app_data/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
 {#
         <script type="text/javascript">
             var podCollectionData = {{ pod_collection|safe }},
@@ -69,6 +68,7 @@
         <script type="text/javascript">
             var backendData = {{ params|tojson|safe }};
         </script>
+        <script data-main="{{ url_for('static', filename='js/app_data/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
         {% endblock %}
         {% block users_app_js_asset %}{% endblock %}
         {% block nodes_app_js_asset %}{% endblock %}

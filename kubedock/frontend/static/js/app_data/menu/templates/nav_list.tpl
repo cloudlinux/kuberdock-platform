@@ -16,7 +16,7 @@
                     <span class="icon-bar"></span>
                 </button>
                 <a class="navbar-brand" href="/">
-                    <img alt="CloudLinux Kuberdock" class="logo" src="/static/img/logo2.png">
+                    <img alt="CloudLinux Kuberdock" class="logo" src="/static/img/logo.png">
                 </a>
             </div>
             <div class="navbar-collapse collapse">

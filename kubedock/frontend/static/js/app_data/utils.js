@@ -95,6 +95,16 @@ define(['moment-timezone', 'notify'], function(moment){
             msg = data;
         } else if (!data.responseJSON || !data.responseJSON.data) {
             msg = data.responseText;
+            if (data.status >= 500 && data.getResponseHeader &&  // nginx error page
+                data.getResponseHeader('content-type') == 'text/html'){
+                if (data.status == 504) error = 'Timeout error';
+                else if (data.status == 502) error = 'Server is unavailable';
+                else if (data.status == 500) error = 'Internal server error';
+                else error = data.statusText;
+                msg = 'It seems like something goes wrong (' + error + '). '
+                    + 'Reload page, try again later, or contact support if '
+                    + 'problem appears again.';
+            }
         } else {
             msg = typeof data.responseJSON.data == 'string' ? data.responseJSON.data :
                 JSON.stringify(data.responseJSON.data);

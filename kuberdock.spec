@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 0%{?dist}.rc.1.cloudlinux
+Release: 0%{?dist}.rc.2.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -182,6 +182,48 @@ fi
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 
 %changelog
+* Mon Jan 18 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com> 1.0-0.rc.2
+- AC-1942: Add data icon on pod page
+- AC-1946: Change bell icon in notifitation block
+- AC-1969: Add icons to license & profile tab in settings page
+- AC-1792: Fix navigate to user edit from login history page
+- AC-1865: Remove capitalize text in labels on settings preapp page
+- AC-1959: fixed expiration date and license type representation
+- AC-1928: removed update log event while log has not yet come
+- AC-1794: First IPPool subnet always is in focus even when user click on another one.
+- AC-1914 Login to KD through WHMCS
+- AC-1962: installation ID validation (it must be non-empty)
+- AC-1004: Allocation of available kybe-types
+- AC-1980: Add new color to ip busy status
+- AC-1662: Hide unbind button in ippool
+- AC-1960: fix kuberdock version in kapi.collect
+- AC-1663: Don't hide error messages automatically
+- AC-1991: Fix error in console on log page
+- AC-1943: added date validation. Added python-dateutil.
+- AC-1796: enabled lowercase letters for envvars
+- AC-1877: added endpoint that returns full timezones list.
+- AC-1530: Fix Pod IP isolation on the same node
+- AC-1961: license statistics info - fixed count of running users containers count, added pods counts per node. Fixed rpm package version info
+- AC-1823: before marking a node as having troubles one we try to restart kubelet
+- AC-1906: add comments, remove warning, namespaces contents already deleted explicitly, no need for warning
+- AC-1884: PD deletion now is asynchronous; Fixed pod unbinding from PD's on failed pod starts.
+  Fixed unittests for kapi.podcollection. Denied pod deletion for non-owners.
+  At persistent volume page now only drives existing in DB will be shown.
+- AC-1567: Create user-friendly Timezone drop down list
+- AC-1871: KuberDock > Add PD > Validation 'Container path' field
+- AC-1919: catch NetworkError in execute_run
+- AC-1733: Fix Elasticsearch clusterization
+- AC-1930: Added a script to clean obsolete containers /var/lib/docker and it's cron job, running every 6 hours
+- AC-2012: show notification instead of nginx error after failed ajax requests
+- AC-1978: fix urls in main menu; fix "no backendData" error
+- AC-1948, AC-2029: pod&container states bugfix and improvements; more tests; refactoring
+- AC-1951: Change style in installation ID line
+- AC-1379: Add preloaders to all pages
+- AC-1993 Change billing period for default package
+- AC-2063: concat updates to one, add concat-updates
+- AC-2000: Persistent drive listing now implemented via DB
+- AC-1968: celery replaced with patched version
+
 * Thu Dec 31 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 1.0-0.rc.1
 - Add style to license status
 - AC-1659: Do not create internal pods if node failed to add

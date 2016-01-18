@@ -30,6 +30,7 @@ EOF
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
+    helpers.upgrade_db()
     # 00077_update.py
     upd.print_log('Clear cache...')
     from kubedock.core import ConnectionPool

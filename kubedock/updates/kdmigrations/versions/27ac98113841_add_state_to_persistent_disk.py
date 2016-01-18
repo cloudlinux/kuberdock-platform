@@ -1,14 +1,14 @@
 """Add state field to persistent disk records
 
 Revision ID: 27ac98113841
-Revises: 37ccf7811576
+Revises: 4078673e3670
 Create Date: 2016-01-13 17:03:19.797906
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '27ac98113841'
-down_revision = '37ccf7811576'
+down_revision = '4078673e3670'
 
 from alembic import op
 import sqlalchemy as sa

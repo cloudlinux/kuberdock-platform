@@ -1129,11 +1129,10 @@ body{
             margin-right: 0 !important;
             height: initial !important;
             text-transform: none !important;
+            word-break: break-all;
             &:before{
-                top: 0;
+                top: 3px;
                 right: 0;
-                bottom: 0;
-                margin: auto;
                 width: 13px;
                 content: '';
                 height: 13px;
@@ -1141,8 +1140,8 @@ body{
                 background: url('../img/pencil-small.png') 0 0 no-repeat;
             }
             &:hover{
-                color: #3197ee;
                 cursor: pointer;
+                color: #4e5665 !important;
                 &:before{
                     background-position: 0 -14px;
                 }

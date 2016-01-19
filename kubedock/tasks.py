@@ -19,7 +19,7 @@ except ImportError:
     JSONDecodeError = ValueError
 
 from flask import current_app
-from .core import db, ssh_connect
+from .core import ConnectionPool, db, ssh_connect
 from .utils import (
     update_dict, get_api_url, send_event, send_logs, k8s_json_object_hook,
     get_timezone,

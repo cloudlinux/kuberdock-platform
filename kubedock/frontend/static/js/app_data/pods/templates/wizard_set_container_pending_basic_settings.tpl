@@ -44,7 +44,7 @@
                                         <span class="ieditable"><%- p.containerPort %></span>
                                     </td>
                                     <td class="containerProtocol"><span class="iseditable"><%- p.protocol %></span></td>
-                                    <td class="hostPort"><span class="ieditable"><%- p.hostPort %></span></td>
+                                    <td class="hostPort"><span class="ieditable"><%- p.hostPort ? p.hostPort : p.containerPort %></span></td>
                                     <td class="public">
                                         <label class="custom">
                                             <% if (p.isPublic){ %>

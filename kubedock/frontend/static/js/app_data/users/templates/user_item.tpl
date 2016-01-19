@@ -1,4 +1,4 @@
-<td><button class="profileUser" title="Show <%- username %> profile"><%- username %></button></td>
+<td><span class="profileUser" title="Show <%- username %> profile"><%- username %></span></td>
 <td><%- podsCount %></td>
 <td><%- containersCount %></td>
 <td><%- email ? email : 'No email' %></td>

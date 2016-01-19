@@ -1073,8 +1073,8 @@ define(['app_data/app', 'app_data/model',
                         'Collecting data... plot will be dispayed in a few minutes.',
                     axes: {
                         xaxis: {
-                            min: utils.localizeDatetimeForUser(new Date(+new Date() - 1000*60*20)),
-                            max: utils.localizeDatetimeForUser(new Date()),
+                            min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
+                            max: App.currentUser.localizeDatetime(),
                             tickOptions: {formatString:'%H:%M'},
                             tickInterval: '5 minutes',
                         },
@@ -1094,7 +1094,7 @@ define(['app_data/app', 'app_data/model',
                 this.model.get('points').splice(0);
 
             this.model.get('points').forEach(function(record){
-                var time = utils.localizeDatetimeForUser(record[0]);
+                var time = App.currentUser.localizeDatetime(record[0]);
                 for (var i=0; i<lines; i++)
                     points[i].push([time, record[i+1]]);
             });

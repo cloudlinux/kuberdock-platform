@@ -256,7 +256,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                                    // '<td>' + itm.username + '</td>' +
                                    // '<td>' + itm.email + '</td>' +
                                    // '<td>' + itm.rolename + '</td>' +
-                                    '<td>' + utils.localizeDatetimeForUser(itm.ts) + '</td>' +
+                                    '<td>' + App.currentUser.localizeDatetime(itm.ts) + '</td>' +
                                     '<td>' + itm.action + '</td>'
                                    // '<td>' + itm.ts + '</td>'
                                 ));
@@ -545,9 +545,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     if (rs.data.length != 0){
                         _.each(rs.data, function(itm){
                             that.ui.tb.append($('<tr>').append(
-                                '<td>' + utils.localizeDatetimeForUser(itm[0]) + '</td>' +
+                                '<td>' + App.currentUser.localizeDatetime(itm[0]) + '</td>' +
                                 '<td>' + utils.toHHMMSS(itm[1]) + '</td>' +
-                                '<td>' + utils.localizeDatetimeForUser(itm[2]) + '</td>' +
+                                '<td>' + App.currentUser.localizeDatetime(itm[2]) + '</td>' +
                                 '<td>' + itm[3] + '</td>'
                             ))
                         });
@@ -627,9 +627,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             return {
                 first_name: first_name ? first_name : '',
                 last_name: last_name ? last_name : '',
-                join_date: join_date ? utils.localizeDatetimeForUser(join_date) : '',
-                last_login: last_login ? utils.localizeDatetimeForUser(last_login) : '',
-                last_activity: last_activity ? utils.localizeDatetimeForUser(last_activity) : '',
+                join_date: join_date ? App.currentUser.localizeDatetime(join_date) : '',
+                last_login: last_login ? App.currentUser.localizeDatetime(last_login) : '',
+                last_activity: last_activity ? App.currentUser.localizeDatetime(last_activity) : '',
                 pods: pods ? pods : [],
                 kubeTypes: _.object(_.map(this.kubeTypes, function(t){return [t.id, t.name]})),
                 'kubes': kubesCount,

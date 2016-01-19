@@ -607,8 +607,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                                 "Collecting data... plot will be dispayed in a few minutes.",
                             axes: {
                                 xaxis: {
-                                    min: utils.localizeDatetimeForUser(new Date(+new Date() - 1000*60*20)),
-                                    max: utils.localizeDatetimeForUser(new Date()),
+                                    min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
+                                    max: App.currentUser.localizeDatetime(),
                                     tickOptions: {formatString:'%H:%M'},
                                     tickInterval: '5 minutes',
                                 },
@@ -622,7 +622,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
                 for (var i=0; i<lines; i++) {
                     if (points.length < i+1) {
-                        points.push([])
+                        points.push([]);
                     }
                 }
 
@@ -635,7 +635,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 that.model.get('points').forEach(function(record){
                     for (var i=0; i<lines; i++) {
                         points[i].push([
-                            utils.localizeDatetimeForUser(record[0]),
+                            App.currentUser.localizeDatetime(record[0]),
                             record[i+1]
                         ]);
                     }

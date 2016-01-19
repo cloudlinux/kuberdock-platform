@@ -823,7 +823,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
-                    userModel = new Model.CurrentUserModel();
+                    userModel = App.currentUser;
                 that.listenTo(layoutView, 'show', function(){
                     App.getTimezones().done(function(timezones){
                         userModel.fetch({

@@ -177,7 +177,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             var allPorts = _.flatten(containers.pluck('ports'), true),
                 allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
                 total_size = _.reduce(allPersistentVolumes,
-                    function(sum, v) { return sum + v.pdSize; }, 0);
+                    function(sum, v) { return sum + (v.pdSize || 1); }, 0);
             this.isPublic = _.any(_.pluck(allPorts, 'isPublic'));
             this.isPerSorage = !!allPersistentVolumes.length;
 

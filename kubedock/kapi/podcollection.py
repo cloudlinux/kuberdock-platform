@@ -462,7 +462,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.template_id = template_id
                 # TODO if remove _is_related then add podIP attribute here
                 # pod.service = json.loads(db_pod.config).get('service')
-                pod.volumes_original = db_pod_config.get('volumes_original')
+                pod.volumes_public = db_pod_config.get('volumes_public')
                 pod.kube_type = db_pod_config.get('kube_type')
 
                 if db_pod_config.get('public_ip'):

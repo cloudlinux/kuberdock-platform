@@ -1491,6 +1491,34 @@ class TestRemoveAndReturnIP(DBTestCase):
         self._check_removed_and_retrun_back()
 
 
+class TestPodComposePersistent(DBTestCase):
+    @mock.patch('kubedock.kapi.pod.get_storage_class')
+    def test_defaults(self, get_storage_class_mock):
+        self.user, _ = self.fixtures.user_fixtures()
+        self.db.session.add(podcollection.PersistentDisk(
+            name='present-2', owner=self.user, size=2
+        ))
+        self.db.session.commit()
+
+        volumes_in = [
+            {'name': 'vol-1', 'localStorage': True},
+            {'name': 'vol-2', 'persistentDisk': {'pdName': 'wncm', 'pdSize': 5}},
+            {'name': 'vol-3', 'persistentDisk': {'pdName': 'default-1'}},
+            {'name': 'vol-4', 'persistentDisk': {'pdName': 'present-2'}},
+        ]
+        volumes_public = [
+            {'name': 'vol-1', 'localStorage': True},
+            {'name': 'vol-2', 'persistentDisk': {'pdName': 'wncm', 'pdSize': 5}},
+            {'name': 'vol-3', 'persistentDisk': {'pdName': 'default-1', 'pdSize': 1}},
+            {'name': 'vol-4', 'persistentDisk': {'pdName': 'present-2', 'pdSize': 2}},
+        ]
+        pod = Pod({'id': str(uuid4()),
+                   'volumes': volumes_in,
+                   'containers': [{'name': 'nginx', 'image': 'nginx'}]})
+        pod.compose_persistent(self.user)
+        self.assertEqual(getattr(pod, 'volumes_public'), volumes_public)
+
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger('TestPodCollection.test_pod').setLevel(logging.DEBUG)

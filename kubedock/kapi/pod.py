@@ -97,7 +97,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         data = vars(self).copy()
         for field in ('namespace', 'secrets'):
             data.pop(field, None)
-        data['volumes'] = data.pop('volumes_original', [])
+        data['volumes'] = data.pop('volumes_public', [])
         for field in hide_fields:
             if field in data:
                 del data[field]
@@ -114,15 +114,23 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
             return
-        self.volumes_original = deepcopy(self.volumes)
-        for volume in self.volumes:
+        # volumes - k8s api, volumes_public - kd api
+        self.volumes_public = deepcopy(self.volumes)
+        for volume, volume_public in zip(self.volumes, self.volumes_public):
             if 'persistentDisk' in volume:
-                self._handle_persistent_storage(volume, owner)
+                self._handle_persistent_storage(volume, volume_public, owner)
             elif 'localStorage' in volume:
                 self._handle_local_storage(volume)
 
     @staticmethod
-    def _handle_persistent_storage(volume, owner):
+    def _handle_persistent_storage(volume, volume_public, owner):
+        """Prepare volume with persistent storage
+
+        :params volume: volume for k8s api
+            (storage specific attributes will be added)
+        :params volume_public: volume for kuberdock api
+            (all missing fields will be filled)
+        """
         pd = volume.pop('persistentDisk')
         name = pd.get('pdName')
 
@@ -132,6 +140,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             persistent_disk = PersistentDisk(name=name, owner_id=owner.id,
                                              size=pd.get('pdSize', 1))
             db.session.add(persistent_disk)
+        if volume_public['persistentDisk'].get('pdSize') is None:
+            volume_public['persistentDisk']['pdSize'] = persistent_disk.size
         pd_cls = get_storage_class()
         if not pd_cls:
             return

@@ -109,7 +109,7 @@
                                             <% if(v.persistentDisk) { %>
                                                 <td>yes</td>
                                                 <td><%- v.persistentDisk.pdName %></td>
-                                                <td><%- v.persistentDisk.pdSize %></td>
+                                                <td><%- v.persistentDisk.pdSize || '' %></td>
                                             <% } else { %>
                                                 <td>no</td>
                                                 <td></td>

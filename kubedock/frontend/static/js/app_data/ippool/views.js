@@ -183,11 +183,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'autoblock'  : '[name="autoblock"]',
             'add_button' : '#network-add-btn',
             'back'       : '.back',
+            'input'      : 'input'
         },
 
         events: {
             'click @ui.add_button' : 'onSave',
-            'click @ui.back'       : 'back'
+            'click @ui.back'       : 'back',
+            'focus @ui.input'      : 'removeError'
         },
 
         onRender: function(){
@@ -219,18 +221,27 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         onSave: function(){
             var that = this,
-                ok = true;
+                ok = true,
+                pattern = /^\d+(?:-\d+)?(?:\s*,\s*(?:\d+(?:-\d+)?))*$/;
+
             App.getIPPoolCollection().done(function(ipCollection){
                 // temp validation
                 var network = that.ui.network.val();
                 if(network.length == 0 || network.split('.').length < 4){
-                    that.ui.network.notify('Wrong IP-address');
+                    utils.notifyWindow('Wrong IP-address');
+                    that.ui.network.addClass('error');
                     ok = false;
                 } else if(network.indexOf('/') < 0){
-                    that.ui.network.notify('Wrong mask');
+                    utils.notifyWindow('Wrong mask');
+                    that.ui.network.addClass('error');
                     ok = false;
                 } else if(parseInt(network.split('/')[1]) > 32){
-                    that.ui.network.notify('Wrong network');
+                    utils.notifyWindow('Wrong network');
+                    that.ui.network.addClass('erorr');
+                    ok = false;
+                } else if ( that.ui.autoblock.val() !== '' && !pattern.test(that.ui.autoblock.val()) ){
+                    utils.notifyWindow('Exclude IP\'s are expected to be in the form of 5,6,7 or 6-134 or both comma-separated');
+                    that.ui.autoblock.addClass('error');
                     ok = false;
                 }
                 if (ok) {
@@ -253,10 +264,16 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             return ok;
         },
 
+        removeError: function(e){
+            var target = $(e.target);
+            if (target.hasClass('error')){
+                target.removeClass('error');
+            }
+        },
+
         back: function(){
             App.navigate('ippool', {trigger: true});
         }
-
     });
 
     views.NetworksLayout = Marionette.LayoutView.extend({

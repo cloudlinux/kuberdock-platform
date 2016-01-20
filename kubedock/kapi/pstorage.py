@@ -20,13 +20,15 @@ from ..users.models import User
 from ..usage.models import PersistentDiskState
 from ..settings import SSH_KEY_FILENAME, CEPH, AWS
 from . import pd_utils
-from ..utils import APIError
+from ..utils import APIError, send_event
 from ..kd_celery import celery
 
 
 NODE_COMMAND_TIMEOUT = 60
 
 DEFAULT_FILESYSTEM = 'xfs'
+
+UNABLE_CREATE_PD_MSG = 'Unable to create persistent disk "{}"'
 
 class NodeCommandError(Exception):
     """Exceptions during execution commands on nodes."""
@@ -291,13 +293,11 @@ class PersistentStorage(object):
         try:
             with drive_lock(pd.drive_name):
                 rv_code = self._create_drive(pd.drive_name, pd.size)
-        except NoNodesError:
-            msg = 'Failed to create drive. '\
-                  'There is no nodes to perform the operation'
-            current_app.logger.exception(msg)
-            raise APIError(msg)
-        except DriveIsLockedError as err:
-            raise APIError(err.message)
+        except (NoNodesError, DriveIsLockedError) as e:
+            current_app.logger.exception(UNABLE_CREATE_PD_MSG.format(pd.name))
+            send_event('notify:error', {'message': '{}, reason: {}'.format(
+                UNABLE_CREATE_PD_MSG.format(pd.drive_name), e.message)})
+            raise APIError(UNABLE_CREATE_PD_MSG.format(pd.name))
 
         if rv_code != 0:
             return None
@@ -338,20 +338,16 @@ class PersistentStorage(object):
         :param pd: kubedock.pods.models.PersistentDisk instance
         :param fs: string -> fs type by default DEFAULT_FILESYSTEM
         """
-        err_msg = u'Failed to make FS for "{}":'.format(pd.drive_name)
+        user_msg = UNABLE_CREATE_PD_MSG.format(pd.name)
+        admin_msg = UNABLE_CREATE_PD_MSG.format(pd.drive_name)
         try:
             with drive_lock(pd.drive_name):
                 return self._makefs(pd.drive_name, fs)
-        except NodeCommandError:
-            msg = err_msg + u' Remote command failed.'
-            current_app.logger.exception(msg)
-            raise APIError(msg)
-        except NoNodesError:
-            msg = err_msg + u' There is no nodes to perform the operation.'
-            current_app.logger.exception(msg)
-            raise APIError(msg)
-        except DriveIsLockedError as err:
-            raise APIError(err.message)
+        except (DriveIsLockedError, NodeCommandError, NoNodesError) as e:
+            current_app.logger.exception(admin_msg)
+            notify_msg = "{}, reason: {}".format(admin_msg, e.message)
+            send_event('notify:error', {'message': notify_msg})
+            raise APIError(user_msg)
 
     def delete_by_id(self, drive_id):
         """
@@ -579,7 +575,7 @@ def _get_mapped_ceph_devices_for_node(host):
     }
     return mapped_devices
 
-    
+
 def _get_mapped_ceph_drives_for_node():
     rbd_mapped = execute_run('rbd showmapped --format=json',
                                 jsonresult=True)

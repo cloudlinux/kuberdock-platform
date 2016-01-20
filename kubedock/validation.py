@@ -487,7 +487,7 @@ package_schema = {
     'first_deposit': positive_float_schema,
     'currency': {'type': 'string', 'maxlength': 16, 'empty': False},
     'period': {'type': 'string', 'maxlength': 16, 'empty': False,
-               'allowed': ['hour', 'month', 'quarter', 'annuel']},
+               'allowed': ['hour', 'month', 'quarter', 'annual']},
     'prefix': {'type': 'string', 'maxlength': 16},
     'suffix': {'type': 'string', 'maxlength': 16},
     'price_ip': positive_float_schema,

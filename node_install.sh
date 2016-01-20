@@ -374,7 +374,19 @@ check_status
 # 11. add docker cleaning script to crontab 
 crontab -l | { cat; echo "0 */6 * * * /var/lib/kuberdock/scripts/docker-cleaner.sh"; } | crontab -
 
+# 12. install kernel
+echo "Installing new kernel..."
+yum_wrapper -y install kernel
+check_status
+yum_wrapper -y install kernel-tools
+check_status
+yum_wrapper -y install kernel-tools-libs
+check_status
+yum_wrapper -y install kernel-headers
+check_status
+yum_wrapper -y install kernel-devel
+check_status
 
-# 12. Reboot will be executed in python function
+# 13. Reboot will be executed in python function
 
 exit 0

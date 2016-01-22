@@ -163,3 +163,12 @@ def restart_service(service):
 # do it inside update scripts
 def close_all_sessions():
     return SessionData.query.delete()
+
+
+def reboot_node(db_upd):
+    """
+    :param db_upd: update database object
+    :return:
+    """
+    db_upd.print_log("Rebooting node")
+    run('(sleep 2; reboot) &', pty=False)

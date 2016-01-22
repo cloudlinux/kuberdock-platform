@@ -205,7 +205,7 @@ class PrintOut(object):
     def _list_data(self, data):
         if self.fields is None:
             self.fields = list((k, 32) for k, v in data.items())
-        fmt = ''.join(['{{{0[0]}:<{0[1]}}}'.format(i) for i in self.fields])
+        fmt = ''.join(['{{{0[0]}:<{0[1]}.{0[1]}}}'.format(i) for i in self.fields])
         print fmt.format(**data)
 
 

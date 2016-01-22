@@ -55,7 +55,7 @@ def parser(subs):
 
     c_search = action.add_parser('search')
     c_search.add_argument('search_string', help="Search string")
-    c_search.add_argument('-p', '--page', default=0, type=int, help="Page to display")
+    c_search.add_argument('-p', '--page', default=1, type=int, help="Page to display")
     c_search.add_argument('-R', '--registry', help="Registry to search in. By default dockerhub is used")
 
     c_image_get = action.add_parser('image_info')

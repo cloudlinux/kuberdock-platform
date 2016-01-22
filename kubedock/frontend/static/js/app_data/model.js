@@ -318,9 +318,10 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             name   : 'Nameless',
             size   : 0,
             in_use : false,
-            pod    : ''
+            pod_id : '',
+            pod_name : '',
         },
-        parse: unwrapper
+        parse: unwrapper,
     });
 
     // TODO: Fixed code duplication by moving models from settings_app to a common file

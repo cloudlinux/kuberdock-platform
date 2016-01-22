@@ -136,6 +136,8 @@ class PersistentStorage(object):
                 'owner': users[item.owner_id].username,
                 'size': item.size,
                 'id': item.id,
+                'pod_id': item.pod_id,
+                'pod_name': None if item.pod_id is None else item.pod.name,
                 'in_use': item.pod_id is not None
             }
             for item in query

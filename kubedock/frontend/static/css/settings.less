@@ -85,7 +85,7 @@
                     vertical-align: middle;
                 }
                 span{
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination{
+                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination, &.busy, &.free{
                         position: relative;
                         padding-left: 22px;
                         &:before{
@@ -98,7 +98,12 @@
                             position: absolute;
                         }
                     }
-                    &.running, &.OK{
+                    &.busy{
+                        &:before{
+                            background-color: #ffb704;
+                        }
+                    }
+                    &.running, &.OK, &.free{
                         &:before{
                             background-color: #97cd75;
                         }

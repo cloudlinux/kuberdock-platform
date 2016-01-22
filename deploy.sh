@@ -33,7 +33,12 @@ while [[ $# > 0 ]];do
         WITH_TESTING=yes
         ;;
         -u|--udp-backend)
-        CONF_FLANNEL_BACKEND=udp
+        CONF_FLANNEL_BACKEND='udp'
+        ;;
+        -x|--vxlan-backend)
+        CONF_FLANNEL_BACKEND='vxlan'
+        VNI="${2-1}";   # vxlan network id. Defaults to 1
+        shift
         ;;
         *)
         echo "Unknown option: $key"
@@ -198,6 +203,9 @@ if [ "$ISAMAZON" = true ];then
     log_it echo "Flannel backend will be set to \"aws-vpc\""
 else
     log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND"
+    if [ ! -z "$VNI" ];then
+        log_it echo "Vxlan network id has been set to $VNI"
+    fi
 fi
 
 # Get number of interfaces up
@@ -622,14 +630,24 @@ CONF_FLANNEL_NET=10.254.0.0/16
 CONF_FLANNEL_SUBNET_LEN=24
 
 if [ "$ISAMAZON" = true ];then
-    # host-gw don't work on AWS so we use aws-vpc
+    # host-gw don't work on AWS so we use aws-vpc or other specified by user
     if [ -z "$ROUTE_TABLE_ID" ];then
-        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"udp\"}}" 2> /dev/null
+        if [ "$CONF_FLANNEL_BACKEND" == 'vxlan' ];then
+            log_it echo "WARNING: Flanneld vxlan backend with VNI=$VNI will be used on amazon instead of recommended aws-vpc..."
+            etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"vxlan\", \"VNI\": $VNI}}" 2> /dev/null
+        else    # just udp backend left for amazon
+            log_it echo "WARNING: Flanneld UDP backend will be used on amazon instead of recommended aws-vpc..."
+            etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"udp\"}}" 2> /dev/null
+        fi
     else
         etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"aws-vpc\", \"RouteTableID\": \"$ROUTE_TABLE_ID\"}}" 2> /dev/null
     fi
 else
-    etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"$CONF_FLANNEL_BACKEND\"}}" 2> /dev/null
+    if [ "$CONF_FLANNEL_BACKEND" == 'vxlan' ];then
+        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"vxlan\", \"VNI\": $VNI}}" 2> /dev/null
+    else    # host-gw or udp backends case
+        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"$CONF_FLANNEL_BACKEND\"}}" 2> /dev/null
+    fi
 fi
 do_and_log etcdctl get /kuberdock/network/config
 

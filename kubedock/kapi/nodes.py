@@ -401,7 +401,10 @@ def _node_is_active(x):
 
 def _get_node_condition(x):
     try:
-        return x['status']['conditions'][0]
+        conditions = x['status']['conditions']
+        if len(conditions) > 1:
+            return [i for i in conditions if i['status'] == 'True'][0]
+        return conditions[0]
     except (TypeError, KeyError, IndexError):
         return {}
 

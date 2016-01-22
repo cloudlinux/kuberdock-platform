@@ -304,6 +304,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         }));
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
+                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
+                            Model.KubeType.noAvailableKubeTypes.notify();
+                            return;
+                        }
                         utils.preloader.show();
                         podCollection.fullCollection.create(data, {
                             wait: true,
@@ -319,6 +323,8 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         });
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(){
+                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id)
+                            Model.KubeType.noAvailableKubeTypes.notify();
                         wizardLayout.steps.show(new Views.WizardCompleteSubView({
                             model: model
                         }));

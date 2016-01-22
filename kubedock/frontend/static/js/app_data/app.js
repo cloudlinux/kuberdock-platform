@@ -12,6 +12,21 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 that.storage = window.localStorage || window.sessionStorage || {};
                 that.menuCollection = new Model.MenuCollection(backendData.menu);
                 that.currentUser = new Model.CurrentUserModel(backendData.user);
+
+                // billing & resources
+                that.packageCollection = new Backbone.Collection(
+                    backendData.packages, {model: Model.Package});
+                that.kubeTypeCollection = new Model.KubeTypeCollection(
+                    backendData.kubeTypes);
+                that.packageKubeCollection = new Backbone.Collection(
+                    _.map(backendData.packageKubes, function(pk){
+                        return {'price': pk.kube_price,
+                                'kubeType': that.kubeTypeCollection.get(pk.kube_id),
+                                'package': that.packageCollection.get(pk.package_id)};
+                    }),
+                    {model: Model.PackageKube});
+                that.userPackage = that.packageCollection.get(backendData.userPackage);
+
                 that.getPodCollection = function(){
                     var deferred = $.Deferred();
                     if (_.has(that, 'podCollection')) {

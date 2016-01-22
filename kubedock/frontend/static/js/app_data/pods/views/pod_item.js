@@ -297,11 +297,9 @@ define(['app_data/app',
                     : '',
                 graphs = this.graphs,
                 kubes = this.model.getKubes(),
-                pkg = utils.getUserPackage(/*full=*/true),
+                pkg = App.userPackage,
                 kubeId = this.model.get('kube_type'),
-                kubeType = _.findWhere(pkg.kubes, {id: kubeId}) ||
-                    _.findWhere(backendData.kubeTypes,
-                                {id: kubeId}), // internal kube may not have pkg
+                kubeType = App.kubeTypeCollection.get(kubeId),
                 hasPorts = this.model.get('containers').any(function(c) {
                     return c.get('ports') && c.get('ports').length;
                 });
@@ -319,7 +317,7 @@ define(['app_data/app',
                 totalPrice      : this.model.totalPrice,
                 limits          : this.model.limits,
                 podName         : this.model.get('name'),
-                package         : pkg
+                period          : pkg.get('period'),
             };
         },
 

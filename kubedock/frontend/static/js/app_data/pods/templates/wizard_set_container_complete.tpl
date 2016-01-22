@@ -31,11 +31,10 @@
                     <label class="col-xs-8">Kube Type</label>
                     <div class="col-xs-7">
                         <select class="kube_type selectpicker" id="extra-options" disabled>
-                            <% _.each(kube_types, function(kube_type){ %>
-                            <option value="<%- kube_type.id %>"
-                            <%= kube_type.id === kube_type ? ' selected' : '' %>
-                            <%= kube_type.available ? 'disabled' : ''%>>
-                                <%- kube_type.name %>
+                            <% kubeTypes.each(function(kubeType){ %>
+                            <option value="<%- kubeType.id %>"
+                            <%= kubeType.get('available') ? '' : 'disabled'%>>
+                                <%- kubeType.get('name') %>
                             </option>
                             <% }) %>
                         </select>
@@ -45,12 +44,11 @@
                     <div class="col-xs-8">
                         <label>Kube Type</label>
                         <select class="kube_type selectpicker" id="extra-options">
-                            <% _.each(kube_types, function(kube_type){ %>
-                                <option value="<%- kube_type.id %>"
-                                <%= kube_type.available ? '' : 'disabled'%>
-                                <%= kube_type.id === kube_type ? ' selected' : '' %>>
-                                    <%- kube_type.name %>
-                                </option>
+                            <% kubeTypes.each(function(kubeType){ %>
+                            <option value="<%- kubeType.id %>"
+                            <%= kubeType.get('available') ? '' : 'disabled'%>>
+                                <%- kubeType.get('name') %>
+                            </option>
                             <% }) %>
                         </select>
                     </div>
@@ -96,7 +94,7 @@
                                     <!-- <%- (c.name === last_edited) ? '*' : '' %> -->
                                 </td>
                                 <td><%- c.kubes %></td>
-                                <td><%- containerPrices[i] %> / <%- package.period %></td>
+                                <td><%- containerPrices[i] %> / <%- period %></td>
                                 <td>
                                     <button class="delete-item pull-right">&nbsp;</button>
                                     <button class="edit-item">&nbsp;</button>
@@ -107,7 +105,7 @@
                             <tr>
                                 <td><b>IP Address:</b></td>
                                 <td></td>
-                                <td><span id="ipaddress_price"><%- price_ip %> / <%- package.period %></td>
+                                <td><span id="ipaddress_price"><%- price_ip %> / <%- period %></td>
                                 <td></td>
                             </tr>
                         <% } %>
@@ -116,13 +114,13 @@
                                 <td><b>Persistent storage:</b></td>
                                 <td></td>
                                 <td colspan="2">
-                                    <span id="pstorage_price"><%- price_pstorage %> per 1 GB / <%- package.period %></span>
+                                    <span id="pstorage_price"><%- price_pstorage %> per 1 GB / <%- period %></span>
                                 </td>
                             </tr>
                         <% } %>
                         <tr>
                             <td class="total" colspan="3">
-                                Total price: <span id="total_price"><%- totalPrice %> / <%- package.period %></span>
+                                Total price: <span id="total_price"><%- totalPrice %> / <%- period %></span>
                             </td>
                         </tr>
                     </tbody>

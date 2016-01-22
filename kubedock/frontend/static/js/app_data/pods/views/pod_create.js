@@ -1348,20 +1348,11 @@ define(['app_data/app', 'app_data/model',
         tagName: 'div',
 
         initialize: function(){
-            this.package = utils.getUserPackage();
-            // kubeTypes is taken from index.html
-            var default_kube = _.findWhere(backendData.kubeTypes, {is_default: true});
-            if (default_kube === undefined) {
-                default_kube = backendData.kubeTypes[0];
-            }
-            if(!this.model.has('kube_type')){
-                this.model.attributes['kube_type'] = default_kube.id;
-            }
-            this.model.recalcInfo(this.package);
+            this.pkg = App.userPackage;
+            this.model.recalcInfo(this.pkg);
         },
 
         templateHelpers: function() {
-
             return {
                 last_edited      : this.model.lastEditedContainer.id,
                 isPublic         : this.model.isPublic,
@@ -1369,13 +1360,13 @@ define(['app_data/app', 'app_data/model',
                 limits           : this.model.limits,
                 containerPrices  : this.model.containerPrices,
                 totalPrice       : this.model.totalPrice,
-                kube_types       : backendData.kubeTypes,
+                kubeTypes        : this.pkg.getKubeTypes(),
                 restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                 restart_policy   : this.model.get('restartPolicy'),
                 image_name_id    : this.model.get('lastAddedImageNameId'),
-                package          : this.package,
-                price_ip         : utils.getFormattedPrice(this.package, this.package.price_ip),
-                price_pstorage   : utils.getFormattedPrice(this.package, this.package.price_pstorage)
+                period           : this.pkg.get('period'),
+                price_ip         : this.pkg.getFormattedPrice(this.pkg.get('price_ip')),
+                price_pstorage   : this.pkg.getFormattedPrice(this.pkg.get('price_pstorage')),
             };
         },
 
@@ -1421,7 +1412,7 @@ define(['app_data/app', 'app_data/model',
                     this.model.lastEditedContainer.id = this.model
                         .get('containers').last().id;
                 }
-                this.model.recalcInfo(this.package);
+                this.model.recalcInfo(this.pkg);
                 this.render();
             } else {
                 utils.modalDialogDelete({
@@ -1478,7 +1469,7 @@ define(['app_data/app', 'app_data/model',
             var num = parseInt(evt.target.value);
             this.getCurrentContainer().set('kubes', num);
 
-            this.model.recalcInfo(this.package);
+            this.model.recalcInfo(this.pkg);
             this.render();
             $('.kube-quantity button span').text(num);
         },
@@ -1488,7 +1479,7 @@ define(['app_data/app', 'app_data/model',
             var kube_id = parseInt(evt.target.value);
             this.model.set('kube_type', kube_id);
 
-            this.model.recalcInfo(this.package);
+            this.model.recalcInfo(this.pkg);
             this.render();
         },
 
@@ -1505,6 +1496,9 @@ define(['app_data/app', 'app_data/model',
 
         onRender: function() {
             this.ui.selectpicker.selectpicker();
+            this.ui.kubeTypes.selectpicker({
+                noneSelectedText: 'No available kube types',
+            });
             this.ui.kubeQuantity.selectpicker('val', this.getCurrentContainer().get('kubes'));
             this.ui.kubeTypes.selectpicker('val', this.model.get('kube_type'));
         },
@@ -1518,9 +1512,10 @@ define(['app_data/app', 'app_data/model',
 
         editKubeType: function(){
             this.ui.editKubeType.hide();
-            this.ui.editKubeTypeDescription.hide()
-            this.ui.kubeTypes.attr('disabled',false);
-            this.$('.kube-type-wrapper .disabled').removeClass('disabled');
+            this.ui.editKubeTypeDescription.hide();
+            this.ui.kubeTypes.attr('disabled', false);
+            this.ui.kubeTypes.removeClass('disabled');
+            this.$('.kube-type-wrapper button.disabled').removeClass('disabled');
         },
     });
 

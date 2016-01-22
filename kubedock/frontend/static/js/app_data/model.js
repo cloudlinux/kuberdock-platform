@@ -115,6 +115,10 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         }],
 
         defaults: function(){
+            var kubeTypes = new data.KubeTypeCollection(
+                    App.userPackage.getKubeTypes().where({available: true})),
+                default_kube = kubeTypes.findWhere({is_default: true}) ||
+                    kubeTypes.at(0) || data.KubeType.noAvailableKubeTypes;
             return {
                 name: 'Nameless',
                 containers: [],
@@ -122,6 +126,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 replicas: 1,
                 restartPolicy: "Always",
                 node: null,
+                kube_type: default_kube.id,
             };
         },
 
@@ -155,16 +160,18 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         recalcInfo: function(pkg) {
             var containers = this.get('containers'),
                 volumes = this.get('volumes'),
-                kube = _.findWhere(backendData.kubeTypes, {id: this.get('kube_type')}),
-                pkgKube = _.findWhere(backendData.packageKubes,
-                    {package_id: pkg.id, kube_id: kube.id}),
-                kubePrice = pkgKube ? pkgKube.kube_price : 0,
+                kube = App.kubeTypeCollection.get(this.get('kube_type')) ||
+                    data.KubeType.noAvailableKubeTypes,
+                kubePrice = pkg.priceFor(kube.id) || 0,
                 totalKubes = this.getKubes();
 
             this.limits = {
-                cpu: (totalKubes * kube.cpu).toFixed(2) + ' ' + kube.cpu_units,
-                ram: totalKubes * kube.memory + ' ' + kube.memory_units,
-                hdd: totalKubes * kube.disk_space + ' ' + kube.disk_space_units,
+                cpu: (totalKubes * kube.get('cpu')).toFixed(2) +
+                    ' ' + kube.get('cpu_units'),
+                ram: totalKubes * kube.get('memory') +
+                    ' ' + kube.get('memory_units'),
+                hdd: totalKubes * kube.get('disk_space') +
+                    ' ' + kube.get('disk_space_units'),
             };
 
             var allPorts = _.flatten(containers.pluck('ports'), true),
@@ -177,15 +184,15 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             var rawContainerPrices = containers.map(
                 function(c) { return kubePrice * c.get('kubes'); });
             this.containerPrices = _.map(rawContainerPrices,
-                function(price) { return utils.getFormattedPrice(pkg, price); });
+                function(price) { return pkg.getFormattedPrice(price); });
 
             var totalPrice = _.reduce(rawContainerPrices,
                 function(sum, p) { return sum + p; });
             if (this.isPublic)
-                totalPrice += pkg.price_ip;
+                totalPrice += pkg.get('price_ip');
             if (this.isPerSorage)
-                totalPrice += pkg.price_pstorage * total_size;
-            this.totalPrice = utils.getFormattedPrice(pkg, totalPrice);
+                totalPrice += pkg.get('price_pstorage') * total_size;
+            this.totalPrice = pkg.getFormattedPrice(totalPrice);
         },
 
         save: function(attrs, options){
@@ -558,6 +565,87 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     data.LicenseModel = Backbone.Model.extend({
         parse: unwrapper,
         url: '/api/pricing/license'
+    });
+
+
+    // Billing & resources
+
+    data.Package = Backbone.AssociatedModel.extend({
+        defaults: function(){
+            return {
+                currency: 'USD',
+                first_deposit: 0,
+                id: 0,
+                name: 'No name',
+                period: 'month',
+                prefix: '$',
+                price_ip: 0,
+                price_over_traffic: 0,
+                price_pstorage: 0,
+                suffix: ' USD',
+            };
+        },
+        getKubeTypes: function() {
+            var kubes = _.chain(this.parents)
+                .filter(function(model){ return model instanceof data.PackageKube; })
+                .map(function(packageKube){ return packageKube.get('kubeType'); })
+                .value();
+            return new data.KubeTypeCollection(kubes);
+        },
+        priceFor: function(kubeID) {
+            var packageKube = _.find(this.parents, function(model){
+                return model instanceof data.PackageKube &&
+                    model.get('kubeType').id == kubeID;
+            });
+            return packageKube ? packageKube.get('price') : undefined;
+        },
+        getFormattedPrice: function(price, format) {
+            return this.get('prefix') +
+                numeral(price).format(format || '0.00') +
+                this.get('suffix');
+        },
+    });
+
+    data.KubeType = Backbone.AssociatedModel.extend({
+        defaults: function(){
+            return {
+                available: false,
+                cpu: 0,
+                cpu_units: 'Cores',
+                disk_space: 0,
+                disk_space_units: 'GB',
+                id: null,
+                included_traffic: 0,
+                is_default: null,
+                memory: 0,
+                memory_units: 'MB',
+                name: 'No name',
+            };
+        },
+    });
+    data.KubeType.noAvailableKubeTypes = new data.KubeType(
+        {name: 'No available kube types', id: 'noAvailableKubeTypes'});
+    data.KubeType.noAvailableKubeTypes.notify = function(){
+        utils.notifyWindow('There are no available kube types in your package.');
+    };
+    data.KubeTypeCollection = Backbone.Collection.extend({
+        model: data.KubeType,
+        comparator: function(kubeType) {
+            return !kubeType.get('available');
+        },
+    });
+
+    data.PackageKube = Backbone.AssociatedModel.extend({
+        relations: [{
+            type: Backbone.One,
+            key: 'kubeType',
+            relatedModel: data.KubeType,
+        }, {
+            type: Backbone.One,
+            key: 'package',
+            relatedModel: data.Package,
+        }],
+        defaults: {price: 0},
     });
 
     return data;

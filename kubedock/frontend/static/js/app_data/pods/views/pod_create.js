@@ -376,6 +376,7 @@ define(['app_data/app', 'app_data/model',
             podPorts       : '.hostPort',
             pdName         : '.pd-name',
             pdSize         : '.pd-size',
+            input          : 'input',
 
             stopContainer  : '#stopContainer',
             startContainer : '#startContainer',
@@ -398,6 +399,8 @@ define(['app_data/app', 'app_data/model',
             'click @ui.removeVolume'   : 'removeVolumeEntry',
             'change @ui.restartPolicy' : 'changePolicy',
             'change @ui.input_command' : 'changeCommand',
+            'focus @ui.input'          : 'removeError',
+
 
             'click @ui.stopContainer'  : 'stopContainer',
             'click @ui.startContainer' : 'startContainer',
@@ -439,6 +442,11 @@ define(['app_data/app', 'app_data/model',
         changePolicy: function(evt){
             evt.stopPropagation();
             this.model.set('restartPolicy', $(evt.target).val())
+        },
+
+        removeError: function(evt){
+            var target = $(evt.target);
+            if (target.hasClass('error')) target.removeClass('error');
         },
 
         changeCommand: function(evt){
@@ -515,17 +523,26 @@ define(['app_data/app', 'app_data/model',
             App.getSystemSettingsCollection().done(function(settingsCollection){
                 var tgt = $(evt.target),
                     volumes = that.pod.get('volumes');
-
                 if (that.hasOwnProperty('showPersistentAdd')) {
                     var pdName = that.ui.pdName.val().trim(),
                         pdSize = parseInt(that.ui.pdSize.val().trim());
-                    if (!pdName || !pdSize) return;
+                    if (!pdName){
+                        that.ui.pdName.addClass('error');
+                        utils.notifyWindow('Persistent volume name must be set!');
+                        return;
+                    }
+                    if (!pdSize){
+                        that.ui.pdSize.addClass('error');
+                        utils.notifyWindow('Persistent volume size must be set!');
+                        return;
+                    }
                     var pdSizeLimit = settingsCollection.findWhere({name: 'persitent_disk_max_size'});
                     if (pdSizeLimit !== undefined && (pdSize < 1 || pdSize > Number(pdSizeLimit.get('value')))) {
                         utils.notifyWindow('Max size of persistent volume '
                             + 'should be more than zero and less than '
                             + pdSizeLimit.get('value')
                             + ' GB');
+                            that.ui.pdSize.addClass('error');
                         return;
                     }
                     if (that.hasOwnProperty('currentIndex')) {

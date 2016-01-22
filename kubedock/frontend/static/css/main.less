@@ -1150,6 +1150,7 @@ body{
 
     /* paginator */
     .pager{
+        font-size: 0;
         margin: 10px 0 30px;
         li {
             .border-radius(2px);
@@ -1166,6 +1167,13 @@ body{
                 font-size: 12px;
                 background-color: #fff;
                 text-transform: uppercase;
+                &.disabled{
+                    .opacity(0.5);
+                    &:hover{
+                        .box-shadow-materials();
+                        cursor: not-allowed;
+                    }
+                }
                 &:hover{
                     .box-shadow(0 5px 11px 0 rgba(0, 0, 0, 0.18));
                     cursor: pointer;

@@ -2,6 +2,7 @@
 
 import unittest
 from hashlib import md5
+import json
 
 import mock
 
@@ -208,6 +209,51 @@ class TestCephStorage(DBTestCase):
                 name2: {'size': size2, 'in_use': False}
             }
         )
+
+
+class TestCephUtils(unittest.TestCase):
+    """Tests for CEPH not db-aware utils."""
+    
+    @mock.patch.object(pstorage, 'run_remote_command')
+    @mock.patch.object(pstorage.ConnectionPool, 'get_connection')
+    @mock.patch.object(pstorage, '_get_mapped_ceph_devices_for_node')
+    def test_unmap_temporary_mapped_ceph_drives(
+            self, get_mapped_mock, get_conn_mock, run_cmd_mock):
+        """Test pstorage.unmap_temporary_mapped_ceph_drives function"""
+        redis_mock = get_conn_mock.return_value
+        redis_mock.hkeys.return_value = []
+        pstorage.unmap_temporary_mapped_ceph_drives()
+        redis_mock.hkeys.assert_called_once_with(
+            pstorage.REDIS_TEMP_MAPPED_HASH)
+        get_mapped_mock.assert_not_called()
+        run_cmd_mock.assert_not_called()
+
+        drive1 = 'd1'
+        node1 = 'n1'
+        dev1 = '/dev/rbd11'
+        drive_data = {'node': node1, 'dev': dev1}
+        redis_mock.hkeys.return_value = [drive1]
+        redis_mock.hget.return_value = json.dumps(drive_data)
+        get_mapped_mock.return_value = {}
+        pstorage.unmap_temporary_mapped_ceph_drives()
+        redis_mock.hget.assert_called_once_with(
+            pstorage.REDIS_TEMP_MAPPED_HASH, drive1)
+        get_mapped_mock.assert_called_once_with(node1)
+        run_cmd_mock.assert_not_called()
+        redis_mock.hdel.assert_called_once_with(
+            pstorage.REDIS_TEMP_MAPPED_HASH, drive1)
+
+        get_mapped_mock.return_value = {'unknown_device': {'name': drive1}}
+        pstorage.unmap_temporary_mapped_ceph_drives()
+        run_cmd_mock.assert_not_called()
+        redis_mock.hdel.assert_called_with(
+            pstorage.REDIS_TEMP_MAPPED_HASH, drive1)
+
+        get_mapped_mock.return_value = {dev1: {'name': drive1}}
+        pstorage.unmap_temporary_mapped_ceph_drives()
+        run_cmd_mock.assert_called_once_with(node1, 'rbd unmap ' + dev1)
+        redis_mock.hdel.assert_called_with(
+            pstorage.REDIS_TEMP_MAPPED_HASH, drive1)
 
 
 if __name__ == '__main__':

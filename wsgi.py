@@ -37,6 +37,7 @@ except (TypeError, AttributeError):
 
 from kubedock import frontend, api, listeners
 from kubedock.settings import PRE_START_HOOK_ENABLED
+from kubedock.core import ExclusiveLock
 
 front_app = frontend.create_app()
 back_app = api.create_app()
@@ -44,6 +45,13 @@ application = DispatcherMiddleware(
     front_app,
     {'/api': back_app}
 )
+
+# Remove all locks remained after previous server run.
+try:
+    with back_app.app_context():
+        ExclusiveLock.clean_locks()
+except:
+    pass
 
 try:
     import uwsgi

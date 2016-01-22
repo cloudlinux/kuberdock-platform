@@ -88,11 +88,15 @@ CELERYBEAT_SCHEDULE = {
     # marked as deleted)
     'clean-deleted-persistent-drives': {
         'task': 'kubedock.tasks.clean_deleted_drives',
-        'schedule': crontab(hour='1,13')
+        'schedule': crontab(hour='*')
     },
     'send-stat': {
         'task': 'kubedock.tasks.send_stat',
         'schedule': timedelta(hours=24)
+    },
+    'unmap-temp-mapped-drives': {
+        'task': 'kubedock.kapi.pstorage.unmap_temporary_mapped_ceph_drives_task',
+        'schedule': crontab(minute='*')
     }
 }
 

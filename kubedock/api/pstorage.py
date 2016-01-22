@@ -51,7 +51,7 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         try:
             pd.save()
         except Exception:
-            Storage().delete_by_id(data['id'])
+            ps.delete_drive_by_id(data['id'])
             raise APIError('Couldn\'t save persistent disk.')
         return data
 
@@ -65,7 +65,7 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         if pd is None:
             raise PDNotFound()
         if pd.owner_id != self._get_current_user().id:
-            raise APIError(403, 'Volume does not belong to current user')
+            raise APIError('Volume does not belong to current user', 403)
         if pd.pod_id is not None:
             raise PDIsUsed()
         ps.delete_drive_by_id(device_id)

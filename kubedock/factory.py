@@ -5,8 +5,10 @@ import pytz
 from celery import Celery
 from flask import Flask
 from flask.json import JSONEncoder
+from fabric.api import env
 
 from .core import db, login_manager, influx_db
+from kubedock.settings import SSH_KEY_FILENAME
 #from .utils import register_blueprints
 
 
@@ -50,6 +52,8 @@ def make_celery(app=None):
         abstract = True
         def __call__(self, *args, **kwargs):
             with app.app_context():
+                env.user = 'root'
+                env.key_filename = SSH_KEY_FILENAME
                 return TaskBase.__call__(self, *args, **kwargs)
     celery.Task = ContextTask
     return celery

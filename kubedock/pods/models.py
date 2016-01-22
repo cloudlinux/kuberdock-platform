@@ -398,16 +398,28 @@ class PersistentDisk(BaseModelMixin, db.Model):
 
     @classmethod
     def take(cls, pod_id, drives):
-        db.session.begin_nested()
-        cls.filter(cls.drive_name.in_(drives), cls.pod_id.is_(None)).update(
-            {'pod_id': pod_id}, synchronize_session=False)
-        already_taken = cls.filter(cls.drive_name.in_(drives),
-                                   cls.pod_id != pod_id).first()
-        if already_taken:
-            db.session.rollback()
-            db.session.refresh(already_taken)
-            return already_taken
-        db.session.commit()
+        """Tries to bind given drives to the pod.
+        Returns list of drive names which were binded to the pod and dict with
+        drives that already binded to another pod.
+        If there are any drives binded to another pod, then does not bind
+        any free drives to the target pod.
+
+        """
+        all_drives = cls.filter(cls.drive_name.in_(drives)).all()
+        taken_by_another = {item.drive_name: item for item in all_drives if
+                            (item.pod_id != pod_id and item.pod_id is not None)}
+        if taken_by_another:
+            return [], taken_by_another
+        now_taken = [item.drive_name for item in all_drives
+                     if item.pod_id is None]
+        if now_taken:
+            cls.filter(
+                cls.drive_name.in_(now_taken)
+            ).update(
+                {'pod_id': pod_id}, synchronize_session=False
+            )
+            db.session.commit()
+        return now_taken, {}
 
     @classmethod
     def free(cls, pod_id):

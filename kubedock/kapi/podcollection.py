@@ -665,24 +665,40 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             return
 
         # check that pod can use all of them
-        already_taken = PersistentDisk.take(pod.id, drives.keys())
-        if already_taken:
-            raise APIError(
-                u'For now two pods cannot share one Persistent Disk ({0}). '
-                u'Please stop pod "{1}" before starting this one.'
-                .format(already_taken.name, already_taken.pod.name))
-
-        # prepare drives
+        now_taken, taken_by_another_pod = PersistentDisk.take(
+            pod.id, drives.keys()
+        )
+        # Flag points that persistent drives, binded on previous step, must be
+        # unbind before exit.
+        free_on_exit = False
         try:
-            for drive_name, (storage, persistent_disk) in drives.iteritems():
-                storage.create(persistent_disk)
-                vid = storage.makefs(persistent_disk)
-                persistent_disk.state = PersistentDiskStatuses.CREATED
-                pod._update_volume_path(v['name'], vid)
-        except:
-            # free already taken drives in case of exception
-            PersistentDisk.free_drives(drives.keys())
-            raise
+            if taken_by_another_pod:
+                free_on_exit = True
+                raise APIError(
+                    u'For now two pods cannot share one Persistent Disk. '
+                    u'{0}. Stop that pods before starting this one.'
+                    .format(
+                        '; '.join(
+                            'PD: {0}, Pod: {1}'.format(item.name, item.pod.name)
+                            for item in taken_by_another_pod.values()
+                        )
+                    )
+                )
+
+            # prepare drives
+            try:
+                for drive_name, (storage, persistent_disk) in drives.iteritems():
+                    storage.create(persistent_disk)
+                    vid = storage.makefs(persistent_disk)
+                    persistent_disk.state = PersistentDiskStatuses.CREATED
+                    pod._update_volume_path(v['name'], vid)
+            except:
+                # free already taken drives in case of exception
+                free_on_exit = True
+                raise
+        finally:
+            if free_on_exit and now_taken:
+                PersistentDisk.free_drives(now_taken)
 
     # def _container_start(self, pod, data):
     #     self._do_container_action('start', data)

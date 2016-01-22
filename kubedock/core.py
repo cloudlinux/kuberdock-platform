@@ -1,5 +1,6 @@
 import json
 import socket
+import time
 
 import paramiko
 import redis
@@ -52,6 +53,74 @@ class ConnectionPool(object):
             db=current_app.config.get('SSE_REDIS_DB', 0),
         )
         return redis.StrictRedis(connection_pool=pool)
+
+
+class ExclusiveLock(object):
+    """Class for acquire and release named locks. It's implemented via
+    Redis backend.
+
+    """
+    #: Prefix for all locks created by this class.
+    lock_prefix = 'kd.exclusivelock.'
+
+    def __init__(self, name, ttl=None):
+        """Init Lock object.
+        :param name: name of the lock
+        :param ttl: number of seconds after acquiring when the lock must
+        be automatically released.
+        """
+        self._redis_con = ConnectionPool().get_connection()
+        self._lock = None
+        self.name = self.lock_prefix + name
+        self.ttl = ttl
+
+    def lock(self):
+        """Try to acquire the lock.
+        If lock is already acquired, then immediately returns False.
+        If lock has been acquired, then returns True.
+        """
+        if self._lock is not None:
+            return False
+        self._lock = self._redis_con.lock(self.name, self.ttl)
+        return self._lock.acquire(blocking=False)
+
+    def release(self):
+        """Release the lock."""
+        if self._lock is None:
+            return
+        self._lock.release()
+
+    @classmethod
+    def is_acquired(cls, name):
+        """Checks if the lock was already acquired and not yet released."""
+        redis_con = ConnectionPool().get_connection()
+        name = cls.lock_prefix + name
+        lock = redis_con.lock(name, 1)
+        res = False
+        try:
+            res = not lock.acquire(blocking=False)
+        finally:
+            try:
+                lock.release()
+            except redis.lock.LockError:
+                # exception is raised in case of already released lock
+                pass
+        return res
+
+    @classmethod
+    def clean_locks(cls, pattern=None):
+        """Removes all locks. Optionally may be specified prefix for lock's
+        names.
+
+        """
+        redis_con = ConnectionPool().get_connection()
+        if pattern:
+            pattern = cls.lock_prefix + 'pattern*'
+        else:
+            pattern = cls.lock_prefix + '*'
+        keys = list(redis_con.scan_iter(pattern))
+        if keys:
+            redis_con.delete(*keys)
 
 
 class EvtStream(object):

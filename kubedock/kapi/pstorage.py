@@ -3,6 +3,7 @@ import boto
 import boto.ec2
 import json
 import time
+from contextlib import contextmanager
 
 from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
@@ -12,7 +13,7 @@ from StringIO import StringIO
 from fabric.exceptions import CommandTimeout, NetworkError
 from flask import current_app
 
-from ..core import db
+from ..core import db, ExclusiveLock, ConnectionPool
 from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import Pod, PersistentDisk, PersistentDiskStatuses
 from ..users.models import User
@@ -36,17 +37,66 @@ class NoNodesError(Exception):
     pass
 
 
+class DriveIsLockedError(Exception):
+    """Exception raises when drive is exclusively locked by some operation.
+    Blocking operations: creation, making FS, deletion. We forbid
+    simultaneous running more than one of that operations.
+    """
+    pass
+
+
 def delete_drive_by_id(drive_id):
     """Marks drive in DB as deleted and asynchronously calls deletion from
     storage backend.
     """
-    PersistentDisk.mark_todelete(drive_id)
+    try:
+        with drive_lock(drive_id=drive_id):
+            PersistentDisk.mark_todelete(drive_id)
+    except DriveIsLockedError as err:
+        raise APIError(err.message)
     delete_persistent_drives_task.delay([drive_id], mark_only=True)
 
 
 @celery.task()
 def delete_persistent_drives_task(pd_ids, mark_only=False):
     return delete_persistent_drives(pd_ids, mark_only=mark_only)
+
+
+@contextmanager
+def drive_lock(drivename=None, drive_id=None, ttl=None):
+    """Context for locking drive to exclusively use by one operation.
+    If lock for the drivename is already acquired, then raises
+    DriveIsLockedError.
+    Lock will be automatically released on exit from context.
+    Lock will be valid for some time (TTL).
+    """
+    lock_name = drivename
+    if not drivename and drive_id:
+        pd = PersistentDisk.query.filter(
+            PersistentDisk.id == drive_id
+        ).first()
+        if pd:
+            lock_name = pd.drive_name
+    if lock_name is None:
+        raise APIError('Cant lock unknown drive')
+    if ttl is None:
+        # Calculate lock TTL as a sum of timeouts for remote operations
+        # plus some additional time
+        ttl = (NODE_COMMAND_TIMEOUT * 10 + # FS creation
+               NODE_COMMAND_TIMEOUT + # FS status
+               NODE_COMMAND_TIMEOUT * 2 + # map & unmap
+               10)  # some additional wait time
+    lock = ExclusiveLock('PD.{}'.format(lock_name), ttl)
+    if not lock.lock():
+        raise DriveIsLockedError(
+            'Persistent disk is exclusively locked by another operation. '
+            'Wait some time and try again.'
+        )
+    try:
+        yield lock
+    finally:
+        lock.release()
+
 
 def delete_persistent_drives(pd_ids, mark_only=False):
     if not pd_ids:
@@ -55,12 +105,24 @@ def delete_persistent_drives(pd_ids, mark_only=False):
     to_delete = []
     if pd_cls:
         for pd_id in pd_ids:
-            rv = pd_cls().delete_by_id(pd_id)
-            if rv != 0:
-                current_app.logger.warning(
-                    u'Persistent Disk id:"{0}" is busy or '
-                    u'does not exist.'.format(pd_id))
+            try:
+                rv = pd_cls().delete_by_id(pd_id)
+            except DriveIsLockedError:
+                # Skip deleting drives that is locked by another client
                 continue
+            if rv != 0:
+                try:
+                    if pd_cls().is_drive_exist(pd_id):
+                        current_app.logger.warning(
+                            u'Persistent Disk id:"{0}" is busy.'.format(pd_id)
+                        )
+                        continue
+                    # If pd is not exist, then delete it from DB
+                except NodeCommandError:
+                    current_app.logger.warning(
+                        u'Persistent Disk id:"{0}" is busy or '
+                        u'does not exist.'.format(pd_id))
+                    continue
             to_delete.append(pd_id)
     else:
         to_delete = pd_ids
@@ -227,12 +289,15 @@ class PersistentStorage(object):
         :param pd: kubedock.pods.models.PersistentDisk instance
         """
         try:
-            rv_code = self._create_drive(pd.drive_name, pd.size)
+            with drive_lock(pd.drive_name):
+                rv_code = self._create_drive(pd.drive_name, pd.size)
         except NoNodesError:
             msg = 'Failed to create drive. '\
                   'There is no nodes to perform the operation'
             current_app.logger.exception(msg)
             raise APIError(msg)
+        except DriveIsLockedError as err:
+            raise APIError(err.message)
 
         if rv_code != 0:
             return None
@@ -248,11 +313,17 @@ class PersistentStorage(object):
         :param user: object -> user object
         """
         drive_name = pd_utils.compose_pdname(name, user)
-        rv = self._delete(drive_name)
-        if rv is None:
-            # drive name not found, try to delete by legacy name
-            drive_name = pd_utils.compose_pdname_legacy(name, user)
-            rv = self._delete(drive_name)
+
+        try:
+            with drive_lock(drive_name):
+                rv = self._delete(drive_name)
+            if rv is None:
+                # drive name not found, try to delete by legacy name
+                drive_name = pd_utils.compose_pdname_legacy(name, user)
+                with drive_lock(drive_name):
+                    rv = self._delete(drive_name)
+        except DriveIsLockedError as err:
+            raise APIError(err.message)
         if rv == 0 and self._cached_drives is not None:
             self._cached_drives = [
                 d for d in self._cached_drives
@@ -269,7 +340,8 @@ class PersistentStorage(object):
         """
         err_msg = u'Failed to make FS for "{}":'.format(pd.drive_name)
         try:
-            return self._makefs(pd.drive_name, fs)
+            with drive_lock(pd.drive_name):
+                return self._makefs(pd.drive_name, fs)
         except NodeCommandError:
             msg = err_msg + u' Remote command failed.'
             current_app.logger.exception(msg)
@@ -278,19 +350,39 @@ class PersistentStorage(object):
             msg = err_msg + u' There is no nodes to perform the operation.'
             current_app.logger.exception(msg)
             raise APIError(msg)
+        except DriveIsLockedError as err:
+            raise APIError(err.message)
 
     def delete_by_id(self, drive_id):
         """
         Deletes a user drive
         :param name: string -> drive id
+        Raises DriveIsLockedError if drive is locked by another operation at
+        the moment.
         """
-        rv = self._delete_by_id(drive_id)
+        with drive_lock(drive_id=drive_id):
+            rv = self._delete_by_id(drive_id)
         if rv == 0 and self._cached_drives:
             self._cached_drives = [
                 d for d in self._cached_drives
                 if d['id'] != drive_id
             ]
         return rv
+
+    def is_drive_exist(self, drive_id):
+        """Checks if drive physically exists in storage backend.
+        Returns True if drive exists, False if drive not exists.
+        Raises exception if it's impossible now to check drive existance.
+        """
+        pd = PersistentDisk.query.filter(
+            PersistentDisk.id == drive_id
+        ).first()
+        if not pd:
+            return False
+        return self._is_drive_exist(pd)
+
+    def _is_drive_exist(self, pd):
+        raise NotImplementedError()
 
     @staticmethod
     def start_stat(size, name=None, user=None, sys_drive_name=None):
@@ -466,6 +558,28 @@ def get_all_ceph_drives(host):
     return all_devices
 
 
+def _get_mapped_ceph_devices_for_node(host):
+    """Returns dict with device ('/dev/rbdN') as a key, and ceph image name
+    in value. This is the main difference from _get_mapped_ceph_drives_for_node
+     - there keys are ceph image names.
+    """
+    rbd_mapped = run_remote_command(host,
+                                    'rbd showmapped  --format=json',
+                                    jsonresult=True)
+    if not isinstance(rbd_mapped, dict):
+        raise NodeCommandError(
+            'Unexpected answer format in "rbd showmapped"'
+        )
+    mapped_devices = {
+        j['device']: {
+            'pool': j['pool'],
+            'name': j['name'],
+        }
+        for j in rbd_mapped.values()
+    }
+    return mapped_devices
+
+    
 def _get_mapped_ceph_drives_for_node():
     rbd_mapped = execute_run('rbd showmapped --format=json',
                                 jsonresult=True)
@@ -481,6 +595,70 @@ def _get_mapped_ceph_drives_for_node():
         for j in rbd_mapped.values()
     }
     return mapped_devices
+
+
+
+REDIS_TEMP_MAPPED_HASH = 'kd.temp.rbd.mapped'
+
+
+def mark_ceph_drive_as_temporary_mapped(drivename, dev, node):
+    redis_con = ConnectionPool.get_connection()
+    redis_con.hset(
+        REDIS_TEMP_MAPPED_HASH, drivename,
+        json.dumps({'node': node, 'dev': dev})
+    )
+
+
+def unmark_ceph_drive_as_temporary_mapped(drive):
+    redis_con = ConnectionPool.get_connection()
+    redis_con.hdel(REDIS_TEMP_MAPPED_HASH, drive)
+
+
+@celery.task(ignore_result=True, rate_limit='1/m')
+def unmap_temporary_mapped_ceph_drives_task():
+    unmap_temporary_mapped_ceph_drives()
+
+def unmap_temporary_mapped_ceph_drives():
+    redis_con = ConnectionPool.get_connection()
+    drives = redis_con.hkeys(REDIS_TEMP_MAPPED_HASH)
+    if not drives:
+        return
+    node_to_map = {}
+    for drive in drives:
+        data = redis_con.hget(REDIS_TEMP_MAPPED_HASH, drive)
+        try:
+            data = json.loads(data)
+        except:
+            continue
+        node = data.get('node')
+        device = data.get('dev')
+        if not (node and device):
+            continue
+        if node not in node_to_map:
+            try:
+                mapped_drives = _get_mapped_ceph_devices_for_node(node)
+                node_to_map[node] = {
+                    key: value['name']
+                    for key, value in mapped_drives.iteritems()
+                }
+            except:
+                current_app.logger.warn('Failed to get mapped devices')
+                continue
+        node_maps = node_to_map[node]
+        try:
+            with drive_lock(drive, ttl=NODE_COMMAND_TIMEOUT):
+                try:
+                    # Unmap drive from node if it is actually mapped.
+                    # Clear redis entry if unmap was success. Also clear it if
+                    # device is not mapped.
+                    if device in node_maps and node_maps[device] == drive:
+                        run_remote_command(node, 'rbd unmap {}'.format(device))
+                    redis_con.hdel(REDIS_TEMP_MAPPED_HASH, drive)
+                except:
+                    current_app.logger.warn('Failed to unmap {}'.format(drive))
+                    pass
+        except DriveIsLockedError:
+            pass
 
 
 def get_mapped_ceph_drives(hosts):
@@ -507,6 +685,10 @@ class CephStorage(PersistentStorage):
         return Node.all_with_flag_query(
             NodeFlagNames.CEPH_INSTALLED, 'true'
         ).first()
+
+    def _is_drive_exist(self, pd):
+        res = self.run_on_first_node('rbd ls --format json')
+        return pd.drive_name in res
 
     def enrich_volume_info(self, volume, size, drive_name):
         """Adds storage specific attributes to volume dict.
@@ -578,9 +760,10 @@ class CephStorage(PersistentStorage):
         :param fs: string -> desired filesystem
         :return: None or raise an exception in case of error
         """
-        if self._is_mapped(drive):      # If defice is already mapped it means
+        if self._is_mapped(drive):      # If device is already mapped it means
             return None                 # it's in use. Exit
         dev = self._map_drive(drive)    # mapping drive
+        mark_ceph_drive_as_temporary_mapped(drive, dev, self._cached_node_ip)
         try:
             if self._get_fs(dev):           # if drive already has filesystem
                 return None                 # whatever it be return
@@ -590,6 +773,7 @@ class CephStorage(PersistentStorage):
             time.sleep(5)
         finally:
             self._unmap_drive(dev)
+            unmark_ceph_drive_as_temporary_mapped(drive)
         return None
 
     def _create_fs(self, device, fs=DEFAULT_FILESYSTEM):
@@ -813,6 +997,12 @@ class AmazonStorage(PersistentStorage):
         if size is not None:
             volume[self.VOLUME_EXTENSION_KEY]['size'] = size
         return volume
+
+    def _is_drive_exist(self, pd):
+        raw_drives = self._get_raw_drives()
+        exists = any(vol.tags.get('Name', 'Nameless') == pd.drive_name
+                     for vol in raw_drives)
+        return exists
 
     def extract_volume_info(self, volume):
         res = {}

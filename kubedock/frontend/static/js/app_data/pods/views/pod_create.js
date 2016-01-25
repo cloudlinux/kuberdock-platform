@@ -451,7 +451,12 @@ define(['app_data/app', 'app_data/model',
             evt.stopPropagation();
             var cmd = $(evt.target).val();
             if (cmd != '') {
-                this.model.set('args', [cmd])
+                this.model.set('args', _.map(
+                    cmd.match(/(?:[^\s"']+|(?:"|')[^"']*(?:"|'))/g),
+                    function(i){
+                        return i.replace(/^["']|["']$/g, '');
+                    })
+                );
             }
         },
 

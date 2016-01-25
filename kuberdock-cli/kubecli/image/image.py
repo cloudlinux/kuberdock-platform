@@ -20,10 +20,15 @@ class Image(object):
         payload = {
             'url': self._get_registry(),
             'searchkey': self.data.get('search_string', ''),
-            'page': self.data.get('page', 0)
+            'page': self.data.get('page', 1)
         }
         data = self.query.unwrap(self.query.get(IMAGES_PATH, payload))
-        printout = PrintOut(as_json=self.as_json, fields=None)
+        fields = (('name', 24), ('description', 76))
+        printout = PrintOut(as_json=self.as_json, fields=fields)
+        if not self.as_json:
+            data = [dict((k,v) for k,v in i.items()
+                if k in ['name', 'description'])
+                    for i in data]
         printout.show_list(data)
 
     def ps(self):

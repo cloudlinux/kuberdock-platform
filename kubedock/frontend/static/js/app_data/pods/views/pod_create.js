@@ -703,17 +703,19 @@ define(['app_data/app', 'app_data/model',
             var that = this,
                 volumes = this.pod.get('volumes'),
                 vm = this.model.get('volumeMounts'),
+                ports = this.model.get('ports'),
                 pattern = /^[A-Za-z_/-]*$/;
+
+
+            this.model.set('ports', ports = _.filter(ports, function(port){ return port.containerPort }));
+            this.model.set('volumeMounts',vm = _.filter(vm, function(v){ return v.mountPath }));
+
 
             /* mountPath and persistent disk check */
             for (var i=0; i<vm.length; i++) {
-
                 vm[i].mountPath = vm[i].mountPath.replace(/\s+/g, '');
 
-                if (!vm[i].mountPath) {
-                    utils.notifyWindow('Mount path must be set!');
-                    return;
-                } else if (vm[i].mountPath.length < 2){
+                if (vm[i].mountPath && vm[i].mountPath.length < 2){
                     utils.notifyWindow('Mount path minimum length is 3 symbols');
                     return;
                 } else if (vm[i].mountPath.length > 30){
@@ -752,6 +754,7 @@ define(['app_data/app', 'app_data/model',
                 utils.notifyWindow('You have a duplicate ' + type + ' port ' +
                                    dublicatePort.port + ' in ' + where);
             };
+
             try {
                 _.each(this.model.get('ports'), function(port, i){
                     that.pod.get('containers').each(function(container2){

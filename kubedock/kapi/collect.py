@@ -31,13 +31,15 @@ def get_users_number(role='User'):
                 if u.get('rolename') == role
                     and u.get('username') != KUBERDOCK_INTERNAL_USER])
 
-def get_pods():
-    data = {}
-    pods = PodCollection().get(as_json=False)
-    data['total'] = len(pods)
-    data['running'] = len([p for p in pods
-        if p.get('status') != 'stopped'])
-    return data
+
+# NOTE: get_pods_info does the same, but without touching k8s
+# def get_pods():
+#     data = {}
+#     pods = PodCollection().get(as_json=False)
+#     data['total'] = len(pods)
+#     data['running'] = len([p for p in pods
+#         if p.get('status') != 'stopped'])
+#     return data
 
 
 def get_updates():
@@ -341,7 +343,7 @@ def collect():
     data['storage'] = get_storage()
     data['users'] = get_users_number()
     data['admins'] = get_users_number(role='Admin')
-    data['pods'] = get_pods()
+    # data['pods'] = get_pods()
     data['updates'] = get_updates()
 
     data['platform'] = get_current_platform()

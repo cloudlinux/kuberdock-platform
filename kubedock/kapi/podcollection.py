@@ -247,6 +247,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod = self._get_by_id(pod_id)
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed')
+
+        DBPod.query.get(pod_id).mark_as_deleting()
+
         # we call _stop_pod here explicitly to be uncoupled with namespaces
         # _stop_pod explicitly remove rc and all its pods
         self._stop_pod(pod, raise_=False)
@@ -473,6 +476,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 b = db_pod_config.get('containers')
                 pod.containers = self.merge_lists(a, b, 'name')
                 restore_containers_host_ports_config(pod.containers, b)
+
+            if db_pod.status == 'deleting':
+                pod.status = 'deleting'
 
             if db_pod_config.get('public_aws'):
                 pod.public_aws = db_pod_config['public_aws']

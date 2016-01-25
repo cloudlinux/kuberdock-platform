@@ -326,14 +326,19 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
 
             function eventHandler(nodes){
                 var source = new EventSource("/api/stream"), events;
-                var collectionChange = function(collectionGetter){
+                var collectionEvent = function(collectionGetter, eventType){
+                    eventType = eventType || 'change';
                     return function(ev){
                         collectionGetter.apply(that).done(function(collection){
-                            var data = JSON.parse(ev.data),
-                                item = collection.fullCollection.get(data.id);
+                            var data = JSON.parse(ev.data);
+                            if (eventType === 'delete'){
+                                collection.fullCollection.remove(data.id);
+                                return;
+                            }
+                            var item = collection.fullCollection.get(data.id);
                             if (item) {
                                 item.fetch({statusCode: null}).fail(function(xhr){
-                                    if (xhr.status == 404)
+                                    if (xhr.status == 404)  // "delete" event was missed
                                         collection.remove(item);
                                 });
                             } else {  // it's a new item, or we've missed some event
@@ -349,9 +354,9 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 else {
                     if (nodes) {
                         events = {
-                            'node:change': collectionChange(that.getNodeCollection),
-                            // 'ippool:change': collectionChange(that.getIPPoolCollection),
-                            // 'user:change': collectionChange(that.getUserCollection),
+                            'node:change': collectionEvent(that.getNodeCollection),
+                            // 'ippool:change': collectionEvent(that.getIPPoolCollection),
+                            // 'user:change': collectionEvent(that.getUserCollection),
                             'node:installLog': function(ev){
                                 that.getNodeCollection().done(function(collection){
                                     var decoded = JSON.parse(ev.data),
@@ -363,7 +368,8 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         };
                     } else {
                         events = {
-                            'pod:change': collectionChange(that.getPodCollection),
+                            'pod:change': collectionEvent(that.getPodCollection),
+                            'pod:delete': collectionEvent(that.getPodCollection, 'delete'),
                             // 'pd:change':
                         };
                     }

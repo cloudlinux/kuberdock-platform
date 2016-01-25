@@ -93,6 +93,12 @@ class Pod(BaseModelMixin, db.Model):
             self.save()
         return self
 
+    def mark_as_deleting(self, commit=True):
+        self.status = 'deleting'
+        if commit:
+            db.session.add(self)
+            db.session.commit()
+
     def to_dict(self):
         return dict(
             id=self.id,

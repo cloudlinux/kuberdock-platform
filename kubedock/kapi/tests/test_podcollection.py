@@ -63,6 +63,8 @@ class TestCaseMixin(object):
             patcher.start()
 
 
+# TODO: use DBTestCase
+@mock.patch('kubedock.kapi.podcollection.DBPod', mock.Mock())
 class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):

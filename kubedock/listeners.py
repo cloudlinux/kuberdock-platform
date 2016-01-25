@@ -135,26 +135,25 @@ def get_pod_state(pod):
     return json.dumps(res)
 
 
-def send_pod_status_update(pod, pod_id, event_type, app):
-    key_ = 'pod_state_' + pod_id
-    with app.app_context():
-        redis = ConnectionPool.get_connection()
-        prev_state = redis.get(key_)
-        if not prev_state:
-            redis.set(key_, get_pod_state(pod))
-        else:
-            current = get_pod_state(pod)
-            deleted = event_type == 'DELETED'
-            if prev_state != current or deleted:
-                redis.set(key_, 'DELETED' if deleted else current)
-                db_pod = Pod.query.get(pod_id)
-                if not db_pod:
-                    unregistered_pod_warning(pod_id)
-                    return
-                owner = db_pod.owner.id
-                send_event('pod:change', {'id': pod_id})   # common for admins
-                send_event('pod:change', {'id': pod_id},
-                           channel='user_{0}'.format(owner))
+def send_pod_status_update(pod, db_pod, event_type, app):
+    key_ = 'pod_state_' + db_pod.id
+
+    redis = ConnectionPool.get_connection()
+    prev_state = redis.get(key_)
+    if not prev_state:
+        redis.set(key_, get_pod_state(pod))
+    else:
+        current = get_pod_state(pod)
+        deleted = event_type == 'DELETED'
+        if prev_state != current or deleted:
+            redis.set(key_, 'DELETED' if deleted else current)
+            owner = db_pod.owner.id
+            event = ('pod:delete'
+                     if db_pod.status in ('deleting', 'deleted') else
+                     'pod:change')
+            send_event(event, {'id': db_pod.id})   # common for admins
+            send_event(event, {'id': db_pod.id},
+                       channel='user_{0}'.format(owner))
 
 
 def process_pods_event(data, app):
@@ -172,13 +171,14 @@ def process_pods_event(data, app):
                                    pod['metadata']['namespace'])
         return
 
-    send_pod_status_update(pod, pod_id, event_type, app)
-
     # save states in database
     with app.app_context():
-        if Pod.query.get(pod_id) is None:
+        db_pod = Pod.query.get(pod_id)
+        if db_pod is None:
             unregistered_pod_warning(pod_id)
             return
+
+        send_pod_status_update(pod, db_pod, event_type, app)
 
         host = pod['spec'].get('nodeName')
 

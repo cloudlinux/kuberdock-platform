@@ -72,6 +72,7 @@ class TestStatItem(unittest.TestCase):
         self.assertEqual(upd, expected,
             "updates are {0} but {1} expected".format(str(upd), str(expected)))
 
+    @unittest.skip('deprecated, not used, commented out')
     @mock.patch('kubedock.kapi.collect.PodCollection')
     def test_get_pods(self, _PodCollection):
         mock_inst = mock.MagicMock(

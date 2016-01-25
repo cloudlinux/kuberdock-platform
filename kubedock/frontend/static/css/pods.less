@@ -513,36 +513,46 @@
     margin-bottom: 0px;
     .pod-controls{
         .message-wrapper{
+            .box-shadow(0px 10px 21px 1px rgba(230,230,230,0.96));
             display: none;
+            margin-bottom: 40px;
+            background-color: #e7f4dd;
             &.show{
                 display: block;
             }
-            .box-shadow(0px 10px 21px 1px rgba(230,230,230,0.96));
-            margin-bottom: 40px;
-            background-color: rgb(255, 254, 236);
             .message{
                 top: 10px;
                 width: 100%;
                 position: relative;
-                padding: 10px 35px 30px;
+                padding: 10px 35px 30px 55px;
                 border: 10px solid transparent;
                 border-width: 0 0 10px;
-                background-color: #fffeec;
+                background-color: #e7f4dd;
                 background-color: hsla(0, 0%, 0%, 0);
-                background-image: -webkit-linear-gradient(#fffeec, #fffeec), -webkit-linear-gradient(top left, transparent 50.5%, #fffeec 50.5%), -webkit-linear-gradient(top right, transparent 50.5%, #fffeec 50.5%), -webkit-linear-gradient(bottom left, transparent 50.5%, #fffeec 50.5%), -webkit-linear-gradient(bottom right, transparent 50.5%, #fffeec 50.5%);
-                background-image: -moz-linear-gradient(#fffeec, #fffeec), -moz-linear-gradient(top left, transparent 50.5%, #fffeec 50.5%), -moz-linear-gradient(top right, transparent 50.5%, #fffeec 50.5%), -moz-linear-gradient(bottom left, transparent 50.5%, #fffeec 50.5%), -moz-linear-gradient(bottom right, transparent 50.5%, #fffeec 50.5%);
-                background-image: linear-gradient(#fffeec, #fffeec), linear-gradient(to bottom right, transparent 50.5%, #fffeec 50.5%), linear-gradient(to bottom left, transparent 50.5%, #fffeec 50.5%), linear-gradient(to top right, transparent 50.5%, #fffeec 50.5%), linear-gradient(to top left, transparent 50.5%, #fffeec 50.5%);
+                background-image: -webkit-linear-gradient(#e7f4dd, #e7f4dd), -webkit-linear-gradient(top left, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(top right, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(bottom left, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(bottom right, transparent 50.5%, #e7f4dd 50.5%);
+                background-image: -moz-linear-gradient(#e7f4dd, #e7f4dd), -moz-linear-gradient(top left, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(top right, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(bottom left, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(bottom right, transparent 50.5%, #e7f4dd 50.5%);
+                background-image: linear-gradient(#e7f4dd, #e7f4dd), linear-gradient(to bottom right, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to bottom left, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to top right, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to top left, transparent 50.5%, #e7f4dd 50.5%);
                 background-repeat: repeat, repeat-x, repeat-x, repeat-x, repeat-x;
                 background-position: 0 0, 0 0, 0 0, 10px 100%, 10px 100%;
                 background-size: auto auto, 0 0, 0 0, 20px 20px, 20px 20px;
                 background-clip: padding-box, border-box, border-box, border-box, border-box;
                 background-origin: padding-box, border-box, border-box, border-box, border-box;
+                &:before{
+                    top: 14px;
+                    margin: 0;
+                    left: -36px;
+                    width: 71px;
+                    content: '';
+                    height: 72px;
+                    position: absolute;
+                    background: url('../img/success-big.png') 0 0 no-repeat;
+                }
                 h3{
                     color: #050505;
                     font-size: 17px;
                     margin-top: 5px;
+                    text-align: left;
                     line-height: 17px;
-                    text-align: center;
                     margin-bottom: 15px;
                     font-family: @bold;
                 }

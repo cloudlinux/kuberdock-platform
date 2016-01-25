@@ -249,7 +249,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                         className: 'success',
                     });
                 } else {
-                    utils.notifyWindow('Sorry, link not copied');
+                    utils.notifyWindow('Your browser does not support this action. Click on application name and copy link from address bar.');
                 }
             }
         });

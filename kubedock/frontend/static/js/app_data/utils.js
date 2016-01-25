@@ -64,15 +64,6 @@ define(['moment-timezone', 'notify'], function(moment){
         return hours + ':' + minutes + ':' + secs;
     };
 
-    //utils.localizeDatetime = function(dt, tz){
-    //    try {
-    //        return moment(dt).tz(tz).format('YYYY-MM-DD hh:mm:ss');
-    //    } catch (e){
-    //        console.log(e);
-    //    }
-    //    return dt;
-    //};
-
     utils.dateYYYYMMDD = function(date, sep){
         if(!date) date = new Date();
         if(!sep) sep = '-';
@@ -144,30 +135,27 @@ define(['moment-timezone', 'notify'], function(moment){
         }, 500);
     };
 
-    utils.localizeDatetimeForUser = function(dt, user, formatString) {
-        /* Returns string representing date&time with timezone converted to
-         * the given user. 'user' must contain 'timezone' field.
-         * If there is defined global userProfile variable, then it will
-         * be used for timezone extracting (in case when 'user' is undefined).
-         * Accepts timezones in form 'Europe/London (+0000)', 'Europe/London'
-         * When no user is specified and userProfile is undefined, then uses
-         * 'UTC' timezone to convert date&time.
-         */
-        var tz;
-        if (user === undefined && typeof userProfile != 'undefined') {
-            user = userProfile;
+    /* Returns string representing date&time with timezone converted to
+     * the given `tz`.
+     * You can pass params as an object: localizeDatetime({dt: ,..})
+     * or just one by one: localizeDatetime(dt, tz,...)
+     *
+     * @param dt - datetime, current time by default
+     * @param tz - timezone in form 'Europe/London (+0000)' or 'Europe/London'
+     *     UTC by default
+     * @param formatString - optional, 'YYYY-MM-DD HH:mm:ss' by default
+     * @returns {String} formatted localized datetime
+     */
+    utils.localizeDatetime = function(options) {
+        if (arguments.length != 1 || !options ||
+                (!options.dt && !options.tz && !options.formatString)){
+            // called as localizeDatetime(dt, tz, formatString)
+            options = _.object(['dt', 'tz', 'formatString'], arguments);
         }
-        if (user === undefined || typeof user.timezone !== 'string') {
-            tz = 'UTC';
-        } else {
-            tz = user.timezone.split(' (', 1)[0];
-        }
-        return this.localizeDatetime(dt, tz, formatString);
-    };
 
-    utils.localizeDatetime = function(dt, tz, formatString){
-        if (!dt) return dt;
-        formatString = formatString || 'YYYY-MM-DD HH:mm:ss';
+        var dt = options.dt || new Date(),
+            tz = typeof options.tz == 'string' ? options.tz.split(' (', 1)[0] : 'UTC',
+            formatString = options.formatString || 'YYYY-MM-DD HH:mm:ss';
         try {
             return moment(dt).tz(tz).format(formatString);
         } catch (e) {

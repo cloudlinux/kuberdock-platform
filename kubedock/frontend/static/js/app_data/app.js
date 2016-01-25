@@ -11,6 +11,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
             require(['app_data/model', 'app_data/utils'], function(Model, Utils){
                 that.storage = window.localStorage || window.sessionStorage || {};
                 that.menuCollection = new Model.MenuCollection(backendData.menu);
+                that.currentUser = new Model.CurrentUserModel(backendData.user);
                 that.getPodCollection = function(){
                     var deferred = $.Deferred();
                     if (_.has(that, 'podCollection')) {
@@ -125,7 +126,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     }
                     return deferred.promise();
                 };
-                
+
                 that.getRoles = function(){
                     var deferred = $.Deferred();
                     if (typeof roles === 'undefined') {

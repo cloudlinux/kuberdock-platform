@@ -70,7 +70,7 @@ define(['app_data/app', 'marionette',
         templateHelpers: {
             formatDate: function(dt) {
                 if (dt) {
-                    return utils.localizeDatetimeForUser(dt);
+                    return App.currentUser.localizeDatetime(dt);
                 }
                 return 'unknown';
             },

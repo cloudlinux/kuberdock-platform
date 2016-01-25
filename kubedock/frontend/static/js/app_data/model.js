@@ -65,6 +65,12 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                     _.each(data.data.reverse(), function(serie) {
                         var lines = serie.hits.reverse(),
                             oldSerie = seriesByTime[serie.start];
+                        _.each(lines, function(line){
+                            line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
+                        });
+                        serie.start = App.currentUser.localizeDatetime(serie.start);
+                        if (serie.end)
+                            serie.end = App.currentUser.localizeDatetime(serie.end);
                         if (lines.length && oldSerie && oldSerie.hits.length) {
                             // if we have some logs, append only new lines
                             var first = lines[0],
@@ -243,7 +249,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.NodeModel = Backbone.Model.extend({
-        logsLimit: 5000,  // max number of line in logs
+        logsLimit: 1000,  // max number of lines in logs
         urlRoot: '/api/nodes/',
         parse: unwrapper,
         defaults: function() {
@@ -262,6 +268,9 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                     var oldLines = this.get('logs'),
                         lines = data.data.hits.reverse();
 
+                    _.each(lines, function(line){
+                        line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
+                    });
                     if (lines.length && oldLines.length) {
                         // if we have some logs, append only new lines
                         var first = lines[0],
@@ -470,8 +479,12 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.CurrentUserModel = Backbone.Model.extend({
-        url: function(){ return '/api/users/editself' },
-        parse: unwrapper
+        url: function(){ return '/api/users/editself'; },
+        parse: unwrapper,
+        localizeDatetime: function(dt, formatString){
+            return utils.localizeDatetime({dt: dt, tz: this.get('timezone'),
+                                           formatString: formatString});
+        },
     });
 
     data.PermissionModel = Backbone.Model.extend({

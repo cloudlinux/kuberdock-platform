@@ -32,8 +32,10 @@ def index():
     params['impersonated'] = False if session.get('auth_by_another') is None else True
     params['menu'] = MenuItem.get_menu()
     params['current_username'] = current_user.username
+    params['user'] = current_user.to_dict(for_profile=True)
     params['adviseCollection'] = read_role_events(current_user.role)
     return render_template('index.html', params=params)
+
 
 def return_pods():
     post_desc = all_request_params().get('postDescription', '')
@@ -43,13 +45,11 @@ def return_pods():
     extra_taxes = {e.pop('key'): e for e in extra_taxes_list}
     package_kubes = []
     kube_types = []
-    user_profile = current_user.to_dict(for_profile=True)
     for pk in PackageKube.query.filter(PackageKube.package_id == current_user.package_id).all():
         package_kubes.append(pk.to_dict())
         kube_types.append(pk.kube.to_dict())
     if current_user.username == KUBERDOCK_INTERNAL_USER:
         kube_types = [kube.to_dict() for kube in Kube.query]
-
 
     return {
         'podCollection': coll,
@@ -58,8 +58,8 @@ def return_pods():
         'extraTaxes': extra_taxes,
         'packageKubes': package_kubes,
         'userPackage': current_user.package_id,
-        'postDescription': post_desc,
-        'userProfile': user_profile}
+        'postDescription': post_desc}
+
 
 def return_nodes():
     return {

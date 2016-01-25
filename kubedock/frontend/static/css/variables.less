@@ -51,10 +51,10 @@
     -moz-opacity:       @opacity;
     opacity:            @opacity;
 }
-.animation (@name, @duration: 300ms, @delay: 0, @ease: ease) {
-    -webkit-animation: @name @duration @delay @ease;
-    -moz-animation:    @name @duration @delay @ease;
-    -ms-animation:     @name @duration @delay @ease;
+.animation (@name, @duration: 300ms, @ease: ease) {
+    -webkit-animation: @name @duration @ease;
+    -moz-animation:    @name @duration @ease;
+    -ms-animation:     @name @duration @ease;
 }
 .transition (@transition) {
     -webkit-transition: @transition;
@@ -73,6 +73,7 @@
     -moz-transform:      rotate(@deg);
     -ms-transform:       rotate(@deg);
     -o-transform:        rotate(@deg);
+    transform:           rotate(@deg);
 }
 .background-size (@size) {
     -webkit-background-size: @size;
@@ -111,6 +112,30 @@
 .align-right{
     text-align: right;
 }
+
+/* animation */
+/* rotating */
+@-webkit-keyframes rotating {
+  from {
+    .rotate(0deg);
+  }
+  to {
+    .rotate(360deg);
+  }
+}
+@keyframes rotating {
+  from {
+    .rotate(0deg);
+  }
+  to {
+    .rotate(360deg);
+  }
+}
+.rotating(@time) {
+    .animation(rotating, @time, linear infinite);
+}
+/* end rotating */
+
 .clearfix{
     zoom:1;
     &:before, &:after{

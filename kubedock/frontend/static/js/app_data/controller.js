@@ -130,8 +130,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             var that = this;
             require(['app_data/pods/views/pod_create',
                      'app_data/paginator/views',
-                     'app_data/pods/views/loading',
-                     'app_data/menu/views'], function(Views, Pager, Loading, Menu){
+                     'app_data/menu/views'], function(Views, Pager, Menu){
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
                         pod = podCollection.fullCollection.get(id),
@@ -190,8 +189,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             require(['app_data/utils',
                      'app_data/pods/views/pod_create',
                      'app_data/paginator/views',
-                     'app_data/pods/views/loading',
-                     'app_data/menu/views'], function(utils, Views, Pager, Loading, Menu){
+                     'app_data/menu/views'], function(utils, Views, Pager, Menu){
                 App.getPodCollection().done(function(podCollection){
                     var registryURL = 'registry.hub.docker.com',
                         imageTempCollection = new Model.ImagePageableCollection(),

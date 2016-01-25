@@ -1491,10 +1491,9 @@
                             margin-bottom: 0;
                             position: relative;
                             padding-left: 26px;
-                            /*display: inline-block;*/
                             &:before{
                                 top: 4px;
-                                left: -4px;
+                                left: -5px;
                                 bottom: 0;
                                 width: 16px;
                                 content: '';
@@ -1503,18 +1502,13 @@
                                 display: inline-block;
                                 background: url('../img/load-more.png') 0 0 no-repeat;
                             }
+                            &.animation{
+                                &:before{
+                                    .rotating(1s);
+                                }
+                            }
                             &:hover{
                                 cursor: pointer;
-                            }
-                        }
-                        span{
-                            line-height: 16px;
-                            display: inline-block;
-                            vertical-align: middle;
-                            &.small-loader{
-                                width: 20px;
-                                height: 20px;
-                                background: url('../img/small-loader.gif') 0 0 no-repeat;
                             }
                         }
                     }

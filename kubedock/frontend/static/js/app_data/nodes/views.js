@@ -274,9 +274,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'nodeAddBtn'     : 'button#node-add-btn',
             'nodeCancelBtn'  : 'button#node-cancel-btn',
             'nodeTypeSelect' : 'select.kube_type',
-            'node_name'        : 'input#node_address',
-            'spinner'          : '#address-spinner',
-            'selectpicker'     : '.selectpicker',
+            'node_name'      : 'input#node_address',
+            'selectpicker'   : '.selectpicker',
         },
 
         events:{

@@ -1,4 +1,3 @@
-<div id="address-spinner"></div>
 <div class="col-md-12 clearfix no-padding information">
     <label>Keep in mind please</label>
     <div>

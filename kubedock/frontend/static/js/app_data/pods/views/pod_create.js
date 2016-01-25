@@ -267,9 +267,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         appendLoader: function(control){
-            var loader = $('<div class="state load-state" id="image-search-small-loader"></div>');
-            loader.append($('<span class="small-loader"></span>'))
-                .append($('<span>Loading...</span>'));
+            var loader = $('<div id="load-control" class="btn-more animation">Loading ...</div>');
             if (control === undefined) {
                 this.ui.searchControl.empty().append(loader);
             } else {
@@ -278,7 +276,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         removeLoader: function(){
-            $('#image-search-small-loader').remove();
+            this.ui.searchControl.empty();
         },
 
         onInputKeypress: function(evt){
@@ -335,7 +333,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         loadNextPage: function(){
-            this.appendLoader(this.ui.loader.removeClass('btn-more'));
+            this.ui.loader.text('Loading ...').addClass('animation');
             this.trigger('image:getnextpage', this.collection, this.query);
         }
     });

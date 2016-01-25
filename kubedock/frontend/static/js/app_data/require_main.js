@@ -12,8 +12,6 @@ requirejs.config({
         "backbone-associations": "lib/backbone-associations",
         text                   : "lib/text",
         tpl                    : "lib/underscore-tpl",
-        "jquery-spin"          : "lib/jquery.spin",
-        spin                   : "lib/spin.min",
         "bootstrap-editable"   : "lib/bootstrap-editable.min",
         "bootstrap3-typeahead" : 'lib/bootstrap3-typeahead.min',
         jqplot                 : "lib/jquery.jqplot.min",
@@ -49,7 +47,6 @@ requirejs.config({
         marionette: ['backbone'],
         'bootstrap-editable': ['bootstrap'],
         'bootstrap3-typeahead': ['bootstrap'],
-        'jquery-spin': ['spin'],
         tpl: ['text'],
         'jqplot-axis-renderer': ['jqplot'],
         selectpicker: {
@@ -64,7 +61,8 @@ requirejs.config({
         moment: {
             noGlobal: true
         }
-    }
+    },
+    waitSeconds: 30
 });
 
 require(['app_data/app', 'notify'], function(App, notify){

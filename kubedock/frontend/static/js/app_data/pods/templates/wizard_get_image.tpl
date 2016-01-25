@@ -47,11 +47,7 @@
         <div id="data-collection"></div>
         <div class="search-control">
             <% if (showPaginator){ %>
-            <div id="load-control" class="btn-more">Load more</div>
-            <!--
-            <div class="state no-more-state">There are no more items</div>
-            <div class="state load-state"><span class="small-loader"></span> <span>Loading...</span></div>
-            -->
+                <div id="load-control" class="btn-more">Load more</div>
             <% } %>
         </div>
     </div>

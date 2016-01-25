@@ -21,7 +21,7 @@ def valid_package(**kwargs):
                  'price_pstorage': random() * 10,
                  'price_over_traffic': random() * 10,
                  'currency': randstr(3),
-                 'period': choice(['hour', 'month', 'quarter', 'annuel']),
+                 'period': choice(['hour', 'month', 'quarter', 'annual']),
                  'prefix': randstr(),
                  'suffix': randstr()}, **kwargs)
 

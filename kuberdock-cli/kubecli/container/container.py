@@ -536,12 +536,9 @@ class KuberDock(KubeCtl):
         pod = self._get_pod()
         if not pod:
             raise SystemExit('Pod "{0}" not found'.format(self.name))
-        command = {}
-        if pod['status'] == 'stopped':
-            # Is this correct? In previous version was pod['command'] = 'stop',
-            # But API for start/stop takes only 'command' parameter from request
-            # body
-            command['command'] = 'start'
+        if pod['status'] != 'stopped':
+            raise SystemExit('Pod {0} has already been started.'.format(self.name))
+        command = {'command': 'start'}
         res = self.query.unwrap(
             self.query.put(PODAPI_PATH + pod['id'], command))
         printout.show(res)
@@ -555,9 +552,9 @@ class KuberDock(KubeCtl):
             as_json=self.as_json
         )
         pod = self._get_pod()
-        command = {}
-        if pod['status'] in ['running', 'pending']:
-            command['command'] = 'stop'
+        if pod['status'] not in ['running', 'pending']:
+            raise SystemExit('Pod {0} has already been stopped.'.format(self.name))
+        command = {'command': 'stop'}
         res = self.query.unwrap(
             self.query.put(PODAPI_PATH + pod['id'], command))
         printout.show_list(res)

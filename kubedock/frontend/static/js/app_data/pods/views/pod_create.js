@@ -898,6 +898,7 @@ define(['app_data/app', 'app_data/model',
             addItem    : '.add-env',
             removeItem : '.remove-env',
             nameField  : 'input.name',
+            valueField : 'input.value',
             next       : '.next-step',
             navButtons : '.nav-buttons',
 
@@ -913,7 +914,7 @@ define(['app_data/app', 'app_data/model',
             'click @ui.reset'      : 'resetFielsdsValue',
             'change @ui.input'     : 'onChangeInput',
             'click @ui.next'       : 'finalStep',
-            'focus @ui.nameField'  : 'removeError',
+            'focus @ui.input'      : 'removeError',
 
             'click @ui.stopContainer'  : 'stopContainer',
             'click @ui.startContainer' : 'startContainer',
@@ -993,21 +994,32 @@ define(['app_data/app', 'app_data/model',
         },
 
         finalStep: function(){
-            var success = true,
+            var env = this.model.get('env');
+
+            this.model.set('env',env = _.filter(env, function(item){ return item.name }));
+
+            var successName = true,
+                successValue = true,
                 pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]*$/;
 
-            _.each(this.ui.nameField, function(field){
-                if (!pattern.test(field.value)){
-                    $(field).addClass('error');
-                    success = false
+            _.each(this.ui.nameField, function(item){
+                if (!pattern.test(item.value)){
+                    $(item).addClass('error');
+                    successName = false
                 }
-            })
+            });
+
+            _.each(this.ui.valueField, function(item){
+                if (!item.value){
+                    $(item).addClass('error');
+                    successValue = false
+                }
+            });
 
             if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
-
-            !success ?
-            utils.notifyWindow('First symbol must be letter in variables name') :
-            this.trigger('step:complete');
+            if (!successValue) utils.notifyWindow('Variables value must be set');
+            if (!successName) utils.notifyWindow('First symbol must be letter in variables name');
+            if (successName && successValue) this.trigger('step:complete');
         },
 
         addItem: function(evt){

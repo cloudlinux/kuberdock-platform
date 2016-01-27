@@ -13,6 +13,7 @@ from ..helper import KubeQuery, PrintOut, echo
 from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
     IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH, PREDEFINED_APPS_PATH,
     REGISTER_PATH)
+from .. import exceptions
 
 
 # Some common error messages
@@ -535,9 +536,13 @@ class KuberDock(KubeCtl):
         )
         pod = self._get_pod()
         if not pod:
-            raise SystemExit('Pod "{0}" not found'.format(self.name))
+            raise exceptions.NotApplicable(
+                'Pod "{0}" not found'.format(self.name),
+                as_json=self.as_json)
         if pod['status'] != 'stopped':
-            raise SystemExit('Pod {0} has already been started.'.format(self.name))
+            raise exceptions.NotApplicable(
+                'Pod {0} has already been started.'.format(self.name),
+                as_json=self.as_json)
         command = {'command': 'start'}
         res = self.query.unwrap(
             self.query.put(PODAPI_PATH + pod['id'], command))
@@ -553,7 +558,9 @@ class KuberDock(KubeCtl):
         )
         pod = self._get_pod()
         if pod['status'] not in ['running', 'pending']:
-            raise SystemExit('Pod {0} has already been stopped.'.format(self.name))
+            raise exceptions.NotApplicable(
+                'Pod {0} has already been stopped.'.format(self.name),
+                as_json=self.as_json)
         command = {'command': 'stop'}
         res = self.query.unwrap(
             self.query.put(PODAPI_PATH + pod['id'], command))

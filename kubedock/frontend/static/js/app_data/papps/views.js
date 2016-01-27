@@ -182,8 +182,11 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             },
 
             templateHelpers: function(){
+                var modified = this.model.get('modified');
+
                 return {
-                    urlPath: this.urlPath
+                    urlPath: this.urlPath,
+                    modified: modified ? App.currentUser.localizeDatetime(modified) : 'Not modified yet',
                 };
             },
 
@@ -262,12 +265,40 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             emptyView           : views.AppListEmpty,
             childViewContainer  : 'tbody',
 
+            ui: {
+                'th' : 'thead th'
+            },
+
+            events: {
+                'click @ui.th' : 'toggleSort',
+            },
+
             childEvents: {
                 'app:edit:item': 'appEditItem'
             },
 
+            initialize: function(){
+                this.counter = 1;
+                this.collection.setSorting('name', -1);
+                this.collection.fullCollection.sort();
+            },
+
             appEditItem: function(view, id){
                 this.trigger('app:edit', id);
+            },
+
+            toggleSort: function(e) {
+                var target = $(e.target),
+                    targetClass = target.attr('class');
+
+                if (targetClass) {
+                    console.log('sort fired');
+                    this.collection.setSorting(targetClass, this.counter);
+                    this.collection.fullCollection.sort();
+                    this.counter = this.counter * (-1)
+                    target.find('.caret').toggleClass('rotate').parent()
+                          .siblings().find('.caret').removeClass('rotate');
+                }
             }
         });
 

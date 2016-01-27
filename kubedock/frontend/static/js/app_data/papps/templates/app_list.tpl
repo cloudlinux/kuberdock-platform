@@ -2,9 +2,10 @@
     <table id="predefined-app-table" class="table">
         <thead>
             <tr>
-                <th class="col-md-4">Name</th>
-                <th class="col-md-4">Link</th>
-                <th class="col-md-4">Actions</th>
+                <th class="name">Name<b class="caret"></b></th>
+                <th>Link</th>
+                <th class="modified">Last change<b class="caret"></b></th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody></tbody>

@@ -19,16 +19,41 @@ else
   PLUGIN_DIR="."
 fi
 
-API_SERVER=$(cut -d '=' -f 2 <<< $KUBELET_API_SERVER)
-MASTER_IP=$(echo $API_SERVER | grep -oP '\d+\.\d+\.\d+\.\d+')
-TOKEN=$(grep token /etc/kubernetes/configfile | grep -oP '[a-zA-Z0-9]+$')
-# TODO must be taken from some node global.env for all settings
-IFACE=$(cut -d '=' -f 2 <<< $FLANNEL_OPTIONS)
-NODE_IP=$(ip -o ad | grep " $IFACE " | head -1 | awk '{print $4}' | cut -d/ -f1)
-DATA_DIR="$PLUGIN_DIR/data/$NAMESPACE"
-DATA_INFO="$DATA_DIR/$KUBERNETES_POD_ID"
 LOG_FILE="$PLUGIN_DIR/kuberdock.log"
 LOG_ENABLED="1"
+
+function log {
+  if [ "$LOG_ENABLED" == "1" ];then
+    if [ $(wc -l < "$LOG_FILE") -ge 100 ];then    # limit log to 100 lines
+      tail -n 100 "$LOG_FILE" > "$LOG_FILE.tmp"
+      mv "$LOG_FILE.tmp" "$LOG_FILE"
+    fi
+    echo "$(date -uIns) $@" >> "$LOG_FILE"
+  fi
+}
+
+function if_failed {
+  local status=$?
+  if [ "$status" -ne 0 ]
+  then
+      MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" ex_status add $NAMESPACE $KUBERNETES_POD_ID "$1")
+      log "$MSG"
+  fi
+}
+
+API_SERVER=$(cut -d '=' -f 2 <<< $KUBELET_API_SERVER)
+if_failed "Error while init API_SERVER"
+MASTER_IP=$(echo $API_SERVER | grep -oP '\d+\.\d+\.\d+\.\d+')
+if_failed "Error while init MASTER_IP"
+TOKEN=$(grep token /etc/kubernetes/configfile | grep -oP '[a-zA-Z0-9]+$')
+if_failed "Error while init TOKEN"
+# TODO must be taken from some node global.env for all settings
+IFACE=$(cut -d '=' -f 2 <<< $FLANNEL_OPTIONS)
+if_failed "Error while init IFACE"
+NODE_IP=$(ip -o ad | grep " $IFACE " | head -1 | awk '{print $4}' | cut -d/ -f1)
+if_failed "Error while init NODE_IP"
+DATA_DIR="$PLUGIN_DIR/data/$NAMESPACE"
+DATA_INFO="$DATA_DIR/$KUBERNETES_POD_ID"
 
 
 function rule_reject_pod_local_input {
@@ -104,18 +129,10 @@ function etcd_ {
   fi
   curl -sS --cacert "$ETCD_CAFILE" --cert "$ETCD_CERTFILE" --key "$ETCD_KEYFILE" \
     -X "$1" ${args[@]}
+  if_failed "Error while work with Etcd: $1 ${args[@]}"
 }
 
 
-function log {
-  if [ "$LOG_ENABLED" == "1" ];then
-    if [ $(wc -l < "$LOG_FILE") -ge 100 ];then    # limit log to 100 lines
-      tail -n 100 "$LOG_FILE" > "$LOG_FILE.tmp"
-      mv "$LOG_FILE.tmp" "$LOG_FILE"
-    fi
-    echo "$(date -uIns) $@" >> "$LOG_FILE"
-  fi
-}
 
 
 function get_pod_spec {
@@ -134,11 +151,12 @@ function iptables_ {
 
 
 function teardown_pod {
-    log "Teardown Pod $POD_IP of user $USER_ID; PUBLCI_IP: \"$POD_PUBLIC_IP\""
+    log "Teardown Pod $POD_IP of user $USER_ID; PUBLIC_IP: \"$POD_PUBLIC_IP\""
     del_rules "$POD_IP" "$USER_ID"
 
     if [ "$POD_PUBLIC_IP" != "" ];then
-      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $DATA_INFO-spec
+        MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $KUBERNETES_POD_ID $DATA_INFO-spec)
+        log "$MSG"
     fi
 
     etcd_ DELETE "$USER_ID" "$POD_IP"
@@ -156,6 +174,7 @@ function add_resolve {
     curl -sS --cacert "$ETCD_CAFILE" --cert "$ETCD_CERTFILE" --key "$ETCD_KEYFILE" \
       -X PUT "https://10.254.0.10:2379/v2/keys/skydns/kuberdock/svc/$1/$resolve" \
       -d value="{\"host\":\"127.0.0.1\",\"priority\":10,\"weight\":10,\"ttl\":30,\"targetstrip\":0}"
+    if_failed "Error while add resolve to Etcd"
   done
 }
 
@@ -255,16 +274,17 @@ case "$ACTION" in
     iptables_ -I FORWARD -t filter -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK-PUBLIC-IP
-    /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" init
+    MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" init)
+    log "$MSG"
     iptables_ -I KUBERDOCK -t filter -i docker0 ! -o docker0 -m set ! --match-set kuberdock_cluster dst -j ACCEPT
     iptables_ -I KUBERDOCK -t nat -m set ! --match-set kuberdock_cluster dst -j ACCEPT
     protect_cluster_drop
     ;;
   "setup")
-
     # Workaround 1
     # TODO what if api-server is down ?
     POD_SPEC=$(get_pod_spec)
+    if_failed "Error while get pod spec"
     # Protection from fast start/stop pod; Must be first check
     if [ "$POD_SPEC" == "" ];then
       log "Empty spec case. Skip setup"
@@ -281,10 +301,15 @@ case "$ACTION" in
     fi
 
     POD_IP=$(docker inspect --format="{{.NetworkSettings.IPAddress}}" "$DOCKER_PAUSE_ID")
+    if_failed "Error while get POD_IP"
     SERVICE_IP=$(iptables -w -L -t nat | grep "$NAMESPACE" | head -1 | awk '{print $5}')
+    if_failed "Error while get SERVICE_IP"
     USER_ID=$(echo "$POD_SPEC" | grep kuberdock-user-uid | awk '{gsub(/,$/,""); print $2}' | tr -d \")
+    if_failed "Error while get USER_ID"
     POD_PUBLIC_IP=$(echo "$POD_SPEC" | grep kuberdock-public-ip | awk '{gsub(/,$/,""); print $2}' | tr -d \")
+    if_failed "Error while get POD_PUBLIC_IP"
     RESOLVE=$(echo "$POD_SPEC" | grep kuberdock_resolve | awk '{gsub(/,$/,""); for(i=2; i<=NF; ++i) print $i}' | tr -d \" | xargs echo)
+    if_failed "Error while get RESOLVE"
 
     log "Setup Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID; PUBLIC_IP: \"$POD_PUBLIC_IP\"; resolve: \"$RESOLVE\""
 
@@ -295,7 +320,8 @@ case "$ACTION" in
 
     if [ "$POD_PUBLIC_IP" != "" ];then
       echo "POD_PUBLIC_IP=$POD_PUBLIC_IP" >> "$DATA_INFO"
-      /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $DATA_INFO-spec
+      MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $KUBERNETES_POD_ID $DATA_INFO-spec)
+      log "$MSG"
     fi
 
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"
@@ -309,12 +335,14 @@ case "$ACTION" in
     # Workaround 3. Recheck that pod still exists.
     # TODO what if api-server is down ?
     POD_SPEC=$(get_pod_spec)
+    if_failed "Error while get pod spec"
     if [ "$POD_SPEC" == "" ];then
       log "Pod already not exists. Make teardown"
       teardown_pod
       exit
     fi
 
+    /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" ex_status delete $NAMESPACE $KUBERNETES_POD_ID
     ;;
   "teardown")
     if [ -f "$DATA_INFO" ];then
@@ -323,5 +351,6 @@ case "$ACTION" in
     else
       log "Teardown called for not existed pod. Skip"
     fi
+    /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" ex_status delete $NAMESPACE $KUBERNETES_POD_ID
     ;;
 esac

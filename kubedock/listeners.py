@@ -373,6 +373,46 @@ def listen_fabric(watch_url, list_url, func, verbose=1, k8s_json_object_hook=Non
     return result
 
 
+def listen_fabric_etcd(path, func, verbose=1):
+    fn_name = func.func_name
+    url = ('http://127.0.0.1:4001/v2/keys/{0}'
+           '?wait=true&recursive=true'.format(path))
+
+    def result():
+        while True:
+            if verbose >= 2:
+                print '==START WATCH {0} == pid: {1}'.format(
+                    fn_name, os.getpid())
+            try:
+                r = requests.get(url, params={'wait': True, 'recursive': True})
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                print repr(e), '...restarting listen {0}...'.format(fn_name)
+                gevent.sleep(0.2)
+            else:
+                if verbose >= 3:
+                    print '==EVENT CONTENT {0} ==: {1}'.format(
+                        fn_name, r.text)
+                try:
+                    data = r.json()
+                except Exception as e:
+                    print repr(e)
+                else:
+                    func(data)
+    return result
+
+
+def process_extended_statuses(data):
+    if data['action'] != 'set':
+        return
+    _, namespace, pod = data['node']['key'].rsplit('/', 2)
+    status = data['node']['value']
+    print '=== Namespace: {0} | Pod: {1} | Status: {2} ==='.format(
+        namespace, pod, status
+    )
+
+
 listen_pods = listen_fabric(
     get_api_url('pods', namespace=False, watch=True),
     get_api_url('pods', namespace=False),
@@ -401,5 +441,11 @@ listen_events = listen_fabric(
     get_api_url('events', namespace=False, watch=True),
     get_api_url('events', namespace=False),
     process_events_event,
+    1
+)
+
+listen_extended_statuses = listen_fabric_etcd(
+    'kuberdock/network/plugin/extended_statuses/',
+    process_extended_statuses,
     1
 )

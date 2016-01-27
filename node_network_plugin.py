@@ -9,6 +9,8 @@ import json
 import subprocess
 from ConfigParser import ConfigParser
 from StringIO import StringIO
+from contextlib import contextmanager
+from functools import wraps
 
 import ipaddress
 import requests
@@ -23,6 +25,7 @@ PUBLIC_IP_MANGLE_RULE = \
     'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t mangle -d {1} ' \
     '-p {2} --dport {3} -j MARK --set-mark 2'
 
+
 # MARKS:
 # 1 - traffic to reject/drop
 # 2 - traffic for public ip (will be added and used later)
@@ -35,8 +38,15 @@ def glog(*args):
     print(*args, file=LOG_TO)
 
 
+class PluginException(Exception):
+    pass
+
+
 class ETCD(object):
     ignore = ('createdIndex', 'dir', 'key', 'modifiedIndex')
+
+    extended_statuses = 'extended_statuses'
+    users_path = 'users'
 
     def __init__(self, path=None):
         config = get_config('/etc/sysconfig/flanneld')
@@ -74,7 +84,7 @@ class ETCD(object):
 
     def pods(self, user):
         pods_list = []
-        for k, v in self._get('users', user).items():
+        for k, v in self._get(self.users_path, user).items():
             try:
                 value = json.loads(v['value'])
             except ValueError:
@@ -84,15 +94,30 @@ class ETCD(object):
         return pods
 
     def users(self):
-        users = map(int, self._get('users'))
+        users = map(int, self._get(self.users_path))
         return users
 
-    def delete(self, user, pod):
-        requests.delete(self._url('users', user, pod), **self._args())
+    def delete_user(self, user, pod):
+        url = self._url(self.users_path, user, pod)
+        self.delete(url)
+
+    def delete(self, url):
+        requests.delete(url, **self._args())
 
     def registered_hosts(self):
         registered_hosts = list(self._get('registered_hosts'))
         return registered_hosts
+
+    def delete_ex_status(self, namespace, k8s_pod):
+        url = self._url(self.extended_statuses, namespace, k8s_pod)
+        self.delete(url)
+
+    def put_ex_status(self, namespace, k8s_pod, message):
+        url = self._url(self.extended_statuses, namespace, k8s_pod)
+        self.put(url, message)
+
+    def put(self, url, value):
+        requests.put(url, data={'value': value}, **self._args())
 
     def wait(self):
         requests.get(
@@ -152,50 +177,51 @@ def update_ipset():
 
 def modify_ip(cmd, ip, iface):
     if subprocess.call(['ip', 'addr', cmd, ip + '/32', 'dev', iface]):
-        glog('Error {0} ip: {1} on iface: {2}'.format(cmd, ip, iface))
-        return 1
+        raise PluginException(
+            'Error {0} ip: {1} on iface: {2}'.format(cmd, ip, iface))
     if cmd == 'add':
         subprocess.call(['arping', '-I', iface, '-A', ip, '-c', '10', '-w', '1'])
     return 0
 
 
-def handle_public_ip(action, public_ip, pod_ip, iface, namespace, pod_spec_file):
-    if action not in ('add', 'del',):
-        glog('Unknown action for public ip. Skip call.')
-        return 1
-    if not os.path.exists(pod_spec_file):
-        glog('Pod spec file is not exists. Skip call')
-        return 2
-    with open(pod_spec_file) as f:
-        try:
-            ports_s = json.load(f)['metadata']['annotations']['kuberdock-pod-ports']
-            ports = json.loads(ports_s)
-        except (TypeError, ValueError, KeyError) as e:
-            glog('Error loading ports from spec "{0}" Skip call.'.format(e))
-            return 3
-    if not ports:
-        return 4
-    for container in ports:
-        for port_spec in container:
-            is_public = port_spec.get('isPublic', False)
-            if not is_public:
-                continue
-            container_port = port_spec.get('containerPort')
-            if not container_port:
-                glog('Something went wrong and bad spec of pod has come. Skip')
-                return 5
-            proto = port_spec.get('protocol', 'tcp')
-            host_port = port_spec.get('hostPort', None) or container_port
-            if action == 'add':
-                if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, host_port, pod_ip, container_port).split(' ')):
-                    subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, host_port, pod_ip, container_port).split(' '))
-                if subprocess.call(PUBLIC_IP_MANGLE_RULE.format('C', public_ip, proto, host_port).split(' ')):
-                    subprocess.call(PUBLIC_IP_MANGLE_RULE.format('I', public_ip, proto, host_port).split(' '))
-            elif action == 'del':
-                subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, host_port, pod_ip, container_port).split(' '))
-                subprocess.call(PUBLIC_IP_MANGLE_RULE.format('D', public_ip, proto, host_port).split(' '))
-    modify_ip(action, public_ip, iface)
-    return 0
+def handle_public_ip(
+        action, public_ip, pod_ip, iface, namespace, k8s_pod_id, pod_spec_file):
+    with send_feedback_context(namespace, k8s_pod_id):
+        if action not in ('add', 'del',):
+            raise PluginException('Unknown action for public ip. Skip call.')
+        if not os.path.exists(pod_spec_file):
+            raise PluginException('Pod spec file is not exists. Skip call')
+        with open(pod_spec_file) as f:
+            try:
+                ports_s = json.load(f)['metadata']['annotations']['kuberdock-pod-ports']
+                ports = json.loads(ports_s)
+            except (TypeError, ValueError, KeyError) as e:
+                raise PluginException(
+                    'Error loading ports from spec "{0}" Skip call.'.format(e))
+        if not ports:
+            return 4
+        for container in ports:
+            for port_spec in container:
+                is_public = port_spec.get('isPublic', False)
+                if not is_public:
+                    continue
+                container_port = port_spec.get('containerPort')
+                if not container_port:
+                    raise PluginException(
+                        'Something went wrong and bad spec of pod has come. Skip')
+                proto = port_spec.get('protocol', 'tcp')
+                host_port = port_spec.get('hostPort', None) or container_port
+                if action == 'add':
+                    if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, host_port, pod_ip, container_port).split(' ')):
+                        subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, host_port, pod_ip, container_port).split(' '))
+                    if subprocess.call(PUBLIC_IP_MANGLE_RULE.format('C', public_ip, proto, host_port).split(' ')):
+                        subprocess.call(PUBLIC_IP_MANGLE_RULE.format('I', public_ip, proto, host_port).split(' '))
+                elif action == 'del':
+                    subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, host_port, pod_ip, container_port).split(' '))
+                    subprocess.call(PUBLIC_IP_MANGLE_RULE.format('D', public_ip, proto, host_port).split(' '))
+        modify_ip(action, public_ip, iface)
+        return 0
+    return 1
 
 
 def init():
@@ -213,7 +239,7 @@ def init():
         for pod in etcd.pods(user):
             pod_ip = ipaddress.ip_address(pod)
             if pod_ip not in network or pod_ip in subnet:
-                etcd.delete(user, pod)
+                etcd.delete_user(user, pod)
     update_ipset()
 
 
@@ -230,6 +256,44 @@ def watch(callback, args=None, path=None):
             callback(*args)
 
 
+def send_feedback(namespace, k8s_pod, message):
+    glog(message)
+    etcd = ETCD()
+    etcd.put_ex_status(namespace, k8s_pod, message)
+
+
+@contextmanager
+def send_feedback_context(namespace, k8s_pod):
+    try:
+        yield
+    except Exception as e:
+        status = "{}: {}".format(type(e).__name__, e.message)
+        send_feedback(namespace, k8s_pod, status)
+
+
+#  def send_feedback_on_fail(f):
+    #  @wraps(f)
+    #  def wrapper(*args, **kwargs):
+        #  with sendfeedback_context():
+            #  status = f(*args, **kwargs)
+            #  if status:
+                #  raise PluginException("'{}' exit with code: {}".format(f.func_name, status))
+            #  return status
+    #  return wrapper
+
+
+def remove_feedback(namespace, k8s_pod):
+    etcd = ETCD()
+    etcd.delete_ex_status(namespace, k8s_pod)
+
+
+def handle_ex_status(action, namespace=None, k8s_pod=None, status=None):
+    if action == 'add':
+        send_feedback(namespace, k8s_pod, status)
+    elif action == 'delete':
+        remove_feedback(namespace, k8s_pod)
+
+
 def main(action, *args):
     if action == 'init':
         # TODO must be called after each restart service and flush/restore
@@ -243,6 +307,8 @@ def main(action, *args):
         update_ipset()
     elif action == 'watch':
         watch(update_ipset)
+    elif action == 'ex_status':
+        handle_ex_status(*args)
 
 
 if __name__ == '__main__':

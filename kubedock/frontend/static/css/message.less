@@ -47,33 +47,10 @@
                     cursor: pointer;
                 }
                 &.move{
-                    -webkit-animation: spin 5s linear infinite;
-                    -moz-animation: spin 5s linear infinite;
-                    animation: spin 5s linear infinite;
+                    .animation(bell, 5s, linear infinite)
                 }
             }
         }
-    }
-    @-moz-keyframes spin {
-        0% { -moz-transform: rotate(0deg); }
-        10% { -moz-transform: rotate(-27deg); }
-        20% { -moz-transform: rotate(27deg); }
-        30% { -moz-transform: rotate(0deg); }
-        100% { -moz-transform: rotate(0deg); }
-    }
-    @-webkit-keyframes spin {
-        0% { -webkit-transform: rotate(0deg); }
-        10% { -webkit-transform: rotate(-27deg); }
-        20% { -webkit-transform: rotate(27deg); }
-        30% { -webkit-transform: rotate(0deg); }
-        100% { -webkit-transform: rotate(0deg); }
-    }
-    @keyframes spin {
-        0% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
-        10% { -webkit-transform: rotate(-27deg); transform:rotate(-27deg); }
-        20% { -webkit-transform: rotate(27deg); transform:rotate(27deg); }
-        30% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
-        100% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
     }
     #message-body{
         display: none;

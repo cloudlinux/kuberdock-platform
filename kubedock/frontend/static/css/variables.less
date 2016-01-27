@@ -114,27 +114,46 @@
 }
 
 /* animation */
+
 /* rotating */
 @-webkit-keyframes rotating {
-  from {
-    .rotate(0deg);
-  }
-  to {
-    .rotate(360deg);
-  }
+    from { .rotate(0deg); }
+    to { .rotate(360deg); }
 }
 @keyframes rotating {
-  from {
-    .rotate(0deg);
-  }
-  to {
-    .rotate(360deg);
-  }
+    from { .rotate(0deg); }
+    to { .rotate(360deg);}
+}
+@-moz-keyframes rotating {
+    from { .rotate(0deg); }
+    to { .rotate(360deg); }
 }
 .rotating(@time) {
     .animation(rotating, @time, linear infinite);
 }
-/* end rotating */
+
+/* bell */
+@-moz-keyframes bell {
+    0% { -moz-transform: rotate(0deg); }
+    10% { -moz-transform: rotate(-27deg); }
+    20% { -moz-transform: rotate(27deg); }
+    30% { -moz-transform: rotate(0deg); }
+    100% { -moz-transform: rotate(0deg); }
+}
+@-webkit-keyframes bell {
+    0% { -webkit-transform: rotate(0deg); }
+    10% { -webkit-transform: rotate(-27deg); }
+    20% { -webkit-transform: rotate(27deg); }
+    30% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(0deg); }
+}
+@keyframes bell {
+    0% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
+    10% { -webkit-transform: rotate(-27deg); transform:rotate(-27deg); }
+    20% { -webkit-transform: rotate(27deg); transform:rotate(27deg); }
+    30% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
+    100% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
+}
 
 .clearfix{
     zoom:1;

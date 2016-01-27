@@ -644,7 +644,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         delete_user: function(){
             this.model.deleteUserConfirmDialog({
                 success: function(){
-                    App.navigate('/', {trigger: true});
+                    App.navigate('users', {trigger: true});
                 },
             });
         },

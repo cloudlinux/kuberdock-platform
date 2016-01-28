@@ -262,6 +262,7 @@ check_status
 
 
 # 7. Setting kernel parameters
+modprobe bridge
 sysctl -w net.ipv4.ip_nonlocal_bind=1
 sysctl -w net.ipv4.ip_forward=1
 sysctl -w net.bridge.bridge-nf-call-iptables=1

@@ -534,6 +534,23 @@ do_and_log systemctl reenable etcd
 do_and_log systemctl restart etcd
 
 
+# KuberDock k8s to etcd middleware
+cat > /etc/systemd/system/kuberdock-k8s2etcd.service << EOF
+[Unit]
+Description=KuberDock kubernetes to etcd events middleware
+Before=kube-apiserver.service
+
+[Service]
+ExecStart=/usr/bin/env python2 /var/opt/kuberdock/k8s2etcd.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+do_and_log systemctl reenable kuberdock-k8s2etcd
+do_and_log systemctl restart kuberdock-k8s2etcd
+
 
 # Systemd to sysvinit backwards compatibility has been broken
 # after updating to centos 7.2.
@@ -593,7 +610,7 @@ chmod 600 $KUBERNETES_CONF_DIR/configfile_for_nodes
 
 #9. Configure kubernetes
 log_it echo "Configure kubernetes"
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP  --watch-cache=false\"|}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission_control=NamespaceLifecycle,NamespaceExists,SecurityContextDeny|}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBE_ALLOW_PRIV/ {s/--allow_privileged=false/--allow_privileged=true/}" $KUBERNETES_CONF_DIR/config
 
@@ -732,6 +749,37 @@ fi
 
 
 #15. Starting kubernetes
+# Need to add After=etcd.service, because kube-apiserver start faster then etcd on machine boot
+cat > /etc/systemd/system/kube-apiserver.service << EOF
+[Unit]
+Description=Kubernetes API Server
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=etcd.service
+
+[Service]
+EnvironmentFile=-/etc/kubernetes/config
+EnvironmentFile=-/etc/kubernetes/apiserver
+User=kube
+ExecStart=/usr/bin/kube-apiserver \
+	    \$KUBE_LOGTOSTDERR \
+	    \$KUBE_LOG_LEVEL \
+	    \$KUBE_ETCD_SERVERS \
+	    \$KUBE_API_ADDRESS \
+	    \$KUBE_API_PORT \
+	    \$KUBELET_PORT \
+	    \$KUBE_ALLOW_PRIV \
+	    \$KUBE_SERVICE_ADDRESSES \
+	    \$KUBE_ADMISSION_CONTROL \
+	    \$KUBE_API_ARGS
+Restart=on-failure
+Type=notify
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+
 log_it echo "Starting kubernetes..."
 for i in kube-apiserver kube-controller-manager kube-scheduler;
     do do_and_log systemctl reenable $i;done
@@ -825,13 +873,17 @@ do_cleanup()
     log_it echo "Cleaning up..."
 
     log_it echo "Stop and disable services..."
-    for i in nginx emperor.uwsgi flanneld redis postgresql influxdb etcd \
+    for i in nginx emperor.uwsgi flanneld redis postgresql influxdb kuberdock-k8s2etcd etcd \
              kube-apiserver kube-controller-manager kube-scheduler;do
         log_it systemctl disable $i
     done
-    for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kube-scheduler;do
+    for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kuberdock-k8s2etcd kube-scheduler;do
         log_it systemctl stop $i
     done
+
+    log_it echo -e "Deleting custom kuberdock-k8s2etcd.service..."
+    log_it rm /etc/systemd/system/kuberdock-k8s2etcd.service
+    log_it systemctl daemon-reload
 
     log_it echo "Cleaning up etcd..."
     log_it etcdctl rm --recursive /registry

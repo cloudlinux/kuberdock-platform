@@ -65,18 +65,18 @@ class Creator(Command):
         # Package and Kube with id=0 are default
         # and must be undeletable (always present with id=0) for fallback
         k_internal = Kube(id=Kube.get_internal_service_kube_type(),
-                  name='Internal service', cpu=.01, cpu_units='Cores',
+                  name='Internal service', cpu=.05, cpu_units='Cores',
                   memory=64, memory_units='MB', disk_space=1,
                   disk_space_units='GB', included_traffic=0)
         k1 = Kube(id=Kube.get_default_kube_type(),
-                  name='Small', cpu=.01, cpu_units='Cores',
+                  name='Small', cpu=.05, cpu_units='Cores',
                   memory=16, memory_units='MB', disk_space=1,
                   disk_space_units='GB', included_traffic=0,
                   is_default=True)
-        k2 = Kube(name='Standard', cpu=.06, cpu_units='Cores',
+        k2 = Kube(name='Standard', cpu=.25, cpu_units='Cores',
                   memory=64, memory_units='MB', disk_space=1,
                   disk_space_units='GB', included_traffic=0)
-        k3 = Kube(name='High memory', cpu=.125, cpu_units='Cores',
+        k3 = Kube(name='High memory', cpu=.5, cpu_units='Cores',
                   memory=256, memory_units='MB', disk_space=2,
                   disk_space_units='GB', included_traffic=0)
 

@@ -342,7 +342,6 @@ case "$ACTION" in
       exit
     fi
 
-    /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" ex_status delete $NAMESPACE $KUBERNETES_POD_ID
     ;;
   "teardown")
     if [ -f "$DATA_INFO" ];then
@@ -351,6 +350,5 @@ case "$ACTION" in
     else
       log "Teardown called for not existed pod. Skip"
     fi
-    /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" ex_status delete $NAMESPACE $KUBERNETES_POD_ID
     ;;
 esac

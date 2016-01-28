@@ -23,6 +23,15 @@ from . import tasks
 
 
 MAX_ETCD_VERSIONS = 1000
+ETCD_URL = 'http://127.0.0.1:4001/v2/keys/{0}'
+ETCD_KUBERDOCK = 'kuberdock'
+ETCD_NETWORK_PLUGIN = 'network/plugin'
+ETCD_EXTENDED_STATUSES = 'extended_statuses'
+ETCD_EXTENDED_STATUSES_URL = ETCD_URL.format('/'.join([
+    ETCD_KUBERDOCK, ETCD_NETWORK_PLUGIN, ETCD_EXTENDED_STATUSES]))
+ETCD_POD_STATES = 'pod_states'
+ETCD_POD_STATES_URL = ETCD_URL.format('/'.join([
+    ETCD_KUBERDOCK, ETCD_POD_STATES]))
 
 
 def filter_event(data):
@@ -156,10 +165,11 @@ def send_pod_status_update(pod, db_pod, event_type, app):
                        channel='user_{0}'.format(owner))
 
 
-def process_pods_event(data, app):
+def process_pods_event(data, app, event_time=None, live=True):
     if PODS_VERBOSE_LOG >= 2:
         print 'POD EVENT', data
-    event_time = datetime.utcnow()  # TODO: is there a better way to get event time?
+    if not event_time:
+        event_time = datetime.utcnow()
     event_type = data['type']
     pod = data['object']
     pod_id = pod['metadata'].get('labels', {}).get('kuberdock-pod-uid')
@@ -178,11 +188,14 @@ def process_pods_event(data, app):
             unregistered_pod_warning(pod_id)
             return
 
-        send_pod_status_update(pod, db_pod, event_type, app)
+        # if live, we need to send events to frontend
+        if live:
+            send_pod_status_update(pod, db_pod, event_type, app)
 
         host = pod['spec'].get('nodeName')
 
-        if deleted or pod['status'].get('phase', '').lower() in ('succeeded', 'failed'):
+        phase = pod['status'].get('phase', '').lower()
+        if deleted or phase in ('succeeded', 'failed'):
             PersistentDisk.free(pod_id)
         update_states(pod_id, pod['status'], event_type=event_type,
                       host=host, event_time=event_time)
@@ -373,55 +386,121 @@ def listen_fabric(watch_url, list_url, func, verbose=1, k8s_json_object_hook=Non
     return result
 
 
-def listen_fabric_etcd(path, func, verbose=1):
+def listen_fabric_etcd(url, func, list_func=None, verbose=1):
     fn_name = func.func_name
-    url = ('http://127.0.0.1:4001/v2/keys/{0}'
-           '?wait=true&recursive=true'.format(path))
 
-    def result():
+    def result(app):
+        index = 0
         while True:
-            if verbose >= 2:
-                print '==START WATCH {0} == pid: {1}'.format(
-                    fn_name, os.getpid())
             try:
-                r = requests.get(url, params={'wait': True, 'recursive': True})
+                if verbose >= 2:
+                    print '==START WATCH {0}==pid:{1}'.format(
+                        fn_name, os.getpid())
+                if not index and list_func:
+                    index = list_func(app)
+                r = requests.get(url, params={'wait': True,
+                                              'recursive': True,
+                                              'waitIndex': index})
+                if verbose >= 3:
+                    print '==EVENT CONTENT {0} ==: {1}'.format(
+                        fn_name, r.text)
+                data = r.json()
+                # The event in requested index is outdated and cleared
+                if data.get('errorCode') == 401:
+                    print "The event in requested index is outdated and "\
+                            "cleared. Skip all events and wait for new one"
+                    index = 0
+                    continue
+                func(data, app)
+                index = int(data['node']['modifiedIndex']) + 1
             except KeyboardInterrupt:
                 break
             except Exception as e:
                 print repr(e), '...restarting listen {0}...'.format(fn_name)
                 gevent.sleep(0.2)
-            else:
-                if verbose >= 3:
-                    print '==EVENT CONTENT {0} ==: {1}'.format(
-                        fn_name, r.text)
-                try:
-                    data = r.json()
-                except Exception as e:
-                    print repr(e)
-                else:
-                    func(data)
     return result
 
 
-def process_extended_statuses(data):
+def prelist_extended_statuses(app):
+    """ Check if there are already some extended statuses stored in etcd and
+    process them. Get etcd index from header and return it.
+    """
+    res = requests.get(ETCD_EXTENDED_STATUSES_URL, params={'recursive': True,
+                                                           'sorted': True})
+    try:
+        if res.ok:
+            data = res.json()
+            etcd_index = res.headers['x-etcd-index']
+            for namespace in data['node'].get('nodes', []):
+                for pod in namespace.get('nodes', []):
+                    process_extended_statuses(
+                        {'action': 'set', 'node': pod}, app)
+            return int(etcd_index) + 1
+        elif res.json().get('errorCode') != 100:
+            raise ValueError()
+    except ValueError:
+        raise Exception("Error while prelist expod states:{}".format(res.text))
+
+
+def process_extended_statuses(data, app):
+    """Get extended statuses from etcd key and prepare it for kuberdock process.
+    Delete delete namespace dir from etcd after processing.
+    """
     if data['action'] != 'set':
         return
-    _, namespace, pod = data['node']['key'].rsplit('/', 2)
+    key = data['node']['key']
+    _, namespace, pod = key.rsplit('/', 2)
     status = data['node']['value']
     print '=== Namespace: {0} | Pod: {1} | Status: {2} ==='.format(
-        namespace, pod, status
-    )
+        namespace, pod, status)
+    # TODO: don't do this if we have several pods in one namespace
+    r = requests.delete(
+        ETCD_URL.format(key.rsplit('/', 1)[0]),
+        params={'recursive': True, 'dir': True})
+    if not r.ok:
+        print "error while delete:{}".format(r.text)
 
 
-listen_pods = listen_fabric(
-    get_api_url('pods', namespace=False, watch=True),
-    get_api_url('pods', namespace=False),
-    process_pods_event,
-    PODS_VERBOSE_LOG,
-    # TODO: remove param, use it for all listeners
-    # (it converts things like datetime from k8s API to native python types)
-    k8s_json_object_hook=k8s_json_object_hook,
-)
+def prelist_pod_states(app):
+    """ Check if there are already some pod states stored in etcd and
+    process them. Get etcd index from header and return it.
+    """
+    res = requests.get(ETCD_POD_STATES_URL,
+                       params={'recursive': True, 'sorted': True})
+    try:
+        if res.ok:
+            data = res.json()
+            etcd_index = res.headers['x-etcd-index']
+            for node in data['node'].get('nodes', []):
+                # TODO: for now send all prelist event to process, but there are no
+                # need to send old events to frontend, just need to save them
+                # to db. Need to have separate method or filter old events by time.
+                process_pod_states(
+                    {'action': 'set', 'node': node}, app, live=False)
+            return int(etcd_index) + 1
+        elif res.json().get('errorCode') != 100:
+            raise ValueError()
+    except ValueError:
+        raise Exception("Error while prelist pod states: {}".format(res.text))
+
+
+def process_pod_states(data, app, live=True):
+    """ Get pod event from etcd event and prepare it for kuberdock process.
+    Delete pod event from etcd after processing.
+    """
+    if data['action'] != 'set':
+        return
+    key = data['node']['key']
+    _, ts = key.rsplit('/', 1)
+    obj = data['node']['value']
+    k8s_obj = json.loads(obj, object_hook=k8s_json_object_hook)
+    k8s_obj = filter_event(k8s_obj)
+    event_time = datetime.fromtimestamp(float(ts))
+    process_pods_event(k8s_obj, app, event_time, live)
+    r = requests.delete(ETCD_URL.format(key))
+    if not r.ok:
+        print "error while delete:{}".format(r.text)
+
 
 listen_endpoints = listen_fabric(
     get_api_url('endpoints', namespace=False, watch=True),
@@ -445,7 +524,15 @@ listen_events = listen_fabric(
 )
 
 listen_extended_statuses = listen_fabric_etcd(
-    'kuberdock/network/plugin/extended_statuses/',
+    ETCD_EXTENDED_STATUSES_URL,
     process_extended_statuses,
+    prelist_extended_statuses,
     1
+)
+
+listen_pod_states = listen_fabric_etcd(
+    ETCD_POD_STATES_URL,
+    process_pod_states,
+    prelist_pod_states,
+    PODS_VERBOSE_LOG
 )

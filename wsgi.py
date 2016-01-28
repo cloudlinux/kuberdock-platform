@@ -61,26 +61,26 @@ else:
     if uwsgi.worker_id() == 1:
         # TODO cut all stale functionality
         # g = gevent.spawn(listeners.listen_endpoints, back_app)
-        h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
         e = gevent.spawn(listeners.listen_events, back_app)
         if PRE_START_HOOK_ENABLED:
             j = gevent.spawn(api.pre_start_hook, back_app)
         k = gevent.spawn(api.populate_registered_hosts, back_app)
-        l = gevent.spawn(listeners.listen_extended_statuses)
+        l = gevent.spawn(listeners.listen_extended_statuses, back_app)
+        s = gevent.spawn(listeners.listen_pod_states, back_app)
 
 if __name__ == "__main__":
 
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN'):
         # g = gevent.spawn(listeners.listen_endpoints, back_app)
-        h = gevent.spawn(listeners.listen_pods, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
         e = gevent.spawn(listeners.listen_events, back_app)
         if PRE_START_HOOK_ENABLED:
             j = gevent.spawn(api.pre_start_hook, back_app)
         k = gevent.spawn(api.populate_registered_hosts, back_app)
-        l = gevent.spawn(listeners.listen_extended_statuses)
+        l = gevent.spawn(listeners.listen_extended_statuses, back_app)
+        s = gevent.spawn(listeners.listen_pod_states, back_app)
 
     @run_with_reloader
     def run_server():

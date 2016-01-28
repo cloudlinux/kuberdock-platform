@@ -52,12 +52,11 @@ class TestNodes(DBTestCase):
         settings.NODE_INSTALL_LOG_FILE = self.original_install_log_dir
 
     @mock.patch.object(nodes, '_check_node_hostname')
-    @mock.patch.object(nodes, 'send_event')
     @mock.patch.object(nodes, '_deploy_node')
     @mock.patch.object(nodes, 'PodCollection')
     @mock.patch.object(nodes.socket, 'gethostbyname')
     def test_create_node(self, gethostbyname_mock, podcollection_mock,
-                         deploy_node_mock, send_event_mock,
+                         deploy_node_mock,
                          check_node_hostname_mock):
         """Test for kapi.nodes.create_node function."""
         ip = '192.168.1.2'
@@ -80,7 +79,6 @@ class TestNodes(DBTestCase):
         self.assertIsNotNone(node)
         self.assertEqual(node.ip, ip)
         self.assertEqual(node.kube_id, default_kube_type)
-        send_event_mock.assert_called_once_with('node:change', {'id': node.id})
         check_node_hostname_mock.assert_called_once_with(node.ip, hostname)
 
         # add a node with the same IP

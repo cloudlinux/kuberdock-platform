@@ -150,17 +150,42 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         initialize: function() {
             this.counter = 1;
+            this.sortingType = {
+                username : 1,
+                pods_count : 1,
+                containers_count : 1,
+                email : 1,
+                package : 1,
+                rolename : 1,
+                active : 1
+            };
+        },
+
+        templateHelpers: function(){
+            return {
+                sortingType : this.sortingType
+            }
         },
 
         toggleSort: function(e) {
-            var target = $(e.target),
-                targetClass = target.attr('class');
+            var that = this,
+                targetClass = e.target.className;
 
-            this.collection.setSorting(targetClass, this.counter);
-            this.collection.fullCollection.sort();
-            this.counter = this.counter * (-1)
-            target.find('.caret').toggleClass('rotate').parent()
-                  .siblings().find('.caret').removeClass('rotate');
+            if (targetClass) {
+                this.collection.setSorting(targetClass, this.counter);
+                this.collection.fullCollection.sort();
+                this.counter = this.counter * (-1);
+
+                if (that.sortingType[targetClass] == 1){
+                    _.each(that.sortingType, function(item, index){
+                        that.sortingType[index] = 1;
+                    })
+                    that.sortingType[targetClass] = -1;
+                } else {
+                    that.sortingType[targetClass] = 1;
+                }
+                this.render();
+            }
         },
 
         //showSearch: function(){

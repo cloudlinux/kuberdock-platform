@@ -159,7 +159,8 @@ define(['app_data/app',
             return {
                 allChecked: this.collection.fullCollection.allChecked ? true : false,
                 checked: this.collection.fullCollection.checkedNumber,
-                isCollection : this.collection.fullCollection.length < 1 ? 'disabled' : ''
+                isCollection : this.collection.fullCollection.length < 1 ? 'disabled' : '',
+                sortingType : this.sortingType
             }
         },
 
@@ -168,17 +169,32 @@ define(['app_data/app',
                 this.collection.fullCollection.checkedNumber = 0;
             }
             this.counter = 1;
+            this.sortingType = {
+                name : 1,
+                replicas : 1,
+                status : 1,
+                kube_type : 1
+            };
         },
 
         toggleSort: function(e) {
-            var target = $(e.target),
-              targetClass = target.attr('class');
+            var that = this,
+                targetClass = e.target.className;
+
             if (targetClass) {
-              this.collection.setSorting(targetClass, this.counter);
-              this.collection.fullCollection.sort();
-              this.counter = this.counter * (-1)
-              target.find('.caret').toggleClass('rotate').parent()
-                  .siblings().find('.caret').removeClass('rotate');
+                this.collection.setSorting(targetClass, this.counter);
+                this.collection.fullCollection.sort();
+                this.counter = this.counter * (-1);
+
+                if (that.sortingType[targetClass] == 1){
+                    _.each(that.sortingType, function(item, index){
+                        that.sortingType[index] = 1;
+                    })
+                    that.sortingType[targetClass] = -1;
+                } else {
+                    that.sortingType[targetClass] = 1;
+                }
+                this.render();
             }
         },
 

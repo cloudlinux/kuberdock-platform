@@ -13,15 +13,15 @@
 <div class="container">
     <table id="nodelist-table" class="table">
         <thead>
-            <tr class="tablesorter-headerRow">
-                <th class="hostname">Node<b class="caret"></b></th>
-                <th class="ip">IP<b class="caret"></b></th>
-                <th class="kube_type">Kube Type<b class="caret"></b></th>
+            <tr>
+                <th class="hostname">Node<b class="caret <%= sortingType.hostname == -1 ? 'rotate' : '' %>"></b></th>
+                <th class="ip">IP<b class="caret <%= sortingType.ip == -1 ? 'rotate' : '' %>"></b></th>
+                <th class="kube_type">Kube Type<b class="caret <%= sortingType.kube_type == -1 ? 'rotate' : '' %>"></b></th>
                 <!-- <th class="hostname">Kube capacity<b class="caret"></b><br>(used/max)</th> -->
                 <!-- <th>Average<b class="caret"></b><br>CPU usage</th> -->
                 <!-- <th>Active pods<b class="caret"></b><br>(containers)</th> -->
-                <th class="status">Status<b class="caret"></b></th>
-                <th class="actions">Actions</b></th>
+                <th class="status">Status<b class="caret <%= sortingType.status == -1 ? 'rotate' : '' %>"></b></th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody></tbody>

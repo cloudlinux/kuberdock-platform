@@ -27,14 +27,14 @@
                     <table id="userslist-table" class="table col-sm-12 no-padding">
                         <thead>
                             <tr>
-                               <th class="username">Name<span class="caret"></span></th>
-                               <th class="pods_count">Pods<span class="caret"></span></th>
-                               <th class="containers_count">Containers<span class="caret"></span></th>
-                               <th class="email">Email<span class="caret"></span></th>
-                               <th class="package">Package<span class="caret"></span></th>
-                               <th class="rolename">Role<span class="caret"></span></th>
-                               <th class="active">Status<span class="caret"></span></th>
-                               <th class="actions">Actions</span></th>
+                               <th class="username">Name<span class="caret <%= sortingType.username == -1 ? 'rotate' : '' %>"></span></th>
+                               <th class="pods_count">Pods<span class="caret <%= sortingType.pods_count == -1 ? 'rotate' : '' %>"></span></th>
+                               <th class="containers_count">Containers<span class="caret <%= sortingType.containers_count == -1 ? 'rotate' : '' %>"></span></th>
+                               <th class="email">Email<span class="caret <%= sortingType.email == -1 ? 'rotate' : '' %>"></span></th>
+                               <th class="package">Package<span class="caret <%= sortingType.package == -1 ? 'rotate' : '' %>"></span></th>
+                               <th class="rolename">Role<span class="caret <%= sortingType.rolename == -1 ? 'rotate' : '' %>"></span></th>
+                               <th class="active">Status<span class="caret <%= sortingType.active == -1 ? 'rotate' : '' %>"></span></th>
+                               <th>Actions</span></th>
                             </tr>
                         </thead>
                         <tbody></tbody>

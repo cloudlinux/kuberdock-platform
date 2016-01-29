@@ -324,14 +324,14 @@
             <div id="custom-fields">
                 <div class="title">Set up resources amount</div>
                 <div class="body">
-                    {% for name, v in fields.iteritems() %}
-                        {% if name in plan_fields and plan_fields[name] == 'kube' %}
+                    {% for field in fields %}
+                        {% if field.name in plan_fields and plan_fields[field.name] == 'kube' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ v.title }}</label>
+                            <label class="custom-field-title">{{ field.title }}</label>
                             <div class="custom-field-body">
-                                <select id="field-{{ name }}" class="custom-field">
+                                <select id="field-{{ field.name }}" class="custom-field">
                                     {% for row in range(1, 11) %}
-                                        {% if row == v.value|int %}
+                                        {% if row == field.value|int %}
                                         <option selected="selected" value="{{ row }}">{{ row }}</option>
                                         {% else %}
                                         <option value="{{ row }}">{{ row }}</option>
@@ -340,13 +340,13 @@
                                 </select>
                             </div>
                         </div>
-                        {% elif name in plan_fields and plan_fields[name] == 'kubeType' %}
+                        {% elif field.name in plan_fields and plan_fields[field.name] == 'kubeType' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ v.title }}</label>
+                            <label class="custom-field-title">{{ field.title }}</label>
                             <div class="custom-field-body">
-                                <select id="field-{{ name }}" class="custom-field">
+                                <select id="field-{{ field.name }}" class="custom-field">
                                     {% for row in package.kubes %}
-                                        {% if row.id == v.value|int %}
+                                        {% if row.id == field.value|int %}
                                         <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
                                         {% else %}
                                         <option value="{{ row.id }}">{{ row.name }}</option>
@@ -355,12 +355,12 @@
                                 </select>
                             </div>
                         </div>
-                        {% elif name in plan_fields and plan_fields[name] == 'pdSize' %}
+                        {% elif field.name in plan_fields and plan_fields[field.name] == 'pdSize' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ v.title }}</label>
+                            <label class="custom-field-title">{{ field.title }}</label>
                             <div class="custom-field-body">
-                                <input id="field-{{ name }}" class="custom-field"
-                                    type="number" value="{{ v.value }}"
+                                <input id="field-{{ field.name }}" class="custom-field"
+                                    type="number" value="{{ field.value }}"
                                     min="1" max="{{ max_pd_size }}" step="1">
                             </div>
                         </div>
@@ -373,16 +373,16 @@
             <div id="recource-fields">
                 <div class="title">Additional configuration</div>
                 <div class="body">
-                {% for name, v in fields.iteritems() %}
-                    {% if name not in plan_fields %}
+                {% for field in fields %}
+                    {% if field.name not in plan_fields %}
                     <div class="custom-field-item">
-                        {% if not v.hidden %}
-                        <label class="custom-field-title">{{ v.title }}</label>
+                        {% if not field.hidden %}
+                        <label class="custom-field-title">{{ field.title }}</label>
                         {% endif %}
                         <div class="custom-field-body">
-                            <input id="field-{{ name }}" class="custom-field"
-                                type="{{ 'hidden' if v.hidden else 'text' }}"
-                                value="{{ v.value }}">
+                            <input id="field-{{ field.name }}" class="custom-field"
+                                type="{{ 'hidden' if field.hidden else 'text' }}"
+                                value="{{ field.value }}">
                         </div>
                     </div>
                     {% endif %}

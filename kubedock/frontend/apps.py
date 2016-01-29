@@ -11,6 +11,9 @@ from ..system_settings.models import SystemSettings
 from ..kapi import predefined_apps as kapi_papps
 
 
+PLAN_FIELDS_ORDER = {'kubeType': 0, 'kube': 1, 'pdSize': 2}
+
+
 apps = Blueprint('apps', __name__, url_prefix='/apps')
 
 
@@ -59,11 +62,12 @@ def index(app_hash):
             page = 'apps/index.html'
             plan_fields = get_plan_fields(plan)
             filter_fields_from_plans(fields, [p for p in plans if p != plan])
+            sort_key = lambda field: PLAN_FIELDS_ORDER.get(plan_fields.get(field['name']))
             data.update(
                 appPackageID=kuberdock['appPackages'].index(plan),
                 billing_url=billing_url,
                 max_pd_size=max_pd_size,
-                fields=fields,
+                fields=sorted(fields.itervalues(), key=sort_key),
                 plan_fields=plan_fields,
                 has_simple=bool(set(fields) - set(plan_fields)),
             )

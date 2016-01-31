@@ -63,6 +63,11 @@ ELASTICSEARCH_REST_PORT = 9200
 PD_SEPARATOR_USERNAME = '__SEP__'
 # separator for persisnet drive name - user id after separator
 PD_SEPARATOR_USERID = '__SEPID__'
+#: Persistent drive namespace. Used to distinct drives for different kuberdock
+# clusters on one storage backend. In case of CEPH it is equal to CEPH pool
+# name for this cluster.
+PD_NAMESPACE = ''
+PD_NS_SEPARATOR = '/'
 PORTS_TO_RESTRICT = [ELASTICSEARCH_REST_PORT]
 ERROR_TOKEN = 'ERROR:'
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
@@ -117,6 +122,7 @@ MASTER_TOBIND_FLANNEL = 'enp0s5'
 NODE_TOBIND_EXTERNAL_IPS = 'enp0s5'
 NODE_TOBIND_FLANNEL = 'enp0s5'
 NODE_INSTALL_TIMEOUT_SEC = 30*60    # 30 min
+PD_NAMESPACE = ''
 
 NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
@@ -142,6 +148,8 @@ if cp.read(KUBERDOCK_SETTINGS_FILE):
             NODE_TOBIND_EXTERNAL_IPS = cp.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
         if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
             NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
+        if cp.has_option('main', 'PD_NAMESPACE'):
+            PD_NAMESPACE = cp.get('main', 'PD_NAMESPACE')
 
 
 # Import local settings
@@ -154,14 +162,18 @@ except ImportError:
 DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
 SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
+
 AWS = False
 try:
     from amazon_settings import *
 except ImportError:
     pass
 
-CEPH=False
+CEPH = False
+CEPH_POOL_NAME = 'rbd'
 try:
     from ceph_settings import *
+    if CEPH and PD_NAMESPACE:
+        CEPH_POOL_NAME = PD_NAMESPACE
 except ImportError:
     pass

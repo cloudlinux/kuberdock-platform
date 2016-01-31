@@ -2,7 +2,8 @@
 """
 from collections import namedtuple
 
-from ..settings import PD_SEPARATOR_USERNAME, PD_SEPARATOR_USERID
+from ..settings import (
+    PD_SEPARATOR_USERNAME, PD_SEPARATOR_USERID, PD_NAMESPACE, PD_NS_SEPARATOR)
 from ..users.models import User
 
 
@@ -48,7 +49,12 @@ def compose_pdname(drive, user):
     :param user: User object or user id
     """
     user_id = getattr(user, 'id', user)
-    return PD_SEPARATOR_USERID.join((drive, str(user_id)))
+    drivename = PD_SEPARATOR_USERID.join((drive, str(user_id)))
+    if PD_NAMESPACE:
+        return PD_NS_SEPARATOR.join([
+            PD_NAMESPACE, drivename
+        ])
+    return drivename
 
 
 def compose_pdname_legacy(drive, user):

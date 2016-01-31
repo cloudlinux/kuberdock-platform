@@ -29,6 +29,7 @@ from kubedock.updates.kuberdock_upgrade import get_available_updates
 from kubedock.updates.helpers import get_maintenance
 from kubedock import tasks
 from kubedock.kapi import licensing
+from kubedock.kapi.pstorage import check_namespace_exists
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.script.commands import InvalidCommand
@@ -250,6 +251,7 @@ class NodeFlagCmd(Command):
                 node.hostname,
                 {NODE_CEPH_AWARE_KUBERDOCK_LABEL: "True"}
             )
+            check_namespace_exists(node.ip)
         print u'Node "{0}": flag "{1}" was set to "{2}"'.format(
             nodename, flagname, value)
 

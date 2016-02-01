@@ -189,6 +189,18 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         initialize: function(options){
             this.searchString = options.searchString;
             this.counter = 1;
+            this.sortingType = {
+                hostname : 1,
+                ip : 1,
+                kube_type : 1,
+                status : 1
+            };
+        },
+
+        templateHelpers: function(){
+            return {
+                sortingType : this.sortingType
+            }
         },
 
         filterCollection: function(){
@@ -205,22 +217,25 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             }
         },
 
-        //collectionEvents: {
-        //    "remove": function () {
-        //        this.render()
-        //    }
-        //},
-
         toggleSort: function(e) {
-            console.log('sort fired');
-            var target = $(e.target),
-                targetClass = target.attr('class');
+            var that = this,
+                targetClass = e.target.className;
 
-            this.collection.setSorting(targetClass, this.counter);
-            this.collection.fullCollection.sort();
-            this.counter = this.counter * (-1)
-            target.find('.caret').toggleClass('rotate').parent()
-                  .siblings().find('.caret').removeClass('rotate');
+            if (targetClass) {
+                this.collection.setSorting(targetClass, this.counter);
+                this.collection.fullCollection.sort();
+                this.counter = this.counter * (-1);
+
+                if (that.sortingType[targetClass] == 1){
+                    _.each(that.sortingType, function(item, index){
+                        that.sortingType[index] = 1;
+                    })
+                    that.sortingType[targetClass] = -1;
+                } else {
+                    that.sortingType[targetClass] = 1;
+                }
+                this.render();
+            }
         },
 
         showSearch: function(){

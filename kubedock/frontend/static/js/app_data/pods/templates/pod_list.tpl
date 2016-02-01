@@ -14,10 +14,10 @@
                         <span></span>
                     </label>
                 </th>
-                <th class="name">Pod name<b class="caret"></th>
-                <th class="replicas">Replicated<b class="caret"></b></th>
-                <th class="status">Status<b class="caret"></b></th>
-                <th class="kube_type">Kube Type<b class="caret"></th>
+                <th class="name">Pod name<b class="caret <%= sortingType.name == -1 ? 'rotate' : '' %>"></th>
+                <th class="replicas">Replicated<b class="caret <%= sortingType.replicas == -1 ? 'rotate' : '' %>"></b></th>
+                <th class="status">Status<b class="caret <%= sortingType.status == -1 ? 'rotate' : '' %>"></b></th>
+                <th class="kube_type">Kube Type<b class="caret <%= sortingType.kube_type == -1 ? 'rotate' : '' %>"></th>
                 <th>Number of Kubes</th>
                 <th>Actions</th>
             </tr>

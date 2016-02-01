@@ -279,25 +279,42 @@ define(['app_data/app', 'app_data/utils', 'marionette',
 
             initialize: function(){
                 this.counter = 1;
+                this.sortingType = {
+                    name : 1,
+                    modified : 1,
+                };
                 this.collection.setSorting('name', -1);
                 this.collection.fullCollection.sort();
+            },
+
+            templateHelpers: function(){
+                return {
+                    sortingType : this.sortingType
+                }
             },
 
             appEditItem: function(view, id){
                 this.trigger('app:edit', id);
             },
 
-            toggleSort: function(e) {
-                var target = $(e.target),
-                    targetClass = target.attr('class');
+            toggleSort: function(e){
+                var that = this,
+                    targetClass = e.target.className;
 
                 if (targetClass) {
-                    console.log('sort fired');
                     this.collection.setSorting(targetClass, this.counter);
                     this.collection.fullCollection.sort();
-                    this.counter = this.counter * (-1)
-                    target.find('.caret').toggleClass('rotate').parent()
-                          .siblings().find('.caret').removeClass('rotate');
+                    this.counter = this.counter * (-1);
+
+                    if (that.sortingType[targetClass] == 1){
+                        _.each(that.sortingType, function(item, index){
+                            that.sortingType[index] = 1;
+                        })
+                        that.sortingType[targetClass] = -1;
+                    } else {
+                        that.sortingType[targetClass] = 1;
+                    }
+                    this.render();
                 }
             }
         });

@@ -159,7 +159,8 @@
 
     PA.prototype.applyAppPackage = function(pod, appPackage){
         var podPlan = appPackage.pods[0],
-            spec = this.getSpec(pod);
+            spec = this.getSpec(pod),
+            kuberdock = pod.kuberdock;
 
         pod.kuberdock.kube_type = podPlan.kubeType;
 
@@ -179,6 +180,10 @@
             spec.containers.forEach(function(c){ c.ports.forEach(
                 function(port){ port.isPublic = false; });
             });
+        }
+
+        if (appPackage.packagePostDescription){
+            kuberdock.postDescription += '\n' + appPackage.packagePostDescription;
         }
         return pod;
     };

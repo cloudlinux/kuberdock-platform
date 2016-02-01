@@ -490,28 +490,45 @@
                 });
 
                 submitButton.onclick = function(evt){
+                    {#  // remove this line to uncomment
+                    // if you need to test PA without whmcs, just uncomment this
+                    // block. It will work only if you are logged in Kuberdock.
+                    // Also, you can see compiled yaml in console.
+                    var yml = app.templateToApp(appPackageID, getValues()),
+                        desc = yml.kuberdock.postDescription,
+                        r = new XMLHttpRequest();
+                    console.log(jsyaml.safeDump(yml));
+                    console.log(yml);
+                    r.onreadystatechange = function(){
+                        if (r.readyState == 4) {
+                            console.log(r);
+                            if(r.status != 200) {
+                                alert(r.responseText);
+                                return;
+                            }
+                            var id = JSON.parse(r.response).data.id;
+                            // POST redirect
+                            var form = document.createElement('form'),
+                                field = document.createElement('input');
+                            form.setAttribute('method', 'POST');
+                            form.setAttribute('action', window.location.origin +
+                                                        '/#pods/' + id);
+                            field.setAttribute('type', 'hidden');
+                            field.setAttribute('name', 'postDescription');
+                            field.setAttribute('value', desc);
+                            form.appendChild(field);
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    };
+                    r.open('POST', '/api/yamlapi/', true);
+                    r.setRequestHeader("Content-type", "application/json");
+                    r.send(window.JSON.stringify({data: jsyaml.safeDump(yml)}));
+                    return;
+                    // remove next line to uncomment (end of block)
+                    #}
                     if (!billingUrl) {
                         alert('Billing URL not set!');
-                        {#
-                        var yml = app.templateToApp(appPackageID, getValues()),
-                            desc = yml.kuberdock.postDescription,
-                            r = new XMLHttpRequest();
-                        console.log(jsyaml.safeDump(yml));
-                        console.log(yml);
-                        r.onreadystatechange = function(){
-                            if (r.readyState == 4) {
-                                console.log(r);
-                                if(r.status != 200) return;
-                                var id = JSON.parse(r.response).data.id;
-                                window.location = '/?postDescription=' +
-                                                  encodeURIComponent(desc) +
-                                                  '#pods/' + id;
-                            }
-                        };
-                        r.open('POST', '/api/yamlapi/', true);
-                        r.setRequestHeader("Content-type", "application/json");
-                        r.send(window.JSON.stringify({data: jsyaml.safeDump(yml)}));
-                        #}
                         return;
                     }
 

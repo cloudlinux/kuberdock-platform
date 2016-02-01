@@ -1,3 +1,13 @@
+.clearfix{
+    zoom: 1;
+    &:before, &:after{
+        content: "";
+        display: table;
+    }
+    &:after{
+        clear: both;
+    }
+}
 .text-shadow (@string: 0 1px 3px rgba(0, 0, 0, 0.25)) {
     text-shadow: @string;
 }
@@ -153,14 +163,4 @@
     20% { -webkit-transform: rotate(27deg); transform:rotate(27deg); }
     30% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
     100% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
-}
-
-.clearfix{
-    zoom:1;
-    &:before, &:after{
-        content:""; display:table;
-    }
-    &:after{
-        clear: both;
-    }
 }

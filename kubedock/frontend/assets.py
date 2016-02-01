@@ -19,8 +19,6 @@ vendor_js = Bundle(
     'js/lib/backbone.marionette.js',
     'js/lib/bootstrap.js',
     'js/lib/backbone.paginator.js',
-    'js/lib/spin.min.js',
-    'js/lib/jquery.spin.js',
     'js/lib/bootstrap-editable.min.js',
     'js/lib/jquery.jqplot.min.js',
     'js/lib/jqplot.dateAxisRenderer.min.js',

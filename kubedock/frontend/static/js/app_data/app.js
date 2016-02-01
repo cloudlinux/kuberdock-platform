@@ -393,10 +393,11 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     _.mapObject(events, function(handler, eventName){
                         source.addEventListener(eventName, handler, false);
                     });
+                    source.onopen = function(){
+                        console.log('Connected!');
+                    };
                     source.onerror = function () {
-                        console.info('SSE Error');
-                        source.close();
-                        setTimeout(_.partial(eventHandler, nodes), 5000);
+                        console.log('SSE Error. Reconnecting...');
                     };
                 }
             }

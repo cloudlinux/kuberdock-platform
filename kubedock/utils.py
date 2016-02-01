@@ -49,9 +49,40 @@ class POD_STATUSES:
     failed = 'failed'
 
 
-def send_event(event_name, data, to_file=None, channel='common'):
+def get_channel_key(conn, key, size=100):
+    """
+    Gets the last cache id for channel. If keys amount exceeds size truncate keys
+    @param conn: object -> redis connection object
+    @param key: string -> redis key for hash
+    @param size: int -> key amount limit
+    @return: int -> last key incremented by one
+    """
+    length = conn.hlen(key)
+    if length == 0:
+        return 1
+    keys = sorted(conn.hkeys(key), key=int)
+    if length >= size:
+        for k in keys[:-(size-1)]:
+            conn.hdel(key, k)
+    return int(keys[-1])+1
+
+
+def send_event(event_name, data, to_file=None, channel='common', prefix='SSEEVT'):
+    """
+    Sends event via pubsub to all subscribers and cache it to be rolled back
+    if missed
+    @param event_name: string -> event name
+    @param data: dict -> data to be sent
+    @param to_file: file handle object -> file object to output logs
+    @param channel: string -> target identifier for event to be sent to
+    @param prefix: string -> redis key prefix to store channel cache
+    """
     conn = ConnectionPool.get_connection()
-    conn.publish(channel, json.dumps([event_name, data]))
+    key = ':'.join([prefix, channel])
+    channel_key = get_channel_key(conn, key)
+    message = json.dumps([channel_key, event_name, data])
+    conn.hset(key, channel_key, message)
+    conn.publish(channel, message)
     if to_file is not None:
         try:
             to_file.write(data)

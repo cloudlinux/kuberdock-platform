@@ -4,7 +4,7 @@ import time
 
 import paramiko
 import redis
-from sse import Sse
+#from sse import Sse
 from paramiko.ssh_exception import AuthenticationException, SSHException
 from flask_sqlalchemy_fix import SQLAlchemy
 from flask.ext.influxdb import InfluxDB
@@ -123,23 +123,78 @@ class ExclusiveLock(object):
             redis_con.delete(*keys)
 
 
+def _parse_message_text(text, encoding):
+    """
+    Generator to parse and decode data to be sent to SSE endpoint
+    @param test: iterable -> list, tuple, set or string to be decoded
+    @param encoding: string -> endocing to decode
+    @return: generator
+    """
+    if isinstance(text, (list, tuple, set)):
+        for item in text:
+            if isinstance(item, bytes):
+                item = item.decode(encoding)
+            for subitem in item.splitlines():
+                yield subitem
+    else:
+        if isinstance(text, bytes):
+            text = text.decode(encoding)
+        for item in text.splitlines():
+            yield item
+
+
+def make_message(eid, event, text, encoding='utf-8'):
+    """
+    Makes message according to SSE standard
+    @param eid: int -> message id
+    @param event: string -> event type
+    @param text: iterable -> message content
+    @param encoding: string -> encoding to decode data
+    @return: string -> decoded and formatted string data
+    """
+    _buff = []
+    _buff.append("event:{0}".format(event))
+    for text_item in _parse_message_text(text, encoding):
+        _buff.append("data:{0}".format(text_item))
+    if eid is not None:
+        _buff.append("id:{0}".format(eid))
+    return "{}\n\n".format('\n'.join(_buff))
+
+
 class EvtStream(object):
-    def __init__(self, conn, channel):
+    """
+    Delegates messages for SSE endpoint for channel specified
+    """
+    key = 'SSEEVT'
+    def __init__(self, conn, channel, last_id=None):
+        self.conn = conn
+        self.channel = channel
         self.pubsub = conn.pubsub()
         self.pubsub.subscribe(channel)
+        self.last_id = last_id
+        if self.last_id is not None:
+            self.last_id = int(self.last_id)
+        self.cache_key = ':'.join([self.key, channel])
 
     def __iter__(self):
-        ssev = Sse()
-        for data in ssev:
-            yield data.encode('u8')
-        for message in self.pubsub.listen():
-            if message['type'] == 'message':
-                event, data = json.loads(message['data'])
+        if self.last_id is not None:
+            for key, value in sorted(((int(k), v)
+                    for k, v in self.conn.hgetall(self.cache_key).iteritems()),
+                        key=(lambda x: x[0])):
+                if key <= self.last_id:
+                    continue
+                eid, event, data = json.loads(value)
                 if not isinstance(data, basestring):
                     data = json.dumps(data)
-                ssev.add_message(event, data)
-                for data in ssev:
-                    yield data.encode('u8')
+                msg = make_message(eid, event, data)
+                yield msg.encode('u8')
+        for message in self.pubsub.listen():
+            if message['type'] == 'message':
+                eid, event, data = json.loads(message['data'])
+                if not isinstance(data, basestring):
+                    data = json.dumps(data)
+                msg = make_message(eid, event, data)
+                yield msg.encode('u8')
 
 
 def ssh_connect(host, timeout=10):

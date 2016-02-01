@@ -73,7 +73,31 @@ define(['app_data/app', 'marionette',
                     return App.currentUser.localizeDatetime(dt);
                 }
                 return 'unknown';
-            },
+            }
+        },
+
+        initialize: function(){
+            this.checkLimits();
+        },
+
+        checkLimits: function(){
+            var results,
+                that = this,
+                data = this.model.get('data');
+
+            _.each(data, function(item){
+                !that.comparison(item[0],item[1])
+                    ? item[3] = true
+                    : item[3] = false;
+            });
+
+            results = _.any(data, function(item){ return !that.comparison(item[0],item[1])});
+            this.model.set('attention', results);
+        },
+
+        comparison: function(a, b){
+            if (a == 'unlimited' || a == 0) a = Infinity;
+            return a > b ? true : false;
         },
 
         ui: {
@@ -105,12 +129,8 @@ define(['app_data/app', 'marionette',
                 },
                 error: function(response, newValue) {
                     that.model.set({name: newValue});
-                    $.notify(response.responseText, {
-                        autoHideDelay: 5000,
-                        clickToHide: true,
-                        globalPosition: 'bottom left',
-                        className: 'error',
-                    });
+                    console.log(response);
+                    utils.notifyWindow(response.responseJSON.data);
                 },
             });
         }

@@ -32,6 +32,10 @@ while [[ $# > 0 ]];do
         -t|--testing)
         WITH_TESTING=yes
         ;;
+        -n|--pd-namespace)
+        PD_CUSTOM_NAMESPACE="$2"
+        shift
+        ;;
         -u|--udp-backend)
         CONF_FLANNEL_BACKEND='udp'
         ;;
@@ -47,7 +51,6 @@ while [[ $# > 0 ]];do
     esac
     shift # past argument or value
 done
-
 
 # SOME HELPERS
 
@@ -266,6 +269,12 @@ NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
 # Do some preliminaries for aws/non-aws setups
 HAS_CEPH=no
+if [ -z "$PD_CUSTOM_NAMESPACE" ]; then
+  PD_NAMESPACE="$MASTER_IP"
+else
+  PD_NAMESPACE="$PD_CUSTOM_NAMESPACE"
+fi
+
 
 if [ "$ISAMAZON" = true ];then
     AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)
@@ -432,6 +441,7 @@ echo "MASTER_IP=$MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
 echo "MASTER_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 echo "NODE_TOBIND_EXTERNAL_IPS=$NODE_TOBIND_EXTERNAL_IPS" >> $KUBERDOCK_MAIN_CONFIG
 echo "NODE_TOBIND_FLANNEL=$NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
+echo "PD_NAMESPACE=$PD_NAMESPACE" >> $KUBERDOCK_MAIN_CONFIG
 
 
 

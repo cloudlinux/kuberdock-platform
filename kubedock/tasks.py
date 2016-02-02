@@ -33,7 +33,8 @@ from .settings import (
     PORTS_TO_RESTRICT, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
-    delete_persistent_drives, remove_drives_marked_for_deletion)
+    delete_persistent_drives, remove_drives_marked_for_deletion,
+    check_namespace_exists)
 from .kapi.usage import update_states
 
 from .kd_celery import celery
@@ -178,6 +179,7 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         is_ceph_installed = _check_ceph_via_ssh(ssh)
         if is_ceph_installed:
             NodeFlag.save_flag(node_id, NodeFlagNames.CEPH_INSTALLED, "true")
+        check_namespace_exists(node_ip=host)
 
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read())

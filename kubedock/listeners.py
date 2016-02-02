@@ -195,8 +195,8 @@ def process_pods_event(data, app, event_time=None, live=True):
         host = pod['spec'].get('nodeName')
 
         phase = pod['status'].get('phase', '').lower()
-        if deleted or phase in ('succeeded', 'failed'):
-            PersistentDisk.free(pod_id)
+        #if deleted or phase in ('succeeded', 'failed'):
+            #PersistentDisk.free(pod_id)
         update_states(pod_id, pod['status'], event_type=event_type,
                       host=host, event_time=event_time)
 

@@ -1,4 +1,3 @@
-import base64
 import boto
 import boto.ec2
 import json
@@ -8,19 +7,18 @@ from contextlib import contextmanager
 from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
 from fabric.tasks import execute
-from hashlib import md5
 from StringIO import StringIO
 from fabric.exceptions import CommandTimeout, NetworkError
 from flask import current_app
 
 from ..core import db, ExclusiveLock, ConnectionPool
 from ..nodes.models import Node, NodeFlagNames
-from ..pods.models import Pod, PersistentDisk, PersistentDiskStatuses
+from ..pods.models import PersistentDisk, PersistentDiskStatuses
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..settings import SSH_KEY_FILENAME, CEPH, AWS
-from . import pd_utils
 from ..utils import APIError, send_event
+from ..settings import (
+    SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR)
 from ..kd_celery import celery
 
 
@@ -28,11 +26,29 @@ NODE_COMMAND_TIMEOUT = 60
 
 DEFAULT_FILESYSTEM = 'xfs'
 
+
 UNABLE_CREATE_PD_MSG = 'Unable to create persistent disk "{}"'
+
+
+def check_namespace_exists(node_ip=None, namespace=None):
+    """Checks existence of requests for namespace providing by storage backend.
+    For CEPH namespace is equal to pool name, so it will check pool existence,
+    and create it if the one is missed.
+    """
+    cls = get_storage_class()
+    if cls:
+        cls().check_namespace_exists(node_ip=node_ip, namespace=namespace)
+
 
 class NodeCommandError(Exception):
     """Exceptions during execution commands on nodes."""
     pass
+
+class NodeCommandWrongExitCode(NodeCommandError):
+    """Special exception to catch specified exit codes for remote commands."""
+    def __init__(self, code):
+        super(NodeCommandWrongExitCode, self).__init__()
+        self.code = code
 
 class NoNodesError(Exception):
     """Exception raises when there is no nodes for current storage backend."""
@@ -171,15 +187,18 @@ class PersistentStorage(object):
         self._cached_drives = None
         self._cached_node_ip = None
 
+    def check_namespace_exists(self, node_ip=None, namespace=None):
+        """Method ensures that configured namespace exists.
+        If it not exists, then will create it.
+        """
+        return True
+
     def get_drives(self):
         """Returns cached drive list. At first call fills the cache by calling
-        method _get_drives.
+        method _get_drives_from_db.
         """
         if self._cached_drives is None:
             self._cached_drives = self._get_drives_from_db()
-            # TODO: cleanup _ged_drives() & _filter_missed_drives methods
-            # from nested classes. Earlier drives were collected from
-            # storage backend. Now we have them in our DB.
         return self._cached_drives
 
     def _get_drives_from_db(self, user_id=None):
@@ -202,25 +221,12 @@ class PersistentStorage(object):
                 'id': item.id,
                 'pod_id': item.pod_id,
                 'pod_name': None if item.pod_id is None else item.pod.name,
+                #'pod': None if item.pod_id is None else item.pod.name,
                 'in_use': item.pod_id is not None
             }
             for item in query
         ]
         return res
-
-    def _filter_missed_drives(self, drives):
-        """Removes drives from given list which are deleted or marked for
-        deletion, or missed in database.
-        """
-        if not drives:
-            return drives
-        query = PersistentDisk.get_all_query()
-        query = query.with_entities(PersistentDisk.id)
-        query = query.filter(
-            PersistentDisk.id.in_(item['id'] for item in drives)
-        )
-        valid_ids = {item.id for item in query}
-        return [item for item in drives if item['id'] in valid_ids]
 
     def get_node_ip(self):
         if self._cached_node_ip is None:
@@ -242,7 +248,6 @@ class PersistentStorage(object):
         Returns list of all persistent storage data
         :return: list -> list of dicts
         """
-        self._bind_to_pod()
         if drive_id is None:
             return self.get_drives()
         drives = [i for i in self.get_drives() if i['id'] == drive_id]
@@ -255,7 +260,6 @@ class PersistentStorage(object):
         :param user: object -> user object got from SQLAlchemy
         :return: list -> list of dicts
         """
-        self._bind_to_pod()
         # strip owner
         if device_id is None:
             return [dict([(k, v) for k, v in d.items() if k != 'owner'])
@@ -301,35 +305,11 @@ class PersistentStorage(object):
 
         if rv_code != 0:
             return None
+        self.start_stat(pd.size, pd.name, pd.owner_id)
         data = pd.to_dict()
         if self._cached_drives is not None:
             self._cached_drives.append(data)
         return data
-
-    def delete(self, name, user):
-        """
-        Deletes a user drive
-        :param name: string -> drive name
-        :param user: object -> user object
-        """
-        drive_name = pd_utils.compose_pdname(name, user)
-
-        try:
-            with drive_lock(drive_name):
-                rv = self._delete(drive_name)
-            if rv is None:
-                # drive name not found, try to delete by legacy name
-                drive_name = pd_utils.compose_pdname_legacy(name, user)
-                with drive_lock(drive_name):
-                    rv = self._delete(drive_name)
-        except DriveIsLockedError as err:
-            raise APIError(err.message)
-        if rv == 0 and self._cached_drives is not None:
-            self._cached_drives = [
-                d for d in self._cached_drives
-                if d['name'] != name and d['owner'] != user.username
-            ]
-        return rv
 
     def makefs(self, pd, fs=DEFAULT_FILESYSTEM):
         """
@@ -357,7 +337,18 @@ class PersistentStorage(object):
         the moment.
         """
         with drive_lock(drive_id=drive_id):
-            rv = self._delete_by_id(drive_id)
+            pd = PersistentDisk.query.filter(
+                PersistentDisk.id == drive_id
+            ).first()
+            if not pd:
+                current_app.logger.warning(
+                    'Unable to delete drive. '
+                    'Unknown drive id: %s',
+                    drive_id
+                )
+                return 1
+            self.end_stat(pd.name, pd.owner_id)
+            rv = self._delete_pd(pd)
         if rv == 0 and self._cached_drives:
             self._cached_drives = [
                 d for d in self._cached_drives
@@ -381,34 +372,27 @@ class PersistentStorage(object):
         raise NotImplementedError()
 
     @staticmethod
-    def start_stat(size, name=None, user=None, sys_drive_name=None):
+    def start_stat(size, name=None, user_id=None):
         """
         Start counting usage statistics.
 
         You need to provide `name` and `user` or `sys_drive_name`
         :param size: int -> size in GB
         :param name: string -> user's drive name
-        :param user: object -> user object
-        :param sys_drive_name: string -> system drive name
+        :param user_id: id of the drive owner
         """
-        if name is None or user is None:
-            name, user = pd_utils.get_drive_and_user(sys_drive_name)
-        PersistentDiskState.start(user.id, name, size)
+        PersistentDiskState.start(user_id, name, size)
 
     @staticmethod
-    def end_stat(name=None, user=None, sys_drive_name=None):
+    def end_stat(name=None, user_id=None):
         """
         Finish counting usage statistics.
 
         You need to provide `name` and `user` or `sys_drive_name`
         :param name: string -> user's drive name
         :param user: object -> user object
-        :param sys_drive_name: string -> system drive name
         """
-        if name is None or user is None:
-            PersistentDiskState.end(sys_drive_name=sys_drive_name)
-            return
-        PersistentDiskState.end(user.id, name)
+        PersistentDiskState.end(user_id, name)
 
     def enrich_volume_info(self, volume, size, drive_name):
         """Adds storage specific attributes to volume dict.
@@ -423,74 +407,13 @@ class PersistentStorage(object):
         """
         return {}
 
-    def _get_pod_drives(self):
-        """
-        Pulls pod configs from DB and produces persistent drive -> pod name
-        mappings if any.
-        :return: dict -> 'drive name':'pod name' mapping
-        """
-        if hasattr(self, '_drives_from_db'):
-            return self._drives_from_db
-        self._drives_from_db = {}
-        pods = db.session.query(Pod).filter(Pod.status != 'deleted')
-        for pod in pods:
-            try:
-                drive_names = self._find_persistent(json.loads(pod.config))
-                self._drives_from_db.update(dict.fromkeys(drive_names, pod.name))
-            except (TypeError, ValueError):
-                continue
-        return self._drives_from_db
-
-    @staticmethod
-    def _find_persistent(config):
-        """
-        Iterates through 'volume' list and gets 'scriptableDisk' entries.
-        Then base64-decodes them and returns
-        :param config: dict -> pod config as dict
-        :return: list -> list of names of persistent drives
-        """
-        data = []
-        for v in config['volumes']:
-            scriptable = v.get('scriptableDisk')
-            if scriptable:
-                data.append(base64.b64decode(scriptable['params']).split(';')[1])
-        return data
-
-    def _bind_to_pod(self):
-        """
-        If list of drives has mapped ones add pod it mounted to info
-        """
-        if not any(drive.get('in_use') for drive in self.get_drives()):
-            return
-        names = self._get_pod_drives()
-        for d in self.get_drives():
-            if not d.get('in_use'):
-                continue
-            user = User.query.filter_by(username=d['owner']).first()
-            if not user:
-                continue
-            name = pd_utils.compose_pdname(d['name'], user)
-            d['pod'] = names.get(name)
-
-    def _get_drives(self):
-        """
-        To be overwritten by child classes
-        """
-        return []
-
     def _create_drive(self, drive_name, size):
         """
         To be overwritten by child classes
         """
         return 0
 
-    def _delete(self, drive_name):
-        """
-        To be overwritten by child classes
-        """
-        return 0
-
-    def _delete_by_id(self, drive_id):
+    def _delete_pd(self, pd):
         """
         To be overwritten by child classes
         """
@@ -501,7 +424,8 @@ class PersistentStorage(object):
         return run_remote_command(ip, command, *args, **kwargs)
 
 
-def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False):
+def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
+                catch_exitcodes=None):
     try:
         result = run(command, timeout=timeout)
     except (CommandTimeout, NetworkError):
@@ -509,11 +433,13 @@ def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False):
             'Timeout reached while execute remote command'
         )
     if result.return_code != 0:
-        raise NodeCommandError(
-            'Remote command execution failed (exit code = {})'.format(
-                result.return_code
+        if not catch_exitcodes or result.return_code not in catch_exitcodes:
+            raise NodeCommandError(
+                'Remote command execution failed (exit code = {})'.format(
+                    result.return_code
+                )
             )
-        )
+        raise NodeCommandWrongExitCode(code=result.return_code)
     if jsonresult:
         try:
             result = json.loads(result)
@@ -526,7 +452,8 @@ def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False):
 
 
 def run_remote_command(host_string, command, timeout=NODE_COMMAND_TIMEOUT,
-                       jsonresult=False):
+                       jsonresult=False,
+                       catch_exitcodes=None):
     """Executes command on remote host via fabric run.
     Optionally timeout may be specified.
     If result of execution is expected in json format, then the output will
@@ -535,7 +462,8 @@ def run_remote_command(host_string, command, timeout=NODE_COMMAND_TIMEOUT,
     with settings(hide('running', 'warnings', 'stdout', 'stderr'),
                   host_string=host_string,
                   warn_only=True):
-        return execute_run(command, timeout=timeout, jsonresult=jsonresult)
+        return execute_run(command, timeout=timeout, jsonresult=jsonresult,
+                           catch_exitcodes=catch_exitcodes)
 
 
 def get_all_ceph_drives(host):
@@ -556,11 +484,10 @@ def get_all_ceph_drives(host):
 
 def _get_mapped_ceph_devices_for_node(host):
     """Returns dict with device ('/dev/rbdN') as a key, and ceph image name
-    in value. This is the main difference from _get_mapped_ceph_drives_for_node
-     - there keys are ceph image names.
+    in value.
     """
     rbd_mapped = run_remote_command(host,
-                                    'rbd showmapped  --format=json',
+                                    'rbd showmapped --format=json',
                                     jsonresult=True)
     if not isinstance(rbd_mapped, dict):
         raise NodeCommandError(
@@ -574,24 +501,6 @@ def _get_mapped_ceph_devices_for_node(host):
         for j in rbd_mapped.values()
     }
     return mapped_devices
-
-
-def _get_mapped_ceph_drives_for_node():
-    rbd_mapped = execute_run('rbd showmapped --format=json',
-                                jsonresult=True)
-    if not isinstance(rbd_mapped, dict):
-        raise NodeCommandError(
-            'Unexpected answer format in "rbd showmapped"'
-        )
-    mapped_devices = {
-        j['name']: {
-            'pool': j['pool'],
-            'device': j['device'],
-        }
-        for j in rbd_mapped.values()
-    }
-    return mapped_devices
-
 
 
 REDIS_TEMP_MAPPED_HASH = 'kd.temp.rbd.mapped'
@@ -614,6 +523,7 @@ def unmark_ceph_drive_as_temporary_mapped(drive):
 def unmap_temporary_mapped_ceph_drives_task():
     unmap_temporary_mapped_ceph_drives()
 
+
 def unmap_temporary_mapped_ceph_drives():
     redis_con = ConnectionPool.get_connection()
     drives = redis_con.hkeys(REDIS_TEMP_MAPPED_HASH)
@@ -634,7 +544,7 @@ def unmap_temporary_mapped_ceph_drives():
             try:
                 mapped_drives = _get_mapped_ceph_devices_for_node(node)
                 node_to_map[node] = {
-                    key: value['name']
+                    key: PD_NS_SEPARATOR.join([value['pool'], value['name']])
                     for key, value in mapped_drives.iteritems()
                 }
             except:
@@ -652,20 +562,22 @@ def unmap_temporary_mapped_ceph_drives():
                     redis_con.hdel(REDIS_TEMP_MAPPED_HASH, drive)
                 except:
                     current_app.logger.warn('Failed to unmap {}'.format(drive))
-                    pass
         except DriveIsLockedError:
             pass
 
 
-def get_mapped_ceph_drives(hosts):
-    """Returns dict of mapped drives, keys - host strings, values - results
-    of _get_mapped_ceph_drives_for_node method execution.
+def _get_ceph_pool_pgnum_by_osdnum(osdnum):
+    """Calculates CEPH placement groups number depending on OSDs number.
+    http://docs.ceph.com/docs/hammer/rados/operations/placement-groups/#a-preselection-of-pg-num
+
     """
-    with settings(hide('running', 'warnings', 'stdout', 'stderr'),
-                  warn_only=True):
-        mapped_drives = execute(_get_mapped_ceph_drives_for_node,
-                                hosts=hosts)
-        return mapped_drives
+    OSDNUM_TO_PGNUM = ((5, 128), (10, 512), (50, 4096))
+    pgnum = 64
+    for osds, pgn in OSDNUM_TO_PGNUM:
+        if osdnum < osds:
+            pgnum = pgn
+            break
+    return pgnum
 
 
 class CephStorage(PersistentStorage):
@@ -673,9 +585,46 @@ class CephStorage(PersistentStorage):
 
     VOLUME_EXTENSION_KEY = 'rbd'
 
+    CEPH_NOTFOUND_CODE = 2
+
     def __init__(self):
         super(CephStorage, self).__init__()
         self._monitors = None
+
+    def check_namespace_exists(self, node_ip=None, namespace=None):
+        """Method ensures that configured namespace exists.
+        If it not exists, then will create it.
+        For CEPH: namespace == pool name. It creates pool if it not exists.
+        """
+        if node_ip is None:
+            node_ip = self.get_node_ip()
+        if namespace is None:
+            namespace = CEPH_POOL_NAME
+        try:
+            pools = run_remote_command(
+                node_ip,
+                'ceph osd lspools --format json', jsonresult=True
+            )
+        except:
+            return False
+        for item in pools:
+            if item.get('poolname') == namespace:
+                return True
+        try:
+            osd_stat = run_remote_command(
+                node_ip,
+                'ceph osd stat --format json',
+                jsonresult=True
+            )
+            osdnum = osd_stat.get('num_osds')
+            pgnum = _get_ceph_pool_pgnum_by_osdnum(osdnum)
+            run_remote_command(
+                node_ip,
+                'ceph osd pool create {0} {1} {1}'.format(namespace, pgnum)
+            )
+        except:
+            return False
+        return True
 
     def _get_first_node(self):
         return Node.all_with_flag_query(
@@ -683,18 +632,43 @@ class CephStorage(PersistentStorage):
         ).first()
 
     def _is_drive_exist(self, pd):
-        res = self.run_on_first_node('rbd ls --format json')
-        return pd.drive_name in res
+        drive_name = pd.drive_name
+        pool = 'rbd'
+        parts = drive_name.split(PD_NS_SEPARATOR, 1)
+        if len(parts) > 1:
+            pool, drive_name = parts
+        try:
+            res = self.run_on_first_node(
+                'rbd ls -p {0} --format json'.format(pool),
+                jsonresult=True,
+                catch_exitcodes=[self.CEPH_NOTFOUND_CODE]
+            )
+        except NodeCommandWrongExitCode:
+            # If the pool is absent, then the drive not exists.
+            current_app.logger.exception('CEPH pool "%s" not found', pool)
+            return False
+        return drive_name in res
 
     def enrich_volume_info(self, volume, size, drive_name):
         """Adds storage specific attributes to volume dict.
+        Converts drive name in form namespace/drivename to pool name and
+        image name for kubernetes.
         """
+        pool_name = CEPH_POOL_NAME
+        # Detect pool name in drive name: first word before separator is the
+        # pool name. If a pool name is not specified, then use default pool.
+        parts = drive_name.split(PD_NS_SEPARATOR, 1)
+        if len(parts) > 1:
+            pool_name, image = parts
+        else:
+            image = drive_name
+
         volume[self.VOLUME_EXTENSION_KEY] = {
-            'image': drive_name,
+            'image': image,
             'keyring': '/etc/ceph/ceph.client.admin.keyring',
             'fsType': DEFAULT_FILESYSTEM,
             'user': 'admin',
-            'pool': 'rbd'
+            'pool': pool_name
         }
         if size is not None:
             volume[self.VOLUME_EXTENSION_KEY]['size'] = size
@@ -709,7 +683,9 @@ class CephStorage(PersistentStorage):
         if not volume[self.VOLUME_EXTENSION_KEY].get('monitors'):
             volume[self.VOLUME_EXTENSION_KEY]['monitors'] = self.get_monitors()
         res['size'] = volume[self.VOLUME_EXTENSION_KEY].get('size')
-        res['drive_name'] = volume[self.VOLUME_EXTENSION_KEY].get('image')
+        image = volume[self.VOLUME_EXTENSION_KEY].get('image')
+        pool_name = volume[self.VOLUME_EXTENSION_KEY].get('pool')
+        res['drive_name'] = pool_name + PD_NS_SEPARATOR + image
         return res
 
     def get_monitors(self):
@@ -788,10 +764,16 @@ class CephStorage(PersistentStorage):
         The routine is checked if a device is mapped to any of nodes
         :param drive
         """
-        res = self.run_on_first_node(
-            'rbd status {0} --format json'.format(drive),
-            jsonresult=True
-        )
+        try:
+            res = self.run_on_first_node(
+                'rbd status {0} --format json'.format(drive),
+                jsonresult=True,
+                catch_exitcodes=[self.CEPH_NOTFOUND_CODE]
+            )
+        except NodeCommandWrongExitCode:
+            # Such error we catch when there are no specified drive in the
+            # CEPH cluster. Also it means that the drive is not mapped.
+            return False
         if isinstance(res, dict):
             return bool(res.get('watchers'))
         return False
@@ -811,7 +793,7 @@ class CephStorage(PersistentStorage):
         Maps drive to a node
         :param drive: string -> drive name
         """
-        res = self.run_on_first_node(
+        self.run_on_first_node(
             'rbd unmap {0}'.format(device)
         )
 
@@ -846,117 +828,22 @@ class CephStorage(PersistentStorage):
                 u'Possibly it already exists',
                 name, size)
             return 1
-        self.start_stat(size, sys_drive_name=name)
         return 0
 
-    @staticmethod
-    def _get_nodes(first_only=False):
-        """
-        Returns list of node ip -> hostname mappings from DB. If first only is
-        True then takes the first node only
-        :param first_only: boolean
-        :return: dict -> dict of node ip -> hostname
-        """
-        query = Node.all_with_flag_query(NodeFlagNames.CEPH_INSTALLED, 'true')
-        if not first_only:
-            return {k: v for k, v in query.values(Node.ip, Node.hostname)}
-        rv = query.first()
-        if rv:
-            return {rv.ip: rv.hostname}
-
-    def _delete_by_id(self, drive_id):
+    def _delete_pd(self, pd):
         """
         Gets drive list from the first node in the list because all nodes have
         the same list of images. Then tries to delete it. If an image is mapped
         an error will occur.
-        :param drive_id: string -> md5 hash of drive name
+        :param pd: Instance of PersistentDisk
         """
-        raw_drives = self._get_raw_drives(check_inuse=True)
-        for name, data in raw_drives.iteritems():
-            hashed = md5(name).hexdigest()
-            if hashed != drive_id:
-                continue
-            self.end_stat(sys_drive_name=name)
-            if data['in_use']:
-                return 1
+        if not self._is_mapped(pd.drive_name):
             try:
-                self.run_on_first_node('rbd rm {0}'.format(name))
+                self.run_on_first_node('rbd rm {0}'.format(pd.drive_name))
+                return 0
             except NodeCommandError:
                 return 1
-            return 0
-        return None
-
-    def _delete(self, drive_name):
-        """
-        Gets drive list. Then tries to delete given drive it.
-        If an image is mapped an error will occur.
-        :param drive_name: string -> drive name
-        """
-        raw_drives = self._get_raw_drives(check_inuse=True)
-        if drive_name not in raw_drives:
-            return None
-        data = raw_drives[drive_name]
-        self.end_stat(sys_drive_name=drive_name)
-        if data['in_use']:
-            return 1
-        try:
-            self.run_on_first_node('rbd rm {0}'.format(drive_name))
-        except NodeCommandError:
-            return 1
-        return 0
-
-    def _get_raw_drives(self, check_inuse=True):
-        """
-        Polls hosts and gets volume data from them
-        :param check_inuse: if flag is specified, then every node will be
-            checked for mapped volumes. Every mapped volume will be merked as
-            'in_use' = True. If the flag is not specified, then the method will
-            return list of drives without usage check.
-        """
-        try:
-            all_drives = get_all_ceph_drives(self.get_node_ip())
-        except NoNodesError:
-            return {}
-
-        if not check_inuse:
-            return all_drives
-
-        nodes = self._get_nodes(first_only=False)
-        if not nodes:
-            return {}
-
-        mapped_drives = get_mapped_ceph_drives(nodes.keys())
-        for node, drives in mapped_drives.iteritems():
-            for name, data in drives.iteritems():
-                if name not in all_drives:
-                    continue
-                entry = all_drives[name]
-                nodes = entry.get('nodes') or []
-                nodes.append(node)
-                entry.update(data)
-                entry['nodes'] = nodes
-                entry['in_use'] = True
-        return all_drives
-
-    def _get_drives(self):
-        raw_drives = self._get_raw_drives(check_inuse=True)
-        drives = []
-        for item, data in raw_drives.iteritems():   # iterate by drive names
-            name, user = pd_utils.get_drive_and_user(item)
-            if not user:
-                # drive name does not contain separator. Skip it
-                continue
-            entry = {'name': name,
-                     'drive_name': item,
-                     'owner': user.username,
-                     'size': int(data['size'] / 1073741824),
-                     'id': md5(item).hexdigest(),
-                     'in_use': data['in_use']}
-            if data['in_use']:
-                entry['device'] = data.get('device')
-                entry['node'] = data['nodes'][0]
-            drives.append(entry)
-        return drives
+        return 1
 
 
 class AmazonStorage(PersistentStorage):
@@ -965,6 +852,7 @@ class AmazonStorage(PersistentStorage):
     VOLUME_EXTENSION_KEY = 'awsElasticBlockStore'
 
     def __init__(self):
+        self._conn = None
         try:
             from ..settings import AVAILABILITY_ZONE, REGION, \
                                    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
@@ -1010,7 +898,7 @@ class AmazonStorage(PersistentStorage):
 
 
     def _get_connection(self):
-        if hasattr(self, '_conn'):
+        if self._conn is not None:
             return
         self._conn = boto.ec2.connect_to_region(
             self._region,
@@ -1034,7 +922,7 @@ class AmazonStorage(PersistentStorage):
             while vol.status != 'available':
                 time.sleep(1)
                 vol.update()
-            self.start_stat(size, sys_drive_name=name)
+            #self.start_stat(size, sys_drive_name=name)
             return 0
 
     def _get_raw_drives(self):
@@ -1062,50 +950,16 @@ class AmazonStorage(PersistentStorage):
                 continue
         raise APIError("Drive not found")
 
-    def _get_drives(self):
-        drives = []
-        raw_drives = self._get_raw_drives()
-        for vol in raw_drives:
-            item = vol.tags.get('Name', 'Nameless')
-            name, user = pd_utils.get_drive_and_user(item)
-            if not user:
-                continue
-            entry = {'name': name,
-                     'drive_name': item,
-                     'owner': user.username,
-                     'size': vol.size,
-                     'id': md5(item).hexdigest(),
-                     'in_use': True if vol.status == 'in_use' else False}
-            if vol.status == 'in_use':
-                entry['node'] = vol.attach_data.instance_id
-                entry['device'] = vol.attach_data.device
-            drives.append(entry)
-        return drives
-
-    def _delete_by_id(self, drive_id):
+    def _delete_pd(self, pd):
         """
         Actually deletes amazon EBS by id
-        :param drive_id: string -> md5 hash of drive name
+        :param pd: instance of PersistentDisk
         """
         raw_drives = self._get_raw_drives()
         for vol in raw_drives:
             name = vol.tags.get('Name', 'Nameless')
-            if md5(name).hexdigest() == drive_id:
-                self.end_stat(sys_drive_name=name)
-                return 0 if vol.delete() else 1
-
-    def _delete(self, drive_name):
-        """
-        Gets drive list from the first node in the list because all nodes have
-        the same list of images. Then tries to delete it. If an image is mapped
-        an error will occur.
-        :param drive_name: string -> drive name
-        """
-        raw_drives = self._get_raw_drives()
-        for vol in raw_drives:
-            name = vol.tags.get('Name', 'Nameless')
-            if name == drive_name:
-                self.end_stat(sys_drive_name=drive_name)
+            if name == pd.drive_name:
+                #self.end_stat(sys_drive_name=name)
                 return 0 if vol.delete() else 1
 
     def _makefs(self, drive_name, fs=DEFAULT_FILESYSTEM):
@@ -1129,18 +983,23 @@ class AmazonStorage(PersistentStorage):
         """
         Sends to node command to loop until state of /proc/partitions is changed
         :param device: string -> a block device, e.g. /dev/xvda
-        :param to_be_attached: bool -> toggles checks to be taken: attached or detached
+        :param to_be_attached: bool -> toggles checks to be taken: attached or
+            detached
         :param timeout: int -> number of seconds to wait for state change
         """
         check = 'n' if to_be_attached else 'z'
         message = 'Device failed to switch to {} state'.format(
             'attached' if to_be_attached else 'detached')
 
-        command = ('KDWAIT=0 && while [ "$KDWAIT" -lt {0} ];'
-                   'do OUT=$(cat /proc/partitions|grep {1});'
-                   'if [ -{2} "$OUT" ];then break;'
-                   'else KDWAIT=$(($KDWAIT+1)) && $(sleep 1 && exit 1);'
-                   'fi;done'.format(timeout, device.replace('/dev/', ''), check))
+        command = (
+            'KDWAIT=0 && while [ "$KDWAIT" -lt {0} ];'
+            'do OUT=$(cat /proc/partitions|grep {1});'
+            'if [ -{2} "$OUT" ];then break;'
+            'else KDWAIT=$(($KDWAIT+1)) && $(sleep 1 && exit 1);'
+            'fi;done'.format(
+                timeout, device.replace('/dev/', ''), check
+            )
+        )
         try:
             self.run_on_first_node(command)
         except NodeCommandError:
@@ -1153,9 +1012,11 @@ class AmazonStorage(PersistentStorage):
         :param drive_id: string -> EBS volume ID
         :param instance_id: string -> EC2 instance ID
         :param device: string -> block device name, e.g. /dev/xvda
-        :param attach: bool -> action to be taken: if True attach otherwise detach
+        :param attach: bool -> action to be taken: if True attach otherwise
+            detach
         """
-        action = self._conn.attach_volume if attach else self._conn.detach_volume
+        action = (self._conn.attach_volume if attach
+                  else self._conn.detach_volume)
         message = 'An error occurred while drive being {0}: {{0}}'.format(
             'attached' if attach else 'detached')
         try:
@@ -1186,7 +1047,8 @@ class AmazonStorage(PersistentStorage):
 
     def _get_next_drive(self):
         """
-        Gets current node xvdX devices, sorts'em and gets the last device letter.
+        Gets current node xvdX devices, sorts'em and gets the last device
+            letter.
         Then returns next letter device name
         :return: string -> device (/dev/xvdX)
         """

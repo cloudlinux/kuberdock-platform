@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 0.1
-Release: 29%{?dist}.cloudlinux
+Release: 30%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,11 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Tue Feb 02 2016 Igor Savenko <bliss@cloudlinux.com> 0.1-30
+- AC-1937: Improve error handling in KCLI
+- AC-2014: Starting pod repeatedly brings 'Unknown format' error
+- AC-2028: kcli kuberdock search & kcli docker search doesn't work
+
 * Wed Dec 30 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-29
 - AC-603: Return status when JSON enabled.
 - AC-1741: set YAML origin. Added test for kcli. Added filtering by origin.

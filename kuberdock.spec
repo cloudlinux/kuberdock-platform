@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 0%{?dist}.rc.2.cloudlinux
+Release: 0%{?dist}.rc.3.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -185,6 +185,80 @@ fi
 %exclude /var/opt/kuberdock/dev-utils
 
 %changelog
+* Tue Feb 02 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.3
+- AC-1976: KuberDock - Predefined Apps page - Align pagination level
+- AC-1858: Do not ignore "Exclude IPs" parsing error
+- "reboot_node" update helper
+- Add deploy.sh options to specify flanneld backend
+- AC-2048: upgrade to stock kernel
+- Raise requirements to strict 1.1.3 kubernetes, add fix for node's statuses
+- AC-1664: Required fields are in red
+- AC-1809: display names of pods in PD list; traffic lights like in IPPool
+- AC-1992, AC-2116: various KubeType improvements; refactoring; bugfix
+  Backbone AssociatedModels for Kubes and Packages
+  KubeTypes are sorted by default (available come first)
+  Show warnings if there is no available kube types
+  Bugfix:
+    if there are more than one container in pod, unavailable kube types weren't
+    disabled;
+    if there is no any kube type in user's package, user cannot go to the final
+    step of pod creation;
+    disabled kube type may be selected, if there is no available kube types;
+- AC-1875: Change preloader from gif to css, remove extra js lib, & loading View, some refactoring
+- AC-2065, AC-2059: defaults for "pdSize" + tests
+- AC-2031: recover on partially failed PD operations.
+  Added common lock mechanism.
+  Added locks for destructive PD operation: create, make FS, delete.
+  Added recover to unmap temporary mapped ceph-drives.
+  Fixed APIError for PD forbidden deletion.
+- AC-2013: move feedback func to python, add checks
+  work with etcd extended_statuses only from python
+  add contextmanager for python, that send_feedback if exception were raise
+  add some checks to sh script
+- AC-2168 : KuberDock > Pod's page > In Environment variables step if fields is empty, user can't go to the next step
+- AC-2033:better msg and notify when can't create PD
+  When can't create PD, don't show internal PD name for user and send notification to admin
+- AC-2153: KuberDock > Pod's page > remove  error message if container port empty
+- AC-1977: each modification add quotes to command
+- Raised SQLAlchemy connection pool limits
+- AC-1782: KuberDockAC-1782 Sort Predefined apps in alphabetic way
+- Small animation fixes
+- AC-2174 : KuberDock > Predefined Applications > Switching sorting
+- AC-2184, AC-2041: package-specific addition to the postDescription
+  also improved and documented hack in kubedock/frontend/templates/apps/index.html
+  for testing PA without billing system
+- Small fix login page & clearfix class
+- AC-2175: Change a notification about exceeding the limits page license
+- AC-1653: PA fields ordering
+- AC-2001: fixed bug with pod deletion; new SSE event pod:delete
+  Now if listener catches pod change and pod status in db is "deleting",
+  it will send pod:delete instead of pod:change to frontend.
+  Frontend won't make GET request after pod deletion.
+- AC-2036: Implement reliable message delivery to frontend
+- AC-1779: admin is allowed to login as himself
+- Fixed node installation failure in case when the bridge module was not loaded before install.
+  This happened with new stock centos kernels
+- AC-2013: update node part
+- AC-2045,2055,2056: k8s2etcd; kubernetes 1.1.3
+  add k8s to etcd middleware service
+  Service watch for change in resources(only pods for now) and save them to etcd.
+  Add etcd listener, that listen for etcd and process events from it.
+  Also, process events stored by service between kuberdock restarts.
+  Delete extended_statuses from etcd after processing.
+  added update k8s to 1.1.3
+  added 'After=etcd.service' to kube-apiserver.service file
+  add '--watch-cache=false' to apiserver config file
+  add '--cpu-cfs-quota=true' to kubelet config file
+  Warning: Will restart all pods to apply new limits update kubes to new hard limits
+- PA: empty additional configuration block
+  Pods: status "waiting" on container page
+  Pods: filter pods with status "deleting"
+  Pods: added default volumes=[]  (fixed traceback in pstorage)
+  ContainerStates: added kuberdock-specific reasons and exit codes
+  ContainerStates: fixed "false positive" case of overlapping CS
+  k8s-1.1.3: succeeded containers have reason=Error
+- AC-2062: Introduced namespaces for persistent disks
+
 * Mon Jan 18 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com> 1.0-0.rc.2
 - AC-1942: Add data icon on pod page
 - AC-1946: Change bell icon in notifitation block

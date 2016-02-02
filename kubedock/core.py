@@ -187,8 +187,8 @@ class EvtStream(object):
                     data = json.dumps(data)
                 msg = make_message(eid, event, data)
                 yield msg.encode('u8')
-        #else:
-        #    yield ':\n\n'
+        else:
+            yield ':\n\n'
         while True:
             message = self.pubsub.get_message()
             if message:

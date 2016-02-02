@@ -162,16 +162,15 @@ def make_message(eid, event, text, encoding='utf-8'):
 
 
 class EvtStream(object):
-    """
-    Delegates messages for SSE endpoint for channel specified
-    """
     key = 'SSEEVT'
+    timeout = 30
     def __init__(self, conn, channel, last_id=None):
         self.conn = conn
         self.channel = channel
         self.pubsub = conn.pubsub()
         self.pubsub.subscribe(channel)
         self.last_id = last_id
+        self._time_is_out = self.timeout
         if self.last_id is not None:
             self.last_id = int(self.last_id)
         self.cache_key = ':'.join([self.key, channel])
@@ -188,13 +187,24 @@ class EvtStream(object):
                     data = json.dumps(data)
                 msg = make_message(eid, event, data)
                 yield msg.encode('u8')
-        for message in self.pubsub.listen():
-            if message['type'] == 'message':
-                eid, event, data = json.loads(message['data'])
-                if not isinstance(data, basestring):
-                    data = json.dumps(data)
-                msg = make_message(eid, event, data)
-                yield msg.encode('u8')
+        #else:
+        #    yield ':\n\n'
+        while True:
+            message = self.pubsub.get_message()
+            if message:
+                if message['type'] == 'message':
+                    eid, event, data = json.loads(message['data'])
+                    if not isinstance(data, basestring):
+                        data = json.dumps(data)
+                    msg = make_message(eid, event, data)
+                    yield msg.encode('u8')
+            else:
+                if not self._time_is_out:
+                    self._time_is_out = self.timeout
+                    yield ':\n\n'
+                else:
+                    self._time_is_out -= 1
+            time.sleep(0.5)
 
 
 def ssh_connect(host, timeout=10):

@@ -86,6 +86,8 @@ start='urlArgs: "bust="'
 replace='(new Date()).getTime()'
 replace_with=$(date +"%s")
 sed -i "/$start/ {s/$replace/$replace_with/}" kubedock/frontend/static/js/*/require_main.js
+# In case of deprecating undocumented %exclude macro
+rm -rf dev-utils
 
 %install
 rm -rf %{buildroot}
@@ -180,6 +182,7 @@ fi
 %config %{_sysconfdir}/nginx/conf.d/shared-etcd.conf
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
+%exclude /var/opt/kuberdock/dev-utils
 
 %changelog
 * Mon Jan 18 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com> 1.0-0.rc.2

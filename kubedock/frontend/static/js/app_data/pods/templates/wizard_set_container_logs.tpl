@@ -77,8 +77,13 @@
                                 <p><%- line['@timestamp'] %>: <%- line.log %></p>
                             <% }) %>
                             <% if (serie.end) { %>
-                                <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>"><%- serie.end %>: <%- serie.exit_code ? 'Falied' : 'Exited successfully' %></p>
-                                <p class="container-logs-<%- serie.exit_code ? 'failed' : 'succeeded' %>-reason"><%- serie.reason %></p>
+                                <% if (serie.exit_code !== 0) { %>
+                                <p class="container-logs-failed"><%- serie.end %>: Falied</p>
+                                <p class="container-logs-failed-reason"><%- serie.reason %></p>
+                                <% } else { %>
+                                <p class="container-logs-succeeded"><%- serie.end %>: Exited successfully</p>
+                                <p class="container-logs-succeeded-reason"><%- serie.reason %></p>
+                                <% } %>
                             <% } %>
 
                             <% }) %>

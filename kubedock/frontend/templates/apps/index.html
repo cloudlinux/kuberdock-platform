@@ -515,7 +515,7 @@
                                                         '/#pods/' + id);
                             field.setAttribute('type', 'hidden');
                             field.setAttribute('name', 'postDescription');
-                            field.setAttribute('value', desc);
+                            field.setAttribute('value', desc || '');
                             form.appendChild(field);
                             document.body.appendChild(form);
                             form.submit();

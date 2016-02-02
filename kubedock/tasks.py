@@ -390,7 +390,7 @@ def fix_pods_timeline():
         elif pods.get(cs.pod_state.pod_id) is None:
             # it's the last CS and pod not found in k8s
             cs.end_time = now
-            cs.reason = 'Pod was stopped.'
+            cs.exit_code, cs.reason = ContainerState.REASONS.pod_was_stopped
 
     try:
         db.session.commit()

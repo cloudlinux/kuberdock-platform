@@ -69,7 +69,8 @@ def index(app_hash):
                 max_pd_size=max_pd_size,
                 fields=sorted(fields.itervalues(), key=sort_key),
                 plan_fields=plan_fields,
-                has_simple=bool(set(fields) - set(plan_fields)),
+                has_simple=bool(set(field['name'] for field in fields.itervalues()
+                                    if not field['hidden']) - set(plan_fields)),
             )
 
         return render_template(page, **data)

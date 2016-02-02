@@ -103,15 +103,17 @@ def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time
                 db.session.add(cs)
             updated_CS.add(cs)
 
-            # find end_time:
-            # the best option is sate.finishedAt, it must be right
-            # the next best option is cs.end_time (we might get it from previous
-            # run or some other source)
+            # reset CS if it was marked as missing
+            if ((state_type == 'terminated' or deleted) and
+                    (cs.exit_code, cs.reason) == ContainerState.REASONS.missed):
+                cs.end_time, cs.exit_code, cs.reason = None, None, None
+
+            # get end_time
             cs.end_time = state.get('finishedAt') or cs.end_time
             if cs.end_time is None and (state_type == 'terminated' or deleted):
                 cs.end_time = event_time
 
-            # extend pod state so all container states fit
+            # extend pod state so all container states fit in
             # pod_state.start_time = min(pod_state.start_time, start)
             if deleted and (pod_state.end_time is None or
                             pod_state.end_time < cs.end_time):
@@ -125,9 +127,11 @@ def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time
                     cs.reason = u'{0}: {1}'.format(reason, message)
                 elif reason or message:
                     cs.reason = reason or message
+                # fix k8s 1.1.3 issue: succeeded containers have reason=Error
+                if cs.exit_code == 0 and cs.reason == 'Error':
+                    cs.reason = None
             elif deleted and cs.exit_code is None:
-                cs.exit_code = 0
-                cs.reason = u'Pod was stopped.'
+                cs.exit_code, cs.reason = ContainerState.REASONS.pod_was_stopped
 
             # fix overlaping
             try:

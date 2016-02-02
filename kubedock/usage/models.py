@@ -12,6 +12,11 @@ def to_timestamp(dt):
 
 
 class ContainerState(BaseModelMixin, db.Model):
+    class REASONS(object):
+        """Non-k8s exit codes and reasons."""
+        missed = (-1, 'Reason of failure was missed.')
+        pod_was_stopped = (-2, 'Pod was stopped.')
+
     __tablename__ = 'container_states'
     pod_state_id = db.Column(db.ForeignKey('pod_states.id'), nullable=False)
     container_name = db.Column(db.String(length=255), primary_key=True,
@@ -34,13 +39,15 @@ class ContainerState(BaseModelMixin, db.Model):
 
     def fix_overlap(self, end_time):
         """Shift end_time timestamp of container state to fix overlaping."""
-        current_app.logger.warn('Overlaping ContainerStates was found: {0} at {1}.'
-                                .format(self.container_name, self.start_time,
-                                        self.end_time, end_time))
-        self.end_time = end_time
-        if self.exit_code is None and self.reason is None:
-            self.exit_code = 1
-            self.reason = 'Reason of failure was missed.'
+        db.session.refresh(self)
+        if self.end_time is None or self.end_time > end_time:
+            current_app.logger.warn(
+                'Overlaping ContainerStates was found: {0} at {1} ({2} -> {3}).'
+                .format(self.container_name, self.start_time,
+                        self.end_time, end_time))
+            self.end_time = end_time
+            if self.exit_code is None and self.reason is None:
+                self.exit_code, self.reason = self.REASONS.missed
 
     @classmethod
     def in_range(cls, start=None, end=None):

@@ -39,6 +39,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         # TODO delete this because 'owner' will appear in api response
         data['owner'] = None if owner is None else owner.username
         data.setdefault('status', POD_STATUSES.stopped)
+        data.setdefault('volumes', [])
         pod = Pod(data)
         pod._check_pod_name(owner)
         pod._make_uuid_if_missing()
@@ -113,6 +114,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def compose_persistent(self, owner):
         if not getattr(self, 'volumes', False):
+            self.volumes_public = []
             return
         # volumes - k8s api, volumes_public - kd api
         self.volumes_public = deepcopy(self.volumes)

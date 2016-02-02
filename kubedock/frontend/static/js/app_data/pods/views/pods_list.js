@@ -155,6 +155,10 @@ define(['app_data/app',
             'click @ui.th'         : 'toggleSort'
         },
 
+        filter: function(child, index, collection){
+            return child.get('status') !== 'deleting';
+        },
+
         templateHelpers: function(){
             return {
                 allChecked: this.collection.fullCollection.allChecked ? true : false,

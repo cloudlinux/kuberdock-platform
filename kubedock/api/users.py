@@ -23,6 +23,12 @@ users = Blueprint('users', __name__, url_prefix='/users')
 def auth_another(uid=None):
     data = KubeUtils._get_params()
     uid = uid if uid else data['user_id']
+    try:
+        uid = int(uid)
+    except (TypeError, ValueError):
+        raise APIError("User UID is expected")
+    if current_user.id == uid:
+        raise APIError("Logging in as admin is pointless")
     user = User.query.get(uid)
     if user is None or user.deleted:
         raise UserNotFound('User "{0}" does not exists'.format(uid))

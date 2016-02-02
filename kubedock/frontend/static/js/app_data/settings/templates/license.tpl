@@ -15,7 +15,7 @@
         <div class="col-xs-10 col-xs-offset-2">
             <div class="col-xs-6 info">
                 <div class="editGroup">
-                    <b>Instalattion ID:</b> <span class="edit-field peditable"> <%= installationID %></span>
+                    <b>Installation ID:</b> <span class="edit-field peditable"> <%= installationID %></span>
                 </div>
                 <div><b>Platform:</b> <%= platform %></div>
                 <div><b>Storage:</b> <%= storage %></div>

@@ -187,6 +187,10 @@ def upgrade(upd, with_testing, *args, **kwargs):
         db.session.commit()
         pstorage.check_namespace_exists(namespace=ns)
 
+    # Restart kuberdock to prevent loss of PD bind state, becuase fix for this
+    # is in the new version.
+    helpers.restart_service('emperor.uwsgi')
+
 
 def downgrade(upd, with_testing,  exception, *args, **kwargs):
     #00085_update.py

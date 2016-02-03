@@ -14,7 +14,10 @@ def send_stream():
         channel = 'common'
     else:
         channel = 'user_{0}'.format(current_user.id)
+    last_id = request.headers.get('Last-Event-Id')
+    if last_id is None:
+        last_id = request.args.get('lastid')
     return current_app.response_class(
-        EvtStream(conn, channel, request.headers.get('Last-Event-Id')),
+        EvtStream(conn, channel, last_id),
         direct_passthrough=True,
         mimetype='text/event-stream')

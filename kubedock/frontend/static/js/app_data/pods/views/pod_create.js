@@ -192,7 +192,8 @@ define(['app_data/app', 'app_data/model',
             loader            : 'div#load-control',
             searchControl     : 'div.search-control',
             privateField      : '#private-image-field',
-            input             : 'input#search-image-field'
+            input             : 'input#search-image-field',
+            label             : 'label.placeholder'
         },
 
         events: {

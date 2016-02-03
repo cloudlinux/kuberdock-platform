@@ -27,6 +27,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         childView           : views.PublicIPsItemView,
         emptyView           : views.PublicIPsEmptyView,
         childViewContainer  : 'tbody',
+
+        onShow: function(){
+            utils.preloader.hide();
+        }
     });
 
     views.SettingsLayout = Marionette.LayoutView.extend({
@@ -38,9 +42,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         onBeforeShow: function(){
             utils.preloader.show();
-        },
-        onShow: function(){
-            utils.preloader.hide();
         }
     });
     return views;

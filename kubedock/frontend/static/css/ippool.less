@@ -29,32 +29,6 @@
             background-color: #fff;
             &.checked, &:hover{
                 background-color: #f5fafe;
-                span{
-                    &#deleteNetwork{
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                    &.block_ip{
-                        background: url('../img/stop.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -17px;
-                        }
-                    }
-                    &.unblock_ip{
-                        background: url('../img/start.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                    &.unbind_ip{
-                        background: url('../img/unblock.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -17px;
-                        }
-                    }
-                }
             }
             td{
                 height: 50px;
@@ -121,18 +95,34 @@
                         top: 16px;
                         width: 16px;
                         height: 17px;
+                        background: url('../img/recycling.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
                     }
                     &.block_ip, &.unblock_ip, &.unbind_ip{
                         top: 16px;
                     }
                     &.block_ip{
                         width: 17px;
+                        background: url('../img/stop.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -17px;
+                        }
                     }
                     &.unbind_ip{
                         width: 14px;
+                        background: url('../img/unblock.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -17px;
+                        }
                     }
                     &.unblock_ip{
                         width: 13px;
+                        background: url('../img/start.png') 0 0 no-repeat;
+                        &:hover{
+                            background-position: 0 -18px;
+                        }
                     }
                 }
             }

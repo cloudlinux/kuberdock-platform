@@ -216,7 +216,7 @@ def downgrade(upd, with_testing,  exception, *args, **kwargs):
         db.session.commit()
 
 
-def upgrade_node(upd, with_testing, *args, **kwargs):
+def upgrade_node(upd, with_testing, env, *args, **kwargs):
     # 00084_update.py
     yum_base_no_kube = 'yum install --disablerepo=kube -y '
 
@@ -254,7 +254,8 @@ def upgrade_node(upd, with_testing, *args, **kwargs):
     pc = PodCollection()
     pods = pc.get(as_json=False)
     for pod in pods:
-        if pod['status'] == POD_STATUSES.running:
+        if (pod.get('host') == env.host_string and
+            pod['status'] == POD_STATUSES.running):
             pc.update_container(pod['id'], None)
 
     # 00088_update.py

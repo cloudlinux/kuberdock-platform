@@ -43,6 +43,7 @@
                 <th>Users pods</th>
                 <th>Predefined apps</th>
                 <th>Persistent volume</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -55,6 +56,7 @@
                 <td><%= data.pods[0] %></td>
                 <td><%= data.apps[0] %></td>
                 <td><%= data.persistentVolume[0] %></td>
+                <td></td>
             </tr>
             <tr <%= attention ? 'class="attention"' : '' %>>
                 <td><b>Current state</b></td>
@@ -114,6 +116,9 @@
                 <% } else { %>
                     <td><%= data.persistentVolume[1] %></td>
                 <% } %>
+                <td>
+                    <span class="check-for-update" title="Update status"></span>
+                </td>
             </tr>
         </tbody>
     </table>

@@ -95,13 +95,42 @@ define(['app_data/app', 'marionette',
             this.model.set('attention', results);
         },
 
+        updateStatistics: function(evt){
+            evt.stopPropagation();
+            var that = this;
+            this.ui.updateStats.addClass('start-atimation');
+            this.model.fetch({
+                wait: true,
+                data: {force: true},
+                success: function(model, resp, opts){
+                    that.ui.updateStats.removeClass('start-atimation');
+                    $.notify('Statistics has updated', {
+                        autoHideDelay: 5000,
+                        clickToHide: true,
+                        globalPosition: 'bottom left',
+                        className: 'success',
+                    });
+                    that.render();
+                },
+                error: function(){
+                    that.ui.updateStats.removeClass('start-atimation');
+                    console.log('Could not fetch statistics');
+                }
+            });
+        },
+
         comparison: function(a, b){
             if (a == 'unlimited' || a == 0) a = Infinity;
             return a > b ? true : false;
         },
 
         ui: {
-            peditable : '.peditable'
+            peditable : '.peditable',
+            updateStats: '.check-for-update'
+        },
+
+        events: {
+            'click @ui.updateStats': 'updateStatistics'
         },
 
         onRender: function(){

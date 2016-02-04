@@ -354,6 +354,8 @@ def _format_package_version(
 @login_required_or_basic_or_token
 @check_permission('read', 'system_settings')
 def get_license():
+    params = all_request_params()
+    force = params.get('force', False)
     data = licensing.get_license_info() or {}
     result = {}
     redis = ConnectionPool.get_connection()
@@ -364,7 +366,7 @@ def get_license():
     except:
         pass
 
-    if not installation_data:
+    if not installation_data or force:
         installation_data = collect.collect()
         try:
             redis.set('KDCOLLECTION', json.dumps(installation_data))

@@ -75,6 +75,10 @@ def unit_stat():
                                     [timetick, limits.memory, record[2]])
         metrics[2]['points'].append([timetick, record[3], record[4]])
 
+    # AC-2223: we can't monitor container's network separately
+    if container is not None:
+        metrics.pop()
+
     if disks:
         disk_metrics = {}
         for record in sorted(disks.items()):
@@ -117,7 +121,6 @@ def process_disks(data, tick, to_skip=None):
     return disks
 
 
-
 def get_node_data(node, start, end=None):
     data = db.session.query(
         StatWrap5Min.time_window,
@@ -125,20 +128,21 @@ def get_node_data(node, start, end=None):
         db.func.avg(StatWrap5Min.memory),
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)).filter(
-            StatWrap5Min.time_window>=start).filter(
-            StatWrap5Min.unit_name=='/',
-            StatWrap5Min.container=='/',
-            StatWrap5Min.host==node).group_by(
+            StatWrap5Min.time_window >= start).filter(
+            StatWrap5Min.unit_name == '/',
+            StatWrap5Min.container == '/',
+            StatWrap5Min.host == node).group_by(
                 StatWrap5Min.time_window)
     disks = db.session.query(StatWrap5Min.time_window, StatWrap5Min.fs_data).filter(
-            StatWrap5Min.time_window>=start).filter(
-                StatWrap5Min.unit_name=='/',
-                StatWrap5Min.container=='/',
-                StatWrap5Min.host==node)
+            StatWrap5Min.time_window >= start).filter(
+                StatWrap5Min.unit_name == '/',
+                StatWrap5Min.container == '/',
+                StatWrap5Min.host == node)
     organized = defaultdict(list)
     for record in disks:
         organized[record[0]].append(record[1])
     return data, organized
+
 
 def get_unit_data(items_list, start, end=None):
     data = db.session.query(
@@ -147,10 +151,11 @@ def get_unit_data(items_list, start, end=None):
         db.func.avg(StatWrap5Min.memory),
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)).filter(
-            StatWrap5Min.time_window>=start).filter(
+            StatWrap5Min.time_window >= start).filter(
             StatWrap5Min.unit_name.in_(items_list)).group_by(
                 StatWrap5Min.time_window)
     return data, None
+
 
 def get_container_data(items_list, container, start, end=None):
     data = db.session.query(
@@ -159,7 +164,7 @@ def get_container_data(items_list, container, start, end=None):
         db.func.avg(StatWrap5Min.memory),
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)).filter(
-            StatWrap5Min.time_window>=start).filter(
+            StatWrap5Min.time_window >= start).filter(
                 StatWrap5Min.unit_name.in_(items_list)).filter(
                     StatWrap5Min.container.like('k8s_'+container+'%')).group_by(
                 StatWrap5Min.time_window)

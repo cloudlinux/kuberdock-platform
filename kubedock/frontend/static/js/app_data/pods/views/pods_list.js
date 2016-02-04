@@ -6,6 +6,7 @@ define(['app_data/app',
         'app_data/utils',
         'bootstrap'],
        function(App, layoutPodListTpl, podListItemTpl, podListEmptyTpl, podListTpl, utils){
+    'use strict';
 
     var podList = {};
 
@@ -155,7 +156,7 @@ define(['app_data/app',
             utils.preloader.hide();
         },
 
-        filter: function(child, index, collection){
+        filter: function(child){
             return child.get('status') !== 'deleting';
         },
 
@@ -164,8 +165,8 @@ define(['app_data/app',
                 allChecked: this.collection.fullCollection.allChecked ? true : false,
                 checked: this.collection.fullCollection.checkedNumber,
                 isCollection : this.collection.fullCollection.length < 1 ? 'disabled' : '',
-                sortingType : this.sortingType
-            }
+                sortingType : this.collection.orderAsDict(),
+            };
         },
 
         initialize: function(){
@@ -173,37 +174,24 @@ define(['app_data/app',
                 this.collection.fullCollection.checkedNumber = 0;
             }
             this.counter = 1;
-            this.sortingType = {
-                name : 1,
-                replicas : 1,
-                status : 1,
-                kube_type : 1
-            };
+            this.collection.order = [
+                // sort by status (asc), but if statuses are equal,
+                // sort by name (asc), and so on...
+                {key: 'status', order: 1}, {key: 'name', order: 1},
+                {key: 'kube_type', order: 1}, {key: 'kubes', order: -1}
+            ];
+            this.collection.fullCollection.sort();
+            this.collection.on('change', function(){ this.fullCollection.sort(); });
         },
 
         toggleSort: function(e) {
-            var that = this,
-                targetClass = e.target.className;
-
-            if (targetClass) {
-                this.collection.setSorting(targetClass, this.counter);
-                this.collection.fullCollection.sort();
-                this.counter = this.counter * (-1);
-
-                if (that.sortingType[targetClass] == 1){
-                    _.each(that.sortingType, function(item, index){
-                        that.sortingType[index] = 1;
-                    })
-                    that.sortingType[targetClass] = -1;
-                } else {
-                    that.sortingType[targetClass] = 1;
-                }
-                this.render();
-            }
+            var targetClass = e.target.className;
+            if (!targetClass) return;
+            this.collection.toggleSort(targetClass);
+            this.render();
         },
 
         toggleCheck: function(evt){
-            var tgt = evt.target;
             evt.stopPropagation();
             if (this.collection.fullCollection.length > 0){
                 if (this.collection.fullCollection.allChecked){
@@ -234,16 +222,16 @@ define(['app_data/app',
                     : (this.collection.fullCollection.checkedNumber++, true);
                 this.collection.fullCollection.checkedNumber == this.collection.length
                     ? this.collection.fullCollection.allChecked = true
-                    : this.collection.fullCollection.allChecked = false
+                    : this.collection.fullCollection.allChecked = false;
                 this.render();
             }
         },
 
         removePods: function(evt){
             evt.stopPropagation();
-            var body;
+            var body,
                 that = this,
-                items = that.collection.fullCollection.filter(function(i){return i.is_checked});
+                items = that.collection.fullCollection.filter(function(i){return i.is_checked;});
             if (items.length > 1){
                 body = 'Are you sure you want to delete selected pods?';
             } else {
@@ -283,7 +271,7 @@ define(['app_data/app',
         },
 
         sendCommand: function(command){
-            var items = this.collection.fullCollection.filter(function(i){return i.is_checked});
+            var items = this.collection.fullCollection.filter(function(i){return i.is_checked;});
 
             utils.preloader.show();
             var deferreds = _.map(items, function(item) {

@@ -6,10 +6,9 @@ define(['app_data/app', 'app_data/utils', 'marionette',
         'tpl!app_data/papps/templates/app_list.tpl',
         'tpl!app_data/papps/templates/app_load_form.tpl',
         'bootstrap'],
-       function(App, utils, Marionette,
-                mainTpl, breadcrumbsTpl, appListEmptyTpl,
-                appListItemTpl, appListTpl, appLoadFormTpl){
-
+    function(App, utils, Marionette, mainTpl, breadcrumbsTpl, appListEmptyTpl,
+             appListItemTpl, appListTpl, appLoadFormTpl){
+        'use strict';
         var views = {};
 
         views.MainLayout = Marionette.LayoutView.extend({
@@ -235,14 +234,12 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             },
 
             copyLink: function(evt){
-                var msg,
-                    successful,
+                var successful,
                     target = $(evt.target),
                     link = target.parent().find('textarea');
 
                 link.select();
                 successful = document.execCommand('copy');
-                msg = successful ? 'successful' : 'unsuccessful';
 
                 if (successful) {
                     utils.notifyWindow('Link copied to buffer', 'success');
@@ -274,44 +271,28 @@ define(['app_data/app', 'app_data/utils', 'marionette',
 
             initialize: function(){
                 this.counter = 1;
-                this.sortingType = {
-                    name : 1,
-                    modified : 1,
-                };
-                this.collection.setSorting('name', -1);
+                this.collection.order = [{key: 'name', order: 1},
+                                         {key: 'modified', order: -1}];
                 this.collection.fullCollection.sort();
+                this.collection.on('change', function(){ this.fullCollection.sort(); });
             },
 
             templateHelpers: function(){
                 return {
-                    sortingType : this.sortingType
-                }
+                    sortingType : this.collection.orderAsDict(),
+                };
             },
 
             appEditItem: function(view, id){
                 this.trigger('app:edit', id);
             },
 
-            toggleSort: function(e){
-                var that = this,
-                    targetClass = e.target.className;
-
-                if (targetClass) {
-                    this.collection.setSorting(targetClass, this.counter);
-                    this.collection.fullCollection.sort();
-                    this.counter = this.counter * (-1);
-
-                    if (that.sortingType[targetClass] == 1){
-                        _.each(that.sortingType, function(item, index){
-                            that.sortingType[index] = 1;
-                        })
-                        that.sortingType[targetClass] = -1;
-                    } else {
-                        that.sortingType[targetClass] = 1;
-                    }
-                    this.render();
-                }
-            }
+            toggleSort: function(e) {
+                var targetClass = e.target.className;
+                if (!targetClass) return;
+                this.collection.toggleSort(targetClass);
+                this.render();
+            },
         });
 
     return views;

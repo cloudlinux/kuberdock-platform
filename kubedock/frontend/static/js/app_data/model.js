@@ -4,7 +4,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
     var data = {},
         unwrapper = function(response) {
-            var data = response.hasOwnProperty('data') ? response['data'] : response
+            var data = response.hasOwnProperty('data') ? response['data'] : response;
             if (response.hasOwnProperty('status')) {
                 if(response.status == 'error' || response.status == 'warning') {
                     var err = data;
@@ -18,6 +18,51 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             }
             return data;
         };
+
+    /**
+     * Smart sorting for Backbone.PageableCollection
+     */
+    data.SortableCollectionMixin = {
+        /**
+         * If you need to sort by some attribute that is not present in model's
+         * fields directly, define getForSort in your collection class.
+         */
+        getForSort: function(model, key){ return model.get(key); },
+        /**
+         * Call initSortable() when you need to add comparator to the .fullCollection
+         */
+        initSortable: function(){
+            this.fullCollection.comparator = function(a, b){
+                var order = this.pageableCollection.order;
+                for (var i = 0; i < order.length; i++) {
+                    var term = order[i],
+                        aVal = this.pageableCollection.getForSort(a, term.key),
+                        bVal = this.pageableCollection.getForSort(b, term.key);
+                    if (aVal == bVal) continue;
+                    return term.order * (aVal > bVal ? 1 : -1);
+                }
+                return 0;
+            };
+        },
+        /**
+         * List of pairs "key-order" for sorting. Next key will be used only if
+         * items are equal by previous key.
+         */
+        order: [{key: 'id', order: 1}],
+        orderAsDict: function(){
+            return _.mapObject(_.indexBy(this.order, 'key'),
+                               function(field){ return field.order; });
+        },
+        toggleSort: function(key) {
+            var term = _.findWhere(this.order, {key: key}) || {key: key, order: -1};
+            term.order = term.order === 1 ? -1 : 1;
+            // sort by this field first, then by others
+            this.order = _.without(this.order, term);
+            this.order.unshift(term);
+
+            this.fullCollection.sort();
+        },
+    };
 
     data.Container = Backbone.Model.extend({
         idAttribute: 'name',
@@ -109,9 +154,9 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     data.Pod = Backbone.AssociatedModel.extend({
         urlRoot: '/api/podapi/',
         relations: [{
-              type: Backbone.Many,
-              key: 'containers',
-              relatedModel: data.Container,
+            type: Backbone.Many,
+            key: 'containers',
+            relatedModel: data.Container,
         }],
 
         defaults: function(){
@@ -231,13 +276,22 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         state: {
             pageSize: 8
         },
-
+        initialize: function(){ this.once('reset', this.initSortable); },
+        getForSort: function(model, key){
+            if (key === 'name')
+                return (model.get(key) || '').toLowerCase();
+            if (key === 'kubes')
+                return model.get('containers').reduce(
+                    function(sum, c){ return sum + c.get('kubes'); }, 0);
+            return model.get(key);
+        },
         searchIn: function(val){
             return this.fullCollection.models.filter(function(i){
                 return i.get('name').indexOf(val) === 0;
             });
         },
     });
+    _.defaults(data.PodCollection.prototype, data.SortableCollectionMixin);
 
     data.ImageCollection = Backbone.Collection.extend({
         url: '/api/images/',
@@ -470,7 +524,14 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         },
         initialize: function(models){
             this.filtered = new Backbone.PageableCollection(
-                models, {mode: 'client', state: this.state});
+                null, {mode: 'client', state: this.state});
+            _.defaults(this.filtered, data.SortableCollectionMixin);
+            this.filtered.getForSort = function(model, key){
+                if (key === 'name')
+                    return (model.get(key) || '').toLowerCase();
+                return model.get(key);
+            },
+            this.filtered.once('reset', this.filtered.initSortable);
             this.listenTo(this, 'add', this.refilter);
             this.listenTo(this, 'remove', this.refilter);
         },
@@ -554,7 +615,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
     data.MenuModel = Backbone.Model.extend({
         defaults: function(){
-            return { children: [], path: '#' }
+            return { children: [], path: '#' };
         }
     });
 

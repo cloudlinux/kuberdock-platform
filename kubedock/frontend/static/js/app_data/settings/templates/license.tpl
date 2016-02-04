@@ -23,7 +23,9 @@
             <div class="col-xs-6 servers">
                 <div><b>KuberDock version:</b> <%= version.KuberDock %></div>
                 <div><b>Kubernetes version:</b> <%= version.kubernetes %></div>
-                <div><b>Docker version:</b> <%= version.docker %></div>
+                <% if (version.docker !== 'unknown'){ %>
+                    <div><b>Docker version:</b> <%= version.docker %></div>
+                <% } %>
                 <div><b>Support:</b> <a href="mailto:helpdesk@kuberdock.com">helpdesk@kuberdock.com</a></div>
             </div>
         </div>

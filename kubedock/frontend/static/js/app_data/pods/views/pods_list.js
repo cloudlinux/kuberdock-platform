@@ -34,10 +34,6 @@ define(['app_data/app',
             utils.preloader.show();
         },
 
-        onShow: function(){
-            utils.preloader.hide();
-        },
-
         clearPager: function(){
             this.trigger('pager:clear');
         },
@@ -153,6 +149,10 @@ define(['app_data/app',
             'click @ui.toggleCheck': 'toggleCheck',
             'click @ui.removePods' : 'removePods',
             'click @ui.th'         : 'toggleSort'
+        },
+
+        onShow: function(){
+            utils.preloader.hide();
         },
 
         filter: function(child, index, collection){

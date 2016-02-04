@@ -8,6 +8,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
 
         initialize: function(){
             var that = this;
+            this.lastEventId = null;
             require(['app_data/model', 'app_data/utils'], function(Model, Utils){
                 that.storage = window.localStorage || window.sessionStorage || {};
                 that.menuCollection = new Model.MenuCollection(backendData.menu);
@@ -324,12 +325,15 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
             var controller = new Controller();
             new Router({controller: controller});
 
-            function eventHandler(nodes){
-                var source = new EventSource("/api/stream"), events;
+            function eventHandler(nodes, url){
+                if (url === undefined) url = "/api/stream";
+                var source = new EventSource(url),
+                    events;
                 var collectionEvent = function(collectionGetter, eventType){
                     eventType = eventType || 'change';
                     return function(ev){
                         collectionGetter.apply(that).done(function(collection){
+                            that.lastEventId = ev.lastEventId;
                             var data = JSON.parse(ev.data);
                             if (eventType === 'delete'){
                                 collection.fullCollection.remove(data.id);
@@ -375,17 +379,19 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     }
 
                     events['notify:error'] = function(ev) {
-                        console.log(ev);
+                        that.lastEventId = ev.lastEventId;
                         var data = JSON.parse(ev.data);
                         Utils.notifyWindow(data.message);
                     };
 
                     events['advise:show'] = function(ev) {
+                        that.lastEventId = ev.lastEventId;
                         var data = JSON.parse(ev.data);
                         controller.attachNotification(data);
                     };
 
                     events['advise:hide'] = function(ev) {
+                        that.lastEventId = ev.lastEventId;
                         var data = JSON.parse(ev.data);
                         controller.detachNotification(data);
                     };
@@ -398,6 +404,14 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     };
                     source.onerror = function () {
                         console.log('SSE Error. Reconnecting...');
+                        if (source.readyState === 2){
+                            var url = source.url;
+                            if (that.lastEventId && url.indexOf('lastid') === -1) {
+                                url += "?lastid=" + encodeURIComponent(that.lastEventId);
+                            }
+                            source.close();
+                            setTimeout(_.partial(eventHandler, nodes, url), 5000);
+                        }
                     };
                 }
             }

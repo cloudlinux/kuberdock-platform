@@ -16,11 +16,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
 
     @check_permission('get', 'predefined_apps')
     def get(self, app_id=None):
-        user = self._get_current_user()
-        if user.is_administrator():
-            app = kapi_apps.PredefinedApps().get(app_id)
-        else:
-            app = kapi_apps.PredefinedApps(user).get(app_id)
+        app = kapi_apps.PredefinedApps().get(app_id)
 
         file_only = self._get_params().get('file-only', False)
         if app_id is not None and file_only:

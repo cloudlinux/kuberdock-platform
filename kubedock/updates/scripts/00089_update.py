@@ -185,7 +185,11 @@ def upgrade(upd, with_testing, *args, **kwargs):
             synchronize_session=False
         )
         db.session.commit()
-        pstorage.check_namespace_exists(namespace=ns)
+        try:
+            pstorage.check_namespace_exists(namespace=ns)
+        except pstorage.NoNodesError:
+            # skip CEPH pool checking if there are no nodes with CEPH
+            pass
 
     # Restart kuberdock to prevent loss of PD bind state, becuase fix for this
     # is in the new version.

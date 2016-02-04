@@ -314,6 +314,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 val = this.ui.node_name.val(),
                 pattern =  /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;
 
+            val = val.replace(/\s+/g, '');
+            this.ui.node_name.val(val);
+
             App.getNodeCollection().done(function(nodeCollection){
                 switch (true){
                     case !val:

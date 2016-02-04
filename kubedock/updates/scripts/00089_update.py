@@ -113,7 +113,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     upd.print_log('Update kubes to hard limits')
     internal = Kube.get_by_name('Internal service')
     if internal:
-        internal.cpu = 0.01
+        internal.cpu = 0.02
         internal.save()
     small = Kube.get_by_name('Small')
     if small:

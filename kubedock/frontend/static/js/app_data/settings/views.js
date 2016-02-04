@@ -120,12 +120,8 @@ define(['app_data/app', 'marionette',
                 },
                 success: function(response, newValue) {
                     that.model.set({name: newValue});
-                    $.notify('New instalattion ID "' + newValue + '" is saved', {
-                        autoHideDelay: 5000,
-                        clickToHide: true,
-                        globalPosition: 'bottom left',
-                        className: 'success',
-                    });
+                    utils.notifyWindow('New instalattion ID "' + newValue + '" is saved',
+                                       'success');
                 },
                 error: function(response, newValue) {
                     that.model.set({name: newValue});

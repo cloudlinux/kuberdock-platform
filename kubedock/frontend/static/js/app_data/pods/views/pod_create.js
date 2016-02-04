@@ -118,12 +118,8 @@ define(['app_data/app', 'app_data/model',
                     mode: 'inline',
                     success: function(response, newValue) {
                         that.model.set({name: newValue});
-                        $.notify('New pod name "' + newValue + '" is saved', {
-                            autoHideDelay: 5000,
-                            clickToHide: true,
-                            globalPosition: 'bottom left',
-                            className: 'success',
-                        });
+                        utils.notifyWindow('New pod name "' + newValue + '" is saved',
+                                           'success');
                     },
                     validate: function(newValue) {
                         var model = podCollection.find(

@@ -245,12 +245,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 msg = successful ? 'successful' : 'unsuccessful';
 
                 if (successful) {
-                    $.notify('Link copied to buffer', {
-                        autoHideDelay: 5000,
-                        clickToHide: true,
-                        globalPosition: 'bottom left',
-                        className: 'success',
-                    });
+                    utils.notifyWindow('Link copied to buffer', 'success');
                 } else {
                     utils.notifyWindow('Your browser does not support this action. Click on application name and copy link from address bar.');
                 }

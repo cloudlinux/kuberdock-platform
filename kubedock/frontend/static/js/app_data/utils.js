@@ -106,16 +106,48 @@ define(['moment-timezone', 'notify'], function(moment){
 
         if (data && data.status == 401){
             window.location = '/login';
+        } else if (type === 'error') {
+            // do not hide error messages automatically
+            // also, group identical messages
+            var notifyElement = utils.notifyList[msg];
+            if (!notifyElement){  // new message
+                $.notify({message: msg, count: 1}, {autoHide: false,
+                                                    clickToHide: false,
+                                                    className: type});
+                // $.notify lib does not return element, so...
+                utils.notifyList[msg] = $('.notifyjs-bootstrap-error:contains("'+msg+'")')[0];
+                utils.notifyList[msg].count = 1;
+                utils.notifyList[msg].msg = msg;
+            } else {  // old message, again (show and increase counter)
+                $(notifyElement).find('.notify-count')
+                    .removeClass('hidden').text(++notifyElement.count);
+            }
         } else {
-            $.notify(msg,{
-                autoHide: type == 'error' ? false : true,
-                autoHideDelay: 5000,
-                clickToHide: true,
-                globalPosition: 'bottom left',
-                className: type,
-            });
+            $.notify({message: msg}, {className: type});
         }
     };
+    utils.notifyList = {};  // Notify messages counter
+    $.notify.defaults({
+        autoHide: true,
+        autoHideDelay: 5000,
+        clickToHide: true,
+        globalPosition: 'bottom left',
+    });
+    $.notify.addStyle('bootstrap', {  // notify template
+        html: "<div>" +
+                  "<span class='notify-msg' data-notify-text='message'/>" +
+                  "<span class='notify-count hidden' data-notify-text='count'/>" +
+                  "<span class='notify-close'/>" +
+              "</div>"
+    });
+    // close errors only if there is no selected text (let user copy error message)
+    $(document).on('click', '.notifyjs-bootstrap-error', function(event) {
+        event.stopPropagation();
+        if (!document.getSelection().toString().length){
+            utils.notifyList[this.msg] = undefined;
+            $(this).trigger('notify-hide');
+        }
+    });
 
     utils.preloader = {
         show: function(){ $('#page-preloader').show(); },

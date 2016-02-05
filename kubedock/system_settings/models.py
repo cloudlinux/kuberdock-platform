@@ -1,5 +1,7 @@
+import json
 from ..core import db
 from ..utils import APIError
+
 
 class SystemSettings(db.Model):
     """
@@ -11,15 +13,18 @@ class SystemSettings(db.Model):
     name = db.Column(db.String(255), nullable=False, unique=True)
     value = db.Column(db.Text, nullable=True)
     label = db.Column(db.Text, nullable=True)
-    description = db.Column(db.Text, nullable=True)
-    placeholder = db.Column(db.String, nullable=True)
+    description = db.Column(db.Text, default='')
+    placeholder = db.Column(db.String, default='')
+    options = db.Column(db.String, nullable=True)
 
     @classmethod
     def get_all(cls):
         result = []
         for row in cls.query.all():
-            result.append(dict((k,v) for k,v in vars(row).items()
-                if not k.startswith('_')))
+            data = {k: v for k, v in vars(row).items() if not k.startswith('_')}
+            if data['options']:
+                data['options'] = json.loads(data['options'])
+            result.append(data)
         return result
 
     @classmethod
@@ -27,7 +32,9 @@ class SystemSettings(db.Model):
         entry = cls.query.get(id).first()
         if entry is None:
             raise APIError('No such resource', 404)
-        return dict((k,v) for k,v in vars(entry).items() if not k.startswith('_'))
+        data = {k: v for k, v in vars(entry).items() if not k.startswith('_')}
+        if data['options']:
+            data['options'] = json.loads(data['options'])
 
     @classmethod
     def get_by_name(cls, name):
@@ -43,3 +50,12 @@ class SystemSettings(db.Model):
             raise APIError('No such resource', 404)
         entry.value = value
         db.session.commit()
+
+    @classmethod
+    def set_by_name(cls, name, value, commit=True):
+        entry = cls.query.filter_by(name=name).first()
+        if entry is None:
+            raise APIError('No such resource', 404)
+        entry.value = value
+        if commit:
+            db.session.commit()

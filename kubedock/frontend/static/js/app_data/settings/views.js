@@ -15,17 +15,25 @@ define(['app_data/app', 'marionette',
                 userEditTpl, notificationSettingsTpl, notificationItemTpl,
                 notificationCreateTpl, generalSettingsTpl, generalSettingsItemTpl,
                 licenseTpl, utils){
-
-    var views = {},
-        defaultHideDelay = 4000;
+    var views = {};
 
     views.GeneralItemView = Marionette.ItemView.extend({
         template: generalSettingsItemTpl,
         tagName: 'div',
-        className: 'link-wrapper',
+
+        className: function(){
+            var className = 'link-wrapper',
+                billing = this.model.collection.findWhere({name: 'billing_type'}).get('value'),
+                name = this.model.get('name');
+
+            if (billing === 'No billing' && _.contains(
+                    ['billing_url', 'billing_username', 'billing_password'], name))
+                className += ' hidden';
+            return className;
+        },
 
         ui: {
-            itemField: 'input.settings-item'
+            itemField: '.settings-item',
         },
 
         events: {
@@ -34,8 +42,26 @@ define(['app_data/app', 'marionette',
 
         fieldChange: function(evt){
             evt.stopPropagation();
-            this.model.set({value: $(evt.target).val()});
-        }
+            var value = $(evt.target).val();
+            if (this.model.get('options'))
+                value = this.model.get('options')[parseInt(value)];
+            this.model.set({value: value});
+
+            // toggle billing settings, depending on selected billing type
+            if (this.model.get('name') === 'billing_type'){
+                $('#billing_url, #billing_username, #billing_password').parent()
+                    .toggleClass('hidden', this.model.get('value') === 'No billing');
+            }
+        },
+
+        onRender: function() {
+            var options = this.model.get('options');
+            if (options) {
+                this.ui.itemField.selectpicker();
+                this.ui.itemField.selectpicker(
+                    'val', options.indexOf(this.model.get('value')));
+            }
+        },
     });
 
     views.GeneralView = Marionette.CompositeView.extend({
@@ -48,14 +74,16 @@ define(['app_data/app', 'marionette',
         },
 
         submitSettings: function(){
-            var changed = this.collection.filter(function(m){ return m.hasChanged('value') });
+            var changed = this.collection.filter(function(m){ return m.hasChanged('value'); });
             if (changed.length) {
                 _.each(changed, function(m){
                     m.save(null, {wait: true})
                         .fail(utils.notifyWindow)
                         .done(function(){
-                            utils.notifyWindow(m.get('label') + ' changed successfully',
-                                               'success');
+                            var msg = (m.get('name') === 'billing_type' ?
+                                       'Billing system changed successfully' :
+                                       m.get('label') + ' changed successfully');
+                            utils.notifyWindow(msg, 'success');
                         });
                 });
             }
@@ -91,7 +119,7 @@ define(['app_data/app', 'marionette',
                     : item[3] = false;
             });
 
-            results = _.any(data, function(item){ return !that.comparison(item[0],item[1])});
+            results = _.any(data, function(item){ return !that.comparison(item[0],item[1]); });
             this.model.set('attention', results);
         },
 
@@ -114,7 +142,7 @@ define(['app_data/app', 'marionette',
                 },
                 error: function(){
                     that.ui.updateStats.removeClass('start-atimation');
-                    console.log('Could not fetch statistics');
+                    console.log('Could not fetch statistics');  //eslint-disable-line no-console
                 }
             });
         },
@@ -154,12 +182,13 @@ define(['app_data/app', 'marionette',
                 },
                 error: function(response, newValue) {
                     that.model.set({name: newValue});
-                    console.log(response);
-                    utils.notifyWindow(response.responseJSON.data);
+                    utils.notifyWindow(response);
                 },
             });
         }
     });
+
+    /*eslint-disable */
 
     views.NotificationCreateView = Backbone.Marionette.ItemView.extend({
         template: notificationCreateTpl,
@@ -262,6 +291,8 @@ define(['app_data/app', 'marionette',
         childView: views.NotificationItemView
     });
 
+    /*eslint-enable */
+
     /* Profile edit volumes Views */
     views.ProfileEditView = Backbone.Marionette.ItemView.extend({
         template: userEditTpl,
@@ -305,11 +336,10 @@ define(['app_data/app', 'marionette',
                 email: this.model.get('email'),
                 timezone: this.model.get('timezone'),
                 timezones : timezones
-            }
+            };
         },
 
         onRender: function(){
-            var that = this;
             this.ui.first_name.val(this.model.get('first_name'));
             this.ui.last_name.val(this.model.get('last_name'));
             this.ui.middle_initials.val(this.model.get('middle_initials'));
@@ -337,7 +367,7 @@ define(['app_data/app', 'marionette',
                 'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
             };
 
-            equal = _.isEqual(oldData, newData)
+            equal = _.isEqual(oldData, newData);
             equal === false ? this.ui.save.show() : this.ui.save.hide();
         },
 
@@ -392,19 +422,19 @@ define(['app_data/app', 'marionette',
                 utils.scrollTo(this.ui.email);
                 this.ui.email.addClass('error');
                 this.ui.email.notify("empty E-mail");
-                return
+                return;
             } else if (!pattern.test(data.email)) {
                 utils.scrollTo(this.ui.email);
                 this.ui.email.addClass('error');
                 this.ui.email.notify("E-mail must be correct");
-                return
+                return;
             }
             if (this.ui.password.val() !== this.ui.password_again.val()) {
                 utils.scrollTo(this.ui.password);
                 this.ui.password.addClass('error');
                 this.ui.password_again.addClass('error');
                 this.ui.password_again.notify("passwords don't match");
-                return
+                return;
             }
             if (this.ui.password.val())  // update only if specified
                 data.password = this.ui.password.val();
@@ -418,6 +448,8 @@ define(['app_data/app', 'marionette',
                 });
         }
     });
+
+    /*eslint-disable */
 
     views.PermissionItemView = Marionette.ItemView.extend({
         template: permissionItemTpl,
@@ -462,6 +494,8 @@ define(['app_data/app', 'marionette',
             });
         }
     });
+
+    /*eslint-enable */
 
     views.SettingsLayout = Marionette.LayoutView.extend({
         template: settingsLayoutTpl,
@@ -513,7 +547,7 @@ define(['app_data/app', 'marionette',
                     that.ui.general.addClass('active');
                 }
                 else {
-                    $(item).removeClass('active')
+                    $(item).removeClass('active');
                 }
             });
         }

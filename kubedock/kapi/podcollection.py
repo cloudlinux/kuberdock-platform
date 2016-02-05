@@ -246,7 +246,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def delete(self, pod_id, force=False):
         pod = self._get_by_id(pod_id)
         if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
-            self._raise('Service pod cannot be removed')
+            self._raise('Service pod cannot be removed', 400)
 
         DBPod.query.get(pod_id).mark_as_deleting()
 

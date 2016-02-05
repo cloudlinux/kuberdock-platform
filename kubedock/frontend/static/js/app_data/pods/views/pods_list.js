@@ -100,15 +100,23 @@ define(['app_data/app',
 
         deleteItem: function(evt){
             evt.stopPropagation();
-            var that = this;
+            var model = this.model;
             utils.modalDialogDelete({
                 title: "Delete",
-                body: 'Are you sure you want to delete "' + that.model.get('name') + '" pod?',
+                body: 'Are you sure you want to delete "' + model.get('name') + '" pod?',
                 small: true,
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        that.model.destroy();
+                        utils.preloader.show();
+                        model.destroy({wait: true})
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow)
+                            .done(function(){
+                                App.getPodCollection().done(function(col){
+                                    col.remove(model);
+                                });
+                            });
                     },
                     buttonCancel: true
                }
@@ -253,6 +261,8 @@ define(['app_data/app',
 
                         that.collection.fullCollection.checkedNumber = 0;
                         that.collection.fullCollection.allChecked = false;
+                        that.collection.fullCollection.each(
+                            function(model){ model.is_checked = false; });
                         that.render();
                     },
                     buttonCancel: true

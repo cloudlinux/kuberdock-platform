@@ -120,8 +120,8 @@ define(['moment-timezone', 'notify'], function(moment){
                 utils.notifyList[msg].count = 1;
                 utils.notifyList[msg].msg = msg;
             } else {  // old message, again (show and increase counter)
-                $(notifyElement).find('.notify-count')
-                    .removeClass('hidden').text(++notifyElement.count);
+                $(notifyElement).find('.notify-count').text(++notifyElement.count);
+                $(notifyElement).addClass('notify-multi');
             }
         } else {
             $.notify({message: msg}, {className: type});
@@ -137,7 +137,7 @@ define(['moment-timezone', 'notify'], function(moment){
     $.notify.addStyle('bootstrap', {  // notify template
         html: "<div>" +
                   "<span class='notify-msg' data-notify-text='message'/>" +
-                  "<span class='notify-count hidden' data-notify-text='count'/>" +
+                  "<span class='notify-count' data-notify-text='count'/>" +
                   "<span class='notify-close'/>" +
               "</div>"
     });

@@ -952,6 +952,7 @@ body{
                 color: #eee;
                 width: 52px;
                 height: 53px;
+                cursor: pointer;
                 position: absolute;
                 background: url('../img/notify-cross.png') center no-repeat;
             }
@@ -972,12 +973,16 @@ body{
                 }
                 &.notifyjs-bootstrap-error{
                     background-color: #b04242;
+                    &.notify-multi .notify-count {
+                        display: block;
+                    }
                     .notify-count {
                         .border-radius(50%);
                         top: -7px;
                         left: -7px;
                         color: #fff;
                         height: 22px;
+                        display: none;
                         padding: 0 5px;
                         min-width: 22px;
                         font-size: 13px;

@@ -37,10 +37,11 @@ def create_app(settings_override=None, fake_sessions=False):
     from .predefined_apps import predefined_apps
     from .logs import logs
     from .hosts import hosts
+    from .billing import billing
 
     for bp in (images, stream, nodes, stats, users, notifications, yamlapi,
                usage, pricing, ippool, settings, podapi, auth,
-               pstorage, predefined_apps, logs, hosts):
+               pstorage, predefined_apps, logs, hosts, billing):
         app.register_blueprint(bp)
 
     app.errorhandler(404)(on_404)

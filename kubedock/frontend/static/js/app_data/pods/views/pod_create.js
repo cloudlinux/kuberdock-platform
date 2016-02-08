@@ -171,7 +171,7 @@ define(['app_data/app', 'app_data/model',
             var showPaginator = this.collection.length ? true : false;
             return {
                 showPaginator: showPaginator
-            }
+            };
         },
 
         ui: {
@@ -321,7 +321,7 @@ define(['app_data/app', 'app_data/model',
             var registryURL = this.registryURL;
             return {
                 registryURL: registryURL
-            }
+            };
         },
 
         // image was selected from search results
@@ -436,7 +436,7 @@ define(['app_data/app', 'app_data/model',
 
         changePolicy: function(evt){
             evt.stopPropagation();
-            this.model.set('restartPolicy', $(evt.target).val())
+            this.model.set('restartPolicy', $(evt.target).val());
         },
 
         removeError: function(evt){
@@ -461,7 +461,7 @@ define(['app_data/app', 'app_data/model',
             var kubeType;
 
             if (!this.pod.detached){
-                kube_id = this.pod.get('kube_type');
+                var kube_id = this.pod.get('kube_type');
                 _.each(backendData.kubeTypes, function(kube){
                     if(parseInt(kube.id) == parseInt(kube_id))
                         kubeType = kube;
@@ -606,7 +606,7 @@ define(['app_data/app', 'app_data/model',
         generateName: function(path){
             return path.replace(/^\//, '').replace(/\//g, '-')
                 + _.map(_.range(10),
-                    function(i){return _.random(1, 10)}).join('');
+                    function(i){return _.random(1, 10);}).join('');
         },
 
         togglePersistent: function(evt){
@@ -668,7 +668,7 @@ define(['app_data/app', 'app_data/model',
                             + i[0].charAt(0).toUpperCase()
                             + i[0].slice(1),
                         i[1]
-                ]})
+                ];})
             );
         },
 
@@ -709,8 +709,8 @@ define(['app_data/app', 'app_data/model',
                 pattern = /^[A-Za-z_/-]*$/;
 
 
-            this.model.set('ports', ports = _.filter(ports, function(port){ return port.containerPort }));
-            this.model.set('volumeMounts',vm = _.filter(vm, function(v){ return v.mountPath }));
+            this.model.set('ports', ports = _.filter(ports, function(port){ return port.containerPort; }));
+            this.model.set('volumeMounts',vm = _.filter(vm, function(v){ return v.mountPath; }));
 
 
             /* mountPath and persistent disk check */
@@ -734,7 +734,7 @@ define(['app_data/app', 'app_data/model',
                         : vm[i].mountPath;
                     vm[i].name = itemName.replace(new RegExp('/','g'), '-')
                         + _.map(_.range(10),
-                                function(i){return _.random(1, 10)}).join('');
+                                function(i){return _.random(1, 10);}).join('');
                 }
                 var vol = _.findWhere(volumes, {name: vm[i].name});
                 if (vol.hasOwnProperty('persistentDisk')) {
@@ -745,7 +745,7 @@ define(['app_data/app', 'app_data/model',
                         return;
                     }
                 }
-            };
+            }
 
             /* check ports */
             var showDublicatePortError = function(dublicatePort){
@@ -961,7 +961,7 @@ define(['app_data/app', 'app_data/model',
                 pod = this.model.getPod();
 
             if (!pod.detached){
-                kube_id = pod.get('kube_type');
+                var kube_id = pod.get('kube_type');
                 _.each(backendData.kubeTypes, function(kube){
                     if(parseInt(kube.id) == parseInt(kube_id))
                         kubeType = kube;
@@ -1001,7 +1001,7 @@ define(['app_data/app', 'app_data/model',
         finalStep: function(){
             var env = this.model.get('env');
 
-            this.model.set('env',env = _.filter(env, function(item){ return item.name }));
+            this.model.set('env',env = _.filter(env, function(item){ return item.name; }));
 
             var successName = true,
                 successValue = true,
@@ -1010,14 +1010,14 @@ define(['app_data/app', 'app_data/model',
             _.each(this.ui.nameField, function(item){
                 if (!pattern.test(item.value)){
                     $(item).addClass('error');
-                    successName = false
+                    successName = false;
                 }
             });
 
             _.each(this.ui.valueField, function(item){
                 if (!item.value){
                     $(item).addClass('error');
-                    successValue = false
+                    successValue = false;
                 }
             });
 
@@ -1037,12 +1037,12 @@ define(['app_data/app', 'app_data/model',
 
         removeItem: function(evt){
             var env = this.model.get('env'),
-                item = $(evt.target);
+                item = $(evt.target),
                 index = item.parents('tr').index();
-                item.parents('tr').remove();
-                env.splice(index, 1);
+            item.parents('tr').remove();
+            env.splice(index, 1);
 
-                this.render();
+            this.render();
         },
 
         resetFielsdsValue: function(){
@@ -1169,7 +1169,7 @@ define(['app_data/app', 'app_data/model',
             var pod = this.model.getPod(),
                 kubeType;
             if (!pod.detached){
-                kube_id = pod.get('kube_type');
+                var kube_id = pod.get('kube_type');
                 _.each(backendData.kubeTypes, function(kube){
                     if(parseInt(kube.id) == parseInt(kube_id))
                         kubeType = kube;
@@ -1255,7 +1255,7 @@ define(['app_data/app', 'app_data/model',
             var pod = this.model.getPod(),
                 kubeType;
             if (!pod.detached) {
-                kube_id = pod.get('kube_type');
+                var kube_id = pod.get('kube_type');
                 _.each(backendData.kubeTypes, function(kube){
                     if(parseInt(kube.id) == parseInt(kube_id))
                         kubeType = kube;
@@ -1313,7 +1313,7 @@ define(['app_data/app', 'app_data/model',
             var that = this;
             this.model.getLogs(/*size=*/100).always(function(){
                 // callbacks are called with model as a context
-                if (!this.destroyed) {
+                if (!that.destroyed) {
                     this.set('timeout', setTimeout(that.getLogs, 10000));
                     that.render();
                 }
@@ -1501,7 +1501,7 @@ define(['app_data/app', 'app_data/model',
         changePolicy: function(evt){
             evt.stopPropagation();
             var restart_policy = $(evt.target).val();
-            this.model.set('restartPolicy', restart_policy)
+            this.model.set('restartPolicy', restart_policy);
         },
 
         getCurrentContainer: function() {
@@ -1520,7 +1520,7 @@ define(['app_data/app', 'app_data/model',
 
         editPolicy: function(){
             this.ui.editPolicy.hide();
-            this.ui.editPolycyDescription.hide()
+            this.ui.editPolycyDescription.hide();
             this.ui.policy.attr('disabled',false);
             this.$('.policy .disabled').removeClass('disabled');
         },

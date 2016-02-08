@@ -69,6 +69,7 @@
                         </div>
                     </div>
                     <div class="col-xs-12 no-padding container-logs-wrapper">
+                        <a class="export-logs pull-right" title="Export container log to txt file" download="<%= parentID %>_<%= name %>_logs.txt" href="/api/logs/container/<%= parentID %>/<%= name %>?size=200&text=true">Export</a>
                         <div class="container-logs">
                             <% _.each(logs, function(serie){ %>
 

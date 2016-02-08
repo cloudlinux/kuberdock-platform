@@ -1,5 +1,6 @@
 """Utils to extract logs from elasticsearch services."""
 from datetime import datetime, timedelta
+from dateutil.parser import parse as parse_dt
 
 from .elasticsearch_utils import execute_es_query
 from .podcollection import PodCollection, POD_STATUSES
@@ -40,6 +41,8 @@ def get_container_logs(pod_id, container_name, owner_id=None, size=100,
         logs = log_query('docker-*', [{'term': {'container_id': docker_id}}],
                          host, size, start, end)
         hits = [line['_source'] for line in logs.get('hits', [])]
+        for hit in hits:
+            hit['@timestamp'] = parse_dt(hit['@timestamp'])
         series.append({
             'total': logs.get('total', len(hits)),
             'hits': hits,
@@ -48,7 +51,7 @@ def get_container_logs(pod_id, container_name, owner_id=None, size=100,
             'start': container_state.start_time,
             'end': container_state.end_time,
         })
-        size -= len(hits)
+        size -= len(hits) + 2  # start&stop lines
         if size <= 0:
             break
 

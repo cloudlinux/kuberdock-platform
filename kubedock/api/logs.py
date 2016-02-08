@@ -1,6 +1,8 @@
 """API for logs retreiving.
 """
-from flask import Blueprint, request
+import pytz
+
+from flask import Blueprint, request, jsonify, Response
 from flask.ext.login import current_user
 
 from ..rbac import check_permission
@@ -18,7 +20,6 @@ logs = Blueprint('logs', __name__, url_prefix='/logs')
 
 @logs.route('/container/<pod_id>/<container_id>', methods=['GET'])
 @login_required_or_basic_or_token
-@KubeUtils.jsonwrap
 def api_get_container_logs(pod_id, container_id):
     """Return logs from specified container.
     Optional parameters (submitted via ?key=value&...):
@@ -44,9 +45,33 @@ def api_get_container_logs(pod_id, container_id):
     except (TypeError, ValueError):
         size = 100
     owner = User.get(user.username)
+    mime = request.accept_mimetypes.best_match(['application/json', 'text/plain'])
 
-    return es_logs.get_container_logs(pod_id, container_id, owner.id,
+    logs = es_logs.get_container_logs(pod_id, container_id, owner.id,
                                       size, starttime, endtime)
+
+    if mime == 'text/plain' or request.args.get('text', False):
+        # return logs as .txt document
+        logs_text = []
+        for serie in logs[::-1]:
+            logs_text.append((serie['start'].replace(tzinfo=pytz.UTC), 'Started'))
+            logs_text.extend((line['@timestamp'], line['log'].strip('\n'))
+                             for line in serie['hits'][::-1])
+            if serie['end']:
+                msg = ('Pod was stopped' if serie['exit_code'] == 2 else
+                       'Exited successfully' if serie['exit_code'] == 0 else
+                       'Falied')
+                if serie['reason']:
+                    msg = '{0} ({1})'.format(msg, serie['reason'])
+                logs_text.append((serie['end'].replace(tzinfo=pytz.UTC), msg + '\n'))
+        timezone = pytz.timezone(current_user.timezone)
+        logs_text = '\n'.join(
+            '{0}: {1}'.format(time.astimezone(timezone).isoformat(), msg)
+            for time, msg in logs_text)
+        headers = {'content-disposition': ('attachment; filename="{0}_{1}_logs.txt"'
+                                           .format(pod_id, container_id))}
+        return Response(logs_text, content_type='text/plain', headers=headers)
+    return jsonify({'status': 'OK', 'data': logs})
 
 
 @logs.route('/node/<hostname>', methods=['GET'])

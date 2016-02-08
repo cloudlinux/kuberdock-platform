@@ -34,7 +34,9 @@
             <table class="table" id="all-users-activities-table">
             <thead>
                 <tr>
-                    <th>Last activity</th>
+                    <th class="col-md-3">Last activity</th>
+                    <th class="col-md-5">Date / time</th>
+                    <th class="col-md-4">IP</th>
                 </tr>
             </thead>
                 <tbody id="users-activities-table"></tbody>

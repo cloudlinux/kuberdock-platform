@@ -3,17 +3,13 @@
 import os
 import math
 import socket
-from functools import wraps
-from datetime import datetime
 
 import requests
-from fabric.api import run, settings, env, hide
-from fabric.tasks import execute
 from flask import current_app
 
 from ..utils import send_event, from_binunit, run_ssh_command, get_api_url
 from ..core import db
-from ..nodes.models import Node, NodeFlag, NodeFlagNames, NodeMissedAction
+from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
 from ..users.models import User
 from ..billing.models import Kube
@@ -21,8 +17,7 @@ from ..billing import kubes_to_limits
 from ..api import APIError
 from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
-    ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, PORTS_TO_RESTRICT,
-    SSH_KEY_FILENAME, ERROR_TOKEN)
+    ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE)
 from ..validation import check_internal_pod_data
 from .podcollection import PodCollection
 from .licensing import is_valid as license_valid
@@ -142,7 +137,6 @@ def delete_node(node_id=None, node=None):
             raise APIError('Node not found, id = {}'.format(node_id))
 
     hostname = node.hostname
-    ip = node.ip
     if node_id is None:
         node_id = node.id
 
@@ -154,16 +148,11 @@ def delete_node(node_id=None, node=None):
     if logs_pod:
         PodCollection(ku).delete(logs_pod.id, force=True)
 
-    nodes = [key for key in Node.get_ip_to_hostame_map() if key != ip]
-
     try:
         delete_node_from_db(node)
     except Exception as e:
         raise APIError(u'Failed to delete node from DB: {}'.format(e))
 
-    for port in PORTS_TO_RESTRICT:
-        handle_nodes(process_rule, nodes=nodes, action='delete',
-            port=port, target='ACCEPT', source=ip, append_reject=False)
     res = tasks.remove_node_by_host(hostname)
     if res['status'] == 'Failure':
         raise APIError(
@@ -442,9 +431,8 @@ def _get_node_condition(x):
 
 
 def _deploy_node(dbnode, do_deploy, with_testing):
-    nodes = [key for key in Node.get_ip_to_hostame_map() if key != dbnode.ip]
     if do_deploy:
-        tasks.add_new_node.delay(dbnode.id, with_testing, nodes)
+        tasks.add_new_node.delay(dbnode.id, with_testing)
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
         if is_ceph_installed:
@@ -458,10 +446,6 @@ def _deploy_node(dbnode, do_deploy, with_testing):
             # TODO write all possible states to class
             dbnode.state = 'completed'
             db.session.commit()
-
-    for port in PORTS_TO_RESTRICT:
-        handle_nodes(process_rule, nodes=nodes, action='insert',
-                     port=port, target='ACCEPT', source=dbnode.ip)
 
 
 def add_node_to_db(node):
@@ -699,88 +683,3 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
             }
         ]
     }
-
-
-def save_failed(token):
-    """
-    Decorator getting strings starting with token and saving'em to DB
-    """
-    def outer(func):
-        @wraps(func)
-        def inner(*args, **kw):
-            data = func(*args, **kw)
-            failed = [
-                n for n in data.iteritems()
-                if isinstance(n[1], basestring) and n[1].startswith(token)
-            ]
-            if not failed:
-                return data
-            time_stamp = datetime.utcnow()
-            db.session.add_all(
-                NodeMissedAction(
-                    host=i[0],
-                    command=i[1].replace(token, '', 1),
-                    time_stamp=time_stamp
-                )
-                for i in failed
-            )
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-            return data
-        return inner
-    return outer
-
-
-@save_failed(token=ERROR_TOKEN)
-def handle_nodes(func, **kw):
-    env.user = 'root'
-    env.skip_bad_hosts = True
-    env.key_filename = SSH_KEY_FILENAME
-    nodes = kw.pop('nodes', [])
-    if not nodes:
-        return {}
-    with settings(hide('running', 'warnings', 'stdout', 'stderr'),
-                  warn_only=True):
-        return execute(func, hosts=nodes, **kw)
-
-
-def process_rule(**kw):
-    append_reject = kw.pop('append_reject', True)
-    action = kw.pop('action', 'insert')
-    source = kw.pop('source', None)
-    kw['source'] = ' -s {0}'.format(source) if source else ''
-    kw['action'] = {'insert': 'I', 'append': 'A', 'delete': 'D'}[action]
-    kw['conj'] = {'insert': '||', 'append': '||', 'delete': '&&'}[action]
-
-    getnodeip = ('FIRST_IFACE=$(ip -o link show |'
-                 'awk -F: \'$3 ~ /LOWER_UP/ {gsub(/ /, "", $2);'
-                 'if ($2 != "lo"){print $2;exit}}\');'
-                 'FIRST_IP=$(ip -o -4 address show $FIRST_IFACE|'
-                 'awk \'/inet/ {sub(/\/.*$/, "", $4);'
-                 'print $4;exit;}\'); export $FIRST_IP;'
-                 'echo $FIRST_IP > /tmp/qqqq;')
-
-    cmd = ('iptables -C INPUT -p tcp --dport {port}'
-           '{source} -d $FIRST_IP -j {target} > /dev/null 2>&1 '
-           '{conj} iptables -{action} INPUT -p tcp --dport {port}'
-           '{source} -d $FIRST_IP -j {target}')
-
-    try:
-        run(getnodeip + cmd.format(**kw))
-        if append_reject:
-            run(getnodeip + cmd.format(
-                action='A', port=kw['port'], source='',
-                target='REJECT', conj='||'
-            ))
-        run('/sbin/service iptables save')
-    except Exception:
-        message = ERROR_TOKEN + getnodeip + cmd.format(**kw) + ';'
-        if append_reject:
-            message += (getnodeip + cmd.format(
-                action='A', port=kw['port'], source='',
-                target='REJECT', conj='||') + ';'
-            )
-        message += '/sbin/service iptables save'
-        return message

@@ -77,7 +77,6 @@ PD_SEPARATOR_USERID = '__SEPID__'
 # name for this cluster.
 PD_NAMESPACE = ''
 PD_NS_SEPARATOR = '/'
-PORTS_TO_RESTRICT = [ELASTICSEARCH_REST_PORT]
 ERROR_TOKEN = 'ERROR:'
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
 DEFAULT_REGISTRY = 'https://registry-1.docker.io'

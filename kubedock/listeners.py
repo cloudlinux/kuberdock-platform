@@ -12,11 +12,10 @@ from .core import ConnectionPool
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
 from .users.models import User
-from .settings import (
-    SERVICES_VERBOSE_LOG, PODS_VERBOSE_LOG, KUBERDOCK_INTERNAL_USER)
-from .utils import (modify_node_ips, get_api_url, set_limit,
+from .settings import PODS_VERBOSE_LOG, KUBERDOCK_INTERNAL_USER
+from .utils import (get_api_url, set_limit,
                     unregistered_pod_warning, send_event,
-                    pod_without_id_warning, unbind_ip, k8s_json_object_hook)
+                    pod_without_id_warning, k8s_json_object_hook)
 from .kapi.usage import update_states
 from .kapi.podcollection import PodCollection
 from . import tasks
@@ -40,101 +39,6 @@ def filter_event(data):
         return None
 
     return data
-
-
-def process_endpoints_event(data, app):
-    service_name = data['object']['metadata']['name']
-    current_namespace = data['object']['metadata']['namespace']
-    r = requests.get(get_api_url('services', service_name,
-                                 namespace=current_namespace))
-    if r.status_code == 404:
-        return
-    service = r.json()
-    event_type = data['type']
-    pods = data['object']['subsets']
-    if len(pods) == 0:
-        if event_type == 'ADDED':
-            # Handle here if public-ip added during runtime
-            if SERVICES_VERBOSE_LOG >= 2:
-                print 'SERVICE IN ADDED(pods 0)', service
-        elif event_type == 'MODIFIED':      # when stop(delete) pod
-            if SERVICES_VERBOSE_LOG >= 2:
-                print 'SERVICE IN MODIF(pods 0)', service
-            state = json.loads(service['metadata']['annotations']['public-ip-state'])
-            if SERVICES_VERBOSE_LOG >= 2:
-                print 'STATE(pods=0)==========', state
-            if 'assigned-to' in state:
-                unbind_ip(service_name, state, service,
-                          SERVICES_VERBOSE_LOG, app)
-                del state['assigned-to']
-                del state['assigned-pod-ip']
-                service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                # TODO what if resourceVersion has changed?
-                r = requests.put(get_api_url('services', service_name,
-                                 namespace=current_namespace),
-                                 json.dumps(service))
-        elif event_type == 'DELETED':
-            pass
-            # Handle here if public-ip removed during runtime
-        else:
-            print 'Unknown event type in endpoints event listener:', event_type
-    elif len(pods) == 1:
-        state = json.loads(service['metadata']['annotations']['public-ip-state'])
-        if SERVICES_VERBOSE_LOG >= 2:
-            print 'STATE(pods=1)==========', state
-        public_ip = state['assigned-public-ip']
-        if not public_ip:
-            # TODO change with "release ip" feature
-            return
-        assigned_to = state.get('assigned-to')
-        podname = pods[0]['addresses'][0]['targetRef']['name']
-        # Can't use task.get_pods_nodelay due cyclic imports
-        kub_pod = requests.get(get_api_url('pods', podname,
-                                           namespace=current_namespace))
-        if not kub_pod.ok:
-            # If 404 than it's double pod respawn case
-            # Pod may be deleted at this moment
-            return
-        kub_pod = kub_pod.json()
-        ports = service['spec']['ports']
-        # TODO what to do here when pod yet not assigned to node at this moment?
-        # skip only this event or reconnect(like now)?
-        current_host = kub_pod['spec']['nodeName']
-        pod_ip = pods[0]['addresses'][0]['ip']
-        if not assigned_to:
-            res = modify_node_ips(service_name, current_host, 'add', pod_ip, public_ip, ports, app)
-            if res is True:
-                state['assigned-to'] = current_host
-                state['assigned-pod-ip'] = pod_ip
-                service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                r = requests.put(get_api_url('services', service_name,
-                                 namespace=current_namespace),
-                                 json.dumps(service))
-        else:   # Happens after reboot node
-            if current_host != assigned_to:     # migrate pod
-                # This case is never happens, presumably due fact that pod is
-                # never changes - old pod deleted and new pod created.
-                # Maybe this case will be useful in "unbind at runtime" feature
-                # or when we can switch kube_type
-                if SERVICES_VERBOSE_LOG >= 2:
-                    print 'MIGRATE POD from {0} to {1}'.format(assigned_to,
-                                                               current_host)
-                # Try to unbind ip from possibly failed node, even if we can't
-                # we add ip to another node.
-                unbind_ip(service_name, state, service,
-                          SERVICES_VERBOSE_LOG, app)
-                res2 = modify_node_ips(service_name, current_host, 'add', pod_ip,
-                                       public_ip, ports, app)
-                if res2 is True:
-                    state['assigned-to'] = current_host
-                    state['assigned-pod-ip'] = pod_ip
-                    service['metadata']['annotations']['public-ip-state'] = json.dumps(state)
-                    r = requests.put(get_api_url('services', service_name,
-                                     namespace=current_namespace), service)
-                else:
-                    print 'Failed to bind new ip to {0}'.format(current_host)
-    else:   # more? replica case
-        pass
 
 
 def get_pod_state(pod):
@@ -501,13 +405,6 @@ def process_pod_states(data, app, live=True):
     if not r.ok:
         print "error while delete:{}".format(r.text)
 
-
-listen_endpoints = listen_fabric(
-    get_api_url('endpoints', namespace=False, watch=True),
-    get_api_url('endpoints', namespace=False),
-    process_endpoints_event,
-    SERVICES_VERBOSE_LOG
-)
 
 listen_nodes = listen_fabric(
     get_api_url('nodes', namespace=False, watch=True),

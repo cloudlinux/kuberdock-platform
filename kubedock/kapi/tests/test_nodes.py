@@ -13,7 +13,6 @@ from kubedock.core import db
 from kubedock.billing.models import Kube
 from kubedock.kapi import nodes
 from kubedock.testutils.testcases import DBTestCase
-from kubedock.testutils import fixtures
 from kubedock import settings
 from kubedock.nodes.models import Node
 from kubedock.api import APIError
@@ -92,18 +91,12 @@ class TestNodes(DBTestCase):
             nodes.create_node(None, 'anotherhost', kube_id)
 
     @mock.patch.object(nodes.tasks, 'remove_node_by_host')
-    @mock.patch.object(nodes, 'handle_nodes')
-    def test_delete_node(self, handle_nodes_mock, remove_by_host_mock):
+    def test_delete_node(self, remove_by_host_mock):
         """Test for kapi.nodes.delete_node function."""
         node1, node2 = self.add_two_nodes()
         id1 = node1.id
 
         nodes.delete_node(id1)
-        for port in nodes.PORTS_TO_RESTRICT:
-            handle_nodes_mock.assert_any_call(
-                nodes.process_rule, nodes=[node2.ip], action='delete',
-                port=port, target='ACCEPT', source=node1.ip,
-                append_reject=False)
         nodes_ = Node.get_all()
         remove_by_host_mock.assert_called_once_with(node1.hostname)
         self.assertEqual(nodes_, [node2])
@@ -326,12 +319,11 @@ class TestNodes(DBTestCase):
         }
         self.assertTrue(nodes._node_is_active(valid_status))
 
-    @mock.patch.object(nodes, 'handle_nodes')
     @mock.patch.object(nodes.tasks, 'add_node_to_k8s')
     @mock.patch.object(nodes.tasks, 'add_new_node')
     @mock.patch.object(nodes.tasks, 'is_ceph_installed_on_node')
     def test__deploy_node(self, is_ceph_mock, add_node_mock,
-                          add_node_to_k8s_mock, handle_nodes_mock):
+                          add_node_to_k8s_mock):
         """Test for kapi.nodes._deploy_node function."""
         node1, node2 = self.add_two_nodes()
         with_testing = True
@@ -339,19 +331,11 @@ class TestNodes(DBTestCase):
         nodes._deploy_node(node1, do_deploy, with_testing)
         add_node_mock.delay.assert_called_once_with(
             node1.id, with_testing, [node2.ip])
-        # there may be more than one port in PORTS_TO_RESTRICT,
-        # so do not check called_once
-        handle_nodes_mock.assert_called_with(
-            nodes.process_rule, nodes=[node2.ip],
-            action='insert', port=nodes.PORTS_TO_RESTRICT[0],
-            target='ACCEPT', source=node1.ip)
 
         self.assertFalse(is_ceph_mock.called)
         self.assertFalse(add_node_to_k8s_mock.called)
 
         add_node_mock.delay.reset_mock()
-        handle_nodes_mock.reset_mock()
-        handle_nodes_mock.reset_mock()
 
         with_testing = True
         do_deploy = False
@@ -363,10 +347,6 @@ class TestNodes(DBTestCase):
             node1.hostname, node1.kube_id, False)
         self.assertEqual(node1.state, 'completed')
         self.assertFalse(add_node_mock.delay.called)
-        handle_nodes_mock.assert_called_with(
-            nodes.process_rule, nodes=[node2.ip],
-            action='insert', port=nodes.PORTS_TO_RESTRICT[0],
-            target='ACCEPT', source=node1.ip)
 
 
 if __name__ == '__main__':

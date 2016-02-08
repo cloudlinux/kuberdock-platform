@@ -15,8 +15,7 @@ from ..billing import repr_limits, Kube
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
-from ..utils import (run_ssh_command, send_event, APIError, POD_STATUSES,
-                     unbind_ip, atomic)
+from ..utils import APIError, POD_STATUSES, atomic
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
@@ -257,10 +256,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # we remove service also manually
         service_name = pod.get_config('service')
         if service_name:
-            # service = self._get(['services', service_name], ns=pod.namespace)
-            # state = json.loads(service.get('metadata', {}).get('annotations', {}).get('public-ip-state', '{}'))
-            # if state.get('assigned-to'):
-            #     unbind_ip(service_name, state, service, 0, current_app)
             rv = self._del(['services', service_name], ns=pod.namespace)
             self._raise_if_failure(rv, "Could not remove a service")
 
@@ -505,9 +500,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             for pi, p in enumerate(c.get('ports', [])):
                 host_port = p.get('hostPort', None) or p.get('containerPort')
                 port_name = 'c{0}-p{1}'.format(ci, pi)
-                if p.get('isPublic'):
-                    # TODO this will disable standard event based mechanism:
-                    port_name += '-public-old'
                 ports.append({
                     "name": port_name,
                     "port": host_port,
@@ -518,15 +510,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'kind': 'Service',
             'apiVersion': KUBE_API_VERSION,
             'metadata': {
-                # 'generateName': pod.name.lower() + '-service-',
                 'generateName': 'service-',
                 'labels': {'name': pod.id[:54] + '-service'},
-                # 'annotations': {
-                #     'public-ip-state': json.dumps({
-                #         'assigned-public-ip': getattr(pod, 'public_ip',
-                #                                       getattr(pod, 'public_aws', None))
-                #     })
-                # },
             },
             'spec': {
                 'selector': {'kuberdock-pod-uid': pod.id},

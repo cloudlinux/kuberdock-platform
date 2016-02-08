@@ -4,9 +4,6 @@
 # IMPORTANT: each package must be installed with separate command because of
 # yum incorrect error handling!
 
-PORTS=$1
-IPS=$2
-
 # SOME VARS:
 AWS=${AWS}
 KUBERNETES_CONF_DIR='/etc/kubernetes'
@@ -430,32 +427,6 @@ if [ "$FS_TYPE" == "xfs" ]; then
 else
   echo "Only XFS supported as backing filesystem for disk space limits"
 fi
-
-
-cat > /var/lib/kuberdock/scripts/modify_ip.sh << 'EOF'
-CMD=$1
-PUBLIC_IP=$2
-IFACE=$3
-#nmcli g &> /dev/null
-#if [ $? == 0 ];then
-#    CONNECTION=$(nmcli -f UUID,DEVICE con | awk "/$IFACE/ {print \$1; exit}")
-#    if [ -z $CONNECTION ];then
-#        echo "No connection found for interface $IFACE"
-#        exit 1
-#    fi
-#    if [ $CMD == 'add' ];then
-#        nmcli con mod "$CONNECTION" +ipv4.addresses "$PUBLIC_IP/32"
-#    else
-#        nmcli con mod "$CONNECTION" -ipv4.addresses "$PUBLIC_IP/32"
-#    fi
-#fi
-ip addr $CMD $PUBLIC_IP/32 dev $IFACE
-if [ $CMD == 'add' ];then
-    arping -I $IFACE -A $PUBLIC_IP -c 10 -w 1
-fi
-exit 0
-EOF
-
 
 
 # 10. enable services

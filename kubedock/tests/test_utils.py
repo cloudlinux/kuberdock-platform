@@ -12,8 +12,6 @@ from ..utils import (
     atomic,
     get_api_url,
     compose_dnat,
-    compose_mark,
-    compose_check,
     from_binunit,
     parse_datetime_str,
     update_dict,
@@ -23,12 +21,7 @@ from ..utils import (
     get_user_role,
     get_available_port,
     get_current_dnat,
-    handle_generic_node,
-    set_bridge_rules,
-    modify_node_ips,
-    unbind_ip,
     get_timezone,
-    NODE_TOBIND_EXTERNAL_IPS,
 )
 
 
@@ -256,6 +249,7 @@ class TestUtilsGetApiUrl(unittest.TestCase):
                 namespace='user-unnamed-1-v1cf712fd0bea4ac37ab9e12a2ee3094'))
 
 
+# TODO: remove after handle_aws_node
 class TestUtilsComposes(unittest.TestCase):
 
     def test_composes(self):
@@ -265,15 +259,6 @@ class TestUtilsComposes(unittest.TestCase):
                           compose_dnat('A', 'enp0s5', 'tcp',
                                        '192.168.168.168/32', 8080,
                                        '10.254.10.10', 54321))
-
-        self.assertEquals('iptables -A FORWARD -i docker0 -o docker0 '
-                          '-s 10.254.10.20/32 -j MARK --set-mark 0x4',
-                          compose_mark('A', '10.254.10.20/32', '0x4'))
-
-        self.assertEquals('iptables -A FORWARD -i docker0 -o docker0 '
-                          '-d 10.254.10.20/32 -m mark ! --mark 0x4 '
-                          '-j REJECT',
-                          compose_check('A', '10.254.10.20/32', '0x4'))
 
 
 class TestUtilsFromBinunit(unittest.TestCase):
@@ -476,6 +461,7 @@ class TestUtilsGetAvailablePort(unittest.TestCase):
         sock.connect_ex.assert_called_with((host, port))
 
 
+# TODO: remove after handle_aws_node
 class TestUtilsGetCurrentDNAT(unittest.TestCase):
 
     def test_get_current_dnat(self):
@@ -497,174 +483,6 @@ class TestUtilsGetCurrentDNAT(unittest.TestCase):
         expected = [NetData(80, '10.254.97.4', 80)]
         res = get_current_dnat(conn)
         self.assertEqual(expected, res)
-
-
-class TestUtilsHandleGenericNode(unittest.TestCase):
-
-    def test_handle_generic_node(self):
-        stdout = mock.Mock()
-
-        ssh = mock.Mock()
-        service = 'abcd'
-        cmd = 'add'
-        pod_ip = '10.254.10.10'
-        pub_ip = '192.168.168.168/32'
-        ports = [
-            {
-                'name': 'web-public',
-                'targetPort': 8080,
-                'port': 80,
-            },
-            {
-                'name': 'internal',
-                'targetPort': 8090
-            },
-            {
-                'name': 'syslog-public',
-                'targetPort': 514,
-                'protocol': 'udp'
-            }
-        ]
-        app = flask.Flask(__name__)
-
-        ssh.exec_command.return_value = (mock.Mock(), stdout, mock.Mock())
-
-        stdout.channel.recv_exit_status.return_value = 1
-        res = handle_generic_node(ssh, service, cmd, pod_ip, pub_ip, ports, app)
-        self.assertFalse(res)
-
-        stdout.channel.recv_exit_status.return_value = 0
-        res = handle_generic_node(ssh, service, cmd, pod_ip, pub_ip, ports, app)
-        self.assertTrue(res)
-
-        cmd = 'del'
-        res = handle_generic_node(ssh, service, cmd, pod_ip, pub_ip, ports, app)
-        self.assertTrue(res)
-
-        calls = [
-            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh add 192.168.168.168/32 {0}'.format(NODE_TOBIND_EXTERNAL_IPS)),
-            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh add 192.168.168.168/32 {0}'.format(NODE_TOBIND_EXTERNAL_IPS)),
-            mock.call('iptables -t nat -C PREROUTING -i {0} -p tcp -d 192.168.168.168/32 --dport 80 -j DNAT --to-destination 10.254.10.10:8080'.format(NODE_TOBIND_EXTERNAL_IPS)),
-            mock.call('iptables -t nat -C PREROUTING -i {0} -p udp -d 192.168.168.168/32 --dport 514 -j DNAT --to-destination 10.254.10.10:514'.format(NODE_TOBIND_EXTERNAL_IPS)),
-            mock.call('bash /var/lib/kuberdock/scripts/modify_ip.sh del 192.168.168.168/32 {0}'.format(NODE_TOBIND_EXTERNAL_IPS)),
-            mock.call('iptables -t nat -D PREROUTING -i {0} -p tcp -d 192.168.168.168/32 --dport 80 -j DNAT --to-destination 10.254.10.10:8080'.format(NODE_TOBIND_EXTERNAL_IPS)),
-            mock.call('iptables -t nat -D PREROUTING -i {0} -p udp -d 192.168.168.168/32 --dport 514 -j DNAT --to-destination 10.254.10.10:514'.format(NODE_TOBIND_EXTERNAL_IPS))
-        ]
-        ssh.exec_command.assert_has_calls(calls)
-
-
-class TestUtilsSetBridgeRules(unittest.TestCase):
-
-    @mock.patch('kubedock.utils.get_pod_owner_id')
-    def test_set_bridge_rules(self, get_pod_owner_id_mock):
-        get_pod_owner_id_mock.return_value = '0x4'
-
-        stdout = mock.Mock()
-
-        ssh = mock.Mock()
-        service = 'abcd'
-        cmd = 'add'
-        pod_ip = '10.254.10.20'
-        app = flask.Flask(__name__)
-
-        ssh.exec_command.return_value = (mock.Mock(), stdout, mock.Mock())
-
-        stdout.channel.recv_exit_status.return_value = 1
-        set_bridge_rules(ssh, service, cmd, pod_ip, app)
-
-        stdout.channel.recv_exit_status.return_value = 0
-        set_bridge_rules(ssh, service, cmd, pod_ip, app)
-
-        cmd = 'del'
-        set_bridge_rules(ssh, service, cmd, pod_ip, app)
-
-        calls = [
-            mock.call('iptables -C FORWARD -i docker0 -o docker0 -s 10.254.10.20 -j MARK --set-mark 0x4'),
-            mock.call('iptables -I FORWARD -i docker0 -o docker0 -s 10.254.10.20 -j MARK --set-mark 0x4'),
-            mock.call('iptables -C FORWARD -i docker0 -o docker0 -d 10.254.10.20 -m mark ! --mark 0x4 -j REJECT'),
-            mock.call('iptables -I FORWARD -i docker0 -o docker0 -d 10.254.10.20 -m mark ! --mark 0x4 -j REJECT'),
-            mock.call('iptables -C FORWARD -i docker0 -o docker0 -s 10.254.10.20 -j MARK --set-mark 0x4'),
-            mock.call('iptables -C FORWARD -i docker0 -o docker0 -d 10.254.10.20 -m mark ! --mark 0x4 -j REJECT'),
-            mock.call('iptables -D FORWARD -i docker0 -o docker0 -s 10.254.10.20 -j MARK --set-mark 0x4'),
-            mock.call('iptables -D FORWARD -i docker0 -o docker0 -d 10.254.10.20 -m mark ! --mark 0x4 -j REJECT')
-        ]
-
-        ssh.exec_command.assert_has_calls(calls)
-
-
-class TestUtilsModifyNodeIPs(unittest.TestCase):
-
-    @unittest.skip('because of migration to network plugin')
-    @mock.patch('kubedock.utils.set_bridge_rules')
-    @mock.patch('kubedock.utils.handle_generic_node')
-    @mock.patch('kubedock.utils.handle_aws_node')
-    @mock.patch('kubedock.utils.AWS', False)  # TODO: Test with AWS == True
-    @mock.patch('kubedock.utils.ssh_connect')
-    def test_modify_node_ips(self, ssh_connect_mock, handle_aws_node_mock,
-                             handle_generic_node_mock, set_bridge_rules_mock):
-        service = 'abcd'
-        host = 'node'
-        cmd = 'add'
-        pod_ip = '10.254.10.10'
-        public_ip = '192.168.168.168/32'
-        ports = [
-            {
-                'name': 'web-public',
-                'targetPort': 8080,
-                'port': 80,
-            },
-            {
-                'name': 'internal',
-                'targetPort': 8090
-            },
-            {
-                'name': 'syslog-public',
-                'targetPort': 514,
-                'protocol': 'udp'
-            }
-        ]
-        app = flask.Flask(__name__)
-
-        ssh = mock.Mock()
-
-        ssh_connect_mock.return_value = (ssh, 'error')
-        res = modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app)
-        self.assertFalse(res)
-
-        ssh_connect_mock.return_value = (ssh, None)
-        handle_generic_node_mock.return_value = 'foo'
-        res = modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app)
-        handle_aws_node_mock.assert_not_called
-        handle_generic_node_mock.assert_called_once_with(
-            ssh, service, cmd, pod_ip, public_ip, ports, app
-        )
-        set_bridge_rules_mock.assert_called_once_with(
-            ssh, service, cmd, pod_ip, app
-        )
-        self.assertEqual(res, 'foo')
-
-
-class TestUtilsUnbindIP(unittest.TestCase):
-
-    @mock.patch('kubedock.utils.modify_node_ips')
-    def test_unbind_ip(self, modify_node_ips_mock):
-        service_name = 'abcd'
-        host = 'node'
-        pod_ip = '10.254.10.10'
-        public_ip = '192.168.168.168/32'
-        ports = mock.Mock()
-        state = {
-            'assigned-to': host,
-            'assigned-pod-ip': pod_ip,
-            'assigned-public-ip': public_ip
-        }
-        service = {'spec': {'ports': ports}}
-        verbosity = 0
-        app = flask.Flask(__name__)
-
-        unbind_ip(service_name, state, service, verbosity, app)
-        modify_node_ips_mock.assert_called_with(service_name, host, 'del',
-                                                pod_ip, public_ip, ports, app)
 
 
 class TestUtilsGetTimezone(unittest.TestCase):

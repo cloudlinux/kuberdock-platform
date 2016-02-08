@@ -6,7 +6,7 @@ import requests
 import subprocess
 import time
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # requests .json() errors handling workaround.
 # requests module uses simplejson as json by default
@@ -27,10 +27,10 @@ from .utils import (
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, PodState, PersistentDisk, User
-from .nodes.models import NodeMissedAction, Node, NodeFlag, NodeFlagNames
+from .nodes.models import Node, NodeFlag, NodeFlagNames
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
-    PORTS_TO_RESTRICT, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
+    NODE_CEPH_AWARE_KUBERDOCK_LABEL)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
@@ -127,7 +127,7 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
 
 
 @celery.task()
-def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
+def add_new_node(node_id, with_testing=False, redeploy=False):
 
     db_node = Node.get_by_id(node_id)
     initial_evt_sent = False
@@ -199,17 +199,13 @@ def add_new_node(node_id, with_testing=False, nodes=None, redeploy=False):
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
-                     'bash /node_install.sh{6}'
+                     'bash /node_install.sh'
         # we pass ports and hosts to let the node know which hosts are allowed
-        data_for_firewall = reduce(
-            (lambda x, y: x + ' {0}'.format(','.join(y))),
-                [map(str, l) for l in PORTS_TO_RESTRICT, nodes if l], '')
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
         i, o, e = ssh.exec_command(
             deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
-                              node_interface, timezone, host,
-                              data_for_firewall),
+                              node_interface, timezone, host),
             get_pty=True)
         s_time = time.time()
         while not o.channel.exit_status_ready():
@@ -315,23 +311,6 @@ def pull_hourly_stats():
         if entry['time_window'] in existing_windows:
             continue
         db.session.add(StatWrap5Min(**entry))
-    db.session.commit()
-
-
-@celery.task()
-def process_missed_actions():
-    actions = db.session.query(NodeMissedAction).filter(
-        NodeMissedAction.time_stamp > (datetime.utcnow()-timedelta(minutes=35))
-        ).order_by(NodeMissedAction.time_stamp)
-    for action in actions:
-        ssh, error_message = ssh_connect(action.host)
-        if error_message:
-            continue
-        i, o, e = ssh.exec_command(action.command)
-        if o.channel.recv_exit_status() != 0:
-            continue
-        db.session.delete(action)
-        ssh.close()
     db.session.commit()
 
 

@@ -208,33 +208,6 @@ class TestPodCollectionDelete(unittest.TestCase, TestCaseMixin):
         self.app._stop_pod.assert_called_once_with(pod, raise_=False)
         self.app._del.assert_called_once_with(['services', 'fs'], ns='n')
 
-    @unittest.skip('Partially out of date')
-    @mock.patch('kubedock.kapi.podcollection.current_app')
-    @mock.patch.object(podcollection, 'unbind_ip')
-    def test_pod_assigned_IPs_are_cleared(self, unbind_, ca_):
-        """
-        Check if an attempt to unbind IP address has been made.
-        """
-        pod = fake_pod(sid='s')
-        pod.get_config = (lambda x: 'fs')
-
-        # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
-
-        self.app._get.return_value = {
-            'metadata': {
-                'annotations': {
-                    'public-ip-state':' {"assigned-to":"host1","assigned-pod-ip":"ip1","assigned-public-ip":"ip2"}'}},
-            'spec': {
-                'ports': []}}
-
-        # Making actual call
-        self.app.delete(str(uuid4()))
-        self.assertTrue(unbind_.called)
-
     @mock.patch.object(podcollection.PodCollection, '_remove_public_ip')
     @mock.patch('kubedock.kapi.podcollection.current_app')
     def test_pod_assigned_IPs_are_marked_as_free(self, ca_, free_):
@@ -319,7 +292,6 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
         self.mock_methods(podcollection.PodCollection, '_get_namespaces', '_get_pods', '_merge')
         self.pod_collection = podcollection.PodCollection(U())
 
-    @unittest.skip('Partially out of date')
     @mock.patch.object(podcollection.PodCollection, '_post')
     def test_pod_run_service(self, post_):
         """
@@ -343,12 +315,11 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
         expected_service_conf = \
             '{"kind": "Service", "spec": {"sessionAffinity": "None", "type": ' \
             '"ClusterIP", "ports": [{"targetPort": 80, "protocol": "TCP", ' \
-            '"name": "c0-p0-public", "port": 1000}, {"targetPort": 80, ' \
+            '"name": "c0-p0", "port": 1000}, {"targetPort": 80, ' \
             '"protocol": "TCP", "name": "c0-p1", "port": 80}], "selector": ' \
             '{"kuberdock-pod-uid": "%(id)s"}}, "apiVersion": "v1", "metadata": ' \
             '{"generateName": "service-", "labels": {"name": ' \
-            '"%(id)s-service"}, "annotations": {"public-ip-state": ' \
-            '"{\\"assigned-public-ip\\": \\"127.0.0.1\\"}"}}}' % {'id': pod_id}
+            '"%(id)s-service"}}}' % {'id': pod_id}
         post_.assert_called_once_with(['services'], expected_service_conf,
                                       ns='n', rest=True)
 

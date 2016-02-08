@@ -22,7 +22,7 @@ from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .billing import Kube
 from .pods import Pod
 from .core import ssh_connect, db, ConnectionPool
-from .settings import NODE_TOBIND_EXTERNAL_IPS, SERVICES_VERBOSE_LOG, AWS, PODS_VERBOSE_LOG
+from .settings import NODE_TOBIND_EXTERNAL_IPS, PODS_VERBOSE_LOG
 
 
 class UPDATE_STATUSES:
@@ -307,6 +307,7 @@ def hostname_to_ip(name):
         pass
 
 
+# TODO: remove after handle_aws_node
 def compose_dnat(*params):
     """
     Composes iptables DNAT rule
@@ -315,28 +316,6 @@ def compose_dnat(*params):
     """
     IPTABLES = ('iptables -t nat -{0} PREROUTING -i {1} -p {2} '
                '-d {3} --dport {4} -j DNAT --to-destination {5}:{6}')
-    return IPTABLES.format(*params)
-
-
-def compose_mark(*params):
-    """
-    Composes iptables FORWARD rule to mark packets with user ID
-    :param params: array of positional params
-    :return: string -> iptables rule
-    """
-    IPTABLES = ('iptables -{0} FORWARD -i docker0 -o docker0 '
-                '-s {1} -j MARK --set-mark {2}')
-    return IPTABLES.format(*params)
-
-
-def compose_check(*params):
-    """
-    Composes iptables FORWARD rule to check packets by user ID
-    :param params: array of positional params
-    :return: string -> iptables rule
-    """
-    IPTABLES = ('iptables -{0} FORWARD -i docker0 -o docker0 '
-                '-d {1} -m mark ! --mark {2} -j REJECT')
     return IPTABLES.format(*params)
 
 
@@ -406,6 +385,7 @@ def create_security_group(conn, vpc_id, name='kuberdock-elb-default'):
     return []
 
 
+# TODO: remove after handle_aws_node
 def get_current_dnat(conn):
     """
     Gets all node iptables DNAT rules. Get host port, pod IP, pod port for a rule
@@ -470,52 +450,7 @@ def get_pod_owner_id(service):
     return item.owner_id
 
 
-def handle_generic_node(ssh, service, cmd, pod_ip, public_ip, ports, app):
-    """
-    Handles IP addresses and iptables rules on non-amazon node
-    :param ssh: object -> ssh connection object
-    :param service: string -> service name
-    :param cmd: string -> command (currently 'add' and 'del')
-    :param pod_ip: string -> IP address of a node pod
-    :param public_ip: string -> public IP address from the IP pool
-    :param ports: list -> list of port dicts
-    :return: boolean
-    """
-    i, o, e = ssh.exec_command(
-        'bash /var/lib/kuberdock/scripts/modify_ip.sh {0} {1} {2}'
-        .format(cmd, public_ip, NODE_TOBIND_EXTERNAL_IPS)
-    )
-    exit_status = o.channel.recv_exit_status()
-    if exit_status > 0:
-        if SERVICES_VERBOSE_LOG >= 2:
-            print 'O', o.read()
-            print 'E', e.read()
-        print 'Error modify_ip.sh with exit status {0} public_ip={1} IFACE={2}'\
-            .format(exit_status, public_ip, NODE_TOBIND_EXTERNAL_IPS)
-        return False
-
-    for port_spec in ports:
-        if not port_spec['name'].endswith('-public'):
-            continue
-        container_port = port_spec['targetPort']
-        public_port = port_spec.get('port', container_port)
-        protocol = port_spec.get('protocol', 'tcp')
-        params = (NODE_TOBIND_EXTERNAL_IPS, protocol, public_ip, public_port,
-                  pod_ip, container_port, service)
-        if cmd == 'add':
-            if SERVICES_VERBOSE_LOG >= 1:
-                print '==ADDED PORTS==', public_port, container_port, protocol
-            i, o, e = ssh.exec_command(compose_dnat('C', *params))
-            exit_status = o.channel.recv_exit_status()
-            if exit_status != 0:
-                ssh.exec_command(compose_dnat('I', *params))
-        else:
-            if SERVICES_VERBOSE_LOG >= 1:
-                print '==DELETED PORTS==', public_port, container_port, protocol
-            ssh.exec_command(compose_dnat('D', *params))
-    return True
-
-
+# TODO: need to be moved to network plugin
 def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
     try:
         from .settings import REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
@@ -604,62 +539,6 @@ def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
                                           ruleset.pod_ip, ruleset.pod_port)
                     ssh.exec_command(rule)
     return True
-
-
-def set_bridge_rules(ssh, service, cmd, pod_ip, app):
-    """
-    Sets docker bridge iptables rules to intercontainer communication for containers
-    belonging to a same user
-    :param ssh: object -> ssh connection object
-    :param service: string -> service name
-    :param cmd: string -> command (currently 'add' and 'del')
-    :param pod_ip: string -> pod ip address
-    """
-    if app is None:
-        return
-    with app.app_context():
-        user_id = get_pod_owner_id(service)
-    if cmd == 'add':
-        for routine in compose_mark, compose_check:
-            i, o, e = ssh.exec_command(routine('C', pod_ip, user_id))
-            exit_status = o.channel.recv_exit_status()
-            if exit_status != 0:
-                ssh.exec_command(routine('I', pod_ip, user_id))
-    elif cmd == 'del':
-        for routine in compose_mark, compose_check:
-            ssh.exec_command(routine('D', pod_ip, user_id))
-
-
-def modify_node_ips(service, host, cmd, pod_ip, public_ip, ports, app=None):
-    ssh, errors = ssh_connect(host)
-    if errors:
-        return False
-    if AWS:
-        result = handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app)
-    else:
-        # result = handle_generic_node(ssh, service, cmd, pod_ip, public_ip, ports, app)
-        result = True
-    # TODO cut all stale functionality
-    #set_bridge_rules(ssh, service, cmd, pod_ip, app)
-    ssh.close()
-    return result
-
-
-def unbind_ip(service_name, state, service, verbosity, app):
-    if not state.get('assigned-to'):
-        print 'WARNING: unbind_ip called for not assigned pod. Skipped.'
-        return
-    res = modify_node_ips(service_name, state['assigned-to'], 'del',
-                          state['assigned-pod-ip'],
-                          state['assigned-public-ip'],
-                          service['spec']['ports'], app)
-    if verbosity >= 2:
-        if not res:
-            print 'Failed to unbind from {0} node. Ignoring'\
-                .format(state['assigned-to'])
-        else:
-            print 'Successfully unbinded ip from {0} node'\
-                .format(state['assigned-to'])
 
 
 def unregistered_pod_warning(pod_id):

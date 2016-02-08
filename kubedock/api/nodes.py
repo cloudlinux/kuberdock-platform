@@ -60,6 +60,22 @@ def put_item(node_id):
     return jsonify({'status': 'OK', 'data': data})
 
 
+@nodes.route('/<int:node_id>', methods=['PATCH'])
+@login_required_or_basic_or_token
+@check_permission('delete', 'nodes')
+@maintenance_protected
+def patch_item(node_id):
+    data = request.json
+    command = data.get('command')
+    if command is None:
+        raise APIError('No command has been send')
+    if command != 'delete':
+        raise APIError('Unsupported command')
+    node = kapi_nodes.mark_node_as_being_deleted(node_id)
+    kapi_nodes.delete_node(node=node)
+    return jsonify({'status': 'OK', 'data': {'status': 'deletion'}})
+
+
 @nodes.route('/<node_id>', methods=['DELETE'])
 @login_required_or_basic_or_token
 @check_permission('delete', 'nodes')

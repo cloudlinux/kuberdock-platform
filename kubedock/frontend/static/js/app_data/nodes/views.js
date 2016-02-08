@@ -143,7 +143,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 footer: {
                     buttonOk: function() {
                         utils.preloader.show();
-                        that.model.destroy({wait: true})
+                        that.model.save({command: 'delete'},{patch: true})
                             .always(utils.preloader.hide)
                             .fail(utils.notifyWindow);
                     },
@@ -449,7 +449,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     footer: {
                         buttonOk: function(){
                             utils.preloader.show();
-                            model.destroy({wait: true})
+                            model.save({command: 'delete'}, {patch: true})
                                 .always(utils.preloader.hide)
                                 .fail(utils.notifyWindow);
                         },

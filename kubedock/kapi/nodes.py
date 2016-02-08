@@ -120,13 +120,31 @@ def create_node(ip, hostname, kube_id,
     return node
 
 
-def delete_node(node_id):
-    """Deletes node."""
+def mark_node_as_being_deleted(node_id):
     node = Node.query.filter(Node.id == node_id).first()
     if node is None:
         raise APIError('Node not found, id = {}'.format(node_id))
+    node.state = 'deletion'
+    db.session.commit()
+    return node
+
+
+def delete_node(node_id=None, node=None):
+    """Deletes node."""
+
+    # As long as the func is allowed to be called after mark_node_as_being_deleted
+    # func there's no need to double DB request, let's get the node object directly.
+    if node is None:
+        if node_id is None:
+            raise APIError('Insufficient data for operation')
+        node = Node.query.filter(Node.id == node_id).first()
+        if node is None:
+            raise APIError('Node not found, id = {}'.format(node_id))
+
     hostname = node.hostname
     ip = node.ip
+    if node_id is None:
+        node_id = node.id
 
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
 
@@ -156,6 +174,9 @@ def delete_node(node_id):
         os.remove(NODE_INSTALL_LOG_FILE.format(hostname))
     except OSError:
         pass
+    send_event('node:deleted', {
+        'id': node_id,
+        'message': 'Node successfully deleted'})
 
 
 def get_install_log(node_status, hostname):
@@ -178,8 +199,12 @@ def get_status(node, res=None):
     """
     if res is not None:
         if _node_is_active(res):
-            node_status = 'running'
-            node_reason = ''
+            if node.state == 'deletion':
+                node_status = 'deletion'
+                node_reason = 'Node marked as being deleting'
+            else:
+                node_status = 'running'
+                node_reason = ''
         else:
             node_status = 'troubles'
             condition = _get_node_condition(res)

@@ -383,6 +383,14 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         var data = JSON.parse(ev.data);
                         Utils.notifyWindow(data.message);
                     };
+                    
+                    events['node:deleted'] = function(ev) {
+                        that.lastEventId = ev.lastEventId;
+                        var data = JSON.parse(ev.data);
+                        Utils.notifyWindow(data.message, 'success');
+                        App.navigate('nodes');
+                        controller.showNodes({deleted: data.id});
+                    };
 
                     events['advise:show'] = function(ev) {
                         that.lastEventId = ev.lastEventId;

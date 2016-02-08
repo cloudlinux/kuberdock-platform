@@ -351,14 +351,16 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             });
         },
 
-        showNodes: function(){
+        showNodes: function(options){
             var that = this;
             require(['app_data/nodes/views', 'app_data/menu/views'], function(Views, Menu){
                 var layoutView = new Views.NodesLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
-
                 that.listenTo(layoutView, 'show', function(){
                     App.getNodeCollection().done(function(nodeCollection){
+                        if (_.has(options, 'deleted')) {
+                            nodeCollection.fullCollection.remove(options.deleted);
+                        }
                         layoutView.nav.show(navbar);
                         var nodeCollectionView = new Views.NodesListView({
                             collection: nodeCollection

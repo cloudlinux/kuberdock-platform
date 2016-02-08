@@ -1,8 +1,8 @@
 %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")
 
 Name: kuberdock-cli
-Version: 0.1
-Release: 30%{?dist}.cloudlinux
+Version: 1.0
+Release: 0%{?dist}.rc.1.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,9 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Mon Feb 08 2016 Igor Savenko <bliss@cloudlinux.com> 1.0-0.rc.1
+- raised tag
+
 * Tue Feb 02 2016 Igor Savenko <bliss@cloudlinux.com> 0.1-30
 - AC-1937: Improve error handling in KCLI
 - AC-2014: Starting pod repeatedly brings 'Unknown format' error

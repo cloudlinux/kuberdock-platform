@@ -304,7 +304,7 @@ manager.add_command('node-flag', NodeFlagCmd())
 manager.add_command('node-info', NodeInfoCmd())
 manager.add_command('auth-key', AuthKey())
 
-
+# !TEST COMMENT! skip it
 if __name__ == '__main__':
     try:
         manager.run()

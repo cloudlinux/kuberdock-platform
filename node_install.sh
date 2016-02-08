@@ -164,8 +164,6 @@ mv /pd.sh /var/lib/kuberdock/scripts/pd.sh
 chmod +x /var/lib/kuberdock/scripts/pd.sh
 mv /fslimit.py /var/lib/kuberdock/scripts/fslimit.py
 chmod +x /var/lib/kuberdock/scripts/fslimit.py
-mv /docker-cleaner.sh /var/lib/kuberdock/scripts/docker-cleaner.sh
-chmod +x /var/lib/kuberdock/scripts/docker-cleaner.sh
 check_status
 
 
@@ -372,9 +370,6 @@ sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/${MASTER_IP}/}" $CADVISOR_C
 systemctl reenable kuberdock-cadvisor
 check_status
 
-# 11. add docker cleaning script to crontab 
-crontab -l | { cat; echo "0 */6 * * * /var/lib/kuberdock/scripts/docker-cleaner.sh"; } | crontab -
-
-# 12. Reboot will be executed in python function
+# 11. Reboot will be executed in python function
 
 exit 0

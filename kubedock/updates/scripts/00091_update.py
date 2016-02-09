@@ -22,13 +22,13 @@ def downgrade(upd, with_testing,  exception, *args, **kwargs):
     upd.print_log('Downgrading nodes only')
 
 
-def upgrade_node(upd, with_testing, env,  exception, *args, **kwargs):
-    upd.print_log('Downgrading nodes with docker-cleaner.sh ')
+def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    upd.print_log('Upgrading nodes with docker-cleaner.sh')
     run("""rm -f /var/lib/kuberdock/scripts/docker-cleaner.sh""")
     run("""crontab -l | grep -v "docker-cleaner.sh" | crontab - """)
 
-def downgrade_node(upd, with_testing, env, *args, **kwargs):
-    upd.print_log('Upgrading nodes with docker-cleaner.sh')
+def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
+    upd.print_log('Downgrading nodes with docker-cleaner.sh')
     run("cat > /var/lib/kuberdock/scripts/docker-cleaner.sh << 'EOF' {0}"
     .format(DOCKERCLEANER))
     run("""chmod +x /var/lib/kuberdock/scripts/docker-cleaner.sh""")

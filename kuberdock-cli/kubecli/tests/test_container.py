@@ -369,19 +369,11 @@ class TestKuberDock(unittest.TestCase):
             'data': [
                 {
                     "description": "desc1",
-                    "is_automated": True,
-                    "is_official": True,
-                    "is_trusted": True,
                     "name": "name1",
-                    "star_count": 0
                 },
                 {
                     "description": "desc2",
-                    "is_automated": False,
-                    "is_official": False,
-                    "is_trusted": False,
                     "name": "name2",
-                    "star_count": 1
                 },
             ],
             "num_pages": 2,

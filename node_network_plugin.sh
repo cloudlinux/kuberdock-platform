@@ -302,7 +302,7 @@ case "$ACTION" in
 
     POD_IP=$(docker inspect --format="{{.NetworkSettings.IPAddress}}" "$DOCKER_PAUSE_ID")
     if_failed "Error while get POD_IP"
-    SERVICE_IP=$(iptables -w -L -t nat | grep "$NAMESPACE" | head -1 | awk '{print $5}')
+    SERVICE_IP=$(iptables -w -n -L -t nat | grep "$NAMESPACE" | head -1 | awk '{print $5}')
     if_failed "Error while get SERVICE_IP"
     USER_ID=$(echo "$POD_SPEC" | grep kuberdock-user-uid | awk '{gsub(/,$/,""); print $2}' | tr -d \")
     if_failed "Error while get USER_ID"

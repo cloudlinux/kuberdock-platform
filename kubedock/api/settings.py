@@ -2,7 +2,7 @@ import json
 from pytz import common_timezones, timezone
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-#from flask.ext.login import current_user
+# from flask.ext.login import current_user
 from flask.views import MethodView
 
 from ..core import db
@@ -173,7 +173,7 @@ def get_timezone():
 @check_permission('get_timezone', 'settings')
 def get_all_timezones():
     data = ['{0} ({1})'.format(tz, datetime.now(timezone(tz)).strftime('%z'))
-                for tz in common_timezones]
+            for tz in common_timezones]
     return jsonify({'status': 'OK', 'data': data})
 
 
@@ -196,6 +196,7 @@ class SystemSettingsAPI(KubeUtils, MethodView):
         check_system_settings(params)
         if value is not None:
             SystemSettings.set(sid, value)
+    patch = put
 
     @check_permission('delete', 'system_settings')
     def delete(self, sid):

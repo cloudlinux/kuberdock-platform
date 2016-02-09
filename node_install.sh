@@ -141,6 +141,13 @@ yum_wrapper()
     fi
 }
 
+
+chk_ver()
+{
+    python -c "from distutils.version import LooseVersion; print(LooseVersion('$1') < LooseVersion('$2'))"
+}
+
+
 echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
 echo "Using MASTER_IP=${MASTER_IP}"
@@ -455,6 +462,24 @@ echo "Removing swap entries from fstab"
 sed -r -i '/[[:space:]]+swap[[:space:]]+/d' /etc/fstab
 check_status
 
-# 12. Reboot will be executed in python function
+# 12. Check kernel
+current_kernel=$(uname -r)
+check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
+
+if [ "$check_kernel" == "True" ]
+then
+    echo "Current kernel is $current_kernel, upgrading..."
+    yum_wrapper -y install kernel
+    check_status
+    yum_wrapper -y install kernel-tools
+    check_status
+    yum_wrapper -y install kernel-tools-libs
+    check_status
+    yum_wrapper -y install kernel-headers
+    check_status
+    yum_wrapper -y install kernel-devel
+fi
+
+# 13. Reboot will be executed in python function
 
 exit 0

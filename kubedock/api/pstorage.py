@@ -2,7 +2,6 @@ from flask import Blueprint
 from flask.views import MethodView
 
 from . import APIError
-from ..core import db
 from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils, register_api
 from ..kapi import pstorage as ps
@@ -42,8 +41,11 @@ class PersistentStorageAPI(KubeUtils, MethodView):
     def post(self):
         user = self._get_current_user()
         params = self._get_params()
-        pd = PersistentDisk(size=params['size'], owner=user, name=params['name'])
-
+        name, size = params.get('name', ''), params.get('size', 1)
+        pd = PersistentDisk.query.filter_by(name=name).first()
+        if pd is not None:
+            raise APIError('{0} already exists'.format(name), 406)
+        pd = PersistentDisk(size=size, owner=user, name=name)
         Storage = self._resolve_storage()
         data = Storage().create(pd)
         if data is None:

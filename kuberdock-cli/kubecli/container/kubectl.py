@@ -33,7 +33,7 @@ def parser(subs):
         'template', help='Read template for predefined application'
     )
     get_template.add_argument(
-        '--id', required=True, help=template_id_help
+        '--id', required=True, help=template_id_help, type=int
     )
     get_templates = get_resource.add_parser(
         'templates', help='Read all templates for predefined applications'

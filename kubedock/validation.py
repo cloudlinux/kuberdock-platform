@@ -122,6 +122,12 @@ envvar_name_regex = {
                'Must not start with digit'
 }
 
+pdname_regex = {
+    'regex': r'^[A-Za-z]+[A-Za-z0-9_\-]*',
+    'message': 'Latin letters, digits, undescores and dashes are expected only. ' \
+               'Must start with a letter'
+}
+
 
 # Kubernetes restriction, names must be dns-compatible
 # pod_name = r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])+$"
@@ -225,6 +231,7 @@ protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
 kubes_qty_schema = {'type': 'integer', 'min': 1, 'max': MAX_KUBES_PER_CONTAINER}
 container_name_schema = {'type': 'string', 'empty': False, 'maxlength': 255}
 pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0, 'pd_size_max': True}
+pdname_schema = {'type': 'string', 'required': True, 'empty': False, 'maxlength': 36, 'regex': pdname_regex}
 kube_type_schema = {'type': 'integer', 'coerce': int, 'kube_type_in_db': True}
 volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False, 'maxlength': 255}
 new_pod_schema = {
@@ -264,9 +271,7 @@ new_pod_schema = {
                     'nullable': True,
                     'pd_backend_required': True,
                     'schema': {
-                        'pdName': {
-                            'type': 'string'
-                        },
+                        'pdName': pdname_schema,
                         'pdSize': pdsize_schema,
                         'used': {
                             'type': 'boolean',

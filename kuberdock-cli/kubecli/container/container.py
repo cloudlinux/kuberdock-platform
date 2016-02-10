@@ -54,6 +54,7 @@ class PodResource(object):
                  name=None, filename=None, json=False, **_):
         self.name = name
         self.fin = filename
+        self.as_json = json
         self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
 
     def _find_pod_by_name(self, data):
@@ -72,6 +73,10 @@ class PodResource(object):
         data = query.unwrap(query.get(PODAPI_PATH))
         if self.name:
             data = self._find_pod_by_name(data)
+            if not data:
+                raise exceptions.NotApplicable(
+                    'Pod "{0}" not found'.format(self.name),
+                    as_json=self.as_json)
         return data
 
     def get(self):
@@ -153,6 +158,7 @@ class TemplateResource(object):
         self.fin = filename
         self.name = name
         self.origin = origin
+        self.as_json = json
         self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
 
     def get(self):
@@ -172,7 +178,7 @@ class TemplateResource(object):
     def create(self):
         yaml_content = self.fin.read()
         if not yaml_content:
-            raise SystemExit('Empty file content')
+            raise exceptions.NotApplicable('Empty file content', as_json=self.as_json)
         query = self.resource.query()
         answer = query.post(PREDEFINED_APPS_PATH, {'template': yaml_content,
                                                    'origin': self.origin,
@@ -423,7 +429,7 @@ class KuberDock(KubeCtl):
         self._data_path = None
         # Need to set resource type from KubeCtl
         args['resource'] = 'pod'
-        self._load(args)
+        self._initialized = self._load(args)
         super(KuberDock, self).__init__(**args)
 
     def create(self):
@@ -447,6 +453,11 @@ class KuberDock(KubeCtl):
         """
         Sends POST request to KuberDock to save configured container
         """
+        if not self._initialized:
+            raise exceptions.NotApplicable(
+                """Pod data missing or contains garbage. Try running "kcli kuberdock forget" """
+                """then "kcli kuberdock create" to recreate pod to be created""",
+                as_json=self.as_json)
         data = self._prepare(final=True)
         kube_types = self._get_kube_types()
         try:
@@ -632,7 +643,8 @@ class KuberDock(KubeCtl):
                 for attr, val in json.load(data).items():
                     setattr(self, attr, val)
         except (IOError, ValueError, TypeError): # no file, no JSON
-            pass
+            return False
+        return True
 
     def _save(self):
         """

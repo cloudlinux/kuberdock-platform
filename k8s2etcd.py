@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 import json
-import gevent
+import time
 import logging
 import logging.handlers
 import requests
@@ -17,9 +17,28 @@ form = logging.Formatter('%(asctime)s %(name)-12s %(levelname)s:%(message)s')
 handler.setFormatter(form)
 logger.addHandler(handler)
 
+attempts = 3
+attempt_timeout = 1
+filename = 'index.txt'
+loop_timeout = 0.2
+
 watch_url = 'ws://127.0.0.1:8080/api/v1/pods?watch=true&resourceVersion={}'
 list_url = 'http://127.0.0.1:8080/api/v1/pods'
 etcd_url = 'http://127.0.0.1:4001/v2/keys/kuberdock/pod_states'
+
+
+def store(resource_version):
+    with open(filename, 'w') as f:
+        f.write('{0:d}'.format(int(resource_version)))
+
+
+def get():
+    try:
+        with open(filename) as f:
+            rv = int(f.read())
+            return rv
+    except:
+        logger.debug("Can't get saved resourceVersion")
 
 
 def prelist():
@@ -34,10 +53,18 @@ def prelist():
 def process(content):
     """ Put content to etcd with timestamp as key """
     ts = str((datetime.utcnow() - datetime.fromtimestamp(0)).total_seconds())
-    requests.put('/'.join([etcd_url, ts]), data={'value': content})
+    for i in range(attempts):
+        try:
+            requests.put('/'.join([etcd_url, ts]), data={'value': content})
+            break
+        except:
+            logger.exception("{}: Can't process event {}".format(i, content))
+            time.sleep(attempt_timeout)
+    else:
+        logger.error("Can't process event {}, skipping...".format(content))
 
 
-resourceVersion = None
+resourceVersion = get()
 while True:
     try:
         if not resourceVersion:
@@ -51,11 +78,12 @@ while True:
                     '401' in data['object']['message']):
                 resourceVersion = None
                 break
+            process(content)
             resourceVersion = data['object']['metadata']['resourceVersion']
             logger.debug("new resourceVersion {}".format(resourceVersion))
-            process(content)
+            store(resourceVersion)
     except KeyboardInterrupt:
         break
     except Exception as e:
         logger.exception('restarting')
-        gevent.sleep(0.2)
+        time.sleep(loop_timeout)

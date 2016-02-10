@@ -10,6 +10,8 @@ EXIT_MESSAGE="Installation error."
 PORTS=$1
 IPS=$2
 
+FSTAB_BACKUP="/var/lib/kuberdock/backups/fstab.pre-swapoff"
+
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 
@@ -159,6 +161,8 @@ check_status
 
 # 4.1 create and populate scripts directory
 mkdir -p /var/lib/kuberdock/scripts
+check_status
+mkdir -p /var/lib/kuberdock/backups
 check_status
 mv /pd.sh /var/lib/kuberdock/scripts/pd.sh
 chmod +x /var/lib/kuberdock/scripts/pd.sh
@@ -370,6 +374,18 @@ sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/${MASTER_IP}/}" $CADVISOR_C
 systemctl reenable kuberdock-cadvisor
 check_status
 
-# 11. Reboot will be executed in python function
+# 11. disable swap for best performance
+echo "Disabling swap"
+swapoff -a
+
+echo "Backing up fstab to: ${FSTAB_BACKUP}"
+cp /etc/fstab ${FSTAB_BACKUP}
+check_status
+
+echo "Removing swap entries from fstab"
+sed -r -i '/[[:space:]]+swap[[:space:]]+/d' /etc/fstab
+check_status
+
+# 12. Reboot will be executed in python function
 
 exit 0

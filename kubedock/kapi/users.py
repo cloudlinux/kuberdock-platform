@@ -84,9 +84,6 @@ class UserCollection(object):
         if 'package' in data:
             package = data['package']
             p = Package.by_name(package)
-            if p is None:
-                p = Package.by_name('Standard package')
-
             old_package, new_package = user.package, p
             kubes_in_old_only = (set(kube.kube_id for kube in old_package.kubes) -
                                  set(kube.kube_id for kube in new_package.kubes))

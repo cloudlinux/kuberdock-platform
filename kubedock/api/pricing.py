@@ -33,6 +33,10 @@ class DuplicateName(APIError):
     pass
 
 
+class DefaultPackageNotRemovable(APIError):
+    pass
+
+
 class DefaultKubeNotRemovable(APIError):
     pass
 
@@ -85,6 +89,9 @@ class PackagesAPI(KubeUtils, MethodView):
             raise DuplicateName('Package with name \'{0}\' already exists'
                                 .format(params['name']))
         package = Package(**params)
+        if package.is_default:
+            package.remove_default_flags()
+
         db.session.add(package)
         db.session.flush()
         return package.to_dict()
@@ -104,6 +111,14 @@ class PackagesAPI(KubeUtils, MethodView):
                 raise DuplicateName('Package with name \'{0}\' already exists'
                                     .format(params['name']))
 
+        is_default = params.get('is_default', None)
+        if is_default:
+            package.remove_default_flags()
+        elif package.is_default and is_default is not None:
+            raise DefaultPackageNotRemovable(
+                'Setting "is_default" flag to false is forbidden. You can change '
+                'default package by setting another package as default.')
+
         for key, value in params.iteritems():
             setattr(package, key, value)
         db.session.flush()
@@ -117,11 +132,24 @@ class PackagesAPI(KubeUtils, MethodView):
             raise PackageNotFound()
         if package.users:
             raise PackageInUse('You have users with this package')
+        if package.is_default:
+            raise DefaultPackageNotRemovable(
+                'Deleting of default package is forbidden. '
+                'Set another package as default and try again')
         PackageKube.query.filter_by(package_id=package_id).delete()
         db.session.delete(package)
 
 register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id', strict_slashes=False)
 
+
+@pricing.route('/packages/default', methods=['GET'], strict_slashes=False)
+@KubeUtils.jsonwrap
+@login_required_or_basic_or_token
+def get_default_package():
+    package = Package.get_default()
+    if package is None:
+        raise PackageNotFound
+    return package.to_dict()
 
 # === KUBE ROUTINES ===
 
@@ -190,6 +218,16 @@ class KubesAPI(KubeUtils, MethodView):
         db.session.delete(kube)
 
 register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id', strict_slashes=False)
+
+
+@pricing.route('/kubes/default', methods=['GET'], strict_slashes=False)
+@KubeUtils.jsonwrap
+@login_required_or_basic_or_token
+def get_default_kube():
+    kube = Kube.get_default_kube()
+    if kube is None:
+        raise KubeNotFound()
+    return kube.to_dict()
 
 
 @atomic(APIError('Could not create kube', 500), nested=False)

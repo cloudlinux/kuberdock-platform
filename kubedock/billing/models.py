@@ -44,12 +44,24 @@ class Package(BaseModelMixin, db.Model):
     price_ip = db.Column(db.Float, default=0.0, nullable=False)
     price_pstorage = db.Column(db.Float, default=0.0, nullable=False)
     price_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
+    is_default = db.Column(db.Boolean, default=None)
+
+    __table_args__ = (db.Index('packages_is_default_key', 'is_default', unique=True,
+                               postgresql_where=is_default.is_(True)),)
 
     users = db.relationship('User', backref='package')
 
     @classmethod
     def by_name(cls, package_name):
         return cls.query.filter_by(name=package_name).first()
+
+    @classmethod
+    def remove_default_flags(cls):
+        cls.query.update({Package.is_default: None}, synchronize_session='fetch')
+
+    @classmethod
+    def get_default(cls):
+        return cls.query.filter(cls.is_default == True).first()
 
 
 class Kube(BaseModelMixin, db.Model):

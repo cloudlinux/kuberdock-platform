@@ -34,7 +34,7 @@ def initial_fixtures():
               disk_space_units='GB', included_traffic=0)
 
     p1 = Package(id=0, name='Standard package', first_deposit=0, currency='USD',
-                 period='hour', prefix='$', suffix=' USD')
+                 period='hour', prefix='$', suffix=' USD', is_default=True)
 
     db.session.add(k_internal)
     PackageKube(package=p1, kube=k1, kube_price=0)

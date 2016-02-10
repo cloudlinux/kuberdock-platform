@@ -498,6 +498,7 @@ package_schema = {
     'price_ip': positive_float_schema,
     'price_pstorage': positive_float_schema,
     'price_over_traffic': positive_float_schema,
+    'is_default': {'type': 'boolean', 'coerce': extbool, 'required': False}
 }
 
 kube_schema = {

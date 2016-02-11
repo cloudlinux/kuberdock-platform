@@ -62,6 +62,7 @@ Requires: python-wsgiref >= 0.1.2
 Requires: python-psycogreen >= 1.0
 Requires: python-botocore
 Requires: python-dateutil
+Requires: python-nginx
 Requires: python-boto
 Requires: python-alembic
 Requires: python-flask-migrate >= 1.4.0
@@ -106,6 +107,7 @@ ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_
 %{__install} -D -m 0644 conf/shared-kubernetes.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
 %{__install} -D -m 0644 conf/shared-etcd.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-etcd.conf
 %{__install} -D -m 0644 conf/kuberdock.conf %{buildroot}%{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
+%{__install} -D -m 0644 conf/sudoers-nginx.conf %{buildroot}%{_sysconfdir}/sudoers.d/nginx
 
 
 %clean
@@ -178,8 +180,9 @@ fi
 %attr (-,nginx,nginx) /var/lib/kuberdock
 %dir %{_sysconfdir}/nginx/ssl
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
-%config %{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
-%config %{_sysconfdir}/nginx/conf.d/shared-etcd.conf
+%attr (-,nginx,nginx) %config %{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
+%attr (-,nginx,nginx) %config %{_sysconfdir}/nginx/conf.d/shared-etcd.conf
+%config %{_sysconfdir}/sudoers.d/nginx
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 %exclude /var/opt/kuberdock/dev-utils

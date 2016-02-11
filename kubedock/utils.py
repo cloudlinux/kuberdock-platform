@@ -8,7 +8,9 @@ import re
 import socket
 import sys
 import datetime
+import nginx
 
+import subprocess
 from collections import namedtuple
 from flask import current_app, request, jsonify, g, has_app_context
 from flask.ext.login import current_user, logout_user
@@ -787,7 +789,27 @@ def get_timezone(default_tz=None):
     raise OSError('Time zone cannot be determined')
 
 
+files = ['/etc/nginx/conf.d/shared-kubernetes.conf',
+         '/etc/nginx/conf.d/shared-etcd.conf']
+deny_all = nginx.Key('deny', 'all')
+
+
+def update_allowed(accept_ips, conf):
+    for server in conf.filter('Server'):
+        for location in server.filter('Location'):
+            if not any([key.name == 'return' and key.value == '403'
+                        for key in location.keys]):
+                for key in location.keys:
+                    if key.name in ('allow', 'deny'):
+                        location.remove(key)
+                for ip in accept_ips:
+                    location.add(nginx.Key('allow', ip))
+                location.add(deny_all)
+
+
 def update_nginx_proxy_restriction(accept_ips):
-    pass
-    # modification of shared-etcd.conf and shared-kubernetes.conf need to be
-    # done here to allow access only from accept_ips
+    for filename in files:
+        conf = nginx.loadf(filename)
+        update_allowed(accept_ips, conf)
+        nginx.dumpf(conf, filename)
+    subprocess.call('sudo /var/opt/kuberdock/nginx_reload.sh', shell=True)

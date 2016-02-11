@@ -2,6 +2,7 @@ from collections import namedtuple
 from datetime import datetime
 import json
 import unittest
+import nginx
 
 import flask
 import mock
@@ -22,6 +23,7 @@ from ..utils import (
     get_available_port,
     get_current_dnat,
     get_timezone,
+    update_allowed
 )
 
 
@@ -504,6 +506,76 @@ class TestUtilsGetTimezone(unittest.TestCase):
 
         res = get_timezone(default_tz='UTC')
         self.assertEqual(res, 'UTC')
+
+
+class TestUtilUpdateNginxProxyRestriction(unittest.TestCase):
+
+    conf = """
+            server {
+                listen 8123;
+                server_name localhost;
+
+                location / {
+                    return 403;
+                }
+
+                location /v2 {
+                    return 403;
+                }
+
+                location /v2/keys {
+                    proxy_pass http://127.0.0.1:4001;
+                    allow bla-bla.com
+                }
+            }
+
+            server {
+                listen 8124;
+                server_name localhost2;
+
+                location / {
+                    return 403;
+                }
+
+                location /v2/keys {
+                    proxy_pass http://127.0.0.1:4001;
+                    allow bla-bla.com
+                }
+
+                location /v2/values {
+                    proxy_pass http://127.0.0.1:4002;
+                    allow bla2-bla2.com
+                }
+            }
+        """
+    accept_ips = ['127.0.0.1', '192.168.3.1', '192.168.3.2']
+
+    def test_update_allowed(self):
+
+        def check_ips(location):
+            ips = [key.value for key in location.keys if key.name == 'allow']
+            self.assertEqual(self.accept_ips, ips)
+            self.assertEqual(location.keys[-1].as_dict(), {'deny': 'all'})
+
+        conf = nginx.loads(self.conf)
+        update_allowed(self.accept_ips, conf)
+        servers = conf.filter('Server')
+        location = servers[0].filter('Location')[0]
+        self.assertFalse(any([key.name in ('allow', 'deny')
+                              for key in location.keys]))
+        location = servers[0].filter('Location')[1]
+        self.assertFalse(any([key.name in ('allow', 'deny')
+                              for key in location.keys]))
+        location = servers[0].filter('Location')[2]
+        check_ips(location)
+        location = servers[1].filter('Location')[0]
+        self.assertFalse(any([key.name in ('allow', 'deny')
+                              for key in location.keys]))
+        location = servers[1].filter('Location')[1]
+        check_ips(location)
+        location = servers[1].filter('Location')[2]
+        check_ips(location)
+
 
 
 if __name__ == '__main__':

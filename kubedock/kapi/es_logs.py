@@ -1,6 +1,7 @@
 """Utils to extract logs from elasticsearch services."""
 from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_dt
+import hashlib
 
 from .elasticsearch_utils import execute_es_query
 from .podcollection import PodCollection, POD_STATUSES
@@ -25,7 +26,8 @@ def get_container_logs(pod_id, container_name, owner_id=None, size=100,
     :param owner_id: owner of the containers
     :param start: minimum log time to select (see log_query doc)
     :param end: maximum log time to select (see log_query doc)
-    :param size: limits selection to this number (100 by default) (see log_query doc)
+    :param size: limits selection to this number (100 by default)
+        (see log_query doc)
     """
     states = CS.in_range(start, end).filter(CS.container_name == container_name,
                                             CS.pod_state.has(pod_id=pod_id))
@@ -62,7 +64,8 @@ def get_node_logs(hostname, date, size=100, host=None):
     """Extracts node's logs by query to node's elasticsearch.
     :param hostname: name of the host to get logs
     :param date: date of logs
-    :param size: limit selection to this number (default = 100) (see log_query doc)
+    :param size: limit selection to this number (default = 100)
+        (see log_query doc)
     :param host: node ip to use or None to search all nodes
     Records will be ordered by timestamp in descending order.
     TODO: add ordering parameter support.
@@ -70,7 +73,12 @@ def get_node_logs(hostname, date, size=100, host=None):
     index = 'syslog-'
     date = date or datetime.utcnow().date()
     index += date.strftime('%Y.%m.%d')
-    logs = log_query(index, [{'term': {'host': hostname}}], host, size)
+    logs = log_query(
+        index,
+        [{'term': {'host_md5': hashlib.md5(hostname).hexdigest()}}],
+        host,
+        size
+    )
     hits = [line['_source'] for line in logs.get('hits', [])]
     return {'total': logs.get('total', len(hits)), 'hits': hits}
 

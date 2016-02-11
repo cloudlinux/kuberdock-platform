@@ -48,6 +48,7 @@ for pod in pods:
 
 if node_ip:
     print('network.publish_host: {}'.format(node_ip))
+print('network.bind_host: 0.0.0.0')
 
 print('discovery.zen.ping.multicast.enabled: false')
 print('discovery.zen.ping.unicast.hosts: [{}]'.format(

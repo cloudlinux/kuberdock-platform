@@ -1,6 +1,7 @@
 import unittest
 from datetime import date, datetime, timedelta
 from uuid import uuid4
+import hashlib
 
 from kubedock.testutils.testcases import DBTestCase
 
@@ -217,7 +218,8 @@ class TestNodeLogs(unittest.TestCase):
                                                     {'log': '654'},
                                                     {'log': '987'}]})
         log_query_mock.assert_called_once_with(
-            index, [{'term': {'host': hostname}}], None, size
+            index, [{'term': {'host_md5': hashlib.md5(hostname).hexdigest()}}],
+            None, size
         )
 
 

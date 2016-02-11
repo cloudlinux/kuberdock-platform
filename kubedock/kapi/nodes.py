@@ -517,7 +517,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
             {
                 "command": ["./run.sh"],
                 "kubes": collector_kubes,
-                "image": "kuberdock/fluentd:1.4",
+                "image": "kuberdock/fluentd:1.5",
                 "name": "fluentd",
                 "env": [
                     {
@@ -547,9 +547,8 @@ def get_kuberdock_logs_config(node, name, kube_type,
                 "terminationMessagePath": None
             },
             {
-                "command": ["/elasticsearch/run.sh"],
                 "kubes": storage_kubes,
-                "image": "kuberdock/elasticsearch:1.5",
+                "image": "kuberdock/elasticsearch:2.2",
                 "name": "elasticsearch",
                 "env": [
                     {

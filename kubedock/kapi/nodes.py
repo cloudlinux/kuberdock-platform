@@ -387,6 +387,13 @@ def _check_node_hostname(ip, hostname):
             "Error while trying to get node name: {}".format(message))
     uname_hostname = message.strip()
     if uname_hostname != hostname:
+        if uname_hostname in hostname:
+            status, h_message = run_ssh_command(ip, "hostname -f")
+            if status:
+                raise APIError(
+                    "Error while trying to get node h_name: {}".format(h_message))
+            uname_hostname = h_message.strip()
+    if uname_hostname != hostname:
         raise APIError('Wrong node name. {} resolves itself by name {}'.format(
             hostname, uname_hostname))
 

@@ -1,5 +1,10 @@
 <!-- <td class="checkboxes"><label class="custom"><input type="checkbox"><span></span></label></td> -->
-<td><span class="container-page-btn"><%- image.replace(/:\d+$/, '') %></span></td>
+<td>
+    <span class="container-page-btn"><%- imagename %></span>
+    <% if (imagetag) { %>
+    <sup title="image tag" class="image-tag"><%- imagetag %></sup>
+    <% } %>
+</td>
 <td><span class="<%- state %>"><%- state %></span></td>
 <td><span><%- kubes ? kubes : 'unknown' %></span></td>
 <td><span><%- startedAt ? startedAt : '' %></span></td>

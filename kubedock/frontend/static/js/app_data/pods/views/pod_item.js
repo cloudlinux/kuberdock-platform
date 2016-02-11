@@ -82,12 +82,22 @@ define(['app_data/app',
         templateHelpers: function(){
             var kubes = this.model.get('kubes'),
                 startedAt = this.model.get('startedAt'),
-                modelIndex = this.model.collection.indexOf(this.model);
+                modelIndex = this.model.collection.indexOf(this.model),
+                imagename = this.model.get('image'),
+                imagetag = null;
+
+            if (/[^/:]+:[^/:]+$/.test(imagename)) {
+                var pos = imagename.lastIndexOf(':');
+                imagetag = imagename.substr(pos + 1);
+                imagename = imagename.substr(0, pos);
+            }
 
             return {
                 kubes: kubes ? kubes : 0,
                 startedAt: startedAt ? App.currentUser.localizeDatetime(startedAt) : 'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
+                imagename: imagename,
+                imagetag: imagetag
             };
         },
 

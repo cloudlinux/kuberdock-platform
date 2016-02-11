@@ -1,5 +1,5 @@
 #!/bin/bash
-# install kubernetes components on Node host
+# Install ceph components on Node host
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8

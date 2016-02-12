@@ -210,6 +210,92 @@ class TestKuberDock(unittest.TestCase):
             {'pdSize': 1, 'pdName': '/dev/sda1'}
         )
 
+    @mock.patch.object(container.os.path, 'exists')
+    @mock.patch.object(container.KuberDock, '_list_env')
+    @mock.patch.object(container.KuberDock, '_load')
+    @mock.patch.object(container.KubeQuery, 'get')
+    @mock.patch.object(container.KubeQuery, 'post')
+    def test_list_env_called(self, _post, _get, _load, _list, _os_path):
+        """
+        Tests if _list_env is called when --list-env is passed
+        """
+        _os_path.return_value = True
+        _get.return_value = {"data": []}
+        _get.return_value = {"status": "OK"}
+        _load.return_value = True
+        c = container.KuberDock(list_env=True, image='test', kubes=1)
+        c._resolve_data_path('test')
+        c.set()
+        self.assertTrue(_list.called)
+
+    @mock.patch.object(container.PrintOut, 'show_list')
+    @mock.patch.object(container.os.path, 'exists')
+    @mock.patch.object(container.KuberDock, '_load')
+    @mock.patch.object(container.KubeQuery, 'get')
+    @mock.patch.object(container.KubeQuery, 'post')
+    def test_show_list_called_by_list_env(self, _post, _get, _load, _os_path, _po):
+        """
+        Tests if show_list is called when --list-env is passed
+        """
+        _os_path.return_value = True
+        _get.return_value = {"data": []}
+        _get.return_value = {"status": "OK"}
+        _load.return_value = True
+        c = container.KuberDock(list_env=True, image='test', kubes=1)
+        c._resolve_data_path('test')
+        c.containers = [{'image':'test',
+                         'env':[
+                            {'name':'ONE','value':'first'},
+                            {'name':'TWO','value':'second'}]}]
+        c.set()
+        _po.assert_called_once_with([
+            {'name':'ONE','value':'first'},{'name':'TWO','value':'second'}])
+
+    @mock.patch.object(container.KuberDock, '_delete_env')
+    @mock.patch.object(container.KuberDock, '_list_env')
+    @mock.patch.object(container.os.path, 'exists')
+    @mock.patch.object(container.KuberDock, '_load')
+    @mock.patch.object(container.KubeQuery, 'get')
+    @mock.patch.object(container.KubeQuery, 'post')
+    def test_delete_env_called(self, _post, _get, _load, _os_path, _list, _delete):
+        """
+        Tests if _delete_env is called when --delete-env is passed
+        """
+        _os_path.return_value = True
+        _get.return_value = {"data": []}
+        _get.return_value = {"status": "OK"}
+        _load.return_value = True
+        c = container.KuberDock(list_env=False, image='test', kubes=1, delete_env='ONE')
+        c._resolve_data_path('test')
+        c.set()
+        self.assertFalse(_list.called)
+        self.assertTrue(_delete.called)
+
+    @mock.patch.object(container.os.path, 'exists')
+    @mock.patch.object(container.KuberDock, '_load')
+    @mock.patch.object(container.KubeQuery, 'get')
+    @mock.patch.object(container.KubeQuery, 'post')
+    def test_env_deleted(self, _post, _get, _load, _os_path):
+        """
+        Tests if envvar is deleted when --delete-env is passed
+        """
+        _os_path.return_value = True
+        _get.return_value = {"data": []}
+        _get.return_value = {"status": "OK"}
+        _load.return_value = True
+        c = container.KuberDock(delete_env='TWO,THREE', image='test', kubes=1)
+        c._resolve_data_path('test')
+        c.containers = [{'image':'test',
+                         'env':[
+                            {'name':'ONE','value':'first'},
+                            {'name':'TWO','value':'second'},
+                            {'name':'THREE','value':'third'}]}]
+        c.set()
+        check_model = [{'name':'ONE','value':'first'}]
+        self.assertEqual(check_model, c.containers[0]['env'],
+                         "Only one item is expected after ENV deletion")
+
+
     @mock.patch.object(container.KubeQuery, 'get')
     @mock.patch.object(container.KubeQuery, 'post')
     def test_save(self, post_mock, get_mock):

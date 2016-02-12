@@ -37,6 +37,8 @@ def parser(subs):
     c_set.add_argument('--env', help="Add or change environment variables")
     c_set.add_argument('-p', '--persistent-drive', help="Specify persistent drive for mount path")
     c_set.add_argument('-s', '--size', type=int, help="Specify size in GB for drive to be created")
+    c_set.add_argument('--delete-env', help="Delete comma-separated list of environment variables from pending container")
+    c_set.add_argument('--list-env', action='store_true', help="List environment variables of pending container")
 
     c_del = action.add_parser('delete')
     c_del.add_argument('name', help="Container name")

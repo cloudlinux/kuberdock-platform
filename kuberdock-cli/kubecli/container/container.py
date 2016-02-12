@@ -442,6 +442,9 @@ class KuberDock(KubeCtl):
             i = self._get_image()
             i.data['kubes'] = int(self.kubes)
 
+        if getattr(self, 'list_env', False):
+            return self._list_env()
+
         if self.delete is None:
             self._save()
         else:
@@ -646,6 +649,15 @@ class KuberDock(KubeCtl):
             return False
         return True
 
+    def _list_env(self):
+        if not hasattr(self, 'image'):
+            raise exceptions.NotApplicable('To show envvars image is expected',
+                                           as_json=self.as_json)
+        po = PrintOut(as_json=self.as_json, fields=(('name', 32), ('value', 48)))
+        for c in self.containers:
+            if c.get('image') == self.image:
+                po.show_list(c.get('env', []))
+
     def _save(self):
         """
         Saves current container as JSON file
@@ -793,27 +805,40 @@ class KuberDock(KubeCtl):
 
     def _prepare_env(self):
         """
-        Add container environment variables
+        Adds, modifies or deletes container environment variables
         """
-        if not hasattr(self, 'env'):
+        if not hasattr(self, 'env') and not hasattr(self, 'delete_env'):
             return
         if not hasattr(self, 'image'):
             raise SystemExit(ERR_SPECIFY_IMAGE_OPTION)
-        for c in self.containers:
-            if c['image'] != self.image:
+        for container in self.containers:
+            if container['image'] != self.image:
                 continue
-            if 'env' not in c:
-                c['env'] = []
-            existing = set(item['name'] for item in c['env'])
-            data_to_add = [dict(zip(['name', 'value'], item.strip().split(':')))
-                        for item in self.env.strip().split(',')
-                        if len(item.split(':')) == 2]
-            for i in c['env']:
-                for j in data_to_add:
-                    if i['name'] == j['name']:
-                        i['value'] = j['value']
-                        break
-            c['env'].extend(filter((lambda x: x['name'] not in existing), data_to_add))
+            if 'env' not in container:
+                container['env'] = []
+            if hasattr(self, 'env'):
+                self._add_or_update_env(container)
+            if hasattr(self, 'delete_env'):
+                self._delete_env(container)
+
+    def _delete_env(self, container):
+        """Deletes environment variables"""
+        container['env'] = [i for i in container['env']
+                    if i['name'] not in self.delete_env.split(',')]
+
+    def _add_or_update_env(self, container):
+        """Adds or modifies environment variables"""
+        existing = set(item['name'] for item in container['env'])
+        data_to_add = [dict(zip(['name', 'value'], item.strip().split(':')))
+                    for item in self.env.strip().split(',')
+                    if len(item.split(':')) == 2]
+        for i in container['env']:
+            for j in data_to_add:
+                if i['name'] == j['name']:
+                    i['value'] = j['value']
+                    break
+        container['env'].extend(
+            filter((lambda x: x['name'] not in existing), data_to_add))
 
     def _resolve_containers_directory(self):
         """

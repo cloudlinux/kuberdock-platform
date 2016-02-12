@@ -207,10 +207,7 @@ class PersistentStorage(object):
             query = query.filter(PersistentDisk.owner_id == user_id)
             users = {user_id: User.get(user_id)}
         else:
-            users = {
-                item.id: item for item in
-                db.session.query(User).filter(User.deleted == False)
-            }
+            users = {item.id: item for item in db.session.query(User)}
         query = query.order_by(PersistentDisk.name)
         res = [
             {

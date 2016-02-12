@@ -604,6 +604,20 @@ predefined_app_schema = {
 node_schema = {'hostname': hostname_schema, 'kube_type': kube_type_schema}
 
 
+ippool_schema = {
+    'network': {'type': 'string'},
+    'autoblock': {
+        'type': 'string',
+        'regex': {
+            'regex': re.compile(r'^(?:\s*\d+(?:-\d+)?\s*,)*'
+                                r'(?:\s*\d+(?:-\d+)?\s*)$'),
+            'message': 'Exclude IP\'s are expected to be in the form of 5,6,7 '
+                       'or 6-134 or both comma-separated',
+        },
+    },
+}
+
+
 # ===================================================================
 
 

@@ -5,6 +5,7 @@ import ipaddress
 from .podcollection import PodCollection
 from ..pods.models import IPPool, PodIP, ip_network
 from ..utils import APIError, atomic
+from ..validation import ValidationError, V, ippool_schema
 
 
 class IpAddrPool(object):
@@ -42,27 +43,29 @@ class IpAddrPool(object):
         :return: dict with fields 'network' and 'autoblock'
 
         """
+        data = V()._api_validation(data, ippool_schema)
         try:
             network = ip_network(data.get('network'))
-            if IPPool.filter_by(network=str(network)).first():
-                raise APIError(
-                    'Network {0} already exists'.format(str(network)))
-            autoblock = self._parse_autoblock(data.get('autoblock'))
-            pool = IPPool(network=str(network))
-            block_list = [
-                int(ipaddress.ip_address(i))
-                for i in imap(unicode, network.hosts())
-                if int(i.split('.')[-1]) in autoblock
-            ]
-
-            pool.block_ip(block_list)
-            pool.save()
-            return {'id': str(network),
-                    'network': str(network),
-                    'autoblock': block_list,
-                    'allocation': pool.free_hosts_and_busy(page=1)}
         except (ValueError, AttributeError) as e:
-            raise APIError(str(e))
+            raise ValidationError(str(e))
+
+        if IPPool.filter_by(network=str(network)).first():
+            raise APIError(
+                'Network {0} already exists'.format(str(network)))
+        autoblock = self._parse_autoblock(data.get('autoblock'))
+        pool = IPPool(network=str(network))
+        block_list = [
+            int(ipaddress.ip_address(i))
+            for i in imap(unicode, network.hosts())
+            if int(i.split('.')[-1]) in autoblock
+        ]
+
+        pool.block_ip(block_list)
+        pool.save()
+        return {'id': str(network),
+                'network': str(network),
+                'autoblock': block_list,
+                'allocation': pool.free_hosts_and_busy(page=1)}
 
     @atomic(nested=False)
     def update(self, network, params):
@@ -83,12 +86,12 @@ class IpAddrPool(object):
         return net.to_dict()
 
     def get_user_addresses(self, user):
-        pods = dict([(pod.id, pod.name)
-            for pod in user.pods if pod.status != 'deleted'])
+        pods = {pod.id: pod.name
+                for pod in user.pods if pod.status != 'deleted'}
         return [{
-                'id': str(ipaddress.ip_address(i.ip_address)),
-                'pod': pods[i.pod_id]
-            } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
+            'id': str(ipaddress.ip_address(i.ip_address)),
+            'pod': pods[i.pod_id]
+        } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
     @atomic(nested=False)
     def delete(self, network):
@@ -106,13 +109,14 @@ class IpAddrPool(object):
         blocklist = set()
         if not data:
             return blocklist
-        for num in [i.strip() for i in data.split(',')]:
-            if num.isdigit():
-                blocklist.add(int(num))
+        for term in (i.strip() for i in data.split(',')):
+            if term.isdigit():
+                blocklist.add(int(term))
                 continue
             try:
-                f, l = map(int, num.split('-'))
-                blocklist.update(set(range(f, l+1)))
+                first, last = map(int, term.split('-'))
+                blocklist.update(set(range(first, last + 1)))
             except ValueError:
-                continue
+                raise APIError("Exclude IP's are expected to be in the form of "
+                               "5,6,7 or 6-134 or both comma-separated")
         return blocklist

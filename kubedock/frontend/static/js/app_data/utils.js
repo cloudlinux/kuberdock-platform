@@ -1,5 +1,5 @@
 define(['moment-timezone', 'notify'], function(moment){
-
+    'use strict';
     var utils = {};
 
     utils.modalDialog = function(options){
@@ -21,7 +21,7 @@ define(['moment-timezone', 'notify'], function(moment){
             if (options.type === 'delete'){
                 buttonText = 'Delete';
             } else if (options.type === 'saveAnyway'){
-                 buttonText = 'save anyway';
+                buttonText = 'save anyway';
             } else if ( options.type === 'deleteAnyway'){
                 buttonText = 'Delete Anyway';
             } else {
@@ -87,7 +87,8 @@ define(['moment-timezone', 'notify'], function(moment){
         } else if (!data.responseJSON || !data.responseJSON.data) {
             msg = data.responseText;
             if (data.status >= 500 && data.getResponseHeader &&  // nginx error page
-                data.getResponseHeader('content-type') == 'text/html'){
+                    data.getResponseHeader('content-type') == 'text/html'){
+                var error;
                 if (data.status == 504) error = 'Timeout error';
                 else if (data.status == 502) error = 'Server is unavailable';
                 else if (data.status == 500) error = 'Internal server error';
@@ -160,8 +161,8 @@ define(['moment-timezone', 'notify'], function(moment){
         return  hContent > hWindow ? true : false;
     };
 
-    utils.scrollTo = function(a, b){
-        el = a.offset().top;
+    utils.scrollTo = function(a){
+        var el = a.offset().top;
         $('html, body').animate({
             scrollTop: el-50
         }, 500);
@@ -191,7 +192,7 @@ define(['moment-timezone', 'notify'], function(moment){
         try {
             return moment(dt).tz(tz).format(formatString);
         } catch (e) {
-            console.log(e);
+            console.log(e);  // eslint-disable-line no-console
         }
         return moment(dt).format(formatString);
     };

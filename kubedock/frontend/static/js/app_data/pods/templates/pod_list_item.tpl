@@ -12,9 +12,9 @@
 <td>
     <span class="poditem-page-btn" title="Edit <%- name %> pod" ><%- name %></span>
 </td>
-<td>
+<!-- <td>
     <span><%- replicas || 1 %></span>
-</td>
+</td> -->
 <td>
     <% if (status) { %>
         <span class="<%- status %>"><%- status %></span>

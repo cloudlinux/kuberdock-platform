@@ -8,6 +8,15 @@ DEFAULT_TIMEZONE = 'UTC'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 DEBUG = True
+# With the following option turned on (by default) and in case of debug mode
+# we will get a couple of 'idle in transaction' states
+# in postgres if there will be unhandled exceptions in request processing.
+# From docs:
+# In debug mode Flask will not tear down a request on an exception immediately.
+# Instead if will keep it alive so that the interactive debugger can still
+# access it. This behavior can be controlled by the
+# PRESERVE_CONTEXT_ON_EXCEPTION configuration variable.
+PRESERVE_CONTEXT_ON_EXCEPTION = False
 TEST = False
 PRE_START_HOOK_ENABLED = False
 

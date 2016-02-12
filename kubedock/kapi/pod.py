@@ -72,22 +72,29 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
         if pod.status in (POD_STATUSES.running, POD_STATUSES.succeeded,
                           POD_STATUSES.failed):
-            for pod_item in status.get('containerStatuses', []):
-                if pod_item['name'] == 'POD':
-                    continue
+            container_statuses = status.get('containerStatuses', [])
+            if container_statuses:
+                for pod_item in container_statuses:
+                    if pod_item['name'] == 'POD':
+                        continue
+                    for container in pod.containers:
+                        if container['name'] == pod_item['name']:
+                            state, stateDetails = pod_item.pop('state').items()[0]
+                            pod_item['state'] = state
+                            pod_item['startedAt'] = stateDetails.get('startedAt')
+                            if state == 'terminated':
+                                pod_item['exitCode'] = stateDetails.get('exitCode')
+                                pod_item['finishedAt'] = stateDetails.get('finishedAt')
+                            container_id = pod_item.get('containerID', container['name'])
+                            pod_item['containerID'] = _del_docker_prefix(container_id)
+                            image_id = pod_item.get('imageID', container['image'])
+                            pod_item['imageID'] = _del_docker_prefix(image_id)
+                            container.update(pod_item)
+            else:
                 for container in pod.containers:
-                    if container['name'] == pod_item['name']:
-                        state, stateDetails = pod_item.pop('state').items()[0]
-                        pod_item['state'] = state
-                        pod_item['startedAt'] = stateDetails.get('startedAt')
-                        if state == 'terminated':
-                            pod_item['exitCode'] = stateDetails.get('exitCode')
-                            pod_item['finishedAt'] = stateDetails.get('finishedAt')
-                        container_id = pod_item.get('containerID', container['name'])
-                        pod_item['containerID'] = _del_docker_prefix(container_id)
-                        image_id = pod_item.get('imageID', container['image'])
-                        pod_item['imageID'] = _del_docker_prefix(image_id)
-                        container.update(pod_item)
+                    container['state'] = pod.status
+                    container['containerID'] = None
+                    container['imageID'] = None
         else:
             pod._forge_dockers(status=pod.status)
         return pod

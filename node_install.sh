@@ -4,18 +4,117 @@
 # IMPORTANT: each package must be installed with separate command because of
 # yum incorrect error handling!
 
-KUBERNETES_CONF_DIR=/etc/kubernetes
-EXIT_MESSAGE="Installation error."
-
 PORTS=$1
 IPS=$2
 
+# SOME VARS:
+AWS=${AWS}
+KUBERNETES_CONF_DIR='/etc/kubernetes'
+EXIT_MESSAGE="Installation error."
+KUBE_REPO='/etc/yum.repos.d/kube-cloudlinux.repo'
+KUBE_TEST_REPO='/etc/yum.repos.d/kube-cloudlinux-testing.repo'
+PLUGIN_DIR_BASE='/usr/libexec/kubernetes'
+KD_WATCHER_SERVICE='/etc/systemd/system/kuberdock-watcher.service'
+KD_KERNEL_VARS='/etc/sysctl.d/75-kuberdock.conf'
+KD_RSYSLOG_CONF='/etc/rsyslog.d/kuberdock.conf'
+KD_ELASTIC_LOGS='/var/lib/elasticsearch'
+CADVISOR_CONF='/etc/sysconfig/kuberdock-cadvisor'
 FSTAB_BACKUP="/var/lib/kuberdock/backups/fstab.pre-swapoff"
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 
 # SOME HELPERS
+
+remove_unneeded(){
+    rpm -q --whatrequires $@
+    if [[ $? -ne 0 ]];then
+        yum -y autoremove $@
+    fi
+}
+
+unmap_ceph(){
+    which rbd &> /dev/null
+    if [[ $? -eq 0 ]];then
+        echo "Try unmount and unmap all rbd drives"
+        for i in $(ls -1 /dev/ | grep -P 'rbd\d+');do
+            umount "/dev/$i"
+            rbd unmap "/dev/$i"
+        done
+    fi
+}
+
+clean_node(){
+    echo "=== Node clean up started ==="
+    echo "ALL PACKAGES, CONFIGS AND DATA RELATED TO KUBERDOCK AND PODS WILL BE DELETED"
+
+    echo "Stop and disable services..."
+    for i in kubelet docker kube-proxy flanneld kuberdock-watcher \
+             kuberdock-cadvisor ntpd;do
+        systemctl disable $i
+        systemctl stop $i
+    done
+    systemctl unmask docker-storage-setup
+
+    # Maybe only in some cases?
+    unmap_ceph
+
+    yum -y remove kubernetes*
+    yum -y remove docker
+    yum -y remove flannel*
+    yum -y remove kuberdock-cadvisor
+    remove_unneeded python-requests
+    remove_unneeded python-ipaddress
+    remove_unneeded ipset
+    remove_unneeded ntp
+
+    if [ "$AWS" = True ];then
+        remove_unneeded aws-cli
+        remove_unneeded jq
+    fi
+
+    # kubelet auth token and etcd certs
+    rm -rf $KUBERNETES_CONF_DIR
+    rm -rf /etc/pki/etcd
+
+    rm -rf $PLUGIN_DIR_BASE
+    rm -f $KD_WATCHER_SERVICE
+
+    rm -f /etc/sysconfig/flanneld*
+    rm -f /etc/systemd/system/flanneld.service
+    rm -rf /run/flannel
+
+    rm -f $KD_KERNEL_VARS
+
+    rm -rf /etc/sysconfig/docker*
+
+    rm -rf /var/lib/docker
+    rm -rf /var/lib/kubelet
+    rm -rf /var/lib/kuberdock
+    rm -rf $CADVISOR_CONF*
+    rm -rf $KD_ELASTIC_LOGS
+
+    rm -f $KUBE_REPO
+    rm -f $KUBE_TEST_REPO
+
+    rm -f $KD_RSYSLOG_CONF
+    systemctl restart rsyslog
+
+    rm -f /etc/ntpd.conf*
+
+    systemctl daemon-reload
+
+    systemctl stop firewalld
+    iptables -w -F
+    iptables -w -X
+    iptables -w -F -t mangle
+    iptables -w -X -t mangle
+    iptables -w -F -t nat
+    iptables -w -X -t nat
+
+    echo "=== Node clean up finished ==="
+}
+clean_node
 
 check_status()
 {
@@ -64,8 +163,7 @@ fi
 
 rpm -q firewalld && firewall-cmd --state
 if [ $? == 0 ];then
-    # TODO change rules, not disable
-    echo "Setting up firewall rules..."
+    echo "Stop firewalld. Dynamic Iptables rules will be used instead."
     systemctl stop firewalld
     check_status
     systemctl mask firewalld
@@ -73,7 +171,7 @@ fi
 
 # 1. create yum repo file
 
-cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
+cat > $KUBE_REPO << EOF
 [kube]
 name=kube
 baseurl=http://repo.cloudlinux.com/kubernetes/x86_64/
@@ -83,7 +181,7 @@ gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
 
 # Add kubernetes testing repo
-cat > /etc/yum.repos.d/kube-cloudlinux-testing.repo << EOF
+cat > $KUBE_TEST_REPO << EOF
 [kube-testing]
 name=kube-testing
 baseurl=http://repo.cloudlinux.com/kubernetes-testing/x86_64/
@@ -133,7 +231,6 @@ yum_wrapper -y install ipset
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
-AWS=${AWS}
 if [ "$AWS" = True ];then
     yum_wrapper -y install aws-cli
     check_status
@@ -174,21 +271,21 @@ check_status
 
 # 4.2 kuberdock kubelet plugin stuff
 echo "Setup network plugin..."
-PLUGIN_DIR=/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock
+PLUGIN_DIR="$PLUGIN_DIR_BASE/kubelet-plugins/net/exec/kuberdock"
 mkdir -p "$PLUGIN_DIR/data"
 mv "/node_network_plugin.sh" "$PLUGIN_DIR/kuberdock"
 mv "/node_network_plugin.py" "$PLUGIN_DIR/kuberdock.py"
 chmod +x "$PLUGIN_DIR/kuberdock"
 check_status
 
-cat > /etc/systemd/system/kuberdock-watcher.service << EOF
+cat > $KD_WATCHER_SERVICE << EOF
 [Unit]
 Description=KuberDock Network Plugin watcher
 After=flanneld.service
 Requires=flanneld.service
 
 [Service]
-ExecStart=/usr/bin/env python2 /usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/kuberdock.py watch
+ExecStart=/usr/bin/env python2 $PLUGIN_DIR/kuberdock.py watch
 
 [Install]
 WantedBy=multi-user.target
@@ -270,7 +367,7 @@ sysctl -w net.ipv4.ip_forward=1
 sysctl -w net.bridge.bridge-nf-call-iptables=1
 sysctl -w net.bridge.bridge-nf-call-ip6tables=1
 check_status
-cat > /etc/sysctl.d/75-kuberdock.conf << EOF
+cat > $KD_KERNEL_VARS << EOF
 net.ipv4.ip_nonlocal_bind = 1
 net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-iptables = 1
@@ -281,7 +378,7 @@ EOF
 
 # 8. setup rsyslog forwarding
 echo "Reconfiguring rsyslog..."
-cat > /etc/rsyslog.d/kuberdock.conf << 'EOF'
+cat > $KD_RSYSLOG_CONF << 'EOF'
 $LocalHostName $NODENAME
 $template LongTagForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%"
 *.* @127.0.0.1:5140;LongTagForwardFormat

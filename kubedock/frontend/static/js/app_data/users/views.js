@@ -244,23 +244,44 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         template: allUsersActivitiesTpl,
 
         ui: {
-            'dateFrom'   : 'input#dateFrom',
-            'dateTo'     : 'input#dateTo',
-            'usersList'  : 'ul#users-list',
-            'tbody'      : '#users-activities-table',
-            'users_page' : '#users-page, .usersPage',
-            'username'   : '#username',
+            'dateFrom'    : 'input#dateFrom',
+            'dateTo'      : 'input#dateTo',
+            'usersList'   : 'ul#users-list',
+            'tbody'       : '#users-activities-table',
+            'users_page'  : '#users-page, .usersPage',
+            'username'    : '#username',
+            'calendarIco' : '.calendar',
+            'searchIco'   : 'i.search'
         },
 
         events: {
             'change input.user-activity' : 'getUsersActivities',
-            'change input#dateFrom'      : 'getUsersActivities',
-            'change input#dateTo'        : 'getUsersActivities',
-            'click @ui.users_page'       : 'back'
+            'change @ui.dateFrom'        : 'getUsersActivities',
+            'change @ui.dateTo'          : 'getUsersActivities',
+            'click @ui.users_page'       : 'back',
+            'click @ui.calendarIco'      : 'foncusInput',
+            'click @ui.searchIco'        : 'foncusInput',
+            'focus @ui.dateFrom'         : 'removeError'
+        },
+
+        foncusInput: function(e){
+            var target = $(e.target);
+            target.prev('input').focus();
+        },
+
+        removeError: function(evt){
+            var target = $(evt.target);
+            if (target.hasClass('error')) target.removeClass('error');
         },
 
         _getActivities: function(username, dateFrom, dateTo){
-            var that = this;
+            var that = this,
+                now = utils.dateYYYYMMDD();
+
+            if (dateFrom > dateTo){
+                this.ui.dateFrom.addClass('error');
+                utils.notifyWindow('Start date may not exceed the end date')
+            }
 
             utils.preloader.show();
             $.ajax({
@@ -273,16 +294,16 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         that.ui.tbody.empty();
                         if(rs.data.length == 0){
                             that.ui.tbody.append($('<tr>').append(
-                                '<td colspan="5" align="center" class="disabled-color-text">Nothing found</td>'
+                                '<td colspan="3" align="center" class="disabled-color-text">Nothing found</td>'
                             ));
                         } else {
-                            $.each(rs.data, function (i, itm) {
+                            _.each(rs.data, function(itm){
                                 that.ui.tbody.append($('<tr>').append(
                                    // '<td>' + itm.username + '</td>' +
-                                   // '<td>' + itm.email + '</td>' +
                                    // '<td>' + itm.rolename + '</td>' +
+                                    '<td>' + itm.action + '</td>' +
                                     '<td>' + App.currentUser.localizeDatetime(itm.ts) + '</td>' +
-                                    '<td>' + itm.action + '</td>'
+                                    '<td>' + itm.remote_ip + '</td>'
                                    // '<td>' + itm.ts + '</td>'
                                 ));
                             })
@@ -297,10 +318,16 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         onRender: function(){
             var that = this;
             // Init datepicker
-            this.ui.dateFrom.datepicker({dateFormat: "yy-mm-dd"});
-            this.ui.dateTo.datepicker({dateFormat: "yy-mm-dd"});
-            // Set default date
             var now = utils.dateYYYYMMDD();
+            this.ui.dateFrom.datepicker({
+                dateFormat: "yy-mm-dd",
+                maxDate: now
+            });
+            this.ui.dateTo.datepicker({
+                    dateFormat : "yy-mm-dd",
+                    maxDate: now
+            });
+            // Set default date
             this.ui.dateFrom.val(now);
             this.ui.dateTo.val(now);
             // init user autocomplete field

@@ -132,12 +132,7 @@ define(['app_data/app', 'marionette',
                 data: {force: true},
                 success: function(model, resp, opts){
                     that.ui.updateStats.removeClass('start-atimation');
-                    $.notify('Statistics has updated', {
-                        autoHideDelay: 5000,
-                        clickToHide: true,
-                        globalPosition: 'bottom left',
-                        className: 'success',
-                    });
+                    utils.notifyWindow('Statistics has updated', 'success');
                     that.render();
                 },
                 error: function(){

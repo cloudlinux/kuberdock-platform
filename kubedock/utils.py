@@ -93,7 +93,8 @@ def send_event(event_name, data, to_file=None, channel='common', prefix='SSEEVT'
 
 
 def send_logs(node, data, to_file=None, channel='common'):
-    send_event('node:installLog', {'id': node, 'data': data}, channel=channel)
+    conn = ConnectionPool.get_connection()
+    conn.publish(channel, json.dumps(['node:installLog', {'id': node, 'data': data}]))
     if to_file is not None:
         try:
             to_file.write(data)

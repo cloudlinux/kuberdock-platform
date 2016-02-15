@@ -18,7 +18,7 @@ from kubedock.models import User, Pod
 from kubedock.billing.models import Package, Kube, PackageKube
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
-from kubedock.system_settings.models import SystemSettings
+from kubedock.system_settings.fixtures import add_system_settings
 from kubedock.notifications.models import Notification
 from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import (
@@ -66,9 +66,9 @@ class Creator(Command):
         # Package and Kube with id=0 are default
         # and must be undeletable (always present with id=0) for fallback
         k_internal = Kube(id=Kube.get_internal_service_kube_type(),
-                  name='Internal service', cpu=.02, cpu_units='Cores',
-                  memory=64, memory_units='MB', disk_space=1,
-                  disk_space_units='GB', included_traffic=0)
+                          name='Internal service', cpu=.02, cpu_units='Cores',
+                          memory=64, memory_units='MB', disk_space=1,
+                          disk_space_units='GB', included_traffic=0)
         k1 = Kube(id=Kube.get_default_kube_type(),
                   name='Small', cpu=.05, cpu_units='Cores',
                   memory=16, memory_units='MB', disk_space=1,
@@ -89,29 +89,17 @@ class Creator(Command):
         PackageKube(package=p1, kube=k2, kube_price=0)
         PackageKube(package=p1, kube=k3, kube_price=0)
 
-        bla = SystemSettings(name='billing_apps_link',
-                            label='Link to billing system script',
-                            description='Link to predefined application request processing script',
-                            placeholder = 'http://whmcs.com/script.php')
-
-        pds = SystemSettings(name='persitent_disk_max_size',
-                        value='10',
-                        label='Persistent disk maximum size',
-                        description='maximum capacity of a user container persistent disk in GB',
-                        placeholder = 'Enter value to limit PD size')
-
-
-        db.session.add_all([bla, pds])
+        add_system_settings()
 
         m1 = Notification(type='warning',
-                         message='LICENSE_EXPIRED',
-                         description='Your license has been expired.')
+                          message='LICENSE_EXPIRED',
+                          description='Your license has been expired.')
         m2 = Notification(type='warning',
-                         message='NO_LICENSE',
-                         description='License not found.')
+                          message='NO_LICENSE',
+                          description='License not found.')
         m3 = Notification(type='info',
-                         message='CLN_NOTIFICATION',
-                         description='')
+                          message='CLN_NOTIFICATION',
+                          description='')
         db.session.add_all([m1, m2, m3])
 
         db.session.commit()

@@ -25,7 +25,9 @@ def index(app_hash):
             plan_id = int(plan_id)
 
         app = PredefinedApps().get_by_qualifier(app_hash)
-        billing_url = SystemSettings.get_by_name('billing_apps_link') or ''
+        billing_url = SystemSettings.get_by_name('billing_url')
+        if billing_url:
+            billing_url += '/cart.php'
         max_pd_size = SystemSettings.get_by_name('persitent_disk_max_size') or 10
         name = app.get('name', 'app')
         template = app.get('template', '')

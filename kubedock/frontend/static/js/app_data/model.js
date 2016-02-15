@@ -586,7 +586,8 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     data.SettingsCollection = Backbone.Collection.extend({
         url: '/api/settings/sysapi',
         model: data.SettingsModel,
-        parse: unwrapper
+        parse: unwrapper,
+        comparator: function(model){ return model.id; },
     });
 
     data.NetworkModel = Backbone.Model.extend({

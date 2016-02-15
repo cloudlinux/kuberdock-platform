@@ -437,93 +437,102 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     existsUsername = false,
                     existsEmail = false,
                     username = that.ui.username.val(),
-                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i,
-                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i;
+                    firtsName = that.ui.first_name.val(),
+                    lastName = that.ui.last_name.val(),
+                    middleInitials = that.ui.middle_initials.val(),
+                    spaces = /\s/g,
+                    numbers = /\d/g,
+                    symbols = /[!"#$%&'()*+,\-.\/\\:;<=>?@[\]^_`{\|}~]/g,
+                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i,
+                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
-                _.each(users, function(user){
-                    if (user.get('username') == that.ui.username.val()) existsUsername = true;
-                    if (user.get('email') == that.ui.email.val()) existsEmail = true;
-                });
+                that.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+                that.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+                that.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+
+                existsEmail = _.any(users, function(user){ if (user.get('email') == that.ui.email.val()) return true });
+                existsUsername = _.any(users, function(user){ if (user.get('username') == that.ui.username.val()) return true });
+
                 switch (true) {
                 /* username */
                 case that.ui.username.val() == '':
                     utils.scrollTo(that.ui.username);
-                    that.ui.username.notify("Empty username");
+                    utils.notifyWindow("Empty username");
                     that.ui.username.addClass('error');
                     break;
                 case that.ui.username.val().length >= 26:
                     utils.scrollTo(that.ui.username);
-                    that.ui.username.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     that.ui.username.addClass('error');
                     break;
                 case !patternLatin.test(that.ui.username.val()):
                     utils.scrollTo(that.ui.username);
-                    that.ui.username.notify("Username should contain letters of Latin alphabet only");
+                    utils.notifyWindow("Username should contain letters of Latin alphabet only");
                     that.ui.username.addClass('error');
                     break;
                 case existsUsername:
                     utils.scrollTo(that.ui.username);
-                    that.ui.username.notify('Username should be unique');
+                    utils.notifyWindow('Username should be unique');
                     that.ui.username.addClass('error');
                     break;
                 /* first name */
                 case that.ui.first_name.val().length >= 26:
                     utils.scrollTo(that.ui.first_name);
                     that.ui.first_name.addClass('error');
-                    that.ui.first_name.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* last name */
                 case that.ui.last_name.val().length >= 26:
                     utils.scrollTo(that.ui.last_name);
                     that.ui.last_name.addClass('error');
-                    that.ui.last_name.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* middle initials */
                 case that.ui.middle_initials.val().length >= 26:
                     utils.scrollTo(that.ui.middle_initials);
                     that.ui.middle_initials.addClass('error');
-                    that.ui.middle_initials.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* password */
                 case !that.ui.password.val() || (that.ui.password.val() !== that.ui.password_again.val()):
                     utils.scrollTo(that.ui.password);
                     that.ui.password.addClass('error');
                     that.ui.password_again.addClass('error');
-                    that.ui.password_again.notify("Empty password or don't match");
+                    utils.notifyWindow("Empty password or don't match");
                     break;
                 case that.ui.password.val().length >= 26:
                     utils.scrollTo(that.ui.password);
                     that.ui.password.addClass('error');
                     that.ui.password_again.addClass('error');
-                    that.ui.password_again.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* email */
                 case that.ui.email.val() == '':
                     utils.scrollTo(that.ui.email);
                     that.ui.email.addClass('error');
-                    that.ui.email.notify("Empty E-mail");
+                    utils.notifyWindow("Empty E-mail");
                     break;
                 case that.ui.email.val() !== '' && !pattern.test(that.ui.email.val()):
                     utils.scrollTo(that.ui.email);
                     that.ui.email.addClass('error');
-                    that.ui.email.notify("E-mail must be correct");
+                    utils.notifyWindow("E-mail must be correct");
                     break;
                 case that.ui.email.val().length >= 51:
                     utils.scrollTo(that.ui.email);
                     that.ui.email.addClass('error');
                     that.ui.email.addClass('error');
-                    that.ui.email.notify("Maximum length should be 50 symbols");
+                    utils.notifyWindow("Maximum length should be 50 symbols");
                     break;
                 case existsEmail && that.ui.email.val() !== '':
                     utils.scrollTo(that.ui.email);
-                    that.ui.email.notify('Email should be unique');
                     that.ui.email.addClass('error');
+                    utils.notifyWindow('Email should be unique');
                     break;
                 /* timezone */
                 case that.ui.timezone.val() == '':
                     utils.scrollTo(that.ui.timezone);
                     that.ui.timezone.addClass('error');
-                    that.ui.timezone.notify("Empty Timezone");
+                    utils.notifyWindow("Empty Timezone");
                     break;
                 default:
                     utils.preloader.show();
@@ -764,6 +773,25 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         onSave: function(){
             var that = this;
             App.getUserCollection().done(function(userCollection){
+                var existsEmail = false,
+                    users = userCollection.models,
+                    firtsName = that.ui.first_name.val(),
+                    lastName = that.ui.last_name.val(),
+                    middleInitials = that.ui.middle_initials.val(),
+                    spaces = /\s/g,
+                    numbers = /\d/g,
+                    symbols = /[!"#$%&'()*+,\-.\/\\:;<=>?@[\]^_`{\|}~]/g,
+                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i,
+                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
+
+                that.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+                that.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+                that.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+
+                if (that.model.get('email') !== that.ui.email.val()){
+                    existsEmail = _.any(users, function(user){ if (user.get('email') == that.ui.email.val()) return true });
+                }
+
                 var data = {
                     'email'           : that.ui.email.val(),
                     'active'          : (that.ui.user_status.val() == 1),
@@ -776,76 +804,65 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     'timezone'        : that.ui.timezone.val(),
                 };
 
-                var existsEmail = false,
-                    users = userCollection.models,
-                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i,
-                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i;
-
-                    if (that.model.get('email') !== that.ui.email.val()){
-                        _.each(users, function(user){
-                            if (user.get('email') == that.ui.email.val()) existsEmail = true;
-                        });
-                    }
-
                 switch (true) {
                 /* first name */
                 case that.ui.first_name.val().length >= 26:
                     utils.scrollTo(that.ui.first_name);
                     that.ui.first_name.addClass('error');
-                    that.ui.first_name.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* last name */
                 case that.ui.last_name.val().length >= 26:
                     utils.scrollTo(that.ui.last_name);
                     that.ui.last_name.addClass('error');
-                    that.ui.last_name.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* middle initials */
                 case that.ui.middle_initials.val().length >= 26:
                     utils.scrollTo(that.ui.middle_initials);
                     that.ui.middle_initials.addClass('error');
-                    that.ui.middle_initials.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* password */
                 case that.ui.password.val() || (that.ui.password.val() !== that.ui.password_again.val()):
                     utils.scrollTo(that.ui.password);
                     that.ui.password.addClass('error');
                     that.ui.password_again.addClass('error');
-                    that.ui.password_again.notify("Empty password or don't match");
+                    utils.notifyWindow("Empty password or don't match");
                     break;
                 case that.ui.password.val().length >= 26:
                     utils.scrollTo(that.ui.password);
                     that.ui.password.addClass('error');
                     that.ui.password_again.addClass('error');
-                    that.ui.password_again.notify("Maximum length should be 25 symbols");
+                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* email */
                 case that.ui.email.val() == '':
                     utils.scrollTo(that.ui.email);
                     that.ui.email.addClass('error');
-                    that.ui.email.notify("Empty E-mail");
+                    utils.notifyWindow("Empty E-mail");
                     break;
                 case that.ui.email.val() !== '' && !pattern.test(that.ui.email.val()):
                     utils.scrollTo(that.ui.email);
                     that.ui.email.addClass('error');
-                    that.ui.email.notify("E-mail must be correct");
+                    utils.notifyWindow("E-mail must be correct");
                     break;
                 case that.ui.email.val().length >= 51:
                     utils.scrollTo(that.ui.email);
                     that.ui.email.addClass('error');
                     that.ui.email.addClass('error');
-                    that.ui.email.notify("Maximum length should be 50 symbols");
+                    utils.notifyWindow("Maximum length should be 50 symbols");
                     break;
                 case existsEmail && that.ui.email.val() !== '':
                     utils.scrollTo(that.ui.email);
-                    that.ui.email.notify('Email should be unique');
                     that.ui.email.addClass('error');
+                    utils.notifyWindow('Email should be unique');
                     break;
                 /* timezone */
                 case that.ui.timezone.val() == '':
                     utils.scrollTo(that.ui.timezone);
                     that.ui.timezone.addClass('error');
-                    that.ui.timezone.notify("Empty Timezone");
+                    utils.notifyWindow("Empty Timezone");
                     break;
                 default:
                     if (that.ui.password.val())  // update only if specified

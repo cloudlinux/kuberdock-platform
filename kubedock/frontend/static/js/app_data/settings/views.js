@@ -316,6 +316,7 @@ define(['app_data/app', 'marionette',
             'click @ui.save'       : 'onSave',
             'click @ui.editBtn'    : 'editTemplate',
             'change @ui.input'     : 'changeValue',
+            'keyup @ui.input'     : 'changeValue',
             'change @ui.timezone'  : 'changeValue',
             'focus @ui.input'      : 'removeError',
             /*'click @ui.deleteBtn'  : 'deleteProfile',*/
@@ -404,31 +405,42 @@ define(['app_data/app', 'marionette',
         },
 
         onSave: function(){
+            var firtsName = this.ui.first_name.val(),
+                lastName = this.ui.last_name.val(),
+                middleInitials = this.ui.middle_initials.val(),
+                spaces = /\s/g,
+                numbers = /\d/g,
+                symbols = /[!"#$%&'()*+,\-.\/\\:;<=>?@[\]^_`{\|}~]/g,
+                pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
+
+            this.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+            this.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+            this.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+
             var data = {
                     'first_name': this.ui.first_name.val(),
                     'last_name': this.ui.last_name.val(),
                     'middle_initials': this.ui.middle_initials.val(),
                     'email': this.ui.email.val(),
                     'timezone': this.ui.timezone.val(),
-                },
-                pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
+                };
 
             if (data.email == '') {
                 utils.scrollTo(this.ui.email);
                 this.ui.email.addClass('error');
-                this.ui.email.notify("empty E-mail");
+                utils.notifyWindow("empty E-mail");
                 return;
             } else if (!pattern.test(data.email)) {
                 utils.scrollTo(this.ui.email);
                 this.ui.email.addClass('error');
-                this.ui.email.notify("E-mail must be correct");
+                utils.notifyWindow("E-mail must be correct");
                 return;
             }
             if (this.ui.password.val() !== this.ui.password_again.val()) {
                 utils.scrollTo(this.ui.password);
                 this.ui.password.addClass('error');
                 this.ui.password_again.addClass('error');
-                this.ui.password_again.notify("passwords don't match");
+                utils.notifyWindow("passwords don't match");
                 return;
             }
             if (this.ui.password.val())  // update only if specified

@@ -8,4 +8,4 @@ def upgrade(upd, with_testing, *args, **kwargs):
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
     upd.print_log('Downgrading db...')
-    helpers.downgrade_db(revision='27ac98113841')
+    helpers.downgrade_db(revision='46bba639e6fb')

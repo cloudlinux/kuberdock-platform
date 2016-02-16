@@ -1,3 +1,4 @@
+import pytz
 import unittest
 from datetime import date, datetime, timedelta
 from uuid import uuid4
@@ -60,26 +61,30 @@ class TestContainerLogs(DBTestCase):
         patcher = mock.patch.object(es_logs, 'log_query')
         self.addCleanup(patcher.stop)
         self.log_query_mock = patcher.start()
-        self.log_query_mock.return_value = {'hits': [{'_source': {'log': '321'}},
-                                                     {'_source': {'log': '654'}},
-                                                     {'_source': {'log': '987'}}],
-                                            'total': 3}
+        self.log_query_mock.side_effect = lambda *a, **kw: {  # return new mutable
+            'hits': [{'_source': {'log': '321', '@timestamp': '2015-01-01T12:12:12+00:00'}},
+                     {'_source': {'log': '654', '@timestamp': '2015-01-01T12:12:12+00:00'}},
+                     {'_source': {'log': '987', '@timestamp': '2015-01-01T12:12:12+00:00'}}],
+            'total': 3}
 
         patcher = mock.patch.object(es_logs.Node, 'get_by_name')
         self.addCleanup(patcher.stop)
         self.get_by_name_mock = patcher.start()
         self.get_by_name_mock.return_value = type('Node', (), {'ip': self.host})
 
+        hits = [{'log': '321', '@timestamp': datetime(2015, 1, 1, 12, 12, 12, tzinfo=pytz.UTC)},
+                {'log': '654', '@timestamp': datetime(2015, 1, 1, 12, 12, 12, tzinfo=pytz.UTC)},
+                {'log': '987', '@timestamp': datetime(2015, 1, 1, 12, 12, 12, tzinfo=pytz.UTC)}]
         self.default_result = [{
             'total': 3,
-            'hits': [{'log': '321'}, {'log': '654'}, {'log': '987'}],
+            'hits': hits,
             'exit_code': None,
             'reason': None,
             'end': None,
             'start': self.container_state_2.start_time,
         }, {
             'total': 3,
-            'hits': [{'log': '321'}, {'log': '654'}, {'log': '987'}],
+            'hits': hits,
             'exit_code': self.container_state_1.exit_code,
             'reason': self.container_state_1.reason,
             'end': self.container_state_1.end_time,
@@ -99,7 +104,7 @@ class TestContainerLogs(DBTestCase):
             mock.call(self.index, self.get_filters(self.container_state_2.docker_id),
                       self.host, size, start, end),
             mock.call(self.index, self.get_filters(self.container_state_1.docker_id),
-                      self.host, size - 3, start, end),
+                      self.host, size - 5, start, end),  # 3 log lines + start + end = 5
         ])
         self.get_by_name_mock.assert_has_calls([mock.call(self.pod_state.hostname)] * 2)
         self.assertEqual(res, self.default_result)

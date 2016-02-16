@@ -43,7 +43,7 @@ class IpAddrPool(object):
         :return: dict with fields 'network' and 'autoblock'
 
         """
-        data = V()._api_validation(data, ippool_schema)
+        data = V()._api_validation(data or {}, ippool_schema)
         try:
             network = ip_network(data.get('network'))
         except (ValueError, AttributeError) as e:

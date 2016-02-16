@@ -19,13 +19,14 @@ class TestSystemSettings(APITestCase):
         self.userauth = (user.username, user_password)
         self.adminauth = (self.admin.username, admin_password)
         ss = SystemSettings(name='test_setting',
-                           value='test_setting_value',
-                           label='test_setting_label',
-                           description='test_setting_description',
-                           placeholder='test_setting_placeholder')
+                            value='test_setting_value',
+                            label='test_setting_label',
+                            options='["foo", "abc"]',
+                            description='test_setting_description',
+                            placeholder='test_setting_placeholder')
         fixtures.db.session.add(ss)
         fixtures.db.session.commit()
-    
+
     @attr('db')
     def test_get_setting(self):
         resp = self.open(self.url, auth=self.userauth)
@@ -34,11 +35,12 @@ class TestSystemSettings(APITestCase):
         data = resp.json.get('data')[0]
         data.pop('id') # do not know autoincremented ID
         self.assertEqual(
-            {u'name': u'test_setting',
-            u'value': u'test_setting_value',
-            u'label': u'test_setting_label',
-            u'description': u'test_setting_description',
-            u'placeholder': u'test_setting_placeholder'}, data)
+            {'name': 'test_setting',
+             'value': 'test_setting_value',
+             'options': ['foo', 'abc'],
+             'label': 'test_setting_label',
+             'description': 'test_setting_description',
+             'placeholder': 'test_setting_placeholder'}, data)
 
 
     @attr('db')
@@ -52,14 +54,15 @@ class TestSystemSettings(APITestCase):
         resp3 = self.open(self.url, auth=self.userauth)
         self.assert200(resp3)
         data = resp3.json.get('data')[0]
-        data.pop('id', None) # do not know autoincremented ID
+        data.pop('id', None)  # do not know autoincremented ID
         self.assertEqual(
-            {u'name': u'test_setting',
-            u'value': u'test_setting_edited',
-            u'label': u'test_setting_label',
-            u'description': u'test_setting_description',
-            u'placeholder': u'test_setting_placeholder'}, data)
-        
+            {'name': 'test_setting',
+             'value': 'test_setting_edited',
+             'label': 'test_setting_label',
+             'options': ['foo', 'abc'],
+             'description': 'test_setting_description',
+             'placeholder': 'test_setting_placeholder'}, data)
+
     @attr('db')
     def test_edit_forbidden_for_user_setting(self):
         resp1 = self.open(self.url, auth=self.userauth)

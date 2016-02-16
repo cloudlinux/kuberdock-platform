@@ -614,9 +614,10 @@ ippool_schema = {
     'network': {'type': 'string'},
     'autoblock': {
         'type': 'string',
+        'nullable': True,
         'regex': {
-            'regex': re.compile(r'^(?:\s*\d+(?:-\d+)?\s*,)*'
-                                r'(?:\s*\d+(?:-\d+)?\s*)$'),
+            'regex': re.compile(r'^(?:(?:\s*\d+(?:-\d+)?\s*,)*'
+                                r'(?:\s*\d+(?:-\d+)?\s*))?$'),
             'message': 'Exclude IP\'s are expected to be in the form of 5,6,7 '
                        'or 6-134 or both comma-separated',
         },

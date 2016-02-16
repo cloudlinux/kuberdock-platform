@@ -123,22 +123,13 @@ class TestIpPool(DBTestCase):
             'network': u'192.168.4.0/24',
             'autoblock': invalid_block
         }
-        res = ippool.IpAddrPool().create(data)
-        self.assertEqual(
-            {
-                'network': res['network'],
-                'autoblock': res['autoblock']
-            },
-            {
-                'network': data['network'],
-                'autoblock': [],
-            }
-        )
+        with self.assertRaises(APIError):
+            res = ippool.IpAddrPool().create(data)
 
         networks = db.session.query(IPPool).order_by(IPPool.network)
         self.assertEqual(
             [item.network for item in networks],
-            [u'192.168.1.1/32', u'192.168.2.0/24', u'192.168.4.0/24']
+            [u'192.168.1.1/32', u'192.168.2.0/24'],
         )
 
     @mock.patch.object(ippool.PodCollection, '_remove_public_ip')

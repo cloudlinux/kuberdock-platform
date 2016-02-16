@@ -5,6 +5,7 @@ from collections import namedtuple
 import mock
 
 from kubedock.kapi import pd_utils
+from kubedock import settings
 
 class TestPdUtils(unittest.TestCase):
     """Tests for pd_utils functions."""
@@ -63,13 +64,23 @@ class TestPdUtils(unittest.TestCase):
         name = 'gfgfgf'
         uid = 776
         res = pd_utils.compose_pdname(name, uid)
-        self.assertEqual(res, name + pd_utils.PD_SEPARATOR_USERID + str(uid))
+        drive = name + pd_utils.PD_SEPARATOR_USERID + str(uid)
+        if settings.PD_NAMESPACE:
+            composed = settings.PD_NAMESPACE + settings.PD_NS_SEPARATOR + drive
+        else:
+            composed = drive
+        self.assertEqual(res, drive)
 
         test_user_cls = namedtuple('test_user_cls', 'id')
         uid = 111
         uobject = test_user_cls(uid)
         res = pd_utils.compose_pdname(name, uobject)
-        self.assertEqual(res, name + pd_utils.PD_SEPARATOR_USERID + str(uid))
+        drive = name + pd_utils.PD_SEPARATOR_USERID + str(uid)
+        if settings.PD_NAMESPACE:
+            composed = settings.PD_NAMESPACE + settings.PD_NS_SEPARATOR + drive
+        else:
+            composed = drive
+        self.assertEqual(res, composed)
 
     def test_compose_pd_name_legacy(self):
         """Test pd_utils.compose_pdname function."""

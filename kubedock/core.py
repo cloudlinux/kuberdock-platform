@@ -12,7 +12,10 @@ from flask.ext.login import LoginManager
 from flask import current_app
 from werkzeug.contrib.cache import RedisCache
 
-from .settings import REDIS_HOST, REDIS_PORT, SSH_KEY_FILENAME
+from .settings import (REDIS_HOST, REDIS_PORT,
+                       SSH_KEY_FILENAME,
+                       SSE_KEEPALIVE_INTERVAL,
+                       SSE_POLL_INTERVAL)
 
 
 login_manager = LoginManager()
@@ -123,59 +126,70 @@ class ExclusiveLock(object):
             redis_con.delete(*keys)
 
 
-def _parse_message_text(text, encoding):
-    """
-    Generator to parse and decode data to be sent to SSE endpoint
-    @param test: iterable -> list, tuple, set or string to be decoded
-    @param encoding: string -> endocing to decode
-    @return: generator
-    """
-    if isinstance(text, (list, tuple, set)):
-        for item in text:
-            if isinstance(item, bytes):
-                item = item.decode(encoding)
-            for subitem in item.splitlines():
-                yield subitem
-    else:
-        if isinstance(text, bytes):
-            text = text.decode(encoding)
-        for item in text.splitlines():
+class ServerSentEvents(object):
+
+    def __init__(self):
+        self._buff = []
+
+    @staticmethod
+    def _parse_message_text(text, encoding):
+        """
+        Generator to parse and decode data to be sent to SSE endpoint
+        @param test: iterable -> list, tuple, set or string to be decoded
+        @param encoding: string -> endocing to decode
+        @return: generator
+        """
+        if isinstance(text, (list, tuple, set)):
+            for item in text:
+                if isinstance(item, bytes):
+                    item = item.decode(encoding)
+                for subitem in item.splitlines():
+                    yield subitem
+        else:
+            if isinstance(text, bytes):
+                text = text.decode(encoding)
+            for item in text.splitlines():
+                yield item
+
+    def make_message(self, eid, event, text, encoding='utf-8'):
+        """
+        Makes message according to SSE standard
+        @param eid: int -> message id
+        @param event: string -> event type
+        @param text: iterable -> message content
+        @param encoding: string -> encoding to decode data
+        @return: string -> decoded and formatted string data
+        """
+        self._buff.append("event:{0}\n".format(event))
+        for text_item in self._parse_message_text(text, encoding):
+            self._buff.append("data:{0}\n".format(text_item))
+        if eid is not None:
+            self._buff.append("id:{0}\n".format(eid))
+        self._buff.append('\n')
+
+    def __iter__(self):
+        for item in self._buff:
             yield item
-
-
-def make_message(eid, event, text, encoding='utf-8'):
-    """
-    Makes message according to SSE standard
-    @param eid: int -> message id
-    @param event: string -> event type
-    @param text: iterable -> message content
-    @param encoding: string -> encoding to decode data
-    @return: string -> decoded and formatted string data
-    """
-    _buff = []
-    _buff.append("event:{0}".format(event))
-    for text_item in _parse_message_text(text, encoding):
-        _buff.append("data:{0}".format(text_item))
-    if eid is not None:
-        _buff.append("id:{0}".format(eid))
-    return "{}\n\n".format('\n'.join(_buff))
+        self._buff = []
 
 
 class EvtStream(object):
     key = 'SSEEVT'
-    timeout = 30
+
     def __init__(self, conn, channel, last_id=None):
         self.conn = conn
         self.channel = channel
         self.pubsub = conn.pubsub()
         self.pubsub.subscribe(channel)
         self.last_id = last_id
+        self.timeout = int(SSE_KEEPALIVE_INTERVAL / SSE_POLL_INTERVAL)
         self._time_is_out = self.timeout
         if self.last_id is not None:
             self.last_id = int(self.last_id)
         self.cache_key = ':'.join([self.key, channel])
 
     def __iter__(self):
+        sse = ServerSentEvents()
         if self.last_id is not None:
             for key, value in sorted(((int(k), v)
                     for k, v in self.conn.hgetall(self.cache_key).iteritems()),
@@ -185,8 +199,9 @@ class EvtStream(object):
                 eid, event, data = json.loads(value)
                 if not isinstance(data, basestring):
                     data = json.dumps(data)
-                msg = make_message(eid, event, data)
-                yield msg.encode('u8')
+                sse.make_message(eid, event, data)
+                for msg in sse:
+                    yield msg.encode('u8')
         else:
             yield ':\n\n'
         while True:
@@ -196,15 +211,16 @@ class EvtStream(object):
                     eid, event, data = json.loads(message['data'])
                     if not isinstance(data, basestring):
                         data = json.dumps(data)
-                    msg = make_message(eid, event, data)
-                    yield msg.encode('u8')
+                    sse.make_message(eid, event, data)
+                    for msg in sse:
+                        yield msg.encode('u8')
             else:
                 if not self._time_is_out:
                     self._time_is_out = self.timeout
                     yield ':\n\n'
                 else:
                     self._time_is_out -= 1
-            time.sleep(0.5)
+            time.sleep(SSE_POLL_INTERVAL)
 
 
 def ssh_connect(host, timeout=10):

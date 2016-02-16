@@ -83,6 +83,9 @@ DEFAULT_REGISTRY = 'https://registry-1.docker.io'
 DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
 DOCKER_IMG_CACHE_TIMEOUT = timedelta(hours=4)
 
+SSE_KEEPALIVE_INTERVAL = 15
+SSE_POLL_INTERVAL = 0.5
+
 ID_PATH = '/var/lib/kuberdock/installation-id'
 STAT_URL = 'https://cln.cloudlinux.com/api/kd/validate.json'
 

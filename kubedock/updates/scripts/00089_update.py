@@ -138,7 +138,6 @@ def upgrade(upd, with_testing, *args, **kwargs):
     upd.print_log(helpers.local('systemctl reenable kuberdock-k8s2etcd'))
     upd.print_log(helpers.local('systemctl restart kuberdock-k8s2etcd'))
 
-    helpers.install_package('kubernetes-master-1.1.3', with_testing)
     upd.print_log('Add after etcd.service to kube-apiserver service file')
     upd.print_log(
         helpers.local(
@@ -217,6 +216,8 @@ def downgrade(upd, with_testing,  exception, *args, **kwargs):
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    run('yum --enablerepo=kube,kube-testing clean metadata')
+
     # 00084_update.py
     yum_base_no_kube = 'yum install --disablerepo=kube -y '
 
@@ -233,7 +234,10 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     run('yum remove -y kernel-devel-' + old_version)
 
     # 00086_update.py
-    helpers.remote_install('kubernetes-node-1.1.3', with_testing)
+    res = helpers.remote_install('kubernetes-node-1.1.3', with_testing)
+    upd.print_log(res)
+    if res.failed:
+        raise helpers.UpgradeError('Failed to update kubernetes on node')
     upd.print_log("Turn on cpu-cfs-quota in kubelet")
 
     get(KUBELET_PATH, KUBELET_TEMP_PATH)

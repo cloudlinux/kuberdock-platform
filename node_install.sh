@@ -165,11 +165,10 @@ else
     fi
 fi
 
-rpm -q firewalld && firewall-cmd --state
+rpm -q firewalld
 if [ $? == 0 ];then
     echo "Stop firewalld. Dynamic Iptables rules will be used instead."
     systemctl stop firewalld
-    check_status
     systemctl mask firewalld
 fi
 

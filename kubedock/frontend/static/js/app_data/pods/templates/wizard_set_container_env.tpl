@@ -122,7 +122,7 @@
                             <div>Number of Kubes: <%- kubes %></div>
                         </div>
                         <div class="col-xs-6 servers">
-                            <div>CPU: <%- kube_type.cpu * kubes %> <%- kube_type.cpu_units %></div>
+                            <div>CPU: <%- (kube_type.cpu * kubes).toFixed(2) %> <%- kube_type.cpu_units %></div>
                             <div>RAM: <%- kube_type.memory * kubes %> <%- kube_type.memory_units %></div>
                             <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %></div>
                         </div>

@@ -54,6 +54,7 @@ define(['app_data/app', 'app_data/model',
                 that.listenTo(view, 'image:fetched', that.imageFetched);
                 that.listenTo(view, 'pager:clear', that.clearPager);
                 that.listenTo(view, 'pod:save', that.podSave);
+                that.listenTo(view, 'pod:pay_and_run', that.podPayAndRun);
                 that.listenTo(view, 'image:searchsubmit', that.imageSearchSubmit);
                 that.listenTo(view, 'image:getnextpage', that.imageGetNextPage);
 
@@ -100,6 +101,9 @@ define(['app_data/app', 'app_data/model',
         },
         podSave: function(data){
             this.trigger('pod:save', data.model);
+        },
+        podPayAndRun: function(data){
+            this.trigger('pod:pay_and_run', data.model);
         },
         imageSearchSubmit: function(data){
             this.trigger('image:searchsubmit', data);
@@ -1359,9 +1363,10 @@ define(['app_data/app', 'app_data/model',
         template: wizardSetContainerCompleteTpl,
         tagName: 'div',
 
-        initialize: function(){
+        initialize: function(options){
             this.pkg = App.userPackage;
             this.model.recalcInfo(this.pkg);
+            this.hasBilling = options.hasBilling;
         },
 
         templateHelpers: function() {
@@ -1379,6 +1384,7 @@ define(['app_data/app', 'app_data/model',
                 period           : this.pkg.get('period'),
                 price_ip         : this.pkg.getFormattedPrice(this.pkg.get('price_ip')),
                 price_pstorage   : this.pkg.getFormattedPrice(this.pkg.get('price_pstorage')),
+                hasBilling       : this.hasBilling,
             };
         },
 
@@ -1411,7 +1417,7 @@ define(['app_data/app', 'app_data/model',
 
         triggers: {
             'click .save-container'     : 'pod:save',
-            'click .save-run-container' : 'pod:run',
+            'click .pay-and-run-container' : 'pod:pay_and_run',
         },
 
         deleteItem: function(evt){

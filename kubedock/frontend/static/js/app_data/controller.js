@@ -325,18 +325,48 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                             },
                         });
                     });
+                    that.listenTo(wizardLayout, 'pod:pay_and_run', function(data){
+                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
+                            Model.KubeType.noAvailableKubeTypes.notify();
+                            return;
+                        }
+                        App.getSystemSettingsCollection().done(function(collection){
+                            var billingUrl = utils.getBillingUrl(collection);
+                            if (billingUrl) {
+                                utils.preloader.show();
+                                data.attributes['status'] = 'unpaid';
+                                podCollection.fullCollection.create(data, {
+                                    wait: true,
+                                    complete: utils.preloader.hide,
+                                    success: function(model){
+                                        var podObj = encodeURIComponent(JSON.stringify(data.attributes)),
+                                            userObj = encodeURIComponent(JSON.stringify(App.currentUser.attributes));
+                                        window.location = billingUrl
+                                            + (billingUrl.indexOf('?') === -1 ? '?' : '&')
+                                            + 'pod=' + podObj + '&user=' + userObj;
+                                    },
+                                    error: function(model, response){
+                                        utils.notifyWindow(response);
+                                    }
+                                });
+                            }
+                        });
+                    });
                     that.listenTo(wizardLayout, 'step:complete', function(){
                         model.solveKubeTypeConflicts();
-
                         if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
                             if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
                                 Model.KubeType.noAvailableKubeTypes.notifyConflict();
                             else
                                 Model.KubeType.noAvailableKubeTypes.notify();
                         }
-                        wizardLayout.steps.show(new Views.WizardCompleteSubView({
-                            model: model
-                        }));
+                        App.getSystemSettingsCollection().done(function(collection){
+                            var billingType = collection.findWhere({name: 'billing_type'}).get('value');
+                            wizardLayout.steps.show(new Views.WizardCompleteSubView({
+                                model: model,
+                                hasBilling: billingType === 'No billing' ? false : true
+                            }));
+                        });
                     });
                     that.listenTo(wizardLayout, 'image:selected', function(image, auth){
                         utils.preloader.show();

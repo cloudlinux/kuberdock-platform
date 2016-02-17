@@ -534,7 +534,8 @@
 
                     var yml = app.templateToApp(appPackageID, getValues()),
                         url = billingUrl
-                            + '?yaml=' + encodeURIComponent(jsyaml.safeDump(yml))
+                            + (billingUrl.indexOf('?') === -1 ? '?' : '&')
+                            + 'yaml=' + encodeURIComponent(jsyaml.safeDump(yml))
                             + '&pkgid=' + app.userPackage.id
                             + '&referer=' + window.location.href;
                     window.location = url;

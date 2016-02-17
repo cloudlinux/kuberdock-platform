@@ -18,7 +18,11 @@
     <% if ( status == "running" || status == "pending") { %>
         <span class="stop-btn">stop</span>
     <% } else { %>
-        <span class="start-btn">start</span>
+        <% if ( status === "unpaid") { %>
+            <span class="pay-and-start-btn">pay & start</span>
+        <% } else { %>
+            <span class="start-btn">start</span>
+        <% } %>
     <% } %>
     <span class="terminate-btn">delete</span>
     <% if (graphs) { %>

@@ -30,6 +30,8 @@
             <span class="stop-btn" title="Stop <%- name %> pod"></span>
         <% } else if (_.contains(['stopped', 'succeeded', 'failed'], status)) { %>
             <span class="start-btn" title="Run <%- name %> pod"></span>
+        <% } else if (status === 'unpaid') { %>
+            <span class="pay-and-start-btn" title="Pay then Run <%- name %> pod"></span>
         <% } %>
     <% } else { %>
         <span class="start-btn" title="Run <%- name %> pod"></span>

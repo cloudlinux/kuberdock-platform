@@ -264,6 +264,10 @@ new_pod_schema = {
         'type': 'string', 'required': True,
         'allowed': ['Always', 'OnFailure', 'Never']
     },
+    'status': {
+        'type': 'string', 'required': False,
+        'allowed': ['stopped', 'unpaid']
+    },
     'volumes': {
         'type': 'list',
         'schema': {

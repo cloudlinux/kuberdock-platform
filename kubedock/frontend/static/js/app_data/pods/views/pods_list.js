@@ -70,6 +70,7 @@ define(['app_data/app',
 
         ui: {
             start      : '.start-btn',
+            paystart   : '.pay-and-start-btn',
             stop       : '.stop-btn',
             remove     : '.terminate-btn',
             checkbox   : 'label.custom span',
@@ -78,6 +79,7 @@ define(['app_data/app',
 
         events: {
             'click @ui.start'      : 'startItem',
+            'click @ui.paystart'   : 'payStartItem',
             'click @ui.stop'       : 'stopItem',
             'click @ui.remove'     : 'deleteItem',
             'click @ui.podPageBtn' : 'podPage',
@@ -96,6 +98,24 @@ define(['app_data/app',
         startItem: function(evt){
             evt.stopPropagation();
             App.commandPod('start', this.model).always(this.render);
+        },
+
+        payStartItem: function(evt){
+            evt.stopPropagation();
+            var that = this;
+            App.getSystemSettingsCollection().done(function(collection){
+                var billingUrl = utils.getBillingUrl(collection);
+                if (billingUrl === null) { // no billing
+                    App.commandPod('start', that.model).always(that.render);
+                }
+                else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
+                    var podObj = encodeURIComponent(JSON.stringify(that.model.attributes)),
+                        userObj = encodeURIComponent(JSON.stringify(App.currentUser.attributes));
+                    window.location = billingUrl
+                        + (billingUrl.indexOf('?') === -1 ? '?' : '&')
+                        + 'pod=' + podObj + '&user=' + userObj;
+                }
+            });
         },
 
         deleteItem: function(evt){

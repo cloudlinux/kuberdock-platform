@@ -125,9 +125,17 @@
             </div>
         </div>
     </div>
-    <div class="buttons pull-right">
-        <button class="prev-step gray">Back</button>
-        <button class="add-more blue">Add more containers</button>
-        <button class="save-container">Save</button>
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="col-xs-3"></div>
+            <div class="buttons col-xs-9 no-padding">
+                <button class="prev-step gray pull-left">Back</button>
+                <button class="add-more blue pull-left">Add more containers</button>
+                <button class="save-container blue pull-left">Save</button>
+                <% if (hasBilling){ %>
+                <button class="pay-and-run-container blue pull-right">Pay and Run</button>
+                <% } %>
+            </div>
+        </div>
     </div>
 </div>

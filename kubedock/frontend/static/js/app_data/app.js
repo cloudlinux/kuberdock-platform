@@ -383,7 +383,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         var data = JSON.parse(ev.data);
                         Utils.notifyWindow(data.message);
                     };
-                    
+
                     events['node:deleted'] = function(ev) {
                         that.lastEventId = ev.lastEventId;
                         var data = JSON.parse(ev.data);

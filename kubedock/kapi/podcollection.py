@@ -148,6 +148,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             IpState.start(pod.id, pod.ip)
         pod.set_dbconfig(conf, save=False)
 
+    @atomic()
+    def _set_entry(self, pod, data):
+        """Sets pod status in DB"""
+        # TODO: wants rethinking, we've got two kind of statuses, in DB and pod config
+        if data.get('status') not in ['unpaid', 'stopped', 'deleted']:
+            return
+        DBPod.query.get(pod.id).status = data['status']
+
     @staticmethod
     @atomic()
     def _remove_public_ip(pod_id=None, ip=None):
@@ -213,7 +221,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if hasattr(obj, i):
                 delattr(obj, i)
         pod = DBPod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
-                    status=POD_STATUSES.stopped, template_id=template_id)
+                    status=getattr(obj, 'status', POD_STATUSES.stopped),
+                    template_id=template_id)
         kube = db.session.query(Kube).get(kube_type)
         if kube is None:
             kube = Kube.get_default_kube()
@@ -245,6 +254,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'stop': self._stop_pod,
             'resize': self._resize_replicas,
             'change_config': self._change_pod_config,
+            'set': self._set_entry,  # sets DB data, not pod config one
             # 'container_start': self._container_start,
             # 'container_stop': self._container_stop,
             # 'container_delete': self._container_delete,
@@ -462,6 +472,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if (db_pod.id, namespace) not in self._collection:  # exists in DB only
                 pod = Pod(db_pod_config)
                 pod.id = db_pod.id
+                pod.status = getattr(db_pod, 'status', POD_STATUSES.stopped)
                 pod.template_id = template_id
                 pod._forge_dockers()
                 self._collection[pod.id, namespace] = pod

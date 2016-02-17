@@ -217,5 +217,28 @@ define(['moment-timezone', 'notify'], function(moment){
         return pkg.prefix + numeral(price).format(format) + pkg.suffix;
     };
 
+    utils.getBillingUrl = function(billingcollection){
+
+        var billingEndpoints = {
+            WHMCS: {
+                billing: '/kdorder.php?a=orderPod'
+            }
+        };
+
+        var billingType = billingcollection.findWhere({name: 'billing_type'}).get('value');
+        if (billingType === 'No billing') return null;  // no billing
+
+        if (!_.has(billingEndpoints, billingType)) { // unknown billing
+            utils.notifyWindow('Unknown billing type');
+            return;
+        }
+        var billingUrl = billingcollection.findWhere({name: 'billing_url'}).get('value');
+        if (billingUrl === undefined) { // no configured URL
+            utils.notifyWindow('Billing URL not configured!');
+            return;
+        }
+        return billingUrl.replace(/\/$/, '') + billingEndpoints[billingType].billing;
+    };
+
     return utils;
 });

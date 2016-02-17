@@ -49,6 +49,7 @@ class POD_STATUSES:
     pending = 'pending'
     succeeded = 'succeeded'
     failed = 'failed'
+    unpaid = 'unpaid'
 
 
 def get_channel_key(conn, key, size=100):

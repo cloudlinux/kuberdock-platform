@@ -108,63 +108,25 @@ define(['app_data/app',
             'updateContainer'  : '.container-update',
             'checkForUpdate'   : '.check-for-update',
             'containerPageBtn' : '.container-page-btn',
-            /*'checkbox'         : 'input[type="checkbox"]'*/
         },
 
         events: {
-            /*'click @ui.start'              : 'startItem',
-            'click @ui.stop'               : 'stopItem',
-            'click @ui.delete'             : 'deleteItem',*/
             'click @ui.updateContainer'    : 'updateItem',
             'click @ui.checkForUpdate'     : 'checkForUpdate',
             'click @ui.containerPageBtn'   : 'containerPage',
-            /*'click @ui.checkbox'           : 'checkItem'*/
         },
 
         modelEvents: {
             'change': 'render'
         },
 
-        /*startItem: function(){
-            App.commandPod('start', this.model.get('parentID'));
-        },
-        stopItem: function(){
-            App.commandPod('stop', this.model.get('parentID'));
-        },*/
         updateItem: function(){
             App.updateContainer(this.model);
         },
+
         checkForUpdate: function(){
             App.checkContainerForUpdate(this.model).done(this.render);
         },
-
-        /*deleteItem: function(evt){
-            var that = this,
-                name = that.model.get('name');
-            utils.modalDialogDelete({
-                title: "Delete container?",
-                body: "Are you sure you want to delete container '" + name + "'?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        that.command(evt, 'delete');
-                    },
-                    buttonCancel: true
-                }
-            });
-        },*/
-
-        /*checkItem: function(){
-            if (this.model.is_checked){
-                this.$el.removeClass('checked');
-                this.model.is_checked = false;
-            } else {
-                this.model.is_checked = true;
-                this.$el.addClass('checked');
-            }
-            this.render();
-        },*/
 
         containerPage: function(evt){
             evt.stopPropagation();
@@ -178,83 +140,6 @@ define(['app_data/app',
         template  : pageInfoPanelTpl,
         childView: podItem.InfoPanelItem,
         childViewContainer: "tbody",
-
-        ui: {
-            /*count             : '.count',
-            defaultTableHead  : '.main-table-head',
-            containersControl : '.containersControl',
-            checkAllItems     : 'table thead .custom',*/
-        },
-
-        events: {
-            /*'click .stop-checked'     : 'stopItems',
-            'click .start-checked'    : 'startItems',
-            'click @ui.checkAllItems' : 'checkAllItems',*/
-        },
-
-        /*childEvents: {
-            render: function() {
-                var col = this.collection,
-                    count = 0;
-                if (col.length != 0){
-                    _.each(col.models, function(model){
-                        if (model.is_checked) count++
-                    });
-                }
-                if ( count != 0 ) {
-                    this.ui.count.text(count + ' Item');
-                    this.ui.containersControl.show();
-                    this.ui.defaultTableHead.addClass('min-opacity');
-                } else {
-                    this.ui.containersControl.hide();
-                    this.ui.defaultTableHead.removeClass('min-opacity');
-                }
-                if (count >= 2) this.ui.count.text(count + ' Items');
-            }
-        },
-
-        checkAllItems: function(){
-            var col = this.collection;
-
-            _.each(col.models, function(model){
-                model.is_checked = true
-            });
-            this.render();
-        },*/
-
-        /*command: function(cmd){
-            var preloader = $('#page-preloader');
-                preloader.show();
-            var model;
-            var containers = [];
-            containerCollection.forEach(function(i){
-                if (i.get('checked') === true){
-                    model = App.getCollection().fullCollection.get(i.get('parentID'));
-                    _.each(model.get('containers'), function(itm){
-                        if(itm.name == i.get('name'))
-                            containers.push(itm.containerID);
-                    });
-                }
-            });
-            if(model)
-            model.save({'command': cmd, 'containers_action': containers}, {
-                success: function(){
-                    preloader.hide();
-                },
-                error: function(model, response, options, data){
-                    preloader.hide();
-                    utils.notifyWindow(response);
-                }
-            });
-        },*/
-
-        /*startItems: function(evt){
-            this.command('start');
-        },
-
-        stopItems: function(evt){
-            this.command('stop');
-        },*/
     });
 
     podItem.ControlsPanel = Backbone.Marionette.ItemView.extend({
@@ -272,12 +157,13 @@ define(['app_data/app',
         },
 
         events: {
-            'click .stats-btn'     : 'statsItem',
-            'click .list-btn'      : 'listItem',
-            'click .start-btn'     : 'startItem',
-            'click .stop-btn'      : 'stopItem',
-            'click .terminate-btn' : 'terminateItem',
-            'click @ui.close'      : 'closeMessage'
+            'click .stats-btn'        : 'statsItem',
+            'click .list-btn'         : 'listItem',
+            'click .start-btn'        : 'startItem',
+            'click .pay-and-start-btn': 'payStartItem',
+            'click .stop-btn'         : 'stopItem',
+            'click .terminate-btn'    : 'terminateItem',
+            'click @ui.close'         : 'closeMessage'
         },
 
         modelEvents: {
@@ -355,6 +241,24 @@ define(['app_data/app',
         startItem: function(evt){
             evt.stopPropagation();
             App.commandPod('start', this.model).always(this.render);
+        },
+
+        payStartItem: function(evt){
+            evt.stopPropagation();
+            var that = this;
+            App.getSystemSettingsCollection().done(function(collection){
+                var billingUrl = utils.getBillingUrl(collection);
+                if (billingUrl === null) { // no billing
+                    App.commandPod('start', that.model).always(that.render);
+                }
+                else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
+                    var podObj = encodeURIComponent(JSON.stringify(that.model.attributes)),
+                        userObj = encodeURIComponent(JSON.stringify(App.currentUser.attributes));
+                    window.location = billingUrl
+                        + (billingUrl.indexOf('?') === -1 ? '?' : '&')
+                        + 'pod=' + podObj + '&user=' + userObj;
+                }
+            });
         },
 
         stopItem: function(evt){

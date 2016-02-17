@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 0%{?dist}.rc.3.cloudlinux
+Release: 0%{?dist}.rc.3.1.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -185,6 +185,9 @@ fi
 %exclude /var/opt/kuberdock/dev-utils
 
 %changelog
+* Wed Feb 17 2016 Stanislav Sergiienko <ssergiienko@cloudlinux.com> 1.0-0.rc.3.1
+- Fixed rc2 to rc3 update. Check package installation for kubernetes-node
+
 * Tue Feb 02 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.3
 - AC-1976: KuberDock - Predefined Apps page - Align pagination level
 - AC-1858: Do not ignore "Exclude IPs" parsing error

@@ -2,7 +2,7 @@
 <td>
     <span class="container-page-btn"><%- imagename %></span>
     <% if (imagetag) { %>
-    <sup title="image tag" class="image-tag"><%- imagetag %></sup>
+    <span title="image tag" class="image-tag"><%- imagetag %></span>
     <% } %>
 </td>
 <td><span class="<%- state %>"><%- state %></span></td>

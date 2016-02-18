@@ -148,6 +148,28 @@ chk_ver()
 }
 
 
+prjquota_enable()
+{
+  if [ ! -d "$1" ]; then
+    mkdir -p "$1"
+  fi
+  FS=$(df --print-type "$1" | tail -1)
+  FS_TYPE=$(awk '{print $2}' <<< "$FS")
+  if [ "$FS_TYPE" == "xfs" ]; then
+    MOUNTPOINT=$(awk '{print $7}' <<< "$FS")
+    if [ "$MOUNTPOINT" == "/" ] && ! grep -E '^GRUB_CMDLINE_LINUX=.*rootflags=prjquota|^GRUB_CMDLINE_LINUX=.*rootflags=pquota' /etc/default/grub; then
+      sed -i '/^GRUB_CMDLINE_LINUX=/s/"$/ rootflags=prjquota"/' /etc/default/grub
+      grub2-mkconfig -o /boot/grub2/grub.cfg
+    fi
+    if ! grep -E "^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*prjquota|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*pquota" /etc/fstab; then
+      sed -i "\|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]]|s|defaults|defaults,prjquota|" /etc/fstab
+    fi
+  else
+    echo "Only XFS supported as backing filesystem for disk space limits ($1)"
+  fi
+}
+
+
 echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
 echo "Using MASTER_IP=${MASTER_IP}"
@@ -416,23 +438,8 @@ mv "/make_elastic_config.py" "/var/lib/elasticsearch"
 chmod +x "/var/lib/elasticsearch/make_elastic_config.py"
 
 # prjquota enable
-if [ ! -d /var/lib/docker/overlay ]; then
-  mkdir -p /var/lib/docker/overlay
-fi
-FS=$(df --print-type /var/lib/docker/overlay | tail -1)
-FS_TYPE=$(awk '{print $2}' <<< "$FS")
-if [ "$FS_TYPE" == "xfs" ]; then
-  MOUNTPOINT=$(awk '{print $7}' <<< "$FS")
-  if [ "$MOUNTPOINT" == "/" ] && ! grep -E '^GRUB_CMDLINE_LINUX=.*rootflags=prjquota|^GRUB_CMDLINE_LINUX=.*rootflags=pquota' /etc/default/grub; then
-    sed -i '/^GRUB_CMDLINE_LINUX=/s/"$/ rootflags=prjquota"/' /etc/default/grub
-    grub2-mkconfig -o /boot/grub2/grub.cfg
-  fi
-  if ! grep -E "^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*prjquota|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*pquota" /etc/fstab; then
-    sed -i "\|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]]|s|defaults|defaults,prjquota|" /etc/fstab
-  fi
-else
-  echo "Only XFS supported as backing filesystem for disk space limits"
-fi
+prjquota_enable "/var/lib/docker/overlay"
+prjquota_enable "/var/lib/kuberdock/storage"
 
 
 # 10. enable services

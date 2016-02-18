@@ -592,7 +592,8 @@ def set_limit(host, pod_id, containers, app):
         limits.append((containers[container_name], disk_space_str))
     limits_repr = ' '.join('='.join(limit) for limit in limits)
     _, o, e = ssh.exec_command(
-        'python /var/lib/kuberdock/scripts/fslimit.py {0}'.format(limits_repr)
+        'python /var/lib/kuberdock/scripts/fslimit.py containers '
+        '{0}'.format(limits_repr)
     )
     exit_status = o.channel.recv_exit_status()
     if exit_status > 0:

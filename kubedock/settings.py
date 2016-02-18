@@ -94,10 +94,6 @@ CELERYBEAT_SCHEDULE = {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)
     },
-    'process-missed-actions': {
-        'task': 'kubedock.tasks.process_missed_actions',
-        'schedule': timedelta(minutes=10)
-    },
     'fix-pods-timeline': {
         'task': 'kubedock.tasks.fix_pods_timeline',
         'schedule': timedelta(minutes=5)

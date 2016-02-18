@@ -103,7 +103,8 @@ define(['app_data/app',
             var model = this.model;
             utils.modalDialogDelete({
                 title: "Delete",
-                body: 'Are you sure you want to delete "' + model.get('name') + '" pod?',
+                body: 'Are you sure you want to delete "' +
+                    _.escape(model.get('name')) + '" pod?',
                 small: true,
                 show: true,
                 footer: {
@@ -243,7 +244,8 @@ define(['app_data/app',
             if (items.length > 1){
                 body = 'Are you sure you want to delete selected pods?';
             } else {
-                body = 'Are you sure you want to delete "' + items[0].get('name') + '" pod?';
+                body = 'Are you sure you want to delete "' +
+                    _.escape(items[0].get('name')) + '" pod?';
             }
             utils.modalDialogDelete({
                 title: "Delete",

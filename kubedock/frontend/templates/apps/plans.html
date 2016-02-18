@@ -576,7 +576,7 @@
 
             function recalculate(app){
                 var domPlans = document.getElementsByClassName('plan'),
-                    filled = jsyaml.safeLoad(app.fill());
+                    filled = app.filledDefault;
                 filled.kuberdock.appPackages.forEach(function(appPackage, i){
                     appPackage = app.fillAppPackageWithDefaults(appPackage, filled);
                     var info = app.calculateInfo(appPackage),
@@ -604,7 +604,7 @@
                     template: {{ template|tojson|safe }},
                 });
 
-                var yml = jsyaml.safeLoad(app.fill()),
+                var yml = app.filledDefault,
                     el = document.getElementById('pre-description');
                 if (yml.kuberdock.preDescription) {
                     var parser = new BBCodeParser(BBCodeParser.defaultTags());

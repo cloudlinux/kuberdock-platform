@@ -1,5 +1,5 @@
-import json
 import yaml
+from copy import deepcopy
 
 from flask import Blueprint, request, render_template, current_app
 from flask.ext.login import current_user
@@ -31,12 +31,12 @@ def index(app_hash):
         max_pd_size = SystemSettings.get_by_name('persitent_disk_max_size') or 10
         name = app.get('name', 'app')
         template = app.get('template', '')
-        kapi_papps.validate_template(template)
 
-        parsed = yaml.safe_load(template)
-        kuberdock = parsed['kuberdock']
+        fields, filled_template, parsed_template, _ = \
+            kapi_papps.validate_template(template)
+
+        kuberdock = parsed_template['kuberdock']
         plans = kuberdock.get('appPackages')
-        fields = kapi_papps.parse_fields(template)
 
         package = get_package(kuberdock)
 
@@ -50,29 +50,28 @@ def index(app_hash):
             plan = plans[0]
 
         data = dict(
-            name=name, package=package, template=kapi_papps.unescape(template),
+            name=name, package=package, template=template,
             default_kube_type_id=Kube.get_default_kube_type(),
         )
 
         if plan is None:  # display plans
             page = 'apps/plans.html'
-            parsed_static = yaml.safe_load(kapi_papps.fill(template, fields))
-            static_plans = parsed_static['kuberdock']['appPackages']
+            static_plans = filled_template['kuberdock']['appPackages']
             check_package_has_kubes(package, static_plans)
             data.update(plans=static_plans)
         else:  # display additional configuration
             page = 'apps/index.html'
             plan_fields = get_plan_fields(plan)
-            filter_fields_from_plans(fields, [p for p in plans if p != plan])
-            sort_key = lambda field: PLAN_FIELDS_ORDER.get(plan_fields.get(field['name']))
+            fields = fields_not_from_plans(parsed_template, fields, plan)
+            sort_key = lambda field: PLAN_FIELDS_ORDER.get(plan_fields.get(field.name))
             data.update(
                 appPackageID=kuberdock['appPackages'].index(plan),
                 billing_url=billing_url,
                 max_pd_size=max_pd_size,
                 fields=sorted(fields.itervalues(), key=sort_key),
                 plan_fields=plan_fields,
-                has_simple=bool(set(field['name'] for field in fields.itervalues()
-                                    if not field['hidden']) - set(plan_fields)),
+                has_simple=bool(set(field.name for field in fields.itervalues()
+                                    if not field.hidden) - set(plan_fields)),
             )
 
         return render_template(page, **data)
@@ -111,35 +110,34 @@ def get_package(kuberdock):
         if package_id is None:
             package_id = kuberdock.get('packageID')
         if package_id is None:
-            package_id = kuberdock.get('userPackage', 0)
-        package = Package.query.get(package_id)
-        if package is None:
-            package = Package.query.get(0)
-    return dict(package.to_dict(),
-                kubes=[dict(pk.kube.to_dict(), price=pk.kube_price)
-                       for pk in package.kubes])
+            package_id = kuberdock.get('userPackage')
+
+        if package_id is None:
+            package = Package.get_default()
+        else:
+            package = Package.query.get(package_id) or Package.get_default()
+
+    return package.to_dict(with_kubes=True)
 
 
 def get_plan_fields(plan):
     fields = {}
     for pod in plan.get('pods', []):
-        name, _, _ = kapi_papps.get_value(pod.get('kubeType', ''), with_reused=True)
-        fields[name] = 'kubeType'
+        if isinstance(pod.get('kubeType'), kapi_papps.TemplateField):
+            fields[pod['kubeType'].name] = 'kubeType'
         for container in pod.get('containers', []):
-            name, _, _ = kapi_papps.get_value(container.get('kubes', ''), with_reused=True)
-            fields[name] = 'kube'
+            if isinstance(container.get('kubes'), kapi_papps.TemplateField):
+                fields[container['kubes'].name] = 'kube'
         for pd in pod.get('persistentDisks', []):
-            name, _, _ = kapi_papps.get_value(pd.get('pdSize', ''), with_reused=True)
-            fields[name] = 'pdSize'
-
-    fields.pop(None, None)  # if name was None
+            if isinstance(pd.get('pdSize'), kapi_papps.TemplateField):
+                fields[container['pdSize'].name] = 'pdSize'
     return fields
 
 
-def filter_fields_from_plans(fields, plans):
-    in_plans = kapi_papps.parse_fields(json.dumps(plans))
-    for name in set(fields) & set(in_plans):
-        for text in in_plans[name]['occurrences']:
-            fields[name]['occurrences'].remove(text)
-        if not fields[name]['occurrences']:
-            fields.pop(name)
+def fields_not_from_plans(parsed_template, fields, plan):
+    parsed_template = deepcopy(parsed_template)
+    # remove all packages except current
+    parsed_template['kuberdock']['appPackages'] = plan
+    # get set of fields in this structure
+    _, used_fields = kapi_papps.fill(parsed_template, fields)
+    return used_fields

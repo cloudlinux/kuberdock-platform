@@ -1,6 +1,7 @@
 import re
 import string
 import random
+from collections import Mapping, Sequence
 
 import yaml
 
@@ -69,16 +70,16 @@ class PredefinedApps(object):
         app.delete()
 
 
-#:Custom variable pattern
-# Everything in form '$sometext$' will be treated as custom variable definition
-# Escaped $ signs will not be treated as variable pattern
-CUSTOM_VAR_PATTERN = re.compile(r'[^\\](\$[^\$\\]+\$)')
-# Valid variable must be in form:
-CORRECT_VARIABLE_FORMAT_DESCRIPTION = \
-"$<VARIABLE_NAME|default:<word 'autogen' or some default value>|VAR_DESCRIPTION>$"
-VARIABLE_PATTERN = \
-    re.compile(r'^\$([^\|\$\\]+)\|default:([^\|\$\\]+)\|([^\|\$\\]+)\$$')
-REUSED_VARIABLE_PATTERN = re.compile(r'^\$([^\|\$\\]+)\$$')
+FIELD_PARSER = re.compile(
+    r'\$(?:'                  # match $$ (escaped $) or $VAR[|default:<>|Label]$
+        r'(?P<name>[\w\-]+)'  # name: alphanumeric, -, _
+        r'(?:\|default:'      # default and label: any symbol except \,|,$; or any escaped symbol
+            r'(?P<default>(?:[^\\\|\$]|\\[\s\S])+|)'
+            r'\|'
+            r'(?P<label>(?:[^\\\|\$]|\\[\s\S])+|)'
+        r')?'                 # default and label are optioanl
+    r')?\$'
+)  # NOQA
 
 
 def validate_template(template):
@@ -89,18 +90,18 @@ def validate_template(template):
             If it is specified, then it must be one of existing types.
 
     """
-    check_custom_variables(template)
-    try:
-        parsed_template = yaml.safe_load(template)
+    try:  # find all variables and prepare YAML for loading
+        template, fields = preprocess(template, raise_=True)
+    except AppParseError as err:
+        raise_validation_error('customFields', str(err))
+    try:  # load
+        parsed_template = load(template, fields)
     except (yaml.scanner.ScannerError, yaml.parser.ParserError):
         raise_validation_error(u'common', u'Invalid yaml format')
-    if not isinstance(parsed_template, (dict, list)):
-        raise_validation_error(
-            u'common',
-            u'Invalid yaml template: top level element must be list or dict'
-        )
 
-    filled_template = yaml.safe_load(fill(template, parse_fields(template)))
+    # fill template with defaults and leave only fields that are necessary for
+    # filling template (filter out fields in YAML-comments, for example)
+    filled_template, fields = fill(parsed_template, fields)
     try:
         find_root(filled_template)
     except AppParseError as err:
@@ -110,39 +111,7 @@ def validate_template(template):
 
     check_plans(filled_template)
 
-
-def check_custom_variables(template):
-    """Checks validity of custom variables in template.
-    :param template: string with template content
-    :raise: APIError in case of invalid variables.
-
-    """
-    custom_vars = find_custom_vars(template)
-    if not custom_vars:
-        return
-
-    valid_vars = {}
-    unknown_vars = []
-    for var in custom_vars:
-        try:
-            name, _, _ = get_value(var, True)
-            valid_vars[name] = var
-        except AppParseError:
-            unknown_vars.append({
-                'name': get_reused_variable_name(var),
-                'item': var
-            })
-    unknown_vars = [
-        item['item'] for item in unknown_vars
-        if item['name'] not in valid_vars
-    ]
-    if unknown_vars:
-        raise_validation_error('customVars', unknown_vars)
-
-
-def find_custom_vars(text):
-    custom = CUSTOM_VAR_PATTERN.findall(text)
-    return custom
+    return fields, filled_template, parsed_template, template
 
 
 def check_plans(yml):
@@ -194,6 +163,9 @@ def check_plans(yml):
 
 
 def find_root(app_struct):
+    if not isinstance(app_struct, (dict, list)):
+        raise AppParseError('Invalid yaml template: top level element must be '
+                            'list or dict')
     try:
         if app_struct['kind'] == 'ReplicationController':
             return app_struct['spec']['template']['spec']
@@ -204,70 +176,9 @@ def find_root(app_struct):
     raise AppParseError("Not found 'spec' section")
 
 
-def generate(length=8, symbols=string.lowercase+string.digits):
-    rv = ''.join(random.choice(symbols) for i in range(length-1))
+def generate(length=8, symbols=string.lowercase + string.digits):
+    rv = ''.join(random.choice(symbols) for i in range(length - 1))
     return random.choice(string.lowercase) + rv
-
-
-def parse_fields(text):
-    custom = find_custom_vars(text)
-    fields = {}
-    for item in custom:
-        hidden = False
-        name, value, title = get_value(item, with_reused=True)
-        if not name:
-            continue
-        if value == 'autogen':
-            value = generate()
-            hidden = True
-        elif value is not None and value.lower() == 'user_domain_list':
-            value = item
-            hidden = True
-        if name in fields:
-            field = fields[name]
-            field['occurrences'].append(item)
-            if field['value'] is None:  # $VAR_NAME$ was before full definition
-                field['value'], field['title'], field['hidden'] = value, title, hidden
-        else:
-            fields[name] = {'title': title, 'value': value, 'name': name,
-                            'hidden': hidden, 'occurrences': [item]}
-    return fields
-
-
-def fill(template, fields):
-    for field in fields.values():
-        for text in field['occurrences']:
-            template = template.replace(text, field['value'], 1)
-    return template
-
-
-def get_value(value, strict=False, with_reused=False):
-    if not isinstance(value, basestring):
-        if strict:
-            raise AppParseError(u'Invalid custom variable: {}'.format(value))
-        return (None, value, None)
-    m = VARIABLE_PATTERN.match(value)
-    if m is None:
-        if strict:
-            raise AppParseError(u'Invalid custom variable: {}'.format(value))
-        if with_reused:
-            return get_reused_variable_name(value, strict), None, None
-        return (None, value, None)
-    varname, defaultvalue, description = m.groups()
-    return (varname, defaultvalue, description)
-
-
-def get_reused_variable_name(value, strict=False):
-    if not isinstance(value, basestring):
-        if strict:
-            raise AppParseError(u'Invalid custom variable: {}'.format(value))
-        return None
-    m = REUSED_VARIABLE_PATTERN.match(value)
-    if m is None:
-        if strict:
-            raise AppParseError(u'Invalid custom variable: {}'.format(value))
-        return None
-    return m.groups()[0]
 
 
 # TODO: this is a weird schema. If you need to specify,
@@ -277,8 +188,122 @@ def raise_validation_error(key, error):
     raise ValidationError({'validationError': {key: error}})
 
 
-def unescape(text):
-    """Removes escaping characters '\' from escaped delimiters of custom
-    variables: '\$' -> '$'.
+def preprocess(template, raise_=True):
     """
-    return text.replace(r'\$', r'$')
+    Find all fields and prepare yaml for loading.
+    Unescape all escaped $ ($$) and replace fields with UIDs.
+    """
+    fields = {}
+
+    def replace(match):
+        entire_match = match.group()
+        groups = match.groupdict()
+        name, default, label = groups['name'], groups['default'], groups['label']
+
+        if entire_match == '$$':  # escaped
+            return '$'  # unescape
+
+        if name in fields:  # have met it before
+            field = fields[name]
+            if entire_match != '${0}$'.format(name):  # full format
+                if not field.defined:
+                    field.setup(default, label)
+        else:  # first appearing of this variable
+            field = TemplateField(name, default, label)
+            fields[name] = field
+
+        # replace with unique aplphanum string
+        # it's unique enough to say that collision won't apper ever
+        return field.uid
+
+    # replace all escaped $$ with $ and all $fields$ with UIDs
+    template = FIELD_PARSER.sub(replace, template)
+
+
+    if raise_:
+        # check for $VAR$ without full definition ($VAR|default:...$)
+        for field in fields.itervalues():
+            if not field.defined:
+                raise AppParseError(
+                    'Variable is not defined (found a short form ${0}$, but '
+                    'never full ${0}|default:...$)'.format(field.name))
+
+    return template, fields
+
+
+def load(template, fields):
+    """Parse YAML, converting plain fields to links to TemplateField objects"""
+    fields_by_uid = {field.uid: field for field in fields.itervalues()}
+
+    class Loader(yaml.SafeLoader):
+        pass
+
+    class TemplateValue(yaml.YAMLObject):
+        yaml_tag = '!kd'
+        yaml_loader = Loader
+
+        @classmethod
+        def from_yaml(cls, loader, node):
+            return fields_by_uid[loader.construct_scalar(node)]
+    Loader.add_implicit_resolver(
+        '!kd', re.compile('^(?:{0})$'.format('|'.join(fields_by_uid))), None)
+
+    return yaml.load(template, Loader=Loader)
+
+
+def fill(target, fields):
+    """
+    Replace all TemplateField instancies and fields inside strings with values.
+    :param target: parsed (loaded) template
+    :param fields:
+    :returns: filled template and used fields
+    """
+    used_fields = {}
+
+    def _fill(target):
+        if isinstance(target, TemplateField):
+            used_fields[target.name] = target
+            return target.default
+        if isinstance(target, basestring):
+            for field in fields.itervalues():
+                if field.uid in target:
+                    used_fields[field.name] = field
+                    target = target.replace(field.uid, unicode(field.default))
+            return target
+        if isinstance(target, Mapping):
+            return {_fill(key): _fill(value) for key, value in target.iteritems()}
+        if isinstance(target, Sequence):
+            return [_fill(value) for value in target]
+        return target
+    return _fill(target), used_fields
+
+
+class TemplateField(object):
+    """Used to represent each unique variable in template"""
+    def __init__(self, name, default=None, label=None):
+        self.name = name
+        self.uid = generate(32)
+        self.defined = False
+
+        self.hidden = None
+        self.default = None
+
+        if default is not None:  # full definition
+            self.setup(default, label)
+
+    def setup(self, default, label):
+        self.default = self.unescape(default)
+        self.label = self.unescape(label or '')
+
+        if self.default == 'autogen':
+            self.hidden = True
+            self.default = generate()
+        else:
+            self.hidden = False
+            self.default = yaml.safe_load(self.default) if self.default else ''
+
+        self.defined = True
+
+    @staticmethod
+    def unescape(value=None, _patt=re.compile(r'\\([\s\S])')):
+        return _patt.sub('\1', value)

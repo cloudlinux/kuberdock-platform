@@ -188,6 +188,66 @@ fi
 %exclude /var/opt/kuberdock/dev-utils
 
 %changelog
+* Thu Feb 18 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.4
+- AC-2204: Show correct docked version && preloader, text fixes
+- AC-2083: allow users to get a full list of Predefined Apps
+- AC-2036: improved reliability of message delivery
+- AC-2162: Nodes page: KuberDock should cut leading and trailing spaces in Node Name field on Add Node page
+- AC-2062: fix update when CEPH is enabled and no CEPH enabled nodes exist
+- small logs improvement (UI)
+- AC-2264: Find optimal CPU limits for 'Internal service' kube type
+- restart pods only once
+- AC-1663: identical error messages displayed as one with counter
+  also, error messages won't hide on click, if there is some selected text
+- AC-2272: Add style to error counter
+- AC-2265: Increase CPU limits for 'Internal service' kube type
+- AC-2233: hide container network graph
+- AC-2176, AC-2179: pod and PA list sorting
+  stable multi-field sort in pods and PA lists
+  added sort by number of kubes
+  hid "replicated" column
+  created SortableCollectionMixin for PageableCollection
+  small bugfix, refactoring
+- AC-2046 : Admin UI -> Users -> Users Activity don't work fix
+- AC-2167: don't filter for deleted users in get PDs
+- AC-2167: fixed handling of failed pods with no container statuses.
+  Prevent exhaustion of pgsql pool by 'idle in transaction' connections in case of many unhandled exceptions
+- AC-1930: Deprecating docker-cleaner script and reverting it with migration scripts
+- AC-2160: ippool validation
+- AC-1930, fast fix
+- AC-2213: patch method for system settings api
+- AC-2208: Fixed node hostname check before reboot
+- Fixed password generation in deploy.sh
+- Image tags brought back and styled. Changed regexp and added conditional showing
+- AC-2077 kuberdock-plugin. Implement billing API info method
+- AC-2078 kuberdock-plugin. Implement billing API paymentmethods method
+- AC-2079 kuberdock-plugin. Implement billing API order method
+- AC-2080, AC-2081, AC-2082
+- AC-2308: if pod deletion fails, show error and keep the pod
+  also removed few global vars (typos)
+  added class "notify-multi" to error messages with counter
+  uncheck all pods after failed group action
+  (prevents negative values in table header)
+- AC-2034: On node deletion after page refresh deleted node appeared again
+- AC-1807: export logs as txt file
+  also fixed bug: sometimes view would continue to request logs even after it's destroyed
+- AC-2084 Add default package flag and get default package/kube endpoints
+- AC-2114 : Create User page: 'only alphabetic characters allowed' error appears when click CREATE button fix;
+- AC-2190: Fix fluentd error parsing some rsyslog forwarded messages
+- AC-2225 Always clean up node before deploy it again
+- AC-2172: updated elasticsearch to 2.2
+- AC-1947: Remove old code and unittests
+- AC-2182: Check kernel version on node deploy
+- fix ippool exclude ip validation
+- AC-2314: register hosts in nginx shared configs
+  in api/register, register hosts in nginx shared config files, to prevent
+  access to shared etcd and kubernetes configuration from unregistered hosts
+- Fixed rc2 to rc3 update. Check package installation for kubernetes-node
+- AC-2428: Fix disabling of firewalld on node deploy
+- removed сomments from shared config because of bug in python-nginx
+  package(https://github.com/peakwinter/python-nginx/issues/2) removed all comments.
+- AC-1947: Remove obsolete celery task after code cleanup
+
 * Tue Feb 02 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.3
 - AC-1976: KuberDock - Predefined Apps page - Align pagination level
 - AC-1858: Do not ignore "Exclude IPs" parsing error

@@ -281,38 +281,43 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             if (dateFrom > dateTo){
                 this.ui.dateFrom.addClass('error');
                 utils.notifyWindow('Start date may not exceed the end date')
+            } else {
+                this.ui.dateTo.removeClass('error');
+                this.ui.dateFrom.removeClass('error');
             }
 
-            utils.preloader.show();
-            $.ajax({
-                url: '/api/users/a/' + username,
-                data: {date_from: dateFrom, date_to: dateTo},
-                dataType: 'JSON',
-                success: function(rs){
-                    console.log(rs)
-                    if(rs.data){
-                        that.ui.tbody.empty();
-                        if(rs.data.length == 0){
-                            that.ui.tbody.append($('<tr>').append(
-                                '<td colspan="3" align="center" class="disabled-color-text">Nothing found</td>'
-                            ));
-                        } else {
-                            _.each(rs.data, function(itm){
+            if (username && dateFrom && dateTo){
+                utils.preloader.show();
+                $.ajax({
+                    url: '/api/users/a/' + username,
+                    data: {date_from: dateFrom, date_to: dateTo},
+                    dataType: 'JSON',
+                    success: function(rs){
+                        console.log(rs)
+                        if(rs.data){
+                            that.ui.tbody.empty();
+                            if(rs.data.length == 0){
                                 that.ui.tbody.append($('<tr>').append(
-                                   // '<td>' + itm.username + '</td>' +
-                                   // '<td>' + itm.rolename + '</td>' +
-                                    '<td>' + itm.action + '</td>' +
-                                    '<td>' + App.currentUser.localizeDatetime(itm.ts) + '</td>' +
-                                    '<td>' + itm.remote_ip + '</td>'
-                                   // '<td>' + itm.ts + '</td>'
+                                    '<td colspan="3" align="center" class="disabled-color-text">Nothing found</td>'
                                 ));
-                            })
+                            } else {
+                                _.each(rs.data, function(itm){
+                                    that.ui.tbody.append($('<tr>').append(
+                                       // '<td>' + itm.username + '</td>' +
+                                       // '<td>' + itm.rolename + '</td>' +
+                                        '<td>' + itm.action + '</td>' +
+                                        '<td>' + App.currentUser.localizeDatetime(itm.ts) + '</td>' +
+                                        '<td>' + itm.remote_ip + '</td>'
+                                       // '<td>' + itm.ts + '</td>'
+                                    ));
+                                })
+                            }
                         }
-                    }
-                },
-                complete: utils.preloader.hide,
-                error: utils.notifyWindow,
-            });
+                    },
+                    complete: utils.preloader.hide,
+                    error: utils.notifyWindow,
+                });
+            }
         },
 
         onRender: function(){
@@ -356,7 +361,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         getUsersActivities: function(){
-            if(!this.ui.username.data('ready')) return;
             var that = this;
             that.ui.tbody.empty();
             that._getActivities(

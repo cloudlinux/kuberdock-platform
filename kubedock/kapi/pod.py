@@ -106,6 +106,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         for field in ('namespace', 'secrets'):
             data.pop(field, None)
         data['volumes'] = data.pop('volumes_public', [])
+        # strip Z option from mountPath
+        for container in data.get('containers', ()):
+            for volume_mount in container.get('volumeMounts', ()):
+                if volume_mount.get('mountPath', '')[-2:] in (':Z', ':z'):
+                    volume_mount['mountPath'] = volume_mount['mountPath'][:-2]
         for field in hide_fields:
             if field in data:
                 del data[field]
@@ -275,24 +280,15 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 
-        if self._has_rbd(data.get('volumeMounts', []), volumes):
-            data['securityContext'] = {'privileged': True}
-
+        for volume_mount in data.get('volumeMounts', ()):
+            for volume in volumes:
+                if ('rbd' in volume and
+                        volume.get('name') == volume_mount.get('name')):
+                    mountPath = volume_mount.get('mountPath', '')
+                    if mountPath and mountPath[-2:] not in (':Z', ':z'):
+                        volume_mount['mountPath'] += ':Z'
         data['imagePullPolicy'] = 'Always'
         return data
-
-    @staticmethod
-    def _has_rbd(volume_mounts, volumes):
-        """
-        Returns true if one of volumeMounts has a correspondent one in
-        volumes of type 'rbd'
-        :param volume_mounts: list -> list of mount dicts
-        :param volumes: list -> list of volume dicts
-        :return: bool
-        """
-        return any([[i for i in
-                   [v for v in volumes if v.get('name') == vm.get('name')]
-                   if 'rbd' in i] for vm in volume_mounts])
 
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)

@@ -468,7 +468,15 @@ echo "Removing swap entries from fstab"
 sed -r -i '/[[:space:]]+swap[[:space:]]+/d' /etc/fstab
 check_status
 
-# 12. Check kernel
+# 12. Enable restart for ntpd
+echo "Enabling restart for ntpd.service"
+mkdir -p /etc/systemd/system/ntpd.service.d
+echo -e "[Service]
+Restart=always
+RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
+systemctl daemon-reload
+
+# 13. Check kernel
 current_kernel=$(uname -r)
 check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
 
@@ -486,6 +494,6 @@ then
     yum_wrapper -y install kernel-devel
 fi
 
-# 13. Reboot will be executed in python function
+# 14. Reboot will be executed in python function
 
 exit 0

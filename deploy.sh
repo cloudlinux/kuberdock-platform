@@ -401,8 +401,13 @@ install_repos
 yum_wrapper install -y ntp
 yum_wrapper install -y etcd-ca
 yum_wrapper install -y bridge-utils
-do_and_log systemctl daemon-reload
 log_it ntpd -gq
+log_it echo "Enabling restart for ntpd.service"
+do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
+do_and_log echo -e "[Service]
+Restart=always
+RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
+do_and_log systemctl daemon-reload
 do_and_log systemctl restart ntpd
 do_and_log systemctl reenable ntpd
 do_and_log ntpq -p

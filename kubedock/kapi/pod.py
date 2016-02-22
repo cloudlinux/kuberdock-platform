@@ -163,6 +163,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                                     persistent_disk.drive_name)
 
     def _handle_local_storage(self, volume):
+        # TODO: cleanup localStorage volumes. It is now used only for pods of
+        # internal user.
         local_storage = volume.pop('localStorage')
         if not local_storage:
             return
@@ -176,6 +178,12 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def _dump_ports(self):
         return json.dumps([c.get('ports', []) for c in self.containers])
 
+    def extract_volume_annotations(self, volumes):
+        if not volumes:
+            return []
+        res = [vol.pop('annotation') for vol in volumes if 'annotation' in vol]
+        return res
+
     def prepare(self):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
@@ -183,6 +191,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         # TODO why self.owner is unicode string here? why not db obj?
         owner = User.filter_by(username=self.owner).one()
         kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
+        volume_annotations = self.extract_volume_annotations(volumes)
         config = {
             "kind": "ReplicationController",
             "apiVersion": KUBE_API_VERSION,
@@ -207,6 +216,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         "annotations": {
                             "kuberdock_resolve": kuberdock_resolve,
                             "kuberdock-pod-ports": self._dump_ports(),
+                            "kuberdock-volume-annotations": json.dumps(
+                                volume_annotations
+                            )
                         }
                     },
                     "spec": {

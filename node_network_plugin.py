@@ -184,20 +184,25 @@ def modify_ip(cmd, ip, iface):
     return 0
 
 
+def get_pod_spec(pod_spec_file):
+    if not os.path.exists(pod_spec_file):
+        raise PluginException('Pod spec file is not exists. Skip call')
+    with open(pod_spec_file) as f:
+        return json.load(f)
+
+
 def handle_public_ip(
         action, public_ip, pod_ip, iface, namespace, k8s_pod_id, pod_spec_file):
     with send_feedback_context(namespace, k8s_pod_id):
         if action not in ('add', 'del',):
             raise PluginException('Unknown action for public ip. Skip call.')
-        if not os.path.exists(pod_spec_file):
-            raise PluginException('Pod spec file is not exists. Skip call')
-        with open(pod_spec_file) as f:
-            try:
-                ports_s = json.load(f)['metadata']['annotations']['kuberdock-pod-ports']
-                ports = json.loads(ports_s)
-            except (TypeError, ValueError, KeyError) as e:
-                raise PluginException(
-                    'Error loading ports from spec "{0}" Skip call.'.format(e))
+        spec = get_pod_spec(pod_spec_file)
+        try:
+            ports_s = spec['metadata']['annotations']['kuberdock-pod-ports']
+            ports = json.loads(ports_s)
+        except (TypeError, ValueError, KeyError) as e:
+            raise PluginException(
+                'Error loading ports from spec "{0}" Skip call.'.format(e))
         if not ports:
             return 4
         for container in ports:
@@ -294,6 +299,38 @@ def handle_ex_status(action, namespace=None, k8s_pod=None, status=None):
         remove_feedback(namespace, k8s_pod)
 
 
+def init_local_storage(pod_spec_file):
+    spec = get_pod_spec(pod_spec_file)
+    vol_annotations = spec.get('metadata', {}).get('annotations', {}).get(
+        'kuberdock-volume-annotations', None
+    )
+    if not vol_annotations:
+        return
+    try:
+        vol_annotations = json.loads(vol_annotations)
+    except (TypeError, ValueError, KeyError) as e:
+        raise PluginException(
+            'Error loading volume annotations from spec "{0}" '
+            'Skip call.'.format(e)
+        )
+    for annotation in vol_annotations:
+        if not isinstance(annotation, dict):
+            continue
+        ls = annotation.get('localStorage')
+        if not ls:
+            continue
+        path = ls['path']
+        if os.path.exists(path):
+            continue
+        glog("Making directory for local storage: {}".format(annotation))
+        try:
+            os.makedirs(path)
+        except os.error:
+            raise PluginException(
+                'Failed to create local storage dir "{}"'.format(path)
+            )
+        # TODO: set fslimit
+
 def main(action, *args):
     if action == 'init':
         # TODO must be called after each restart service and flush/restore
@@ -301,6 +338,8 @@ def main(action, *args):
         init()
     elif action == 'setup':
         handle_public_ip('add', *args)
+    elif action == 'initlocalstorage':
+        init_local_storage(*args)
     elif action == 'teardown':
         handle_public_ip('del', *args)
     elif action == 'update':

@@ -3,6 +3,7 @@ import boto.ec2
 import json
 import time
 from contextlib import contextmanager
+import os
 
 from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
@@ -18,8 +19,12 @@ from ..users.models import User
 from ..usage.models import PersistentDiskState
 from ..utils import APIError, send_event
 from ..settings import (
-    SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR)
+    SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
+    NODE_LOCAL_STORAGE_PREFIX)
 from ..kd_celery import celery
+from . import node_utils
+from .pd_utils import compose_pdname
+from ..billing.models import Kube
 
 
 NODE_COMMAND_TIMEOUT = 60
@@ -153,7 +158,10 @@ def delete_persistent_drives(pd_ids, mark_only=False):
             db.session.query(PersistentDisk).filter(
                 PersistentDisk.id.in_(to_delete)
             ).update(
-                {PersistentDisk.state: PersistentDiskStatuses.DELETED},
+                {
+                    PersistentDisk.state: PersistentDiskStatuses.DELETED,
+                    PersistentDisk.node_id: None
+                },
                 synchronize_session=False
             )
         else:
@@ -179,6 +187,15 @@ class PersistentStorage(object):
     storage_name = ''
 
     VOLUME_EXTENSION_KEY = ''
+
+    @classmethod
+    def are_pod_volumes_compatible(cls, volumes, owner_id, pod_params):
+        """Should check if volumes of one pod can be created."""
+        return True
+
+    @classmethod
+    def is_volume_of_the_class(cls, vol):
+        return cls.VOLUME_EXTENSION_KEY in vol
 
     def __init__(self):
         env.user = 'root'
@@ -219,7 +236,9 @@ class PersistentStorage(object):
                 'pod_id': item.pod_id,
                 'pod_name': None if item.pod_id is None else item.pod.name,
                 #'pod': None if item.pod_id is None else item.pod.name,
-                'in_use': item.pod_id is not None
+                'in_use': item.pod_id is not None,
+                'available': True,
+                'node_id': None
             }
             for item in query
         ]
@@ -325,6 +344,9 @@ class PersistentStorage(object):
             notify_msg = "{}, reason: {}".format(admin_msg, e.message)
             send_event('notify:error', {'message': notify_msg})
             raise APIError(user_msg)
+
+    def _makefs(self, drive_name, fs):
+        return None
 
     def delete_by_id(self, drive_id):
         """
@@ -1072,6 +1094,157 @@ class AmazonStorage(PersistentStorage):
         )
 
 
+class LocalStorage(PersistentStorage):
+    """Handles local storage drives. It is kind of persistent drives, that is
+    actually a directory in mounted node's disk.
+    """
+    storage_name = 'LOCAL'
+
+    VOLUME_EXTENSION_KEY = 'hostPath'
+
+    def __init__(self):
+        super(LocalStorage, self).__init__()
+
+    @classmethod
+    def are_pod_volumes_compatible(cls, volumes, owner_id, pod_params):
+        """Should check if volumes of one pod can be created.
+        For local storage all volumes must be on one node.
+        """
+        if not volumes:
+            return True
+        node = None
+        for vol in volumes:
+            pd = vol.get('persistentDisk', {})
+            if not pd:
+                continue
+            drive_name = pd.get('pdName', None)
+            if not drive_name:
+                continue
+            drive_name = compose_pdname(drive_name, owner_id)
+            persistent_disk = PersistentDisk.filter_by(
+                drive_name=drive_name
+            ).first()
+            if not persistent_disk:
+                continue
+            if persistent_disk.node_id:
+                if node is not None and node != persistent_disk.node_id:
+                    return False
+                node = persistent_disk.node_id
+        if node is not None:
+            node = Node.query.filter(Node.id == node).first()
+            kube_type = pod_params.get(
+                'kube_type', Kube.get_default_kube_type()
+            )
+            if kube_type != node.kube_id:
+                return False
+        return True
+
+    def _is_drive_exist(self, pd):
+        """Checks if directory of local storage exists on the node.
+        Returns True if it exists, False otherwise.
+        """
+        command = 'test -d "{}"'.format(
+            self._get_full_drive_path(pd.drive_name)
+        )
+        failed_test_code = 1
+        try:
+            res = self.run_on_pd_node(
+                pd, command, catch_exitcodes=[failed_test_code]
+            )
+            if res is None:
+                return False
+        except NodeCommandWrongExitCode:
+            return False
+        return True
+
+    @classmethod
+    def is_volume_of_the_class(cls, vol):
+        if cls.VOLUME_EXTENSION_KEY in vol:
+            annotation = vol.get('annotation', {})
+            return 'localStorage' in annotation
+        return False
+
+    @staticmethod
+    def _get_full_drive_path(drive_name):
+        path = os.path.join(NODE_LOCAL_STORAGE_PREFIX, drive_name)
+        return path
+
+    def enrich_volume_info(self, volume, size, drive_name):
+        """Adds storage specific attributes to volume dict.
+        """
+        full_path = self._get_full_drive_path(drive_name)
+        volume[self.VOLUME_EXTENSION_KEY] = {
+            'path': full_path,
+        }
+        # annotation will be moved to 'annotations' section in pod.py
+        # Here we will write there path and size for local storage, it will
+        # be used by node_network_plugin to create local storage on node
+        # and set fs limits for it. Also annotation with localStorage key means
+        # that volume is a persistent disk with local storage backend.
+        volume['annotation'] = {
+            'localStorage': {
+                'size': size,
+                'path': full_path
+            }
+        }
+        return volume
+
+    def extract_volume_info(self, volume):
+        res = {}
+        drive_path = volume[self.VOLUME_EXTENSION_KEY].get('path', '')
+        drive_name = os.path.basename(drive_path)
+        res['drive_name'] = drive_name
+        return res
+
+    def _get_drives_from_db(self, user_id=None):
+        res = super(LocalStorage, self)._get_drives_from_db(user_id)
+        alive_nodes = _get_alive_nodes()
+        for item in res:
+            pd_node_id = db.session.query(PersistentDisk.node_id).filter(
+                PersistentDisk.id == item['id']
+            ).first().node_id
+            item['available'] = pd_node_id in alive_nodes
+            item['node_id'] = pd_node_id
+        return res
+
+    def run_on_pd_node(self, pd, command, *args, **kwargs):
+        node = Node.query.filter(Node.id == pd.node_id).first()
+        if not node:
+            return
+        return run_remote_command(
+            node.ip,
+            command,
+            *args, **kwargs
+        )
+
+
+    def _delete_pd(self, pd):
+        """Actually removes directory of the local storage on a node.
+        """
+        failed_rm_code = 1
+        try:
+            res = self.run_on_pd_node(
+                pd,
+                'rm -rf "{}"'.format(self._get_full_drive_path(pd.drive_name)),
+                catch_exitcodes=[failed_rm_code]
+            )
+            if res is None:
+                return 1
+        except NodeCommandWrongExitCode:
+            return 1
+        return 0
+
+
+def _get_alive_nodes():
+    """Returns node list which is now in running state in kubernetes in form:
+        {node_id: node_ip}
+    """
+    nodes = node_utils.get_nodes_collection()
+    return {
+        item['id']: item['ip'] for item in nodes if item['status'] == 'running'
+    }
+
+
 def get_storage_class():
     """Returns storage class according to current settings
     """
@@ -1079,10 +1252,10 @@ def get_storage_class():
         return CephStorage
     if AWS:
         return AmazonStorage
-    return None
+    return LocalStorage
 
 
-ALL_STORAGE_CLASSES = [CephStorage, AmazonStorage]
+ALL_STORAGE_CLASSES = [CephStorage, AmazonStorage, LocalStorage]
 
 VOLUME_EXTENSION_TO_STORAGE_CLASS = {
     cls.VOLUME_EXTENSION_KEY: cls
@@ -1095,5 +1268,7 @@ def get_storage_class_by_volume_info(volume):
     """
     for key in VOLUME_EXTENSION_TO_STORAGE_CLASS:
         if key in volume:
-            return VOLUME_EXTENSION_TO_STORAGE_CLASS[key]
+            cls = VOLUME_EXTENSION_TO_STORAGE_CLASS[key]
+            if cls.is_volume_of_the_class(volume):
+                return cls
     return None

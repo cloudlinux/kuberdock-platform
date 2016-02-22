@@ -9,7 +9,7 @@ from ..utils import all_request_params
 
 from kubedock.static_pages.models import MenuItem
 from kubedock.kapi.notifications import read_role_events
-from ..kapi import nodes as kapi_nodes
+from ..kapi import node_utils
 from .auth import login
 
 
@@ -61,7 +61,7 @@ def return_pods():
 
 def return_nodes():
     return {
-        'nodeCollection': kapi_nodes.get_nodes_collection(),
+        'nodeCollection': node_utils.get_nodes_collection(),
         'kubeTypes': [{'id': x.id, 'name': x.name} for x in Kube.public_kubes()],
         #'userActivity': current_user.user_activity(),
         #'onlineUsersCollection': User.get_online_collection(),

@@ -89,11 +89,6 @@ def delete_service_nodelay(item, namespace=None):
     return r.json()
 
 
-def get_all_nodes():
-    r = requests.get(get_api_url('nodes', namespace=False))
-    return r.json().get('items') or []
-
-
 def remove_node_by_host(host):
     r = requests.delete(get_api_url('nodes', host, namespace=False))
     return r.json()

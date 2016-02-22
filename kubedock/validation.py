@@ -269,7 +269,7 @@ new_pod_schema = {
                 'persistentDisk': {
                     'type': 'dict',
                     'nullable': True,
-                    'pd_backend_required': True,
+                    'pd_backend_required': False,
                     'schema': {
                         'pdName': pdname_schema,
                         'pdSize': pdsize_schema,
@@ -282,7 +282,7 @@ new_pod_schema = {
                 'localStorage': {
                     'nullable': True,
                     'anyof': [
-                        {'type': 'boolean'},
+                        # {'type': 'boolean'},
                         {
                             'type': 'dict',
                             'schema': {

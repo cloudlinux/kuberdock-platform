@@ -3,7 +3,8 @@
 from collections import namedtuple
 
 from ..settings import (
-    PD_SEPARATOR_USERNAME, PD_SEPARATOR_USERID, PD_NAMESPACE, PD_NS_SEPARATOR)
+    PD_SEPARATOR_USERNAME, PD_SEPARATOR_USERID, PD_NAMESPACE, PD_NS_SEPARATOR,
+    CEPH, AWS)
 from ..users.models import User
 
 
@@ -50,7 +51,8 @@ def compose_pdname(drive, user):
     """
     user_id = getattr(user, 'id', user)
     drivename = PD_SEPARATOR_USERID.join((drive, str(user_id)))
-    if PD_NAMESPACE:
+    if PD_NAMESPACE and (CEPH or AWS):
+        # do not use namespace for localstorage backend
         return PD_NS_SEPARATOR.join([
             PD_NAMESPACE, drivename
         ])

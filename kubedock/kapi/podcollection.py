@@ -7,7 +7,7 @@ from flask import current_app
 from . import pd_utils
 from .pod import Pod
 from .images import Image
-from .pstorage import get_storage_class_by_volume_info
+from .pstorage import get_storage_class_by_volume_info, get_storage_class
 from .helpers import KubeQuery, ModelQuery, Utilities
 from .licensing import is_valid as license_valid
 from ..core import db
@@ -57,6 +57,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 secrets.add((secret['username'], secret['password'],
                              Image(container['image']).full_registry))
         secrets = sorted(secrets)
+
+        storage_cls = get_storage_class()
+        if storage_cls:
+            if not storage_cls.are_pod_volumes_compatible(
+                        [item for item in params.get('volumes', [])
+                            if 'persistentDisk' in item],
+                        self.owner.id,
+                        params
+                    ):
+                raise APIError("Invalid combination of persistent disks")
 
         if not skip_check:
             self._check_trial(params)

@@ -11,6 +11,7 @@ from ..core import db
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT
 from ..models_mixin import BaseModelMixin
 from ..users.models import User
+#from ..nodes.models import Node
 from ..kapi import pd_utils
 
 
@@ -383,6 +384,9 @@ class PersistentDisk(BaseModelMixin, db.Model):
     pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=True)
     state = db.Column(db.Integer, default=PersistentDiskStatuses.PENDING, nullable=False)
     pod = db.relationship(Pod, backref='persistent_disks')
+    # Optional binding of PD to a particular node. Now is only used for 'local
+    # storage' backend
+    node_id = db.Column(db.ForeignKey('nodes.id'), nullable=True)
 
     def __init__(self, *args, **kwargs):
         super(PersistentDisk, self).__init__(*args, **kwargs)

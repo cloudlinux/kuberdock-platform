@@ -323,6 +323,9 @@ case "$ACTION" in
       MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $KUBERNETES_POD_ID $DATA_INFO-spec)
       log "$MSG"
     fi
+    
+    MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" initlocalstorage $DATA_INFO-spec)
+    log "$MSG"
 
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"
     add_rules "$POD_IP" "$USER_ID"

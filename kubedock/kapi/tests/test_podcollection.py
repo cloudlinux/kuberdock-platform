@@ -663,7 +663,10 @@ class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
                           '_get_pods', '_merge', '_save_pod', '_check_trial',
                           '_make_namespace')
 
-        U = type('User', (), {'username': 'user', 'is_trial': lambda s: True})
+        U = type(
+            'User', (),
+            {'id': 123, 'username': 'user', 'is_trial': lambda s: True}
+        )
 
         self.pod = type('Pod', (), {
             'compose_persistent': mock.Mock(),

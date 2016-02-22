@@ -6,6 +6,7 @@ from ..validation import check_int_id, check_node_data, check_hostname
 from ..billing import Kube
 from . import APIError
 from ..kapi import nodes as kapi_nodes
+from ..kapi import node_utils
 
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
@@ -17,7 +18,7 @@ nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
 def get_list():
     return jsonify({
         'status': 'OK',
-        'data': kapi_nodes.get_nodes_collection()
+        'data': node_utils.get_nodes_collection()
     })
 
 
@@ -26,7 +27,7 @@ def get_list():
 @check_permission('get', 'nodes')
 def get_one_node(node_id):
     check_int_id(node_id)
-    data = kapi_nodes.get_one_node(node_id)
+    data = node_utils.get_one_node(node_id)
     return jsonify({'status': 'OK', 'data': data})
 
 

@@ -178,12 +178,12 @@ define(['app_data/app',
             };
         },
 
-        initialize: function(){
+        initialize: function(options){
             if (!this.collection.fullCollection.hasOwnProperty('checkedNumber')) {
                 this.collection.fullCollection.checkedNumber = 0;
             }
             this.counter = 1;
-            this.collection.order = [
+            this.collection.order = options.order || [
                 // sort by status (asc), but if statuses are equal,
                 // sort by name (asc), and so on...
                 {key: 'status', order: 1}, {key: 'name', order: 1},

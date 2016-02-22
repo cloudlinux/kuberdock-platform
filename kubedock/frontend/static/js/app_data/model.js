@@ -22,7 +22,12 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     /**
      * Smart sorting for Backbone.PageableCollection
      */
-    data.SortableCollectionMixin = {
+    data.SortableCollection = Backbone.PageableCollection.extend({
+        mode: 'client',
+        constructor: function(){
+            Backbone.PageableCollection.apply(this, arguments);
+            this.initSortable();
+        },
         /**
          * If you need to sort by some attribute that is not present in model's
          * fields directly, define getForSort in your collection class.
@@ -62,7 +67,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
             this.fullCollection.sort();
         },
-    };
+    });
 
     data.Container = Backbone.Model.extend({
         idAttribute: 'name',
@@ -268,15 +273,13 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         parse: unwrapper
     });
 
-    data.PodCollection = Backbone.PageableCollection.extend({
+    data.PodCollection = data.SortableCollection.extend({
         url: '/api/podapi/',
         model: data.Pod,
         parse: unwrapper,
-        mode: 'client',
         state: {
             pageSize: 8
         },
-        initialize: function(){ this.once('reset', this.initSortable); },
         getForSort: function(model, key){
             if (key === 'name')
                 return (model.get(key) || '').toLowerCase();
@@ -291,7 +294,6 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             });
         },
     });
-    _.defaults(data.PodCollection.prototype, data.SortableCollectionMixin);
 
     data.ImageCollection = Backbone.Collection.extend({
         url: '/api/images/',
@@ -523,15 +525,13 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             pageSize: 8
         },
         initialize: function(models){
-            this.filtered = new Backbone.PageableCollection(
-                null, {mode: 'client', state: this.state});
-            _.defaults(this.filtered, data.SortableCollectionMixin);
+            this.filtered = new data.SortableCollection(
+                null, {state: this.state});
             this.filtered.getForSort = function(model, key){
                 if (key === 'name')
                     return (model.get(key) || '').toLowerCase();
                 return model.get(key);
             },
-            this.filtered.once('reset', this.filtered.initSortable);
             this.listenTo(this, 'add', this.refilter);
             this.listenTo(this, 'remove', this.refilter);
         },

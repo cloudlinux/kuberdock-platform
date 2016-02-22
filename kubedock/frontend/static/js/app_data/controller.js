@@ -34,11 +34,13 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
                 that.listenTo(listLayout, 'collection:filter', function(data){
                     App.getPodCollection().done(function(collection){
+                        var order = collection.order;
                         if (data.length > 2) {
                             collection = new Model.PodCollection(
                                 collection.searchIn(data));
                         }
-                        var view = new Views.PodCollection({collection: collection});
+                        var view = new Views.PodCollection(
+                            {collection: collection, order: order});
                         listLayout.list.show(view);
                         listLayout.pager.show(new Pager.PaginatorView({view: view}));
                     });

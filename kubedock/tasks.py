@@ -236,6 +236,10 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
         else:
             send_logs(node_id, 'Rebooting node...', log_file)
             ssh.exec_command('reboot')
+            # Here we can wait some time before add node to k8s to prevent
+            # "troubles" status if we know that reboot will take more then
+            # 1 minute. For now delay will be just 2 seconds (fastest reboot)
+            time.sleep(2)
             err = add_node_to_k8s(host, kube_type, is_ceph_installed)
             if err:
                 send_logs(node_id, 'ERROR adding node.', log_file)

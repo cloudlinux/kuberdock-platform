@@ -179,15 +179,15 @@ def get_install_log(node_status, hostname):
             return 'No install log available for this node.\n'
 
 
-def get_status(node, res=None):
+def get_status(node, k8s_node=None):
     """Get node status and reason.
 
     :param node: node model from database
-    :param res: node from k8s
+    :param k8s_node: node from k8s
     :return: status, reason
     """
-    if res is not None:
-        if _node_is_active(res):
+    if k8s_node is not None:
+        if _node_is_active(k8s_node):
             if node.state == 'deletion':
                 node_status = 'deletion'
                 node_reason = 'Node marked as being deleting'
@@ -196,23 +196,44 @@ def get_status(node, res=None):
                 node_reason = ''
         else:
             node_status = 'troubles'
-            condition = _get_node_condition(res)
+            condition = _get_node_condition(k8s_node)
             if condition:
-                node_reason = (
-                    'Node state is {0}\n'
-                    'Reason: "{1}"\n'
-                    'Last transition time: {2}'.format(
-                        condition['status'],
-                        condition['reason'],
-                        condition['lastTransitionTime']
+                if condition['status'] == 'Unknown':
+                    node_reason = (
+                        'Node state is Unknown\n'
+                        'K8s message: {0}\n'
+                        'Possible reasons:\n'
+                        '1) node is down or rebooting more than 1 minute\n'
+                        '2) kubelet.service on node is down\n'
+                        '======================================'.format(
+                            condition.get('message', 'empty')
+                        )
                     )
-                )
+                else:
+                    node_reason = (
+                        'Node state is {0}\n'
+                        'Reason: "{1}"\n'
+                        'Last transition time: {2}\n'
+                        'Message: {3}\n'
+                        '======================================'.format(
+                            condition['status'],
+                            condition['reason'],
+                            condition['lastTransitionTime'],
+                            condition.get('message', 'empty')
+                        )
+                    )
             else:
+                # We can use "pending" here because if node not posts status
+                # in 1m after adding to cluster k8s add "Unknown" condition
+                # to it with reason "NodeStatusNeverUpdated" that we display
+                # correctly as "troubles" with some possible reasons
+                node_status = 'pending'
                 node_reason = (
                     'Node is a member of KuberDock cluster but '
                     'does not provide information about its condition\n'
                     'Possible reasons:\n'
-                    '1) node is in installation progress on final step'
+                    '1) node is in installation progress on final step\n'
+                    '======================================'
                 )
     else:
         if node.state == 'pending':
@@ -424,7 +445,7 @@ def _get_node_condition(x):
     try:
         conditions = x['status']['conditions']
         if len(conditions) > 1:
-            return [i for i in conditions if i['status'] == 'True'][0]
+            return [i for i in conditions if i['status'] in ('True', 'Unknown')][0]
         return conditions[0]
     except (TypeError, KeyError, IndexError):
         return {}

@@ -12,7 +12,11 @@ from .core import ConnectionPool
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
 from .users.models import User
-from .settings import PODS_VERBOSE_LOG, KUBERDOCK_INTERNAL_USER
+from .settings import (
+    PODS_VERBOSE_LOG,
+    KUBERDOCK_INTERNAL_USER,
+    NODE_LOCAL_STORAGE_PREFIX
+)
 from .utils import (get_api_url, set_limit,
                     unregistered_pod_warning, send_event,
                     pod_without_id_warning, k8s_json_object_hook)
@@ -224,6 +228,54 @@ def process_events_event(data, app):
             )
 
 
+def has_local_storage(spec):
+    for volume in spec.get('volumes', []):
+        path = volume.get('hostPath', {}).get('path', '')
+        if path.startswith(NODE_LOCAL_STORAGE_PREFIX):
+            return True
+    return False
+
+
+def process_pods_event_k8s(data, app):
+    event_type = data['type']
+    if event_type != 'MODIFIED':
+        return
+
+    obj = data['object']
+    pod_id = obj.get('metadata', {}).get('labels', {}).get('kuberdock-pod-uid')
+    if not pod_id:
+        return
+
+    spec = obj.get('spec', {})
+    node_selector = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
+    if node_selector or not has_local_storage(spec):
+        return
+
+    with app.app_context():
+        pod = Pod.query.filter_by(id=pod_id).first()
+        if pod and pod.get_dbconfig('node'):
+            return
+
+    node = spec.get('nodeName')
+    if not node:
+        return
+
+    with app.app_context():
+        try:
+            PodCollection().update(
+                pod_id,
+                {'command': 'change_config', 'node': node}
+            )
+        except:
+            current_app.logger.exception(
+                'Failed to pin pod "%s" to node "%s"', pod_id, node
+            )
+        else:
+            current_app.logger.debug(
+                'Pin pod "%s" to node "%s"', pod_id, node
+            )
+
+
 def prelist_version(url):
     res = requests.get(url)
     if res.ok:
@@ -405,6 +457,13 @@ def process_pod_states(data, app, live=True):
     if not r.ok:
         print "error while delete:{}".format(r.text)
 
+
+listen_pods = listen_fabric(
+    get_api_url('pods', namespace=False, watch=True),
+    get_api_url('pods', namespace=False),
+    process_pods_event_k8s,
+    PODS_VERBOSE_LOG
+)
 
 listen_nodes = listen_fabric(
     get_api_url('nodes', namespace=False, watch=True),

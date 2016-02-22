@@ -817,19 +817,24 @@ class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):
         with patch_method('_start_pod') as start_pod_mock:
             pod_data = {'command': 'start'}
             self.pod_collection.update(pod_id, pod_data)
-            start_pod_mock.assert_called_once_with(pod, pod_data)
+            start_pod_mock.assert_called_once_with(pod, {})
 
         with patch_method('_stop_pod') as stop_pod_mock:
             pod_data = {'command': 'stop'}
             self.pod_collection.update(pod_id, pod_data)
-            stop_pod_mock.assert_called_once_with(pod, pod_data)
+            stop_pod_mock.assert_called_once_with(pod, {})
 
         with patch_method('_resize_replicas') as resize_replicas_mock:
             pod_data = {'command': 'resize'}
             resize_replicas_mock.return_value = 12345  # new length
             result = self.pod_collection.update(pod_id, pod_data)
             self.assertEqual(result, resize_replicas_mock.return_value)
-            resize_replicas_mock.assert_called_once_with(pod, pod_data)
+            resize_replicas_mock.assert_called_once_with(pod, {})
+
+        with patch_method('_change_pod_config') as change_pod_config_mock:
+            pod_data = {'command': 'change_config'}
+            self.pod_collection.update(pod_id, pod_data)
+            change_pod_config_mock.assert_called_once_with(pod, {})
 
         # with patch_method('_do_container_action') as do_container_action_mock:
         #     pod_data = {'command': 'container_start'}
@@ -844,7 +849,7 @@ class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):
         #     self.pod_collection.update(pod_id, pod_data)
         #     do_container_action_mock.assert_called_with('rm', pod_data)
 
-        get_by_id_mock.assert_has_calls([mock.call(pod_id)] * 3)
+        get_by_id_mock.assert_has_calls([mock.call(pod_id)] * 4)
 
 
 @unittest.skip('Not supported')
@@ -1493,6 +1498,53 @@ class TestPodComposePersistent(DBTestCase):
                    'containers': [{'name': 'nginx', 'image': 'nginx'}]})
         pod.compose_persistent(self.user)
         self.assertEqual(getattr(pod, 'volumes_public'), volumes_public)
+
+
+class TestPodCollectionChangePodConfig(TestCase, TestCaseMixin):
+
+    def setUp(self):
+        self.mock_methods(podcollection.PodCollection, '_merge')
+
+        self.node = 'node1.kuberdock.local'
+        self.pod_collection = podcollection.PodCollection()
+
+        self.valid_config = {'valid': 'config'}
+
+        self.test_pod = fake_pod(
+            use_parents=(mock.Mock,),
+            name='unnamed-1',
+            kind='replicationcontrollers',
+            namespace='ns',
+            id='fake-id',
+            sid='some-id',
+        )
+
+    @mock.patch.object(podcollection.PodCollection, '_raise_if_failure')
+    @mock.patch.object(podcollection.PodCollection, 'replace_config')
+    @mock.patch.object(podcollection.PodCollection, '_put')
+    @mock.patch.object(podcollection.PodCollection, '_get_by_id')
+    def test_pin_pod_to_node(self, get_by_id, put, rep_config, raise_fail):
+        get_by_id.return_value = self.test_pod
+        self.test_pod.get_config = mock.Mock(return_value={'node': None})
+        self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
+
+        # Actual call
+        self.pod_collection._change_pod_config(
+            self.test_pod,
+            {'node': self.node},
+        )
+
+        self.assertTrue(self.test_pod.get_config.called)
+        rep_config.assert_called_once_with(self.test_pod, {'node': self.node})
+        get_by_id.assert_called_once_with(self.test_pod.id)
+        self.assertTrue(self.test_pod.prepare.called)
+        put.assert_called_once_with(
+            [self.test_pod.kind, self.test_pod.sid],
+            json.dumps(self.valid_config),
+            rest=True,
+            ns=self.test_pod.namespace
+        )
+        self.assertTrue(raise_fail.called)
 
 
 if __name__ == '__main__':

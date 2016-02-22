@@ -15,7 +15,7 @@ from ..billing import repr_limits, Kube
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
-from ..utils import APIError, POD_STATUSES, atomic
+from ..utils import APIError, POD_STATUSES, atomic, update_dict
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
@@ -237,13 +237,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def update(self, pod_id, data):
         pod = self._get_by_id(pod_id)
-        command = data.get('command')
+        command = data.pop('command', None)
         if command is None:
             return
         dispatcher = {
             'start': self._start_pod,
             'stop': self._stop_pod,
             'resize': self._resize_replicas,
+            'change_config': self._change_pod_config,
             # 'container_start': self._container_start,
             # 'container_stop': self._container_stop,
             # 'container_delete': self._container_delete,
@@ -472,6 +473,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 # pod.service = json.loads(db_pod.config).get('service')
                 pod.volumes_public = db_pod_config.get('volumes_public')
                 pod.kube_type = db_pod_config.get('kube_type')
+                pod.node = db_pod_config.get('node')
 
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
@@ -606,6 +608,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         for p in self._get(['pods'], ns=pod.namespace)['items']:
             if self._is_related(p['metadata']['labels'], {'kuberdock-pod-uid': pod.id}):
                 self._del(['pods', p['metadata']['name']], ns=pod.namespace)
+
+    def _change_pod_config(self, pod, data):
+        db_config = pod.get_config()
+        update_dict(db_config, data)
+        self.replace_config(pod, db_config)
+
+        # get pod again after change
+        pod = PodCollection()._get_by_id(pod.id)
+
+        config = pod.prepare()
+        rv = self._put(['replicationcontrollers', pod.sid], json.dumps(config),
+                       rest=True, ns=pod.namespace)
+        self._raise_if_failure(rv, "Could not change '{0}' pod".format(
+            pod.name.encode('ascii', 'replace')))
+
+        return pod.as_dict()
 
     # def _do_container_action(self, action, data):
     #     host = data.get('nodeName')

@@ -345,8 +345,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                                 );
                             },
                             error: function(collection, response){
-                                utils.notifyWindow(response);
                                 utils.preloader.hide();
+                                utils.notifyWindow(response);
                             },
                         });
                 }

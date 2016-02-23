@@ -327,11 +327,11 @@
                     {% for field in fields %}
                         {% if field.name in plan_fields and plan_fields[field.name] == 'kube' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ field.title }}</label>
+                            <label class="custom-field-title">{{ field.label }}</label>
                             <div class="custom-field-body">
                                 <select id="field-{{ field.name }}" class="custom-field">
                                     {% for row in range(1, 11) %}
-                                        {% if row == field.value|int %}
+                                        {% if row == field.default|int %}
                                         <option selected="selected" value="{{ row }}">{{ row }}</option>
                                         {% else %}
                                         <option value="{{ row }}">{{ row }}</option>
@@ -342,11 +342,11 @@
                         </div>
                         {% elif field.name in plan_fields and plan_fields[field.name] == 'kubeType' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ field.title }}</label>
+                            <label class="custom-field-title">{{ field.label }}</label>
                             <div class="custom-field-body">
                                 <select id="field-{{ field.name }}" class="custom-field">
                                     {% for row in package.kubes %}
-                                        {% if row.id == field.value|int %}
+                                        {% if row.id == field.default|int %}
                                         <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
                                         {% else %}
                                         <option value="{{ row.id }}">{{ row.name }}</option>
@@ -357,10 +357,10 @@
                         </div>
                         {% elif field.name in plan_fields and plan_fields[field.name] == 'pdSize' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ field.title }}</label>
+                            <label class="custom-field-title">{{ field.label }}</label>
                             <div class="custom-field-body">
                                 <input id="field-{{ field.name }}" class="custom-field"
-                                    type="number" value="{{ field.value }}"
+                                    type="number" value="{{ field.default }}"
                                     min="1" max="{{ max_pd_size }}" step="1">
                             </div>
                         </div>
@@ -377,12 +377,12 @@
                     {% if field.name not in plan_fields %}
                     <div class="custom-field-item">
                         {% if not field.hidden %}
-                        <label class="custom-field-title">{{ field.title }}</label>
+                        <label class="custom-field-title">{{ field.label }}</label>
                         {% endif %}
                         <div class="custom-field-body">
                             <input id="field-{{ field.name }}" class="custom-field"
                                 type="{{ 'hidden' if field.hidden else 'text' }}"
-                                value="{{ field.value }}">
+                                value="{{ field.default }}">
                         </div>
                     </div>
                     {% endif %}
@@ -421,13 +421,13 @@
                 function getValues(){
                     var values = Object.create(null);
                     Array.prototype.forEach.call(customFields, function(field){
-                        values[field.id.substr('field-'.length).toUpperCase()] = field.value;
+                        values[field.id.substr('field-'.length)] = field.value;
                     });
                     return values;
                 }
 
                 function recalculate(app, appPackageID, values){
-                    var filled = jsyaml.safeLoad(app.fill(values)),
+                    var filled = app.fill(values).filledTemplate,
                         appPackage = filled.kuberdock.appPackages[appPackageID],
                         domPlan = document.getElementById('resource-list');
                     appPackage = app.fillAppPackageWithDefaults(appPackage, filled);
@@ -463,7 +463,7 @@
                 if (!customFields.length)
                     submitButton.click();
 
-                var yml = jsyaml.safeLoad(app.fill()),
+                var yml = app.filledDefault,
                     el = document.getElementById('pre-description');
 
                 if (yml.kuberdock.appPackages.length === 1){

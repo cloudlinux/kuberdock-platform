@@ -51,6 +51,15 @@ class Package(BaseModelMixin, db.Model):
 
     users = db.relationship('User', backref='package')
 
+    def to_dict(self, *args, **kwargs):
+        with_kubes = kwargs.pop('with_kubes', False)
+        data = super(Package, self).to_dict(*args, **kwargs)
+        if with_kubes:
+            data['kubes'] = [dict(package_kube.kube.to_dict(),
+                                  price=package_kube.kube_price)
+                             for package_kube in self.kubes]
+        return data
+
     @classmethod
     def by_name(cls, package_name):
         return cls.query.filter_by(name=package_name).first()

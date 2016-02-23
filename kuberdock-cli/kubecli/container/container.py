@@ -7,6 +7,7 @@ import re
 import string
 import subprocess
 import warnings
+from pipes import quote
 
 from ..image.image import Image
 from ..helper import KubeQuery, PrintOut, echo
@@ -401,7 +402,7 @@ class KubeCtl(object):
             token = data['token']
         try:
             fmt = """echo /usr/libexec/suidwrap '"{0}"' {1} |at now + 2 minute > /dev/null 2>&1"""
-            subprocess.check_call([fmt.format(token, self.name)], shell=True)
+            subprocess.check_call([fmt.format(token, quote(self.name))], shell=True)
         except (KeyError, TypeError, subprocess.CalledProcessError):
             return
 

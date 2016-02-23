@@ -74,12 +74,13 @@ class PackagesAPI(KubeUtils, MethodView):
 
     @check_permission('get', 'users')
     def get(self, package_id=None):
+        with_kubes = all_request_params().get('with_kubes')
         if package_id is None:
-            return [p.to_dict() for p in Package.query.all()]
+            return [p.to_dict(with_kubes=with_kubes) for p in Package.query.all()]
         data = Package.query.get(package_id)
         if data is None:
             raise PackageNotFound()
-        return data.to_dict()
+        return data.to_dict(with_kubes=with_kubes)
 
     @atomic(APIError('Could not create package', 500), nested=False)
     @check_permission('create', 'users')

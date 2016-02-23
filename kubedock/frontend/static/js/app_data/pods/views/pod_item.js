@@ -366,8 +366,8 @@ define(['app_data/app',
             var item = this.model,
                 name = item.get('name');
             utils.modalDialogDelete({
-                title: "Delete " + name + "?",
-                body: "Are you sure you want to delete pod '" + name + "'?",
+                title: "Delete " + _.escape(name) + "?",
+                body: "Are you sure you want to delete pod '" + _.escape(name) + "'?",
                 small: true,
                 show: true,
                 footer: {

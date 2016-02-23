@@ -349,7 +349,7 @@ def collect():
     data['platform'] = get_current_platform()
     data['auth-key'] = license_data.get('auth_key', '')
     if data['nodes']:
-        data['docker'] = data['nodes'][0]['docker']
+        data['docker'] = data['nodes'][0].get('docker', 'unknown')
     else:
         data['docker'] = 'unknown'
     data['predefined-apps'] = get_predefined_apps_info()

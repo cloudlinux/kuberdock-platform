@@ -14,6 +14,7 @@ from fabric.api import env, output
 from sqlalchemy import or_
 from flask.ext.migrate import Migrate
 
+
 if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.realpath(__file__)))))
@@ -24,6 +25,7 @@ from kubedock.updates import helpers
 from kubedock.updates.models import Updates, db
 from kubedock.nodes.models import Node
 from kubedock.utils import UPDATE_STATUSES, get_api_url
+from kubedock.core import ConnectionPool
 
 
 class CLI_COMMANDS:
@@ -369,6 +371,8 @@ def post_upgrade(for_successful=True, reason=None):     # teardown
     if for_successful:
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
+        redis = ConnectionPool.get_connection()
+        redis.delete('KDCOLLECTION')
         print SUCCESSFUL_UPDATE_MESSAGE
     else:
         if reason is not None:

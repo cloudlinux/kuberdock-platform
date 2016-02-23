@@ -261,7 +261,17 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'click @ui.users_page'       : 'back',
             'click @ui.calendarIco'      : 'foncusInput',
             'click @ui.searchIco'        : 'foncusInput',
-            'focus @ui.dateFrom'         : 'removeError'
+            'focus @ui.dateFrom'         : 'removeError',
+            'keypress @ui.username'      : 'selectUserByEnterKey'
+        },
+
+        selectUserByEnterKey: function(e){
+            var that = this;
+            if (e.which === 13) {  // 'Enter' key
+                e.stopPropagation();
+                that.getUsersActivities();
+                that.ui.username.blur();
+            }
         },
 
         foncusInput: function(e){

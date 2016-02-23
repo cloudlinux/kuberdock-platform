@@ -388,94 +388,84 @@ def _format_package_version(
     return major_v + ''.join(x for x in match.groups() if x is not None)
 
 
+def fold():
+    """Closure callable for reduce"""
+    nodes = [0]
+    def inner(a, n):
+        nodes[0] += 1
+        result = [nodes[0]]
+        for i in range(1, len(a)):
+            try:
+                result.append(a[i] + int(n[i]))
+            except ValueError:
+                result.append(a[i])
+        return tuple(result)
+    return inner
+
+
+def get_collection(force=False, key='KDCOLLECTION'):
+    """Get collected data from redis or directly (and then cache'em)"""
+    redis = ConnectionPool.get_connection()
+    data = redis.get(key)
+    if not data or force:
+        data = collect.collect()
+        if data:
+            redis.set(key, json.dumps(data))
+        return data
+    return json.loads(data)
+
+
+def process_collection(data):
+    result = {'status': 'unknown', 'expiration': '', 'type': '',
+              'installationID': data.get('installationID', '')}
+
+    result.update(dict((i, data.get(i)) for i in ('platform', 'storage')))
+
+    result['version'] = dict(zip(('KuberDock', 'kubernetes', 'docker'),
+        map(_format_package_version,
+            map(data.get, ('kuberdock', 'kubernetes', 'docker')))))
+
+    result['data'] = dict(zip(('nodes', 'cores', 'memory', 'containers'),
+                    reduce(fold(),
+                        [('_',  # Node placeholder
+                          n.get('cores', 0),
+                          n.get('memory', {}).get('total', 0),
+                          n.get('user_containers', {}).get('running', 0))
+                            for n in data.get('nodes', [])],
+                                (0, 0, 0, 0))))
+
+    result['data'].update(dict(zip(('pods', 'apps', 'persistentVolume'),
+        (data.get('pods', {}).get('total', 0),
+         data.get('predefined-apps', {}).get('count', 0),
+         data.get('persistent-volumes', {}).get('total', 0)))))
+
+    result['data']['memory'] = "{0:.1f}".format(
+        float(result['data']['memory']) / (1024 ** 3)) # Gb
+    result['data'] = dict((k, [0, v]) for k, v in result['data'].items())
+
+    lic_info = licensing.get_license_info()
+    if lic_info is not None:
+        lic = lic_info.get('data', {}).get('license', {})
+        for key in 'status', 'expiration', 'type':
+            result[key] = lic.get(key)
+
+        default_value = 'unlimited'
+        invalid = bool(set(['none', 'expired']) & set(map(result.get, ('status', 'type'))))
+
+        for key, value in result['data'].iteritems():
+            value[0] = '-' if invalid else lic.get(key, default_value)
+    return result
+
+
 @pricing.route('/license', methods=['GET'], strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
 @check_permission('read', 'system_settings')
 def get_license():
-    params = all_request_params()
-    force = params.get('force', False)
-    data = licensing.get_license_info() or {}
-    result = {}
-    redis = ConnectionPool.get_connection()
+    force = all_request_params().get('force', False)
+    data = get_collection(force)
+    return process_collection(data)
 
-    installation_data = None
-    try:
-        installation_data = json.loads(redis.get('KDCOLLECTION'))
-    except:
-        pass
-
-    if not installation_data or force:
-        installation_data = collect.collect()
-        try:
-            redis.set('KDCOLLECTION', json.dumps(installation_data))
-        except:
-            pass
-
-    cores = []
-    memory = []
-    containers = []
-    for node in installation_data.get('nodes', []):
-        try:
-            cores.append(int(node['cores']))
-        except:
-            pass
-        try:
-            memory.append(int(node['memory']['total']))
-        except:
-            pass
-        try:
-            containers.append(int(node['user_containers']['running']))
-        except:
-            pass
-    result = {
-        'status': 'unknown',
-        'expiration': '',
-        'type': '',
-        'installationID': data.get('installationID', ''),
-        'platform': installation_data.get('platform'),
-        'storage': installation_data.get('storage'),
-        'version': {
-            'KuberDock': _format_package_version(
-                installation_data.get('kuberdock')
-            ),
-            'kubernetes': _format_package_version(
-                installation_data.get('kubernetes')
-            ),
-            'docker': _format_package_version(
-                installation_data.get('docker')
-            )
-        },
-        'data': {
-            'nodes': [0, len(installation_data.get('nodes', []))],
-            'cores': [0, sum(cores)],
-            'memory': [
-                0,
-                "{0:.1f}".format(float(sum(memory)) / (1024 ** 3)) # Gb
-            ],
-            'containers': [0, sum(containers)],
-            'pods': [
-                0, installation_data.get('pods', {}).get('total', 0)
-            ],
-            'apps': [
-                0, installation_data.get('predefined-apps', {}).get('count', 0)
-            ],
-            'persistentVolume': [
-                0,
-                installation_data.get('persistent-volumes', {}).get('count', 0)
-            ]
-        }
-    }
-    data = data.get('data')
-    if data:
-        lc_data = data.get('license')
-        result['status'] = lc_data['status']
-        result['expiration'] = lc_data['expiration']
-        result['type'] = lc_data['type']
-        default_value = 'unlimited'
-        for key, value in result['data'].iteritems():
-            value[0] = lc_data.get(key, default_value)
-    return result
 
 
 @pricing.route('/license/installation_id', methods=['POST'], strict_slashes=False)
@@ -486,7 +476,8 @@ def set_installation_id():
     params = all_request_params()
     installation_id = params.get('value')
     licensing.update_installation_id(installation_id)
-    res = collect.send(collect.collect())
+    collected = collect.collect()
+    res = collect.send(collected)
     if res['status'] != 'OK':
         raise APIError(res['data'])
-    return res['data']
+    return process_collection(collected)

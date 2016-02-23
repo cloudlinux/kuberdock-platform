@@ -108,6 +108,15 @@ define(['app_data/app', 'marionette',
             this.checkLimits();
         },
 
+        modelEvents: {
+            'change': 'modelChanged'
+        },
+
+        modelChanged: function(evt){
+            this.checkLimits();
+            this.render();
+        },
+
         checkLimits: function(){
             var results,
                 that = this,
@@ -120,7 +129,7 @@ define(['app_data/app', 'marionette',
             });
 
             results = _.any(data, function(item){ return !that.comparison(item[0],item[1]); });
-            this.model.set('attention', results);
+            this.model.set({attention: results}, {silent: true});
         },
 
         updateStatistics: function(evt){
@@ -133,7 +142,6 @@ define(['app_data/app', 'marionette',
                 success: function(model, resp, opts){
                     that.ui.updateStats.removeClass('start-atimation');
                     utils.notifyWindow('Statistics has updated', 'success');
-                    that.render();
                 },
                 error: function(){
                     that.ui.updateStats.removeClass('start-atimation');
@@ -171,7 +179,7 @@ define(['app_data/app', 'marionette',
                     }
                 },
                 success: function(response, newValue) {
-                    that.model.set({name: newValue});
+                    that.model.set(_.has(response, 'data') ? response.data : response);
                     utils.notifyWindow('New instalattion ID "' + newValue + '" is saved',
                                        'success');
                 },

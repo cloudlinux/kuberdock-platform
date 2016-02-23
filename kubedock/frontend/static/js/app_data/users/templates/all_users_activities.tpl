@@ -26,7 +26,7 @@
                     <input type="text" id="dateTo" placeholder="To">
                     <i class="calendar"></i>
                 </div>
-                <div class="col-sm-3 no-padding">
+                <div class="col-sm-4 no-padding">
                     <input type="text" name="username" placeholder="Search username" id="username" autocomplete="off">
                     <i class="search"></i>
                 </div>

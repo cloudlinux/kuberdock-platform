@@ -25,7 +25,7 @@
                     <li class="dropdown profile-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown"><%- backendData.current_username || 'administrator' %><b class="caret"></b></a>
                         <ul class="dropdown-menu">
-                            <% if (!backendData.administrator){ %>
+                            <% if (backendData.user.rolename !== 'Admin'){ %>
                                 <li><a class="routable" href="#settings">Settings</a></li>
                             <% } %>
                             <% if (!backendData.impersonated){ %>

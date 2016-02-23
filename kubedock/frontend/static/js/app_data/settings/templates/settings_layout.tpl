@@ -13,7 +13,7 @@
         <div class="row">
             <div class="col-sm-3 col-md-2 sidebar">
                 <ul class="nav nav-sidebar list-unstyled" >
-                    <% if(backendData.administrator) { %>
+                    <% if(backendData.user.rolename  === 'Admin') { %>
                     <li class="general">
                         General
                     </li>

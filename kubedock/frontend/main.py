@@ -24,11 +24,9 @@ def index():
     if current_user.is_administrator():
         params = return_nodes()
         params['destination'] = 'nodes'
-        params['administrator'] = True
     else:
         params = return_pods()
         params['destination'] = 'pods'
-        params['administrator'] = False
     params['impersonated'] = False if session.get('auth_by_another') is None else True
     params['menu'] = MenuItem.get_menu()
     params['current_username'] = current_user.username

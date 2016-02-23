@@ -4,7 +4,8 @@ define(['marionette'], function(Marionette){
         appRoutes: {
             'pods'                            : 'showPods',
             'pods/:id'                        : 'showPodItem',
-            'newpod'                          : 'createPod',
+            'newpod'                          : backendData.user.rolename  === 'PredefinedAppUser' ?
+                                                'showPods' : 'createPod',
             'pods/poditem/:id/:name'          : 'showPodContainer',
             'nodes'                           : 'showNodes',
             'nodes/add'                       : 'showAddNode',
@@ -18,7 +19,7 @@ define(['marionette'], function(Marionette){
             'users/profile/:id/general'       : 'showProfileUser',
             'users/profile/:id/logHistory'    : 'showProfileUserLogHistory',
             'predefined-apps'                 : 'listPredefinedApps',
-            'settings'                        : backendData.administrator
+            'settings'                        : backendData.user.rolename  === 'Admin'
                                                     ? 'showGeneralSettings'
                                                     : 'editProfileSettings',
             'settings/general'                : 'showGeneralSettings',

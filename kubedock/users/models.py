@@ -149,6 +149,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         if for_profile:
             valid = self.profile_fields + ['id']
             data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
+            data['rolename'] = self.role.rolename
             return data
         valid = self.profile_fields + ['id', 'username', 'active', 'suspended']
         data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
@@ -454,5 +455,3 @@ def user_set_setting_signal(args):
     user_id, key, value = args
     user = User.query.get(user_id)
     user.set_settings(key, value)
-
-

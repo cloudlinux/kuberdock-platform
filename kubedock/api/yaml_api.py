@@ -16,7 +16,7 @@ yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
 class YamlAPI(KubeUtils, MethodView):
     decorators = (
         KubeUtils.jsonwrap,
-        check_permission('create', 'pods'),
+        check_permission('create', 'yaml_pods'),
         KubeUtils.pod_start_permissions,
         login_required_or_basic_or_token
     )

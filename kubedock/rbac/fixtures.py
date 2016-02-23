@@ -2,12 +2,13 @@ from kubedock.core import db
 from .models import Resource, Role, Permission
 
 
-RESOURCES = ("users", "nodes", "pods", "ippool",
+RESOURCES = ("users", "nodes", "pods", "yaml_pods", "ippool",
              "notifications", "system_settings", "images", "predefined_apps")
 
 ROLES = (
     ("Admin", False),
     ("User", False),
+    ("PredefinedAppUser", False),
     ("TrialUser", False),
     ("HostingPanel", True),
 )
@@ -28,6 +29,7 @@ PERMISSIONS = (
     ("pods", "Admin", "get", False),
     ("pods", "Admin", "edit", False),
     ("pods", "Admin", "delete", False),
+    ("yaml_pods", "Admin", "create", False),
     ("ippool", "Admin", "create", True),
     ("ippool", "Admin", "get", True),
     ("ippool", "Admin", "edit", True),
@@ -61,6 +63,7 @@ PERMISSIONS = (
     ("pods", "User", "get", True),
     ("pods", "User", "edit", True),
     ("pods", "User", "delete", True),
+    ("yaml_pods", "User", "create", True),
     ("ippool", "User", "create", False),
     ("ippool", "User", "get", False),
     ("ippool", "User", "edit", False),
@@ -76,6 +79,37 @@ PERMISSIONS = (
     ("predefined_apps", "User", "get", True),
     ("predefined_apps", "User", "edit", False),
     ("predefined_apps", "User", "delete", False),
+    # PredefinedAppUser
+    ("users", "PredefinedAppUser", "create", False),
+    ("users", "PredefinedAppUser", "get", False),
+    ("users", "PredefinedAppUser", "edit", False),
+    ("users", "PredefinedAppUser", "delete", False),
+    ("users", "PredefinedAppUser", "auth_by_another", False),
+    ("nodes", "PredefinedAppUser", "create", False),
+    ("nodes", "PredefinedAppUser", "get", False),
+    ("nodes", "PredefinedAppUser", "edit", False),
+    ("nodes", "PredefinedAppUser", "delete", False),
+    ("nodes", "PredefinedAppUser", "redeploy", False),
+    ("pods", "PredefinedAppUser", "create", False),
+    ("pods", "PredefinedAppUser", "get", True),
+    ("pods", "PredefinedAppUser", "edit", True),
+    ("pods", "PredefinedAppUser", "delete", True),
+    ("yaml_pods", "PredefinedAppUser", "create", True),
+    ("ippool", "PredefinedAppUser", "create", False),
+    ("ippool", "PredefinedAppUser", "get", False),
+    ("ippool", "PredefinedAppUser", "edit", False),
+    ("ippool", "PredefinedAppUser", "delete", False),
+    ("ippool", "PredefinedAppUser", "view", False),
+    ("notifications", "PredefinedAppUser", "create", False),
+    ("notifications", "PredefinedAppUser", "get", False),
+    ("notifications", "PredefinedAppUser", "edit", False),
+    ("notifications", "PredefinedAppUser", "delete", False),
+    ("images", "PredefinedAppUser", "get", True),
+    ("images", "PredefinedAppUser", "isalive", True),
+    ("predefined_apps", "PredefinedAppUser", "create", False),
+    ("predefined_apps", "PredefinedAppUser", "get", True),
+    ("predefined_apps", "PredefinedAppUser", "edit", False),
+    ("predefined_apps", "PredefinedAppUser", "delete", False),
     # TrialUser
     ("users", "TrialUser", "create", False),
     ("users", "TrialUser", "get", False),
@@ -91,6 +125,7 @@ PERMISSIONS = (
     ("pods", "TrialUser", "get", True),
     ("pods", "TrialUser", "edit", True),
     ("pods", "TrialUser", "delete", True),
+    ("yaml_pods", "TrialUser", "create", True),
     ("ippool", "TrialUser", "create", False),
     ("ippool", "TrialUser", "get", False),
     ("ippool", "TrialUser", "edit", False),
@@ -121,6 +156,7 @@ PERMISSIONS = (
     ("pods", "HostingPanel", "get", False),
     ("pods", "HostingPanel", "edit", False),
     ("pods", "HostingPanel", "delete", False),
+    ("yaml_pods", "HostingPanel", "create", False),
     ("ippool", "HostingPanel", "create", False),
     ("ippool", "HostingPanel", "get", False),
     ("ippool", "HostingPanel", "edit", False),
@@ -136,7 +172,6 @@ PERMISSIONS = (
     ("predefined_apps", "HostingPanel", "get", True),
     ("predefined_apps", "HostingPanel", "edit", False),
     ("predefined_apps", "HostingPanel", "delete", False),
-
 )
 
 

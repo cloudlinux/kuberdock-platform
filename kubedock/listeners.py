@@ -14,14 +14,14 @@ from .pods.models import Pod, PersistentDisk
 from .users.models import User
 from .settings import (
     PODS_VERBOSE_LOG,
-    KUBERDOCK_INTERNAL_USER,
-    NODE_LOCAL_STORAGE_PREFIX
+    KUBERDOCK_INTERNAL_USER
 )
 from .utils import (get_api_url, set_limit,
                     unregistered_pod_warning, send_event,
                     pod_without_id_warning, k8s_json_object_hook)
 from .kapi.usage import update_states
 from .kapi.podcollection import PodCollection
+from .kapi.pstorage import get_storage_class_by_volume_info, LocalStorage
 from . import tasks
 
 
@@ -228,15 +228,20 @@ def process_events_event(data, app):
             )
 
 
-def has_local_storage(spec):
-    for volume in spec.get('volumes', []):
-        path = volume.get('hostPath', {}).get('path', '')
-        if path.startswith(NODE_LOCAL_STORAGE_PREFIX):
+def has_local_storage(volumes):
+    if not volumes:
+        return False
+    for volume in volumes:
+        cls = get_storage_class_by_volume_info(volume)
+        if cls == LocalStorage:
             return True
     return False
 
 
 def process_pods_event_k8s(data, app):
+    """Binds pods and persistent disks to a node in a case when starts a pod
+    with volumes on local storage backend.
+    """
     event_type = data['type']
     if event_type != 'MODIFIED':
         return
@@ -247,20 +252,30 @@ def process_pods_event_k8s(data, app):
         return
 
     spec = obj.get('spec', {})
-    node_selector = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
-    if node_selector or not has_local_storage(spec):
-        return
 
     with app.app_context():
         pod = Pod.query.filter_by(id=pod_id).first()
-        if pod and pod.get_dbconfig('node'):
+        node = spec.get('nodeName')
+        if not node or not pod:
+            return
+        pod_volumes = pod.get_dbconfig('volumes')
+        if not has_local_storage(pod_volumes):
+            return
+        # Try to set node_id for every local PD of the pod, if they are not
+        # set at the moment.
+        # Set node selectors for the pod only if they are not set.
+        dbnode = Node.get_by_name(node)
+        if dbnode:
+            PersistentDisk.bind_to_node(pod_id, dbnode.id)
+        else:
+            current_app.logger.warning('Unknown node with name "%s"', node)
+
+        node_selector = spec.get(
+            'nodeSelector', {}
+        ).get('kuberdock-node-hostname')
+        if node_selector or pod.get_dbconfig('node'):
             return
 
-    node = spec.get('nodeName')
-    if not node:
-        return
-
-    with app.app_context():
         try:
             PodCollection().update(
                 pod_id,

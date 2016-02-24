@@ -482,6 +482,18 @@ class PersistentDisk(BaseModelMixin, db.Model):
             )
         return query
 
+    @classmethod
+    def bind_to_node(cls, pod_id, node_id):
+        """Binds all PD's to the given node if PD's are not already binded to
+        any node and belong to a given pod.
+        """
+        db.session.query(cls).filter(
+            cls.pod_id == pod_id, cls.node_id == None
+        ).update(
+            {cls.node_id: node_id},
+            synchronize_session=False
+        )
+
 
 class PrivateRegistryFailedLogin(BaseModelMixin, db.Model):
     """Stores time for last failed login attempts to private registries.

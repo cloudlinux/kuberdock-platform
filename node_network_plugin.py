@@ -17,6 +17,8 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+FSLIMIT_PATH = '/var/lib/kuberdock/scripts/fslimit.py'
+
 
 PUBLIC_IP_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t nat -d {1} ' \
                  '-p {2} --dport {3} -j DNAT --to-destination {4}:{5}'
@@ -313,6 +315,7 @@ def init_local_storage(pod_spec_file):
             'Error loading volume annotations from spec "{0}" '
             'Skip call.'.format(e)
         )
+    limits = {}
     for annotation in vol_annotations:
         if not isinstance(annotation, dict):
             continue
@@ -325,11 +328,18 @@ def init_local_storage(pod_spec_file):
         glog("Making directory for local storage: {}".format(annotation))
         try:
             os.makedirs(path)
+            subprocess.call(['chcon', '-Rt', 'svirt_sandbox_file_t', path])
         except os.error:
             raise PluginException(
                 'Failed to create local storage dir "{}"'.format(path)
             )
-        # TODO: set fslimit
+        limits[os.path.basename(path)] = '{}g'.format(ls.get('size', 1))
+    if limits:
+        subprocess.call(
+            ['/usr/bin/env', 'python2', FSLIMIT_PATH, 'storage'] +
+            ['{0}={1}'.format(key, value) for key, value in limits.iteritems()]
+        )
+
 
 def main(action, *args):
     if action == 'init':

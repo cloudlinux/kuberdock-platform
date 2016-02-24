@@ -10,7 +10,7 @@ from websocket import (create_connection, WebSocketException,
 from flask import current_app
 from .core import ConnectionPool
 from .nodes.models import Node
-from .pods.models import Pod, PersistentDisk
+from .pods.models import Pod
 from .users.models import User
 from .settings import (
     PODS_VERBOSE_LOG,
@@ -20,6 +20,7 @@ from .utils import (get_api_url, set_limit,
                     unregistered_pod_warning, send_event,
                     pod_without_id_warning, k8s_json_object_hook)
 from .kapi.usage import update_states
+from .kapi.pstorage import get_storage_class
 from .kapi.podcollection import PodCollection
 from .kapi.pstorage import get_storage_class_by_volume_info, LocalStorage
 from . import tasks
@@ -81,7 +82,6 @@ def process_pods_event(data, app, event_time=None, live=True):
     event_type = data['type']
     pod = data['object']
     pod_id = pod['metadata'].get('labels', {}).get('kuberdock-pod-uid')
-    deleted = event_type == 'DELETED'
 
     if pod_id is None:
         with app.app_context():
@@ -102,9 +102,6 @@ def process_pods_event(data, app, event_time=None, live=True):
 
         host = pod['spec'].get('nodeName')
 
-        phase = pod['status'].get('phase', '').lower()
-        #if deleted or phase in ('succeeded', 'failed'):
-            #PersistentDisk.free(pod_id)
         update_states(pod_id, pod['status'], event_type=event_type,
                       host=host, event_time=event_time)
 
@@ -177,55 +174,63 @@ def process_events_event(data, app):
     if obj.get('kind') != 'Pod':
         return
     reason = event['reason']
-    if reason != 'failedScheduling':
-        return
     pod_id = obj.get('namespace')
-    reason = event['message']
-    if 'PodFitsResources' in reason:
-        reason = 'There are no enough resources for the pod'
-    elif 'MatchNodeSelector' in reason:
-        reason = 'There are no suitable nodes for the pod'
-    else:
-        return
-
-    with app.app_context():
-        pod = Pod.query.get(pod_id)
-        pod_name = pod.name
-        if pod is None:
-            unregistered_pod_warning(pod_id)
+    if reason == 'FailedMount':
+        # TODO: must be removed after Attach/Detach Controller
+        # is added in k8s 1.3 version.
+        with app.app_context():
+            pod = Pod.query.get(pod_id)
+            if pod is None:
+                unregistered_pod_warning(pod_id)
+                return
+            storage = get_storage_class()
+            storage = storage()
+            for pd in pod.persistent_disks:
+                storage.unlock_pd(pd)
+    elif reason == 'failedScheduling':
+        message = event['message']
+        if 'PodFitsResources' in message:
+            reason = 'There are no enough resources for the pod'
+        elif 'MatchNodeSelector' in message:
+            reason = 'There are no suitable nodes for the pod'
+        else:
             return
-        user = User.query.filter(User.id == pod.owner_id).first()
-        if user is None:
-            current_app.logger.warning(
-                'Unknown user for pod %s',
-                pod_id
+
+        with app.app_context():
+            pod = Pod.query.get(pod_id)
+            pod_name = pod.name
+            if pod is None:
+                unregistered_pod_warning(pod_id)
+                return
+            user = User.query.filter(User.id == pod.owner_id).first()
+            if user is None:
+                current_app.logger.warning('Unknown user for pod %s', pod_id)
+                return
+
+            if user.username == KUBERDOCK_INTERNAL_USER:
+                return
+
+            # personalized user message
+            message = 'Failed to start pod "{0}", reason: {1}'.format(
+                pod_name, reason
             )
-            return
+            send_event('notify:error', {'message': message},
+                       channel='user_{0}'.format(user.id))
 
-        if user.username == KUBERDOCK_INTERNAL_USER:
-            return
+            # message for admins
+            message = 'Failed to start pod "{0}", user "{1}", reason: {2}'
+            message = message.format(pod_name, user.username, reason)
 
-        # personalized user message
-        message = 'Failed to start pod "{0}", reason: {1}'.format(
-            pod_name, reason
-        )
-        send_event('notify:error', {'message': message},
-                   channel='user_{0}'.format(user.id))
-
-        # message for admins
-        message = 'Failed to start pod "{0}", user "{1}", reason: {2}'.format(
-            pod_name, user.username, reason
-        )
-        send_event('notify:error', {'message': message})
-        try:
-            pods = PodCollection(user)
-            params = {'command': 'stop'}
-            pods.update(pod_id, params)
-        except:
-            current_app.logger.exception(
-                'Failed to stop pod %s, %s',
-                pod_id, pod_name
-            )
+            send_event('notify:error', {'message': message})
+            try:
+                pods = PodCollection(user)
+                params = {'command': 'stop'}
+                pods.update(pod_id, params)
+            except:
+                current_app.logger.exception(
+                    'Failed to stop pod %s, %s',
+                    pod_id, pod_name
+                )
 
 
 def has_local_storage(volumes):

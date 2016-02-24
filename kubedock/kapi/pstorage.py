@@ -7,7 +7,6 @@ import os
 
 from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
-from fabric.tasks import execute
 from StringIO import StringIO
 from fabric.exceptions import CommandTimeout, NetworkError
 from flask import current_app
@@ -49,11 +48,14 @@ class NodeCommandError(Exception):
     """Exceptions during execution commands on nodes."""
     pass
 
+
 class NodeCommandWrongExitCode(NodeCommandError):
     """Special exception to catch specified exit codes for remote commands."""
+
     def __init__(self, code):
         super(NodeCommandWrongExitCode, self).__init__()
         self.code = code
+
 
 class NoNodesError(Exception):
     """Exception raises when there is no nodes for current storage backend."""
@@ -105,9 +107,9 @@ def drive_lock(drivename=None, drive_id=None, ttl=None):
     if ttl is None:
         # Calculate lock TTL as a sum of timeouts for remote operations
         # plus some additional time
-        ttl = (NODE_COMMAND_TIMEOUT * 10 + # FS creation
-               NODE_COMMAND_TIMEOUT + # FS status
-               NODE_COMMAND_TIMEOUT * 2 + # map & unmap
+        ttl = (NODE_COMMAND_TIMEOUT * 10 +  # FS creation
+               NODE_COMMAND_TIMEOUT +       # FS status
+               NODE_COMMAND_TIMEOUT * 2 +   # map & unmap
                10)  # some additional wait time
     lock = ExclusiveLock('PD.{}'.format(lock_name), ttl)
     if not lock.lock():
@@ -235,7 +237,7 @@ class PersistentStorage(object):
                 'id': item.id,
                 'pod_id': item.pod_id,
                 'pod_name': None if item.pod_id is None else item.pod.name,
-                #'pod': None if item.pod_id is None else item.pod.name,
+                #  'pod': None if item.pod_id is None else item.pod.name,
                 'in_use': item.pod_id is not None,
                 'available': True,
                 'node_id': None
@@ -279,10 +281,11 @@ class PersistentStorage(object):
         # strip owner
         if device_id is None:
             return [dict([(k, v) for k, v in d.items() if k != 'owner'])
-                        for d in self.get_drives() if d['owner'] == user.username]
-        drives = [dict([(k, v) for k, v in d.items() if k != 'owner'])
                     for d in self.get_drives()
-                        if d['owner'] == user.username and d['id'] == device_id]
+                    if d['owner'] == user.username]
+        drives = [dict([(k, v) for k, v in d.items() if k != 'owner'])
+                  for d in self.get_drives()
+                  if d['owner'] == user.username and d['id'] == device_id]
         if drives:
             return drives[0]
 
@@ -299,8 +302,8 @@ class PersistentStorage(object):
         :return: list -> list of dicts of unmapped drives of a user
         """
         return [dict([(k, v) for k, v in d.items() if k != 'owner'])
-                    for d in self.get_unmapped_drives()
-                    if d['owner'] == user.username]
+                for d in self.get_unmapped_drives()
+                if d['owner'] == user.username]
 
     def create(self, pd):
         """
@@ -442,6 +445,11 @@ class PersistentStorage(object):
         ip = self.get_node_ip()
         return run_remote_command(ip, command, *args, **kwargs)
 
+    def unlock_pd(self, pd):
+        """Unlock PD, if it was locked by other node
+        """
+        pass
+
 
 def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
                 catch_exitcodes=None):
@@ -464,9 +472,7 @@ def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
             result = json.loads(result)
         except (ValueError, TypeError):
             raise NodeCommandError(
-                u'Invalid json output of remote command: {}'.format(
-                    result
-            ))
+                u'Invalid json output of remote command: {}'.format(result))
     return result
 
 
@@ -605,10 +611,23 @@ class CephStorage(PersistentStorage):
     VOLUME_EXTENSION_KEY = 'rbd'
 
     CEPH_NOTFOUND_CODE = 2
+    CMD_LIST_LOCKERS = "rbd lock ls {image} --pool {pool} --format=json"
+    CMD_REMOVE_LOCKER = "rbd lock remove {image} {id} {locker} --pool {pool}"
 
     def __init__(self):
         super(CephStorage, self).__init__()
         self._monitors = None
+
+    def get_drive_name_and_pool(self, pd_drive_name):
+        """Split PD drive name to drive_name and pool.
+        If no pool in PD drive name, return default ceph pool name.
+        """
+        pool = CEPH_POOL_NAME
+        drive_name = pd_drive_name
+        parts = pd_drive_name.split(PD_NS_SEPARATOR, 1)
+        if len(parts) > 1:
+            pool, drive_name = parts
+        return pool, drive_name
 
     def check_namespace_exists(self, node_ip=None, namespace=None):
         """Method ensures that configured namespace exists.
@@ -646,16 +665,17 @@ class CephStorage(PersistentStorage):
         return True
 
     def _get_first_node(self):
-        return Node.all_with_flag_query(
-            NodeFlagNames.CEPH_INSTALLED, 'true'
-        ).first()
+        query = Node.all_with_flag_query(NodeFlagNames.CEPH_INSTALLED, 'true')
+        nodes = query.all()
+        for node in nodes:
+            k8s_node = node_utils._get_k8s_node_by_host(node.hostname)
+            status, _ = node_utils.get_status(node, k8s_node)
+            if status == 'running':
+                return node
+        raise NoNodesError("Can't find node running with ceph")
 
     def _is_drive_exist(self, pd):
-        drive_name = pd.drive_name
-        pool = 'rbd'
-        parts = drive_name.split(PD_NS_SEPARATOR, 1)
-        if len(parts) > 1:
-            pool, drive_name = parts
+        pool, drive_name = self.get_drive_name_and_pool(pd.drive_name)
         try:
             res = self.run_on_first_node(
                 'rbd ls -p {0} --format json'.format(pool),
@@ -673,14 +693,7 @@ class CephStorage(PersistentStorage):
         Converts drive name in form namespace/drivename to pool name and
         image name for kubernetes.
         """
-        pool_name = CEPH_POOL_NAME
-        # Detect pool name in drive name: first word before separator is the
-        # pool name. If a pool name is not specified, then use default pool.
-        parts = drive_name.split(PD_NS_SEPARATOR, 1)
-        if len(parts) > 1:
-            pool_name, image = parts
-        else:
-            image = drive_name
+        pool_name, image = self.get_drive_name_and_pool(drive_name)
 
         volume[self.VOLUME_EXTENSION_KEY] = {
             'image': image,
@@ -864,6 +877,26 @@ class CephStorage(PersistentStorage):
                 return 1
         return 1
 
+    def unlock_pd(self, pd):
+        pool, image = self.get_drive_name_and_pool(pd.drive_name)
+        try:
+            cmd = self.CMD_LIST_LOCKERS.format(image=image, pool=pool)
+            lock = self.run_on_first_node(cmd, jsonresult=True)
+        except:
+            current_app.logger.exception(
+                "Can't get list of locker for drive {}".format(pd.drive_name))
+            return
+        for key in lock.keys():
+            current_app.logger.debug(
+                "try to unlock drive {}".format(pd.drive_name))
+            try:
+                cmd = self.CMD_REMOVE_LOCKER.format(
+                    image=image, id=key, locker=lock[key]['locker'], pool=pool)
+                self.run_on_first_node(cmd)
+            except:
+                current_app.logger.exception(
+                    "Can't unlock drive {}".format(pd.drive_name))
+
 
 class AmazonStorage(PersistentStorage):
     storage_name = 'AWS'
@@ -915,7 +948,6 @@ class AmazonStorage(PersistentStorage):
         res['drive_name'] = volume[self.VOLUME_EXTENSION_KEY].get('drive')
         return res
 
-
     def _get_connection(self):
         if self._conn is not None:
             return
@@ -941,7 +973,7 @@ class AmazonStorage(PersistentStorage):
             while vol.status != 'available':
                 time.sleep(1)
                 vol.update()
-            #self.start_stat(size, sys_drive_name=name)
+            #  self.start_stat(size, sys_drive_name=name)
             return 0
 
     def _get_raw_drives(self):
@@ -978,7 +1010,7 @@ class AmazonStorage(PersistentStorage):
         for vol in raw_drives:
             name = vol.tags.get('Name', 'Nameless')
             if name == pd.drive_name:
-                #self.end_stat(sys_drive_name=name)
+                #  self.end_stat(sys_drive_name=name)
                 return 0 if vol.delete() else 1
 
     def _makefs(self, drive_name, fs=DEFAULT_FILESYSTEM):
@@ -999,8 +1031,8 @@ class AmazonStorage(PersistentStorage):
         return drive.id
 
     def _wait_until_ready(self, device, to_be_attached=True, timeout=90):
-        """
-        Sends to node command to loop until state of /proc/partitions is changed
+        """Sends to node command to loop until
+        state of /proc/partitions is changed
         :param device: string -> a block device, e.g. /dev/xvda
         :param to_be_attached: bool -> toggles checks to be taken: attached or
             detached
@@ -1040,7 +1072,7 @@ class AmazonStorage(PersistentStorage):
             'attached' if attach else 'detached')
         try:
             action(drive_id, instance_id, device)
-        except boto.exception.EC2ResponseError, e:
+        except boto.exception.EC2ResponseError as e:
             raise APIError(message.format(str(e)))
 
     @staticmethod
@@ -1077,7 +1109,7 @@ class AmazonStorage(PersistentStorage):
             )
         except NodeCommandError:
             raise APIError("An error occurred while list of node "
-                            "devices was being retrieved")
+                           "devices was being retrieved")
 
         last = res.splitlines()[-1]
         last_num = ord(last)
@@ -1217,7 +1249,6 @@ class LocalStorage(PersistentStorage):
             *args, **kwargs
         )
 
-
     def _delete_pd(self, pd):
         """Actually removes directory of the local storage on a node.
         """
@@ -1261,6 +1292,7 @@ VOLUME_EXTENSION_TO_STORAGE_CLASS = {
     cls.VOLUME_EXTENSION_KEY: cls
     for cls in ALL_STORAGE_CLASSES
 }
+
 
 def get_storage_class_by_volume_info(volume):
     """Returns appropriate storage class for the given volume.

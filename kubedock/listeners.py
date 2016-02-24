@@ -187,7 +187,7 @@ def process_events_event(data, app):
             storage = storage()
             for pd in pod.persistent_disks:
                 storage.unlock_pd(pd)
-    elif reason == 'failedScheduling':
+    elif reason == 'FailedScheduling':
         message = event['message']
         if 'PodFitsResources' in message:
             reason = 'There are no enough resources for the pod'
@@ -211,15 +211,19 @@ def process_events_event(data, app):
                 return
 
             # personalized user message
-            message = 'Failed to start pod "{0}", reason: {1}'.format(
+            message = 'Failed to run pod "{0}", reason: {1}'.format(
                 pod_name, reason
             )
             send_event('notify:error', {'message': message},
                        channel='user_{0}'.format(user.id))
 
             # message for admins
-            message = 'Failed to start pod "{0}", user "{1}", reason: {2}'
+            message = 'Failed to run pod "{0}", user "{1}", reason: {2}'
             message = message.format(pod_name, user.username, reason)
+
+            node = pod.get_dbconfig('node')
+            if node is not None:
+                message += ' (pinned to node "{0}")'.format(node)
 
             send_event('notify:error', {'message': message})
             try:

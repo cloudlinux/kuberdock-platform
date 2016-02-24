@@ -382,7 +382,7 @@ def send(data):
             answer['data'] = msg
         else:
             if not res.get('success'):
-                msg = 'Failed to upload stat. Answer: {}'.format(res)
+                msg = 'Failed to upload stat. Answer: {}'.format(res.get('message', ''))
                 current_app.logger.warn(msg)
                 answer['data'] = msg
             else:

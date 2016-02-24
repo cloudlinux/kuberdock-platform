@@ -666,7 +666,7 @@ class KubeUtils(object):
             user = cls._get_current_user()
             params = cls._get_params()
             if ('command' in params and params['command'] in ['start'] or params) and user.suspended is True:
-                raise PermissionDenied('Permission denied. User suspended. +  Your package has expired. Please upgrade it.')
+                raise PermissionDenied('Permission denied. Your account is suspended. Your package has expired. Please upgrade it.')
             return func(*args, **kwargs)
         return wrapper
 

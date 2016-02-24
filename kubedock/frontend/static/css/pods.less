@@ -97,7 +97,7 @@
                         max-width: 12px;
                     }
                 }
-                &.index, &.disabled-color-text{
+                &.index, &.disabled-color-text, input[disabled]{
                     color: #b1b9c0;
                 }
                 &.actions{
@@ -112,10 +112,54 @@
                         text-transform: uppercase;
                     }
                 }
-                a, span, button{
-                    min-height: 12px;
-                    vertical-align: top;
-                    display: inline-block;
+                .bootstrap-select{
+                    .no-results {
+                        display: none !important;
+                    }
+                    .dropdown-menu{
+                        top: 1px;
+                        border: none;
+                        &.inner{
+                            border: 1px solid #e5e5e5;
+                            border-top: none;
+                            > li{
+                                a{
+                                    padding: 9px 20px;
+                                }
+                            }
+                        }
+                        &.error{
+                            border-color: red;
+                        }
+                        &.open{
+                            min-height: 36px !important;
+                            .bs-searchbox{
+                                padding: 0;
+                                input {
+                                    font-size: 13px;
+                                    font-family: @regular;
+                                    color: #1d1d1d;
+                                    .placeholder(#b4b4b4);
+                                    .box-shadow( none );
+                                    .border-radius( 0 );
+                                    height: 36px;
+                                    outline: 0;
+                                    border: 1px solid #188eed;
+                                    background-color: #fff;
+                                    padding: 0 20px;
+                                    width: 100%;
+                                    &:focus{
+                                        .box-shadow(none);
+                                        .transition(color 500ms ease);
+                                        border-color: #188eed;
+                                    }
+                                    &.error{
+                                        border-color: red;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 .custom{
                     input{
@@ -128,20 +172,13 @@
                     }
                 }
                 .input-wrap{
-                    width: 100%;
-                    height: inherit;
-                    position: relative;
                     input{
                         .box-sizing(border-box);
-                        position: absolute;
                         width: 100%;
                         height: 36px;
-                        top: 0;
-                        bottom: 0;
-                        left: 0;
-                        margin: auto;
+                        margin: 0;
                         outline: none;
-                        padding: 0 20px;
+                        padding: 0 0 0 20px;
                         font-size: 13px;
                         background-color: #fff;
                         border: 1px solid #e5e5e5;
@@ -152,6 +189,11 @@
                         &.error{
                             border-color: red;
                         }
+                    }
+                    input[type=number]::-webkit-inner-spin-button,
+                    input[type=number]::-webkit-outer-spin-button {
+                      -webkit-appearance: none;
+                      margin: 0;
                     }
                 }
                 .add-drive-cancel{
@@ -357,7 +399,9 @@
                     }
                 }
             }
-            a, .poditem-page-btn, .container-page-btn{
+            // FIXME: "a" is messing up with bootstrap-select
+            // a, .poditem-page-btn, .container-page-btn{
+            .poditem-page-btn, .container-page-btn{
                 padding: 0;
                 color: #3197ee;
                 font-size: 13px;
@@ -1068,6 +1112,40 @@
                                 &:last-child{
                                     padding-right: 24px;
                                 }
+                                label.custom{
+                                    font-size: 0;
+                                    font-weight: 400;
+                                    input:checked{
+                                        ~ i {
+                                            font-weight: 800;
+                                        }
+                                    }
+                                    i, span{
+                                        display: inline-block;
+                                        vertical-align: middle;
+                                    }
+                                    span{
+                                        margin-right: 6px;
+                                    }
+                                    i{
+                                        font-size: 13px;
+                                        font-style: normal;
+                                    }
+                                    + .custom{
+                                        margin-left: 10px;
+                                    }
+                                }
+                                .bootstrap-select{
+                                    button{
+                                        height: 36px;
+                                    }
+                                    &.btn-group{
+                                        .dropdown-toggle{
+                                            font-size: 13px;
+                                            padding-right: 39px;
+                                        }
+                                    }
+                                }
                                 span{
                                     &.remove-port, &.remove-volume{
                                         top: 2px;
@@ -1080,6 +1158,23 @@
                                         &:hover{
                                             cursor: pointer;
                                             background-position: 0 -18px;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    #volumes-table{
+                        .editable-container{
+                            &.editable-inline{
+                                .form-inline{
+                                    .control-group{
+                                        .editable-input{
+                                            input{
+                                                &.form-control{
+                                                    width: 195px;
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1529,7 +1624,10 @@
     }
     .description{
         font-size: 12px;
-        line-height: 78px;
+        margin-top: 22px;
+        p{
+            margin-bottom: 0;
+        }
     }
 }
 #container-page{

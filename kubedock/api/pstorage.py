@@ -6,6 +6,7 @@ from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils, register_api
 from ..kapi import pstorage as ps
 from ..pods.models import PersistentDisk
+from ..nodes.models import Node
 from ..rbac import check_permission
 
 
@@ -35,8 +36,10 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         user = self._get_current_user()
         cls = self._resolve_storage()
         if params.get('free-only') == 'true':
-            return cls().get_user_unmapped_drives(user)
-        return cls().get_by_user(user, device_id)
+            return map(add_kube_type, cls().get_user_unmapped_drives(user))
+        if device_id is None:
+            return map(add_kube_type, cls().get_by_user(user))
+        return add_kube_type(cls().get_by_user(user, device_id))
 
     def post(self):
         user = self._get_current_user()
@@ -55,7 +58,7 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         except Exception:
             ps.delete_drive_by_id(data['id'])
             raise APIError('Couldn\'t save persistent disk.')
-        return data
+        return add_kube_type(data)
 
     def put(self, device_id):
         pass
@@ -71,6 +74,14 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         if pd.pod_id is not None:
             raise PDIsUsed()
         ps.delete_drive_by_id(device_id)
+
+
+def add_kube_type(disk):
+    node = disk.get('node_id')
+    if node is not None:
+        node = Node.query.get(node)
+    disk['kube_type'] = None if node is None else node.kube_id
+    return disk
 
 
 register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id', strict_slashes=False)

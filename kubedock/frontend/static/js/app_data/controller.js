@@ -153,7 +153,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     });
 
                     that.listenTo(wizardLayout, 'step:portconf',
-                        _.partial(show, Views.WizardPortsSubView));
+                        _.partial(show, Views.WizardGeneralSubView));
                     that.listenTo(wizardLayout, 'step:volconf',
                         _.partial(show, Views.WizardVolumesSubView));
                     that.listenTo(wizardLayout, 'step:envconf',
@@ -211,7 +211,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     model.detached = true;
                     model.lastEditedContainer = {id: null, isNew: true};
                     that.listenTo(model, 'remove:containers', function(container){
-                        model.deleteVolumes(_.pluck(container.get('volumeMounts'), 'name'));
+                        model.deleteVolumes(container.get('volumeMounts').pluck('name'));
                     });
                     var newImageView = function(options){
                         imageView = new Views.GetImageView(
@@ -305,7 +305,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
                         if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
-                            Model.KubeType.noAvailableKubeTypes.notify();
+                            if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
+                                Model.KubeType.noAvailableKubeTypes.notifyConflict();
+                            else
+                                Model.KubeType.noAvailableKubeTypes.notify();
                             return;
                         }
                         utils.preloader.show();
@@ -323,8 +326,14 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         });
                     });
                     that.listenTo(wizardLayout, 'step:complete', function(){
-                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id)
-                            Model.KubeType.noAvailableKubeTypes.notify();
+                        model.solveKubeTypeConflicts();
+
+                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
+                            if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
+                                Model.KubeType.noAvailableKubeTypes.notifyConflict();
+                            else
+                                Model.KubeType.noAvailableKubeTypes.notify();
+                        }
                         wizardLayout.steps.show(new Views.WizardCompleteSubView({
                             model: model
                         }));

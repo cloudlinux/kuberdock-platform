@@ -69,8 +69,39 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         },
     });
 
-    data.Container = Backbone.Model.extend({
+    data.VolumeMount = Backbone.Model.extend({
         idAttribute: 'name',
+        defaults: function(){
+            return {name: this.generateName(this.get('mountPath')), mountPath: null};
+        },
+        generateName: function(){
+            return _.map(_.range(10), function(){ return _.random(36).toString(36); }).join('');
+        },
+        getContainer: function(){ return ((this.collection || {}).parents || [])[0]; },
+    });
+
+    data.Port = Backbone.Model.extend({
+        idAttribute: 'containerPort',
+        defaults: {
+            containerPort: null,
+            hostPort: null,
+            isPublic: false,
+            protocol: "tcp",
+        },
+        getContainer: function(){ return ((this.collection || {}).parents || [])[0]; },
+    });
+
+    data.Container = Backbone.AssociatedModel.extend({
+        idAttribute: 'name',
+        relations: [{
+            type: Backbone.Many,
+            key: 'ports',
+            relatedModel: data.Port,
+        }, {
+            type: Backbone.Many,
+            key: 'volumeMounts',
+            relatedModel: data.VolumeMount,
+        }],
         defaults: function(){
             return {
                 image: null,
@@ -87,9 +118,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 logsError: null,
             };
         },
-        getPod: function(){
-            return ((this.collection || {}).parents || [])[0];
-        },
+        getPod: function(){ return ((this.collection || {}).parents || [])[0]; },
         checkForUpdate: function(){
             return $.ajax({
                 url: this.getPod().url() + '/' + this.id + '/update',
@@ -145,13 +174,10 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 return {
                     containerPort: port.number,
                     protocol: port.protocol,
-                    hostPort: null,
-                    isPublic: false
                 };
             });
-            _data.volumeMounts = _.map(_data.volumeMounts || [], function(vm){
-                return {name: null, mountPath: vm};
-            });
+            _data.volumeMounts = _.map(_data.volumeMounts || [],
+                                       function(vm){ return {mountPath: vm}; });
             return new this(_data);
         }
     });
@@ -186,6 +212,40 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             return this.save({command: cmd}, options);
         },
 
+        /**
+         * Add to kubeTypes info about conflicts with pod's PDs.
+         * Also, if pod's kubeType conflicts with some of pod's PDs, change it.
+         */
+        solveKubeTypeConflicts: function(){
+            var kubeTypes = App.userPackage.getKubeTypes();
+            kubeTypes.map(function(kt){ kt.conflicts = new data.PersistentStorageCollection(); });
+            if (this.persistentDrives){
+                _.each(this.get('volumes'), function(volume){
+                    if (volume.persistentDisk){
+                        var pd = this.persistentDrives.get(volume.persistentDisk.pdName);
+                        if (pd){
+                            var kubeType = pd.get('kube_type');
+                            if (kubeType !== undefined){
+                                kubeTypes.each(function(kt){
+                                    if (kt.id !== kubeType)
+                                        kt.conflicts.add(pd);
+                                });
+                            }
+                        }
+                    }
+                }, this);
+            }
+            kubeTypes = new data.KubeTypeCollection(kubeTypes.filter(
+                function(kt){ return kt.get('available') && !kt.conflicts.length; }));
+
+            if (!kubeTypes.get(this.get('kube_type'))){
+                var kubeType = kubeTypes.findWhere({is_default: true})
+                               || kubeTypes.at(0)
+                               || data.KubeType.noAvailableKubeTypes;
+                this.set('kube_type', kubeType.id);
+            }
+        },
+
         // delete specified volumes from pod model, release Persistent Disks
         deleteVolumes: function(names){
             var volumes = this.get('volumes');
@@ -193,10 +253,10 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 if (!_.contains(names, volume.name))
                     return true;  // leave this volume
 
-                if (_.has(volume, 'persistentDisk')) {  // release PD
-                    _.chain(this.persistentDrives || [])
-                        .where({pdName: volume.persistentDisk.pdName})
-                        .each(function(disk) { disk.used = false; });
+                if (volume.persistentDisk && this.persistentDrives) {  // release PD
+                    _.each(
+                        this.persistentDrives.where({name: volume.persistentDisk.pdName}),
+                        function(disk){ disk.set('in_use', false); });
                 }
                 return false;  // remove this volume
             }, this));
@@ -207,11 +267,15 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 function(sum, c){ return sum + c.get('kubes'); }, 0);
         },
 
+        getKubeType: function(){
+            return App.kubeTypeCollection.get(this.get('kube_type')) ||
+                data.KubeType.noAvailableKubeTypes;
+        },
+
         recalcInfo: function(pkg) {
             var containers = this.get('containers'),
                 volumes = this.get('volumes'),
-                kube = App.kubeTypeCollection.get(this.get('kube_type')) ||
-                    data.KubeType.noAvailableKubeTypes,
+                kube = this.getKubeType(),
                 kubePrice = pkg.priceFor(kube.id) || 0,
                 totalKubes = this.getKubes();
 
@@ -224,7 +288,8 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                     ' ' + kube.get('disk_space_units'),
             };
 
-            var allPorts = _.flatten(containers.pluck('ports'), true),
+            var allPorts = _.flatten(containers.map(
+                    function(c){ return c.get('ports').toJSON(); }), true),
                 allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
                 total_size = _.reduce(allPersistentVolumes,
                     function(sum, v) { return sum + (v.pdSize || 1); }, 0);
@@ -377,14 +442,35 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
     // TODO: Fixed code duplication by moving models from settings_app to a common file
     data.PersistentStorageModel = Backbone.Model.extend({
+        idAttribute: 'name',
         defaults: {
-            name   : 'Nameless',
-            size   : 0,
-            in_use : false,
-            pod_id : '',
-            pod_name : '',
+            name: 'Nameless',
+            size: 1,
+            in_use: false,
+            pod_id: '',
+            pod_name: '',
+            available: true,
+            node_id: undefined,
+            kube_type: undefined,
         },
         parse: unwrapper,
+        /**
+         * Find all PDs from parent collection in pod, that conflict with this one.
+         * @param pod {data.Pod} - pod model
+         * @param ignored {data.PersistentStorageModel} - ignore conflicts with this PD
+         */
+        conflictsWith: function(pod, ignored){
+            if (this.get('node_id') === undefined)
+                return new data.PersistentStorageCollection();
+            var podDisks = _.chain(pod.get('volumes'))
+                    .pluck('persistentDisk').filter().pluck('pdName').value();
+
+            return new data.PersistentStorageCollection(this.collection.filter(function(pd){
+                return pd !== this && pd !== ignored
+                    && _.contains(podDisks, pd.get('name'))
+                    && pd.get('node_id') && pd.get('node_id') != this.get('node_id');
+            }, this));
+        },
     });
 
     // TODO: Fixed code duplication by moving models from settings_app to a common file
@@ -689,6 +775,12 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         {name: 'No available kube types', id: 'noAvailableKubeTypes'});
     data.KubeType.noAvailableKubeTypes.notify = function(){
         utils.notifyWindow('There are no available kube types in your package.');
+    };
+    data.KubeType.noAvailableKubeTypes.notifyConflict = function(){
+        // Case, when there are no available kube types, 'cause of conflicts with pod's PDs.
+        // TODO: better message
+        utils.notifyWindow('You cannot use selected Persistent Disks with any '
+                           + 'available Kube Types.');
     };
     data.KubeTypeCollection = Backbone.Collection.extend({
         model: data.KubeType,

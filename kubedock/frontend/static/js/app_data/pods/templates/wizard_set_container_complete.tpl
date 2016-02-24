@@ -31,27 +31,24 @@
                     <label class="col-xs-8">Kube Type</label>
                     <div class="col-xs-7">
                         <select class="kube_type selectpicker" id="extra-options" disabled>
-                            <% kubeTypes.each(function(kubeType){ %>
-                            <option value="<%- kubeType.id %>"
-                            <%= kubeType.get('available') ? '' : 'disabled'%>>
-                                <%- kubeType.get('name') %>
-                            </option>
-                            <% }) %>
-                        </select>
-                    </div>
-                    <div class="col-xs-1 no-padding edit-kube-type"></div>
                     <% } else { %>
                     <div class="col-xs-8">
                         <label>Kube Type</label>
                         <select class="kube_type selectpicker" id="extra-options">
+                    <% } %>
                             <% kubeTypes.each(function(kubeType){ %>
                             <option value="<%- kubeType.id %>"
-                            <%= kubeType.get('available') ? '' : 'disabled'%>>
+                            <%= kubeType.get('available') && !kubeType.conflicts.length ? '' : 'disabled'%>>
                                 <%- kubeType.get('name') %>
+                                <%= !kubeType.get('available') ? '(currently not available)'
+                                    : kubeType.conflicts.length ? '(conflict with disk ' + kubeType.conflicts.pluck('name').join(', ') + ')'
+                                        : '' %>
                             </option>
                             <% }) %>
                         </select>
                     </div>
+                    <% if (containers.length > 1){ %>
+                    <div class="col-xs-1 no-padding edit-kube-type"></div>
                     <% } %>
                     <label>Number of Kubes:</label>
                     <div class="col-xs-4 no-padding">

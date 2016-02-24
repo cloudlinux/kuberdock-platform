@@ -50,14 +50,14 @@
                 <div class="col-xs-10">
                     <div class="info col-xs-6">
                         <div>Image: <%- image %></div>
-                        <div>Kube Type: <%- kube_type.name %></div>
+                        <div>Kube Type: <%- kube_type.get('name') %></div>
                         <div>Restart policy: <%- restart_policy %></div>
                         <div>Number of Kubes: <%- kubes %></div>
                     </div>
                     <div class="col-xs-6 servers">
-                        <div>CPU: <%- (kube_type.cpu * kubes).toFixed(2) %> <%- kube_type.cpu_units %></div>
-                        <div>RAM: <%- kube_type.memory * kubes %> <%- kube_type.memory_units %></div>
-                        <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %></div>
+                        <div>CPU: <%- (kube_type.get('cpu') * kubes).toFixed(2) %> <%- kube_type.get('cpu_units') %></div>
+                        <div>RAM: <%- kube_type.get('memory') * kubes %> <%- kube_type.get('memory_units') %></div>
+                        <div>HDD: <%- kube_type.get('disk_space') * kubes %> <%- kube_type.get('disk_space_units') %></div>
                     </div>
                 </div>
                 <div class="col-xs-12 no-padding">
@@ -72,12 +72,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                        <% if (ports.length != 0) { %>
+                        <% if (ports && ports.length != 0) { %>
                             <% _.each(ports, function(p){ %>
                                 <tr>
-                                    <td class="containerPort"><%- p.containerPort ? p.containerPort : 'none'%></td>
-                                    <td class="containerProtocol"><%- p.protocol ? p.protocol : 'none' %></td>
-                                    <td class="hostPort"><%- p.hostPort ? p.hostPort : p.containerPort%></td>
+                                    <td class="containerPort"><%- p.containerPort || 'none'%></td>
+                                    <td class="containerProtocol"><%- p.protocol || 'none' %></td>
+                                    <td class="hostPort"><%- p.hostPort || p.containerPort || 'none' %></td>
                                     <td><%- p.isPublic ? 'yes' : 'no' %></td>
                                 </tr>
                             <% }) %>
@@ -102,14 +102,15 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    <% if (volumes.length != 0) { %>
-                                        <% _.each(volumes, function(v){ %>
+                                    <% if (volumeMounts && volumeMounts.length != 0) { %>
+                                        <% _.each(volumeMounts, function(vm){ %>
                                             <tr>
-                                                <td><%- v.mountPath %></td>
-                                            <% if(v.persistentDisk) { %>
+                                                <td><%- vm.mountPath %></td>
+                                            <% var volume = _.findWhere(volumes, {name: vm.name}) %>
+                                            <% if(volume.persistentDisk) { %>
                                                 <td>yes</td>
-                                                <td><%- v.persistentDisk.pdName %></td>
-                                                <td><%- v.persistentDisk.pdSize || '' %></td>
+                                                <td><%- volume.persistentDisk.pdName %></td>
+                                                <td><%- volume.persistentDisk.pdSize || '' %></td>
                                             <% } else { %>
                                                 <td>no</td>
                                                 <td></td>

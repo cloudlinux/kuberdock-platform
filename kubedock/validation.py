@@ -211,7 +211,11 @@ user_schema = {
         'type': 'string',
         'required': False,
         'allowed': pytz.common_timezones
-    }
+    },
+    'clientid': {
+        'type': 'integer',
+        'required': False
+    },
 }
 
 
@@ -833,12 +837,12 @@ class V(cerberus.Validator):
     def _validate_package_exists(self, exists, field, value):
         if exists:
             if Package.by_name(value) is None:
-                self._error(field, "Package doesn't exists")
+                self._error(field, "Package doesn't exist")
 
     def _validate_package_id_exists(self, exists, field, value):
         if exists:
             if Package.query.get(int(value)) is None:
-                self._error(field, "Package doesn't exists")
+                self._error(field, "Package doesn't exist")
 
 
 def check_int_id(id):

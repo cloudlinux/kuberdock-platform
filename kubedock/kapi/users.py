@@ -1,6 +1,9 @@
+import requests
+
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
-from flask import current_app
+from hashlib import md5
+from copy import deepcopy
 
 from ..core import db
 from ..utils import APIError, atomic
@@ -9,6 +12,7 @@ from ..billing.models import Package
 from ..pods.models import Pod, PersistentDisk
 from ..rbac.models import Role
 from ..users.models import User, UserActivity
+from ..system_settings.models import SystemSettings
 from ..users.utils import enrich_tz_with_offset
 from .podcollection import PodCollection, POD_STATUSES
 from .pstorage import get_storage_class, delete_persistent_drives_task
@@ -48,11 +52,14 @@ class UserCollection(object):
         if not license_valid():
             raise APIError("Action forbidden. Please check your license")
         data = UserValidator().validate_user_create(data)
+        role = Role.by_rolename(data['rolename'])
+        package = Package.by_name(data['package'])
+        self.get_client_id(data, package)
         temp = {key: value for key, value in data.iteritems()
                 if value != '' and key not in ('package', 'rolename',)}
         user = User(**temp)
-        user.role = Role.by_rolename(data['rolename'])
-        user.package = Package.by_name(data['package'])
+        user.role = role
+        user.package = package
         db.session.add(user)
         db.session.flush()
         return user.to_dict()
@@ -220,3 +227,39 @@ class UserCollection(object):
         pod_collection = PodCollection(user)
         for pod in pod_collection.get(as_json=False):
             pod_collection._return_public_ip(pod['id'])
+
+    @staticmethod
+    def get_client_id(data, package):
+        """Tries to create the user in billing"""
+        # TODO: untie from WHMCS specifics, maybe as plugin
+
+        if data.get('clientid'):
+            return
+        if SystemSettings.get_by_name('billing_type') == 'No billing':
+            return
+        url, username, password = map(SystemSettings.get_by_name,
+                ('billing_url', 'billing_username', 'billing_password'))
+        if not all((url, username, password)):
+            raise APIError("Some billing parameters are missing or "
+                           "not properly configured")
+        billing_data = deepcopy(data)
+        billing_data.update({
+            'action'      : 'addclient',
+            'username'    : username,
+            'password'    : md5(password).hexdigest(),
+            'firstname'   : data.pop('first_name', 'kduser'),
+            'lastname'    : data.pop('last_name', 'kduser'),
+            'address1'    : 'KuberDock',
+            'city'        : 'KuberDock',
+            'state'       : 'None',
+            'postcode'    : '12345',
+            'country'     : 'US',
+            'phonenumber' : '0000000',
+            'package_id'  : package.id,
+            'responsetype': 'json'})
+        r = requests.post(url.strip('/ ') + '/includes/api.php', data=billing_data)
+        if r.status_code != 200:
+            raise APIError(
+                "Could not add user to billing. Make sure billing site "
+                "is accessible and properly functioning")
+        data['clientid'] = r.json().get('clientid')

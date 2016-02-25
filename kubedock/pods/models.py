@@ -5,6 +5,8 @@ import string
 import types
 from datetime import datetime
 from hashlib import md5
+import uuid
+
 from sqlalchemy.dialects import postgresql
 from flask import current_app
 from ..core import db
@@ -393,7 +395,7 @@ class PersistentDisk(BaseModelMixin, db.Model):
         if self.drive_name is None:
             owner = self.owner if self.owner is not None else self.owner_id
             self.drive_name = pd_utils.compose_pdname(self.name, owner)
-        if self.name is None or self.owner is None:
+        if self.name is None or self.owner_id is None:
             name, user_id, username = pd_utils.parse_pd_name(self.drive_name)
             if self.name is None:
                 self.name = name
@@ -457,14 +459,59 @@ class PersistentDisk(BaseModelMixin, db.Model):
                     in_use=self.pod_id is not None)
 
     @classmethod
-    def mark_todelete(cls, drive_id):
-        db.session.query(cls).filter(
-            cls.id == drive_id, cls.pod_id == None
-        ).update(
-            {cls.state: PersistentDiskStatuses.TODELETE},
-            synchronize_session=False
+    def _increment_drive_name(cls, pd):
+        """Finds drive_name with postfix '_i', where 'i' is the smallest number
+        for which there is no existing drive_names in database.
+        It is needed for auto creation of new PD while old one with the same
+        name is in deleting process.
+        """
+        base_drivename = pd_utils.compose_pdname(pd.name, pd.owner_id)
+        # escape existing symbols %, _ for like clause in selection
+        name_for_like_search = base_drivename.replace(
+            '_', '\\_').replace('%', '\\%')
+        existing_drives = cls.query.filter(
+            cls.drive_name.like('{}\\_%'.format(name_for_like_search)),
+            cls.name == pd.name,
+            cls.owner_id == pd.owner_id,
+            cls.state != PersistentDiskStatuses.DELETED
         )
+        max_number = 0
+        for item in existing_drives:
+            try:
+                number = int(item.drive_name.split('_')[-1])
+                if number > max_number:
+                    max_number = number
+            except (ValueError, TypeError):
+                pass
+        return '{0}_{1}'.format(base_drivename, max_number + 1)
+
+    @classmethod
+    def mark_todelete(cls, drive_id):
+        """Marks PD for deletion. Also creates a new one PD with the same
+        'name' and owner, but with different physical 'drive_name'. It is needed
+        for possibility to fast relaunch the pod right after PD deletion. If we
+        will use the same physical drive name, then we have to wait until old
+        drive will be actually deleted.
+
+        """
+        pd = cls.query.filter(cls.id == drive_id, cls.pod_id == None).first()
+        if not pd or pd.state == PersistentDiskStatuses.TODELETE:
+            return
+        new_drive_name = cls._increment_drive_name(pd)
+        old_name = pd.name
+        # change name for deleting PD to prevent conflict of uniques and
+        # to hide PD from search by name
+        pd.name = uuid.uuid4().hex
+        pd.state = PersistentDiskStatuses.TODELETE
+        db.session.flush()
+        new_pd = cls(
+            drive_name=new_drive_name, name=old_name, owner_id=pd.owner_id,
+            size=pd.size, state=PersistentDiskStatuses.DELETED
+        )
+        db.session.add(new_pd)
         db.session.commit()
+        return new_pd
+
 
     @classmethod
     def get_todelete_query(cls):

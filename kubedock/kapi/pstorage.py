@@ -13,10 +13,10 @@ from flask import current_app
 
 from ..core import db, ExclusiveLock, ConnectionPool
 from ..nodes.models import Node, NodeFlagNames
-from ..pods.models import PersistentDisk, PersistentDiskStatuses
+from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..utils import APIError, send_event
+from ..utils import APIError, send_event, atomic
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX)
@@ -76,10 +76,52 @@ def delete_drive_by_id(drive_id):
     """
     try:
         with drive_lock(drive_id=drive_id):
-            PersistentDisk.mark_todelete(drive_id)
+            new_pd = PersistentDisk.mark_todelete(drive_id)
+            if new_pd:
+                update_pods_volumes(new_pd)
     except DriveIsLockedError as err:
         raise APIError(err.message)
-    delete_persistent_drives_task.delay([drive_id], mark_only=True)
+    delete_persistent_drives_task.delay([drive_id], mark_only=False)
+
+
+@atomic(nested=False)
+def update_pods_volumes(pd):
+    """Replaces volume info in configs of existing pods with new one pd.
+    Will change volumes with the same owner and the same public volume name,
+    as in the given pd.
+    :param pd: object of PersistentDisk model
+    """
+    storage_cls = get_storage_class()
+    for pod in Pod.query.filter(Pod.owner_id == pd.owner_id):
+        if pod.is_deleted:
+            continue
+        try:
+            config = pod.get_dbconfig()
+        except (TypeError, ValueError):
+            current_app.logger.exception('Invalid pod (%s) config: %s',
+                                         pod.id, pod.config)
+            continue
+        vol = next(
+            (item for item in config.get('volumes_public', [])
+                if item.get('persistentDisk', {}).get('pdName', '') == pd.name),
+            None
+        )
+        current_app.logger.debug('Pod %s config: %s', pod.id, pod.config)
+        current_app.logger.debug('Found volume: %s', vol)
+        if not vol or not vol.get('name', None):
+            continue
+        volumes = config.get('volumes', [])
+        changed = False
+        for item in volumes:
+            if item.get('name', '') != vol['name']:
+                continue
+
+            current_app.logger.debug('Updating volume: %s', item)
+            storage_cls().enrich_volume_info(item, pd.size, pd.drive_name)
+            changed = True
+            break
+        if changed:
+            pod.set_dbconfig(config, save=False)
 
 
 @celery.task()
@@ -182,7 +224,7 @@ def remove_drives_marked_for_deletion():
     """Collects and deletes drives marked as deleted and deletes them."""
     ids = [item.id for item in PersistentDisk.get_todelete_query()]
     if ids:
-        delete_persistent_drives(ids, mark_only=True)
+        delete_persistent_drives(ids, mark_only=False)
 
 
 class PersistentStorage(object):
@@ -1202,7 +1244,7 @@ class LocalStorage(PersistentStorage):
         return path
 
     def enrich_volume_info(self, volume, size, drive_name):
-        """Adds storage specific attributes to volume dict.
+        """Adds storae specific attributes to volume dict.
         """
         full_path = self._get_full_drive_path(drive_name)
         volume[self.VOLUME_EXTENSION_KEY] = {
@@ -1242,7 +1284,11 @@ class LocalStorage(PersistentStorage):
     def run_on_pd_node(self, pd, command, *args, **kwargs):
         node = Node.query.filter(Node.id == pd.node_id).first()
         if not node:
+            current_app.logger.debug(
+                'There is no node to execute command: %s', command)
             return
+        current_app.logger.debug(
+            'Node %s execute command: %s', node.ip, command)
         return run_remote_command(
             node.ip,
             command,
@@ -1254,9 +1300,11 @@ class LocalStorage(PersistentStorage):
         """
         failed_rm_code = 1
         try:
+            drive_path = self._get_full_drive_path(pd.drive_name)
+            current_app.logger.debug('Deleting local storage: %s', drive_path)
             res = self.run_on_pd_node(
                 pd,
-                'rm -rf "{}"'.format(self._get_full_drive_path(pd.drive_name)),
+                'rm -rf "{}"'.format(drive_path),
                 catch_exitcodes=[failed_rm_code]
             )
             if res is None:

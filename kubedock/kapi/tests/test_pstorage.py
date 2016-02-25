@@ -1,18 +1,17 @@
 """Tests for kapi.pstorage module."""
 
 import unittest
-from hashlib import md5
 import json
+import uuid
 
 import mock
 
 from kubedock.core import db
 from kubedock.kapi import pstorage
-from kubedock.settings import PD_SEPARATOR_USERID, PD_NS_SEPARATOR
+from kubedock.settings import PD_NS_SEPARATOR
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
-from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
+from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from kubedock.billing.models import Kube
-from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses
 
 from kubedock.testutils import create_app
 
@@ -114,6 +113,100 @@ class TestPstorageFuncs(DBTestCase):
         pstorage.delete_persistent_drives([pd.id])
         pds = db.session.query(PersistentDisk).all()
         self.assertEqual(pds, [])
+
+    @mock.patch.object(pstorage, 'update_pods_volumes')
+    @mock.patch.object(pstorage, 'delete_persistent_drives_task')
+    def test_delete_drive_by_id(self, delete_pd_mock, update_pod_mock):
+        """Test pstorage.delete_drive_by_id function."""
+        user, _ = self.fixtures.user_fixtures()
+        pd = PersistentDisk(
+            name='q', owner_id=user.id, size=1
+        )
+        db.session.add(pd)
+        db.session.commit()
+        old_id = pd.id
+        old_drive_name = pd.drive_name
+        old_name = pd.name
+
+        pstorage.delete_drive_by_id(pd.id)
+
+        new_pd = db.session.query(PersistentDisk).filter(
+            PersistentDisk.state == PersistentDiskStatuses.DELETED
+        ).first()
+        self.assertIsNotNone(new_pd)
+        update_pod_mock.assert_called_once_with(new_pd)
+        delete_pd_mock.delay.assert_called_once_with([old_id], mark_only=False)
+
+        updated_pd = db.session.query(PersistentDisk).filter(
+            PersistentDisk.id == old_id
+        ).first()
+        self.assertIsNotNone(updated_pd)
+        self.assertNotEqual(updated_pd.name, old_name)
+        self.assertEqual(updated_pd.state, PersistentDiskStatuses.TODELETE)
+        self.assertEqual(updated_pd.drive_name, old_drive_name)
+        self.assertEqual(updated_pd.drive_name + '_1', new_pd.drive_name)
+        self.assertEqual(new_pd.name, old_name)
+        self.assertEqual(new_pd.owner_id, updated_pd.owner_id)
+
+    def test_update_pods_volumes(self):
+        """Test pstorage.update_pods_volumes function"""
+        user, _ = self.fixtures.user_fixtures()
+        old_drive_name = 'qq11'
+        new_drive_name = 'ww22'
+        pdname = 'qwerty1243'
+        pod_id = str(uuid.uuid4())
+        storage_prefix = pstorage.NODE_LOCAL_STORAGE_PREFIX
+        pod = Pod(
+            id=pod_id, name='somename', owner_id=user.id,
+            kube_id=Kube.get_default_kube_type(),
+            config=json.dumps({
+                "volumes": [
+                    {
+                        "hostPath": {
+                            "path": storage_prefix + '/' + old_drive_name
+                        },
+                        "name": "var-qqq7824431125",
+                        "annotation": {
+                            "localStorage": {
+                                "path": storage_prefix + '/' + old_drive_name,
+                                "size": 1
+                            }
+                        }
+                    }
+                ],
+                "volumes_public": [
+                    {
+                        "persistentDisk": {"pdSize": 1, "pdName": pdname},
+                        "name": "var-qqq7824431125"
+                    }
+                ]
+
+            })
+        )
+        db.session.add(pod)
+        new_pd = PersistentDisk(
+            name=pdname, drive_name=new_drive_name, owner_id=user.id, size=1
+        )
+        db.session.add(new_pd)
+        db.session.commit()
+        pstorage.update_pods_volumes(new_pd)
+        pods = db.session.query(Pod).all()
+        self.assertTrue(len(pods), 1)
+        new_pod = pods[0]
+        config = new_pod.get_dbconfig()
+        self.assertEqual(len(config['volumes']), len(config['volumes_public']))
+        self.assertEqual(len(config['volumes']), 1)
+        new_drive_path = storage_prefix + '/' + new_drive_name
+        self.assertEqual(
+            config['volumes'][0]['hostPath']['path'], new_drive_path
+        )
+        self.assertEqual(
+            config['volumes'][0]['annotation']['localStorage']['path'],
+            new_drive_path
+        )
+        self.assertEqual(
+            config['volumes_public'][0]['persistentDisk']['pdName'], pdname
+        )
 
 
 class TestCephStorage(DBTestCase):

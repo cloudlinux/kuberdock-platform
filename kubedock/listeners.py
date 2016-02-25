@@ -10,7 +10,7 @@ from websocket import (create_connection, WebSocketException,
 from flask import current_app
 from .core import ConnectionPool
 from .nodes.models import Node
-from .pods.models import Pod
+from .pods.models import Pod, PersistentDisk
 from .users.models import User
 from .settings import (
     PODS_VERBOSE_LOG,

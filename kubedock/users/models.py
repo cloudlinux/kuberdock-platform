@@ -46,6 +46,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
     timezone = db.Column(db.String(64), nullable=False,
                          default=DEFAULT_TIMEZONE,
                          server_default=DEFAULT_TIMEZONE)
+    clientid = db.Column(db.Integer, nullable=True, unique=True)
 
     # This fields(+password) can be seen and edited by user himself
     # Admins can edit them too

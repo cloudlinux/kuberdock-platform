@@ -172,14 +172,14 @@ SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
 AWS = False
 try:
-    from amazon_settings import *
+    from .amazon_settings import *
 except ImportError:
     pass
 
 CEPH = False
 CEPH_POOL_NAME = 'rbd'
 try:
-    from ceph_settings import *
+    from .ceph_settings import *
     if CEPH and PD_NAMESPACE:
         CEPH_POOL_NAME = PD_NAMESPACE
 except ImportError:

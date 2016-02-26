@@ -4,7 +4,7 @@ define(['marionette'], function(Marionette){
         appRoutes: {
             'pods'                            : 'showPods',
             'pods/:id'                        : 'showPodItem',
-            'newpod'                          : backendData.user.rolename  === 'PredefinedAppUser' ?
+            'newpod'                          : backendData.user.rolename  === 'LimitedUser' ?
                                                 'showPods' : 'createPod',
             'pods/poditem/:id/:name'          : 'showPodContainer',
             'nodes'                           : 'showNodes',

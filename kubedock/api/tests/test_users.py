@@ -253,7 +253,7 @@ class TestUsers(APITestCase):
     def test_get_roles(self):
         response = self.admin_open(self.item_url('roles'))
         self.assert200(response)
-        self.assertItemsEqual(['Admin', 'User', 'TrialUser', 'PredefinedAppUser'],
+        self.assertItemsEqual(['Admin', 'User', 'TrialUser', 'LimitedUser'],
                               response.json['data'])
 
     def test_get_user_activities(self):

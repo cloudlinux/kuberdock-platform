@@ -1,3 +1,4 @@
+from collections import Sequence
 from flask import Blueprint
 from flask.views import MethodView
 
@@ -36,10 +37,10 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         user = self._get_current_user()
         cls = self._resolve_storage()
         if params.get('free-only') == 'true':
-            return map(add_kube_type, cls().get_user_unmapped_drives(user))
+            return add_kube_types(cls().get_user_unmapped_drives(user))
         if device_id is None:
-            return map(add_kube_type, cls().get_by_user(user))
-        return add_kube_type(cls().get_by_user(user, device_id))
+            return add_kube_types(cls().get_by_user(user))
+        return add_kube_types(cls().get_by_user(user, device_id))
 
     def post(self):
         user = self._get_current_user()
@@ -58,7 +59,7 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         except Exception:
             ps.delete_drive_by_id(data['id'])
             raise APIError('Couldn\'t save persistent disk.')
-        return add_kube_type(data)
+        return add_kube_types(data)
 
     def put(self, device_id):
         pass
@@ -81,12 +82,16 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         ps.delete_drive_by_id(device_id)
 
 
-def add_kube_type(disk):
-    node = disk.get('node_id')
-    if node is not None:
-        node = Node.query.get(node)
-    disk['kube_type'] = None if node is None else node.kube_id
-    return disk
+def add_kube_types(disks):
+    if not isinstance(disks, Sequence):  # one disk
+        node_id = disks.get('node_id')
+        if node_id is not None:
+            disks['kube_type'] = Node.query.get(node_id).kube_id
+        return disks
+    node2kube = dict(Node.query.values(Node.id, Node.kube_id))
+    for disk in disks:
+        disk['kube_type'] = node2kube.get(disk.get('node_id'))
+    return disks
 
 
 register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id', strict_slashes=False)

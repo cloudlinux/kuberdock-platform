@@ -308,7 +308,11 @@
             fullPod.containers.push({name: name, kubes: 1});
         });
 
-        names = (spec.volumes || []).map(function(v){ return v.name; });
+        names = [];
+        spec.volumes.forEach(function(volume){
+            if (volume.persistentDisk)
+                names.push(volume.name);
+        });
         fullPod.persistentDisks.forEach(function(pd){
             pd.pdSize = pd.pdSize || 1;
             names.splice(names.indexOf(pd.name), 1);
@@ -374,8 +378,10 @@
         var pdByVolumeName = {};
         podPlan.persistentDisks.forEach(
             function(pd){ pdByVolumeName[pd.name] = pd.pdSize; });
-        (spec.volumes || []).forEach(
-            function(vol){ vol.persistentDisk.pdSize = pdByVolumeName[vol.name]; });
+        (spec.volumes || []).forEach(function(vol){
+            if (vol.persistentDisk)
+                vol.persistentDisk.pdSize = pdByVolumeName[vol.name];
+        });
 
         if (appPackage.publicIP === false && this.hasPublicPorts){
             spec.containers.forEach(function(c){ c.ports.forEach(

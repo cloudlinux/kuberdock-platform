@@ -883,7 +883,9 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     licenseModel = new Model.LicenseModel();
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
+                    utils.preloader.show();
                     App.getLicenseModel().done(function(license){
+                        utils.preloader.hide();
                         layoutView.main.show(new Views.LicenseView({ model: license }));
                     });
                 });

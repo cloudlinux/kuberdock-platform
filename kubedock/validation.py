@@ -269,7 +269,7 @@ new_pod_schema = {
         'schema': {
             'type': 'dict',
             'schema': {
-                'name': dict(volume_name_schema, volume_type_required=True),
+                'name': dict(volume_name_schema, volume_type_required=False),
                 'persistentDisk': {
                     'type': 'dict',
                     'nullable': True,

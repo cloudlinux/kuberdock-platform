@@ -130,11 +130,18 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             return
         # volumes - k8s api, volumes_public - kd api
         self.volumes_public = deepcopy(self.volumes)
+        clean_vols = set()
         for volume, volume_public in zip(self.volumes, self.volumes_public):
             if 'persistentDisk' in volume:
                 self._handle_persistent_storage(volume, volume_public, owner)
             elif 'localStorage' in volume:
                 self._handle_local_storage(volume)
+            else:
+                name = volume.get('name', None)
+                clean_vols.add(name)
+        if clean_vols:
+            self.volumes = [item for item in self.volumes
+                            if item['name'] not in clean_vols]
 
     @staticmethod
     def _handle_persistent_storage(volume, volume_public, owner):
@@ -192,6 +199,22 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         owner = User.filter_by(username=self.owner).one()
         kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
         volume_annotations = self.extract_volume_annotations(volumes)
+
+        # Extract volumeMounts for missing volumes
+        # missing volumes may exist if there some 'Container' storages, as
+        # described in https://cloudlinux.atlassian.net/browse/AC-2492
+        existing_vols = {item['name'] for item in volumes}
+        containers = []
+        for container in self.containers:
+            container = deepcopy(container)
+            container['volumeMounts'] = [
+                item for item in container.get('volumeMounts', [])
+                if item['name'] in existing_vols
+            ]
+            containers.append(
+                self._prepare_container(container, kube_type, volumes)
+            )
+
         config = {
             "kind": "ReplicationController",
             "apiVersion": KUBE_API_VERSION,
@@ -223,8 +246,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     },
                     "spec": {
                         "volumes": volumes,
-                        "containers": [self._prepare_container(c, kube_type, volumes)
-                                       for c in self.containers],
+                        "containers": containers,
                         "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
                         "imagePullSecrets": [{"name": secret}
                                              for secret in secrets]

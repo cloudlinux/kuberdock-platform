@@ -1211,7 +1211,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
                 'sid': pod.name,
                 'name': pod.name,
                 'namespace': pod.namespace,
-                'containers': 'containers_in_kubernetes'
+                'containers': []
             })
             for pod in pod_model_instances
         }
@@ -1227,7 +1227,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
             self.assertEqual(pod.kube_type, pod_in_collection.kube_type)
         # check that containers lists were merged using "name" as key
         merge_lists_mock.assert_has_calls([
-            mock.call('containers_in_kubernetes', [], 'name')
+            mock.call([], [], 'name')
             for i in range(pods_total)
         ])
 
@@ -1503,7 +1503,8 @@ class TestPodComposePersistent(DBTestCase):
 class TestPodCollectionChangePodConfig(TestCase, TestCaseMixin):
 
     def setUp(self):
-        self.mock_methods(podcollection.PodCollection, '_merge')
+        self.mock_methods(podcollection.PodCollection,
+                          '_get_namespaces', '_get_pods', '_merge')
 
         self.node = 'node1.kuberdock.local'
         self.pod_collection = podcollection.PodCollection()

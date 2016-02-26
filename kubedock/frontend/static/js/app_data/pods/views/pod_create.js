@@ -418,7 +418,7 @@ define(['app_data/app', 'app_data/model',
                     }
                     var item = _.findWhere(volumes, {name: vm.name});
                     if (item === undefined) {
-                        volumes.push({name: vm.name, localStorage: true});
+                        volumes.push({name: vm.name/*, localStorage: true*/});
                     }
                 });
             });
@@ -649,10 +649,11 @@ define(['app_data/app', 'app_data/model',
             if ('persistentDisk' in vItem) {
                 this.releasePersistentDisk(vItem);
                 delete vItem.persistentDisk;
-                vItem.localStorage = true;
+                // vItem.localStorage = true;
             }
-            else if ('localStorage' in vItem) {
-                delete vItem.localStorage;
+            // else if ('localStorage' in vItem) {
+            else {
+                // delete vItem.localStorage;
                 vItem.persistentDisk = {pdName: null, pdSize: null};
             }
         },
@@ -844,7 +845,7 @@ define(['app_data/app', 'app_data/model',
                     if (volume !== undefined)
                         volume.name = newName;
                     else
-                        volumes.push({name: newName, localStorage: true});
+                        volumes.push({name: newName/*, localStorage: true*/});
                     mountEntry.mountPath = newValue;
                     mountEntry.name = newName;
                 }

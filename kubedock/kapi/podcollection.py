@@ -481,6 +481,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.secrets = db_pod_config.get('secrets', [])
                 a = pod.containers
                 b = db_pod_config.get('containers')
+                restore_fake_volume_mounts(a, b)
                 pod.containers = self.merge_lists(a, b, 'name')
                 restore_containers_host_ports_config(pod.containers, b)
 
@@ -797,3 +798,22 @@ def restore_containers_host_ports_config(pod_containers, db_containers):
             if host_port_key in port:
                 src_port[host_port_key] = port[host_port_key]
     return pod_containers
+
+
+def restore_fake_volume_mounts(k8s_containers, kd_containers):
+    """Just appends volumeMounts existing in KD and missed in k8s
+    containers.
+    """
+    name_to_kd_containers = {item['name']: item for item in kd_containers}
+    for container in k8s_containers:
+        kd_container = name_to_kd_containers.get(container['name'], None)
+        if kd_container is None:
+            continue
+        vol_mounts = container.get('volumeMounts', [])
+        k8s_vm_names = {item['name'] for item in vol_mounts}
+        for vm in kd_container.get('volumeMounts', []):
+            if vm['name'] not in k8s_vm_names:
+                vol_mounts.append(vm)
+        if vol_mounts:
+            container['volumeMounts'] = vol_mounts
+

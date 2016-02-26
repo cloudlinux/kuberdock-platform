@@ -4,7 +4,7 @@ from ..decorators import login_required_or_basic_or_token
 from ..decorators import maintenance_protected
 from ..utils import KubeUtils, register_api
 from ..kapi.podcollection import PodCollection
-from ..validation import check_new_pod_data
+from ..validation import check_new_pod_data, V, update_pod_schema
 from ..rbac import check_permission
 
 
@@ -32,8 +32,13 @@ class PodsAPI(KubeUtils, MethodView):
         user = self._get_current_user()
         params = self._get_params()
         #check_change_pod_data(params)
+        params = V(allow_unknown=True)._api_validation(params, update_pod_schema)
+        # TODO: with cerberus 0.10, just use "purge_unknown" option
+        data = {'command': params.get('command'),
+                'commandOptions': params.get('commandOptions') or {}}
         pods = PodCollection(user)
-        return pods.update(pod_id, params)
+        return pods.update(pod_id, data)
+    patch = put
 
     @maintenance_protected
     def delete(self, pod_id):

@@ -11,7 +11,6 @@ global_patchers = [
     mock.patch.object(validation, 'Kube'),
     mock.patch.object(validation, 'Package'),
     mock.patch.object(validation, 'User'),
-    mock.patch.object(validation, 'Node'),
     mock.patch.object(validation, 'Role'),
     mock.patch.object(validation, 'strip_offset_from_timezone'),
 ]

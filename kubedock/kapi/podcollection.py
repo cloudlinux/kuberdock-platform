@@ -7,11 +7,13 @@ from flask import current_app
 from . import pd_utils
 from .pod import Pod
 from .images import Image
-from .pstorage import get_storage_class_by_volume_info, get_storage_class
+from .pstorage import (get_storage_class_by_volume_info, get_storage_class,
+                       delete_drive_by_id)
 from .helpers import KubeQuery, ModelQuery, Utilities
 from .licensing import is_valid as license_valid
 from ..core import db
 from ..billing import repr_limits, Kube
+from ..kd_celery import celery
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
@@ -252,6 +254,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         dispatcher = {
             'start': self._start_pod,
             'stop': self._stop_pod,
+            'redeploy': self._redeploy,
             'resize': self._resize_replicas,
             'change_config': self._change_pod_config,
             'set': self._set_entry,  # sets DB data, not pod config one
@@ -602,6 +605,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if pod.status != POD_STATUSES.stopped:
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
+                rc = self._get(['replicationcontrollers', pod.sid], ns=pod.namespace)
+                self._raise_if_failure(rc, "Could not find Replication Controller")
+                rc['spec']['replicas'] = 0
+                rv = self._put(['replicationcontrollers', pod.sid],
+                               json.dumps(rc), ns=pod.namespace, rest=True)
+                self._raise_if_failure(rv, "Could not stop a pod")
                 rv = self._del(['replicationcontrollers', pod.sid],
                                ns=pod.namespace)
                 self._stop_cluster(pod)
@@ -636,6 +645,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             pod.name.encode('ascii', 'replace')))
 
         return pod.as_dict()
+
+    def _redeploy(self, pod, data):
+        self._stop_pod(pod, raise_=False)
+        finish_redeploy.delay(pod.id, data)
+        return PodCollection(owner=self.owner).get(pod.id)  # return updated pod
 
     # def _do_container_action(self, action, data):
     #     host = data.get('nodeName')
@@ -762,6 +776,27 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if pod_kubes > kubes_left:
                 self._raise('Trial User limit is exceeded. '
                             'Kubes available for you: {0}'.format(kubes_left))
+
+
+@celery.task(bind=True, default_retry_delay=10, ignore_results=True)
+def finish_redeploy(self, pod_id, data):
+    pod_collection = PodCollection()
+    pod = pod_collection._get_by_id(pod_id)
+    if pod.status == POD_STATUSES.running:
+        pod_collection._stop_pod(pod, raise_=False)  # try to stop again, just in case
+        raise self.retry()
+
+    if (data.get('commandOptions') or {}).get('wipeOut'):
+        for volume in pod.volumes_public:
+            pd = volume.get('persistentDisk')
+            if pd:
+                pd = PersistentDisk.get_all_query().filter(
+                    PersistentDisk.name == pd['pdName']
+                ).first()
+                delete_drive_by_id(pd.id)
+
+    # start updated pod
+    PodCollection().update(pod_id, {'command': 'start'})
 
 
 def restore_containers_host_ports_config(pod_containers, db_containers):

@@ -17,6 +17,7 @@
     <span class="status-line <%- status %>">Status: <%- status %></span>
     <% if ( status == "running" || status == "pending") { %>
         <span class="stop-btn">stop</span>
+        <span class="restart-btn">restart</span>
     <% } else { %>
         <% if ( status === "unpaid") { %>
             <span class="pay-and-start-btn">pay & start</span>

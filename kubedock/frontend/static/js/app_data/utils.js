@@ -28,18 +28,21 @@ define(['moment-timezone', 'notify'], function(moment){
                 buttonText = 'Ok';
             }
             if(options.footer.buttonOk){
-                modal.find('.modal-footer').append(
-                    $('<button type="button" class="btn blue" ' +
-                          'data-dismiss="modal">').unbind('click')
+                var btn = $('<button type="button" class="btn blue" ' +
+                            'data-dismiss="modal">').unbind('click')
                         .bind('click', options.footer.buttonOk)
-                        .text(buttonText)
-                );
+                        .addClass(options.footer.buttonOkClass || '')
+                        .text(options.footer.buttonOkText || buttonText);
+                modal.find('.modal-footer').append(btn);
             }
-            if(options.footer.buttonCancel === true){
-                modal.find('.modal-footer').prepend(
-                    $('<button type="button" class="btn"' +
-                          'data-dismiss="modal">Cancel</button>')
-                );
+            if(options.footer.buttonCancel){
+                var btn = $('<button type="button" class="btn"' +
+                                'data-dismiss="modal">Cancel</button>')
+                        .addClass(options.footer.buttonCancelClass || '')
+                        .text(options.footer.buttonCancelText || 'Cancel');
+                if (_.isFunction(options.footer.buttonCancel))
+                    btn.bind('click', options.footer.buttonCancel);
+                modal.find('.modal-footer').prepend(btn);
             }
         }
         return modal;

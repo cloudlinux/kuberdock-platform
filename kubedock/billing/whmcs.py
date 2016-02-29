@@ -14,7 +14,9 @@ class BillingWHMCS(BillingCommon):
     def __init__(self):
         super(BillingWHMCS, self).__init__()
 
-    def get_info(self, data):
+    def get_info(self, data, user=None):
+        if user is not None and user.username == 'hostingPanel':
+            raise APIError(self.url, type='Billing API error')
         data['kdServer'] = self._get_master_url()
         return self._query('getkuberdockinfo', data).get('results')
 
@@ -116,6 +118,6 @@ class BillingWHMCS(BillingCommon):
             if 'result' in res and res['result'] == 'success':
                 return res
             else:
-                raise APIError(res['message'], type='Billing API error')
+                raise APIError(self.url, type='Billing API error')
         except TypeError:
             raise APIError('Undefined response', type='Billing API error')

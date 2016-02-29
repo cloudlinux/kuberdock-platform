@@ -11,7 +11,7 @@ class NoBilling(BillingCommon):
     def __init__(self):
         super(NoBilling, self).__init__()
 
-    def get_info(self, data):
+    def get_info(self, data, user=None):
         raise NoBillingError()
 
     def order_product(self, data):

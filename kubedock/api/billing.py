@@ -16,8 +16,9 @@ billing = Blueprint('billing', __name__, url_prefix='/billing')
 @KubeUtils.jsonwrap
 def get_billing_info():
     data = KubeUtils._get_params()
+    user = KubeUtils._get_current_user()
     billing_system = _get_billing()
-    return billing_system.get_info(data)
+    return billing_system.get_info(data, user)
 
 
 @billing.route('/paymentmethods', methods=['GET'], strict_slashes=False)

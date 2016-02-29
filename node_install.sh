@@ -24,9 +24,9 @@ export LANG=en_US.UTF-8
 # SOME HELPERS
 
 remove_unneeded(){
-    rpm -q --whatrequires $@
+    rpm -q --whatrequires $@ &> /dev/null
     if [[ $? -ne 0 ]];then
-        yum -y autoremove $@
+        yum -y autoremove $@ &> /dev/null
     fi
 }
 
@@ -41,6 +41,15 @@ unmap_ceph(){
     fi
 }
 
+del_existed(){
+    for i in "$@";do
+        if [[ -e "$i" ]];then
+            echo "Deleting $i"
+            rm -rf "$i"
+        fi
+    done
+}
+
 clean_node(){
     echo "=== Node clean up started ==="
     echo "ALL PACKAGES, CONFIGS AND DATA RELATED TO KUBERDOCK AND PODS WILL BE DELETED"
@@ -48,18 +57,21 @@ clean_node(){
     echo "Stop and disable services..."
     for i in kubelet docker kube-proxy flanneld kuberdock-watcher \
              kuberdock-cadvisor ntpd;do
-        systemctl disable $i
-        systemctl stop $i
+        systemctl disable $i &> /dev/null
+        systemctl stop $i &> /dev/null
     done
-    systemctl unmask docker-storage-setup
+    systemctl unmask docker-storage-setup &> /dev/null
 
     # Maybe only in some cases?
     unmap_ceph
 
-    yum -y remove kubernetes*
-    yum -y remove docker
-    yum -y remove flannel*
-    yum -y remove kuberdock-cadvisor
+    echo "Remove some packages (k8s, docker, etc.)..."
+    {
+        yum -y remove kubernetes*
+        yum -y remove docker
+        yum -y remove flannel*
+        yum -y remove kuberdock-cadvisor
+    } &> /dev/null
     remove_unneeded python-requests
     remove_unneeded python-ipaddress
     remove_unneeded ipset
@@ -71,37 +83,38 @@ clean_node(){
     fi
 
     # kubelet auth token and etcd certs
-    rm -rf $KUBERNETES_CONF_DIR
-    rm -rf /etc/pki/etcd
+    echo "Deleting some files and configs..."
+    del_existed $KUBERNETES_CONF_DIR
+    del_existed /etc/pki/etcd
 
-    rm -rf $PLUGIN_DIR_BASE
-    rm -f $KD_WATCHER_SERVICE
+    del_existed $PLUGIN_DIR_BASE
+    del_existed $KD_WATCHER_SERVICE
 
-    rm -f /etc/sysconfig/flanneld*
-    rm -f /etc/systemd/system/flanneld.service
-    rm -rf /run/flannel
+    del_existed /etc/sysconfig/flanneld*
+    del_existed /etc/systemd/system/flanneld.service
+    del_existed /run/flannel
 
-    rm -f $KD_KERNEL_VARS
+    del_existed $KD_KERNEL_VARS
 
-    rm -rf /etc/sysconfig/docker*
+    del_existed /etc/sysconfig/docker*
 
-    rm -rf /var/lib/docker
-    rm -rf /var/lib/kubelet
-    rm -rf /var/lib/kuberdock
-    rm -rf $CADVISOR_CONF*
-    rm -rf $KD_ELASTIC_LOGS
+    del_existed /var/lib/docker
+    del_existed /var/lib/kubelet
+    del_existed /var/lib/kuberdock
+    del_existed $CADVISOR_CONF*
+    del_existed $KD_ELASTIC_LOGS
 
-    rm -f $KUBE_REPO
-    rm -f $KUBE_TEST_REPO
+    del_existed $KUBE_REPO
+    del_existed $KUBE_TEST_REPO
 
-    rm -f $KD_RSYSLOG_CONF
-    systemctl restart rsyslog
+    del_existed $KD_RSYSLOG_CONF
+    systemctl restart rsyslog &> /dev/null
 
-    rm -f /etc/ntpd.conf*
+    del_existed /etc/ntpd.conf*
 
     systemctl daemon-reload
 
-    systemctl stop firewalld
+    systemctl stop firewalld &> /dev/null
     iptables -w -F
     iptables -w -X
     iptables -w -F -t mangle

@@ -98,11 +98,11 @@ CELERYBEAT_SCHEDULE = {
         'task': 'kubedock.tasks.fix_pods_timeline',
         'schedule': timedelta(minutes=5)
     },
-    # twice per day clean up persistent drives (for deleted users and drives
+    # Every hour clean up persistent drives (for deleted users and drives
     # marked as deleted)
     'clean-deleted-persistent-drives': {
         'task': 'kubedock.tasks.clean_deleted_drives',
-        'schedule': crontab(hour='*')
+        'schedule': crontab(minute=0)
     },
     'send-stat': {
         'task': 'kubedock.tasks.send_stat',

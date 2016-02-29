@@ -188,14 +188,6 @@ def process_events_event(data, app):
             for pd in pod.persistent_disks:
                 storage.unlock_pd(pd)
     elif reason == 'FailedScheduling':
-        message = event['message']
-        if 'PodFitsResources' in message:
-            reason = 'There are no enough resources for the pod'
-        elif 'MatchNodeSelector' in message:
-            reason = 'There are no suitable nodes for the pod'
-        else:
-            return
-
         with app.app_context():
             pod = Pod.query.get(pod_id)
             pod_name = pod.name
@@ -210,6 +202,24 @@ def process_events_event(data, app):
             if user.username == KUBERDOCK_INTERNAL_USER:
                 return
 
+            message = event['message']
+
+            if 'PodFitsResources' in message:
+                reason = 'There are no enough resources for the pod'
+            elif 'MatchNodeSelector' in message:
+                node = pod.get_dbconfig('node')
+                if node is None:
+                    reason = 'There are no suitable nodes for the pod'
+                else:
+                    reason = (
+                        'Unable to access Persistent volume(s): {0}'.format(
+                            ', '.join('"{0}"'.format(d.name) for d in
+                                      pod.persistent_disks)
+                        )
+                    )
+            else:
+                return
+
             # personalized user message
             message = 'Failed to run pod "{0}", reason: {1}'.format(
                 pod_name, reason
@@ -221,7 +231,6 @@ def process_events_event(data, app):
             message = 'Failed to run pod "{0}", user "{1}", reason: {2}'
             message = message.format(pod_name, user.username, reason)
 
-            node = pod.get_dbconfig('node')
             if node is not None:
                 message += ' (pinned to node "{0}")'.format(node)
 

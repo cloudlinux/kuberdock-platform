@@ -417,7 +417,7 @@ def get_collection(force=False, key='KDCOLLECTION'):
 
 def process_collection(data):
     result = {'status': 'unknown', 'expiration': '', 'type': '',
-              'installationID': data.get('installationID', '')}
+              'installationID': data.get('installation-id', '')}
 
     result.update(dict((i, data.get(i)) for i in ('platform', 'storage')))
 

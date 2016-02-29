@@ -314,15 +314,36 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 
-        for volume_mount in data.get('volumeMounts', ()):
+        self.add_caps(data)
+        self.add_securety_labels(data, volumes)
+
+        data['imagePullPolicy'] = 'Always'
+        return data
+
+    def add_caps(self, container):
+        '''Add SYS_ADMIN capabilities if there are any 'mount' command in
+        lifecycle hooks
+        '''
+        # TODO: Need to be removed after find better solution
+        for hook in container.get('lifecycle', {}).values():
+            commands = hook.get('exec', {}).get('command', ())
+            if [cmd for cmd in commands if 'mount' in cmd]:
+                container['securityContext'] = {'capabilities':
+                                                {'add': ['SYS_ADMIN']}}
+
+    def add_securety_labels(self, container, volumes):
+        '''Add SELinuxOptions to volumes. For now, just add docker `:Z` option
+        to mountPath.
+        '''
+        # TODO: after k8s 1.2 version, use
+        # `pod.Spec.SecurityContext.SELinuxOptions`
+        for volume_mount in container.get('volumeMounts', ()):
             for volume in volumes:
                 if ('rbd' in volume and
                         volume.get('name') == volume_mount.get('name')):
                     mountPath = volume_mount.get('mountPath', '')
                     if mountPath and mountPath[-2:] not in (':Z', ':z'):
                         volume_mount['mountPath'] += ':Z'
-        data['imagePullPolicy'] = 'Always'
-        return data
 
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)

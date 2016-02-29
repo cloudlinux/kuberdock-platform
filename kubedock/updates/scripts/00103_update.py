@@ -14,6 +14,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     local('mkdir -p ' + SERVICE_DIR)
     local('echo -e "'+OVERRIDE_CONF+'" > '+OVERRIDE_FILE)
     local('systemctl daemon-reload')
+    local('systemctl restart ntpd')
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
     upd.print_log('Disabling restart for ntpd.service on master')
@@ -25,6 +26,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     run('mkdir -p ' + SERVICE_DIR)
     run('echo -e "'+OVERRIDE_CONF+'" > '+OVERRIDE_FILE)
     run('systemctl daemon-reload')
+    run('systemctl restart ntpd')
 
 def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
     upd.print_log('Disabling restart for ntpd.service')

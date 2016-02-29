@@ -12,6 +12,7 @@ from kubedock.settings import PD_NS_SEPARATOR
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from kubedock.billing.models import Kube
+from kubedock.nodes.models import Node
 
 from kubedock.testutils import create_app
 
@@ -207,6 +208,96 @@ class TestPstorageFuncs(DBTestCase):
         self.assertEqual(
             config['volumes_public'][0]['persistentDisk']['pdName'], pdname
         )
+
+
+class TestLocalStorage(DBTestCase):
+    """Tests for kapi.LocalStorage class."""
+    def setUp(self):
+        super(TestLocalStorage, self).setUp()
+        self.user, _ = self.fixtures.user_fixtures()
+
+    def test_check_node_is_locked(self):
+        """Test LocalStorage.check_node_is_locked method."""
+        kube_type = Kube.get_default_kube_type()
+        node1 = Node(ip='192.168.1.2', hostname='host1', kube_id=kube_type)
+        node2 = Node(ip='192.168.1.3', hostname='host2', kube_id=kube_type)
+        db.session.add_all([node1, node2])
+        db.session.commit()
+        user, _ = self.fixtures.user_fixtures()
+        pd = PersistentDisk(
+            name='q', owner_id=user.id, size=1
+        )
+        db.session.add(pd)
+        db.session.commit()
+
+        flag, reason = pstorage.LocalStorage.check_node_is_locked(node1.id)
+        self.assertFalse(flag)
+        self.assertIsNone(reason)
+        flag, reason = pstorage.LocalStorage.check_node_is_locked(node2.id)
+        self.assertFalse(flag)
+
+        pd = PersistentDisk(
+            name='w', owner_id=user.id, size=1, node_id=node1.id
+        )
+        db.session.add(pd)
+        db.session.commit()
+
+        flag, reason = pstorage.LocalStorage.check_node_is_locked(node1.id)
+        self.assertTrue(flag)
+        self.assertIsNotNone(reason)
+
+    def test_drive_can_be_deleted(self):
+        """Test LocalStorage.drive_can_be_deleted method."""
+        user, _ = self.fixtures.user_fixtures()
+        pd = PersistentDisk(
+            name='q', owner_id=user.id, size=1
+        )
+        db.session.add(pd)
+        db.session.commit()
+
+        flag, reason = pstorage.LocalStorage.drive_can_be_deleted(pd.id)
+        self.assertTrue(flag)
+        self.assertIsNone(reason)
+
+        pod_id = str(uuid.uuid4())
+        pdname = 'somename1'
+        pod = Pod(
+            id=pod_id, name='somename', owner_id=user.id,
+            kube_id=Kube.get_default_kube_type(),
+            config=json.dumps({
+                "volumes_public": [
+                    {
+                        "persistentDisk": {"pdSize": 1, "pdName": pdname},
+                    }
+                ]
+
+            })
+        )
+        db.session.add(pod)
+        db.session.commit()
+
+        flag, reason = pstorage.LocalStorage.drive_can_be_deleted(pd.id)
+        self.assertTrue(flag)
+        self.assertIsNone(reason)
+
+        pd = PersistentDisk(
+            name=pdname, owner_id=user.id, size=1
+        )
+        db.session.add(pd)
+        db.session.commit()
+        flag, reason = pstorage.LocalStorage.drive_can_be_deleted(pd.id)
+        self.assertFalse(flag)
+        self.assertIsNotNone(reason)
+
+        # delete pod, drive must became deletable
+        pod.status = 'deleted'
+        db.session.query(Pod).update(
+            {Pod.status: 'deleted'}, synchronize_session=False
+        )
+        db.session.commit()
+        flag, reason = pstorage.LocalStorage.drive_can_be_deleted(pd.id)
+        self.assertTrue(flag)
+        self.assertIsNone(reason)
 
 
 class TestCephStorage(DBTestCase):

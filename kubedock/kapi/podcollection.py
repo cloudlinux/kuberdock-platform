@@ -47,7 +47,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def add(self, params, skip_check=False):  # TODO: celery
         if not skip_check and not license_valid():
-            raise APIError("Action forbidden. Please check your license")
+            raise APIError("Action forbidden. Please contact support.")
         secrets = set()  # username, password, full_registry
         for container in params['containers']:
             if not container.get('sourceUrl'):

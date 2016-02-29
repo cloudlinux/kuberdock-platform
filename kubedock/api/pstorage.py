@@ -73,6 +73,11 @@ class PersistentStorageAPI(KubeUtils, MethodView):
             raise APIError('Volume does not belong to current user', 403)
         if pd.pod_id is not None:
             raise PDIsUsed()
+        allow_flag, description = ps.drive_can_be_deleted(device_id)
+        if not allow_flag:
+            raise APIError(
+                'Volume can not be deleted. Reason: {}'.format(description)
+            )
         ps.delete_drive_by_id(device_id)
 
 

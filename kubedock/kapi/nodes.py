@@ -19,6 +19,7 @@ from ..validation import check_internal_pod_data
 from .podcollection import PodCollection
 from .. import tasks
 from .node_utils import add_node_to_db, delete_node_from_db
+from . import pstorage
 
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
 
@@ -137,6 +138,8 @@ def delete_node(node_id=None, node=None):
     if node_id is None:
         node_id = node.id
 
+    _check_node_can_be_deleted(node_id)
+
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
 
     logs_pod_name = get_kuberdock_logs_pod_name(node.hostname)
@@ -163,6 +166,17 @@ def delete_node(node_id=None, node=None):
     send_event('node:deleted', {
         'id': node_id,
         'message': 'Node successfully deleted'})
+
+
+def _check_node_can_be_deleted(node_id):
+    """Check if the node could be deleted.
+    If it can not, then raises APIError.
+    """
+    is_locked, reason = pstorage.check_node_is_locked(node_id)
+    if is_locked:
+        raise APIError(
+            "Node can't be deleted. Reason: {}".format(reason)
+        )
 
 
 def edit_node_hostname(node_id, ip, hostname):

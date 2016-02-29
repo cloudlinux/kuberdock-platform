@@ -541,6 +541,16 @@ class PersistentDisk(BaseModelMixin, db.Model):
             synchronize_session=False
         )
 
+    @classmethod
+    def get_by_node_id(cls, node_id):
+        """Returns all PersistentDisk binded to a given node.
+        :param node_id: identifier if a Node model
+        :return: SQLAlchemy query
+        """
+        if node_id is None:
+            return []
+        return cls.query.filter(cls.node_id == node_id)
+
 
 class PrivateRegistryFailedLogin(BaseModelMixin, db.Model):
     """Stores time for last failed login attempts to private registries.

@@ -4,6 +4,7 @@ import json
 import time
 from contextlib import contextmanager
 import os
+from collections import defaultdict
 
 from ConfigParser import ConfigParser
 from fabric.api import run, settings, env, hide
@@ -101,11 +102,7 @@ def update_pods_volumes(pd):
             current_app.logger.exception('Invalid pod (%s) config: %s',
                                          pod.id, pod.config)
             continue
-        vol = next(
-            (item for item in config.get('volumes_public', [])
-                if item.get('persistentDisk', {}).get('pdName', '') == pd.name),
-            None
-        )
+        vol = _get_pod_volume_by_pd_name(config, pd.name)
         current_app.logger.debug('Pod %s config: %s', pod.id, pod.config)
         current_app.logger.debug('Found volume: %s', vol)
         if not vol or not vol.get('name', None):
@@ -491,6 +488,28 @@ class PersistentStorage(object):
         """Unlock PD, if it was locked by other node
         """
         pass
+
+    @classmethod
+    def check_node_is_locked(cls, node_id):
+        """If some storage has KD node-aware dependency, then this method should
+        check if the given node is free of storage, or if it is using by the
+        storage.
+        :return: tuple of lock_flag, reason - lock_flag True if the node is
+        in-use, False, if the node is free. Reason will explain of lock reason
+        if the node is not free.
+        """
+        return (False, None)
+
+    @classmethod
+    def drive_can_be_deleted(cls, persistent_disk_id):
+        """Checks if the given persistent disk can be deleted.
+        :param persistent_disk_id: identifier of PersistentDisk model
+        :return: tuple of <allowed flag>, reason: allowed flag - True if the
+        disk can be deleted. False if the disk can not be deleted. Reason -
+        short description why the disk can't be deleted if allowed flag = False,
+        Reason is None if allowed flad = True.
+        """
+        return (True, None)
 
 
 def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
@@ -1313,6 +1332,67 @@ class LocalStorage(PersistentStorage):
             return 1
         return 0
 
+    @classmethod
+    def check_node_is_locked(cls, node_id):
+        """For local storage node is used if there is any PD on this node.
+        """
+        pd_list = PersistentDisk.get_by_node_id(node_id).all()
+        if not pd_list:
+            return (False, None)
+        users = User.query.filter(
+            User.id.in_(item.owner_id for item in pd_list)
+        )
+        user_id_to_name = {item.id: item.username for item in users}
+        user_to_pd_list = defaultdict(list)
+        for pd in pd_list:
+            user_to_pd_list[user_id_to_name[pd.owner_id]].append(pd.name)
+        return (True, json.dumps(user_to_pd_list))
+
+    @classmethod
+    def drive_can_be_deleted(cls, persistent_disk_id):
+        """Local Storage disk can not be deleted if there is any not deleted
+        pod linked to the disk.
+        """
+        pd = PersistentDisk.query.filter(
+            PersistentDisk.id == persistent_disk_id
+        ).one()
+        pods = []
+        for pod in Pod.query.filter(Pod.owner_id == pd.owner_id):
+            if pod.is_deleted:
+                continue
+            try:
+                config = pod.get_dbconfig()
+            except (TypeError, ValueError):
+                current_app.logger.exception('Invalid pod (%s) config: %s',
+                                            pod.id, pod.config)
+                continue
+            vol = _get_pod_volume_by_pd_name(config, pd.name)
+            if not vol:
+                continue
+            pods.append(pod)
+        if not pods:
+            return (True, None)
+        return (
+            False,
+            'Persistent Disk is linked by pods: {}'.format(
+                ', '.join('"{}"'.format(pod.name) for pod in pods)
+            )
+        )
+
+
+def _get_pod_volume_by_pd_name(pod_config, pd_name):
+    """Returns entry from volumes_public section of pod configuration
+    with given persistent disk name.
+    If there is no such an entry, then return None
+    :param pod_config: dict of pod configuration which is stored in database
+    :param pd_name: name of persistent disk
+
+    """
+    for item in pod_config.get('volumes_public', []):
+        if item.get('persistentDisk', {}).get('pdName', '') == pd_name:
+            return item
+    return None
+
 
 def _get_alive_nodes():
     """Returns node list which is now in running state in kubernetes in form:
@@ -1352,3 +1432,21 @@ def get_storage_class_by_volume_info(volume):
             if cls.is_volume_of_the_class(volume):
                 return cls
     return None
+
+
+def check_node_is_locked(node_id):
+    storage_cls = get_storage_class()
+    if not storage_cls:
+        return (False, None)
+    is_locked, reason = storage_cls.check_node_is_locked(node_id)
+    if is_locked:
+        reason = "There are Persistent Disks on the node "\
+                 "{owner name: list of PD}:\n" + reason
+    return (is_locked, reason)
+
+
+def drive_can_be_deleted(pd_id):
+    storage_cls = get_storage_class()
+    if not storage_cls:
+        return (True, None)
+    return storage_cls.drive_can_be_deleted(pd_id)

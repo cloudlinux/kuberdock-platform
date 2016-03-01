@@ -15,10 +15,14 @@ class BillingWHMCS(BillingCommon):
         super(BillingWHMCS, self).__init__()
 
     def get_info(self, data, user=None):
-        if user is not None and user.username == 'hostingPanel':
-            raise APIError(self.url, type='Billing API error')
         data['kdServer'] = self._get_master_url()
-        return self._query('getkuberdockinfo', data).get('results')
+        try:
+            return self._query('getkuberdockinfo', data).get('results')
+        except APIError, e:
+            if e.message == 'User not found':
+                raise APIError(self.url, type='Billing API error: User not found')
+            else:
+                raise e
 
     def get_payment_methods(self):
         return self._query('getpaymentmethods').get('paymentmethods').get('paymentmethod')
@@ -118,6 +122,6 @@ class BillingWHMCS(BillingCommon):
             if 'result' in res and res['result'] == 'success':
                 return res
             else:
-                raise APIError(self.url, type='Billing API error')
+                raise APIError(res['message'], type='Billing API error')
         except TypeError:
             raise APIError('Undefined response', type='Billing API error')

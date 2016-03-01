@@ -235,7 +235,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                 Model.KubeType.noAvailableKubeTypes.notifyConflict();
                             else
                                 Model.KubeType.noAvailableKubeTypes.notify();
-                            return;
+                            return true;
                         }
                     };
 
@@ -314,7 +314,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         }));
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
-                        checkKubeTypes();
+                        if (checkKubeTypes()) return;
                         utils.preloader.show();
                         podCollection.fullCollection.create(data, {
                             wait: true,
@@ -330,7 +330,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         });
                     });
                     that.listenTo(wizardLayout, 'pod:pay_and_run', function(data){
-                        checkKubeTypes();
+                        if (checkKubeTypes()) return;
                         App.getSystemSettingsCollection().done(function(collection){
                             var billingUrl = utils.getBillingUrl(collection);
                             if (billingUrl) {

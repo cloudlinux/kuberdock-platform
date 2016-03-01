@@ -268,7 +268,8 @@ define(['app_data/app',
             utils.modalDialog({
                 title: 'Confirm restarting of application ' + _.escape(name),
                 body: 'You can wipe out all the data and redeploy the '
-                    + 'application or you can just restart application.',
+                    + 'application or you can just restart and save data '
+                    + 'in Persistent storages of your application.',
                 small: true,
                 show: true,
                 footer: {

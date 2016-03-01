@@ -11,7 +11,6 @@ from .api import APIError
 from .predefined_apps.models import PredefinedApp
 from .billing.models import Kube, Package
 from .users.models import User
-from .nodes.models import Node
 from .rbac.models import Role
 from .system_settings.models import SystemSettings
 from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
@@ -118,13 +117,13 @@ email_literal_regex = re.compile(
 # schemas.
 envvar_name_regex = {
     'regex': r'^[A-Za-z_]+[A-Za-z0-9_]*',
-    'message': 'Latin letters, digits, undescores are expected only. ' \
+    'message': 'Latin letters, digits, undescores are expected only. '
                'Must not start with digit'
 }
 
 pdname_regex = {
     'regex': r'^[A-Za-z]+[A-Za-z0-9_\-]*',
-    'message': 'Latin letters, digits, undescores and dashes are expected only. ' \
+    'message': 'Latin letters, digits, undescores and dashes are expected only. '
                'Must start with a letter'
 }
 
@@ -134,7 +133,6 @@ pdname_regex = {
 pod_name_schema = {
     'type': 'string',
     'empty': False,
-    'required': True,
     'maxlength': 63,    # kubernetes restriction (was)
     # 'regex': pod_name,
 }
@@ -238,8 +236,19 @@ pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0, 'pd_size_max': True
 pdname_schema = {'type': 'string', 'required': True, 'empty': False, 'maxlength': 36, 'regex': pdname_regex}
 kube_type_schema = {'type': 'integer', 'coerce': int, 'kube_type_in_db': True}
 volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False, 'maxlength': 255}
+
+update_pod_schema = {
+    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy']},
+    'commandOptions': {
+        'type': 'dict',
+        'schema': {
+            'wipeOut': {'type': 'boolean', 'nullable': True},
+        }
+    },
+}
+
 new_pod_schema = {
-    'name': pod_name_schema,
+    'name': dict(pod_name_schema, required=True),
     'clusterIP': {
         'type': 'ipv4',
         'nullable': True,
@@ -469,7 +478,7 @@ change_pod_schema.update({
     'kubes': {'type': 'strnum', 'empty': True, 'required': False},
 })
 change_pod_schema['containers']['schema']['schema']['volumeMounts']\
-['schema']['schema']['path'] = {
+['schema']['schema']['path'] = {  # NOQA
     'type': 'string',
     'maxlength': PATH_LENGTH,
     'required': False
@@ -490,7 +499,7 @@ kube_name_schema = {
     'empty': False,
     'regex': {
         'regex': r'^[A-Za-z0-9]+[A-Za-z0-9 ]*$',
-        'message': 'Name may contain Latin alphabet letters, digits, spaces '\
+        'message': 'Name may contain Latin alphabet letters, digits, spaces '
                    'and should not start with a space'
     }
 }
@@ -510,7 +519,7 @@ package_schema = {
 }
 
 kube_schema = {
-    'name':  kube_name_schema,
+    'name': kube_name_schema,
     'cpu': {'coerce': float, 'min': 0.01, 'max': 9.99, 'required': True},
     'memory': {'coerce': int, 'min': 1, 'max': 99999, 'required': True},
     'disk_space': {'coerce': int, 'min': 1, 'max': 999, 'required': True},
@@ -560,7 +569,7 @@ app_package_schema = {
         'schema': {
             'type': 'dict',
             'schema': {
-                'name': pod_name_schema,
+                'name': dict(pod_name_schema, required=True),
                 'kubeType': kube_type_schema,
                 'containers': {
                     'type': 'list',
@@ -823,8 +832,8 @@ class V(cerberus.Validator):
         if vtr:
             for vol in self.document['volumes']:
                 if vol.keys() == ['name']:
-                    self._error(field,
-                        'Volume type is required for volume "{0}"'.format(value))
+                    self._error(field, 'Volume type is required for volume '
+                                       '"{0}"'.format(value))
                     return
                 for k in vol.keys():
                     if k not in SUPPORTED_VOLUME_TYPES + ['name']:
@@ -919,7 +928,7 @@ def check_system_settings(data):
     if data.get('name') != 'persitent_disk_max_size':
         return
     if not validator.validate({'value': data.get('value')},
-            {'value': persistent_disk_max_size_schema}):
+                              {'value': persistent_disk_max_size_schema}):
         raise APIError('Incorrect value for PD size limit')
 
 

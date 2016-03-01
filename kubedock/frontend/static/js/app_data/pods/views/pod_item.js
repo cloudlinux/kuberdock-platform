@@ -161,6 +161,7 @@ define(['app_data/app',
             'click .list-btn'         : 'listItem',
             'click .start-btn'        : 'startItem',
             'click .pay-and-start-btn': 'payStartItem',
+            'click .restart-btn'      : 'restartItem',
             'click .stop-btn'         : 'stopItem',
             'click .terminate-btn'    : 'terminateItem',
             'click @ui.close'         : 'closeMessage'
@@ -257,6 +258,52 @@ define(['app_data/app',
                     window.location = billingUrl
                         + (billingUrl.indexOf('?') === -1 ? '?' : '&')
                         + 'pod=' + podObj + '&user=' + userObj;
+                }
+            });
+        },
+
+        restartItem: function(evt){
+            var that = this,
+                name = this.model.get('name');
+            utils.modalDialog({
+                title: 'Confirm restarting of application ' + _.escape(name),
+                body: 'You can wipe out all the data and redeploy the '
+                    + 'application or you can just restart application.',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        utils.preloader.show();
+                        that.model.set('commandOptions', {});
+                        App.commandPod('redeploy', that.model)
+                            .always(that.render)
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow);
+                    },
+                    buttonCancel: function(){
+                        utils.modalDialog({
+                            title: 'Confirm restarting of application ' + _.escape(name),
+                            body: 'Are you sure you want to delete all data? You will '
+                                + 'not be able to recover this data if you continue.',
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    utils.preloader.show();
+                                    App.commandPod('redeploy', that.model, {wipeOut: true})
+                                        .always(that.render)
+                                        .always(utils.preloader.hide)
+                                        .fail(utils.notifyWindow);
+                                },
+                                buttonOkText: 'Continue',
+                                buttonOkClass: 'btn-danger',
+                                buttonCancel: true
+                            }
+                        });
+                    },
+                    buttonOkText: 'Just Restart',
+                    buttonCancelText: 'Wipe Out',
+                    buttonCancelClass: 'btn-danger',
                 }
             });
         },

@@ -97,7 +97,7 @@ define(['app_data/app',
 
         startItem: function(evt){
             evt.stopPropagation();
-            App.commandPod('start', this.model).always(this.render);
+            App.commandPod('start', this.model);
         },
 
         payStartItem: function(evt){
@@ -146,7 +146,7 @@ define(['app_data/app',
 
         stopItem: function(evt){
             evt.stopPropagation();
-            App.commandPod('stop', this.model).always(this.render);
+            App.commandPod('stop', this.model);
         },
 
         toggleItem: function(evt){

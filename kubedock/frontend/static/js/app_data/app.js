@@ -261,7 +261,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     return deferred.promise();
                 };
 
-                that.commandPod = function(cmd, pod){
+                that.commandPod = function(cmd, pod, options){
                     if (pod.constructor !== Model.Pod) {
                         console.log("Pod Model instance is expected!");
                         return;
@@ -271,7 +271,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         return;
                     }
                     Utils.preloader.show();
-                    return pod.command(cmd, {wait: true})
+                    return pod.command(cmd, {wait: true, patch: true}, options)
                         .always(Utils.preloader.hide)
                         .fail(Utils.notifyWindow);
                 };

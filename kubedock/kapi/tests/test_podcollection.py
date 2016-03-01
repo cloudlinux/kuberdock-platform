@@ -617,10 +617,12 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         self.pod_collection = podcollection.PodCollection(U())
 
     @mock.patch.object(podcollection.PersistentDisk, 'free')
+    @mock.patch.object(podcollection.PodCollection, '_get')
+    @mock.patch.object(podcollection.PodCollection, '_put')
     @mock.patch.object(podcollection.PodCollection, '_del')
     @mock.patch.object(podcollection.PodCollection, '_stop_cluster')
     @mock.patch.object(podcollection.PodCollection, '_raise_if_failure')
-    def test_pod_normal_stop(self, rif, stop_cluster, del_, free_pd_mock):
+    def test_pod_normal_stop(self, rif, stop_cluster, del_, put_, get_, free_pd_mock):
         """
         Test _stop_pod in usual case
         :type del_: mock.Mock
@@ -636,11 +638,17 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
                 'state': POD_STATUSES.running,
             }]
         )
+        get_.return_value = {'spec': {}}
 
         # Actual call
         res = self.pod_collection._stop_pod(pod)
 
         self.assertEquals(pod.status, POD_STATUSES.stopped)
+        get_.assert_called_once_with(['replicationcontrollers', pod.sid],
+                                     ns=pod.namespace)
+        put_.assert_called_once_with(['replicationcontrollers', pod.sid],
+                                     json.dumps({'spec': {'replicas': 0}}),
+                                     ns=pod.namespace, rest=True)
         del_.assert_called_once_with(['replicationcontrollers', pod.sid],
                                      ns=pod.namespace)
         stop_cluster.assert_called_once_with(pod)

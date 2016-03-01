@@ -113,6 +113,7 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(minute='*')
     }
 }
+CELERY_IMPORTS = ('kubedock.kapi.podcollection', )
 
 ONLINE_LAST_MINUTES = 5
 

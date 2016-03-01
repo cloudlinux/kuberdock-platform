@@ -208,8 +208,9 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
         parse: unwrapper,
 
-        command: function(cmd, options){
-            return this.save({command: cmd}, options);
+        command: function(cmd, options, commandOptions){
+            return this.save({command: cmd, commandOptions: commandOptions || {}},
+                             options);
         },
 
         /**
@@ -222,7 +223,8 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             if (this.persistentDrives){
                 _.each(this.get('volumes'), function(volume){
                     if (volume.persistentDisk){
-                        var pd = this.persistentDrives.get(volume.persistentDisk.pdName);
+                        var pd = this.persistentDrives
+                                .findWhere({name: volume.persistentDisk.pdName});
                         if (pd){
                             var kubeType = pd.get('kube_type');
                             if (kubeType !== undefined){
@@ -442,7 +444,6 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
     // TODO: Fixed code duplication by moving models from settings_app to a common file
     data.PersistentStorageModel = Backbone.Model.extend({
-        idAttribute: 'name',
         defaults: {
             name: 'Nameless',
             size: 1,

@@ -150,11 +150,11 @@ class User(BaseModelMixin, UserMixin, db.Model):
         if for_profile:
             valid = self.profile_fields + ['id']
             data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
-            data['rolename'] = self.role.rolename
+            data['rolename'] = self.role.rolename if self.role else None
             return data
         valid = self.profile_fields + ['id', 'username', 'active', 'suspended']
         data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
-        data['rolename'] = self.role.rolename
+        data['rolename'] = self.role.rolename if self.role else None
         data['package'] = self.package.name if self.package else None
         if full:
             # add all extra fields

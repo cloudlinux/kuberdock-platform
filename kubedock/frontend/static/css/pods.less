@@ -653,7 +653,7 @@
             }
         }
     }
-    .start-btn, .stop-btn, .terminate-btn, .list-btn, .stats-btn, .pay-and-start-btn{
+    .start-btn, .stop-btn, .restart-btn, .terminate-btn, .list-btn, .stats-btn, .pay-and-start-btn{
         padding-left: 25px;
         position: relative;
         &:before{
@@ -701,6 +701,18 @@
         &:hover{
             &:before{
                 background-position: 0 -17px;
+            }
+        }
+    }
+    .restart-btn{
+        padding-left: 28px;
+        &:before{
+            top: 5px;
+            background: url('../img/redeploy-pod.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -18px;
             }
         }
     }
@@ -1218,8 +1230,18 @@
                             margin-left: 15px;
                             margin-right: 5px;
                             display: inline-block;
-                            input{
+                            input[type="checkbox"]{
                                 display: none;
+                                + span{
+                                    .border-radius(50%);
+                                    width: 15px;
+                                    height: 15px;
+                                    margin-right: 4px;
+                                    position: relative;
+                                    display: inline-block;
+                                    border: 1px solid #898989;
+                                    vertical-align: text-top;
+                                }
                                 &:checked{
                                     +span{
                                         &:before{
@@ -1235,16 +1257,6 @@
                                         }
                                     }
                                 }
-                            }
-                            span{
-                                .border-radius(50%);
-                                width: 15px;
-                                height: 15px;
-                                margin-right: 4px;
-                                position: relative;
-                                display: inline-block;
-                                border: 1px solid #898989;
-                                vertical-align: text-top;
                             }
                         }
                     }
@@ -1278,15 +1290,17 @@
                         label{
                             display: inline-block;
                             margin-bottom: 0;
-                            span{
-                                width: 15px;
-                                height: 15px;
-                                margin-right: 0;
-                                &:before{
-                                    top: -3px;
-                                    left: -5px;
-                                    width: 21px;
-                                    height: 21px;
+                            input[type="checkbox"]{
+                                + span{
+                                    width: 15px;
+                                    height: 15px;
+                                    margin-right: 0;
+                                    &:before{
+                                        top: -3px;
+                                        left: -5px;
+                                        width: 21px;
+                                        height: 21px;
+                                    }
                                 }
                             }
                         }

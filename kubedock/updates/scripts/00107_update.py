@@ -1,9 +1,27 @@
-from kubedock.core import db
-from kubedock.users.models import User
-from kubedock.rbac.models import Role
-from kubedock.rbac import fixtures
-from kubedock.static_pages.models import MenuItemRole
+from fabric.api import local, put, run
 
+from kubedock.core import db
+from kubedock.kapi.podcollection import PodCollection
+from kubedock.pods.models import Pod
+from kubedock.rbac import fixtures
+from kubedock.rbac.models import Role
+from kubedock.static_pages.models import MenuItemRole
+from kubedock.updates import helpers
+
+
+# 00102_update.py
+PLUGIN_DIR = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
+
+# 00103_update.py
+OVERRIDE_CONF = """\
+[Service]
+Restart=always
+RestartSec=1s
+"""
+SERVICE_DIR = "/etc/systemd/system/ntpd.service.d"
+OVERRIDE_FILE = SERVICE_DIR + "/restart.conf"
+
+# 00105_update.py
 PERMISSIONS = (
     # Admin
     ("yaml_pods", "Admin", "create", False),
@@ -45,15 +63,36 @@ PERMISSIONS = (
     # HostingPanel
     ("yaml_pods", "HostingPanel", "create", False),
 )
-
 RESOURCES = ("yaml_pods",)
-
 ROLES = (
     ("LimitedUser", False),
 )
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
+    upd.print_log('Upgrading db...')
+    helpers.upgrade_db()
+
+    # 00103_update.py
+    upd.print_log('Enabling restart for ntpd.service on master')
+    local('mkdir -p ' + SERVICE_DIR)
+    local('echo -e "' + OVERRIDE_CONF + '" > ' + OVERRIDE_FILE)
+    local('systemctl daemon-reload')
+    local('systemctl restart ntpd')
+
+    # 00104_update.py
+    upd.print_log('Restart pods with persistent storage')
+    pc = PodCollection()
+    pods = Pod.query.with_entities(Pod.id).filter(Pod.persistent_disks).all()
+    for pod_id in pods:
+        p = pc._get_by_id(pod_id[0])
+        pc._stop_pod(p)
+        pc._collection.pop((pod_id[0], pod_id[0]))
+        pc._merge()
+        p = pc._get_by_id(pod_id[0])
+        pc._start_pod(p)
+
+    # 00105_update.py
     upd.print_log('Add roles {}, resources {} and its permissions...'.format(
         ROLES, RESOURCES))
     fixtures.add_permissions(
@@ -66,6 +105,12 @@ def upgrade(upd, with_testing, *args, **kwargs):
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
+    # 00103_update.py
+    upd.print_log('Disabling restart for ntpd.service on master')
+    local('rm -f ' + OVERRIDE_FILE)
+    local('systemctl daemon-reload')
+
+    # 00105_update.py
     upd.print_log('Remove MenuRoles...')
     PAUserRole = Role.query.filter(Role.rolename == 'LimitedUser').first()
     if PAUserRole is not None:
@@ -78,3 +123,30 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
         'Delete resources {} with its permissions...'.format(RESOURCES))
     fixtures.delete_resources(RESOURCES)
     db.session.commit()
+
+    upd.print_log('Downgrading db...')
+    helpers.downgrade_db(revision='2df8c40ab250')  # first of rc5
+
+
+def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    run('yum --enablerepo=kube,kube-testing clean metadata')
+
+    # 00101_update.py
+    upd.print_log('Update fslimit.py script...')
+    upd.print_log(put('/var/opt/kuberdock/fslimit.py',
+                      '/var/lib/kuberdock/scripts/fslimit.py',
+                      mode=0755))
+
+    # 00103_update.py
+    upd.print_log('Enabling restart for ntpd.service')
+    run('mkdir -p ' + SERVICE_DIR)
+    run('echo -e "' + OVERRIDE_CONF + '" > ' + OVERRIDE_FILE)
+    run('systemctl daemon-reload')
+    run('systemctl restart ntpd')
+
+
+def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
+    # 00103_update.py
+    upd.print_log('Disabling restart for ntpd.service')
+    run('rm -f ' + OVERRIDE_FILE)
+    run('systemctl daemon-reload')

@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 0%{?dist}.rc.4.cloudlinux
+Release: 0%{?dist}.rc.5.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License

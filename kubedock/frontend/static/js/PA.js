@@ -309,7 +309,7 @@
         });
 
         names = [];
-        spec.volumes.forEach(function(volume){
+        (spec.volumes || []).forEach(function(volume){
             if (volume.persistentDisk)
                 names.push(volume.name);
         });

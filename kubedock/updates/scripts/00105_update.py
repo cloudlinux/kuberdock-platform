@@ -46,7 +46,7 @@ PERMISSIONS = (
     ("yaml_pods", "HostingPanel", "create", False),
 )
 
-RESOURCES = ("yaml_pods")
+RESOURCES = ("yaml_pods",)
 
 ROLES = (
     ("LimitedUser", False),

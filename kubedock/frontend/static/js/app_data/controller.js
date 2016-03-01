@@ -229,6 +229,16 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         imageView.removeLoader();
                     };
 
+                    var checkKubeTypes = function(){
+                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
+                            if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
+                                Model.KubeType.noAvailableKubeTypes.notifyConflict();
+                            else
+                                Model.KubeType.noAvailableKubeTypes.notify();
+                            return;
+                        }
+                    };
+
                     model.origEnv = {};
 
                     that.listenTo(wizardLayout, 'show', function(){
@@ -304,13 +314,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         }));
                     });
                     that.listenTo(wizardLayout, 'pod:save', function(data){
-                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
-                            if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
-                                Model.KubeType.noAvailableKubeTypes.notifyConflict();
-                            else
-                                Model.KubeType.noAvailableKubeTypes.notify();
-                            return;
-                        }
+                        checkKubeTypes();
                         utils.preloader.show();
                         podCollection.fullCollection.create(data, {
                             wait: true,
@@ -326,10 +330,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         });
                     });
                     that.listenTo(wizardLayout, 'pod:pay_and_run', function(data){
-                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
-                            Model.KubeType.noAvailableKubeTypes.notify();
-                            return;
-                        }
+                        checkKubeTypes();
                         App.getSystemSettingsCollection().done(function(collection){
                             var billingUrl = utils.getBillingUrl(collection);
                             if (billingUrl) {

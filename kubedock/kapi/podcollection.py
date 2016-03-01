@@ -154,9 +154,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _set_entry(self, pod, data):
         """Sets pod status in DB"""
         # TODO: wants rethinking, we've got two kind of statuses, in DB and pod config
-        if data.get('status') not in ['unpaid', 'stopped', 'deleted']:
+        status = data.get('commandOptions', {}).get('status')
+        if status not in ['unpaid', 'stopped']:
             return
-        DBPod.query.get(pod.id).status = data['status']
+        DBPod.query.get(pod.id).status = status
 
     @staticmethod
     @atomic()

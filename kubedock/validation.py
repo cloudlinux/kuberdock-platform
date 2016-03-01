@@ -238,11 +238,12 @@ kube_type_schema = {'type': 'integer', 'coerce': int, 'kube_type_in_db': True}
 volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False, 'maxlength': 255}
 
 update_pod_schema = {
-    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy']},
+    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy', 'set']},
     'commandOptions': {
         'type': 'dict',
         'schema': {
             'wipeOut': {'type': 'boolean', 'nullable': True},
+            'status': {'type': 'string', 'required': False, 'allowed': ['unpaid', 'stopped']}
         }
     },
 }

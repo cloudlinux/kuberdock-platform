@@ -158,8 +158,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
             result = remove_node_by_host(host)
             send_logs(node_id, json.dumps(result, indent=2), log_file)
 
-        send_logs(node_id, 'Current kubernetes package on master is'
-                           ' "{0}". Will install same package.'
+        send_logs(node_id, 'Node kubernetes package will be'
+                           ' "{0}" (same version as master kubernetes)'
                            .format(current_master_kubernetes), log_file)
 
         send_logs(node_id, 'Connecting to {0} with ssh with user "root" ...'

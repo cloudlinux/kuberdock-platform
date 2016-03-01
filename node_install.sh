@@ -233,6 +233,10 @@ EOF
 rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 check_status
 
+# Ensure latest packages from new repos
+yum --enablerepo=kube,kube-testing clean metadata
+
+
 # 1.2 Install ntp, we need correct time for node logs
 # We use setup like this
 # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp

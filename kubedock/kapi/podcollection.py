@@ -603,7 +603,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # were not released, then it will free them. If PD's already free, then
         # this call will do nothing.
         PersistentDisk.free(pod.id)
-        if pod.status != POD_STATUSES.stopped:
+        if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
                 rc = self._get(['replicationcontrollers', pod.sid], ns=pod.namespace)
@@ -863,4 +863,3 @@ def restore_fake_volume_mounts(k8s_containers, kd_containers):
                 vol_mounts.append(vm)
         if vol_mounts:
             container['volumeMounts'] = vol_mounts
-

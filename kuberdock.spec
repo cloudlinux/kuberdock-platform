@@ -188,6 +188,56 @@ fi
 %exclude /var/opt/kuberdock/dev-utils
 
 %changelog
+* Tue Mar 01 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.5
+- AC-2326 Docker images tags design:
+  - AC-2432: Fix images tag style
+- AC-2274: KuberDock > IP pool > Displayed hint is always 1 fix
+- AC-2295 - KuberDock > Users > Users Activity > Username not fully fit on the search field;
+- AC-2046 - Admin UI -> Users -> Users Activity don't work
+- AC-2333: Disable ability to create new pods/containers
+  - AC-2334: create restricted role -> added role PredefinedAppUser
+  - AC-2336: Hide buttons for restricted actions
+- AC-2472 Correct node status handling. More precise "troubles" reasons
+- AC-2380: replaced privileged container with Z option
+  - AC-2421: temp workaround for mount in hooks
+- AC-2018: When license is anything but valid dashes instead of limits are shown
+- AC-2339: Implement correct Persistent Storage logic
+  - AC-2302: Implemented FS limits for persistent local storage
+  - AC-2422: implemented local storage backend for persistent disks
+  - AC-2423: Pin pod to node if local storage used
+  - AC-2425: Notify if pinned pod cannot schedule on node
+    Show persistent local storage info when pod cannot migrate to other node
+  - AC-2492: added possibility to store fake mount points in containers
+  - AC-2520: added checks for PD binding before delete a node.
+    Forbid PD (with localstorage backend) deletion if there is some pod linked to the PD.
+    Fixed message for invalid license on pod creation.
+- AC-2471: Admin UI -> Users -> Users Activity doesn't work if not use hints from list
+- AC-1377: TrialUser > Add more information about package status after starting pods with expired package.
+- AC-2118: Settings page 'Failed to upload stat' APIerror appears when changing Installation ID on License tab
+- Integration for parts of local storage PD backend
+- AC-2392: Tying a user to billing.
+- AC-2246: Unlock ceph image on FailedMount event
+- AC-2256: reset licensing page cache after updates
+  - AC-2509: show preloader in license tab
+- AC-2399: Verifying a user is present in billing and KD.
+- AC-2276: enabled restart for ntpd.service on nodes and master
+- AC-2471: added possibility for fast PD recreation
+- AC-2242: select/add persistent disk UI, localStorage behavior. New UI for PD selection.
+- AC-2382: label for 'unpaid' pod
+- AC-2386: implement redirecting to billing from KD
+  - AC-2393: implement 'pay & start' functionality
+- AC-2364: fixed error while creating PD with Ceph or AWS enabled
+- Fixed crontab for clean-deleted-persistent-drives task
+- Styled radiobutton items
+- AC-2337: redeploy pod; ability to restart pod (and optionally recreate PDs)
+- renamed role PredefinedAppUser to LimitedUser
+- Cleaned up node_install log
+- Fixed wrong log message
+- Ensure latest packages in node_install.sh with yum clean metadata at start
+- AC-2434: Release activity RC5
+  - AC-2435: Merged update scripts for rc5 to one. Bumped version to rc5
+- Changeв license error & pop-up redeploy messages
+
 * Thu Feb 18 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.4
 - AC-2204: Show correct docked version && preloader, text fixes
 - AC-2083: allow users to get a full list of Predefined Apps

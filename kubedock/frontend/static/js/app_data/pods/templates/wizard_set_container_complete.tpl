@@ -37,12 +37,8 @@
                         <select class="kube_type selectpicker" id="extra-options">
                     <% } %>
                             <% kubeTypes.each(function(kubeType){ %>
-                            <option value="<%- kubeType.id %>"
-                            <%= kubeType.get('available') && !kubeType.conflicts.length ? '' : 'disabled'%>>
-                                <%- kubeType.get('name') %>
-                                <%= !kubeType.get('available') ? '(currently not available)'
-                                    : kubeType.conflicts.length ? '(conflict with disk ' + kubeType.conflicts.pluck('name').join(', ') + ')'
-                                        : '' %>
+                            <option value="<%- kubeType.id %>" <%= kubeType.disabled ? '' : 'disabled'%>>
+                                <%- kubeType.formattedName %>
                             </option>
                             <% }) %>
                         </select>

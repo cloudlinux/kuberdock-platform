@@ -1370,6 +1370,16 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function() {
+            var kubeTypes = this.pkg.getKubeTypes();
+            kubeTypes.each(function(kt){
+                var conflicts = kt.conflicts.pluck('name').join(', ');
+                kt.formattedName = kt.get('name') + ' ' + (
+                    !kt.get('available') ? '(currently not available)'
+                        : kt.conflicts.length ? '(conflict with disk ' + conflicts + ')'
+                            : '');
+                kt.disabled = kt.get('available') && !kt.conflicts.length;
+            });
+
             return {
                 last_edited      : this.model.lastEditedContainer.id,
                 isPublic         : this.model.isPublic,
@@ -1377,7 +1387,7 @@ define(['app_data/app', 'app_data/model',
                 limits           : this.model.limits,
                 containerPrices  : this.model.containerPrices,
                 totalPrice       : this.model.totalPrice,
-                kubeTypes        : this.pkg.getKubeTypes(),
+                kubeTypes        : kubeTypes,
                 restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                 restart_policy   : this.model.get('restartPolicy'),
                 image_name_id    : this.model.get('lastAddedImageNameId'),

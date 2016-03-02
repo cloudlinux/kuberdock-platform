@@ -6,6 +6,7 @@ from copy import deepcopy
 from .helpers import KubeQuery, ModelQuery, Utilities
 
 from .pstorage import get_storage_class
+from .images import Image
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
@@ -13,6 +14,10 @@ from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
 from ..utils import POD_STATUSES
 from ..pods.models import db, PersistentDisk
 from ..users.models import User
+
+
+ORIGIN_ROOT = 'originroot'
+OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
@@ -106,11 +111,19 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         for field in ('namespace', 'secrets'):
             data.pop(field, None)
         data['volumes'] = data.pop('volumes_public', [])
-        # strip Z option from mountPath
         for container in data.get('containers', ()):
+            new_volumes = []
             for volume_mount in container.get('volumeMounts', ()):
-                if volume_mount.get('mountPath', '')[-2:] in (':Z', ':z'):
-                    volume_mount['mountPath'] = volume_mount['mountPath'][:-2]
+                mount_path = volume_mount.get('mountPath', '')
+                # Skip origin root mountPath
+                if ORIGIN_ROOT in mount_path:
+                    continue
+                # strip Z option from mountPath
+                if mount_path[-2:] in (':Z', ':z'):
+                    volume_mount['mountPath'] = mount_path[:-2]
+                new_volumes.append(volume_mount)
+            container['volumeMounts'] = new_volumes
+
         for field in hide_fields:
             if field in data:
                 del data[field]
@@ -314,22 +327,27 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 
-        self.add_caps(data)
+        self.add_origin_root(data, volumes)
         self.add_securety_labels(data, volumes)
 
         data['imagePullPolicy'] = 'Always'
         return data
 
-    def add_caps(self, container):
-        '''Add SYS_ADMIN capabilities if there are any 'mount' command in
-        lifecycle hooks
+    def add_origin_root(self, container, volumes):
+        '''If there are lifecycle in container, then mount origin root from
+        docker overlay path. Need this for container hooks.
         '''
-        # TODO: Need to be removed after find better solution
-        for hook in container.get('lifecycle', {}).values():
-            commands = hook.get('exec', {}).get('command', ())
-            if [cmd for cmd in commands if 'mount' in cmd]:
-                container['securityContext'] = {'capabilities':
-                                                {'add': ['SYS_ADMIN']}}
+        if 'lifecycle' in container:
+            image = Image(container['image'])
+            image_id = image.get_id()
+            volume_name = '-'.join([container['name'], ORIGIN_ROOT])
+            volumes.append(
+                {u'hostPath':
+                 {u'path': OVERLAY_PATH.format(image_id)},
+                 u'name': volume_name})
+            container['volumeMounts'].append(
+                {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
+                 u'name': volume_name})
 
     def add_securety_labels(self, container, volumes):
         '''Add SELinuxOptions to volumes. For now, just add docker `:Z` option

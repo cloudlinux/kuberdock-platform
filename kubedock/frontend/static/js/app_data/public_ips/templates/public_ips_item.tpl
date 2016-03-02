@@ -2,6 +2,10 @@
     <%- id %>
 </td>
 <td>
-    <span class="<%- pod ? 'stopped' : 'running' %>"><%- pod %></span>
+    <% if (pod){ %>
+    <span class="busy" title="Used by pod &quot;<%- pod %>&quot;">"<%- pod %>"</span>
+    <%} else {%>
+    <span class="running"><%- pod %></span>
+    <%}%>
     <!-- <span class="terminate-btn pull-right"></span> -->
 </td>

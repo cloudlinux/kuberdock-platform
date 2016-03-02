@@ -5,7 +5,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
         'tpl!app_data/papps/templates/app_list_item.tpl',
         'tpl!app_data/papps/templates/app_list.tpl',
         'tpl!app_data/papps/templates/app_load_form.tpl',
-        'bootstrap'],
+        'bootstrap','nicescroll'],
     function(App, utils, Marionette, mainTpl, breadcrumbsTpl, appListEmptyTpl,
              appListItemTpl, appListTpl, appLoadFormTpl){
         'use strict';
@@ -131,6 +131,30 @@ define(['app_data/app', 'app_data/utils', 'marionette',
 
             triggers: {
                 'click @ui.cancel' : 'app:cancel'
+            },
+
+            onRender: function () {
+                if (this.logScroll === null)  // stick to bottom
+                    this.ui.display.scrollTop(this.ui.display[0].scrollHeight);
+                else  // stay at the same position
+                    this.ui.display.scrollTop(this.logScroll);
+
+                if (this.niceScroll !== undefined)
+                    this.niceScroll.remove();
+                this.niceScroll = this.ui.display.niceScroll({
+                    cursorcolor: "#69AEDF",
+                    cursorwidth: "12px",
+                    cursorborder: "none",
+                    cursorborderradius: "none",
+                    background: "#E7F4FF",
+                    autohidemode: false,
+                    railoffset: 'bottom'
+                });
+            },
+
+            onBeforeDestroy: function () {
+                if (this.niceScroll !== undefined)
+                    this.niceScroll.remove();
             },
 
             templateHelpers: function(){

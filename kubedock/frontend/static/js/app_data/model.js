@@ -227,7 +227,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                                 .findWhere({name: volume.persistentDisk.pdName});
                         if (pd){
                             var kubeType = pd.get('kube_type');
-                            if (kubeType !== undefined){
+                            if (kubeType != null){
                                 kubeTypes.each(function(kt){
                                     if (kt.id !== kubeType)
                                         kt.conflicts.add(pd);
@@ -461,7 +461,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
          * @param ignored {data.PersistentStorageModel} - ignore conflicts with this PD
          */
         conflictsWith: function(pod, ignored){
-            if (this.get('node_id') === undefined)
+            if (this.get('node_id') == null)
                 return new data.PersistentStorageCollection();
             var podDisks = _.chain(pod.get('volumes'))
                     .pluck('persistentDisk').filter().pluck('pdName').value();
@@ -469,7 +469,8 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             return new data.PersistentStorageCollection(this.collection.filter(function(pd){
                 return pd !== this && pd !== ignored
                     && _.contains(podDisks, pd.get('name'))
-                    && pd.get('node_id') && pd.get('node_id') != this.get('node_id');
+                    && pd.get('node_id') != null
+                    && pd.get('node_id') != this.get('node_id');
             }, this));
         },
     });

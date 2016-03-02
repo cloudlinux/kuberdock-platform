@@ -7,6 +7,7 @@ from kubedock.rbac import fixtures
 from kubedock.rbac.models import Role
 from kubedock.static_pages.models import MenuItemRole
 from kubedock.updates import helpers
+from kubedock.utils import POD_STATUSES
 
 
 # 00102_update.py
@@ -86,11 +87,12 @@ def upgrade(upd, with_testing, *args, **kwargs):
     pods = Pod.query.with_entities(Pod.id).filter(Pod.persistent_disks).all()
     for pod_id in pods:
         p = pc._get_by_id(pod_id[0])
-        pc._stop_pod(p)
-        pc._collection.pop((pod_id[0], pod_id[0]))
-        pc._merge()
-        p = pc._get_by_id(pod_id[0])
-        pc._start_pod(p)
+        if p.status == POD_STATUSES.running:
+            pc._stop_pod(p)
+            pc._collection.pop((pod_id[0], pod_id[0]))
+            pc._merge()
+            p = pc._get_by_id(pod_id[0])
+            pc._start_pod(p)
 
     # 00105_update.py
     upd.print_log('Add roles {}, resources {} and its permissions...'.format(

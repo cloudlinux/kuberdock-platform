@@ -69,6 +69,11 @@ ROLES = (
     ("LimitedUser", False),
 )
 
+# Update uwsgi configuration.
+UWSGI_KUBERDOCK_INI_SOURCE = '/var/opt/kuberdock/conf/kuberdock.ini'
+UWSGI_KUBERDOCK_INI_DEST = '/etc/uwsgi/vassals/kuberdock.ini'
+SAVE_KUBERDOCK_INI = '/tmp/kuberdock.ini.save.107'
+
 
 def upgrade(upd, with_testing, *args, **kwargs):
     upd.print_log('Upgrading db...')
@@ -105,6 +110,16 @@ def upgrade(upd, with_testing, *args, **kwargs):
         db.session.add(MenuItemRole(role=PAUserRole, menuitem_id=menu_role.menuitem_id))
     db.session.commit()
 
+    # Fixes for celery workers launching
+    upd.print_log('Updating uwsgi configuration ...')
+    local('test -f "{0}" && cp "{0}" "{1}"'.format(
+        UWSGI_KUBERDOCK_INI_DEST, SAVE_KUBERDOCK_INI
+    ))
+    local('cp "{0}" "{1}"'.format(
+        UWSGI_KUBERDOCK_INI_SOURCE, UWSGI_KUBERDOCK_INI_DEST
+    ))
+    local('chmod 644 "{0}"'.format(UWSGI_KUBERDOCK_INI_DEST))
+
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
     # 00103_update.py
@@ -128,6 +143,11 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 
     upd.print_log('Downgrading db...')
     helpers.downgrade_db(revision='2df8c40ab250')  # first of rc5
+
+    upd.print_log('Restoring uwsgi configuration ...')
+    local('test -f "{0}" && mv "{0}" "{1}"'.format(
+        SAVE_KUBERDOCK_INI, UWSGI_KUBERDOCK_INI_DEST
+    ))
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):

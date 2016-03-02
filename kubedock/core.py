@@ -118,7 +118,7 @@ class ExclusiveLock(object):
         """
         redis_con = ConnectionPool().get_connection()
         if pattern:
-            pattern = cls.lock_prefix + 'pattern*'
+            pattern = cls.lock_prefix + pattern + '*'
         else:
             pattern = cls.lock_prefix + '*'
         keys = list(redis_con.scan_iter(pattern))

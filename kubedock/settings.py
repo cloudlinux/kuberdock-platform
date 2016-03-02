@@ -114,6 +114,8 @@ CELERYBEAT_SCHEDULE = {
     }
 }
 CELERY_IMPORTS = ('kubedock.kapi.podcollection', )
+# Do not store results too long. Default is 1 day.
+CELERY_TASK_RESULT_EXPIRES = 60 * 60
 
 ONLINE_LAST_MINUTES = 5
 

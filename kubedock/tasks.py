@@ -37,7 +37,7 @@ from .kapi.pstorage import (
     check_namespace_exists)
 from .kapi.usage import update_states
 
-from .kd_celery import celery
+from .kd_celery import celery, exclusive_task
 
 
 def get_pods_nodelay(pod_id=None, namespace=None):
@@ -297,6 +297,7 @@ def parse_pods_statuses(data):
 
 
 @celery.task()
+@exclusive_task(60 * 30)
 def pull_hourly_stats():
     try:
         data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
@@ -333,6 +334,7 @@ def get_node_interface(data):
 
 
 @celery.task()
+@exclusive_task(60 * 30)
 def fix_pods_timeline():
     """
     Create ContainerStates that wasn't created and
@@ -410,6 +412,7 @@ def is_ceph_installed_on_node(hostname):
 
 
 @celery.task(rate_limit="1/m")
+@exclusive_task(60 * 120)
 def clean_deleted_drives():
     clean_drives_for_deleted_users()
     remove_drives_marked_for_deletion()
@@ -421,7 +424,6 @@ def clean_drives_for_deleted_users():
             User).filter(User.deleted == True)
     ]
     delete_persistent_drives(ids)
-
 
 
 @celery.task(ignore_result=True)

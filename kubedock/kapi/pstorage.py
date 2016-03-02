@@ -21,7 +21,7 @@ from ..utils import APIError, send_event, atomic
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX)
-from ..kd_celery import celery
+from ..kd_celery import celery, exclusive_task
 from . import node_utils
 from .pd_utils import compose_pdname
 from ..billing.models import Kube
@@ -122,6 +122,7 @@ def update_pods_volumes(pd):
 
 
 @celery.task()
+@exclusive_task(60 * 60)
 def delete_persistent_drives_task(pd_ids, mark_only=False):
     return delete_persistent_drives(pd_ids, mark_only=mark_only)
 
@@ -605,7 +606,8 @@ def unmark_ceph_drive_as_temporary_mapped(drive):
     redis_con.hdel(REDIS_TEMP_MAPPED_HASH, drive)
 
 
-@celery.task(ignore_result=True, rate_limit='1/m')
+@celery.task(ignore_result=True)
+@exclusive_task(60 * 60)
 def unmap_temporary_mapped_ceph_drives_task():
     unmap_temporary_mapped_ceph_drives()
 

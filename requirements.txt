@@ -48,3 +48,4 @@ fabric==1.10.2
 python-dateutil==2.4.2
 python-nginx
 pyyaml
+raven>=5.12

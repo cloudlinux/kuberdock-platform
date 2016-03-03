@@ -1,6 +1,7 @@
 from collections import namedtuple
 from datetime import datetime
 import unittest
+import subprocess
 import nginx
 
 import mock
@@ -23,6 +24,7 @@ from ..utils import (
     get_timezone,
     update_allowed,
     from_siunit,
+    get_version
 )
 
 
@@ -531,5 +533,15 @@ class TestUtilsFromSiunit(unittest.TestCase):
         self.assertEquals(from_siunit('2200m'), 2.2)
 
 
+class TestGetVersion(unittest.TestCase):
+
+    @mock.patch('kubedock.utils.subprocess.check_output')
+    def test_get_version_of_non_existent(self, _run):
+        _run.side_effect = subprocess.CalledProcessError(1, 'command')
+        expected = 'unknown'
+        ver = get_version('kuberdoc')
+        self.assertEqual(expected, ver,
+                         "version extected to be {0} but {1} got".format(
+                             expected, ver))
 if __name__ == '__main__':
     unittest.main()

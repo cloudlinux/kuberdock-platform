@@ -159,6 +159,11 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
                       '/var/lib/kuberdock/scripts/fslimit.py',
                       mode=0755))
 
+    # 00102_update.py
+    put('/var/opt/kuberdock/node_network_plugin.sh', PLUGIN_DIR + 'kuberdock')
+    put('/var/opt/kuberdock/node_network_plugin.py', PLUGIN_DIR + 'kuberdock.py')
+    run('systemctl restart kuberdock-watcher')
+
     # 00103_update.py
     upd.print_log('Enabling restart for ntpd.service')
     run('mkdir -p ' + SERVICE_DIR)

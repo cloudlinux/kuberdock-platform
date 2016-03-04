@@ -420,9 +420,9 @@ EOF
 
 # 8. setup rsyslog forwarding
 echo "Reconfiguring rsyslog..."
-cat > $KD_RSYSLOG_CONF << 'EOF'
-$LocalHostName $NODENAME
-$template LongTagForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%"
+cat > $KD_RSYSLOG_CONF << EOF
+\$LocalHostName $NODENAME
+\$template LongTagForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%"
 *.* @127.0.0.1:5140;LongTagForwardFormat
 EOF
 

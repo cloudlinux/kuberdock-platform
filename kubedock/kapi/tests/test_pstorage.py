@@ -210,6 +210,73 @@ class TestPstorageFuncs(DBTestCase):
         )
 
 
+class TestPersistentStorage(DBTestCase):
+    """Tests for PersistentStorage class"""
+
+    def test_get_drives_from_db(self):
+        """Test PersistentStorage._get_drives_from_db"""
+        user, _ = self.fixtures.user_fixtures()
+        pd1 = PersistentDisk(
+            name='q', owner_id=user.id, size=1
+        )
+        pd2 = PersistentDisk(
+            name='q1', owner_id=user.id, size=2
+        )
+        pd3 = PersistentDisk(
+            name='q1', owner_id=1, size=2
+        )
+        db.session.add_all([pd1, pd2, pd3])
+        db.session.commit()
+
+        ps = pstorage.PersistentStorage()
+        drives = ps._get_drives_from_db()
+        self.assertEqual(len(drives), 3)
+        self.assertEqual([[], [], []],
+                         [item['linkedPods'] for item in drives])
+
+        ps = pstorage.PersistentStorage()
+        drives = ps._get_drives_from_db(user_id=user.id)
+        self.assertEqual(len(drives), 2)
+        self.assertEqual([[], []],
+                         [item['linkedPods'] for item in drives])
+        self.assertEqual({user.id: user.username},
+                         {item['owner_id']: item['owner'] for item in drives})
+        self.assertEqual({'q1', 'q'},
+                         {item['name'] for item in drives})
+        self.assertEqual([False, False], [item['in_use'] for item in drives])
+
+        pod_id = str(uuid.uuid4())
+        pod_name = 'somename1'
+        pod = Pod(
+            id=pod_id, name=pod_name, owner_id=user.id,
+            kube_id=Kube.get_default_kube_type(),
+            config=json.dumps({
+                "volumes_public": [
+                    {
+                        "persistentDisk": {"pdSize": 1, "pdName": 'q'},
+                    }
+                ]
+
+            })
+        )
+        db.session.add(pod)
+        db.session.commit()
+        ps = pstorage.PersistentStorage()
+        drives = ps._get_drives_from_db(user_id=user.id)
+        self.assertEqual(len(drives), 2)
+        with_pods = None
+        without_pods = None
+        for drive in drives:
+            if drive['name'] == 'q':
+                with_pods = drive
+            else:
+                without_pods = drive
+        self.assertEqual(with_pods['linkedPods'],
+                        [{'podId': pod_id, 'name':pod_name}])
+        self.assertEqual(without_pods['linkedPods'], [])
+        self.assertEqual([False, False], [item['in_use'] for item in drives])
+
+
 class TestLocalStorage(DBTestCase):
     """Tests for kapi.LocalStorage class."""
     def setUp(self):
@@ -298,6 +365,24 @@ class TestLocalStorage(DBTestCase):
         flag, reason = pstorage.LocalStorage.drive_can_be_deleted(pd.id)
         self.assertTrue(flag)
         self.assertIsNone(reason)
+
+    @mock.patch.object(pstorage.PersistentStorage,
+                       '_add_pod_info_to_drive_list')
+    def test_add_pod_info_to_drive_list(self, add_podinfo_mock):
+        """Tests LocalStorage._add_pod_info_to_drive_list method."""
+        user_id = 1212
+        drive_list = [
+            {'id': 'asdf', 'linkedPods': []},
+            {'id': 'qwer', 'linkedPods': [1, 2, 3]},
+            {'id': 'zxcv'}
+        ]
+        add_podinfo_mock.return_value = drive_list
+        ls = pstorage.LocalStorage()
+        ls._add_pod_info_to_drive_list(drive_list, user_id)
+        self.assertFalse(drive_list[0]['forbidDeletion'])
+        self.assertTrue(drive_list[1]['forbidDeletion'])
+        self.assertFalse(drive_list[2]['forbidDeletion'])
+        add_podinfo_mock.assert_called_once_with(drive_list, user_id)
 
 
 class TestCephStorage(DBTestCase):

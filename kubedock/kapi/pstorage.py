@@ -252,12 +252,12 @@ class PersistentStorage(object):
         """
         return True
 
-    def get_drives(self):
+    def get_drives(self, user_id=None):
         """Returns cached drive list. At first call fills the cache by calling
         method _get_drives_from_db.
         """
         if self._cached_drives is None:
-            self._cached_drives = self._get_drives_from_db()
+            self._cached_drives = self._get_drives_from_db(user_id=user_id)
         return self._cached_drives
 
     def _get_drives_from_db(self, user_id=None):
@@ -273,18 +273,60 @@ class PersistentStorage(object):
                 'name': item.name,
                 'drive_name': item.drive_name,
                 'owner': users[item.owner_id].username,
+                'owner_id': item.owner_id,
                 'size': item.size,
                 'id': item.id,
                 'pod_id': item.pod_id,
                 'pod_name': None if item.pod_id is None else item.pod.name,
-                #  'pod': None if item.pod_id is None else item.pod.name,
                 'in_use': item.pod_id is not None,
                 'available': True,
                 'node_id': None
             }
             for item in query
         ]
+        res = self._add_pod_info_to_drive_list(res, user_id)
         return res
+
+    def _add_pod_info_to_drive_list(self, drive_list, user_id=None):
+        """Adds linked pod list to every drive in drive_list:
+            drive['linkedPods'] = [{'podId': pod identifier, 'name': pod name}]
+        May be extended in nested classes.
+        :param drive_list: list of dicts, each dict is a drive information, as
+        it filled in _get_drives_from_db method.
+        :param user_id: optional user identifier - owner of drives in list and
+            pods to be selected.
+        :return: incoming drive_list where each element is extended with
+            'linkedPods' field
+
+        """
+        drives_by_name = {
+            (item['owner_id'], item['name']): item for item in drive_list
+        }
+        query = Pod.query
+        if user_id:
+            query = query.filter(Pod.owner_id == user_id)
+        for pod in query:
+            if pod.is_deleted:
+                continue
+            try:
+                config = pod.get_dbconfig()
+            except (TypeError, ValueError):
+                current_app.logger.exception('Invalid pod (%s) config: %s',
+                                            pod.id, pod.config)
+                continue
+            for item in config.get('volumes_public', []):
+                name = item.get('persistentDisk', {}).get('pdName', '')
+                key = (pod.owner_id, name)
+                if key not in drives_by_name:
+                    continue
+                pod_list = drives_by_name[key].get('linkedPods', [])
+                pod_list.append({'podId': pod.id, 'name': pod.name})
+                drives_by_name[key]['linkedPods'] = pod_list
+
+        for drive in drive_list:
+            if 'linkedPods' not in drive:
+                drive['linkedPods'] = []
+        return drive_list
 
     def get_node_ip(self):
         if self._cached_node_ip is None:
@@ -318,32 +360,19 @@ class PersistentStorage(object):
         :param user: object -> user object got from SQLAlchemy
         :return: list -> list of dicts
         """
-        # strip owner
         if device_id is None:
-            return [dict([(k, v) for k, v in d.items() if k != 'owner'])
-                    for d in self.get_drives()
-                    if d['owner'] == user.username]
-        drives = [dict([(k, v) for k, v in d.items() if k != 'owner'])
-                  for d in self.get_drives()
-                  if d['owner'] == user.username and d['id'] == device_id]
+            return self.get_drives(user_id=user.id)
+        drives = [item for item in self.get_drives(user_id=user.id)
+                  if item['id'] == device_id]
         if drives:
             return drives[0]
-
-    def get_unmapped_drives(self):
-        """
-        Returns unmapped drives
-        :return: list -> list of dicts of unmapped drives
-        """
-        return [d for d in self.get_drives() if not d['in_use']]
 
     def get_user_unmapped_drives(self, user):
         """
         Returns unmapped drives of a user
         :return: list -> list of dicts of unmapped drives of a user
         """
-        return [dict([(k, v) for k, v in d.items() if k != 'owner'])
-                for d in self.get_unmapped_drives()
-                if d['owner'] == user.username]
+        return [d for d in self.get_drives(user.id) if not d['in_use']]
 
     def create(self, pd):
         """
@@ -1197,8 +1226,27 @@ class LocalStorage(PersistentStorage):
 
     VOLUME_EXTENSION_KEY = 'hostPath'
 
+    FORBID_DELETION_DRIVE_FLAG = 'forbidDeletion'
+
+
     def __init__(self):
         super(LocalStorage, self).__init__()
+
+    def _add_pod_info_to_drive_list(self, drive_list, user_id=None):
+        """In addition to base class method adds flag 'forbidDeletion' to every
+        drive in drive_list. Flag is set to True if there are any pod in
+        'linkedPods' list of the drive. Otherwise the flag will be set to False.
+        Params and return value are identical to the method of the parent class.
+
+        """
+        res = super(LocalStorage, self)._add_pod_info_to_drive_list(
+            drive_list, user_id
+        )
+        for item in res:
+            item[self.FORBID_DELETION_DRIVE_FLAG] = bool(
+                item.get('linkedPods', None)
+            )
+        return res
 
     @classmethod
     def are_pod_volumes_compatible(cls, volumes, owner_id, pod_params):

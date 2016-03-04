@@ -247,6 +247,7 @@ fi
   If there are `lifecycle` in pod spec, add readOnly volume `originroot` with original
   root filesystem from docker image. Can be usefull for container hooks.
 - fixed sysapi permissions
+- AC-2435: Fix missing node update from 00102_update.py
 
 * Thu Feb 18 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.4
 - AC-2204: Show correct docked version && preloader, text fixes

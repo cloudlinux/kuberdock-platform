@@ -566,6 +566,14 @@ persistent_disk_max_size_schema = {
     'coerce': int, 'min': 1
 }
 
+cpu_multiplier_schema = {
+    'coerce': float, 'min': 1, 'max': 100
+}
+
+memory_multiplier_schema = {
+    'coerce': float, 'min': 1, 'max': 100
+}
+
 app_package_schema = {
     'name': {
         'type': 'string',
@@ -961,11 +969,20 @@ def check_internal_pod_data(data, user=None):
 
 def check_system_settings(data):
     validator = V()
-    if data.get('name') != 'persitent_disk_max_size':
-        return
-    if not validator.validate({'value': data.get('value')},
-                              {'value': persistent_disk_max_size_schema}):
-        raise APIError('Incorrect value for PD size limit')
+    name = data.get('name')
+    value = data.get('value')
+    if name == 'persitent_disk_max_size':
+        if not validator.validate({'value': value},
+                                  {'value': persistent_disk_max_size_schema}):
+            raise APIError('Incorrect value for PD size limit')
+    elif name == 'cpu_multiplier':
+        if not validator.validate({'value': value},
+                                  {'value': cpu_multiplier_schema}):
+            raise APIError('Incorrect value for CPU multiplier')
+    elif name == 'memory_multiplier':
+        if not validator.validate({'value': value},
+                                  {'value': memory_multiplier_schema}):
+            raise APIError('Incorrect value for Memory multiplier')
 
 
 class UserValidator(V):

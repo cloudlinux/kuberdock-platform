@@ -141,3 +141,17 @@ class RegisteredHost(db.Model):
     def __repr__(self):
         return "<RegisteredHost(host='{0}', description='{1}')>".format(
             self.host, self.description)
+
+
+class NodeAction(db.Model):
+    __tablename__ = 'node_actions'
+
+    host = db.Column(db.String(255), primary_key=True, nullable=False)
+    command = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, primary_key=True, nullable=False)
+    type = db.Column(db.String(255), nullable=False, default='')
+
+    def __repr__(self):
+        return ("<NodeAction(host='{0}', command='{1}', "
+                "timestamp={2}, type='{3}')>".format(
+                    self.host, self.command, repr(self.timestamp), self.type))

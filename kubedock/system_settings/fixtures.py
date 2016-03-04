@@ -33,4 +33,14 @@ def add_system_settings():
             label='Maximum number of kubes per container',
             description='Changing this value won\'t affect existing containers',
             placeholder='Enter value to limit number of kubes per container'),
+        SystemSettings(
+            name='cpu_multiplier', value='8',
+            label='CPU multiplier',
+            description='Cluster CPU multiplier',
+            placeholder='Enter value for CPU multiplier'),
+        SystemSettings(
+            name='memory_multiplier', value='4',
+            label='Memory multiplier',
+            description='Cluster Memory multiplier',
+            placeholder='Enter value for Memory multiplier'),
     ])

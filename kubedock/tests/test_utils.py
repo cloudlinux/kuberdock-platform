@@ -20,7 +20,8 @@ from ..utils import (
     get_available_port,
     get_current_dnat,
     get_timezone,
-    update_allowed
+    update_allowed,
+    from_siunit,
 )
 
 
@@ -522,6 +523,12 @@ class TestUtilUpdateNginxProxyRestriction(unittest.TestCase):
         location = servers[1].filter('Location')[2]
         check_ips(location)
 
+
+class TestUtilsFromSiunit(unittest.TestCase):
+
+    def test_from_siunit(self):
+        self.assertEquals(from_siunit('4'), 4.0)
+        self.assertEquals(from_siunit('2200m'), 2.2)
 
 
 if __name__ == '__main__':

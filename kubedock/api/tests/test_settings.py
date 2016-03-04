@@ -26,8 +26,8 @@ class TestSystemSettings(APITestCase):
     def test_get_setting(self):
         resp = self.open(self.url, auth=self.adminauth)
         self.assert200(resp)
-        # 7 default settings and 1 added in setUp
-        self.assertEqual(len(resp.json.get('data')), 7 + 1)
+        # 9 default settings and 1 added in setUp
+        self.assertEqual(len(resp.json.get('data')), 9 + 1)
         data = by_name(resp, 'test_setting')
         data.pop('id')  # do not know autoincremented ID
         self.assertEqual(

@@ -17,8 +17,6 @@ KD_RSYSLOG_CONF='/etc/rsyslog.d/kuberdock.conf'
 KD_ELASTIC_LOGS='/var/lib/elasticsearch'
 CADVISOR_CONF='/etc/sysconfig/kuberdock-cadvisor'
 FSTAB_BACKUP="/var/lib/kuberdock/backups/fstab.pre-swapoff"
-CPU_MULTIPLIER='8'
-MEMORY_MULTIPLIER='4'
 CEPH_VERSION=hammer
 CEPH_BASE='/etc/yum.repos.d/ceph-base'
 CEPH_REPO='/etc/yum.repos.d/ceph.repo'
@@ -361,6 +359,8 @@ mv /pd.sh /var/lib/kuberdock/scripts/pd.sh
 chmod +x /var/lib/kuberdock/scripts/pd.sh
 mv /fslimit.py /var/lib/kuberdock/scripts/fslimit.py
 chmod +x /var/lib/kuberdock/scripts/fslimit.py
+mv /kubelet_args.py /var/lib/kuberdock/scripts/kubelet_args.py
+chmod +x /var/lib/kuberdock/scripts/kubelet_args.py
 check_status
 
 

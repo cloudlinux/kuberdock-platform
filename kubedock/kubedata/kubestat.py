@@ -4,8 +4,9 @@ from collections import OrderedDict
 import time
 from ..core import db
 from ..pods import Pod
+from ..system_settings.models import SystemSettings
 from ..users import User
-from ..utils import from_binunit
+from ..utils import from_binunit, from_siunit
 import socket
 import re
 import requests
@@ -133,6 +134,9 @@ class KubeStat(object):
         except (TypeError, ValueError):
             return {}
 
+        cpu_multiplier = float(SystemSettings.get_by_name('cpu_multiplier'))
+        mem_multiplier = float(SystemSettings.get_by_name('memory_multiplier'))
+
         for node in rv.get('items', []):
             name = node.get('metadata', {}).get('name')
             if name is None:
@@ -140,8 +144,10 @@ class KubeStat(object):
             cpu = node.get('status', {}).get('capacity', {}).get('cpu', '1')
             mem = node.get('status', {}).get('capacity', {}).get('memory',
                                                                  '1048576Ki')
-            data[name] = {'cores': int(cpu)/8,
-                          'memory': from_binunit(mem, 'MiB', rtype=int)/4}
+            data[name] = {
+                'cores': from_siunit(cpu) / cpu_multiplier,
+                'memory': from_binunit(mem, 'MiB', rtype=int) / mem_multiplier
+            }
         return data
 
     def _make_windows(self, start_point, end_point):

@@ -10,7 +10,7 @@ from .core import ExclusiveLock
 celery = make_celery()
 
 
-def exclusive_task(timeout, task_id=None):
+def exclusive_task(timeout, task_id=None, blocking=False):
     """Exclusive celery task decorator based on redis locks.
     The decorator adds possibility to define mutually exclusive celery task.
     'Exclusive' means there may be only one task with the same name in running
@@ -24,6 +24,8 @@ def exclusive_task(timeout, task_id=None):
       high enough, to prevent undesired tasks overlapping.
     :param task_id: optional unique string task identifier. Use it when you
       have different celery tasks with the same function name.
+    :param blocking: optional flag specifying whether lock should be blocking
+      or not
 
     Usage example:
 
@@ -48,7 +50,7 @@ def exclusive_task(timeout, task_id=None):
             current_app.logger.debug('Locking task %s', lock_id)
             lock = ExclusiveLock(lock_id, timeout)
             res = None
-            if lock.lock():
+            if lock.lock(blocking=blocking):
                 try:
                     start_time = time.time()
                     current_app.logger.debug(

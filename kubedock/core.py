@@ -77,15 +77,18 @@ class ExclusiveLock(object):
         self.name = self.lock_prefix + name
         self.ttl = ttl
 
-    def lock(self):
+    def lock(self, blocking=False):
         """Try to acquire the lock.
-        If lock is already acquired, then immediately returns False.
+        If lock is already acquired, then immediately returns False
+          if blocking=False (default). Wait lock release if blockging=True.
         If lock has been acquired, then returns True.
+        :param blocking: optional flag specifying whether lock should be
+          blocking or not
         """
         if self._lock is not None:
             return False
         self._lock = self._redis_con.lock(self.name, self.ttl)
-        return self._lock.acquire(blocking=False)
+        return self._lock.acquire(blocking=blocking)
 
     def release(self):
         """Release the lock."""

@@ -28,6 +28,16 @@ class TestNodeUtils(DBTestCase):
             self.tempdir,
             os.path.basename(settings.NODE_INSTALL_LOG_FILE)
         )
+        self.cpu = 1
+        self.mem_kb = 2 ** 20             # in kilobytes
+        self.mem = self.mem_kb * 2 ** 10  # in bytes
+        self.cpu_multiplier = 8
+        self.mem_multiplier = 4
+        self.multipliers = {
+            'cpu_multiplier': self.cpu_multiplier,
+            'memory_multiplier': self.mem_multiplier,
+        }
+        self.get_by_name = lambda x: str(self.multipliers.get(x, ''))
 
     def add_two_nodes(self):
         ip1 = '192.168.1.2'
@@ -49,10 +59,12 @@ class TestNodeUtils(DBTestCase):
         settings.NODE_INSTALL_LOG_FILE = self.original_install_log_dir
 
 
+    @mock.patch.object(node_utils, 'SystemSettings')
     @mock.patch.object(node_utils, '_fix_missed_nodes')
     @mock.patch.object(node_utils, 'get_all_nodes')
     def test_get_nodes_collection(self, get_all_nodes_mock,
-                                  fix_missed_nodes_mock):
+                                  fix_missed_nodes_mock,
+                                  system_settings_mock):
         """Test for kapi.node_utils.get_nodes_collection function."""
         node1, node2 = self.add_two_nodes()
         ip3 = '192.168.1.4'
@@ -75,6 +87,7 @@ class TestNodeUtils(DBTestCase):
             }
         ]
         fix_missed_nodes_mock.return_value = (node1, node2, node3)
+        system_settings_mock.get_by_name = self.get_by_name
         res = node_utils.get_nodes_collection()
         get_all_nodes_mock.assert_called_once_with()
         fix_missed_nodes_mock.assert_called_once_with(
@@ -106,8 +119,9 @@ class TestNodeUtils(DBTestCase):
         self.assertEqual(res[2]['hostname'], node3.hostname)
         self.assertTrue(res[2]['status'], 'pending')
 
+    @mock.patch.object(node_utils, 'SystemSettings')
     @mock.patch.object(node_utils, '_get_k8s_node_by_host')
-    def test_get_one_node(self, get_k8s_node_mock):
+    def test_get_one_node(self, get_k8s_node_mock, system_settings_mock):
         """Test for kapi.node_utils.get_one_node function."""
         with self.assertRaises(APIError) as err:
             node_utils.get_one_node(123)
@@ -124,6 +138,7 @@ class TestNodeUtils(DBTestCase):
             "reason": "NotFound",
             "code": 404
         }
+        system_settings_mock.get_by_name = self.get_by_name
         node = node_utils.get_one_node(node1.id)
         self.assertDictContainsSubset({
             'id': node1.id,
@@ -138,8 +153,8 @@ class TestNodeUtils(DBTestCase):
         get_k8s_node_mock.return_value = {
             "status": {
                 "capacity": {
-                    "cpu": str(1*8),
-                    "memory": "{}Ki".format(2 * 1024 * 1024 * 4),
+                    "cpu": str(self.cpu * self.cpu_multiplier),
+                    "memory": "{}Ki".format(self.mem_kb * self.mem_multiplier),
                     "pods": "40"
                 },
                 "conditions": [
@@ -162,8 +177,8 @@ class TestNodeUtils(DBTestCase):
                 'kube_type': node1.kube_id,
                 'status': 'running',
                 'resources': {
-                    "cpu": "1",
-                    "memory": 2 * 1024 * 1024 * 1024,
+                    "cpu": str(float(self.cpu)),
+                    "memory": float(self.mem),
                     "pods": "40"
                 }
             }

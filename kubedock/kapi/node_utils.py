@@ -4,7 +4,8 @@ import requests
 from flask import current_app
 
 from ..nodes.models import Node, NodeFlag
-from ..utils import from_binunit, get_api_url
+from ..system_settings.models import SystemSettings
+from ..utils import from_binunit, from_siunit, get_api_url
 from ..billing.models import Kube
 from ..api import APIError
 from ..core import db
@@ -38,6 +39,11 @@ def get_nodes_collection():
             resources = kub_hosts[node.hostname]['status']['capacity']
         except KeyError:
             resources = {}
+
+        try:
+            resources['cpu'] = from_siunit(resources['cpu'])
+        except (KeyError, ValueError):
+            pass
 
         try:
             resources['memory'] = from_binunit(resources['memory'])
@@ -241,6 +247,10 @@ def get_one_node(node_id):
     else:
         resources = k8s_node['status'].get('capacity', {})
         try:
+            resources['cpu'] = from_siunit(resources['cpu'])
+        except (KeyError, ValueError):
+            pass
+        try:
             resources['memory'] = from_binunit(resources['memory'])
         except (KeyError, ValueError):
             pass
@@ -279,10 +289,13 @@ def get_all_nodes():
 
 
 def divide_on_multipliers(resources):
+    cpu_multiplier = float(SystemSettings.get_by_name('cpu_multiplier'))
+    memory_multiplier = float(SystemSettings.get_by_name('memory_multiplier'))
+
     try:
         if 'cpu' in resources:
-            resources['cpu'] = str(int(resources['cpu'])/8)
+            resources['cpu'] = str(resources['cpu'] / cpu_multiplier)
         if 'memory' in resources:
-            resources['memory'] = resources['memory']/4
+            resources['memory'] /= memory_multiplier
     except:
         current_app.logger.exception("Can't divide on multipliers")

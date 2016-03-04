@@ -229,6 +229,7 @@ def process_nodes_event(data, app):
                     current_app.logger.debug('Node %s - %s: fire change event',
                                              hostname, node.id)
                     send_event('node:change', {'id': node.id})
+            tasks.process_node_actions.delay(node_host=hostname)
 
 
 def process_events_event(data, app):

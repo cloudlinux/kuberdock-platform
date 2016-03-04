@@ -763,3 +763,29 @@ def update_nginx_proxy_restriction(accept_ips):
         update_allowed(accept_ips, conf)
         nginx.dumpf(conf, filename)
     subprocess.call('sudo /var/opt/kuberdock/nginx_reload.sh', shell=True)
+
+
+def from_siunit(value):
+    """Convert SI unit value to float
+
+    :param value: value to convert
+    :type value: str
+    :returns: converted value
+    :rtype: float
+    :raises: ValueError
+
+    :Examples:
+    >>> from_siunit('4')
+    4.0
+    >>> from_siunit('2200m')
+    2.2
+    """
+
+    if value.endswith('m'):
+        ratio = 1000
+        value = value[:-1]
+    else:
+        ratio = 1
+
+    new_value = float(value) / ratio
+    return new_value

@@ -7,7 +7,8 @@ import requests
 import subprocess
 import time
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import event
 
 # requests .json() errors handling workaround.
 # requests module uses simplejson as json by default
@@ -28,7 +29,8 @@ from .utils import (
 from .stats import StatWrap5Min
 from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, PodState, PersistentDisk, User
-from .nodes.models import Node, NodeFlag, NodeFlagNames
+from .nodes.models import Node, NodeAction, NodeFlag, NodeFlagNames
+from .system_settings.models import SystemSettings
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH)
@@ -129,6 +131,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
     initial_evt_sent = False
     host = db_node.hostname
     kube_type = db_node.kube_id
+    cpu_multiplier = SystemSettings.get_by_name('cpu_multiplier')
+    memory_multiplier = SystemSettings.get_by_name('memory_multiplier')
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
         try:
             current_master_kubernetes = subprocess.check_output(
@@ -182,6 +186,7 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
         sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
         sftp.put('node_network_plugin.py', '/node_network_plugin.py')
         sftp.put('pd.sh', '/pd.sh')
+        sftp.put('kubelet_args.py', '/kubelet_args.py')
         sftp.put('/etc/kubernetes/configfile_for_nodes', '/configfile')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
         sftp.put('/etc/pki/etcd/etcd-client.crt', '/etcd-client.crt')
@@ -206,6 +211,7 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
+                     'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} '\
                      'bash /node_install.sh'
         if CEPH:
             deploy_cmd = 'CEPH_CONF={} '.format(TEMP_CEPH_CONF_PATH) + deploy_cmd
@@ -214,7 +220,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
         i, o, e = ssh.exec_command(
             deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
-                              node_interface, timezone, host),
+                              node_interface, timezone, host,
+                              cpu_multiplier, memory_multiplier),
             get_pty=True)
         s_time = time.time()
         while not o.channel.exit_status_ready():
@@ -424,3 +431,50 @@ def check_if_node_down(hostname):
             'Failed to restart kubelet on node: %s, exit status: %s',
             hostname, exit_status
         )
+
+
+@celery.task()
+@exclusive_task(60 * 30, blocking=True)
+def process_node_actions(action_type=None, node_host=None):
+    actions = db.session.query(NodeAction).filter(
+        NodeAction.timestamp > (datetime.utcnow() - timedelta(minutes=35))
+        ).order_by(NodeAction.timestamp)
+    if action_type is not None:
+        actions = actions.filter(NodeAction.type == action_type)
+    if node_host is not None:
+        actions = actions.filter(NodeAction.host == node_host)
+    for action in actions:
+        ssh, error_message = ssh_connect(action.host)
+        if error_message:
+            continue
+        i, o, e = ssh.exec_command(action.command)
+        if o.channel.recv_exit_status() == 0:
+            db.session.delete(action)
+        ssh.close()
+    db.session.commit()
+
+
+node_multipliers = {
+    'cpu_multiplier': '--cpu-multiplier',
+    'memory_multiplier': '--memory-multiplier',
+}
+
+
+@event.listens_for(SystemSettings.value, 'set')
+def update_node_multiplier(target, value, oldvalue, initiator):
+    if target.name in node_multipliers:
+        NodeAction.query.filter_by(type=target.name).delete()
+        command = ('/usr/bin/env python '
+                   '/var/lib/kuberdock/scripts/kubelet_args.py '
+                   '{0}={1}'.format(node_multipliers[target.name], value))
+        timestamp = datetime.utcnow()
+        for node in Node.query:
+            action = NodeAction(
+                host=node.hostname,
+                command=command,
+                timestamp=timestamp,
+                type=target.name,
+            )
+            db.session.add(action)
+        db.session.commit()
+        process_node_actions.delay(action_type=target.name)

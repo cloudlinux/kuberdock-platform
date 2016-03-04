@@ -75,7 +75,6 @@ PD_SEPARATOR_USERID = '__SEPID__'
 # name for this cluster.
 PD_NAMESPACE = ''
 PD_NS_SEPARATOR = '/'
-ERROR_TOKEN = 'ERROR:'
 NODE_LOCAL_STORAGE_PREFIX = '/var/lib/kuberdock/storage'
 DEFAULT_REGISTRY = 'https://registry-1.docker.io'
 DEFAULT_IMAGES_URL = 'https://registry.hub.docker.com'
@@ -91,6 +90,10 @@ CELERYBEAT_SCHEDULE = {
     'pull-hourly-stats': {
         'task': 'kubedock.tasks.pull_hourly_stats',
         'schedule': timedelta(minutes=5)
+    },
+    'process-node-actions': {
+        'task': 'kubedock.tasks.process_node_actions',
+        'schedule': timedelta(minutes=10)
     },
     'fix-pods-timeline': {
         'task': 'kubedock.tasks.fix_pods_timeline',

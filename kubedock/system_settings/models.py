@@ -29,12 +29,13 @@ class SystemSettings(db.Model):
 
     @classmethod
     def get(cls, id):
-        entry = cls.query.get(id).first()
+        entry = cls.query.get(id)
         if entry is None:
             raise APIError('No such resource', 404)
         data = {k: v for k, v in vars(entry).items() if not k.startswith('_')}
         if data['options']:
             data['options'] = json.loads(data['options'])
+        return data
 
     @classmethod
     def get_by_name(cls, name):

@@ -179,10 +179,19 @@ def get_all_timezones():
 
 class SystemSettingsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+    allowed_for_user = ('billing_type', 'billing_url', 'persitent_disk_max_size')
 
     def get(self, sid):
+        user = KubeUtils._get_current_user()
         if sid is None:
-            return SystemSettings.get_all()
+            if user.is_administrator():
+                return SystemSettings.get_all()
+            return [setting for setting in SystemSettings.get_all()
+                    if setting.get('name') in self.allowed_for_user]
+        data = SystemSettings.get(sid)
+        if (not user.is_administrator() and
+                data.get('name') not in self.allowed_for_user):
+            raise APIError('Access denied', 403)
         return SystemSettings.get(sid)
 
     @check_permission('write', 'system_settings')

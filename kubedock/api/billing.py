@@ -41,10 +41,9 @@ def order_product():
     user = KubeUtils._get_current_user()
     billing_system = _get_billing()
 
-    if data.get('pod', None):
+    if data.get('pod'):
         return billing_system.order_pod(data, user=user)
-    else:
-        return billing_system.order_product(data)
+    return billing_system.order_product(data)
 
 
 def _get_billing():

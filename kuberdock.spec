@@ -237,6 +237,15 @@ fi
 - AC-2434: Release activity RC5
   - AC-2435: Merged update scripts for rc5 to one. Bumped version to rc5
 - Changeв license error & pop-up redeploy messages
+- AC-2461 : Best icon for IPs being used;
+- AC-2462: Fixes for possible celery stuck tasks.
+  Some celery tasks was made exclusive.
+  Disabled prefetch behavior for celery worker subprocesses.
+  Celery beat is launching as separate process.
+- AC-2387 Make payment without redirect
+- AC-2523: add volume with origin root
+  If there are `lifecycle` in pod spec, add readOnly volume `originroot` with original
+  root filesystem from docker image. Can be usefull for container hooks.
 
 * Thu Feb 18 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.4
 - AC-2204: Show correct docked version && preloader, text fixes

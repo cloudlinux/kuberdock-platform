@@ -27,6 +27,10 @@ class BillingCommon(object):
         return
 
     @abstractmethod
+    def order_pod(self, data, user=None):
+        return
+
+    @abstractmethod
     def get_payment_methods(self):
         return
 

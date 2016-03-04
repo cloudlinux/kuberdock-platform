@@ -58,6 +58,11 @@ class BillingWHMCS(BillingCommon):
 
         return self.get_info(data).get('userServices')
 
+    def order_pod(self, data, user=None):
+        if user:
+            data['client_id'] = user.clientid
+        return self._query('orderkuberdockpod', data).get('results')
+
     def add_order(self, info, data):
         package_id = data.get('package_id', None)
         price = data.get('price', None)

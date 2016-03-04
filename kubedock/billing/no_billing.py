@@ -1,5 +1,7 @@
 from kubedock.utils import APIError
 from kubedock.kapi.billing import BillingCommon
+from kubedock.kapi.users import UserCollection
+from kubedock.billing.models import Package, Kube, PackageKube
 
 
 class NoBillingError(APIError):
@@ -12,9 +14,25 @@ class NoBilling(BillingCommon):
         super(NoBilling, self).__init__()
 
     def get_info(self, data, user=None):
-        raise NoBillingError()
+        user_data = UserCollection().get(user=user.id)
+        package_data = Package().by_name(user_data['package'])
+
+        response = {
+            'billing': 'No billing',
+            'user': user_data,
+            'package': package_data.to_dict(with_kubes=True),
+            'default': {
+                'kubeType': Kube.get_default_kube().to_dict(),
+                'packageId': Package.get_default().to_dict(),
+            }
+        }
+
+        return response
 
     def order_product(self, data):
+        raise NoBillingError()
+
+    def order_pod(self, data, user=None):
         raise NoBillingError()
 
     def get_payment_methods(self):

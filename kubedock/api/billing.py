@@ -38,8 +38,13 @@ def payment_methods():
 @KubeUtils.jsonwrap
 def order_product():
     data = KubeUtils._get_params()
+    user = KubeUtils._get_current_user()
     billing_system = _get_billing()
-    return billing_system.order_product(data)
+
+    if data.get('pod', None):
+        return billing_system.order_pod(data, user=user)
+    else:
+        return billing_system.order_product(data)
 
 
 def _get_billing():

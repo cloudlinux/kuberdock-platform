@@ -249,6 +249,7 @@ class UserCollection(object):
             'password'    : md5(password).hexdigest(),
             'firstname'   : data.pop('first_name', 'kduser'),
             'lastname'    : data.pop('last_name', 'kduser'),
+            'kduser'      : data.get('username', 'kduser'),
             'address1'    : 'KuberDock',
             'city'        : 'KuberDock',
             'state'       : 'None',

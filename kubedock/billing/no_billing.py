@@ -20,12 +20,15 @@ class NoBilling(BillingCommon):
         response = {
             'billing': 'No billing',
             'user': user_data,
-            'package': package_data.to_dict(with_kubes=True),
+            'package': package_data.to_dict(with_kubes=True) if package_data else {},
             'default': {
                 'kubeType': Kube.get_default_kube().to_dict(),
                 'packageId': Package.get_default().to_dict(),
             }
         }
+
+        if user.role.rolename == 'HostingPanel':
+            response['packages'] = [p.to_dict(with_kubes=True) for p in Package.query.all()]
 
         return response
 

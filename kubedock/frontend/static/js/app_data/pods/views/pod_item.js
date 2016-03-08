@@ -4,6 +4,8 @@ define(['app_data/app',
         'tpl!app_data/pods/templates/page_info_panel.tpl',
         'tpl!app_data/pods/templates/page_container_item.tpl',
         'tpl!app_data/pods/templates/pod_item_controls.tpl',
+        'tpl!app_data/pods/templates/pod_item_upgrade_resources.tpl',
+        'tpl!app_data/pods/templates/pod_item_upgrade_container_resources.tpl',
         'tpl!app_data/pods/templates/pod_item_graph.tpl',
         'moment-timezone', 'app_data/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral', 'bbcode'],
@@ -13,6 +15,8 @@ define(['app_data/app',
                 pageInfoPanelTpl,
                 pageContainerItemTpl,
                 podItemControlsTpl,
+                upgradeResourcesTpl,
+                upgradeContainerResourcesTpl,
                 podItemGraphTpl,
                 moment, utils){
 
@@ -37,29 +41,8 @@ define(['app_data/app',
             'click @ui.podsList' : 'showPodsList',
         },
 
-        initialize: function(){
-            var that = this;
-            this.listenTo(this.controls, 'show', function(view){
-                that.listenTo(view, 'display:pod:stats', that.showPodStats);
-                that.listenTo(view, 'display:pod:list', that.showPodList);
-            });
-        },
-
-        onBeforeShow: function(){
-            utils.preloader.show();
-        },
-
-        onShow: function(){
-            utils.preloader.hide();
-        },
-
-        showPodStats: function(data){
-            this.trigger('display:pod:stats', data);
-        },
-
-        showPodList: function(data){
-            this.trigger('display:pod:list', data);
-        },
+        onBeforeShow: utils.preloader.show,
+        onShow: utils.preloader.hide,
 
         showPodsList: function(){
             App.navigate('pods', {trigger: true});
@@ -82,7 +65,6 @@ define(['app_data/app',
         templateHelpers: function(){
             var kubes = this.model.get('kubes'),
                 startedAt = this.model.get('startedAt'),
-                modelIndex = this.model.collection.indexOf(this.model),
                 imagename = this.model.get('image'),
                 imagetag = null;
 
@@ -157,8 +139,6 @@ define(['app_data/app',
         },
 
         events: {
-            'click .stats-btn'        : 'statsItem',
-            'click .list-btn'         : 'listItem',
             'click .start-btn'        : 'startItem',
             'click .pay-and-start-btn': 'payStartItem',
             'click .restart-btn'      : 'restartItem',
@@ -172,7 +152,8 @@ define(['app_data/app',
         },
 
         initialize: function(options){
-            this.graphs = options.graphs;
+            this.graphs = !!options.graphs;
+            this.upgrade = !!options.upgrade;
 
             // if got postDescription, save it
             if (backendData.postDescription){
@@ -192,7 +173,6 @@ define(['app_data/app',
             var publicName = this.model.has('public_aws')
                     ? this.model.get('public_aws')
                     : '',
-                graphs = this.graphs,
                 kubes = this.model.getKubes(),
                 pkg = App.userPackage,
                 kubeId = this.model.get('kube_type'),
@@ -208,7 +188,8 @@ define(['app_data/app',
                 postDescription : this.encodeBBCode(this.model.postDescription),
                 publicIP        : this.model.get('public_ip'),
                 publicName      : publicName,
-                graphs          : graphs,
+                graphs          : this.graphs,
+                upgrade         : this.upgrade,
                 kubeType        : kubeType,
                 kubes           : kubes,
                 totalPrice      : this.model.totalPrice,
@@ -223,20 +204,10 @@ define(['app_data/app',
                 this.ui.close.parents('.message-wrapper').show();
         },
 
-        statsItem: function(evt){
-            evt.stopPropagation();
-            this.trigger('display:pod:stats', this.model);
-        },
-
         closeMessage: function(){
             this.ui.close.parents('.message-wrapper').slideUp();
             delete this.model.postDescription;
             delete App.storage['postDescription.' + this.model.id];
-        },
-
-        listItem: function(evt){
-            evt.stopPropagation();
-            this.trigger('display:pod:list', this.model);
         },
 
         startItem: function(evt){
@@ -274,12 +245,12 @@ define(['app_data/app',
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        utils.preloader.show();
                         that.model.set('commandOptions', {});
                         App.commandPod('redeploy', that.model)
-                            .always(that.render)
-                            .always(utils.preloader.hide)
-                            .fail(utils.notifyWindow);
+                            .done(function(){
+                                utils.notifyWindow('Pod will be restarted soon', 'success');
+                            })
+                            .always(that.render);
                     },
                     buttonCancel: function(){
                         utils.modalDialog({
@@ -290,11 +261,11 @@ define(['app_data/app',
                             show: true,
                             footer: {
                                 buttonOk: function(){
-                                    utils.preloader.show();
                                     App.commandPod('redeploy', that.model, {wipeOut: true})
-                                        .always(that.render)
-                                        .always(utils.preloader.hide)
-                                        .fail(utils.notifyWindow);
+                                        .done(function(){
+                                            utils.notifyWindow('Pod will be restarted soon', 'success');
+                                        })
+                                        .always(that.render);
                                 },
                                 buttonOkText: 'Continue',
                                 buttonOkClass: 'btn-danger',
@@ -425,6 +396,121 @@ define(['app_data/app',
 
         modelEvents: {
             'change': 'render'
+        },
+    });
+
+    podItem.UpgradeContainerResources = Backbone.Marionette.ItemView.extend({
+        template: upgradeContainerResourcesTpl,
+        tagName: 'tr',
+
+        ui: {
+            price: '.upgrade-price',
+            kubes: '.upgrade-kubes',
+            moreKubes: '.upgrade-kubes-more',
+            lessKubes: '.upgrade-kubes-less',
+        },
+
+        events: {
+            'click @ui.moreKubes': 'addKube',
+            'click @ui.lessKubes': 'removeKube',
+            'change @ui.kubes': 'changeKubes',
+        },
+
+        modelEvents: {
+            'change': 'render',
+        },
+
+        initialize: function(options){
+            this.pkg = options.pkg;
+            this.modelOrig = options.modelOrig;
+        },
+
+        templateHelpers: function(){
+            var image = /^(.+?)(?::([^/:]+))?$/.exec(this.model.get('image')),
+                imagename = image[1],
+                imagetag = image[2],
+                kube = this.model.getPod().getKubeType(),
+                kubesChange = this.model.get('kubes') - this.modelOrig.get('kubes');
+
+            return {
+                imagename: imagename,
+                imagetag: imagetag,
+                upgradePrice: this.pkg.getFormattedPrice(this.pkg.priceFor(kube.id) * kubesChange),
+                pod: this.model.getPod(),
+                limits: this.model.limits,
+            };
+        },
+
+        addKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() + 1).change(); },
+        removeKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() - 1).change(); },
+        changeKubes: function(){
+            var kubes = Math.max(1, Math.min(10, +this.ui.kubes.val()));
+            this.ui.kubes.val(kubes);
+            this.model.set('kubes', kubes);
+        },
+    });
+
+    podItem.UpgradeResources = Backbone.Marionette.CompositeView.extend({
+        template: upgradeResourcesTpl,
+        childView: podItem.UpgradeContainerResources,
+        childViewContainer: 'tbody',
+        childViewOptions: function(model){
+            return {
+                modelOrig: this.modelOrig.get('containers').get(model.id),
+                pkg: this.pkg,
+            };
+        },
+
+        ui: {
+            cancel: '.cancel-upgrade',
+            order: '.apply-upgrade'
+        },
+
+        events: {
+            'click @ui.cancel': 'cancel',
+            'click @ui.order': 'order',
+        },
+
+        modelEvents: {
+            'change:containers[*].kubes': 'render',
+        },
+
+        initialize: function(options){
+            this.pkg = App.userPackage;
+            this.modelOrig = options.modelOrig;
+            this.containerName = options.containerName;
+        },
+
+        filter: function (child) {
+            return this.containerName == null || child.get('name') === this.containerName;
+        },
+
+        templateHelpers: function(){
+            this.model.recalcInfo(this.pkg);
+            return {
+                period: this.pkg.get('period'),
+                totalPrice: this.model.totalPrice,
+                upgradePrice: this.pkg.getFormattedPrice(
+                    this.model.rawTotalPrice - this.modelOrig.rawTotalPrice),
+            };
+        },
+
+        cancel: function(){
+            App.navigate('pods/' + this.model.id, {trigger: true});
+        },
+
+        order: function(){
+            var that = this;
+            App.getPodCollection().done(function(col){
+                var modelOrigBackup = that.modelOrig.clone();
+                col.add(that.model, {merge: true});
+                App.commandPod('redeploy', that.model)
+                    .fail(function(){ col.add(modelOrigBackup, {merge: true}); })
+                    .done(function(){
+                        utils.notifyWindow('Pod will be upgraded.', 'success');
+                        App.navigate('pods/' + that.model.id, {trigger: true});
+                    });
+            });
         },
     });
 

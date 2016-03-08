@@ -608,10 +608,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if hasattr(pod, 'sid'):
                 rc = self._get(['replicationcontrollers', pod.sid], ns=pod.namespace)
                 self._raise_if_failure(rc, "Could not find Replication Controller")
-                rc['spec']['replicas'] = 0
-                rv = self._put(['replicationcontrollers', pod.sid],
-                               json.dumps(rc), ns=pod.namespace, rest=True)
-                self._raise_if_failure(rv, "Could not stop a pod")
+                if rc.get('kind') != u'Status':  # TODO: fix _raise_if_failure?
+                    rc['spec']['replicas'] = 0
+                    rv = self._put(['replicationcontrollers', pod.sid],
+                                   json.dumps(rc), ns=pod.namespace, rest=True)
+                    self._raise_if_failure(rv, "Could not stop a pod")
                 rv = self._del(['replicationcontrollers', pod.sid],
                                ns=pod.namespace)
                 self._stop_cluster(pod)
@@ -648,9 +649,19 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return pod.as_dict()
 
     def _redeploy(self, pod, data):
-        self._stop_pod(pod, raise_=False)
-        finish_redeploy.delay(pod.id, data)
-        return PodCollection(owner=self.owner).get(pod.id)  # return updated pod
+        stopped = bool(self._stop_pod(pod, raise_=False))
+
+        db_pod = DBPod.query.get(pod.id)
+        # apply changes in config
+        db_config = db_pod.get_dbconfig()
+        containers = {c['name']: c for c in db_config['containers']}
+        for container in data.get('containers', []):
+            if container.get('kubes') is not None:
+                containers[container['name']]['kubes'] = container.get('kubes')
+        db_pod.set_dbconfig(db_config)
+
+        finish_redeploy.delay(pod.id, data, start=stopped)
+        return PodCollection(owner=self.owner).get(pod.id, as_json=False)  # return updated pod
 
     # def _do_container_action(self, action, data):
     #     host = data.get('nodeName')
@@ -780,7 +791,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
 
 @celery.task(bind=True, default_retry_delay=10, ignore_results=True)
-def finish_redeploy(self, pod_id, data):
+def finish_redeploy(self, pod_id, data, start=True):
     pod_collection = PodCollection()
     pod = pod_collection._get_by_id(pod_id)
     if pod.status == POD_STATUSES.running:
@@ -796,8 +807,8 @@ def finish_redeploy(self, pod_id, data):
                 ).first()
                 delete_drive_by_id(pd.id)
 
-    # start updated pod
-    PodCollection().update(pod_id, {'command': 'start'})
+    if start:  # start updated pod
+        PodCollection().update(pod_id, {'command': 'start'})
 
 
 def restore_containers_host_ports_config(pod_containers, db_containers):

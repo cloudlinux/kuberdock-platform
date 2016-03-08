@@ -246,6 +246,18 @@ update_pod_schema = {
             'status': {'type': 'string', 'required': False, 'allowed': ['unpaid', 'stopped']}
         }
     },
+
+    # things that user allowed to change during pod's redeploy
+    'containers': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'kubes': kubes_qty_schema,
+                'name': dict(container_name_schema, required=True),
+            }
+        }
+    }
 }
 
 new_pod_schema = {
@@ -905,9 +917,12 @@ def check_hostname(hostname):
 
 
 def check_change_pod_data(data):
-    validator = V()
-    if not validator.validate(data, change_pod_schema):
-        raise APIError(validator.errors)
+    data = V(allow_unknown=True)._api_validation(data, update_pod_schema)
+    # TODO: with cerberus 0.10, just use "purge_unknown" option
+    return {'command': data.get('command'),
+            'commandOptions': data.get('commandOptions') or {},
+            'containers': [{'name': c.get('name'), 'kubes': c.get('kubes')}
+                           for c in data.get('containers') or []]}
 
 
 def check_new_pod_data(data, user=None):

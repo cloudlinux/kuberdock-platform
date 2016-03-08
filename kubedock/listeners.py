@@ -102,8 +102,7 @@ def process_pods_event(data, app, event_time=None, live=True):
 
         host = pod['spec'].get('nodeName')
 
-        update_states(pod_id, pod['status'], event_type=event_type,
-                      host=host, event_time=event_time)
+        update_states(pod, event_type=event_type, event_time=event_time)
 
     if event_type == 'MODIFIED':
         # fs limits

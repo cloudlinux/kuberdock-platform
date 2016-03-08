@@ -27,9 +27,14 @@
     <% } %>
     <span class="terminate-btn">delete</span>
     <% if (graphs) { %>
-        <span class="list-btn">data</span>
+        <a class="list-btn" href="#pods/<%- id %>">data</a>
     <% } else { %>
-        <span class="stats-btn">stats</span>
+        <a class="stats-btn" href="#pods/<%- id %>/stats">stats</a>
+    <% } %>
+    <% if (upgrade) { %>
+        <a class="upgrade-btn back active" href="#pods/<%- id %>">upgrade</a>
+    <% } else { %>
+        <a class="upgrade-btn" href="#pods/<%- id %>/upgrade">upgrade</a>
     <% } %>
 </div>
 <div class="row placeholders">

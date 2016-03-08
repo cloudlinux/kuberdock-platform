@@ -260,42 +260,6 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
             send_event('node:change', {'id': db_node.id})
 
 
-def parse_pods_statuses(data):
-    """
-    Get pod statuses from k8s pods list and database.
-
-    :param data: k8s PodList
-    :returns: dict -> with keys - kuberdock pod ids and values - structure
-        like Pod.status, but with nodeName, kuberdock pod id and
-        number of kubes for each container in Pod.status.containerStatuses.
-    """
-    db_pods = {}
-    for pod_id, pod_config in Pod.query.filter(
-            Pod.status != 'deleted').values(Pod.id, Pod.config):
-        kubes = {}
-        containers = json.loads(pod_config).get('containers', [])
-        for container in containers:
-            if 'kubes' in container:
-                kubes[container['name']] = container['kubes']
-        db_pods[pod_id] = {'kubes': kubes}
-
-    res = {}
-    for item in data.get('items'):
-        pod_id = item['metadata'].get('labels', {}).get('kuberdock-pod-uid')
-        if pod_id not in db_pods:  # skip deleted or alien pods
-            continue
-
-        current_state = item['status']
-        current_state['nodeName'] = item['spec'].get('nodeName')
-        current_state['uid'] = pod_id
-        if 'containerStatuses' in current_state:
-            for container in current_state['containerStatuses']:
-                if container['name'] in db_pods[pod_id]['kubes']:
-                    container['kubes'] = db_pods[pod_id]['kubes'][container['name']]
-        res[pod_id] = current_state
-    return res
-
-
 @celery.task()
 @exclusive_task(60 * 30)
 def pull_hourly_stats():
@@ -345,16 +309,14 @@ def fix_pods_timeline():
     t.append(time.time())
     # get pods from k8s
     pods = requests.get(get_api_url('pods', namespace=False))
-    pods = parse_pods_statuses(pods.json(object_hook=k8s_json_object_hook))
+    pods = {pod['metadata'].get('labels', {}).get('kuberdock-pod-uid'): pod
+            for pod in pods.json(object_hook=k8s_json_object_hook).get('items')}
     now = datetime.utcnow().replace(microsecond=0)
     t.append(time.time())
 
     updated_CS = set()
-    # TODO: use /api/v1/events too (or instead this)
-    # helps in the case when pods listener doesn't work or works too slow
-    for pod_id, k8s_pod in pods.iteritems():
-        updated_CS.update(update_states(
-            pod_id, k8s_pod, host=k8s_pod['nodeName'], event_time=now))
+    for k8s_pod in pods.itervalues():
+        updated_CS.update(update_states(k8s_pod, event_time=now))
     t.append(time.time())
 
     for cs in css:

@@ -114,8 +114,6 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 kubes: 1,
                 terminationMessagePath: null,
                 sourceUrl: null,
-                logs: [],
-                logsError: null,
             };
         },
         getPod: function(){ return ((this.collection || {}).parents || [])[0]; },
@@ -140,7 +138,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 url: '/api/logs/container/' + pod_id + '/' + name + '?size=' + size,
                 context: this,
                 success: function(data){
-                    var seriesByTime = _.indexBy(this.get('logs'), 'start');
+                    var seriesByTime = _.indexBy(this.logs, 'start');
                     _.each(data.data.reverse(), function(serie) {
                         var lines = serie.hits.reverse(),
                             oldSerie = seriesByTime[serie.start];
@@ -157,13 +155,13 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                             lines.unshift.apply(lines, _.first(oldSerie.hits, index));
                         }
                     });
-                    this.set('logs', data.data);
-                    this.set('logsError', data.data.length ? null : 'Logs not found');
+                    this.logs = data.data;
+                    this.logsError = data.data.length ? null : 'Logs not found';
                 },
                 error: function(xhr) {
                     var data = xhr.responseJSON;
                     if (data && data.data !== undefined)
-                        this.set('logsError', data.data);
+                        this.logsError = data.data;
                 },
             });
         },
@@ -209,8 +207,9 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         parse: unwrapper,
 
         command: function(cmd, options, commandOptions){
-            return this.save({command: cmd, commandOptions: commandOptions || {}},
-                             options);
+            var data = _.extend(this.changedAttributes() || {},  // patch should include previous `set`
+                                {command: cmd, commandOptions: commandOptions || {}});
+            return this.save(data, options);
         },
 
         /**
@@ -293,37 +292,30 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             var allPorts = _.flatten(containers.map(
                     function(c){ return c.get('ports').toJSON(); }), true),
                 allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
-                total_size = _.reduce(allPersistentVolumes,
-                    function(sum, v) { return sum + (v.pdSize || 1); }, 0);
+                totalSize = _.reduce(allPersistentVolumes,
+                    function(sum, v) { return sum + (v.pdSize || 1); }, 0),
+                totalPrice = 0;
             this.isPublic = _.any(_.pluck(allPorts, 'isPublic'));
             this.isPerSorage = !!allPersistentVolumes.length;
 
-            var rawContainerPrices = containers.map(
-                function(c) { return kubePrice * c.get('kubes'); });
-            this.containerPrices = _.map(rawContainerPrices,
-                function(price) { return pkg.getFormattedPrice(price); });
+            containers.each(function(container){
+                var kubes = container.get('kubes');
+                container.limits = {
+                    cpu: (kubes * kube.get('cpu')).toFixed(2) + ' ' + kube.get('cpu_units'),
+                    ram: kubes * kube.get('memory') + ' ' + kube.get('memory_units'),
+                    hdd: kubes * kube.get('disk_space') + ' ' + kube.get('disk_space_units'),
+                };
+                container.rawPrice = kubePrice * kubes;
+                container.price = pkg.getFormattedPrice(container.rawPrice);
+                totalPrice += container.rawPrice;
+            });
 
-            var totalPrice = _.reduce(rawContainerPrices,
-                function(sum, p) { return sum + p; });
             if (this.isPublic)
                 totalPrice += pkg.get('price_ip');
             if (this.isPerSorage)
-                totalPrice += pkg.get('price_pstorage') * total_size;
+                totalPrice += pkg.get('price_pstorage') * totalSize;
+            this.rawTotalPrice = totalPrice;
             this.totalPrice = pkg.getFormattedPrice(totalPrice);
-        },
-
-        save: function(attrs, options){
-            attrs || (attrs = _.clone(this.attributes));
-
-            if (attrs.containers){
-                attrs.containers = attrs.containers.toJSON();
-                _.each(attrs.containers, function(container){
-                    delete container.logs;
-                    delete container.logsError;
-                });
-            }
-
-            return Backbone.Model.prototype.save.call(this, attrs, options);
         },
     });
 
@@ -676,6 +668,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         model: data.SettingsModel,
         parse: unwrapper,
         comparator: function(model){ return model.id; },
+        byName: function(name){ return this.findWhere({name: name}); },
     });
 
     data.NetworkModel = Backbone.Model.extend({

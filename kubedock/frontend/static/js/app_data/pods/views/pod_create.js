@@ -405,6 +405,9 @@ define(['app_data/app', 'app_data/model',
         startContainer: function(){ App.commandPod('start', this.pod); },
         stopContainer: function(){ App.commandPod('stop', this.pod); },
         updateContainer: function(){ App.updateContainer(this.model); },
+        checkContainerForUpdate: function(){
+            App.checkContainerForUpdate(this.model).done(this.render);
+        },
     });
 
     newItem.WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
@@ -688,7 +691,7 @@ define(['app_data/app', 'app_data/model',
                 isPersistent: !!this.volume.persistentDisk,
                 persistentDisk: this.getPDModel(),
                 persistentDrives: this.pod.persistentDrives,
-                pdSizeLimit: this.pdSizeLimit,
+                pdSizeLimit: this.pod.pdSizeLimit,
                 pod: this.pod,
             };
         },
@@ -704,12 +707,6 @@ define(['app_data/app', 'app_data/model',
             } else if (this.volume.persistentDisk){
                 this.listenTo(this.pod.persistentDrives, 'refreshSelects', this.render);
             }
-
-            var that = this;
-            App.getSystemSettingsCollection().done(function(settingsCollection){
-                var conf = settingsCollection.findWhere({name: 'persitent_disk_max_size'});
-                that.pdSizeLimit = conf === undefined ? conf : parseInt(conf.get('value'));
-            });
         },
 
         getPDModel: function(name){
@@ -796,10 +793,13 @@ define(['app_data/app', 'app_data/model',
                 if (this.pod.persistentDrives === undefined) {
                     var persistentDrives = new Model.PersistentStorageCollection();
                     utils.preloader.show();
-                    persistentDrives.fetch({wait: true})
+                    $.when(persistentDrives.fetch({wait: true}),
+                           App.getSystemSettingsCollection())
                         .always(utils.preloader.hide)
                         .fail(utils.notifyWindow)
-                        .done(function(){
+                        .done(function(drives, settings){
+                            var conf = settings.byName('persitent_disk_max_size');
+                            that.pod.pdSizeLimit = conf == null ? 10 : parseInt(conf.get('value'));
                             that.pod.persistentDrives = persistentDrives;
                             that.toggleVolumeEntry();
                             that.render();
@@ -1269,6 +1269,8 @@ define(['app_data/app', 'app_data/model',
                 podName: pod.get('name'),
                 kube_type: kubeType,
                 restart_policy: pod.get('restartPolicy'),
+                logs: this.model.logs,
+                logsError: this.model.logsError,
                 editKubesQty : this.model.editKubesQty,
                 kubeVal : this.model.kubeVal
             };
@@ -1386,7 +1388,7 @@ define(['app_data/app', 'app_data/model',
                 isPublic         : this.model.isPublic,
                 isPerSorage      : this.model.isPerSorage,
                 limits           : this.model.limits,
-                containerPrices  : this.model.containerPrices,
+                containerPrices  : _.pluck(this.model.get('containers').models, 'price'),
                 totalPrice       : this.model.totalPrice,
                 kubeTypes        : kubeTypes,
                 restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},

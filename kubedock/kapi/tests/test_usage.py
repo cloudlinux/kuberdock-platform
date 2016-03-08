@@ -16,6 +16,7 @@ from kubedock.usage.models import PodState
 
 
 class TestPodStates(DBTestCase):
+    """kapi.usage.update_states: tests for pod states."""
     def setUp(self):
         self.user, user_password = fixtures.user_fixtures()
         self.containers = [{'name': '23edwed3', 'kubes': 3},
@@ -41,10 +42,13 @@ class TestPodStates(DBTestCase):
 
     @staticmethod
     def _upd_state(pod_id, event, start_time=None, host=None):
-        usage.update_states(pod_id, {'startTime': start_time}, event, host)
+        usage.update_states({
+            'metadata': {'labels': {'kuberdock-pod-uid': pod_id}},
+            'spec': {'nodeName': host},
+            'status': {'startTime': start_time},
+        }, event)
 
     def test_save_state(self):
-        """Test for kapi.save_pod_state function."""
         pod1_id = self.pod1.id
         pod2_id = self.pod2.id
         host1 = 'host1'
@@ -90,7 +94,7 @@ class TestPodStates(DBTestCase):
         self.assertEqual(states[1].last_event, 'DELETED')
 
     def test_select_pod_states_history(self):
-        """Test for kapi.select_pod_states_history function."""
+        """Test for kapi.usage.select_pod_states_history function."""
         pod1_id = self.pod1.id
         pod2_id = self.pod2.id
         host1 = 'host1'
@@ -171,59 +175,83 @@ class TestPodStates(DBTestCase):
 class TestUpdateStates(DBTestCase):
     def setUp(self):
         self.containers = [{'name': '23edwed3', 'kubes': 3},
-                           {'name': 'gacs4frs', 'kubes': 5}]
+                           {'name': 'gacs4frs', 'kubes': 5},
+                           {'name': '4eoncsrh'}]
         self.pod = self.fixtures.pod(config=json.dumps({
             'containers': self.containers,
         }))
         self.event_started = {
-            'containerStatuses': [{
-                'restartCount': 0,
-                'name': self.containers[0]['name'],
-                'image': '45.55.52.203:5000/test-rc-pd',
-                'imageID': 'docker://a5790f69b866b30aa808d753c43e0a',
-                'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 45)}},
-                'ready': True,
-                'lastState': {},
-                'containerID': 'docker://41b699c3802b599be2656235f2'
-            }, {
-                'restartCount': 0,
-                'name': self.containers[1]['name'],
-                'image': '45.55.52.203:5000/test-rc-pd',
-                'imageID': 'docker://a5790f69b866b30aa808d753c43e0a',
-                'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 47)}},
-                'ready': True,
-                'lastState': {},
-                'containerID': 'docker://f35fd17d8e36702f55b06ede7b'
-            }],
-            'startTime': datetime(2015, 11, 10, 12, 12, 12),
+            'metadata': {'labels': {'kuberdock-pod-uid': self.pod.id}},
+            'spec': {},
+            'status': {
+                'containerStatuses': [{
+                    'restartCount': 0,
+                    'name': self.containers[0]['name'],
+                    'image': '45.55.52.203:5000/test-rc-pd',
+                    'imageID': 'docker://a5790f69b866b30aa808d753c43e0a',
+                    'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 45)}},
+                    'ready': True,
+                    'lastState': {},
+                    'containerID': 'docker://41b699c3802b599be2656235f2'
+                }, {
+                    'restartCount': 0,
+                    'name': self.containers[1]['name'],
+                    'image': '45.55.52.203:5000/test-rc-pd',
+                    'imageID': 'docker://753c43e0aa5790f69b866b30aa808d',
+                    'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 47)}},
+                    'ready': True,
+                    'lastState': {},
+                    'containerID': 'docker://f35fd17d8e36702f55b06ede7b'
+                }, {
+                    'restartCount': 0,
+                    'name': self.containers[2]['name'],
+                    'image': '45.55.52.203:5000/test-rc-pd',
+                    'imageID': 'docker://0aa808d753c43e0aa5790f69b866b3',
+                    'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 46)}},
+                    'ready': True,
+                    'lastState': {},
+                    'containerID': 'docker://6702f55b06ede7bf35fd17d8e3'
+                }],
+                'startTime': datetime(2015, 11, 10, 12, 12, 12),
+            }
         }
+
         self.pod_state = usage.PodState(
-            pod_id=self.pod.id, start_time=self.event_started['startTime']).save()
+            pod_id=self.pod.id,
+            start_time=self.event_started['status']['startTime']).save()
 
     def test_kubes_are_saved(self):
+        """kubes == value from k8s-pod annotaions or value from database or 1"""
         CS = usage.ContainerState
 
-        usage.update_states(self.pod.id, self.event_started)
+        kubes_in_annotations = {self.containers[0]['name']: 7}
+        event = self.event_started
+        event['metadata']['annotations'] = {
+            'kuberdock-container-kubes': json.dumps(kubes_in_annotations),
+        }
+        usage.update_states(event)
         for container in self.pod.get_dbconfig('containers'):
+            name = container['name']
             self.assertIsNotNone(CS.query.filter(
-                CS.container_name == container['name'],
-                CS.kubes == container['kubes'],
+                CS.container_name == name,
+                CS.kubes == (kubes_in_annotations.get(name) or
+                             container.get('kubes', 1)),
             ).first())
 
     def test_pod_state_is_not_created(self):
         self.assertEqual(len(self.pod.states), 1)
-        usage.update_states(self.pod.id, self.event_started)
+        usage.update_states(self.event_started)
         self.assertEqual(len(self.pod.states), 1)
 
     def test_pod_state_is_created_if_not_found(self):
         db.session.delete(self.pod_state)
         CS = usage.ContainerState
 
-        usage.update_states(self.pod.id, self.event_started)
+        usage.update_states(self.event_started)
         for container in self.pod.get_dbconfig('containers'):
             cs = CS.query.filter(
                 CS.container_name == container['name'],
-                CS.kubes == container['kubes'],
+                CS.kubes == container.get('kubes', 1),
             ).first()
             self.assertIsNotNone(cs)
             self.assertIsNotNone(cs.pod_state)
@@ -232,21 +260,22 @@ class TestUpdateStates(DBTestCase):
 
     def test_pod_start_time_used(self):
         db.session.delete(self.pod_state)
-        usage.update_states(self.pod.id, self.event_started)
-        self.assertEqual(self.pod.states[0].start_time, self.event_started['startTime'])
+        usage.update_states(self.event_started)
+        self.assertEqual(self.pod.states[0].start_time,
+                         self.event_started['status']['startTime'])
 
     def test_event_time_used(self):
         db.session.delete(self.pod_state)
         CS = usage.ContainerState
         event_time = datetime(2015, 11, 30, 12, 12, 12)
 
-        usage.update_states(self.pod.id, self.event_started,
+        usage.update_states(self.event_started,
                             event_type='DELETED', event_time=event_time)
         self.assertEqual(self.pod.states[0].end_time, event_time)
         for container in self.pod.get_dbconfig('containers'):
             self.assertIsNotNone(CS.query.filter(
                 CS.container_name == container['name'],
-                CS.kubes == container['kubes'],
+                CS.kubes == container.get('kubes', 1),
                 CS.end_time == event_time,
             ).first())
 

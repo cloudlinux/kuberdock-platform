@@ -579,6 +579,76 @@
         text-decoration: none;
     }
 }
+#item-info{
+    #imagelist-table{
+        .inline-fix{
+            font-size: 0;
+            .upgrade-kubes{
+                width: 52px;
+                height: 35px;
+                margin: 0 4px;
+                font-size: 13px;
+                text-align: center;
+                display: inline-block;
+                vertical-align: middle;
+                border: 1px solid #ddd;
+                -moz-appearance: textfield;
+            }
+            .upgrade-kubes-less,
+            .upgrade-kubes-more{
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+                display: inline-block;
+                vertical-align: middle;
+            }
+            .upgrade-kubes-less{
+                background: url('../img/blue-minus.png') 0 0 no-repeat;
+            }
+            .upgrade-kubes-more{
+                background: url('../img/blue-plus.png') 0 0 no-repeat;
+            }
+            input[type=number]::-webkit-inner-spin-button,
+            input[type=number]::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                margin: 0;
+            }
+        }
+    }
+    .upgrade-summary{
+        margin-top: 20px;
+        padding-top: 37px;
+        border-top: 1px solid #e0e0e0;
+        + .buttons{
+            margin-top: 0;
+        }
+        .upgrade-total-price{
+            p {
+                color: #121010;
+                font-size: 23px;
+                line-height: 23px;
+                margin-bottom: 5px;
+                font-family: @semibold;
+            }
+            small{
+                color: #121010;
+                font-size: 13px;
+                line-height: 13px;
+                font-family: @regular;
+            }
+        }
+        .upgrade-diff-price{
+            color: #30a718;
+            font-size: 23px;
+            line-height: 23px;
+            margin-right: 7px;
+            font-family: @semibold;
+            padding-bottom: 3px;
+        }
+     }
+}
 #item-controls{
     margin-bottom: 0px;
     .pod-controls{
@@ -653,7 +723,7 @@
             }
         }
     }
-    .start-btn, .stop-btn, .restart-btn, .terminate-btn, .list-btn, .stats-btn, .pay-and-start-btn{
+    .start-btn, .stop-btn, .restart-btn, .terminate-btn, .list-btn, .stats-btn, .pay-and-start-btn, .upgrade-btn{
         padding-left: 25px;
         position: relative;
         &:before{
@@ -674,6 +744,30 @@
         &:hover{
             &:before{
                 background-position: 0 -17px;
+            }
+        }
+    }
+    .upgrade-btn{
+         &:before{
+            top: 6px;
+            height: 16px;
+            background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -16px;
+            }
+        }
+        &.back{
+            color: #3197ee;
+            &:before{
+                background-position: 0 -16px;
+            }
+            &:hover{
+                color: #4e5665;
+                &:before{
+                    background-position: 0 0;
+                }
             }
         }
     }
@@ -783,7 +877,7 @@
             }
         }
     }
-    span{
+    span, a {
         height: 40px;
         color: #4e5665;
         font-size: 13px;
@@ -792,9 +886,10 @@
         display: inline-block;
         text-transform: capitalize;
         font-family: @regular;
-        &:hover{
+        &:hover, &:active, &:focus {
             color: #3197ee;
             cursor: pointer;
+            text-decoration: none;
         }
         &:first-child{
             color: #4e5665;
@@ -1869,7 +1964,7 @@
         }
         .status-line{
             .clearfix;
-            span{
+            span, a{
                 color: #4e5665;
                 font-size: 13px;
                 margin-left: 20px;
@@ -1887,9 +1982,10 @@
                     height: 17px;
                     position: absolute;
                 }
-                &:hover{
+                &:hover, &:active, &:focus {
                     cursor: pointer;
                     color: #3197ee;
+                    text-decoration: none;
                 }
                 &#startContainer{
                     &:before{
@@ -1937,6 +2033,18 @@
                     &:hover{
                         &:before{
                             background-position: 0 -21px;
+                        }
+                    }
+                }
+                &.upgrade-btn{
+                     &:before{
+                        top: 6px;
+                        height: 16px;
+                        background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
+                    }
+                    &:hover{
+                        &:before{
+                            background-position: 0 -16px;
                         }
                     }
                 }

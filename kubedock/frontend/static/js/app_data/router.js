@@ -3,7 +3,9 @@ define(['marionette'], function(Marionette){
     var router = Marionette.AppRouter.extend({
         appRoutes: {
             'pods'                            : 'showPods',
-            'pods/:id'                        : 'showPodItem',
+            'pods/:id'                        : 'showPodContainers',
+            'pods/:id/stats'                  : 'showPodStats',
+            'pods/:id(/:container)/upgrade'   : 'showPodUpgrade',
             'newpod'                          : backendData.user.rolename  === 'LimitedUser' ?
                                                 'showPods' : 'createPod',
             'pods/poditem/:id/:name'          : 'showPodContainer',

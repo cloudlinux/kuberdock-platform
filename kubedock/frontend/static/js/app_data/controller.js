@@ -50,80 +50,114 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             });
         },
 
-        showPodItem: function(id){
-            var that = this;
+        /**
+         * Show basic pod page layout, menu, breadcrumbs.
+         * @returns jquery promise
+         */
+        showPodBase: function(id){
+            var that = this,
+                deferred = $.Deferred();
             require(['app_data/pods/views/pod_item',
                      'app_data/paginator/views',
                      'app_data/menu/views'], function(Views, Pager, Menu){
+                if (that.podPageData && that.podPageData.model.id === id) {
+                    deferred.resolveWith(that, [that.podPageData]);
+                    return;
+                }
                 App.getPodCollection().done(function(podCollection){
-                    var itemLayout = new Views.PodItemLayout(),
-                        model = podCollection.fullCollection.get(id),
-                        graphsOn = false;
-
-                    if (model === undefined) {
-                        App.navigate('pods');
-                        that.showPods();
+                    var model = podCollection.fullCollection.get(id);
+                    if (model === undefined){
+                        deferred.rejectWith(that, []);
                         return;
                     }
-
                     that.listenTo(model, 'remove destroy', function(){
                         App.navigate('pods', {trigger: true});
                     });
 
-                    var navbar = new Menu.NavList({
-                        collection: App.menuCollection
-                    });
-
-                    var masthead = new Views.PageHeader({
-                        model: new Backbone.Model({name: model.get('name')})
-                    });
-
-                    that.listenTo(itemLayout, 'display:pod:stats', function(data){
-                        var statCollection = new Model.StatsCollection(),
-                            that = this;
-                        graphsOn = true;
-                        statCollection.fetch({
-                            data: {unit: data.id},
-                            reset: true,
-                            success: function(){
-                                itemLayout.controls.show(new Views.ControlsPanel({
-                                    graphs: true,
-                                    model: model
-                                }));
-                                itemLayout.info.show(new Views.PodGraph({
-                                    model: model,
-                                    collection: statCollection
-                                }));
-                            },
-                            error: function(collection, response){
-                                utils.notifyWindow(response);
-                            },
-                        });
-                    });
-
-                    that.listenTo(itemLayout, 'display:pod:list', function(data){
-                        graphsOn = false;
-                        itemLayout.controls.show(new Views.ControlsPanel({
-                            graphs: false,
-                            model: model
-                        }));
-                        itemLayout.info.show(new Views.InfoPanel({
-                            collection: model.get('containers')
-                        }));
-                    });
+                    var itemLayout = new Views.PodItemLayout(),
+                        navbar = new Menu.NavList({collection: App.menuCollection}),
+                        masthead = new Views.PageHeader(
+                            {model: new Backbone.Model({name: model.get('name')})});
 
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.nav.show(navbar);
                         itemLayout.masthead.show(masthead);
-                        itemLayout.controls.show(new Views.ControlsPanel({
-                            graphs: false,
-                            model: model
-                        }));
-                        itemLayout.info.show(new Views.InfoPanel({
-                            collection: model.get('containers'),
-                        }));
                     });
+                    that.listenTo(itemLayout, 'before:destroy', function(){
+                        delete this.podPageData;
+                    });
+
                     App.contents.show(itemLayout);
+
+                    that.podPageData = {model: model, itemLayout: itemLayout,
+                                        navbar: navbar, masthead: masthead};
+                    deferred.resolveWith(that, [that.podPageData]);
+                });
+            });
+            return deferred.promise();
+        },
+
+        showPodStats: function(id){
+            var that = this;
+            require(['app_data/pods/views/pod_item'], function(Views){
+                that.showPodBase(id).fail(function(){
+                    App.navigate('pods', {trigger: true});
+                }).done(function(pageData){
+                    var statCollection = new Model.StatsCollection();
+                    statCollection.fetch({
+                        data: {unit: pageData.model.id},
+                        reset: true,
+                        success: function(){
+                            pageData.itemLayout.controls.show(new Views.ControlsPanel({
+                                graphs: true,
+                                model: pageData.model
+                            }));
+                            pageData.itemLayout.info.show(new Views.PodGraph({
+                                model: pageData.model,
+                                collection: statCollection
+                            }));
+                        },
+                        error: function(collection, response){
+                            utils.notifyWindow(response);
+                        },
+                    });
+                });
+            });
+        },
+
+        showPodContainers: function(id){
+            var that = this;
+            require(['app_data/pods/views/pod_item'], function(Views){
+                that.showPodBase(id).fail(function(){
+                    App.navigate('pods', {trigger: true});
+                }).done(function(pageData){
+                    pageData.itemLayout.controls.show(new Views.ControlsPanel({
+                        model: pageData.model
+                    }));
+                    pageData.itemLayout.info.show(new Views.InfoPanel({
+                        collection: pageData.model.get('containers'),
+                    }));
+                });
+            });
+        },
+
+        showPodUpgrade: function(id, containerName){
+            var that = this;
+            require(['app_data/pods/views/pod_item'], function(Views){
+                that.showPodBase(id).fail(function(){
+                    App.navigate('pods', {trigger: true});
+                }).done(function(pageData){
+                    pageData.itemLayout.controls.show(new Views.ControlsPanel({
+                        upgrade: true,
+                        model: pageData.model,
+                    }));
+                    var newModel = new Model.Pod(pageData.model.toJSON());
+                    pageData.itemLayout.info.show(new Views.UpgradeResources({
+                        modelOrig: pageData.model,
+                        model: newModel,
+                        containerName: containerName,
+                        collection: newModel.get('containers'),
+                    }));
                 });
             });
         },

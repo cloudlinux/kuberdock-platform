@@ -1,3 +1,4 @@
+import json
 from flask import current_app
 from datetime import datetime
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
@@ -28,18 +29,22 @@ def select_pod_states_history(pod_id, depth=0):
 
 
 @atomic(nested=False)
-def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time=None):
+def update_states(k8s_pod, event_type=None, event_time=None):
     """Update and fix container and pod states using data from k8s pod resource.
     Works well even if `k8s_pod_status`es are processed in a wrong order.
 
-    :param pod_id: id of the container's pod
-    :param k8s_pod_status: k8s Pod.status
+    :param k8s_pod: k8s Pod
+        http://kubernetes.io/v1.1/docs/api-reference/v1/definitions.html#_v1_pod
     :param event_type: k8s event type or None
-    :param host: optional, node hostname (will be saved in PodState)
     :param event_time: optional, used as the best version of "current" time
     :returns: set of updated/created ContainerState
     """
     updated_CS = set()
+    pod_id = k8s_pod['metadata'].get('labels', {}).get('kuberdock-pod-uid')
+    if pod_id is None:
+        return
+    host = k8s_pod['spec'].get('nodeName')
+    k8s_pod_status = k8s_pod['status']
     event_time = event_time or datetime.utcnow().replace(microsecond=0)
     pod_start_time = k8s_pod_status.get('startTime')
     if pod_start_time is None:
@@ -62,15 +67,18 @@ def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time
 
     # get data from our db
     pod = Pod.query.get(pod_id)
-    containers_config = {container.get('name'): container
-                         for container in pod.get_dbconfig('containers', [])}
+    kubes = {container.get('name'): container.get('kubes', 1)  # fallback
+             for container in pod.get_dbconfig('containers', [])}
+    k8s_kubes = k8s_pod['metadata'].get('annotations', {}).get('kuberdock-container-kubes')
+    if k8s_kubes:
+        kubes.update(json.loads(k8s_kubes))
 
     # process container states
     for container in (k8s_pod_status.get('containerStatuses') or []):
         if 'containerID' not in container:
             continue
         container_name = container['name']
-        kubes = containers_config.get(container_name).get('kubes', 1)
+        container_kubes = kubes.get(container_name, 1)
 
         # k8s fires "MODIFIED" pod event when docker_id of container changes.
         # (container restart in the same pod)
@@ -101,7 +109,7 @@ def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time
             cs = ContainerState.query.filter(
                 ContainerState.container_name == container_name,
                 ContainerState.docker_id == docker_id,
-                ContainerState.kubes == kubes,
+                ContainerState.kubes == container_kubes,
                 ContainerState.start_time == start,
             ).first()
             if cs is None:
@@ -109,7 +117,7 @@ def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time
                     pod_state=pod_state,
                     container_name=container_name,
                     docker_id=docker_id,
-                    kubes=kubes,
+                    kubes=container_kubes,
                     start_time=start,
                 )
                 db.session.add(cs)

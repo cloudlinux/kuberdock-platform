@@ -198,6 +198,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def _dump_ports(self):
         return json.dumps([c.get('ports', []) for c in self.containers])
 
+    def _dump_kubes(self):
+        return json.dumps({c.get('name'): c.get('kubes', 1) for c in self.containers})
+
     def extract_volume_annotations(self, volumes):
         if not volumes:
             return []
@@ -252,6 +255,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         "annotations": {
                             "kuberdock_resolve": kuberdock_resolve,
                             "kuberdock-pod-ports": self._dump_ports(),
+                            "kuberdock-container-kubes": self._dump_kubes(),
                             "kuberdock-volume-annotations": json.dumps(
                                 volume_annotations
                             )

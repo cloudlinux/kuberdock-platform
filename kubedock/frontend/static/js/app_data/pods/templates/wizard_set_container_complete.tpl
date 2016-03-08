@@ -49,16 +49,9 @@
                     <label>Number of Kubes:</label>
                     <div class="col-xs-4 no-padding">
                         <select class="kube-quantity selectpicker">
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
+                            <% for (var i = 1; i <= kubesLimit; i++) { %>
+                                <option value="<%= i %>"><%= i %></option>
+                            <% } %>
                         </select>
                     </div>
                     <div class="col-xs-12 edit-kube-type-description">Type will apply for each container</div>

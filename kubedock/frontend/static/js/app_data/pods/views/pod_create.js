@@ -1370,6 +1370,7 @@ define(['app_data/app', 'app_data/model',
             this.model.recalcInfo(this.pkg);
             this.hasBilling = options.hasBilling;
             this.payg = options.payg;
+            this.kubesLimit = options.kubesLimit;
         },
 
         templateHelpers: function() {
@@ -1391,6 +1392,7 @@ define(['app_data/app', 'app_data/model',
                 containerPrices  : _.pluck(this.model.get('containers').models, 'price'),
                 totalPrice       : this.model.totalPrice,
                 kubeTypes        : kubeTypes,
+                kubesLimit       : this.kubesLimit,
                 restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                 restart_policy   : this.model.get('restartPolicy'),
                 image_name_id    : this.model.get('lastAddedImageNameId'),

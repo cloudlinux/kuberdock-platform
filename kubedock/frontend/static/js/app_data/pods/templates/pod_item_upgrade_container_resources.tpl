@@ -7,7 +7,7 @@
 <td class="col-md-2"><span class="upgrade-price"><%- upgradePrice %></span></td>
 <td class="inline-fix">
     <span class="upgrade-kubes-less">-</span>
-    <input class="upgrade-kubes" type="number" min="1" max="10" value="<%- kubes %>"/>
+    <input class="upgrade-kubes" type="number" min="1" max="<%- kubesLimit %>" value="<%- kubes %>"/>
     <span class="upgrade-kubes-more">+</span>
 </td>
 <td class="col-md-2">CPU: <%- limits.cpu %></td>

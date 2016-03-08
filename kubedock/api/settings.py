@@ -179,7 +179,8 @@ def get_all_timezones():
 
 class SystemSettingsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
-    allowed_for_user = ('billing_type', 'billing_url', 'persitent_disk_max_size')
+    allowed_for_user = ('billing_type', 'billing_url', 'persitent_disk_max_size',
+                        'max_kubes_per_container')
 
     def get(self, sid):
         user = KubeUtils._get_current_user()

@@ -152,12 +152,19 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         model: pageData.model,
                     }));
                     var newModel = new Model.Pod(pageData.model.toJSON());
-                    pageData.itemLayout.info.show(new Views.UpgradeResources({
-                        modelOrig: pageData.model,
-                        model: newModel,
-                        containerName: containerName,
-                        collection: newModel.get('containers'),
-                    }));
+                    App.getSystemSettingsCollection().done(function(settings){
+                        var billingType = settings.byName('billing_type').get('value'),
+                            kubesLimit = settings.byName('max_kubes_per_container').get('value');
+                        pageData.itemLayout.info.show(new Views.UpgradeResources({
+                            kubesLimit: parseInt(kubesLimit),
+                            modelOrig: pageData.model,
+                            model: newModel,
+                            containerName: containerName,
+                            fixedPrice: billingType.toLowerCase() !== 'no billing'
+                                && App.userPackage.get('count_type') === 'fixed',
+                            collection: newModel.get('containers'),
+                        }));
+                    });
                 });
             });
         },
@@ -410,12 +417,13 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                 Model.KubeType.noAvailableKubeTypes.notify();
                         }
                         App.getSystemSettingsCollection().done(function(collection){
-                            var billingType = collection.findWhere({name: 'billing_type'}).get('value'),
-                                payg = App.userPackage.get('count_type') === 'payg' ? true : false;
+                            var billingType = collection.byName('billing_type').get('value'),
+                                kubesLimit = collection.byName('max_kubes_per_container').get('value');
                             wizardLayout.steps.show(new Views.WizardCompleteSubView({
                                 model: model,
-                                hasBilling: billingType === 'No billing' ? false : true,
-                                payg: payg
+                                kubesLimit: kubesLimit,
+                                hasBilling: billingType !== 'No billing',
+                                payg: App.userPackage.get('count_type') === 'payg',
                             }));
                         });
                     });

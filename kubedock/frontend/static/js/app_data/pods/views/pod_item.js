@@ -420,9 +420,9 @@ define(['app_data/app',
             'change': 'render',
         },
 
+        viewOptions: ['pkg', 'modelOrig', 'kubesLimit'],
         initialize: function(options){
-            this.pkg = options.pkg;
-            this.modelOrig = options.modelOrig;
+            this.mergeOptions(options, this.viewOptions);
         },
 
         templateHelpers: function(){
@@ -433,6 +433,7 @@ define(['app_data/app',
                 kubesChange = this.model.get('kubes') - this.modelOrig.get('kubes');
 
             return {
+                kubesLimit: this.kubesLimit,
                 imagename: imagename,
                 imagetag: imagetag,
                 upgradePrice: this.pkg.getFormattedPrice(this.pkg.priceFor(kube.id) * kubesChange),
@@ -444,7 +445,7 @@ define(['app_data/app',
         addKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() + 1).change(); },
         removeKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() - 1).change(); },
         changeKubes: function(){
-            var kubes = Math.max(1, Math.min(10, +this.ui.kubes.val()));
+            var kubes = Math.max(1, Math.min(this.kubesLimit, +this.ui.kubes.val()));
             this.ui.kubes.val(kubes);
             this.model.set('kubes', kubes);
         },
@@ -458,6 +459,7 @@ define(['app_data/app',
             return {
                 modelOrig: this.modelOrig.get('containers').get(model.id),
                 pkg: this.pkg,
+                kubesLimit: this.kubesLimit,
             };
         },
 
@@ -475,10 +477,10 @@ define(['app_data/app',
             'change:containers[*].kubes': 'render',
         },
 
+        viewOptions: ['modelOrig', 'containerName', 'kubesLimit', 'fixedPrice'],
         initialize: function(options){
             this.pkg = App.userPackage;
-            this.modelOrig = options.modelOrig;
-            this.containerName = options.containerName;
+            this.mergeOptions(options, this.viewOptions);
         },
 
         filter: function (child) {
@@ -504,12 +506,29 @@ define(['app_data/app',
             App.getPodCollection().done(function(col){
                 var modelOrigBackup = that.modelOrig.clone();
                 col.add(that.model, {merge: true});
-                App.commandPod('redeploy', that.model)
-                    .fail(function(){ col.add(modelOrigBackup, {merge: true}); })
-                    .done(function(){
-                        utils.notifyWindow('Pod will be upgraded.', 'success');
-                        App.navigate('pods/' + that.model.id, {trigger: true});
+                if (that.fixedPrice){
+                    utils.preloader.show();
+                    $.ajax({
+                        type: 'POST',
+                        contentType: 'application/json; charset=utf-8',
+                        url: '/api/billing/orderKubes',
+                        data: JSON.stringify({pod: JSON.stringify(that.model)}),
+                    }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(xhr){
+                        if(xhr.data.status.toLowerCase() == 'paid'){
+                            utils.notifyWindow('Pod will be upgraded.', 'success');
+                            App.navigate('pods/' + that.model.id, {trigger: true});
+                        } else {
+                            window.location = xhr.data.redirect;
+                        }
                     });
+                } else {
+                    App.commandPod('redeploy', that.model)
+                        .fail(function(){ col.add(modelOrigBackup, {merge: true}); })
+                        .done(function(){
+                            utils.notifyWindow('Pod will be upgraded.', 'success');
+                            App.navigate('pods/' + that.model.id, {trigger: true});
+                        });
+                }
             });
         },
     });

@@ -28,4 +28,9 @@ def add_system_settings():
             label='Persistent disk maximum size',
             description='Maximum capacity of a user container persistent disk in GB',
             placeholder='Enter value to limit PD size'),
+        SystemSettings(
+            name='max_kubes_per_container', value='10',
+            label='Maximum number of kubes per container',
+            description='Changing this value won\'t affect existing containers',
+            placeholder='Enter value to limit number of kubes per container'),
     ])

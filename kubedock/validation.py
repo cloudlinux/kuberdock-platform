@@ -13,8 +13,7 @@ from .billing.models import Kube, Package
 from .users.models import User
 from .rbac.models import Role
 from .system_settings.models import SystemSettings
-from .settings import (KUBERDOCK_INTERNAL_USER, AWS, CEPH,
-                       MAX_KUBES_PER_CONTAINER)
+from .settings import KUBERDOCK_INTERNAL_USER, AWS, CEPH
 from .users.utils import strip_offset_from_timezone
 
 
@@ -230,7 +229,7 @@ env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
 protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
-kubes_qty_schema = {'type': 'integer', 'min': 1, 'max': MAX_KUBES_PER_CONTAINER}
+kubes_qty_schema = {'type': 'integer', 'min': 1, 'max_kubes_per_container': True}
 container_name_schema = {'type': 'string', 'empty': False, 'maxlength': 255}
 pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0, 'pd_size_max': True}
 pdname_schema = {'type': 'string', 'required': True, 'empty': False, 'maxlength': 36, 'regex': pdname_regex}
@@ -861,6 +860,13 @@ class V(cerberus.Validator):
             if max_size and int(value) > int(max_size):
                 self._error(field, ('Persistent disk size must be less or equal '
                                     'to "{0}" GB').format(max_size))
+
+    def _validate_max_kubes_per_container(self, exists, field, value):
+        if exists:
+            max_size = SystemSettings.get_by_name('max_kubes_per_container')
+            if max_size and int(value) > int(max_size):
+                self._error(field, ('Container cannot have more than {0} kubes.'
+                                    .format(max_size)))
 
     def _validate_package_exists(self, exists, field, value):
         if exists:

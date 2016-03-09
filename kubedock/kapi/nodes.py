@@ -117,6 +117,7 @@ def mark_node_as_being_deleted(node_id):
     node = Node.query.filter(Node.id == node_id).first()
     if node is None:
         raise APIError('Node not found, id = {}'.format(node_id))
+    _check_node_can_be_deleted(node_id)
     node.state = 'deletion'
     db.session.commit()
     return node

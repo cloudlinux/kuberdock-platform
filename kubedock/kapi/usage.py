@@ -78,7 +78,19 @@ def update_states(pod_id, k8s_pod_status, event_type=None, host=None, event_time
         # current state of a new one.
         for state_type, state in (container['lastState'].items() +
                                   container['state'].items()):
-            docker_id_source = (state if state_type == 'terminated' else container)
+            if state_type == 'terminated':
+                # Terminated state may optionally include containerID. It means
+                # previous container in running state. There are some issues
+                # about wrong assignment of terminated state:
+                # https://github.com/kubernetes/kubernetes/issues/17971
+                # https://github.com/kubernetes/kubernetes/issues/21125
+                docker_id_source = state
+            else:
+                docker_id_source = container
+            if 'containerID' not in docker_id_source:
+                # Do not process states with empty container id. The field is
+                # optional. We can't process such states.
+                continue
             docker_id = docker_id_source['containerID'].split('docker://')[-1]
 
             start = state.get('startedAt')

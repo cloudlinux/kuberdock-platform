@@ -45,6 +45,7 @@ class Package(BaseModelMixin, db.Model):
     price_pstorage = db.Column(db.Float, default=0.0, nullable=False)
     price_over_traffic = db.Column(db.Float, default=0.0, nullable=False)
     is_default = db.Column(db.Boolean, default=None)
+    count_type = db.Column(db.String, nullable=True)
 
     __table_args__ = (db.Index('packages_is_default_key', 'is_default', unique=True,
                                postgresql_where=is_default.is_(True)),)

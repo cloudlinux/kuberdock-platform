@@ -26,7 +26,6 @@ Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
 Requires: python-cerberus >= 0.9.1
 Requires: python-flask >= 0.10.1
-Requires: python-flask-assets >= 0.10
 Requires: python-flask-influxdb >= 0.1
 Requires: python-flask-login >= 0.2.11
 Requires: python-flask-mail >= 0.9.1
@@ -56,8 +55,6 @@ Requires: python-psycopg2 >= 2.5.4
 Requires: python-redis >= 2.10.3
 Requires: python-requests >= 2.4.3
 Requires: python-simple-rbac >= 0.1.1
-Requires: python-sse >= 1.2
-Requires: python-webassets >= 0.10.1
 Requires: python-wsgiref >= 0.1.2
 Requires: python-psycogreen >= 1.0
 Requires: python-botocore

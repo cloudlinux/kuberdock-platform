@@ -128,7 +128,7 @@
                 <button class="prev-step gray pull-left">Back</button>
                 <button class="add-more blue pull-left">Add more containers</button>
                 <button class="save-container blue pull-left">Save</button>
-                <% if (hasBilling){ %>
+                <% if (hasBilling && !payg){ %>
                 <button class="pay-and-run-container blue pull-right">Pay and Run</button>
                 <% } %>
             </div>

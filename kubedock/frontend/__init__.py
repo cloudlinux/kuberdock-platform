@@ -6,7 +6,6 @@ from .. import factory
 from .. import sessions
 from ..rbac import acl, get_user_role
 from ..utils import APIError, PermissionDenied
-from . import assets
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -18,23 +17,13 @@ def create_app(settings_override=None, fake_sessions=False):
         app.session_interface = sessions.ManagedSessionInterface(
             sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
             skip_paths, datetime.timedelta(days=1))
-    assets.init_app(app)
 
     # registering blueprings
     from .main import main
     from .auth import auth
-    from .nodes import nodes
-    from .users import users
-    from .notifications import notifications
-    from .ippool import ippool
-    from .settings import settings
-    from .predefined_apps import predefined_apps
-    from .public_ips import public_ips
-    from .persistent_volumes import persistent_volumes
     from .apps import apps
 
-    for bp in main, auth, nodes, users, notifications, ippool, \
-            settings, predefined_apps, public_ips, persistent_volumes, apps:
+    for bp in main, auth, apps:
         app.register_blueprint(bp)
 
     app.errorhandler(PermissionDenied)(on_permission_denied)

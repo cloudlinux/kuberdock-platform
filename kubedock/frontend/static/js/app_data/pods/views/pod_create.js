@@ -1367,6 +1367,7 @@ define(['app_data/app', 'app_data/model',
             this.pkg = App.userPackage;
             this.model.recalcInfo(this.pkg);
             this.hasBilling = options.hasBilling;
+            this.payg = options.payg;
         },
 
         templateHelpers: function() {
@@ -1395,6 +1396,7 @@ define(['app_data/app', 'app_data/model',
                 price_ip         : this.pkg.getFormattedPrice(this.pkg.get('price_ip')),
                 price_pstorage   : this.pkg.getFormattedPrice(this.pkg.get('price_pstorage')),
                 hasBilling       : this.hasBilling,
+                payg             : this.payg    // Pay-As-You-Go billing method
             };
         },
 

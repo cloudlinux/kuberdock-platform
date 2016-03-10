@@ -12,6 +12,9 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                <div class="buttons clearfix">
+                    <div class="description pull-left">* Each persistent volume billed as usual regardless on it`s status</div>
+                </div>
             </div>
         </div>
         <div class="buttons clearfix"></div>

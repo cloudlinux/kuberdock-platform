@@ -1,9 +1,12 @@
 import hashlib
 import urlparse
+from urllib import urlencode
+from time import time
 
 from flask import request
 from kubedock.utils import APIError
 from kubedock.kapi.billing import BillingCommon
+from kubedock.system_settings.models import SystemSettings
 from flask import current_app
 
 STATUS_UNPAID = 'Unpaid'
@@ -98,6 +101,25 @@ class BillingWHMCS(BillingCommon):
 
     def get_invoice(self, invoice_id):
         return self._query('getinvoice', {'invoiceid': invoice_id})
+
+    def get_autologin_url(self, user, goto):
+        """
+        Generate WHMCS AutoAuth link.
+        http://docs.whmcs.com/AutoAuth
+
+        :param user: User model
+        :param goto: where to send the user after successful authentication.
+        """
+        whmcs_url = self._make_url('dologin.php')
+        auth_key = SystemSettings.get_by_name('sso_secret_key')
+        timestamp = str(int(time()))
+        email = user.email
+        auth_hash = hashlib.sha1(email + timestamp + auth_key).hexdigest()
+
+        url = urlparse.urlparse(whmcs_url)
+        query = urlencode(dict(urlparse.parse_qsl(url.query), email=email,
+                               timestamp=timestamp, hash=auth_hash, goto=goto))
+        return url._replace(query=query).geturl()
 
     def _get_package_by_id(self, info, package_id):
         try:

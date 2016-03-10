@@ -19,6 +19,11 @@ def add_system_settings():
             name='billing_password', label='WHMCS admin password',
             placeholder='password'),
         SystemSettings(
+            name='sso_secret_key', label='Secret key for Single sign-on',
+            placeholder='Enter a secret key',
+            description=('Used for Single sign-on. Must be shared between '
+                         'Kuberdock and billing system.')),
+        SystemSettings(
             name='persitent_disk_max_size', value='10',
             label='Persistent disk maximum size',
             description='Maximum capacity of a user container persistent disk in GB',

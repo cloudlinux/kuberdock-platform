@@ -356,7 +356,7 @@ class TestUtilsSetLimit(unittest.TestCase):
 
         ssh.exec_command.assert_called_with(
             'python '
-            '/var/lib/kuberdock/scripts/fslimit.py '
+            '/var/lib/kuberdock/scripts/fslimit.py containers '
             'ipsum=6g lorem=5g'
         )
         self.assertEqual(ssh.exec_command.call_count, 2)

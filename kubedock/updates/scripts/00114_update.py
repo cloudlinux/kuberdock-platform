@@ -75,6 +75,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    run('yum --enablerepo=kube,kube-testing clean metadata')
     #00110_update.py
     upd.print_log('Fix node hostname in rsyslog configuration...')
     run("sed -i 's/^{0} .*/{0} {1}/' {2}".format(PARAM, env.host_string, CONF))

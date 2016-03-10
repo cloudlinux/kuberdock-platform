@@ -6,13 +6,14 @@ import tempfile
 import shutil
 
 INDEX_PATH = 'kubedock/frontend/templates/index.html'
+LOGIN_PATH = 'kubedock/frontend/templates/auth/login.html'
 STATIC_PATH = 'kubedock/frontend/static'
 ALMOND = 'lib/almond'
 READY = 'prepared.js'
 CONTENTS = []
 FILES = []
 
-def parse():
+def parse(login=False):
     css = re.compile(r"""<link rel="stylesheet(?:/less)?".*?filename=(?:"|')(?P<path>[^"']+)""")
     js = re.compile(r"""<script.*</script>""")
     main = re.compile(r"""data-main=.*?filename=(?:"|')(?P<path>[^"']+)""")
@@ -22,7 +23,8 @@ def parse():
     css_indent = 0
     js_indent = 0
     path = None
-    with open(INDEX_PATH) as f:
+    item = LOGIN_PATH if login else INDEX_PATH
+    with open(item) as f:
         for line in f:
             m = css.search(line)
             if m:
@@ -117,12 +119,13 @@ def make_static_js(path):
         shutil.copyfileobj(infile, outfile)
 
 
-def save():
-    fh, path = tempfile.mkstemp(dir=os.path.dirname(INDEX_PATH))
+def save(login=False):
+    item = LOGIN_PATH if login else INDEX_PATH
+    fh, path = tempfile.mkstemp(dir=os.path.dirname(item))
     with os.fdopen(fh, 'w') as f:
         for i in CONTENTS:
             f.write(i)
-    os.rename(path, INDEX_PATH)
+    os.rename(path, item)
     if os.path.exists(path):
         os.unlink(path)
 
@@ -135,3 +138,10 @@ if __name__ == '__main__':
     make_static_css(less)
     make_static_js(out)
     save()
+    
+    #TODO: Rewrite the whole logic and remove the following addition
+    CONTENTS = []
+    FILES = []
+    last_css, css_indent, last_js, js_indent, path = parse(login=True)
+    insert_css(last_css, css_indent)
+    save(login=True)

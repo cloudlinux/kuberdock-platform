@@ -66,6 +66,15 @@ class BillingWHMCS(BillingCommon):
             data['client_id'] = user.clientid
         return self._query('orderkuberdockpod', data).get('results')
 
+    def order_kubes(self, data, user=None):
+        if user:
+            data['client_id'] = user.clientid
+        result = self._query('addkuberdockkubes', data).get('results')
+        if result['status'] == 'Unpaid':
+            result['redirect'] = self.get_autologin_url(user, 'viewinvoice.php?id={0}'.format(result['invoice_id']))
+
+        return result
+
     def add_order(self, info, data):
         package_id = data.get('package_id', None)
         price = data.get('price', None)

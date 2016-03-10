@@ -46,6 +46,18 @@ def order_product():
     return billing_system.order_product(data)
 
 
+@billing.route('/orderKubes', methods=['POST'], strict_slashes=False)
+@login_required_or_basic_or_token
+@maintenance_protected
+@KubeUtils.jsonwrap
+def order_kubes():
+    data = KubeUtils._get_params()
+    user = KubeUtils._get_current_user()
+    billing_system = _get_billing()
+
+    return billing_system.order_kubes(data, user=user)
+
+
 def _get_billing():
     billings = {
         'no billing': NoBilling,

@@ -362,10 +362,12 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                 Model.KubeType.noAvailableKubeTypes.notify();
                         }
                         App.getSystemSettingsCollection().done(function(collection){
-                            var billingType = collection.findWhere({name: 'billing_type'}).get('value');
+                            var billingType = collection.findWhere({name: 'billing_type'}).get('value'),
+                                payg = App.userPackage.get('count_type') === 'payg' ? true : false;
                             wizardLayout.steps.show(new Views.WizardCompleteSubView({
                                 model: model,
-                                hasBilling: billingType === 'No billing' ? false : true
+                                hasBilling: billingType === 'No billing' ? false : true,
+                                payg: payg
                             }));
                         });
                     });

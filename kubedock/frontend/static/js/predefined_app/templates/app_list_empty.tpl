@@ -1,1 +1,0 @@
-<td colspan="3" class="text-center disabled-color-text">You don't have any apps yet</td>

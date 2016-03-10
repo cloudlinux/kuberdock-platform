@@ -516,7 +516,9 @@ package_schema = {
     'price_ip': positive_float_schema,
     'price_pstorage': positive_float_schema,
     'price_over_traffic': positive_float_schema,
-    'is_default': {'type': 'boolean', 'coerce': extbool, 'required': False}
+    'is_default': {'type': 'boolean', 'coerce': extbool, 'required': False},
+    'count_type': {'type': 'string', 'maxlength': 5, 'required': False,
+           'allowed': ['payg', 'fixed']},
 }
 
 kube_schema = {

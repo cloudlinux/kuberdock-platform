@@ -1348,7 +1348,7 @@ class LocalStorage(PersistentStorage):
         user_to_pd_list = defaultdict(list)
         for pd in pd_list:
             user_to_pd_list[user_id_to_name[pd.owner_id]].append(pd.name)
-        return (True, json.dumps(user_to_pd_list))
+        return True, user_to_pd_list
 
     @classmethod
     def drive_can_be_deleted(cls, persistent_disk_id):
@@ -1442,8 +1442,10 @@ def check_node_is_locked(node_id):
         return (False, None)
     is_locked, reason = storage_cls.check_node_is_locked(node_id)
     if is_locked:
-        reason = "There are Persistent Disks on the node "\
-                 "{owner name: list of PD}:\n" + reason
+        pd_list = '\n'.join('{0}: {1}'.format(name, ', '.join(disks))
+                            for name, disks in reason.iteritems())
+        reason = ('users Persistent volumes located on the node \n'
+                  'owner name: list of persistent disks\n' + pd_list)
     return (is_locked, reason)
 
 

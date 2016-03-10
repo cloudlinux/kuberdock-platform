@@ -109,11 +109,25 @@ define(['app_data/app',
                     App.commandPod('start', that.model).always(that.render);
                 }
                 else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
-                    var podObj = encodeURIComponent(JSON.stringify(that.model.attributes)),
-                        userObj = encodeURIComponent(JSON.stringify(App.currentUser.attributes));
-                    window.location = billingUrl
-                        + (billingUrl.indexOf('?') === -1 ? '?' : '&')
-                        + 'pod=' + podObj + '&user=' + userObj;
+                    utils.preloader.show();
+                    $.ajax({
+                        type: 'POST',
+                        contentType: 'application/json; charset=utf-8',
+                        url: '/api/billing/order',
+                        data: JSON.stringify({
+                            pod: JSON.stringify(that.model.attributes)
+                        })
+                    }).always(
+                        utils.preloader.hide
+                    ).fail(
+                        utils.notifyWindow
+                    ).done(function(response){
+                        if(response.data.status == 'Paid') {
+                            App.navigate('pods');
+                        } else {
+                            window.location = response.data.redirect;
+                        }
+                    });
                 }
             });
         },

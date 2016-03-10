@@ -303,7 +303,6 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                                 Utils.notifyWindow('No updates found', 'success');
                         });
                 };
-
             });
         }
     });

@@ -11,7 +11,6 @@ billing = Blueprint('billing', __name__, url_prefix='/billing')
 
 @billing.route('/info', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
-@registered_host_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def get_billing_info():
@@ -23,7 +22,6 @@ def get_billing_info():
 
 @billing.route('/paymentmethods', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
-@registered_host_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def payment_methods():
@@ -33,7 +31,6 @@ def payment_methods():
 
 @billing.route('/order', methods=['POST'], strict_slashes=False)
 @login_required_or_basic_or_token
-@registered_host_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def order_product():

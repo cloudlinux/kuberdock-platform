@@ -49,6 +49,8 @@ class BillingCommon(object):
 
     def _make_url(self, res):
         if res is not None:
+            if not self.url.endswith('/') and not res.startswith('/'):
+                res = '/' + res
             return self.url + res
         return self.url
 

@@ -338,15 +338,29 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                 data.attributes['status'] = 'unpaid';
                                 podCollection.fullCollection.create(data, {
                                     wait: true,
-                                    complete: utils.preloader.hide,
                                     success: function(model){
-                                        var podObj = encodeURIComponent(JSON.stringify(data.attributes)),
-                                            userObj = encodeURIComponent(JSON.stringify(App.currentUser.attributes));
-                                        window.location = billingUrl
-                                            + (billingUrl.indexOf('?') === -1 ? '?' : '&')
-                                            + 'pod=' + podObj + '&user=' + userObj;
+                                        $.ajax({
+                                            type: 'POST',
+                                            contentType: 'application/json; charset=utf-8',
+                                            url: '/api/billing/order',
+                                            data: JSON.stringify({
+                                                pod: JSON.stringify(data.attributes)
+                                            })
+                                        }).always(
+                                            utils.preloader.hide
+                                        ).fail(
+                                            utils.notifyWindow
+                                        ).done(function(response){
+                                            if(response.data.status == 'Paid') {
+                                                App.navigate('pods');
+                                                that.showPods();
+                                            } else {
+                                                window.location = response.data.redirect;
+                                            }
+                                        });
                                     },
                                     error: function(model, response){
+                                        utils.preloader.hide;
                                         utils.notifyWindow(response);
                                     }
                                 });

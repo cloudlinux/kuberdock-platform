@@ -40,6 +40,10 @@ class Pod(BaseModelMixin, db.Model):
             [c.get('kubes', 1) for c in self.get_dbconfig('containers')]
         )
 
+    @property
+    def kubes_detailed(self):
+        return {c.get('name'): c.get('kubes', 1) for c in self.get_dbconfig('containers')}
+
     def get_limits(self, container=None):
         if container is None:
             kubes = self.kubes

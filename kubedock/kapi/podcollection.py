@@ -565,8 +565,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
-        if pod.status == POD_STATUSES.running or \
-           pod.status == POD_STATUSES.pending:
+        if pod.status == POD_STATUSES.unpaid:
+            raise APIError("Pod is unpaid, we can't run it")
+        if pod.status in (POD_STATUSES.running, POD_STATUSES.pending):
             raise APIError("Pod is not stopped, we can't run it")
         if pod.status == POD_STATUSES.succeeded or \
            pod.status == POD_STATUSES.failed:

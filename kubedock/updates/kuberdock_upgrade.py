@@ -6,8 +6,10 @@ import yum
 import sys
 import json
 import argparse
-import requests
+import itertools
 import subprocess
+import requests
+
 from datetime import datetime
 from importlib import import_module
 from fabric.api import env, output
@@ -401,8 +403,12 @@ def get_kuberdocks_toinstall(testing=False):
     except yum.Errors.YumBaseError:
         all_kuberdocks = []
 
-    l = sorted([i for i in all_kuberdocks if i > installed_kuberdock])
-    return [i.nvra for i in l]  # extra step for proper sorting
+    # Don't use i.envra right here because sorting will be incorrect
+    sorted_available = sorted([i for i in all_kuberdocks if i > installed_kuberdock])
+
+    # For each KD version leave only packages with latest release number
+    by_version = itertools.groupby(sorted_available, lambda x: x.version)
+    return [max(ver[1]).envra for ver in by_version]
 
 
 def parse_cmdline():

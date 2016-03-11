@@ -251,7 +251,7 @@
             } else if (typeof node == 'string'){
                 for (var uid in app.fields.byUID){
                     var field = app.fields.byUID[uid];
-                    node = node.replace(uid, function(){
+                    node = node.replace(new RegExp(uid, 'g'), function(){
                         used[field.name] = true;
                         return field.coerce(values[field.name]);
                     });

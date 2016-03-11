@@ -44,6 +44,8 @@ def get_nodes_collection():
         except (KeyError, ValueError):
             pass
 
+        divide_on_multipliers(resources)
+
         nodes_list.append({
             'id': node.id,
             'ip': node.ip,
@@ -245,6 +247,8 @@ def get_one_node(node_id):
         except (KeyError, ValueError):
             pass
 
+    divide_on_multipliers(resources)
+
     data = {
         'id': node.id,
         'ip': node.ip,
@@ -274,3 +278,14 @@ def _get_k8s_node_by_host(host):
 def get_all_nodes():
     r = requests.get(get_api_url('nodes', namespace=False))
     return r.json().get('items') or []
+
+
+def divide_on_multipliers(resources):
+    try:
+        if 'cpu' in resources:
+            resources['cpu'] = int(resources['cpu'])/8
+        if 'memory' in resources:
+            resources['memory'] = resources['memory']/4
+    except:
+        current_app.logger.exception("Can't divide on multipliers")
+

@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 0%{?dist}.rc.5.cloudlinux
+Release: 0%{?dist}.rc.5.2.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -185,6 +185,44 @@ fi
 %exclude /var/opt/kuberdock/dev-utils
 
 %changelog
+* Fri Mar 11 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 1.0-0.rc.5.2
+- AC-2591: Fix blank node logs
+- Fixed check for node deletion possibility
+- AC-2606: Fix kubedock.tests.test_utils.TestUtilsSetLimit
+- AC-2566: Add info text to Pd list page
+- AC-2537: made error message a bit more readable
+- AC-2618: fixed processing of empty terminated container states in event listener
+- AC-2467: whmcs autoauth
+  added SSO secret key in system_settings
+  added get_autologin_url method for BillingWHMCS
+- AC-2482: update to kubernetes 1.1.3-3
+  update to kubernetes 1.1.3-3, to apply resource multipliers
+- removed old stuff from kuberdock frontend.
+- AC-2508: When billing counting type is PAYG pay & start button is expected to be hidden.
+- AC-2507 Upgrade kubes without redirect to billing
+- AC-2387 Pay and start pod without redirect to billing
+- AC-2338: Implement possibility to change container number of kubes
+  - AC-2418: Added ability to change number of kubes for each container.
+- various bugfix&improvements
+  Main pod page, pod's monitoring and pod upgrade have separate URL's now.
+  Moved container logs from attribute to property.
+  Fixed "check for updates" button in container's ports page.
+  Fixed pdSizeLimit bug on the second step of pod creation:
+    if volume became "persistent" before systemSettings has been fetched, pdSize input would have no limit.
+  Improved error-handling for "stop" command.
+  Fixed/improved some tests (kapi.test_usage)
+  "restart" command:
+    Fixed api response (json-string in data).
+    Fixed doubled error message.
+    Added notification "Pod will be restarted soon".
+  upgrade pod resources for user with fixed pricing
+  PA: fix for case when one node have multiple occurrences of some variable
+- AC-2469: added ability to limit maximum number of kubes per container
+- AC-2545: Merge all updates to one.
+- Аdded backbone 404 page
+- AC-2538: forbid fix-price users to start or change pod directly
+- AC-2625: divide node capacity to fixed multipliers
+
 * Tue Mar 01 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.5
 - AC-2326 Docker images tags design:
   - AC-2432: Fix images tag style

@@ -1,7 +1,11 @@
 define(['app_data/app', 'marionette',
         'tpl!app_data/misc/templates/message_list.tpl',
-        'tpl!app_data/misc/templates/message_list_item.tpl'],
-       function(App, Marionette, messageListTpl, messageListItemTpl){
+        'tpl!app_data/misc/templates/message_list_item.tpl',
+        'tpl!app_data/misc/templates/page_layout.tpl',
+        'tpl!app_data/misc/templates/page_not_found.tpl'],
+       function(App, Marionette,
+                messageListTpl, messageListItemTpl,
+                pageLayoutTpl, pageNotFoundTpl){
 
     var views = {};
 
@@ -39,5 +43,18 @@ define(['app_data/app', 'marionette',
             this.ui.messageBody.parent().toggleClass('visible');
         }
     });
+    
+    views.PageLayout = Marionette.LayoutView.extend({
+        template: pageLayoutTpl,
+        regions: {
+            nav: '#nav',
+            main: '#main'
+        }
+    });
+    
+    views.PageNotFound = Marionette.ItemView.extend({
+        template: pageNotFoundTpl
+    });
+    
     return views;
 });

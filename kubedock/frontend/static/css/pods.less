@@ -877,100 +877,102 @@
             }
         }
     }
-    span, a {
-        height: 40px;
-        color: #4e5665;
-        font-size: 13px;
-        margin-right: 25px;
-        vertical-align: top;
-        display: inline-block;
-        text-transform: capitalize;
-        font-family: @regular;
-        &:hover, &:active, &:focus {
-            color: #3197ee;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        &:first-child{
+    .pod-controls > .no-padding {
+        span, a {
+            height: 40px;
             color: #4e5665;
-            position: relative;
-            padding-left: 37px;
-            margin-right: 20px;
-            &:hover{
+            font-size: 13px;
+            margin-right: 25px;
+            vertical-align: top;
+            display: inline-block;
+            text-transform: capitalize;
+            font-family: @regular;
+            &:hover, &:active, &:focus {
+                color: #3197ee;
+                cursor: pointer;
+                text-decoration: none;
+            }
+            &:first-child{
                 color: #4e5665;
-                cursor: default;
-            }
-            &:before{
-                .border-radius(50%);
-                left: 11px;
-                width: 13px;
-                content: '';
-                height: 13px;
-                bottom: 19px;
-                position: absolute;
-            }
-        }
-        &.running, &.OK{
-            &:before{
-                background-color: #97cd75;
-            }
-        }
-        &.stopped, &.troubles{
-            &:before{
-                background-color: #f5544d;
-            }
-        }
-        &.terminated, &.succeeded, &.failed{
-            &:before{
-                background-color: #c3c3c3;
-            }
-        }
-        &.pending, &.waiting{
-            &:before{
-                .border-radius(0);
-                left: 5px;
-                content: '';
-                width: 22px;
-                bottom: 16px;
-                height: 22px;
-                position: absolute;
-                background: url('../img/pending.gif') 0 0 no-repeat;
-            }
-        }
-        &.unpaid{
-            &:before{
-                .border-radius(0);
-                left: 13px;
-                width: 9px;
-                content: '';
-                margin: auto;
-                height: 17px;
-                position: absolute;
-                background: url('../img/unpaid-icon.png') 0 0 no-repeat;
-            }
-        }
-        &.rename_pod{
-            float: right;
-            margin-top: 5px;
-            margin-left: 22px;
-            position: relative;
-            margin-right: 10px;
-            line-height: 22px;
-            color: #030303;
-            border-bottom: 1px dashed #000000;
-            height: 22px;
-            &:before{
-                top: 0px;
-                left: -31px;
-                width: 23px;
-                height: 19px;
-                content: '';
-                position: absolute;
-                background: url('../img/pencil-big.png') 100% 2px no-repeat;
-            }
-            &:hover{
+                position: relative;
+                padding-left: 37px;
+                margin-right: 20px;
+                &:hover{
+                    color: #4e5665;
+                    cursor: default;
+                }
                 &:before{
-                    background-position: 100% bottom;
+                    .border-radius(50%);
+                    left: 11px;
+                    width: 13px;
+                    content: '';
+                    height: 13px;
+                    bottom: 19px;
+                    position: absolute;
+                }
+            }
+            &.running, &.OK{
+                &:before{
+                    background-color: #97cd75;
+                }
+            }
+            &.stopped, &.troubles{
+                &:before{
+                    background-color: #f5544d;
+                }
+            }
+            &.terminated, &.succeeded, &.failed{
+                &:before{
+                    background-color: #c3c3c3;
+                }
+            }
+            &.pending, &.waiting{
+                &:before{
+                    .border-radius(0);
+                    left: 5px;
+                    content: '';
+                    width: 22px;
+                    bottom: 16px;
+                    height: 22px;
+                    position: absolute;
+                    background: url('../img/pending.gif') 0 0 no-repeat;
+                }
+            }
+            &.unpaid{
+                &:before{
+                    .border-radius(0);
+                    left: 13px;
+                    width: 9px;
+                    content: '';
+                    margin: auto;
+                    height: 17px;
+                    position: absolute;
+                    background: url('../img/unpaid-icon.png') 0 0 no-repeat;
+                }
+            }
+            &.rename_pod{
+                float: right;
+                margin-top: 5px;
+                margin-left: 22px;
+                position: relative;
+                margin-right: 10px;
+                line-height: 22px;
+                color: #030303;
+                border-bottom: 1px dashed #000000;
+                height: 22px;
+                &:before{
+                    top: 0px;
+                    left: -31px;
+                    width: 23px;
+                    height: 19px;
+                    content: '';
+                    position: absolute;
+                    background: url('../img/pencil-big.png') 100% 2px no-repeat;
+                }
+                &:hover{
+                    &:before{
+                        background-position: 100% bottom;
+                    }
                 }
             }
         }

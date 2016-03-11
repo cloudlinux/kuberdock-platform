@@ -2,7 +2,7 @@
 <div class="login-view-mode-wrapper">
     <span class="glass pull-left">User View Mode</span>
     <span>Logged in as user: <b><%= backendData.current_username %></b></span>
-    <a href="/users/logoutA">Exit Mode</a>
+    <a href="/logoutA">Exit Mode</a>
 </div>
 <% } %>
 <div class="container">

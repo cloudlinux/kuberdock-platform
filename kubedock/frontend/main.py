@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, session, request
-from flask.ext.login import current_user, login_required
+from flask import Blueprint, render_template, session, request, flash, current_app, redirect
+from flask.ext.login import current_user, login_required, login_user, logout_user
 
 #from ..utils import JSONDefaultEncoder
 from ..billing import Package, ExtraTax, PackageKube, Kube
@@ -8,10 +8,11 @@ from ..settings import TEST, KUBERDOCK_INTERNAL_USER
 from ..utils import all_request_params
 
 from kubedock.static_pages.models import MenuItem
+from kubedock.users.models import User
 from kubedock.kapi.notifications import read_role_events
 from ..kapi import node_utils
 from .auth import login
-
+from kubedock.users.signals import user_logged_out_by_another
 
 main = Blueprint('main', __name__)
 
@@ -66,6 +67,26 @@ def return_nodes():
         #'userActivity': current_user.user_activity(),
         #'onlineUsersCollection': User.get_online_collection(),
     }
+
+
+@main.route('/logoutA/', methods=['GET'])
+@login_required
+# @check_permission('auth_by_another', 'users')
+def logout_another():
+    admin_user_id = session.pop('auth_by_another', None)
+    user_id = current_user.id
+    logout_user()
+    flash('You have been logged out')
+    if admin_user_id is None:
+        current_app.logger.warning('Session key not defined "auth_by_another"')
+        return redirect('/')
+    user = User.query.get(admin_user_id)
+    if user is None:
+        current_app.logger.warning(
+            'User with Id {0} does not exist'.format(admin_user_id))
+    login_user(user)
+    user_logged_out_by_another.send((user_id, admin_user_id))
+    return redirect('/')
 
 
 #@main.route('/test', methods=['GET'])

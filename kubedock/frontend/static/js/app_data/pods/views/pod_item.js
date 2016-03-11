@@ -520,7 +520,7 @@ define(['app_data/app',
                         } else {
                             window.location = xhr.data.redirect;
                         }
-                    });
+                    }).fail(function(){ col.add(modelOrigBackup, {merge: true}); });
                 } else {
                     App.commandPod('redeploy', that.model)
                         .fail(function(){ col.add(modelOrigBackup, {merge: true}); })

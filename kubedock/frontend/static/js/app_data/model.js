@@ -5,17 +5,8 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     var data = {},
         unwrapper = function(response) {
             var data = response.hasOwnProperty('data') ? response['data'] : response;
-            if (response.hasOwnProperty('status')) {
-                if(response.status == 'error' || response.status == 'warning') {
-                    var err = data;
-                    if(typeof data !== 'string') err = JSON.stringify(data);
-                    $.notify(err, {
-                        autoHideDelay: 5000,
-                        globalPosition: 'top center',
-                        className: response.status == 'error' ? 'danger' : 'warning'
-                    });
-                }
-            }
+            if(response.status === 'error' || response.status === 'warning')
+                utils.notifyWindow(response);
             return data;
         };
 

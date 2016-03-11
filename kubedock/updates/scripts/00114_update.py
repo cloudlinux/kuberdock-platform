@@ -40,9 +40,6 @@ def upgrade(upd, with_testing, *args, **kwargs):
     db.session.commit()
 
     #00111_update.py
-    res = helpers.install_package('kubernetes-master-1.1.3', with_testing)
-    if res:
-        raise helpers.UpgradeError('Failed to update kubernetes on master')
     helpers.restart_master_kubernetes()
 
     #00113_update.py
@@ -82,7 +79,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     run('systemctl restart rsyslog')
 
     #00111_update.py
-    res = helpers.remote_install('kubernetes-node-1.1.3', with_testing)
+    res = helpers.remote_install('kubernetes-node-1.1.3-3.el7.cloudlinux', with_testing)
     upd.print_log(res)
     if res.failed:
         raise helpers.UpgradeError('Failed to update kubernetes on node')

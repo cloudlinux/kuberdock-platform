@@ -232,8 +232,7 @@ def get_one_node(node_id):
         k8s_node = None
         if node.state != 'pending':
             raise APIError(
-                "Error. Node exists in db but don't exists in kubernetes",
-                status_code=404)
+                "Error. Node exists in db but don't exists in kubernetes")
 
     node_status, node_reason = get_status(node, k8s_node)
     install_log = get_install_log(node_status, node.hostname)
@@ -288,4 +287,3 @@ def divide_on_multipliers(resources):
             resources['memory'] = resources['memory']/4
     except:
         current_app.logger.exception("Can't divide on multipliers")
-

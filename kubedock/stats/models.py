@@ -18,4 +18,4 @@ class StatWrap5Min(db.Model):
     memory = db.Column(db.Float, nullable=False, default=0.0)
     rxb = db.Column(db.Float, nullable=False, default=0.0)
     txb = db.Column(db.Float, nullable=False, default=0.0)
-    fs_data = db.Column(db.String(255), nullable=True)
+    fs_data = db.Column(db.Text, nullable=True)

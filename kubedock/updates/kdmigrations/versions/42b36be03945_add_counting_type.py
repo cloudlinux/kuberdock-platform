@@ -15,7 +15,9 @@ import sqlalchemy as sa
 
 def upgrade():
     op.add_column('packages', sa.Column('count_type', sa.String, nullable=True))
+    op.alter_column('stat_wrap_5min', 'fs_data', type_=sa.Text)
 
 
 def downgrade():
     op.drop_column('packages', 'count_type')
+    op.alter_column('stat_wrap_5min', 'fs_data', type_=sa.String(255))

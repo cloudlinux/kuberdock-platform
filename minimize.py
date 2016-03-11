@@ -16,6 +16,7 @@ FILES = []
 def parse(login=False):
     css = re.compile(r"""<link rel="stylesheet(?:/less)?".*?filename=(?:"|')(?P<path>[^"']+)""")
     js = re.compile(r"""<script.*</script>""")
+    js_login = re.compile(r"""<script.+less.+</script>""")
     main = re.compile(r"""data-main=.*?filename=(?:"|')(?P<path>[^"']+)""")
     inside = False
     last_css = 0
@@ -24,6 +25,7 @@ def parse(login=False):
     js_indent = 0
     path = None
     item = LOGIN_PATH if login else INDEX_PATH
+    rejs = js_login if login else js
     with open(item) as f:
         for line in f:
             m = css.search(line)
@@ -39,7 +41,7 @@ def parse(login=False):
                     inside = False
                     last_css = len(CONTENTS)
             if not inside:
-                if js.search(line):
+                if rejs.search(line):
                     dm = main.search(line)
                     if dm:
                         path = dm.group('path')
@@ -61,7 +63,7 @@ def insert_css(pos, indent):
     css = fmt.format(' ' * indent, less)
     CONTENTS.insert(pos, css)
     return less
-    
+
 def insert_js(pos, indent, path):
     fmt = ("""\n{0}<script src="{{{{ url_for('static', """
            """filename='{1}') }}}}" type="text/javascript"></script>\n\n""")
@@ -138,7 +140,7 @@ if __name__ == '__main__':
     make_static_css(less)
     make_static_js(out)
     save()
-    
+
     #TODO: Rewrite the whole logic and remove the following addition
     CONTENTS = []
     FILES = []

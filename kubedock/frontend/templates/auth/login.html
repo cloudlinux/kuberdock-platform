@@ -70,13 +70,13 @@
     <script src="{{ url_for('static', filename='js/lib/jquery.js') }}" type="text/javascript"></script>
     <script src="{{ url_for('static', filename='js/lib/bootstrap.js') }}" type="text/javascript"></script>
     <script src="{{ url_for('static', filename='js/lib/notify.min.js') }}" type="text/javascript"></script>
-        <script type="text/javascript">
-            function autoClosingMessage(selector, delay) {
-                var message = $(selector).alert();
-                window.setTimeout(function() { message.slideUp() }, delay);
-            }
-            autoClosingMessage(".notifyjs-corner", 3000);
-        </script>
+    <script type="text/javascript">
+        function autoClosingMessage(selector, delay) {
+            var message = $(selector).alert();
+            window.setTimeout(function() { message.slideUp() }, delay);
+        }
+        autoClosingMessage(".notifyjs-corner", 3000);
+    </script>
     {% endblock %}
 </body>
 </html>

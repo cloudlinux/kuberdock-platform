@@ -31,7 +31,7 @@ def tearDownModule():
 @mock.patch('kubedock.listeners.ConnectionPool.get_connection')
 @mock.patch('kubedock.listeners.tasks.check_if_node_down.delay')
 @mock.patch('kubedock.listeners.get_node_state')
-class TestNodeEventListeners(unittest.TestCase):
+class TestNodeEventListeners(DBTestCase):
     """process_nodes_event routine tests."""
 
     _data = {

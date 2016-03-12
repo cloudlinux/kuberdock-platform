@@ -118,8 +118,9 @@ define(['moment-timezone', 'notify'], function(moment){
                 $.notify({message: msg, count: 1}, {autoHide: false,
                                                     clickToHide: false,
                                                     className: type});
-                // $.notify lib does not return element, so...
-                utils.notifyList[msg] = $('.notifyjs-bootstrap-error:contains("'+msg+'")')[0];
+                // $.notify lib doesn't return the element, but it's always
+                // the first one (prepend).
+                utils.notifyList[msg] = $('.notifyjs-bootstrap-error')[0];
                 utils.notifyList[msg].count = 1;
                 utils.notifyList[msg].msg = msg;
             } else {  // old message, again (show and increase counter)

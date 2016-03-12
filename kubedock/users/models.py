@@ -58,6 +58,10 @@ class User(BaseModelMixin, UserMixin, db.Model):
         def not_deleted(cls):
             return cls.query.filter_by(deleted=False)
 
+    @property
+    def fix_price(self):
+        return self.package.count_type == 'fixed'
+
     @classmethod
     def get_internal(cls):
         return cls.get(0)

@@ -17,6 +17,7 @@ from ..kd_celery import celery
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
+from ..system_settings.models import SystemSettings
 from ..utils import APIError, POD_STATUSES, atomic, update_dict
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
@@ -77,6 +78,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         params['namespace'] = params['id'] = str(uuid4())
         params['owner'] = self.owner
+
+        if (SystemSettings.get_by_name('billing_type').lower() != 'no billing' and
+                self.owner.fix_price):
+            # All pods created by fixed-price users initially must have status
+            # "unpaid". Status may be changed later (using command "set").
+            params['status'] = POD_STATUSES.unpaid
+
         pod = Pod.create(params)
         pod.compose_persistent(self.owner)
         self._make_namespace(pod.namespace)

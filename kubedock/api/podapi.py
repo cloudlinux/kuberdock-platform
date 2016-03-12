@@ -48,7 +48,7 @@ class PodsAPI(KubeUtils, MethodView):
             user = db_pod.owner
             privileged = True  # admin interacts with user's pod
         if (SystemSettings.get_by_name('billing_type').lower() != 'no billing' and
-                user.package.count_type == 'fixed' and not privileged):
+                user.fix_price and not privileged):
             if params.get('command') == 'set':
                 # fix-price user is not allowed to change paid/unpaid status
                 # and start pod directly, only through billing system

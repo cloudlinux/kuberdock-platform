@@ -295,7 +295,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                             wait: true,
                             data: {searchkey: query, url: registryURL},
                             success: function(collection, response, opts){
-                                collection.each(function(m){imageCollection.add(m)});
+                                collection.each(function(m){ imageCollection.add(m); });
                                 newImageView({
                                     collection: imageCollection,
                                     query: query
@@ -308,13 +308,12 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         });
                     });
                     that.listenTo(wizardLayout, 'image:getnextpage', function(currentCollection, query){
-                        var that = this,
-                            windowTopPosition = window.pageYOffset;
+                        var windowTopPosition = window.pageYOffset;
                         imageTempCollection.getNextPage({
                             wait: true,
                             data: {searchkey: query, url: registryURL},
                             success: function(collection, response, opts){
-                                collection.each(function(m){currentCollection.add(m)});
+                                collection.each(function(m){ currentCollection.add(m); });
                                 newImageView({
                                     collection: currentCollection,
                                     query: query
@@ -375,7 +374,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                             var billingUrl = utils.getBillingUrl(collection);
                             if (billingUrl) {
                                 utils.preloader.show();
-                                data.attributes['status'] = 'unpaid';
                                 podCollection.fullCollection.create(data, {
                                     wait: true,
                                     success: function(model){
@@ -1115,7 +1113,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 });
             });
         },
-        
+
         pageNotFound: function(){
             var that = this;
             require(['app_data/misc/views', 'app_data/menu/views'], function(Views, Menu){

@@ -58,8 +58,7 @@ def api_get_container_logs(pod_id, container_id):
             logs_text.extend((line['@timestamp'], line['log'].strip('\n'))
                              for line in serie['hits'][::-1])
             if serie['end']:
-                msg = ('Pod was stopped' if serie['exit_code'] == 2 else
-                       'Exited successfully' if serie['exit_code'] == 0 else
+                msg = ('Exited successfully' if serie['exit_code'] in (0, -2) else
                        'Falied')
                 if serie['reason']:
                     msg = '{0} ({1})'.format(msg, serie['reason'])

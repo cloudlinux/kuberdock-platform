@@ -1,0 +1,197 @@
+#!/usr/bin/env python
+
+
+import argparse
+import gzip
+import os
+import pwd
+import shutil
+import sys
+import tempfile
+
+from collections import namedtuple
+from operator import attrgetter
+from PIL import Image
+
+
+COMMON_PREFIX = '/var/opt/kuberdock/kubedock/frontend'
+INDEX_PATH = os.path.join(COMMON_PREFIX, 'templates/index.html')
+LOGINPAGE_PATH = os.path.join(COMMON_PREFIX, 'templates/auth/login.html')
+PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/js/app_data/prepared.js')
+GZIP_PREPARED_PATH = os.path.join(COMMON_PREFIX,
+                                  'static/js/app_data/prepared.js.gz')
+LOGO_FILE_PATH = os.path.join(COMMON_PREFIX,
+                              'static/js/app_data/menu/templates/nav_list.tpl')
+STYLES_PATH = os.path.join(COMMON_PREFIX, 'static/css')
+IMG_PATH = os.path.join(COMMON_PREFIX, 'static/img')
+WEB_SERVER_USER = 'nginx'
+LOGO_SIZE = (162, 48)
+LOGIN_LOGO_SIZE = (227, 67)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser('KD customizer')
+    parser.add_argument('-l', '--logo', help='Logo image to subsitute with (162x48 px)')
+    parser.add_argument('-L', '--login-logo', help='Login logo image to subsitute with (227x67 px)')
+    parser.add_argument('-s', '--styles', help='Styles file to customize')
+    parser.add_argument('-S', '--login-styles', help='Styles file to customize login page')
+    return parser.parse_args()
+
+
+def add_style(styles, login=False):
+    fmt = ("""{0}<link rel="stylesheet" type="text/css" """
+           """href="{{{{ url_for('static', filename='css/{1}') }}}}">\n""")
+    contents = []
+    target = LOGINPAGE_PATH if login else INDEX_PATH
+    with open(target) as f:
+        for l in f:
+            if '</head>' in l:
+                pos = l.find('<')
+                s = fmt.format(' ' * (pos+4), styles)
+                contents.append(s)
+            contents.append(l)
+    return contents
+
+
+def change_login_logo(logo):
+    fmt = ("""{0}<style type="text/css">.login-page .container .logo{{"""
+           """background: url({{{{ url_for('static', filename='img/{1}') }}}})"""
+           """center center no-repeat !important;}}</style>\n""")
+    contents = []
+    with open(LOGINPAGE_PATH) as f:
+        for l in f:
+            if '</head>' in l:
+                pos = l.find('<')
+                s = fmt.format(' ' * (pos+4), logo)
+                contents.append(s)
+            contents.append(l)
+    return contents
+
+
+def change_logo(logo, target, gz=False):
+    if not os.path.exists(target):
+        return
+    contents = []
+    op = gzip.open if gz else open
+    with op(target) as f:
+        for l in f:
+            contents.append(l.replace('/logo.png', '/'+logo))
+    return contents
+
+
+def process_logo(logo, user):
+    """
+    Copies provided logo file to a img folder, chowns it and modifies contens
+    to use supplied file
+    @param logo: string -> file path
+    @param user: namedtuple object -> (user.uid, user.gid) of the web-server user
+    """
+    if logo is None:
+        return
+    check_filepath(logo)
+    check_image_size(logo, LOGO_SIZE)
+    fullpath = os.path.join(IMG_PATH, os.path.basename(logo))
+    shutil.copyfile(logo, fullpath)
+
+    save(change_logo(os.path.basename(logo), PREPARED_PATH), PREPARED_PATH)
+    save(change_logo(os.path.basename(logo), LOGO_FILE_PATH), LOGO_FILE_PATH)
+    save(change_logo(os.path.basename(logo), GZIP_PREPARED_PATH, gz=True),
+         GZIP_PREPARED_PATH, gz=True)
+
+    for path in fullpath, PREPARED_PATH, LOGO_FILE_PATH, GZIP_PREPARED_PATH:
+        os.chown(path, user.uid, user.gid)
+
+
+def process_login_logo(logo, user):
+    """
+    Copies provided logo file to a img folder, chowns it and modifies contens
+    to use supplied file
+    @param logo: string -> file path
+    @param user: namedtuple object -> (user.uid, user.gid) of the web-server user
+    """
+    if logo is None:
+        return
+    check_filepath(logo)
+    check_image_size(logo, LOGIN_LOGO_SIZE)
+    fullpath = os.path.join(IMG_PATH, os.path.basename(logo))
+    shutil.copyfile(logo, fullpath)
+
+    save(change_login_logo(os.path.basename(logo)), LOGINPAGE_PATH)
+
+    for path in fullpath, LOGINPAGE_PATH:
+        os.chown(path, user.uid, user.gid)
+
+
+def process_styles(styles, user, login=False):
+    """
+    Copies provided styles file to a styles folder, chowns it and modifies contens
+    to use supplied file
+    @param styles: string -> file path
+    @param user: namedtuple object -> (user.uid, user.gid) of the web-server user
+    """
+    if styles is None:
+        return
+    check_filepath(styles)
+    fullpath = os.path.join(STYLES_PATH, os.path.basename(styles))
+    shutil.copyfile(styles, fullpath)
+    target = LOGINPAGE_PATH if login else INDEX_PATH
+    save(add_style(os.path.basename(styles), login), target)
+    for path in fullpath, target:
+        os.chown(path, user.uid, user.gid)
+
+
+def save(contents, target, gz=False):
+    if contents is None:
+        return
+    fh, path = tempfile.mkstemp(dir=os.path.dirname(target))
+    with os.fdopen(fh, 'w') as f:
+        for l in contents:
+            f.write(l)
+    if gz:
+        path0 = path
+        path  = path+'.gz'
+        with open(path0, 'rb') as i, gzip.open(path, 'wb') as o:
+            shutil.copyfileobj(i, o)
+        os.unlink(path0)
+    os.rename(path, target)
+    if os.path.exists(path):
+        os.unlink(path)
+
+
+def check_euid():
+    if os.geteuid() != 0:
+        raise SystemExit("Superuser privileges expected!")
+
+
+def check_filepath(path):
+    if not os.path.exists(path):
+        raise SystemExit('File not found: {0}'.format(path,))
+
+
+def check_image_size(path, size):
+    im = Image.open(path)
+    if im.size != size:
+        raise SystemExit('{0}x{1} pixels are expected for image'.format(*size))
+
+
+def get_server_user():
+    try:
+        data = pwd.getpwnam(WEB_SERVER_USER)
+        User = namedtuple('User', 'uid gid')
+        return User._make((data.pw_uid, data.pw_gid))
+    except KeyError:
+        raise SystemExit('No such user: {0}'.format(WEB_SERVER_USER,))
+
+
+if __name__ == '__main__':
+    check_euid()
+    user = get_server_user()
+    args = parse_args()
+    if not any(attrgetter('logo', 'login_logo', 'styles', 'login_styles')(args)):
+        print "At least one argument is expected. Use --help to learn about options"
+        sys.exit(0)
+    process_logo(args.logo, user)
+    process_login_logo(args.login_logo, user)
+    process_styles(args.styles, user)
+    process_styles(args.login_styles, user, login=True)
+

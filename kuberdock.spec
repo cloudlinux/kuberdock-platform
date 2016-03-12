@@ -105,6 +105,7 @@ ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_
 %{__install} -D -m 0644 conf/shared-etcd.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-etcd.conf
 %{__install} -D -m 0644 conf/kuberdock.conf %{buildroot}%{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %{__install} -D -m 0644 conf/sudoers-nginx.conf %{buildroot}%{_sysconfdir}/sudoers.d/nginx
+%{__install} -D -m 755 kdcustomize %{buildroot}%{_bindir}/kdcustomize
 
 
 %clean
@@ -222,6 +223,7 @@ fi
 - Аdded backbone 404 page
 - AC-2538: forbid fix-price users to start or change pod directly
 - AC-2625: divide node capacity to fixed multipliers
+- AC-2459: script to customize styles/logos
 
 * Tue Mar 01 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.5
 - AC-2326 Docker images tags design:

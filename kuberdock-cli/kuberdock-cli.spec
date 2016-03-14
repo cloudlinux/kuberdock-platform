@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 1.0
-Release: 0%{?dist}.rc.2.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,9 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Mon Mar 14 2016 Igor Savenko <bliss@cloudlinux.com> 1.0-1
+- raised tag
+
 * Wed Feb 17 2016 Igor Savenko <bliss@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 1.0-0.rc.2
 - fixed kuberdock-cli test
 - AC-2159: Bundle of KCLI-related issues fixed

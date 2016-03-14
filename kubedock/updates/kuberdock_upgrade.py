@@ -57,7 +57,7 @@ SUCCESSFUL_UPDATE_MESSAGE = """
 ********************
 Kuberdock has been restarted.
 Maintenance mode is now disabled.
-Before update to next available version we STRONGLY RECOMMEND to check that \
+Before upgrade to next available version we STRONGLY RECOMMEND to check that \
 All nodes are healthy and finished reboot if they were rebooted. Also check \
 that kuberdock-internal pods are in "Running" state.
 ********************
@@ -567,20 +567,11 @@ if __name__ == '__main__':
             except OSError:
                 pass
 
-            # TODO Called again here just for compatibility (transition time)
-            # remove after beta5 + 1
-            if pre_upgrade():
-                post_upgrade(for_successful=False)
-
             err = do_cycle_updates(args.use_testing)
             post_upgrade(for_successful=not err)
             if not args.local:
                 print 'Restarting upgrade script to check next new package...'
-                # TODO Remove this workaround after few releases
-                if os.path.exists(__file__):
-                    os.execv(__file__, sys.argv)
-                else:
-                    os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade'), sys.argv)
+                os.execv(__file__, sys.argv)
             sys.exit(0)     # if local install case
 
         if args.command == CLI_COMMANDS.resume_upgrade:
@@ -632,13 +623,7 @@ if __name__ == '__main__':
                     # Now, after successfully upgraded master package:
                     open(settings.UPDATES_RELOAD_LOCK_FILE, 'a').close()
                     print 'Restarting this script from new package...'
-                    # TODO Remove this workaround after few releases
-                    if os.path.exists(__file__):
-                        os.execv(__file__,
-                                 sys.argv + [CLI_COMMANDS.after_reload])
-                    else:
-                        os.execv(__file__.replace('kuberdock_upgrade.py', 'kuberdock-upgrade'),
-                                 sys.argv + [CLI_COMMANDS.after_reload])
+                    os.execv(__file__, sys.argv + [CLI_COMMANDS.after_reload])
                 else:
                     print 'Stop upgrading.'
                     sys.exit(0)

@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 0%{?dist}.rc.5.3.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,18 +187,7 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
-* Sat Mar 12 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 1.0-0.rc.5.3
-- AC-2459: script to customize styles/logos
-- AC-2579 Use only packages with latest release during KD upgrade
-- Fixed pay and start link on pod page
-- all pods created by fixed-price users initially must have status "unpaid"
-- AC-2548: added field with linked pods to persistent volumes selection
-- fixed grouping of notifications
-- fixed syles conflict on pod page
-- fixed stylen on license page; fixed response status code for nodes
-- fixed kubernetes version
-
-* Fri Mar 11 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 1.0-0.rc.5.2
+* Mon Mar 14 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 1.0-1
 - AC-2591: Fix blank node logs
 - Fixed check for node deletion possibility
 - AC-2606: Fix kubedock.tests.test_utils.TestUtilsSetLimit
@@ -236,6 +225,16 @@ fi
 - AC-2538: forbid fix-price users to start or change pod directly
 - AC-2625: divide node capacity to fixed multipliers
 - AC-2459: script to customize styles/logos
+- AC-2459: script to customize styles/logos
+- AC-2579 Use only packages with latest release during KD upgrade
+- Fixed pay and start link on pod page
+- all pods created by fixed-price users initially must have status "unpaid"
+- AC-2548: added field with linked pods to persistent volumes selection
+- fixed grouping of notifications
+- fixed syles conflict on pod page
+- fixed stylen on license page; fixed response status code for nodes
+- fixed kubernetes version
+- export logs: fix "Failure (Pod was stopped)" -> "Exited successfully (...)"
 
 * Tue Mar 01 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-0.rc.5
 - AC-2326 Docker images tags design:

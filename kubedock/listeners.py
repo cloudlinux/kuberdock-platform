@@ -256,11 +256,14 @@ def process_events_event(data, app):
                 return
 
             message = event['message']
+            not_enough_resources_keywords = [
+                'PodFitsResources', 'PodExceedsFreeCPU', 'PodExceedsFreeMemory'
+            ]
 
-            if 'PodFitsResources' in message:
+            node = pod.get_dbconfig('node')
+            if any(item in message for item in not_enough_resources_keywords):
                 reason = 'There are no enough resources for the pod'
             elif 'MatchNodeSelector' in message:
-                node = pod.get_dbconfig('node')
                 if node is None:
                     reason = 'There are no suitable nodes for the pod'
                 else:

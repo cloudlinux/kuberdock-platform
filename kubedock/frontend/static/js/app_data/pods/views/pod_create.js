@@ -445,7 +445,7 @@ define(['app_data/app', 'app_data/model',
                 updateIsAvailable: this.model.updateIsAvailable,
                 kube_type: this.pod.getKubeType(),
                 restart_policy: this.pod.get('restartPolicy'),
-                podName: this.pod.get('name'),
+                podName: this.pod.get('name')
             };
         },
 
@@ -495,6 +495,7 @@ define(['app_data/app', 'app_data/model',
             /* mountPath and persistent disk check */
             var volumes = this.pod.get('volumes'),
                 vm = this.model.get('volumeMounts');
+
             for (var i = 0; i < vm.length; i++) {
                 var volumeMount = vm.at(i),
                     name = volumeMount.get('name'),
@@ -518,6 +519,9 @@ define(['app_data/app', 'app_data/model',
                     if (!pd.pdSize || !pd.pdName) {
                         utils.notifyWindow('Persistent options must be set!');
                         return;
+                    } else if (pd.pdSize > that.pod.pdSizeLimit){
+                        utils.notifyWindow('A persistent disk size isn\'t expected to exceed ' + that.pod.pdSizeLimit + ' GB');
+                        return
                     }
                 }
             }
@@ -682,6 +686,7 @@ define(['app_data/app', 'app_data/model',
             'input @ui.pdSelectSearch'      : 'searchPD',
             'hidden.bs.select @ui.pdSelect' : 'selectPD',
             'change @ui.pdSize'             : 'changeSize',
+            'keyup @ui.pdSize'              : 'changeSize',
             'click @ui.persistent'          : 'togglePersistent',
             'click @ui.removeVolume'        : 'removeVolumeEntry',
         },
@@ -767,10 +772,11 @@ define(['app_data/app', 'app_data/model',
 
         changeSize: function(evt){
             evt.stopPropagation();
-            var size = parseInt(evt.target.value);
+            var size = parseInt(evt.target.value.replace(/D/g, ''));
+                this.ui.pdSize.val(size);
+
             if (!size || isNaN(size)){
                 this.ui.pdSize.addClass('error');
-                this.showError(this.ui.pdSize);
             } else if (size < 1 || this.pdSizeLimit !== undefined && size > this.pdSizeLimit) {
                 this.ui.pdSize.addClass('error');
                 utils.notifyWindow('Max size of persistent volume should be '

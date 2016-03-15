@@ -396,15 +396,15 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         templateHelpers: function(){
-            var roles = _.filter(this.roles, function(r){return r !== 'HostingPanel'});
+            var roles = _.filter(this.roles, function(r){ return r !== 'HostingPanel'; }),
                 packages = this.packages,
                 timezones = this.timezones;
             return {
                 roles: roles,
                 packages: packages,
                 defaultRole: 'User',
-                timezones: timezones
-            }
+                timezones: timezones,
+            };
         },
 
         ui: {
@@ -439,7 +439,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         onRender: function(){
-            var that = this;
             this.ui.timezone.val('UTC (+0000)');
             this.ui.selectpicker.selectpicker();
         },
@@ -464,8 +463,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 that.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
                 that.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
 
-                existsEmail = _.any(users, function(user){ if (user.get('email') == that.ui.email.val()) return true });
-                existsUsername = _.any(users, function(user){ if (user.get('username') == that.ui.username.val()) return true });
+                existsEmail = _.any(users, function(user){ if (user.get('email') == that.ui.email.val()) return true; });
+                existsUsername = _.any(users, function(user){ if (user.get('username') == that.ui.username.val()) return true; });
 
                 switch (true) {
                 /* username */
@@ -739,12 +738,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
     views.UsersEditView = views.UserCreateView.extend({     // inherit
         onRender: function(){
-            var that = this;
             this.ui.first_name.val(this.model.get('first_name'));
             this.ui.last_name.val(this.model.get('last_name'));
             this.ui.middle_initials.val(this.model.get('middle_initials'));
             this.ui.email.val(this.model.get('email'));
-            this.ui.timezone.val(this.model.get('timezone'))
+            this.ui.timezone.val(this.model.get('timezone'));
             this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
             this.ui.user_suspend.prop('checked', (this.model.get('suspended') == true));
             this.ui.role_select.val(this.model.get('rolename'));
@@ -780,7 +778,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
             };
 
-            equal = _.isEqual(oldData, newData)
+            equal = _.isEqual(oldData, newData);
             equal === false ? this.ui.user_add_btn.show() : this.ui.user_add_btn.hide();
         },
 
@@ -803,7 +801,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 that.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
 
                 if (that.model.get('email') !== that.ui.email.val()){
-                    existsEmail = _.any(users, function(user){ if (user.get('email') == that.ui.email.val()) return true });
+                    existsEmail = _.any(users, function(user){
+                        if (user.get('email') == that.ui.email.val()) return true;
+                    });
                 }
 
                 var data = {
@@ -838,11 +838,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* password */
-                case that.ui.password.val() || (that.ui.password.val() !== that.ui.password_again.val()):
+                case that.ui.password.val() !== that.ui.password_again.val():
                     utils.scrollTo(that.ui.password);
                     that.ui.password.addClass('error');
                     that.ui.password_again.addClass('error');
-                    utils.notifyWindow("Empty password or don't match");
+                    utils.notifyWindow("Passwords don't match");
                     break;
                 case that.ui.password.val().length >= 26:
                     utils.scrollTo(that.ui.password);

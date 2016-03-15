@@ -296,7 +296,7 @@ define(['app_data/app', 'marionette',
 
     /*eslint-enable */
 
-    /* Profile edit volumes Views */
+    /* Profile edit */
     views.ProfileEditView = Backbone.Marionette.ItemView.extend({
         template: userEditTpl,
 
@@ -436,7 +436,7 @@ define(['app_data/app', 'marionette',
             if (data.email == '') {
                 utils.scrollTo(this.ui.email);
                 this.ui.email.addClass('error');
-                utils.notifyWindow("empty E-mail");
+                utils.notifyWindow("Empty E-mail");
                 return;
             } else if (!pattern.test(data.email)) {
                 utils.scrollTo(this.ui.email);
@@ -448,7 +448,7 @@ define(['app_data/app', 'marionette',
                 utils.scrollTo(this.ui.password);
                 this.ui.password.addClass('error');
                 this.ui.password_again.addClass('error');
-                utils.notifyWindow("passwords don't match");
+                utils.notifyWindow("Passwords don't match");
                 return;
             }
             if (this.ui.password.val())  // update only if specified

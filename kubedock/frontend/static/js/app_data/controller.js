@@ -65,7 +65,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 }
                 App.getPodCollection().done(function(podCollection){
                     var model = podCollection.fullCollection.get(id);
-                    if (model === undefined){
+                    if (model === undefined || model.get('status') === 'deleting'){
                         deferred.rejectWith(that, []);
                         return;
                     }

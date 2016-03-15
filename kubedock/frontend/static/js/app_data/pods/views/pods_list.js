@@ -54,7 +54,14 @@ define(['app_data/app',
         template    : podListItemTpl,
         tagName     : 'tr',
         className   : function(){
-            return this.model.is_checked ? 'pod-item checked' : 'pod-item';
+            return 'pod-item ' + this.model.get('status')
+                 + (this.model.is_checked ? ' checked' : '');
+        },
+        attributes: function(){
+            var attrs = {};
+            if (this.model.get('status') === 'deleting')
+                attrs['title'] = 'Pod will be deleted soon.';
+            return attrs;
         },
 
         initialize: function(options){
@@ -164,9 +171,8 @@ define(['app_data/app',
         },
 
         toggleItem: function(evt){
-            var tgt = $(evt.target);
             evt.stopPropagation();
-            tgt.prop('checked', !tgt.prop('checked'));
+            this.model.is_checked = !this.model.is_checked;
             this.trigger('item:clicked');
         }
     });
@@ -199,23 +205,16 @@ define(['app_data/app',
             utils.preloader.hide();
         },
 
-        filter: function(child){
-            return child.get('status') !== 'deleting';
-        },
-
         templateHelpers: function(){
             return {
-                allChecked: this.collection.fullCollection.allChecked ? true : false,
-                checked: this.collection.fullCollection.checkedNumber,
+                allChecked: this.collection.allChecked(),
+                checked: this.collection.checkedItems().length,
                 isCollection : this.collection.fullCollection.length < 1 ? 'disabled' : '',
                 sortingType : this.collection.orderAsDict(),
             };
         },
 
         initialize: function(options){
-            if (!this.collection.fullCollection.hasOwnProperty('checkedNumber')) {
-                this.collection.fullCollection.checkedNumber = 0;
-            }
             this.counter = 1;
             this.collection.order = options.order || [
                 // sort by status (asc), but if statuses are equal,
@@ -237,15 +236,12 @@ define(['app_data/app',
         toggleCheck: function(evt){
             evt.stopPropagation();
             if (this.collection.fullCollection.length > 0){
-                if (this.collection.fullCollection.allChecked){
-                    this.collection.fullCollection.allChecked = false;
-                    this.collection.fullCollection.checkedNumber = 0;
-                    this.collection.fullCollection.each(function(m){m.is_checked = false;});
-                }
-                else {
-                    this.collection.fullCollection.allChecked = true;
-                    this.collection.fullCollection.checkedNumber = this.collection.fullCollection.length;
-                    this.collection.fullCollection.each(function(m){m.is_checked = true;});
+                if (this.collection.allChecked()){
+                    this.collection.fullCollection.each(function(m){ m.is_checked = false; });
+                } else {
+                    this.collection.fullCollection.each(function(m){
+                        m.is_checked = m.get('status') !== 'deleting';
+                    });
                 }
             }
             this.render();
@@ -258,23 +254,14 @@ define(['app_data/app',
         },
 
         childEvents: {
-            'item:clicked': function(view){
-                var model = this.collection.at(view.index);
-                model.is_checked = model.is_checked
-                    ? (this.collection.fullCollection.checkedNumber--, false)
-                    : (this.collection.fullCollection.checkedNumber++, true);
-                this.collection.fullCollection.checkedNumber == this.collection.length
-                    ? this.collection.fullCollection.allChecked = true
-                    : this.collection.fullCollection.allChecked = false;
-                this.render();
-            }
+            'item:clicked': 'render',
         },
 
         removePods: function(evt){
             evt.stopPropagation();
             var body,
                 that = this,
-                items = that.collection.fullCollection.filter(function(i){return i.is_checked;});
+                items = that.collection.checkedItems();
             if (items.length > 1){
                 body = 'Are you sure you want to delete selected pods?';
             } else {
@@ -295,8 +282,6 @@ define(['app_data/app',
                         }, this);
                         $.when.apply($, deferreds).always(utils.preloader.hide);
 
-                        that.collection.fullCollection.checkedNumber = 0;
-                        that.collection.fullCollection.allChecked = false;
                         that.collection.fullCollection.each(
                             function(model){ model.is_checked = false; });
                         that.render();
@@ -317,17 +302,15 @@ define(['app_data/app',
         },
 
         sendCommand: function(command){
-            var items = this.collection.fullCollection.filter(function(i){return i.is_checked;});
+            var items = this.collection.checkedItems();
 
             utils.preloader.show();
             var deferreds = _.map(items, function(item) {
                 item.is_checked = false;
-                this.collection.fullCollection.checkedNumber--;
                 return item.command(command).fail(utils.notifyWindow);
             }, this);
             $.when.apply($, deferreds).always(utils.preloader.hide);
 
-            this.collection.fullCollection.allChecked = false;
             this.render();
         },
 

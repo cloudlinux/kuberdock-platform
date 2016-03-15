@@ -343,6 +343,12 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 return i.get('name').indexOf(val) === 0;
             });
         },
+        allChecked: function(){
+            var checkable = this.fullCollection.filter(
+                function(m){ return m.get('status') !== 'deleting'; });
+            return checkable.length && _.all(_.pluck(checkable, 'is_checked'));
+        },
+        checkedItems: function(){ return this.fullCollection.filter(function(m){ return m.is_checked; }); },
     });
 
     data.ImageCollection = Backbone.Collection.extend({

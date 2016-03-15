@@ -125,19 +125,29 @@ EOF
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 
 
-yum_wrapper -y install kuberdock-cli flannel kubernetes-proxy at
-
-
-sed -i "s/^FLANNEL_ETCD=.*$/FLANNEL_ETCD=\"http:\/\/$KD_HOST:8123\"/" $FLANNEL_CONFIG
-sed -i "s/^FLANNEL_ETCD_KEY=.*$/FLANNEL_ETCD_KEY=\"\/kuberdock\/network\"/" $FLANNEL_CONFIG
-
-sed -i "s/^KUBE_MASTER=.*$/KUBE_MASTER=\"--master=http:\/\/$KD_HOST:8118\"/" $PROXY_CONFIG
+yum_wrapper -y install kuberdock-cli
 
 sed -i -e "/^url/ {s|[ \t]*\$||}" -e "/^url/ {s|[^/]\+$|$KD_HOST|}" $GLOBAL_KCLI_CONFIG
 
 cp $GLOBAL_KCLI_CONFIG $ROOT_KCLI_CONFIG
 sed -i -e "/^user/ {s|[ \t]*\$||}" -e "/^user/ {s|[^= \t]\+\$|$KD_USER|}" $ROOT_KCLI_CONFIG
 sed -i -e "/^password/ {s|[ \t]*\$||}" -e "/^password/ {s|[^= \t]\+\$|$KD_PASSWORD|}" $ROOT_KCLI_CONFIG
+
+echo "Registering host in KuberDock..."
+kcli kubectl register > /dev/null 2>&1
+if [ $? -ne 0 ];then
+    echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."
+    exit 1
+else
+    echo "Done"
+fi
+
+yum_wrapper -y install flannel kubernetes-proxy at
+
+sed -i "s/^FLANNEL_ETCD=.*$/FLANNEL_ETCD=\"http:\/\/$KD_HOST:8123\"/" $FLANNEL_CONFIG
+sed -i "s/^FLANNEL_ETCD_KEY=.*$/FLANNEL_ETCD_KEY=\"\/kuberdock\/network\"/" $FLANNEL_CONFIG
+
+sed -i "s/^KUBE_MASTER=.*$/KUBE_MASTER=\"--master=http:\/\/$KD_HOST:8118\"/" $PROXY_CONFIG
 
 VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
 if [ "$VER" == "7" ];then
@@ -155,3 +165,4 @@ else
     do_and_log chkconfig atd on
     do_and_log service atd start
 fi
+

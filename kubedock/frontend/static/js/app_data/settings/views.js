@@ -42,10 +42,21 @@ define(['app_data/app', 'marionette',
 
         fieldChange: function(evt){
             evt.stopPropagation();
-            var value = $(evt.target).val();
-            if (this.model.get('options'))
-                value = this.model.get('options')[parseInt(value)];
-            this.model.set({value: value});
+            var tgt = $(evt.target),
+                value = tgt.val(),
+                trimmedValue = value.trim();
+            if (this.model.get('options')) {
+                value = this.model.get('options')[+value];
+            }
+            // Strip dangling spaces for all fields except password
+            if (trimmedValue !== value && !_.contains(['billing_type', 'billing_password'],
+                                                     this.model.get('name'))) {
+                tgt.val(trimmedValue);
+                this.model.set({value: trimmedValue});
+            }
+            else {
+                this.model.set({value: value});
+            }
 
             // toggle billing settings, depending on selected billing type
             if (this.model.get('name') === 'billing_type'){

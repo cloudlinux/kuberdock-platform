@@ -555,7 +555,7 @@ packagekube_schema = {
 }
 
 persistent_disk_max_size_schema = {
-    'coerce': int, 'min': 1, 'max': 999
+    'coerce': int, 'min': 1
 }
 
 app_package_schema = {

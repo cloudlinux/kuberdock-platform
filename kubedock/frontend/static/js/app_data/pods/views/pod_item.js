@@ -196,6 +196,7 @@ define(['app_data/app',
                 limits          : this.model.limits,
                 podName         : this.model.get('name'),
                 period          : pkg.get('period'),
+                ableTo          : _.bind(this.model.ableTo, this.model),
             };
         },
 

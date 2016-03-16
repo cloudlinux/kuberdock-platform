@@ -15,17 +15,11 @@
 </div>
 <div class="no-padding">
     <span class="status-line <%- status %>">Status: <%- status %></span>
-    <% if ( status == "running" || status == "pending") { %>
-        <span class="stop-btn">stop</span>
-        <span class="restart-btn">restart</span>
-    <% } else { %>
-        <% if ( status === "unpaid") { %>
-            <span class="pay-and-start-btn">pay & start</span>
-        <% } else { %>
-            <span class="start-btn">start</span>
-        <% } %>
-    <% } %>
-    <span class="terminate-btn">delete</span>
+    <% if (ableTo('stop')) { %> <span class="stop-btn">stop</span> <% } %>
+    <% if (ableTo('restart')) { %> <span class="restart-btn">restart</span> <% } %>
+    <% if (ableTo('pay-and-start')) { %> <span class="pay-and-start-btn">pay & start</span> <% } %>
+    <% if (ableTo('start')) { %> <span class="start-btn">start</span> <% } %>
+    <% if (ableTo('delete')) { %> <span class="terminate-btn">delete</span> <% } %>
     <% if (graphs) { %>
         <a class="list-btn" href="#pods/<%- id %>">data</a>
     <% } else { %>

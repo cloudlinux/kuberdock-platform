@@ -29,14 +29,8 @@
 <td><%- _.find(backendData.kubeTypes, function(e) { return e.id == kube_type; }).name %></td>
 <td><%- kubes %></td>
 <td class="actions">
-    <% if (_.contains(['running', 'waiting', 'pending'], status)) { %>
-        <span class="stop-btn" title="Stop <%- name %> pod"></span>
-    <% } else if (!status || _.contains(['stopped', 'succeeded', 'failed'], status)) { %>
-        <span class="start-btn" title="Run <%- name %> pod"></span>
-    <% } else if (status === 'unpaid') { %>
-        <span class="pay-and-start-btn" title="Pay then Run <%- name %> pod"></span>
-    <% } %>
-    <% if (!_.contains(['pending', 'deleting'], status)) { %>
-        <span class="terminate-btn" title="Delete <%- name %> pod"></span>
-    <% } %>
+    <% if (ableTo('stop')) { %> <span class="stop-btn" title="Stop <%- name %> pod"></span> <% } %>
+    <% if (ableTo('start')) { %> <span class="start-btn" title="Run <%- name %> pod"></span> <% } %>
+    <% if (ableTo('pay-and-start')) { %> <span class="pay-and-start-btn" title="Pay then Run <%- name %> pod"></span> <% } %>
+    <% if (ableTo('delete')) { %> <span class="terminate-btn" title="Delete <%- name %> pod"></span> <% } %>
 </td>

@@ -192,6 +192,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 restartPolicy: "Always",
                 node: null,
                 kube_type: default_kube.id,
+                status: 'stopped',
             };
         },
 
@@ -201,6 +202,18 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             var data = _.extend(this.changedAttributes() || {},  // patch should include previous `set`
                                 {command: cmd, commandOptions: commandOptions || {}});
             return this.save(data, options);
+        },
+
+        ableTo: function(command){
+            var status = this.get('status');
+            if (command === 'start')
+                return _.contains(['stopped', 'succeeded', 'failed'], status);
+            if (command === 'stop' || command === 'restart')
+                return _.contains(['running', 'waiting', 'pending'], status);
+            if (command === 'pay-and-start')
+                return this.get('status') === 'unpaid';
+            if (command === 'delete')
+                return _.contains(['running', 'waiting', 'stopped', 'succeeded', 'failed', 'unpaid'], status);
         },
 
         /**

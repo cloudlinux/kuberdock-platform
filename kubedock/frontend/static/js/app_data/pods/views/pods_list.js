@@ -72,6 +72,7 @@ define(['app_data/app',
             return {
                 kubes: this.model.getKubes(),
                 checked: !!this.model.is_checked,
+                ableTo: _.bind(this.model.ableTo, this.model),
             };
         },
 
@@ -208,9 +209,10 @@ define(['app_data/app',
         templateHelpers: function(){
             return {
                 allChecked: this.collection.allChecked(),
-                checked: this.collection.checkedItems().length,
+                checked: this.collection.checkedItems(),
                 isCollection : this.collection.fullCollection.length < 1 ? 'disabled' : '',
                 sortingType : this.collection.orderAsDict(),
+                collection: this.collection,
             };
         },
 
@@ -277,6 +279,7 @@ define(['app_data/app',
                     buttonOk: function(){
                         utils.preloader.show();
                         var deferreds = _.map(items, function(item) {
+                            if (!item.ableTo('delete')) return;
                             return item.destroy({wait: true})
                                 .fail(utils.notifyWindow);
                         }, this);
@@ -307,6 +310,7 @@ define(['app_data/app',
             utils.preloader.show();
             var deferreds = _.map(items, function(item) {
                 item.is_checked = false;
+                if (!item.ableTo(command)) return;
                 return item.command(command).fail(utils.notifyWindow);
             }, this);
             $.when.apply($, deferreds).always(utils.preloader.hide);

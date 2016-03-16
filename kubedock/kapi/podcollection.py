@@ -1,5 +1,6 @@
 import ipaddress
 import json
+from os import path
 from uuid import uuid4
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from flask import current_app
@@ -51,6 +52,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def add(self, params, skip_check=False):  # TODO: celery
         if not skip_check and not license_valid():
             raise APIError("Action forbidden. Please contact support.")
+
         secrets = set()  # username, password, full_registry
         for container in params['containers']:
             if not container.get('sourceUrl'):
@@ -59,6 +61,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if secret is not None:
                 secrets.add((secret['username'], secret['password'],
                              Image(container['image']).full_registry))
+
+            for mount in container.get('volumeMounts') or []:
+                # Relative mountPaths in docker are relative to the /.
+                # It's not documented and sometimes relative paths may cause bugs in
+                # kd or k8s (for now localStorage doesn't work in some cases).
+                # So, we convert relative path to the corresponding absolute path.
+                # In future docker may change the way how relative mountPaths treated,
+                # see https://github.com/docker/docker/issues/20988
+                mount['mountPath'] = path.abspath(path.join('/', mount['mountPath']))
+
         secrets = sorted(secrets)
 
         storage_cls = get_storage_class()

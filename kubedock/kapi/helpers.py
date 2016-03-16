@@ -164,6 +164,14 @@ class Utilities(object):
     def _raise(message, code=409):
         raise APIError(message, status_code=code)
 
+    @staticmethod
+    def _format_msg(error, message, return_value):
+        msg = error
+        if message:
+            msg = u'({}){}'.format(error, message)
+        return u'{}: {}'.format(msg, unicode(return_value))
+
+
     def _raise_if_failure(self, return_value, message=None):
         """
         Raises error if return value has key 'status' and that status' value
@@ -172,10 +180,9 @@ class Utilities(object):
         :param message: string
         """
         if not isinstance(return_value, dict):
-            current_app.logger.warning(
-                u'Unknown answer format from kuberdock: %s',
-                unicode(return_value)
-            )
+            error = u'Unknown answer format from kuberdock'
+            msg = self._format_msg(error, message, return_value)
+            current_app.logger.warning(msg)
         else:
             # TODO: handle kubernetes error (APIError?) and test that
             # it will not break anything
@@ -183,16 +190,14 @@ class Utilities(object):
                 return
             status = return_value.get('status')
             if not isinstance(status, basestring):
-                current_app.logger.warning(
-                    u'Unknown kubernetes status answer: %s',
-                    unicode(return_value)
-                )
+                error = u'Unknown kubernetes status answer'
+                msg = self._format_msg(error, message, return_value)
+                current_app.logger.warning(msg)
                 return
             if status.lower() not in ('success', 'working'):
-                current_app.logger.error(
-                    u'Error in kubernetes answer: %s',
-                    unicode(return_value)
-                )
+                error = u'Error in kubernetes answer'
+                msg = self._format_msg(error, message, return_value)
+                self._raise(msg)
 
     @staticmethod
     def _make_name_from_image(image):

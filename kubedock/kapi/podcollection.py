@@ -1,6 +1,7 @@
 import ipaddress
 import json
 from os import path
+import time
 from uuid import uuid4
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from flask import current_app
@@ -294,10 +295,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         DBPod.query.get(pod_id).mark_as_deleting()
 
-        # we call _stop_pod here explicitly to be uncoupled with namespaces
-        # _stop_pod explicitly remove rc and all its pods
-        self._stop_pod(pod, raise_=False)
-
+        PersistentDisk.free(pod.id)
         # we remove service also manually
         service_name = pod.get_config('service')
         if service_name:
@@ -308,7 +306,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             self._remove_public_ip(pod_id=pod_id)
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
-        rv = self._drop_namespace(pod.namespace)
+        self._drop_namespace(pod.namespace)
         self._mark_pod_as_deleted(pod_id)
 
     def check_updates(self, pod_id, container_name):
@@ -340,7 +338,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         :raise APIError: if pod not found or if pod is not running
         """
         pod = self._get_by_id(pod_id)
-        self._stop_pod(pod)
+        self._stop_pod(pod, block=True)
         return self._start_pod(pod)
 
     def _make_namespace(self, namespace):
@@ -397,6 +395,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     registry = DEFAULT_REGISTRY
                 secrets.append((username, password, registry))
         return secrets
+
+    def _get_replicationcontroller(self, namespace, name):
+        rc = self._get(['replicationcontrollers', name], ns=namespace)
+        self._raise_if_failure(rc, "Couldn't find Replication Controller")
+        return rc
 
     def _get_namespace(self, namespace):
         data = self._get(ns=namespace)
@@ -591,7 +594,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             raise APIError("Pod is not stopped, we can't run it")
         if pod.status == POD_STATUSES.succeeded or \
            pod.status == POD_STATUSES.failed:
-            self._stop_pod(pod)
+            self._stop_pod(pod, block=True)
         self._make_namespace(pod.namespace)
         db_config = pod.get_config()
 
@@ -608,10 +611,15 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self.replace_config(pod, db_config)
 
         config = pod.prepare()
-        rv = self._post(['replicationcontrollers'], json.dumps(config),
-                        rest=True, ns=pod.namespace)
-        self._raise_if_failure(rv, "Could not start '{0}' pod".format(
-            pod.name.encode('ascii', 'replace')))
+        try:
+            self._get_replicationcontroller(pod.namespace, pod.sid)
+            rc = pod._put(['replicationcontrollers', pod.sid],
+                          json.dumps(config), ns=pod.namespace, rest=True)
+        except APIError:
+            rc = pod._post(['replicationcontrollers'],
+                          json.dumps(config), ns=pod.namespace, rest=True)
+            self._raise_if_failure(rc, "Could not start '{0}' pod".format(
+                pod.name.encode('ascii', 'replace')))
 
         for container in pod.containers:
             # TODO: create CONTAINER_STATUSES
@@ -619,7 +627,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod.status = POD_STATUSES.pending
         return pod.as_dict()
 
-    def _stop_pod(self, pod, data=None, raise_=True):
+    def _stop_pod(self, pod, data=None, raise_=True, block=False):
         # Call PD release in all cases. If the pod was already stopped and PD's
         # were not released, then it will free them. If PD's already free, then
         # this call will do nothing.
@@ -627,18 +635,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
-                rc = self._get(['replicationcontrollers', pod.sid], ns=pod.namespace)
-                self._raise_if_failure(rc, "Could not find Replication Controller")
-                if rc.get('kind') != u'Status':  # TODO: fix _raise_if_failure?
-                    rc['spec']['replicas'] = 0
-                    rv = self._put(['replicationcontrollers', pod.sid],
-                                   json.dumps(rc), ns=pod.namespace, rest=True)
-                    self._raise_if_failure(rv, "Could not stop a pod")
-                rv = self._del(['replicationcontrollers', pod.sid],
-                               ns=pod.namespace)
-                self._stop_cluster(pod)
-                self._raise_if_failure(rv, "Could not stop a pod")
-                # return rv
+                if block:
+                    scale_replicationcontroller.apply((pod.id,))
+                else:
+                    scale_replicationcontroller.apply_async((pod.id,))
                 for container in pod.containers:
                     # TODO: create CONTAINER_STATUSES
                     container['state'] = POD_STATUSES.stopped
@@ -647,11 +647,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         elif raise_:
             raise APIError('Pod is already stopped')
 
-    def _stop_cluster(self, pod):
-        """ Delete all replicas of the pod """
-        for p in self._get(['pods'], ns=pod.namespace)['items']:
-            if self._is_related(p['metadata']['labels'], {'kuberdock-pod-uid': pod.id}):
-                self._del(['pods', p['metadata']['name']], ns=pod.namespace)
 
     def _change_pod_config(self, pod, data):
         db_config = pod.get_config()
@@ -670,8 +665,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return pod.as_dict()
 
     def _redeploy(self, pod, data):
-        stopped = bool(self._stop_pod(pod, raise_=False))
-
         db_pod = DBPod.query.get(pod.id)
         # apply changes in config
         db_config = db_pod.get_dbconfig()
@@ -681,7 +674,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 containers[container['name']]['kubes'] = container.get('kubes')
         db_pod.set_dbconfig(db_config)
 
-        finish_redeploy.delay(pod.id, data, start=stopped)
+        finish_redeploy.delay(pod.id, data)
         return PodCollection(owner=self.owner).get(pod.id, as_json=False)  # return updated pod
 
     # def _do_container_action(self, action, data):
@@ -811,13 +804,29 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                             'Kubes available for you: {0}'.format(kubes_left))
 
 
-@celery.task(bind=True, default_retry_delay=10, ignore_results=True)
+@celery.task(ignore_results=True)
+def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
+    pc = PodCollection()
+    pod = pc._get_by_id(pod_id)
+    rc = pc._get_replicationcontroller(pod.namespace, pod.sid)
+    rc['spec']['replicas'] = size
+    rc = pc._put(['replicationcontrollers', pod.sid], json.dumps(rc),
+                  ns=pod.namespace, rest=True)
+    pc._raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
+    retry = 0
+    while rc['status']['replicas'] != size and retry < max_retries:
+        retry += 1
+        rc = pc._get_replicationcontroller(pod.namespace, pod.sid)
+        time.sleep(interval)
+    if retry >= max_retries:
+        current_app.logger.error("Can't scale rc: max retries exceeded")
+
+
+@celery.task(bind=True, ignore_results=True)
 def finish_redeploy(self, pod_id, data, start=True):
     pod_collection = PodCollection()
     pod = pod_collection._get_by_id(pod_id)
-    if pod.status != POD_STATUSES.stopped:
-        pod_collection._stop_pod(pod, raise_=False)  # try to stop again, just in case
-        raise self.retry()
+    pod_collection._stop_pod(pod, block=True)
 
     if (data.get('commandOptions') or {}).get('wipeOut'):
         for volume in pod.volumes_public:

@@ -620,13 +620,11 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
     @mock.patch.object(podcollection.PodCollection, '_get')
     @mock.patch.object(podcollection.PodCollection, '_put')
     @mock.patch.object(podcollection.PodCollection, '_del')
-    @mock.patch.object(podcollection.PodCollection, '_stop_cluster')
     @mock.patch.object(podcollection.PodCollection, '_raise_if_failure')
-    def test_pod_normal_stop(self, rif, stop_cluster, del_, put_, get_, free_pd_mock):
+    def test_pod_normal_stop(self, rif, del_, put_, get_, free_pd_mock):
         """
         Test _stop_pod in usual case
         :type del_: mock.Mock
-        :type stop_cluster: mock.Mock
         :type rif: mock.Mock
         """
         pod = fake_pod(
@@ -651,7 +649,6 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
                                      ns=pod.namespace, rest=True)
         del_.assert_called_once_with(['replicationcontrollers', pod.sid],
                                      ns=pod.namespace)
-        stop_cluster.assert_called_once_with(pod)
         self.assertEquals(rif.called, True)
 
         free_pd_mock.assert_called_once_with(pod.id)
@@ -1113,7 +1110,6 @@ class TestPodCollectionStopCluster(unittest.TestCase, TestCaseMixin):
             {'metadata': {'name': 'pod5', 'labels': {'kuberdock-pod-uid': 'other-pod2'}}},
         ]}
 
-        pod_collection._stop_cluster(pod)
 
         get_mock.assert_called_once_with(['pods'], ns=namespace)
         del_mock.assert_has_calls([mock.call(['pods', 'pod1'], ns=namespace),

@@ -480,7 +480,7 @@ define(['app_data/app', 'app_data/model',
 
         goNext: function(evt){
             var that = this,
-                pattern = /^[\w/-]*$/;
+                pattern = /^[\w/.-]*$/;
 
             // remove empty ports and volumeMounts
             this.model.set('ports', this.model.get('ports').filter(
@@ -772,7 +772,7 @@ define(['app_data/app', 'app_data/model',
 
         changeSize: function(evt){
             evt.stopPropagation();
-            // TODO: wants rethinking. 
+            // TODO: wants rethinking.
             var size = evt.target.value;
             if (_.some( [_.isUndefined(size), _.isNaN(size), _.isEmpty(size)] )){
                 this.ui.pdSize.addClass('error');

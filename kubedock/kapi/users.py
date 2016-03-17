@@ -4,7 +4,6 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from hashlib import md5
 from copy import deepcopy
-
 from ..core import db
 from ..utils import APIError, atomic
 from ..validation import UserValidator
@@ -14,9 +13,13 @@ from ..rbac.models import Role
 from ..users.models import User, UserActivity
 from ..system_settings.models import SystemSettings
 from ..users.utils import enrich_tz_with_offset
+from ..settings import KUBERDOCK_INTERNAL_USER
 from .podcollection import PodCollection, POD_STATUSES
 from .pstorage import get_storage_class, delete_persistent_drives_task
 from .licensing import is_valid as license_valid
+
+
+HOSTING_PANEL = 'hostingPanel'
 
 
 class ResourceReleaseError(APIError):
@@ -40,7 +43,7 @@ class UserCollection(object):
         """
         users = User.query if with_deleted else User.not_deleted
         if user is None:
-            return [user.to_dict(full=full) for user in users.all()]
+            return self._set_deletability([u.to_dict(full=full) for u in users.all()])
 
         user = self._convert_user(user)
         return user.to_dict(full=full)
@@ -144,6 +147,8 @@ class UserCollection(object):
         :raises APIError: if user was not found
         """
         user = self._convert_user(user)
+        if not self._is_deletable(user):
+            raise APIError('User {0} is undeletable'.format(user.username), 403)
         uid = user.id
         user.logout(commit=False)
 
@@ -211,6 +216,31 @@ class UserCollection(object):
         if result is None:
             raise UserNotFound('User "{0}" does not exists'.format(user))
         return result
+
+    @staticmethod
+    def _set_deletability(collection):
+        """Marks a collection user as deletable or not"""
+        admins = []
+        for user in collection:
+            if user.get('rolename') == 'Admin':
+                admins.append(user)
+                continue
+            if user.get('username') in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL):
+                user['deletable'] = False
+        if len(admins) == 1:
+            for admin in admins:
+                admin['deletable'] = False
+        return collection
+
+    @staticmethod
+    def _is_deletable(user):
+        if user.is_administrator():
+            if len([u for u in User.query.filter_by(deleted=False).all()
+                        if u.role.rolename == 'Admin']) == 1:
+                return False
+        if user.username in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL):
+            return False
+        return True
 
     @staticmethod
     @atomic()

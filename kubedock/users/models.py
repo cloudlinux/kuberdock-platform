@@ -1,11 +1,12 @@
-import json
 import datetime
 import hashlib
+import json
+
 from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import current_app
-from flask.ext.login import UserMixin
 
+#from flask import current_app
+from flask.ext.login import UserMixin
 from ..core import db, login_manager
 from ..models_mixin import BaseModelMixin
 from .signals import (
@@ -149,17 +150,21 @@ class User(BaseModelMixin, UserMixin, db.Model):
 
     @enrich_tz_with_offset(['timezone'])
     def to_dict(self, for_profile=False, full=False, exclude=None):
+
         if for_profile and full:
             raise RuntimeWarning('Serialize user for profile or full, not both')
+
         if for_profile:
             valid = self.profile_fields + ['id', 'package_id', 'clientid']
             data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
             data['rolename'] = self.role.rolename if self.role else None
             return data
+
         valid = self.profile_fields + ['id', 'username', 'active', 'suspended']
         data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
         data['rolename'] = self.role.rolename if self.role else None
         data['package'] = self.package.name if self.package else None
+
         if full:
             # add all extra fields
             last_activity = self.last_activity
@@ -173,45 +178,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
             data['join_date'] = self.join_date
             data['last_activity'] = last_activity if last_activity else ''
             data['last_login'] = last_login if last_login else None
+            data['deletable'] = True
         return data
-
-    # def to_dict(self):
-    #     valid = ['id', 'username', 'email', 'first_name', 'last_name',
-    #              'middle_initials', 'active', 'suspended']
-    #     data = dict([(k, v) for k, v in vars(self).items() if k in valid])
-    #     data['rolename'] = self.role.rolename
-    #     data['package'] = self.package.name if self.package else None
-    #     return data
-
-    # def to_full_dict(self, include=None, exclude=None):
-    #     last_activity = self.last_activity
-    #     package = self.package.name if self.package else None
-    #     last_login = self.last_login
-    #     pods = self.pods_to_dict()
-    #     containers_count = sum([p['containers_count'] for p in pods])
-    #     data = dict(
-    #         id=self.id,
-    #         username=self.username,
-    #         email=self.email,
-    #         active=self.active,
-    #         first_name=self.first_name,
-    #         last_name=self.last_name,
-    #         middle_initials=self.middle_initials,
-    #         suspended=self.suspended,
-    #         rolename=self.role.rolename,
-    #         join_date=self.join_date.isoformat(sep=' ')[:19],
-    #         package=package,
-    #         pods=pods,
-    #         containers_count=containers_count,
-    #         pods_count=len(pods),
-    #         package_info=self.package_info(),
-    #         last_activity=last_activity.isoformat(sep=' ')[:19] \
-    #             if last_activity else '',
-    #         last_login=last_login.isoformat(sep=' ')[:19] \
-    #             if last_login else None
-    #     )
-    #
-    #     return data
 
     def history_logged_in(self):
         ua = UserActivity.create(action=UserActivity.LOGIN, user_id=self.id)

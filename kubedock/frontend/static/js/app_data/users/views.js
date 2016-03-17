@@ -47,11 +47,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         templateHelpers: function(){
             var podsCount = this.model.get('pods_count'),
-                containersCount = this.model.get('containers_count');
+                containersCount = this.model.get('containers_count'),
+                deletable = this.model.get('deletable');
             return {
                 podsCount: podsCount ? podsCount : 0,
-                containersCount: containersCount ? containersCount : 0
-            }
+                containersCount: containersCount ? containersCount : 0,
+                deletable: deletable !== undefined ? deletable : true
+            };
         },
 
         removeUserConfirm: function(){
@@ -691,7 +693,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 last_login = this.model.get('last_login'),
                 last_activity = this.model.get('last_activity'),
                 first_name = this.model.get('first_name'),
-                last_name = this.model.get('last_name');
+                last_name = this.model.get('last_name'),
+                deletable = this.model.get('deletable');
             _.each(pods, function(pod){
                 var config = JSON.parse(pod.config);
                 _.each(config.containers, function(c){
@@ -707,8 +710,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 pods: pods ? pods : [],
                 kubeTypes: _.object(_.map(this.kubeTypes, function(t){return [t.id, t.name]})),
                 'kubes': kubesCount,
-                toHHMMSS: utils.toHHMMSS
-            }
+                toHHMMSS: utils.toHHMMSS,
+                deletable: deletable !== undefined ? deletable : true
+            };
         },
 
         login_this_user: function(){

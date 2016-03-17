@@ -19,5 +19,7 @@
     <% } else { %>
         <span class="activeteUser" title="Activate user <%- username %>"></span>
     <% } %>
+    <% if (deletable){ %>
     <span class="deleteUser" class="pull-right" title="Remove <%- username %>"></span>
+    <% } %>
 </td>

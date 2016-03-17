@@ -168,7 +168,10 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                     reader = new FileReader(),
                     that = this;
                 reader.onload = function(evt){
-                    that.ui.display.empty().append(evt.target.result);
+                    that.ui.display.empty().val(evt.target.result);
+                    // reset file input, so event would fire even if user
+                    // selects the same file
+                    that.ui.uploader.attr('value', '');
                 };
                 reader.readAsText(file);
             },

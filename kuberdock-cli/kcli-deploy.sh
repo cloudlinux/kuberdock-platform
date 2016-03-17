@@ -133,11 +133,16 @@ cp $GLOBAL_KCLI_CONFIG $ROOT_KCLI_CONFIG
 sed -i -e "/^user/ {s|[ \t]*\$||}" -e "/^user/ {s|[^= \t]\+\$|$KD_USER|}" $ROOT_KCLI_CONFIG
 sed -i -e "/^password/ {s|[ \t]*\$||}" -e "/^password/ {s|[^= \t]\+\$|$KD_PASSWORD|}" $ROOT_KCLI_CONFIG
 
-echo "Registering host in KuberDock..."
-kcli kubectl register > /dev/null 2>&1
+echo -n "Registering host in KuberDock... "
+REGISTER_INFO=$(kcli kubectl register 2>&1)
 if [ $? -ne 0 ];then
-    echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."
-    exit 1
+    echo $REGISTER_INFO | grep -iq "already registered"
+    if [ $? -ne 0 ];then
+        echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."
+        exit 1
+    else
+        echo "Already registered"
+    fi
 else
     echo "Done"
 fi

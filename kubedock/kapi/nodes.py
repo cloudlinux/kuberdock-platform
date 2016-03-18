@@ -155,11 +155,10 @@ def delete_node(node_id=None, node=None):
         raise APIError(u'Failed to delete node from DB: {}'.format(e))
 
     res = tasks.remove_node_by_host(hostname)
-    if res['status'] == 'Failure':
-        raise APIError(
-            'Failure. {0} Code: {1}'.format(res['message'], res['code']),
-            status_code=200
-        )
+    if res['status'] == 'Failure' and res['code'] != 404:
+        raise APIError('Failed to delete node in k8s: {0}, code: {1}. \n'
+                       'Please check and remove it manually if needed.'
+                       .format(res['message'], res['code']))
     try:
         os.remove(NODE_INSTALL_LOG_FILE.format(hostname))
     except OSError:

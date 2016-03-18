@@ -124,8 +124,15 @@ class TestNodeUtils(DBTestCase):
             "reason": "NotFound",
             "code": 404
         }
-        with self.assertRaises(APIError):
-            node_utils.get_one_node(node1.id)
+        node = node_utils.get_one_node(node1.id)
+        self.assertDictContainsSubset({
+            'id': node1.id,
+            'ip': node1.ip,
+            'hostname': node1.hostname,
+            'kube_type': node1.kube_id,
+            'status': 'troubles',
+            'resources': {}
+        }, node)
         get_k8s_node_mock.assert_called_once_with(node1.hostname)
 
         get_k8s_node_mock.return_value = {

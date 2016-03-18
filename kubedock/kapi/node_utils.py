@@ -230,9 +230,6 @@ def get_one_node(node_id):
     k8s_node = _get_k8s_node_by_host(node.hostname)
     if k8s_node['status'] == 'Failure':
         k8s_node = None
-        if node.state != 'pending':
-            raise APIError(
-                "Error. Node exists in db but don't exists in kubernetes")
 
     node_status, node_reason = get_status(node, k8s_node)
     install_log = get_install_log(node_status, node.hostname)

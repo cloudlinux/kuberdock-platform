@@ -664,16 +664,17 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
 
 
 @mock.patch.object(Pod, 'create')
-class TestPodCollectionAdd(unittest.TestCase, TestCaseMixin):
+class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
 
     def setUp(self):
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
                           '_get_pods', '_merge', '_save_pod', '_check_trial',
                           '_make_namespace')
 
-        U = type(
+        U = type(  # TODO: use real models
             'User', (),
-            {'id': 123, 'username': 'user', 'is_trial': lambda s: True}
+            {'id': 123, 'username': 'user', 'is_trial': lambda s: True,
+             'fix_price': False}
         )
 
         self.pod = type('Pod', (), {

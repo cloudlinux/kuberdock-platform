@@ -36,6 +36,25 @@ while [[ $# > 0 ]];do
         PD_CUSTOM_NAMESPACE="$2"
         shift
         ;;
+        # ======== CEPH options ==============
+        # Use this CEPH user to access CEPH cluster
+        # The user must have rwx access to CEPH pool (it is equal to master IP
+        # or --pd-namespace value if the last was specified)
+        --ceph-user)
+        CEPH_CLIENT_USER="$2"
+        shift
+        ;;
+        # Use this CEPH config file for CEPH client on nodes
+        --ceph-config)
+        CEPH_CONFIG_PATH="$2"
+        shift
+        ;;
+        # CEPH user keyring path
+        --ceph-user-keyring)
+        CEPH_KEYRING_PATH="$2"
+        shift
+        ;;
+        # ======== End of CEPH options ==============
         -u|--udp-backend)
         CONF_FLANNEL_BACKEND='udp'
         ;;
@@ -51,6 +70,29 @@ while [[ $# > 0 ]];do
     esac
     shift # past argument or value
 done
+
+HAS_CEPH=no
+# Check CEPH options if any is specified
+if [ ! -z "$CEPH_CONFIG_PATH" ] || [ ! -z "$CEPH_KEYRING_PATH" ] || [ ! -z "$CEPH_CLIENT_USER" ]; then
+
+    MANDATORY_CEPH_OPTIONS="--ceph-config --ceph-user-keyring --ceph-user"
+    # Check that all CEPH configuration options was specified
+    if [ -z "$CEPH_CONFIG_PATH" ] || [ -z "$CEPH_KEYRING_PATH" ] || [ -z "$CEPH_CLIENT_USER" ]; then
+        echo "There must be specified all options for CEPH ($MANDATORY_CEPH_OPTIONS) or none of them"
+        exit 1
+    fi
+
+    for file in "$CEPH_KEYRING_PATH" "$CEPH_CONFIG_PATH"; do
+        if [ ! -e "$file" ]; then
+            echo "File not found: $file"
+            exit 1
+        fi
+    done
+
+    HAS_CEPH=yes
+fi
+
+
 
 # SOME HELPERS
 
@@ -268,7 +310,6 @@ fi
 NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
 # Do some preliminaries for aws/non-aws setups
-HAS_CEPH=no
 if [ -z "$PD_CUSTOM_NAMESPACE" ]; then
   PD_NAMESPACE="$MASTER_IP"
 else
@@ -302,36 +343,18 @@ if [ "$ISAMAZON" = true ];then
     fi
 
 else
-    while true;do
-        read -p "Do you have ceph (yes/no)? [no]: " HAS_CEPH
-        if [ -z "$HAS_CEPH" ];then
-            HAS_CEPH=no
-            break
-        fi
-        if [ "$HAS_CEPH" = yes ];then
-            while [ -z "$CEPH_ADMIN_HOST" ];do
-                read -p "Enter the ceph-admin hostname or ip-address: " CEPH_ADMIN_HOST
-            done
-            read -p "Enter the ceph-deploy username [root]: " CEPH_USER
-                if [ -z "$CEPH_USER" ];then
-                    CEPH_USER=root
-                fi
-            echo "Trying to get your ceph config and keyring..."
-            [ -d /tmp/ceph_tmp_config ] || mkdir /tmp/ceph_tmp_config
-            scp $CEPH_USER@$CEPH_ADMIN_HOST:/etc/ceph/ceph.* /tmp/ceph_tmp_config
-            #FROM_CEPH_ADMIN=$(ssh $CEPH_USER@$CEPH_ADMIN_HOST "grep mon_host /etc/ceph/ceph.conf | cut -d ' ' -f 3; ls /etc/ceph | grep keyring;")
-            #if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please consider populating $KUBERDOCK_DIR/kubedock/ceph_settings.py manually"; fi
-            if (($? > 0)); then log_it echo "ERROR! Could not copy your ceph configuration. Please try again"; exit; fi
-            FROM_CEPH_ADMIN=$(grep mon_host /tmp/ceph_tmp_config/ceph.conf | cut -d ' ' -f 3; ls /tmp/ceph_tmp_config | grep keyring;)
-            MONITORS=$(echo $FROM_CEPH_ADMIN | cut -f 1 -d " ")
-            KEYRING_PATH=/etc/ceph/$(echo $FROM_CEPH_ADMIN | cut -f 2 -d " ")
+    if [ "$HAS_CEPH" = yes ]; then
 
-            break
-        fi
-        if [ "$HAS_CEPH" = no ];then
-            break
-        fi
-    done
+        CEPH_CONF_DIR=$KUBERDOCK_LIB_DIR/conf
+        [ -d $CEPH_CONF_DIR ] || mkdir $CEPH_CONF_DIR
+        cp "$CEPH_CONFIG_PATH" $CEPH_CONF_DIR/ceph.conf || exit 1
+        cp "$CEPH_KEYRING_PATH" $CEPH_CONF_DIR || exit 1
+
+        CEPH_KEYRING_FILENAME=$(basename "$CEPH_KEYRING_PATH")
+
+        MONITORS=$(grep mon_host $CEPH_CONF_DIR/ceph.conf | cut -d ' ' -f 3)
+        KEYRING_PATH=/etc/ceph/$CEPH_KEYRING_FILENAME
+    fi
 fi
 
 
@@ -815,16 +838,18 @@ AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
 EOF
 fi
 
+if [ -z "$CEPH_CLIENT_USER" ]; then
+  CEPH_CLIENT_USER=admin
+fi
+
 if [ "$HAS_CEPH" = yes ];then
 cat > $KUBERDOCK_DIR/kubedock/ceph_settings.py << EOF
 CEPH=True
 MONITORS='$MONITORS'
-KEYRING_PATH='$KEYRING_PATH'
+CEPH_KEYRING_PATH='$KEYRING_PATH'
+CEPH_CLIENT_USER='$CEPH_CLIENT_USER'
 EOF
 
-[ -d $KUBERDOCK_LIB_DIR/conf ] || mkdir $KUBERDOCK_LIB_DIR/conf
-mv /tmp/ceph_tmp_config/ceph.* $KUBERDOCK_LIB_DIR/conf || /bin/true
-rm -rf /tmp/ceph_tmp_config || /bin/true
 fi
 
 # 17. Starting web-interface

@@ -19,6 +19,9 @@ CADVISOR_CONF='/etc/sysconfig/kuberdock-cadvisor'
 FSTAB_BACKUP="/var/lib/kuberdock/backups/fstab.pre-swapoff"
 CPU_MULTIPLIER='8'
 MEMORY_MULTIPLIER='4'
+CEPH_VERSION=hammer
+CEPH_BASE='/etc/yum.repos.d/ceph-base'
+CEPH_REPO='/etc/yum.repos.d/ceph.repo'
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
@@ -84,6 +87,10 @@ clean_node(){
         remove_unneeded jq
     fi
 
+    if [ ! -z "$CEPH_CONF" ]; then
+        remove_unneeded ceph-common
+    fi
+
     # kubelet auth token and etcd certs
     echo "Deleting some files and configs..."
     del_existed $KUBERNETES_CONF_DIR
@@ -109,6 +116,9 @@ clean_node(){
 
     del_existed $KUBE_REPO
     del_existed $KUBE_TEST_REPO
+
+    del_existed $CEPH_BASE
+    del_existed $CEPH_REPO
 
     del_existed $KD_RSYSLOG_CONF
     systemctl restart rsyslog &> /dev/null
@@ -185,6 +195,47 @@ prjquota_enable()
   fi
 }
 
+
+install_ceph_client()
+{
+
+  which rbd &> /dev/null
+  if [[ $? -eq 0 ]];then
+    return
+  fi
+
+cat > $CEPH_BASE << EOF
+http://ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
+http://eu.ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
+http://au.ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
+EOF
+
+cat > $CEPH_REPO << EOF
+[Ceph]
+name=Ceph packages
+#baseurl=http://download.ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
+mirrorlist=file:///etc/yum.repos.d/ceph-base
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc
+EOF
+
+  CNT=1
+  /bin/false
+  while [ $? -ne 0 ]; do
+      echo "Trying to install CEPH-client $CNT"
+      ((CNT++))
+      if [[ $CNT > 4 ]]; then
+          yum --enablerepo=Ceph --nogpgcheck install -y ceph-common
+          check_status
+      else
+          yum --enablerepo=Ceph install -y ceph-common
+      fi
+  done
+  echo "CEPH-client has been installed"
+
+}
 
 echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
@@ -552,6 +603,16 @@ then
     yum_wrapper -y install kernel-devel
 fi
 
-# 14. Reboot will be executed in python function
+# 14. Install and configure CEPH client if CEPH config is defined in envvar
+if [ ! -z "$CEPH_CONF" ]; then
+
+    install_ceph_client
+    
+    cp $CEPH_CONF/* /etc/ceph/
+    check_status
+
+fi
+
+# 15. Reboot will be executed in python function
 
 exit 0

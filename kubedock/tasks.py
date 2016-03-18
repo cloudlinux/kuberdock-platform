@@ -1,3 +1,4 @@
+import os
 import ipaddress
 import json
 import operator
@@ -30,7 +31,7 @@ from .models import Pod, ContainerState, PodState, PersistentDisk, User
 from .nodes.models import Node, NodeFlag, NodeFlagNames
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
-    NODE_CEPH_AWARE_KUBERDOCK_LABEL)
+    NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
@@ -171,10 +172,6 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
             db_node.state = 'completed'
             db.session.commit()
             return error_message
-        is_ceph_installed = _check_ceph_via_ssh(ssh)
-        if is_ceph_installed:
-            NodeFlag.save_flag(node_id, NodeFlagNames.CEPH_INSTALLED, "true")
-        check_namespace_exists(node_ip=host)
 
         i, o, e = ssh.exec_command('ip -o -4 address show')
         node_interface = get_node_interface(o.read(), db_node.ip)
@@ -191,10 +188,27 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.put('/etc/pki/etcd/etcd-dns.crt', '/etcd-dns.crt')
         sftp.put('/etc/pki/etcd/etcd-dns.key', '/etcd-dns.key')
+        if CEPH:
+            TEMP_CEPH_CONF_PATH = '/tmp/kd_ceph_config'
+            CEPH_CONF_SRC_PATH = '/var/lib/kuberdock/conf'
+            try:
+                sftp.stat(TEMP_CEPH_CONF_PATH)
+            except IOError:
+                sftp.mkdir(TEMP_CEPH_CONF_PATH)
+            sftp.put(os.path.join(CEPH_CONF_SRC_PATH, 'ceph.conf'),
+                     os.path.join(TEMP_CEPH_CONF_PATH, 'ceph.conf'))
+            keyring_fname = os.path.basename(CEPH_KEYRING_PATH)
+            sftp.put(
+                os.path.join(CEPH_CONF_SRC_PATH, keyring_fname),
+                os.path.join(TEMP_CEPH_CONF_PATH, keyring_fname)
+            )
+
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
                      'bash /node_install.sh'
+        if CEPH:
+            deploy_cmd = 'CEPH_CONF={} '.format(TEMP_CEPH_CONF_PATH) + deploy_cmd
         # we pass ports and hosts to let the node know which hosts are allowed
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
@@ -229,13 +243,18 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
             res = 'Installation script error. Exit status: {0}.'.format(s)
             send_logs(node_id, res, log_file)
         else:
+            if CEPH:
+                NodeFlag.save_flag(
+                    node_id, NodeFlagNames.CEPH_INSTALLED, "true"
+                )
+                check_namespace_exists(node_ip=host)
             send_logs(node_id, 'Rebooting node...', log_file)
             ssh.exec_command('reboot')
             # Here we can wait some time before add node to k8s to prevent
             # "troubles" status if we know that reboot will take more then
             # 1 minute. For now delay will be just 2 seconds (fastest reboot)
             time.sleep(2)
-            err = add_node_to_k8s(host, kube_type, is_ceph_installed)
+            err = add_node_to_k8s(host, kube_type, CEPH)
             if err:
                 send_logs(node_id, 'ERROR adding node.', log_file)
                 send_logs(node_id, err, log_file)
@@ -362,8 +381,8 @@ def _check_ceph_via_ssh(ssh):
 
 
 def is_ceph_installed_on_node(hostname):
-    """Checks CEPH client is installed on the node, and, if it is, then add
-    appropriate flag to node's flags.
+    """Checks CEPH client is installed on the node. Returns True if it is
+    installed, otherwise - False.
     """
     ssh, error_message = ssh_connect(hostname)
     if error_message:

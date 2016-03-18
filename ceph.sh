@@ -1,4 +1,7 @@
 #!/bin/bash
+# Script installs CEPH-client to a node. It is obsolete now, because CEPH
+# client will be installed to node automatically, during node adding to KD
+# cluster.
 
 MANAGECMD=/var/opt/kuberdock/manage.py
 

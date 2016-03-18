@@ -179,6 +179,8 @@ except ImportError:
 
 CEPH = False
 CEPH_POOL_NAME = 'rbd'
+CEPH_KEYRING_PATH = '/etc/ceph/ceph.client.admin.keyring'
+CEPH_CLIENT_USER = 'admin'
 try:
     from .ceph_settings import *
     if CEPH and PD_NAMESPACE:

@@ -20,7 +20,7 @@ from ..usage.models import PersistentDiskState
 from ..utils import APIError, send_event, atomic
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
-    NODE_LOCAL_STORAGE_PREFIX)
+    NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH)
 from ..kd_celery import celery, exclusive_task
 from . import node_utils
 from .pd_utils import compose_pdname
@@ -582,11 +582,18 @@ def run_remote_command(host_string, command, timeout=NODE_COMMAND_TIMEOUT,
         return execute_run(command, timeout=timeout, jsonresult=jsonresult,
                            catch_exitcodes=catch_exitcodes)
 
+def get_ceph_credentials():
+    """Returns string with options for CEPH client authentication."""
+    return '-n client.{0} --keyring={1}'.format(
+        CEPH_CLIENT_USER, CEPH_KEYRING_PATH
+    )
+
 
 def get_all_ceph_drives(host):
-    drive_list = run_remote_command(host,
-                                    'rbd list --long --format=json',
-                                    jsonresult=True)
+    drive_list = run_remote_command(
+        host,
+        'rbd {} list --long --format=json'.format(get_ceph_credentials()),
+        jsonresult=True)
     if not isinstance(drive_list, list):
         raise NodeCommandError('Unexpected answer format in "rbd list"')
     all_devices = {
@@ -603,9 +610,10 @@ def _get_mapped_ceph_devices_for_node(host):
     """Returns dict with device ('/dev/rbdN') as a key, and ceph image name
     in value.
     """
-    rbd_mapped = run_remote_command(host,
-                                    'rbd showmapped --format=json',
-                                    jsonresult=True)
+    rbd_mapped = run_remote_command(
+        host,
+        'rbd {} showmapped --format=json'.format(get_ceph_credentials()),
+        jsonresult=True)
     if not isinstance(rbd_mapped, dict):
         raise NodeCommandError(
             'Unexpected answer format in "rbd showmapped"'
@@ -676,7 +684,12 @@ def unmap_temporary_mapped_ceph_drives():
                     # Clear redis entry if unmap was success. Also clear it if
                     # device is not mapped.
                     if device in node_maps and node_maps[device] == drive:
-                        run_remote_command(node, 'rbd unmap {}'.format(device))
+                        run_remote_command(
+                            node,
+                            'rbd {} unmap {}'.format(
+                                get_ceph_credentials(), device
+                            )
+                        )
                     redis_con.hdel(REDIS_TEMP_MAPPED_HASH, drive)
                 except:
                     current_app.logger.warn('Failed to unmap {}'.format(drive))
@@ -704,8 +717,10 @@ class CephStorage(PersistentStorage):
     VOLUME_EXTENSION_KEY = 'rbd'
 
     CEPH_NOTFOUND_CODE = 2
-    CMD_LIST_LOCKERS = "rbd lock ls {image} --pool {pool} --format=json"
-    CMD_REMOVE_LOCKER = "rbd lock remove {image} {id} {locker} --pool {pool}"
+    CMD_LIST_LOCKERS = "rbd " + get_ceph_credentials() + " lock ls {image} "\
+                       "--pool {pool} --format=json"
+    CMD_REMOVE_LOCKER = "rbd " + get_ceph_credentials() + " lock remove "\
+                        "{image} {id} {locker} --pool {pool}"
 
     def __init__(self):
         super(CephStorage, self).__init__()
@@ -734,7 +749,10 @@ class CephStorage(PersistentStorage):
         try:
             pools = run_remote_command(
                 node_ip,
-                'ceph osd lspools --format json', jsonresult=True
+                'ceph {} osd lspools --format json'.format(
+                    get_ceph_credentials()
+                ),
+                jsonresult=True
             )
         except:
             return False
@@ -744,14 +762,16 @@ class CephStorage(PersistentStorage):
         try:
             osd_stat = run_remote_command(
                 node_ip,
-                'ceph osd stat --format json',
+                'ceph {} osd stat --format json'.format(get_ceph_credentials()),
                 jsonresult=True
             )
             osdnum = osd_stat.get('num_osds')
             pgnum = _get_ceph_pool_pgnum_by_osdnum(osdnum)
             run_remote_command(
                 node_ip,
-                'ceph osd pool create {0} {1} {1}'.format(namespace, pgnum)
+                'ceph {0} osd pool create {1} {2} {2}'.format(
+                    get_ceph_credentials(), namespace, pgnum
+                )
             )
         except:
             return False
@@ -771,7 +791,9 @@ class CephStorage(PersistentStorage):
         pool, drive_name = self.get_drive_name_and_pool(pd.drive_name)
         try:
             res = self.run_on_first_node(
-                'rbd ls -p {0} --format json'.format(pool),
+                'rbd {0} ls -p {1} --format json'.format(
+                    get_ceph_credentials(), pool
+                ),
                 jsonresult=True,
                 catch_exitcodes=[self.CEPH_NOTFOUND_CODE]
             )
@@ -790,9 +812,9 @@ class CephStorage(PersistentStorage):
 
         volume[self.VOLUME_EXTENSION_KEY] = {
             'image': image,
-            'keyring': '/etc/ceph/ceph.client.admin.keyring',
+            'keyring': CEPH_KEYRING_PATH,
             'fsType': DEFAULT_FILESYSTEM,
-            'user': 'admin',
+            'user': CEPH_CLIENT_USER,
             'pool': pool_name
         }
         if size is not None:
@@ -891,7 +913,9 @@ class CephStorage(PersistentStorage):
         """
         try:
             res = self.run_on_first_node(
-                'rbd status {0} --format json'.format(drive),
+                'rbd {0} status {1} --format json'.format(
+                    get_ceph_credentials(), drive
+                ),
                 jsonresult=True,
                 catch_exitcodes=[self.CEPH_NOTFOUND_CODE]
             )
@@ -909,7 +933,7 @@ class CephStorage(PersistentStorage):
         :param drive: string -> drive name
         """
         res = self.run_on_first_node(
-            'rbd map {0}'.format(drive)
+            'rbd {0} map {1}'.format(get_ceph_credentials(), drive)
         )
         return res
 
@@ -919,7 +943,7 @@ class CephStorage(PersistentStorage):
         :param drive: string -> drive name
         """
         self.run_on_first_node(
-            'rbd unmap {0}'.format(device)
+            'rbd {0} unmap {1}'.format(get_ceph_credentials(), device)
         )
 
     def _get_fs(self, device):
@@ -945,7 +969,9 @@ class CephStorage(PersistentStorage):
         mb_size = 1024 * int(size)
         try:
             self.run_on_first_node(
-                'rbd create {0} --size={1}'.format(name, mb_size)
+                'rbd {0} create {1} --size={2}'.format(
+                    get_ceph_credentials(), name, mb_size
+                )
             )
         except NodeCommandError:
             current_app.logger.warning(
@@ -964,7 +990,9 @@ class CephStorage(PersistentStorage):
         """
         if not self._is_mapped(pd.drive_name):
             try:
-                self.run_on_first_node('rbd rm {0}'.format(pd.drive_name))
+                self.run_on_first_node('rbd {0} rm {1}'.format(
+                    get_ceph_credentials(), pd.drive_name
+                ))
                 return 0
             except NodeCommandError:
                 return 1

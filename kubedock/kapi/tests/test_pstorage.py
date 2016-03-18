@@ -43,8 +43,12 @@ class TestPstorageFuncs(DBTestCase):
                 image1: {'size': size1, 'in_use': False},
                 image2: {'size': size2, 'in_use': False},
             })
-        run_mock.assert_called_once_with(node, 'rbd list --long --format=json',
-                                         jsonresult=True)
+        run_mock.assert_called_once_with(
+            node,
+            'rbd ' + pstorage.get_ceph_credentials() +\
+                ' list --long --format=json',
+            jsonresult=True
+        )
         run_mock.return_value = 'invalid format'
         with self.assertRaises(pstorage.NodeCommandError):
             pstorage.get_all_ceph_drives(node)
@@ -72,7 +76,8 @@ class TestPstorageFuncs(DBTestCase):
         res = pstorage._get_mapped_ceph_devices_for_node(node)
         run_remote_command.assert_called_once_with(
             node,
-            'rbd showmapped --format=json',
+            'rbd ' + pstorage.get_ceph_credentials() +\
+                ' showmapped --format=json',
             jsonresult=True
         )
         self.assertEqual(
@@ -456,7 +461,10 @@ class TestCephUtils(TestCase):
             dev1: {'name': drive1, 'pool': pool}
         }
         pstorage.unmap_temporary_mapped_ceph_drives()
-        run_cmd_mock.assert_called_once_with(node1, 'rbd unmap ' + dev1)
+        run_cmd_mock.assert_called_once_with(
+            node1,
+            'rbd ' + pstorage.get_ceph_credentials() + ' unmap ' + dev1
+        )
         redis_mock.hdel.assert_called_with(
             pstorage.REDIS_TEMP_MAPPED_HASH, fulldrive)
 

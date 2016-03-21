@@ -804,16 +804,7 @@ for i in kube-apiserver kube-controller-manager kube-scheduler;
 
 
 
-#16. Starting web-interface
-log_it echo "Starting kuberdock web-interface..."
-do_and_log systemctl reenable emperor.uwsgi
-do_and_log systemctl restart emperor.uwsgi
-
-do_and_log systemctl reenable nginx
-do_and_log systemctl restart nginx
-
-
-# 17. Adding amazon and ceph config data
+#16. Adding amazon and ceph config data
 if [ "$ISAMAZON" = true ];then
 cat > $KUBERDOCK_DIR/kubedock/amazon_settings.py << EOF
 AWS=True
@@ -835,6 +826,18 @@ EOF
 mv /tmp/ceph_tmp_config/ceph.* $KUBERDOCK_LIB_DIR/conf || /bin/true
 rm -rf /tmp/ceph_tmp_config || /bin/true
 fi
+
+# 17. Starting web-interface
+#
+# WARNING! uWSGI restart should be done after writing all custom settings (CEPH, Amazon, etc)
+#
+log_it echo "Starting kuberdock web-interface..."
+do_and_log systemctl reenable emperor.uwsgi
+do_and_log systemctl restart emperor.uwsgi
+
+do_and_log systemctl reenable nginx
+do_and_log systemctl restart nginx
+
 
 # 18. Create root ssh keys if missing and copy'em  to WEBAPP_USER homedir
 ENT=$(getent passwd $WEBAPP_USER)

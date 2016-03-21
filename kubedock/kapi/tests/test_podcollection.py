@@ -673,8 +673,7 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
 
         U = type(  # TODO: use real models
             'User', (),
-            {'id': 123, 'username': 'user', 'is_trial': lambda s: True,
-             'fix_price': False}
+            {'id': 123, 'username': 'user', 'is_trial': lambda s: True, 'fix_price': False}
         )
 
         self.pod = type('Pod', (), {

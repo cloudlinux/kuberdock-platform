@@ -47,7 +47,8 @@ class UserCRUDTestCase(APITestCase):
 
     # @unittest.skip('')
     @mock.patch('kubedock.kapi.users.license_valid', lambda *a, **kw: True)
-    def test_post(self):
+    @mock.patch('kubedock.kapi.users.UserCollection.get_client_id')
+    def test_post(self, uc):
         data = dict(username='test_post_users',
                     first_name='', last_name='', middle_initials='',
                     password='p-0', email='test_user@test.test',
@@ -150,6 +151,7 @@ class UserCRUDTestCase(APITestCase):
         self.assert400(self.admin_open(url=url, method='PUT', json=data))
 
     @attr('k8s')
+    @mock.patch('kubedock.kapi.podcollection.license_valid', lambda: True)
     def test_suspend(self):
         """AC-1608 In case of unsuspend, return all public IPs"""
         from kubedock.kapi.podcollection import PodCollection

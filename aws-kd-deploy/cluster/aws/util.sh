@@ -158,7 +158,7 @@ function detect-image () {
         ;;
 
       eu-central-1)
-        AWS_IMAGE=ami-e68f82fb
+        AWS_IMAGE=ami-9bf712f4
         ;;
 
       sa-east-1)

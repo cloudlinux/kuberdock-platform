@@ -261,21 +261,6 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                     return deferred.promise();
                 };
 
-                that.commandPod = function(cmd, pod, options){
-                    if (pod.constructor !== Model.Pod) {
-                        console.log("Pod Model instance is expected!");
-                        return;
-                    }
-                    if (/^container_/.test(cmd)) {
-                        console.error('Container stop/start/delete not implemented yet.');
-                        return;
-                    }
-                    Utils.preloader.show();
-                    return pod.command(cmd, {wait: true, patch: true}, options)
-                        .always(Utils.preloader.hide)
-                        .fail(Utils.notifyWindow);
-                };
-
                 that.updateContainer = function(containerModel){
                     var performUpdate = function () {
                         Utils.preloader.show();

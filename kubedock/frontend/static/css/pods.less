@@ -331,7 +331,7 @@
                         }
                     }
                 }
-                .pay-and-start-btn, .start-btn, .stop-btn, .terminate-btn, .editPod{
+                .pay-and-start-btn, .restart-btn, .start-btn, .stop-btn, .terminate-btn, .editPod{
                     top: 2px;
                     left: 0px;
                     height: 17px;
@@ -371,6 +371,13 @@
                 .start-btn, .pay-and-start-btn{
                     width: 12px;
                     background: url('../img/start.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -18px;
+                    }
+                }
+                .restart-btn{
+                    width: 19px;
+                    background: url('../img/redeploy-pod.png') 0 0 no-repeat;
                     &:hover{
                         background-position: 0 -18px;
                     }
@@ -521,7 +528,7 @@
         font-size: 13px;
         font-family: @semibold;
     }
-    .removePods, .stopPods, .runPods{
+    .removePods, .stopPods, .runPods, .restartPods{
         color: #4e5665;
         font-size: 13px;
         position: relative;
@@ -564,6 +571,17 @@
     .runPods{
         &:before{
             background: url('../img/start.png') 0 0 no-repeat;
+        }
+        &:hover{
+            &:before{
+                background-position: 0 -18px;
+            }
+        }
+    }
+    .restartPods{
+        padding-left: 44px;
+        &:before{
+            background: url('../img/redeploy-pod.png') 0 0 no-repeat;
         }
         &:hover{
             &:before{

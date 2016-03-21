@@ -15,10 +15,10 @@
 </div>
 <div class="no-padding">
     <span class="status-line <%- status %>">Status: <%- status %></span>
-    <% if (ableTo('stop')) { %> <span class="stop-btn">stop</span> <% } %>
-    <% if (ableTo('restart')) { %> <span class="restart-btn">restart</span> <% } %>
+    <% if (ableTo('redeploy')) { %> <span class="restart-btn">restart</span> <% } %>
     <% if (ableTo('pay-and-start')) { %> <span class="pay-and-start-btn">pay & start</span> <% } %>
     <% if (ableTo('start')) { %> <span class="start-btn">start</span> <% } %>
+    <% if (ableTo('stop')) { %> <span class="stop-btn">stop</span> <% } %>
     <% if (ableTo('delete')) { %> <span class="terminate-btn">delete</span> <% } %>
     <% if (graphs) { %>
         <a class="list-btn" href="#pods/<%- id %>">data</a>

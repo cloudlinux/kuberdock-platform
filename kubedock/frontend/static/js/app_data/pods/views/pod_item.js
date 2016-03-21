@@ -211,119 +211,11 @@ define(['app_data/app',
             delete App.storage['postDescription.' + this.model.id];
         },
 
-        startItem: function(evt){
-            evt.stopPropagation();
-            App.commandPod('start', this.model).always(this.render);
-        },
-
-        payStartItem: function(evt){
-            evt.stopPropagation();
-            var that = this;
-            App.getSystemSettingsCollection().done(function(collection){
-                var billingUrl = utils.getBillingUrl(collection);
-                if (billingUrl === null) { // no billing
-                    App.commandPod('start', that.model).always(that.render);
-                }
-                else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
-                    utils.preloader.show();
-                    $.ajax({
-                        type: 'POST',
-                        contentType: 'application/json; charset=utf-8',
-                        url: '/api/billing/order',
-                        data: JSON.stringify({
-                            pod: JSON.stringify(that.model.attributes)
-                        })
-                    }).always(
-                        utils.preloader.hide
-                    ).fail(
-                        utils.notifyWindow
-                    ).done(function(response){
-                        if(response.data.status == 'Paid') {
-                            that.render;
-                        } else {
-                            window.location = response.data.redirect;
-                        }
-                    });
-                }
-            });
-        },
-
-        restartItem: function(evt){
-            var that = this,
-                name = this.model.get('name');
-            utils.modalDialog({
-                title: 'Confirm restarting of application ' + _.escape(name),
-                body: 'You can wipe out all the data and redeploy the '
-                    + 'application or you can just restart and save data '
-                    + 'in Persistent storages of your application.',
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        that.model.set('commandOptions', {});
-                        App.commandPod('redeploy', that.model)
-                            .done(function(){
-                                utils.notifyWindow('Pod will be restarted soon', 'success');
-                            })
-                            .always(that.render);
-                    },
-                    buttonCancel: function(){
-                        utils.modalDialog({
-                            title: 'Confirm restarting of application ' + _.escape(name),
-                            body: 'Are you sure you want to delete all data? You will '
-                                + 'not be able to recover this data if you continue.',
-                            small: true,
-                            show: true,
-                            footer: {
-                                buttonOk: function(){
-                                    App.commandPod('redeploy', that.model, {wipeOut: true})
-                                        .done(function(){
-                                            utils.notifyWindow('Pod will be restarted soon', 'success');
-                                        })
-                                        .always(that.render);
-                                },
-                                buttonOkText: 'Continue',
-                                buttonOkClass: 'btn-danger',
-                                buttonCancel: true
-                            }
-                        });
-                    },
-                    buttonOkText: 'Just Restart',
-                    buttonCancelText: 'Wipe Out',
-                    buttonCancelClass: 'btn-danger',
-                }
-            });
-        },
-
-        stopItem: function(evt){
-            evt.stopPropagation();
-            App.commandPod('stop', this.model).always(this.render);
-        },
-
-        terminateItem: function(evt){
-            var item = this.model,
-                name = item.get('name');
-            utils.modalDialogDelete({
-                title: "Delete " + _.escape(name) + "?",
-                body: "Are you sure you want to delete pod '" + _.escape(name) + "'?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        utils.preloader.show();
-                        item.destroy({wait: true})
-                            .always(utils.preloader.hide)
-                            .fail(utils.notifyWindow)
-                            .done(function(){
-                                App.getPodCollection().done(function(col){
-                                    col.remove(item);
-                                });
-                            });
-                    },
-                    buttonCancel: true
-                }
-            });
-        },
+        startItem: function(){ this.model.cmdStart(); },
+        payStartItem: function(){ this.model.cmdPayAndStart(); },
+        restartItem: function(){ this.model.cmdRestart(); },
+        stopItem: function(){ this.model.cmdStop(); },
+        terminateItem: function(){ this.model.cmdDelete(); },
 
         encodeBBCode: function(val) {
             if (val !== undefined) {
@@ -537,7 +429,7 @@ define(['app_data/app',
                         }
                     }).fail(function(){ col.add(modelOrigBackup, {merge: true}); });
                 } else {
-                    App.commandPod('redeploy', that.model)
+                    that.model.command('redeploy')
                         .fail(function(){ col.add(modelOrigBackup, {merge: true}); })
                         .done(function(){
                             utils.notifyWindow('Pod will be upgraded.', 'success');

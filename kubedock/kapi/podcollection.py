@@ -815,7 +815,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 def finish_redeploy(self, pod_id, data, start=True):
     pod_collection = PodCollection()
     pod = pod_collection._get_by_id(pod_id)
-    if pod.status == POD_STATUSES.running:
+    if pod.status != POD_STATUSES.stopped:
         pod_collection._stop_pod(pod, raise_=False)  # try to stop again, just in case
         raise self.retry()
 

@@ -198,22 +198,25 @@ define(['app_data/app', 'backbone', 'app_data/utils',
 
         parse: unwrapper,
 
-        command: function(cmd, options, commandOptions){
+        command: function(cmd, commandOptions){
             var data = _.extend(this.changedAttributes() || {},  // patch should include previous `set`
                                 {command: cmd, commandOptions: commandOptions || {}});
-            return this.save(data, options);
+            return this.save(data, {wait: true, patch: true});
         },
 
         ableTo: function(command){
+            // 'unpaid', 'stopped', 'waiting', 'pending', 'running', 'failed', 'succeeded'
             var status = this.get('status');
             if (command === 'start')
-                return _.contains(['stopped', 'succeeded', 'failed'], status);
+                return _.contains(['stopped'], status);
+            if (command === 'redeploy')
+                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded'], status);
             if (command === 'stop' || command === 'restart')
-                return _.contains(['running', 'waiting', 'pending'], status);
+                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded'], status);
             if (command === 'pay-and-start')
-                return this.get('status') === 'unpaid';
+                return _.contains(['unpaid'], status);
             if (command === 'delete')
-                return _.contains(['running', 'waiting', 'stopped', 'succeeded', 'failed', 'unpaid'], status);
+                return _.contains(['unpaid', 'stopped', 'waiting', 'running', 'failed', 'succeeded'], status);
         },
 
         /**
@@ -320,6 +323,125 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 totalPrice += pkg.get('price_pstorage') * totalSize;
             this.rawTotalPrice = totalPrice;
             this.totalPrice = pkg.getFormattedPrice(totalPrice);
+        },
+
+        // commands with common app/UI interactions, return promise
+        cmdStart: function(){
+            utils.preloader.show();
+            return this.command('start')
+                .always(utils.preloader.hide).fail(utils.notifyWindow);
+        },
+        cmdStop: function(){
+            utils.preloader.show();
+            return this.command('stop')
+                .always(utils.preloader.hide).fail(utils.notifyWindow);
+        },
+        cmdPayAndStart: function(){
+            var deferred = new $.Deferred(),
+                model = this;
+            App.getSystemSettingsCollection().done(function(collection){
+                var billingUrl = utils.getBillingUrl(collection);
+                if (billingUrl === null) { // no billing
+                    model.cmdStart().then(deferred.resolve, deferred.reject);
+                }
+                else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
+                    utils.preloader.show();
+                    $.ajax({
+                        type: 'POST',
+                        contentType: 'application/json; charset=utf-8',
+                        url: '/api/billing/order',
+                        data: JSON.stringify({
+                            pod: JSON.stringify(model.attributes)
+                        })
+                    }).always(
+                        utils.preloader.hide
+                    ).fail(
+                        utils.notifyWindow
+                    ).done(function(response){
+                        if(response.data.status == 'Paid') {
+                            deferred.resolveWith(model, arguments);
+                        } else {
+                            window.location = response.data.redirect;
+                        }
+                    });
+                }
+            });
+            return deferred.promise();
+        },
+        cmdRestart: function(){
+            var deferred = new $.Deferred(),
+                model = this,
+                name = model.get('name');
+            utils.modalDialog({
+                title: 'Confirm restarting of application ' + _.escape(name),
+                body: 'You can wipe out all the data and redeploy the '
+                    + 'application or you can just restart and save data '
+                    + 'in Persistent storages of your application.',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        utils.preloader.show();
+                        model.command('redeploy')
+                            .always(utils.preloader.hide).fail(utils.notifyWindow)
+                            .done(function(){
+                                utils.notifyWindow('Pod will be restarted soon', 'success');
+                            }).then(deferred.resolve, deferred.reject);
+                    },
+                    buttonCancel: function(){
+                        utils.modalDialog({
+                            title: 'Confirm restarting of application ' + _.escape(name),
+                            body: 'Are you sure you want to delete all data? You will '
+                                + 'not be able to recover this data if you continue.',
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    utils.preloader.show();
+                                    model.command('redeploy', {wipeOut: true})
+                                        .always(utils.preloader.hide).fail(utils.notifyWindow)
+                                        .done(function(){
+                                            utils.notifyWindow('Pod will be restarted soon', 'success');
+                                        }).then(deferred.resolve, deferred.reject);
+                                },
+                                buttonOkText: 'Continue',
+                                buttonOkClass: 'btn-danger',
+                                buttonCancel: true
+                            }
+                        });
+                    },
+                    buttonOkText: 'Just Restart',
+                    buttonCancelText: 'Wipe Out',
+                    buttonCancelClass: 'btn-danger',
+                }
+            });
+            return deferred.promise();
+        },
+        cmdDelete: function(){
+            var deferred = new $.Deferred(),
+                model = this,
+                name = model.get('name');
+            utils.modalDialogDelete({
+                title: "Delete " + _.escape(name) + "?",
+                body: "Are you sure you want to delete pod '" + _.escape(name) + "'?",
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        utils.preloader.show();
+                        model.destroy({wait: true})
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow)
+                            .done(function(){
+                                App.getPodCollection().done(function(col){
+                                    col.remove(model);
+                                });
+                            }).then(deferred.resolve, deferred.reject);
+                    },
+                    buttonCancel: true
+                }
+            });
+            return deferred.promise();
         },
     });
 

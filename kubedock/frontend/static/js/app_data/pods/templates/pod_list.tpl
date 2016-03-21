@@ -4,6 +4,9 @@
         <% if (_.any(_.invoke(checked, 'ableTo', 'start'))) { %>
             <span class="runPods" title="Run">Run</span>
         <% } %>
+        <% if (_.any(_.invoke(checked, 'ableTo', 'redeploy'))) { %>
+            <span class="restartPods" title="Restart">Restart</span>
+        <% } %>
         <% if (_.any(_.invoke(checked, 'ableTo', 'stop'))) { %>
             <span class="stopPods" title="Stop">Stop</span>
         <% } %>

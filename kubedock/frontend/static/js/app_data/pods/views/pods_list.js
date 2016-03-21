@@ -78,6 +78,7 @@ define(['app_data/app',
 
         ui: {
             start      : '.start-btn',
+            restart      : '.restart-btn',
             paystart   : '.pay-and-start-btn',
             stop       : '.stop-btn',
             remove     : '.terminate-btn',
@@ -87,6 +88,7 @@ define(['app_data/app',
 
         events: {
             'click @ui.start'      : 'startItem',
+            'click @ui.restart'    : 'restartItem',
             'click @ui.paystart'   : 'payStartItem',
             'click @ui.stop'       : 'stopItem',
             'click @ui.remove'     : 'deleteItem',
@@ -103,73 +105,11 @@ define(['app_data/app',
             App.navigate('pods/' + this.model.id, {trigger: true});
         },
 
-        startItem: function(evt){
-            evt.stopPropagation();
-            App.commandPod('start', this.model);
-        },
-
-        payStartItem: function(evt){
-            evt.stopPropagation();
-            var that = this;
-            App.getSystemSettingsCollection().done(function(collection){
-                var billingUrl = utils.getBillingUrl(collection);
-                if (billingUrl === null) { // no billing
-                    App.commandPod('start', that.model).always(that.render);
-                }
-                else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
-                    utils.preloader.show();
-                    $.ajax({
-                        type: 'POST',
-                        contentType: 'application/json; charset=utf-8',
-                        url: '/api/billing/order',
-                        data: JSON.stringify({
-                            pod: JSON.stringify(that.model.attributes)
-                        })
-                    }).always(
-                        utils.preloader.hide
-                    ).fail(
-                        utils.notifyWindow
-                    ).done(function(response){
-                        if(response.data.status == 'Paid') {
-                            App.navigate('pods');
-                        } else {
-                            window.location = response.data.redirect;
-                        }
-                    });
-                }
-            });
-        },
-
-        deleteItem: function(evt){
-            evt.stopPropagation();
-            var model = this.model;
-            utils.modalDialogDelete({
-                title: "Delete",
-                body: 'Are you sure you want to delete "' +
-                    _.escape(model.get('name')) + '" pod?',
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        utils.preloader.show();
-                        model.destroy({wait: true})
-                            .always(utils.preloader.hide)
-                            .fail(utils.notifyWindow)
-                            .done(function(){
-                                App.getPodCollection().done(function(col){
-                                    col.remove(model);
-                                });
-                            });
-                    },
-                    buttonCancel: true
-               }
-           });
-        },
-
-        stopItem: function(evt){
-            evt.stopPropagation();
-            App.commandPod('stop', this.model);
-        },
+        startItem: function(){ this.model.cmdStart(); },
+        payStartItem: function(){ this.model.cmdPayAndStart(); },
+        restartItem: function(){ this.model.cmdRestart(); },
+        stopItem: function(){ this.model.cmdStop(); },
+        terminateItem: function(){ this.model.cmdDelete(); },
 
         toggleItem: function(evt){
             evt.stopPropagation();
@@ -189,6 +129,7 @@ define(['app_data/app',
         ui: {
             'runPods'       : '.runPods',
             'stopPods'      : '.stopPods',
+            'restartPods'   : '.restartPods',
             'removePods'    : '.removePods',
             'toggleCheck'   : 'thead label.custom span',
             'th'            : 'table th'
@@ -197,6 +138,7 @@ define(['app_data/app',
         events: {
             'click @ui.runPods'    : 'runPods',
             'click @ui.stopPods'   : 'stopPods',
+            'click @ui.restartPods': 'restartPods',
             'click @ui.toggleCheck': 'toggleCheck',
             'click @ui.removePods' : 'removePods',
             'click @ui.th'         : 'toggleSort'
@@ -299,23 +241,69 @@ define(['app_data/app',
             this.sendCommand('start');
         },
 
+        restartPods: function(){
+            var that = this,
+                items = _.filter(this.collection.checkedItems(),
+                                 function(pod){ return pod.ableTo('redeploy'); }),
+                many = items.length > 1,
+                successMsg = 'Pod' + (many ? 's' : '') + ' will be restarted soon',
+                title = 'Confirm restarting of ' + items.length
+                    + ' application' + (many ? 's' : '');
+            utils.modalDialog({
+                title: title,
+                body: 'You can wipe out all the data and redeploy the '
+                    + 'application' + (many ? 's' : '') + ' or you can just '
+                    + 'restart and save data in Persistent storages of your '
+                    + 'application' + (many ? 's' : '') + '.',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        that.sendCommand('redeploy')
+                            .done(function(){ utils.notifyWindow(successMsg, 'success'); });
+                    },
+                    buttonCancel: function(){
+                        utils.modalDialog({
+                            title: title,
+                            body: 'Are you sure you want to delete all data? You will '
+                                + 'not be able to recover this data if you continue.',
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    that.sendCommand('redeploy', {wipeOut: true})
+                                        .done(function(){ utils.notifyWindow(successMsg, 'success'); });
+                                },
+                                buttonOkText: 'Continue',
+                                buttonOkClass: 'btn-danger',
+                                buttonCancel: true
+                            }
+                        });
+                    },
+                    buttonOkText: 'Just Restart',
+                    buttonCancelText: 'Wipe Out',
+                    buttonCancelClass: 'btn-danger',
+                }
+            });
+        },
+
         stopPods: function(evt){
             evt.stopPropagation();
             this.sendCommand('stop');
         },
 
-        sendCommand: function(command){
+        sendCommand: function(command, options){
             var items = this.collection.checkedItems();
 
             utils.preloader.show();
             var deferreds = _.map(items, function(item) {
                 item.is_checked = false;
                 if (!item.ableTo(command)) return;
-                return item.command(command).fail(utils.notifyWindow);
+                return item.command(command, options)
+                    .fail(utils.notifyWindow);
             }, this);
-            $.when.apply($, deferreds).always(utils.preloader.hide);
-
             this.render();
+            return $.when.apply($, deferreds).always(utils.preloader.hide);
         },
 
         onBeforeDestroy: function(){

@@ -402,8 +402,8 @@ define(['app_data/app', 'app_data/model',
             };
         },
 
-        startContainer: function(){ App.commandPod('start', this.pod); },
-        stopContainer: function(){ App.commandPod('stop', this.pod); },
+        startContainer: function(){ this.pod.cmdStart(); },
+        stopContainer: function(){ this.pod.cmdStop(); },
         updateContainer: function(){ App.updateContainer(this.model); },
         checkContainerForUpdate: function(){
             App.checkContainerForUpdate(this.model).done(this.render);
@@ -999,12 +999,8 @@ define(['app_data/app', 'app_data/model',
             };
         },
 
-        startContainer: function(){
-            App.commandPod('start', this.model.getPod());
-        },
-        stopContainer: function(){
-            App.commandPod('stop', this.model.getPod());
-        },
+        startContainer: function(){ this.model.getPod().cmdStart(); },
+        stopContainer: function(){ this.model.getPod().cmdStop(); },
         updateContainer: function(){
             App.updateContainer(this.model);
         },
@@ -1210,12 +1206,8 @@ define(['app_data/app', 'app_data/model',
 
         },
 
-        startContainer: function(){
-            App.commandPod('start', this.model.getPod());
-        },
-        stopContainer: function(){
-            App.commandPod('stop', this.model.getPod());
-        },
+        startContainer: function(){ this.model.getPod().cmdStart(); },
+        stopContainer: function(){ this.model.getPod().cmdStop(); },
         updateContainer: function(){
             App.updateContainer(this.model);
         },
@@ -1362,13 +1354,8 @@ define(['app_data/app', 'app_data/model',
             this.render();
         },
 
-        startItem: function(){
-            App.commandPod('start', this.model.getPod());
-        },
-
-        stopItem: function(){
-            App.commandPod('stop', this.model.getPod());
-        },
+        startItem: function(){ this.model.getPod().cmdStart(); },
+        stopItem: function(){ this.model.getPod().cmdStop(); },
 
         updateContainer: function(){
             App.updateContainer(this.model);

@@ -29,8 +29,9 @@
 <td><%- _.find(backendData.kubeTypes, function(e) { return e.id == kube_type; }).name %></td>
 <td><%- kubes %></td>
 <td class="actions">
-    <% if (ableTo('stop')) { %> <span class="stop-btn" title="Stop <%- name %> pod"></span> <% } %>
     <% if (ableTo('start')) { %> <span class="start-btn" title="Run <%- name %> pod"></span> <% } %>
+    <% if (ableTo('redeploy')) { %> <span class="restart-btn" title="Restart <%- name %> pod"></span> <% } %>
+    <% if (ableTo('stop')) { %> <span class="stop-btn" title="Stop <%- name %> pod"></span> <% } %>
     <% if (ableTo('pay-and-start')) { %> <span class="pay-and-start-btn" title="Pay then Run <%- name %> pod"></span> <% } %>
     <% if (ableTo('delete')) { %> <span class="terminate-btn" title="Delete <%- name %> pod"></span> <% } %>
 </td>

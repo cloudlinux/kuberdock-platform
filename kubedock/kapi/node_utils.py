@@ -282,7 +282,7 @@ def get_all_nodes():
 def divide_on_multipliers(resources):
     try:
         if 'cpu' in resources:
-            resources['cpu'] = int(resources['cpu'])/8
+            resources['cpu'] = str(int(resources['cpu'])/8)
         if 'memory' in resources:
             resources['memory'] = resources['memory']/4
     except:

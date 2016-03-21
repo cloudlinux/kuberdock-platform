@@ -5,6 +5,6 @@
 </td>
 <td class="col-md-3"><%- modified %></td>
 <td class="col-md-3 actions">
-    <span class="edit-item" title="Edit <%- name %> app">Edit</span>
-    <span class="delete-item" title="Delete <%- name %> app">Delete</span>
+    <span class="edit-item" title="Edit <%- name %> app"></span>
+    <span class="delete-item" title="Delete <%- name %> app"></span>
 </td>

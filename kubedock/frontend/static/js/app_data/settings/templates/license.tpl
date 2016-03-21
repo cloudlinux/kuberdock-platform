@@ -1,5 +1,5 @@
 <div id="item-controls" class="licenseTab">
-    <div class="license-status-line">
+    <div class="status-line">
         <span><b>License Status</b></span>
         <span class="icon <%= status %>"><%= status ? status : 'unknown'%></span>
         <span class="icon clock">Expiration date: <%= formatDate(expiration) %></span>
@@ -12,15 +12,15 @@
         </span>
     </div>
     <div class="row">
-        <div class="col-xs-10 col-xs-offset-2">
-            <div class="col-xs-6 info">
+        <div class="col-md-10 col-md-offset-1 control-icons">
+            <div class="col-md-6 col-sm-12 info">
                 <div class="editGroup">
                     <b>Installation ID:</b> <span class="edit-field peditable"> <%= installationID %></span>
                 </div>
                 <div><b>Platform:</b> <%= platform %></div>
                 <div><b>Storage:</b> <%= storage %></div>
             </div>
-            <div class="col-xs-6 servers">
+            <div class="col-md-6 col-sm-12 servers">
                 <div><b>KuberDock version:</b> <%= version.KuberDock %></div>
                 <div><b>Kubernetes version:</b> <%= version.kubernetes %></div>
                 <% if (version.docker !== 'unknown'){ %>

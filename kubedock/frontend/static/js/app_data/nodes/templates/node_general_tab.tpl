@@ -1,20 +1,17 @@
-<div class="status-line <%- status %>">Status: <%- status %></div>
+<div class="status-line"><span class="icon <%- status %>">Status: <%- status %></span></div>
 <% switch (status) { case 'running': %>
 <% var ram = (resources.memory / (1024*1024*1024)).toFixed(2); %>
-<div class="row placeholders">
-    <div class="col-xs-10 clearfix">
-        <div class="col-xs-6 info no-padding">
-            <div>IP: <%- ip %></div>
-            <!--
-            <div>Kube capacity: 100</div>
-            <div>Used kubes: 50</div>
-            -->
-        </div>
-        <div class="col-xs-6 servers no-padding">
-            <div class="server-ico">CPU: <%- resources.cpu %> cores</div>
-            <div class="server-ico">RAM: <%- ram %> GB</div>
-            <div class="server-ico"><!-- SDD: 0GB in Raid 0 --></div>
-        </div>
+<div class="control-icons col-md-10 col-md-offset-1 clearfix">
+    <div class="col-md-6 col-sm-12 info">
+        <div>IP: <%- ip %></div>
+        <!--
+        <div>Kube capacity: 100</div>
+        <div>Used kubes: 50</div>
+        -->
+    </div>
+    <div class="col-md-6 col-sm-12 servers no-padding">
+        <div>CPU: <%- resources.cpu %> cores</div>
+        <div>RAM: <%- ram %> GB</div>
     </div>
 </div>
 <% break; case 'pending': %>

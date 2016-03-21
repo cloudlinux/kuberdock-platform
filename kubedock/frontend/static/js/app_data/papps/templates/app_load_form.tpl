@@ -13,9 +13,9 @@
             <div>You can specify custom fields to let user fill it or to be generated automatically while starting an application if you need.<br>
                 More information on <a href="http://docs.kuberdock.com/index.html?predefined_applications.htm" target="_blank">docs.kuberdock.com</a> section "<b>Administration</b>" -> "<b>Predefined application</b>"</div>
         </div>
-        <div class="buttons clearfix">
-            <button class="save-app blue"><%= isNew ? 'Add' : 'Save' %></button>
+        <div class="buttons">
             <button class="cancel-app gray">Cancel</button>
+            <button class="save-app blue"><%= isNew ? 'Add' : 'Save' %></button>
         </div>
     </div>
 </div>

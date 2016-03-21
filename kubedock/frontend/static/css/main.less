@@ -682,6 +682,7 @@ body{
         padding: 0;
     }
 
+    /* checkbox&radio */
     label.custom{
         margin: 0;
         padding: 0;
@@ -738,6 +739,7 @@ body{
             }
         }
     }
+
     .login-page{
         .container{
             .logo{
@@ -850,7 +852,6 @@ body{
     }
 
     /* modal */
-
     .modal{
         background-color: rgba(61, 76, 85, 0.45);
         .modal-dialog{
@@ -1055,6 +1056,7 @@ body{
         }
     }
     /*end alert messages */
+    @import "tables.less";
     @import "pods.less";
     @import "nodes.less";
     @import "users.less";
@@ -1062,6 +1064,7 @@ body{
     @import "settings.less";
     @import "predefined-app.less";
     @import "message.less";
+    @import "icons.less";
 
     /* edit form */
 
@@ -1531,13 +1534,13 @@ body{
     /* end select styles */
 }
 #page-preloader{
-    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: 1000;
     display: none;
+    position: fixed;
 
     .loader{
         .border-radius(50%);
@@ -1579,25 +1582,15 @@ body{
 }
 /* spin */
 @-webkit-keyframes spin{
-    0%{
-        .rotate(0deg);
-    }
-    100%{
-        .rotate(360deg);
-    }
+    0%{ .rotate(0deg); }
+    100%{ .rotate(360deg); }
 }
 @keyframes spin{
-    0%   {
-        .rotate(0deg);
-    }
-    100% {
-        .rotate(360deg);
-    }
+    0%   { .rotate(0deg); }
+    100% { .rotate(360deg); }
 }
 /* end spin */
 
 @-moz-document url-prefix() {
-    body .podsControl{
-        height: 49px;
-    }
+    body .podsControl{ height: 49px; }
 }

@@ -1,146 +1,5 @@
-/* node-main */
-#nodelist-table{
-    .box-shadow-materials();
-    thead{
-        background-color: transparent;
-        tr{
-            border-color: transparent;
-            th{
-                .user-select(none);
-                height: 50px;
-                color: #4e5665;
-                font-size: 13px;
-                cursor: default;
-                text-align: left;
-                border-top: none;
-                border-bottom: none;
-                font-weight: normal;
-                vertical-align: middle;
-                font-family: @regular;
-                &:first-child{
-                    padding-left: 24px;
-                }
-                &:focus{
-                    outline: 0;
-                }
-                &.active{
-                   background-color: transparent;
-                }
-                .caret{
-                    margin-left: 5px;
-                    &.rotate{
-                        .rotate(180deg)
-                    }
-                }
-            }
-        }
-    }
-    tbody{
-        tr{
-            background-color: #fff;
-            &.checked, &:hover{
-                background-color: #f5fafe;
-            }
-            td{
-                height: 50px;
-                color: #1d1d1d;
-                padding-top: 0;
-                font-size: 13px;
-                padding-bottom: 0;
-                font-family: @regular;
-                vertical-align: middle;
-                &:first-child{
-                    padding-left: 24px;
-                }
-                &:last-child{
-                    padding-right: 0;
-                }
-                &.disabled-color-text{
-                    color: #b1b9c0;
-                }
-                span{
-                    &.deleteNode{
-                        width: 16px;
-                        height: 17px;
-                        position: relative;
-                        display: inline-block;
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                            &:hover{
-                                cursor: pointer;
-                                background-position: 0 -18px;
-                        }
-                    }
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination, &.terminated, &.failed, &.succeeded{
-                        position: relative;
-                        padding-left: 22px;
-                        &:before{
-                            .border-radius(50%);
-                            left: 2px;
-                            width: 12px;
-                            content: '';
-                            height: 12px;
-                            bottom: 2px;
-                            position: absolute;
-                        }
-                    }
-                    &.running, &.OK{
-                        &:before{
-                            background-color: #97cd75;
-                        }
-                    }
-                    &.stopped, &.troubles{
-                        &:before{
-                            background-color: #f5544d;
-                        }
-                    }
-                    &.pending, &.waiting{
-                        padding-left: 33px;
-                        &:before{
-                            .border-radius(0);
-                            left: 5px;
-                            width: 22px;
-                            content: '';
-                            margin: auto;
-                            height: 18px;
-                            position: absolute;
-                            background: url('../img/pending.gif') 0 0 no-repeat;
-                        }
-                    }
-                    &.termination{
-                        &:before{
-                            border: 1px solid #7c7c7c;
-                            background-color: #bbbfc3;
-                        }
-                    }
-                }
-            }
-            button{
-                padding: 0;
-                border: none;
-                outline: none;
-                color: #3197ee;
-                font-size: 13px;
-                text-decoration: none;
-                font-family: @regular;
-                background-color: transparent;
-                &:hover{
-                    cursor: pointer;
-                    text-decoration: none;
-                }
-            }
-        }
-    }
-}
-/* end-node-main */
-
 /* add-node */
 #node-contents{
-    width: 80%;
-    margin: 0 auto;
-    padding: 0 40px;
-    .col-lg-12, .col-lg-6{
-        padding: 0;
-    }
     .node-steps{
         .information{
             text-align: left;
@@ -171,67 +30,19 @@
             }
         }
         #node-add-step{
-            .success{
-                border-color: rgba(0, 128, 0, 0.47) !important;
-            }
-            .error{
-                border-color: rgba(255, 0, 0, 0.31) !important;
-            }
-            .buttons{
-                button{
-                    margin: 0;
+            .form-field{
+                margin-bottom: 30px;
+                &.last{
+                    margin-bottom: 0;
+                    padding-bottom: 49px;
+                    border-bottom: 1px solid #e5e5e5;
                 }
-                button + button{
-                    margin-left: 10px;
-                }
-            }
-            .col-lg-12{
-                margin: 30px 0 20px 0;
-                padding-bottom: 49px;
-                border-bottom: 1px solid #e5e5e5;
-            }
-            .col-lg-6{
                 label{
-                    margin-bottom: 16px;
                     display: block;
+                    margin-bottom: 16px;
                 }
-                &.right{
-                    padding-left: 17px;
-                    .info{
-                        margin-top: 36px;
-                        padding: 18px 36px 19px;
-                        background-color: #fcfcfc;
-                        border: 1px solid #e5e5e5;
-                        p{
-                            height: 22px;
-                            line-height: 20px;
-                            width: 100%;
-                            padding-left: 104px;
-                            margin-bottom: 3px;
-                            display: inline-block;
-                            vertical-align: middle;
-                            position: relative;
-                            &:last-child{
-                                margin-bottom: 0;
-                            }
-                            &:before{
-                                content: '';
-                                position: absolute;
-                                left: 0;
-                                top: 0;
-                                width: 80px;
-                                height: 22px;
-                                background: url('../img/server-ico.png') 0 0 no-repeat;
-                            }
-                        }
-                    }
-                }
-                @media only screen and (max-width : 1200px) {
-                    &.right{
-                        padding: 0;
-                    }
-                }
-                .kube_type button, input{
+                input,
+                .kube_type button{
                     display: block;
                     width: 100%;
                     height: 51px;
@@ -266,66 +77,11 @@
     }
 }
 /* end add-node */
-#details_content{
-    .status-line{
-        height: 40px;
-        color: #1d1d1d;
-        font-size: 15px;
-        line-height: 27px;
-        position: relative;
-        padding-left: 45px;
-        margin-bottom: 0px;
-        font-family: @regular;
-        border-bottom: 1px solid #e5e5e5;
-        &:before{
-            .border-radius(50%);
-            left: 20px;
-            content: '';
-            width: 13px;
-            height: 13px;
-            bottom: 20px;
-            position: absolute;
-        }
-        &.running{
-            &:before{
-                background-color: #98cc79;
-                border: 1px solid #5d973c;
-            }
-        }
-        &.stopped, &.troubles{
-            &:before{
-                background-color: #f25552;
-                border: 1px solid #bc2322;
-            }
-        }
-        &.terminated, &.succeeded, &.failed{
-            &:before{
-                background-color: #c3c3c3;
-            }
-        }
-        &.pending, &.waiting {
-            &:before{
-                .border-radius(0);
-                left: 13px;
-                width: 22px;
-                content: '';
-                bottom: 16px;
-                height: 22px;
-                position: absolute;
-                background: url('../img/pending.gif') 0 0 no-repeat;
-            }
-        }
-        &.termination{
-            &:before{
-                border: 1px solid #7c7c7c;
-                background-color: #bbbfc3;
-            }
-        }
-    }
-}
 /* general details page */
 #tab-content{
-    .details, .reason, .spoiler{
+    .details,
+    .reason,
+    .spoiler{
         font-size: 13px;
         padding: 10px 0 0 20px;
         p{
@@ -339,63 +95,13 @@
             }
         }
     }
-    .row{
-        &.placeholders{
-            .col-xs-10{
-                float: none;
-                margin: 37px auto 0;
-            }
-        }
-    }
-    .col-xs-10{
-        .col-xs-6{
-            margin-bottom: 25px;
-        }
-        .info{
-            padding-left: 94px;
-            position: relative;
-            &:before{
-                content: '';
-                position: absolute;
-                width: 80px;
-                height: 70px;
-                left: 0;
-                top: 0;
-                background: url('../img/info-ico.png') 0 0 no-repeat;
-            }
-            > div{
-                color: #1d1d1d;
-                font-size: 13px;
-                font-weight: normal;
-                font-family: @regular;
-            }
-        }
-        .server-ico{
-            height: 20px;
-            font-size: 13px;
-            padding-left: 103px;
-            position: relative;
-            line-height: 22px;
-            margin-bottom: 5px;
-            &:last-child{
-                margin-bottom: 0;
-            }
-            &:before{
-                position: absolute;
-                content: '';
-                width: 80px;
-                height: 22px;
-                left: 0;
-                top: -1;
-                background: url('../img/server-ico.png') 0 0 no-repeat;
-            }
-        }
-
-    }
 }
 /* end general details page */
 
-#stats-page, #logs-page, #monitoring-page, #configuration-page{
+#logs-page,
+#stats-page,
+#monitoring-page,
+#configuration-page{
     .page-top-menu{
         .clearfix;
         display: block;
@@ -482,7 +188,7 @@
         padding: 20px;
         overflow: auto;
         font-size: 10pt;
-        margin: 15px 0 10px;
+        margin: 37px 0 10px;
         background-color: #000;
         p{
             margin: 0;
@@ -496,7 +202,7 @@
 /* monitoring details page */
 #monitoring-page{
     .graphs{
-        margin-top: 30px;
+        margin-top: 37px;
     }
     .name{
         margin-bottom: 15px;
@@ -626,11 +332,5 @@
     }
 }
 /* end timelines details page */
-
-/* configuration details page */
-#configuration-page{
-
-}
-/* end configuration details page */
 
 /* end details-node */

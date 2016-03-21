@@ -13,9 +13,11 @@
     </div>
 </div>
 <div class="container">
-    <div id="node-contents">
-        <div class="node-steps">
-            <div id="node-add-step"></div>
+    <div class="row">
+        <div id="node-contents" class="col-md-8 col-md-offset-2">
+            <div class="node-steps">
+                <div id="node-add-step"></div>
+            </div>
         </div>
     </div>
 </div>

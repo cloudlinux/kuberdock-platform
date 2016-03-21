@@ -1,5 +1,5 @@
 <div class="container" id="add-image">
-    <div class="col-md-3 sidebar no-padding">
+    <div class="col-md-3 col-sm-12 sidebar no-padding">
         <ul class="nav nav-sidebar">
             <li role="presentation" class="success">Choose image</li>
             <li role="presentation" class="success">Set up image</li>
@@ -7,7 +7,7 @@
             <li role="presentation" class="active">Final setup</li>
         </ul>
     </div>
-    <div id="details_content" class="col-sm-9 set-up-image no-padding">
+    <div id="details_content" class="col-md-9 col-sm-12 set-up-image no-padding">
         <div id="tab-content" class="clearfix complete">
             <div class="col-md-6 no-padding left">
                 <div class="row policy">
@@ -57,7 +57,7 @@
                     <div class="col-xs-12 edit-kube-type-description">Type will apply for each container</div>
                 </div>
             </div>
-            <div class="col-md-5 col-xs-offset-1 servers">
+            <div class="col-md-5 col-md-offset-1 col-sm-offset-0  servers">
                 <div>CPU: <span id="total_cpu"><%- limits.cpu %></span></div>
                 <div>RAM: <span id="total_ram"><%- limits.ram %></span></div>
                 <div>HDD: <span id="hdd_data"><%- limits.hdd %></span></div>
@@ -116,8 +116,8 @@
     </div>
     <div class="row">
         <div class="col-xs-12">
-            <div class="col-xs-3"></div>
-            <div class="buttons col-xs-9 no-padding">
+            <div class="col-md-3 hidden-sm"></div>
+            <div class="buttons col-md-9 col-sm-12 no-padding">
                 <button class="prev-step gray pull-left">Back</button>
                 <button class="add-more blue pull-left">Add more containers</button>
                 <button class="save-container blue pull-left">Save</button>

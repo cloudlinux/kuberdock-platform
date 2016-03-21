@@ -376,10 +376,10 @@ function kube-up {
 
   if [[ ! -f "$AWS_SSH_KEY" ]]; then
     ssh-keygen -f "$AWS_SSH_KEY" -N ''
-    $AWS_CMD import-key-pair --key-name kubernetes --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG
+    $AWS_CMD import-key-pair --key-name $AWS_KEYPAIR --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG
   fi
 
-  $AWS_CMD import-key-pair --key-name kubernetes --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG 2>&1 || true
+  $AWS_CMD import-key-pair --key-name $AWS_KEYPAIR --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG 2>&1 || true
 
   VPC_ID=$(get_vpc_id)
 
@@ -452,7 +452,7 @@ function kube-up {
     --instance-type $MASTER_SIZE \
     --subnet-id $SUBNET_ID \
     --private-ip-address $MASTER_INTERNAL_IP \
-    --key-name kubernetes \
+    --key-name $AWS_KEYPAIR \
     --security-group-ids $SEC_GROUP_ID \
     --associate-public-ip-address \
     --user-data file://${KUBE_TEMP}/master-start.sh | json_val '["Instances"][0]["InstanceId"]')
@@ -510,7 +510,7 @@ function kube-up {
       --instance-type $NODE_SIZE \
       --subnet-id $SUBNET_ID \
       --private-ip-address $INTERNAL_IP_BASE.1${i} \
-      --key-name kubernetes \
+      --key-name $AWS_KEYPAIR \
       --security-group-ids $SEC_GROUP_ID \
       ${public_ip_option} \
       --user-data "file://${KUBE_TEMP}/node-user-data-${i}" | json_val '["Instances"][0]["InstanceId"]')

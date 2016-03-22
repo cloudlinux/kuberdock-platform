@@ -144,7 +144,7 @@ function detect-image () {
       ap-northeast-1)
         AWS_IMAGE=ami-eec1c380
         ;;
-        
+
       ap-northeast-2)
         AWS_IMAGE=ami-c74789a9
         ;;
@@ -380,10 +380,10 @@ function kube-up {
 
   if [[ ! -f "$AWS_SSH_KEY" ]]; then
     ssh-keygen -f "$AWS_SSH_KEY" -N ''
-    $AWS_CMD import-key-pair --key-name ${AWS_KEYPAIR:-kubernetes} --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG
+    $AWS_CMD import-key-pair --key-name $AWS_KEYPAIR --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG
   fi
 
-  $AWS_CMD import-key-pair --key-name ${AWS_KEYPAIR:-kubernetes} --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG 2>&1 || true
+  $AWS_CMD import-key-pair --key-name $AWS_KEYPAIR --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG 2>&1 || true
 
   VPC_ID=$(get_vpc_id)
 
@@ -456,7 +456,7 @@ function kube-up {
     --instance-type $MASTER_SIZE \
     --subnet-id $SUBNET_ID \
     --private-ip-address $MASTER_INTERNAL_IP \
-    --key-name ${AWS_KEYPAIR:-kubernetes} \
+    --key-name $AWS_KEYPAIR \
     --security-group-ids $SEC_GROUP_ID \
     --associate-public-ip-address \
     --user-data file://${KUBE_TEMP}/master-start.sh | json_val '["Instances"][0]["InstanceId"]')
@@ -514,7 +514,7 @@ function kube-up {
       --instance-type $NODE_SIZE \
       --subnet-id $SUBNET_ID \
       --private-ip-address $INTERNAL_IP_BASE.1${i} \
-      --key-name ${AWS_KEYPAIR:-kubernetes} \
+      --key-name $AWS_KEYPAIR \
       --security-group-ids $SEC_GROUP_ID \
       ${public_ip_option} \
       --user-data "file://${KUBE_TEMP}/node-user-data-${i}" | json_val '["Instances"][0]["InstanceId"]')
@@ -558,7 +558,7 @@ function kube-up {
     else
 	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" "sudo ROUTE_TABLE_ID=${ROUTE_TABLE_ID} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} bash -l deploy.sh" < <(cat) 2>"$LOG"
     fi
-    
+
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" mkdir /home/${EC2_USER}/kuberdock-files  2>"$LOG"
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" cp /var/opt/kuberdock/{node_install.sh,pd.sh} /etc/pki/etcd/ca.crt /etc/pki/etcd/etcd-client.crt /etc/pki/etcd/etcd-client.key /home/${EC2_USER}/kuberdock-files 2>"$LOG"
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${EC2_USER}@${KUBE_MASTER_IP}" "sudo cp /var/lib/nginx/.ssh/id_rsa.pub /home/${EC2_USER}/kuberdock-files" 2>"$LOG"

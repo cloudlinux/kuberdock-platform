@@ -45,9 +45,7 @@ def unit_stat():
         capacity = dict(KubeStat._get_nodes_info()).get(node)
         if capacity is not None:
             limits = namedtuple('Limits', ['cpu', 'memory'])(
-                capacity['cores'],
-                from_binunit(capacity['memory'], 'MiB', rtype=int),
-            )
+                capacity['cores'], capacity['memory'])
         data, disks = get_node_data(node, start)
 
     metrics = [

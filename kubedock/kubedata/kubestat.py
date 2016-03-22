@@ -5,6 +5,7 @@ import time
 from ..core import db
 from ..pods import Pod
 from ..users import User
+from ..utils import from_binunit
 import socket
 import re
 import requests
@@ -137,8 +138,10 @@ class KubeStat(object):
             if name is None:
                 continue
             cpu = node.get('status', {}).get('capacity', {}).get('cpu', '1')
-            mem = node.get('status', {}).get('capacity', {}).get('memory', '1048576Ki')
-            data[name] = {'cores': int(cpu), 'memory': mem}
+            mem = node.get('status', {}).get('capacity', {}).get('memory',
+                                                                 '1048576Ki')
+            data[name] = {'cores': int(cpu)/8,
+                          'memory': from_binunit(mem, 'MiB', rtype=int)/4}
         return data
 
     def _make_windows(self, start_point, end_point):

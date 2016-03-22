@@ -131,8 +131,8 @@ class TestNodeUtils(DBTestCase):
         get_k8s_node_mock.return_value = {
             "status": {
                 "capacity": {
-                    "cpu": "1",
-                    "memory": "{}Ki".format(2 * 1024 * 1024),
+                    "cpu": str(1*8),
+                    "memory": "{}Ki".format(2 * 1024 * 1024 * 4),
                     "pods": "40"
                 },
                 "conditions": [

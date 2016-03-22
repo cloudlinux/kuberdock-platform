@@ -106,12 +106,16 @@
         }
         &.pending,
         &.waiting {
+            padding-left: 35px;
+            position: relative;
             &:before{
                 .border-radius(0);
-                left: 13px;
+                top: 0;
+                left: 0;
+                bottom: 0;
                 width: 22px;
                 content: '';
-                bottom: 16px;
+                margin: auto;
                 height: 22px;
                 position: absolute;
                 background: url('../img/pending.gif') 0 0 no-repeat;

@@ -71,27 +71,28 @@
                             <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %> </div>
                         </div>
                     </div>
+                    <div class="col-xs-12 no-padding ">
+
+                    </div>
                     <div class="col-xs-12 no-padding container-logs-wrapper">
                         <a class="export-logs pull-right" title="Export container log to txt file" download="<%= parentID %>_<%= name %>_logs.txt" href="/api/logs/container/<%= parentID %>/<%= name %>?size=200&text=true">Export</a>
                         <div class="container-logs">
                             <% _.each(logs, function(serie){ %>
-
-                            <p class="container-logs-started"><%- serie.start %>: Started</p>
-                            <% _.each(serie.hits, function(line){ %>
-                                <p><%- line['@timestamp'] %>: <%- line.log %></p>
-                            <% }) %>
-                            <% if (serie.end) { %>
-                                <% if (serie.exit_code === -2) { %>
-                                    <p class="container-logs-stopped"><%- serie.end %>: Pod was stopped</p>
-                                <% } else if (serie.exit_code === 0) { %>
-                                    <p class="container-logs-succeeded"><%- serie.end %>: Exited successfully</p>
-                                    <p class="container-logs-succeeded-reason"><%- serie.reason %></p>
-                                <% } else { %>
-                                    <p class="container-logs-failed"><%- serie.end %>: Falied</p>
-                                    <p class="container-logs-failed-reason"><%- serie.reason %></p>
+                                <p class="container-logs-started"><%- serie.start %>: Started</p>
+                                <% _.each(serie.hits, function(line){ %>
+                                    <p><%- line['@timestamp'] %>: <%- line.log %></p>
+                                <% }) %>
+                                <% if (serie.end) { %>
+                                    <% if (serie.exit_code === -2) { %>
+                                        <p class="container-logs-stopped"><%- serie.end %>: Pod was stopped</p>
+                                    <% } else if (serie.exit_code === 0) { %>
+                                        <p class="container-logs-succeeded"><%- serie.end %>: Exited successfully</p>
+                                        <p class="container-logs-succeeded-reason"><%- serie.reason %></p>
+                                    <% } else { %>
+                                        <p class="container-logs-failed"><%- serie.end %>: Falied</p>
+                                        <p class="container-logs-failed-reason"><%- serie.reason %></p>
+                                    <% } %>
                                 <% } %>
-                            <% } %>
-
                             <% }) %>
                             <% if (logsError) { %>
                                 <p><%- logsError %></p>

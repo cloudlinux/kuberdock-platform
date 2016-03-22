@@ -15,11 +15,11 @@
 </div>
 <div class="status-line">
     <span class="icon <%- status %>">Status: <%- status %></span>
-    <% if (ableTo('redeploy')) { %> <span class="icon hover restart-btn">restart</span> <% } %>
-    <% if (ableTo('pay-and-start')) { %> <span class="icon hover pay-and-start-btn">pay & start</span> <% } %>
-    <% if (ableTo('start')) { %> <span class="icon hover start-btn">start</span> <% } %>
-    <% if (ableTo('stop')) { %> <span class="icon hover stop-btn">stop</span> <% } %>
-    <% if (ableTo('delete')) { %> <span class="icon hover terminate-btn">delete</span> <% } %>
+    <% if (ableTo('redeploy')) { %> <span class="icon hover restart-btn">Restart</span> <% } %>
+    <% if (ableTo('pay-and-start')) { %> <span class="icon hover pay-and-start-btn">Pay & start</span> <% } %>
+    <% if (ableTo('start')) { %> <span class="icon hover start-btn">Start</span> <% } %>
+    <% if (ableTo('stop')) { %> <span class="icon hover stop-btn">Stop</span> <% } %>
+    <% if (ableTo('delete')) { %> <span class="icon hover terminate-btn">Delete</span> <% } %>
     <% if (graphs) { %>
         <a class="icon hover list-btn" href="#pods/<%- id %>">Data</a>
     <% } else { %>
@@ -31,30 +31,28 @@
         <a class="icon hover upgrade-btn" href="#pods/<%- id %>/upgrade">Upgrade</a>
     <% } %>
 </div>
-<div class="row placeholders">
-    <div class="control-icons col-md-10 col-md-offset-2 col-sm-12">
-        <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
-            <% if (publicIP) { %>
-                <div>Public IP: <%- publicIP %></div>
-            <% } %>
-            <% if (publicName) { %>
-                <div>Public name: <%- publicName %></div>
-            <% } %>
-            <% if (hasPorts) { %>
-                <div>Pod IP: <%- (typeof(podIP) !== 'undefined') ? podIP : 'Internal ip is not assigned yet'%></div>
-            <% } %>
-            <div>Restart policy: <%- restartPolicy %></div>
-            <div>Kube Type: <%- kubeType.get('name') %></div>
-            <div>Number of Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
-            <div>Price: <%- totalPrice %> / <%- period %></div>
-            <!--
-            <div class="edit">Edit pod</div>
-            -->
-        </div>
-        <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 servers">
-            <div>CPU: <%- limits.cpu %></div>
-            <div>RAM: <%- limits.ram %></div>
-            <div>HDD: <%- limits.hdd %></div>
-        </div>
+<div class="control-icons col-md-10 col-md-offset-2 col-sm-12 clearfix">
+    <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
+        <% if (publicIP) { %>
+            <div>Public IP: <%- publicIP %></div>
+        <% } %>
+        <% if (publicName) { %>
+            <div>Public name: <%- publicName %></div>
+        <% } %>
+        <% if (hasPorts) { %>
+            <div>Pod IP: <%- (typeof(podIP) !== 'undefined') ? podIP : 'Internal ip is not assigned yet'%></div>
+        <% } %>
+        <div>Restart policy: <%- restartPolicy %></div>
+        <div>Kube Type: <%- kubeType.get('name') %></div>
+        <div>Number of Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
+        <div>Price: <%- totalPrice %> / <%- period %></div>
+        <!--
+        <div class="edit">Edit pod</div>
+        -->
+    </div>
+    <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 servers">
+        <div>CPU: <%- limits.cpu %></div>
+        <div>RAM: <%- limits.ram %></div>
+        <div>HDD: <%- limits.hdd %></div>
     </div>
 </div>

@@ -127,8 +127,8 @@
                         <table id="data-table" class="table env-table" >
                             <thead>
                               <tr>
-                                <th>Name</th>
-                                <th>Value</th>
+                                <th class="col-xs-4">Name</th>
+                                <th class="col-xs-8">Value</th>
                               </tr>
                             </thead>
                             <tbody>

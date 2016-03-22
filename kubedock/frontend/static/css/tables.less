@@ -778,6 +778,7 @@
                 }
                 .pay-and-start-btn,
                 .start-btn,
+                .restart-btn,
                 .stop-btn,
                 .terminate-btn,
                 .editPod{
@@ -820,6 +821,13 @@
                 .start-btn, .pay-and-start-btn{
                     width: 12px;
                     background: url('../img/start.png') 0 0 no-repeat;
+                    &:hover{
+                        background-position: 0 -18px;
+                    }
+                }
+                .restart-btn{
+                    width: 19px;
+                    background: url('../img/redeploy-pod.png') 0 0 no-repeat;
                     &:hover{
                         background-position: 0 -18px;
                     }

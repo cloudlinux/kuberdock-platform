@@ -725,25 +725,37 @@ define(['app_data/app', 'app_data/model',
         searchPD: function(evt){
             var name = evt.target.value = evt.target.value.trim(),
                 pd = this.getPDModel(name);
-            this.ui.pdSelect.find('.add-new-pd').remove();
+            this.ui.pdSelect.find('.add-new-pd, .invalid-name-pd').remove();
 
-            if (name && !this.nameFormat.test(name)){
-                $(evt.target).addClass('error');
-                return;
-            }
-
-            if (name && pd === undefined){
-                var createNewPDOption = document.createElement('option');
-                createNewPDOption.value = name;
-                createNewPDOption.innerHTML = _.escape(name + ' (new)');
-                createNewPDOption.className = 'add-new-pd';
-                this.ui.pdSelect.prepend(createNewPDOption);
+            if (name){
+                var error = !this.nameFormat.test(name) ? 'Only "-", "_" and alphanumeric symbols are allowed.'
+                    : name.length > 36 ? 'Maximum length is 36 symbols.'
+                    : null;
+                if (error){
+                    this.ui.pdSelect.prepend($('<option disabled/>')
+                        .addClass('invalid-name-pd').val(name).text(error)
+                        // also add name, so selectpicker won't hide this "option"
+                        .append($('<span class="hidden"/>').text(name))
+                    );
+                    this.ui.pdSelect.selectpicker('refresh');
+                    $(evt.target).addClass('error');
+                    return;
+                }
+                if (pd === undefined){  // add option "create new pd" in select
+                    this.ui.pdSelect.prepend($('<option/>')
+                        .val(name).text(name + ' (new)').addClass('add-new-pd')
+                    );
+                }
             }
             this.ui.pdSelect.selectpicker('refresh');
         },
 
         selectPD: function(){
-            var name = this.ui.pdSelect.val().trim();
+            // if there was an error message, remove it
+            this.ui.pdSelect.find('.invalid-name-pd').remove();
+            this.ui.pdSelect.selectpicker('refresh');
+
+            var name = (this.ui.pdSelect.val() || '').trim();
             if (!name || !this.nameFormat.test(name)) return;
 
             this.releasePersistentDisk();

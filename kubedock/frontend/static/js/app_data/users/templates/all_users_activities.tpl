@@ -10,13 +10,13 @@
 </div>
 <div class="container">
     <div class="row" id="all-user-activity-tab">
-        <div class="col-sm-2 sidebar">
+        <div class="col-md-2 col-sm-12 sidebar">
             <ul class="nav nav-sidebar list-unstyled" role="tablist">
                 <li class="usersPage general">Users</li>
                 <li class="activityPage active">Users activity</li>
             </ul>
         </div>
-        <div class="tab-content col-sm-10">
+        <div class="tab-content col-md-10 col-sm-12">
             <div class="col-sm-12 serch-control">
                 <div class="col-sm-2 no-padding">
                     <input type="text" id="dateFrom" placeholder="From">

@@ -1,0 +1,347 @@
+.status-line{
+    color: #4e5665;
+    font-size: 13px;
+    position: relative;
+    font-family: @regular;
+    border-bottom: 1px solid #e5e5e5;
+    > *{
+        margin-bottom: 20px;
+        display: inline-block;
+        margin-right: 20px;
+        color: #4e5665;
+        text-decoration: none;
+        &:hover{
+            text-decoration: none;
+        }
+        &:last-child{
+            margin-right: 0;
+        }
+    }
+    .icon{
+        padding-left: 25px;
+        position: relative;
+        &:before{
+            top: 0;
+            left: 0;
+            bottom: 0;
+            content: '';
+            margin: auto;
+            position: absolute;
+        }
+        &.hover{
+            &:hover,
+            &:active,
+            &:focus {
+                cursor: pointer;
+                color: #3197ee;
+                text-decoration: none;
+            }
+        }
+        &.active,
+        &.unknown,
+        &.locked,
+        &.suspended,
+        &.ok,
+        &.running,
+        &.none,
+        &.locked,
+        &.stopped,
+        &.troubles,
+        &.expired,
+        &.terminated,
+        &.succeeded,
+        &.failed,
+        &.termination{
+            &:before{
+                .border-radius(50%);
+                width: 12px;
+                height: 12px;
+            }
+        }
+        &.active,
+        &.ok,
+        &.running{
+            &:before{
+                background-color: #97cd75;
+            }
+        }
+        &.unknown,
+        &.none,
+        &.terminated,
+        &.succeeded,
+        &.failed,
+        &.termination{
+            &:before{
+                background-color: #bac1c7;
+            }
+        }
+        &.locked,
+        &.stopped,
+        &.troubles{
+            &:before{
+                background-color: #f5544d;
+            }
+        }
+        &.suspended,
+        &.expired{
+            &:before{
+                background-color: #ffb704;
+            }
+        }
+        &.clock{
+            padding-left: 25px;
+            &:before{
+                width: 17px;
+                height: 17px;
+                background: url('../img/cklock-icon.png') 0 0 no-repeat;
+            }
+        }
+        &.award{
+            padding-left: 25px;
+            &:before{
+                width: 17px;
+                height: 23px;
+                background: url('../img/award-icon.png') 0 0 no-repeat;
+            }
+        }
+        &.pending,
+        &.waiting {
+            &:before{
+                .border-radius(0);
+                left: 13px;
+                width: 22px;
+                content: '';
+                bottom: 16px;
+                height: 22px;
+                position: absolute;
+                background: url('../img/pending.gif') 0 0 no-repeat;
+            }
+        }
+        &#startContainer{
+            &:before{
+                background: url('../img/start.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -18px;
+                }
+            }
+        }
+        &#stopContainer{
+            &:before{
+                width: 17px;
+                height: 17px;
+                background: url('../img/stop.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -17px;
+                }
+            }
+        }
+        &.unpaid{
+            &:before{
+                .border-radius(0);
+                left: 13px;
+                width: 9px;
+                content: '';
+                margin: auto;
+                height: 17px;
+                position: absolute;
+                background: url('../img/unpaid-icon.png') 0 0 no-repeat;
+            }
+        }
+        &.check-for-update{
+            &:before{
+                width: 14px;
+                height: 16px;
+                background: url('../img/check-update-ico.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -17px;
+                }
+            }
+        }
+        &.container-update{
+            padding-left: 35px;
+            &:before{
+                width: 24px;
+                height: 21px;
+                background: url('../img/container-update-ico.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -21px;
+                }
+            }
+        }
+        &.upgrade-btn{
+            &:before{
+                width: 20px;
+                height: 16px;
+                background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -16px;
+                }
+            }
+        }
+        &.start-btn,
+        &.stop-btn,
+        &.restart-btn,
+        &.terminate-btn,
+        &.list-btn,
+        &.stats-btn,
+        &.pay-and-start-btn,
+        &.upgrade-btn{
+            &:before{
+                content: '';
+                width: 20px;
+                height: 17px;
+                position: absolute;
+            }
+        }
+        &.stats-btn,
+        &.list-btn{
+            &:before{
+                height: 16px;
+                background: url('../img/stats-data-icon.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -17px;
+                }
+            }
+        }
+        &.upgrade-btn{
+            &:before{
+                width: 14px;
+                height: 16px;
+                background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -16px;
+                }
+            }
+            &.back{
+                color: #3197ee;
+                &:before{
+                    background-position: 0 -16px;
+                }
+                &:hover{
+                    color: #4e5665;
+                    &:before{
+                        background-position: 0 0;
+                    }
+                }
+            }
+        }
+        &.list-btn{
+            &:before{
+                .rotate(-90deg);
+            }
+        }
+        &.start-btn,
+        &.pay-and-start-btn{
+            &:before{
+                background: url('../img/start.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -18px;
+                }
+            }
+        }
+        &.stop-btn{
+            &:before{
+                background: url('../img/stop.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -17px;
+                }
+            }
+        }
+        &.restart-btn{
+            padding-left: 28px;
+            &:before{
+                background: url('../img/redeploy-pod.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -18px;
+                }
+            }
+        }
+        &.terminate-btn{
+            &:before{
+                background: url('../img/recycling.png') 0 0 no-repeat;
+            }
+            &:hover{
+                &:before{
+                    background-position: 0 -18px;
+                }
+            }
+        }
+    }
+}
+.control-icons{
+    margin-top: 37px;
+    .info,
+    .servers{
+        min-height: 70px;
+        margin-bottom: 37px;
+        > div{
+            color: #1d1d1d;
+            font-size: 13px;
+            line-height: 19px;
+            font-weight: normal;
+            font-family: @regular;
+        }
+    }
+    .info{
+        padding-left: 94px;
+        position: relative;
+        &:before{
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 70px;
+            left: 0;
+            top: 0;
+            background: url('../img/info-ico.png') 0 0 no-repeat;
+        }
+        > div{
+            color: #1d1d1d;
+            font-size: 13px;
+            font-weight: normal;
+            font-family: @regular;
+        }
+    }
+    .servers{
+        position: relative;
+        padding-left: 103px;
+        &:before{
+            top: 0;
+            left: 0;
+            width: 80px;
+            content: '';
+            height: 66px;
+            position: absolute;
+            background: url('../img/servers.png') 0 0 no-repeat;
+        }
+    }
+    @media (max-width: 768px) {
+        .servers{
+            padding-left: 94px;
+            &:before{
+                left: 0;
+                bottom: 0;
+                margin: auto;
+            }
+        }
+    }
+}

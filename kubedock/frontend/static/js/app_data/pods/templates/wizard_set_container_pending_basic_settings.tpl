@@ -6,7 +6,7 @@
         <li role="presentation">Final setup</li>
     </ul>
 </div>
-<div id="details_content" class="col-sm-9 set-up-image no-padding">
+<div id="details_content" class="col-md-9 col-sm-12 set-up-image no-padding">
     <div id="tab-content">
         <div class="image-name-wrapper">
             <%- image %>
@@ -32,7 +32,7 @@
         </div>
     </div>
 </div>
-<div class="col-xs-9 no-padding col-xs-offset-3">
+<div class="col-md-9 col-md-offset-3 col-sm-12 no-padding">
     <div class="description pull-left">
         <p><sup>*</sup> Public IP will require additional payment<br>
         <sup>**</sup> Data wiped out on each container restart, use persistent storage if you want data to persist</p>

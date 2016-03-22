@@ -1,8 +1,9 @@
-<div class="col-xs-5  col-sm-4 col-md-3 left">
+<div class="left">
     <table class="table ip_pool_table">
         <thead>
             <tr>
                 <th>Subnet</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody class="networks-list"></tbody>

@@ -5,9 +5,10 @@
                 <table class="table" id="persistent-volumes-table">
                     <thead>
                         <tr>
-                            <th class="col-md-6">Volume Name</th>
+                            <th class="col-md-4">Volume Name</th>
                             <th class="col-md-3">Size</th>
                             <th class="col-md-3">Status</th>
+                            <th class="col-md-2">Actions</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

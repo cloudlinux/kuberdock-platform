@@ -1,4 +1,4 @@
-<td class="col-xs-4 network">
-    <%- network %>
-    <span id="deleteNetwork" class="pull-right" title="Remove <%= network %> subnet"></span>
+<td class="network"><%- network %></td>
+<td class="actions">
+    <span id="deleteNetwork" title="Remove <%= network %> subnet"></span>
 </td>

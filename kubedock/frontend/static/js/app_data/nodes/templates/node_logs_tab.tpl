@@ -1,5 +1,5 @@
 <div id="logs-page">
-    <div class="status-line <%- status %>">Status: <%- status %></div>
+    <div class="status-line"><span class="icon <%- status %>">Status: <%- status %></span></div>
     <!--
     <div class="page-top-menu">
         <span>Choose log:</span>

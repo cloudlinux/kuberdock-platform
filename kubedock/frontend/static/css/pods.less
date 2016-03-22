@@ -1,507 +1,4 @@
 /* pod-main */
-#podlist-table, #imagelist-table, #ports-table, #volumes-table, .variables-table, #env-table, .env-table{
-    .box-shadow-materials();
-    thead{
-        background-color: transparent;
-        &.min-opacity{
-            .opacity(0);
-        }
-        &.pods-checked{
-            th {
-                .opacity(0);
-                &.checkboxes{
-                    .opacity(1);
-                }
-            }
-        }
-        tr{
-            border-color: transparent;
-            th{
-                .user-select(none);
-                height: 50px;
-                color: #4e5665;
-                font-size: 13px;
-                cursor: default;
-                text-align: left;
-                border-top: none;
-                border-bottom: none;
-                font-weight: normal;
-                vertical-align: middle;
-                font-family: @regular;
-                &:focus{
-                    outline: 0;
-                }
-                &.checkboxes{
-                    font-size: 0;
-                    text-align: center;
-                    label.custom{
-                        max-width: 12px;
-                        margin-top: 4px;
-                    }
-                }
-                &.active{
-                   background-color: transparent;
-                }
-                .caret{
-                    margin-left: 5px;
-                    &.rotate{
-                        .rotate(180deg)
-                    }
-                }
-                .custom{
-                    span{
-                        vertical-align: middle;
-                    }
-                }
-            }
-        }
-    }
-    tbody{
-        tr{
-            background-color: #fff;
-            &:hover{
-                background-color: #f5fafe;
-            }
-            &.checked{
-                background-color: #f5fafe;
-                td{
-                    label{
-                        &.custom{
-                            span{
-                                &:before{
-                                    top: -6px;
-                                    left: -5px;
-                                    width: 21px;
-                                    content: '';
-                                    height: 21px;
-                                    position: absolute;
-                                    background: url('../img/checkbox-checked-blue.png') 0 0 no-repeat;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            &.deleting {
-                td {
-                    .opacity(0.3);
-                }
-            }
-            td{
-                height: 50px;
-                color: #1d1d1d;
-                padding-top: 0;
-                font-size: 13px;
-                padding-bottom: 0;
-                vertical-align: middle;
-                font-family: @regular;
-                &.checkboxes{
-                    font-size: 0;
-                    text-align: center;
-                    label.custom{
-                        max-width: 12px;
-                    }
-                }
-                &.index, &.disabled-color-text, input[disabled]{
-                    color: #b1b9c0;
-                }
-                &.actions{
-                    font-size: 0;
-                    span + span{
-                        margin-left: 10px;
-                    }
-                }
-                &.containerProtocol{
-                    text-transform: uppercase;
-                    *{
-                        text-transform: uppercase;
-                    }
-                }
-                .bootstrap-select{
-                    .no-results {
-                        display: none !important;
-                    }
-                    .dropdown-menu{
-                        top: 1px;
-                        border: none;
-                        &.inner{
-                            border: 1px solid #e5e5e5;
-                            border-top: none;
-                            > li{
-                                a{
-                                    padding: 9px 20px;
-                                    &.invalid-name-pd {  // error message
-                                        color: #d32f2f;
-                                        cursor: auto;
-                                        border: none;
-                                        font-weight: normal;
-                                        white-space: normal;
-                                        padding-top: 3px;
-                                        padding-bottom: 3px;
-                                    }
-                                }
-                            }
-                        }
-                        &.error{
-                            border-color: red;
-                        }
-                        &.open{
-                            min-height: 36px !important;
-                            .bs-searchbox{
-                                padding: 0;
-                                input {
-                                    font-size: 13px;
-                                    font-family: @regular;
-                                    color: #1d1d1d;
-                                    .placeholder(#b4b4b4);
-                                    .box-shadow( none );
-                                    .border-radius( 0 );
-                                    height: 36px;
-                                    outline: 0;
-                                    border: 1px solid #188eed;
-                                    background-color: #fff;
-                                    padding: 0 20px;
-                                    width: 100%;
-                                    &:focus{
-                                        .box-shadow(none);
-                                        .transition(color 500ms ease);
-                                        border-color: #188eed;
-                                    }
-                                    &.error{
-                                        border-color: red;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                .custom{
-                    input{
-                        &:checked{
-                            position: relative;
-                        }
-                    }
-                    span{
-                        vertical-align: middle;
-                    }
-                }
-                .input-wrap{
-                    input{
-                        .box-sizing(border-box);
-                        width: 100%;
-                        height: 36px;
-                        margin: 0;
-                        outline: none;
-                        padding: 0 0 0 20px;
-                        font-size: 13px;
-                        background-color: #fff;
-                        border: 1px solid #e5e5e5;
-                        &:focus{
-                            .transition(color 500ms ease);
-                            border-color: #188eed;
-                        }
-                        &.error{
-                            border-color: red;
-                        }
-                    }
-                    input[type=number]::-webkit-inner-spin-button,
-                    input[type=number]::-webkit-outer-spin-button {
-                      -webkit-appearance: none;
-                      margin: 0;
-                    }
-                }
-                .add-drive-cancel{
-                    border: none;
-                    width: 16px;
-                    height: 15px;
-                    margin: auto;
-                    display: inline-block;
-                    background: url('../img/remove-line.png') center no-repeat;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                span{
-                    &.pdName{
-                        position: relative;
-                        color: #3297ed;
-                        .caret{
-                            top: 11px;
-                            bottom: 0;
-                            margin: auto;
-                            right: -14px;
-                            position: absolute;
-                            border-top-color: #3297ed;
-                        }
-                        .form-control{
-                            &.input-sm{
-                                border-color: transparent;
-                                &:focus{
-                                    border-color: transparent;
-                                }
-                            }
-                        }
-                        + span{
-                            select{
-                                &.form-control{
-                                    &.input-sm{
-                                        min-width: 90px;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    + .editable-container{
-                        button{
-                           margin-bottom: 0 !important;
-                        }
-                        + .add-drive{
-                            margin-top: 8px;
-                            margin-left: 5px;
-                            vertical-align: middle;
-                        }
-                    }
-                    &.add-drive{
-                        width: 15px;
-                        height: 15px;
-                        font-size: 0;
-                        color: #3297ed;
-                        display: inline-block;
-                        vertical-align: bottom;
-                        background: url('../img/add-port-plus.png') 0 0 no-repeat;
-                        &:hover{
-                            cursor: pointer;
-                        }
-                    }
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination, &.terminated, &.failed, &.succeeded{
-                        position: relative;
-                        padding-left: 29px;
-                        text-transform: capitalize;
-                        &:before{
-                            .border-radius(50%);
-                            left: 6px;
-                            width: 12px;
-                            content: '';
-                            height: 12px;
-                            bottom: 2px;
-                            position: absolute;
-                        }
-                    }
-                    &.running, &.OK{
-                        &:before{
-                            background-color: #97cd75;
-                        }
-                    }
-                    &.stopped, &.troubles{
-                        &:before{
-                            background-color: #f5544d;
-                        }
-                    }
-                    &.terminated, &.succeeded, &.failed{
-                        &:before{
-                            background-color: #c3c3c3;
-                        }
-                    }
-                    &.pending, &.waiting{
-                        padding-left: 29px;
-                        &:before{
-                            .border-radius(0);
-                            left: 0;
-                            width: 22px;
-                            content: '';
-                            margin: auto;
-                            height: 18px;
-                            position: absolute;
-                            background: url('../img/pending.gif') 0 0 no-repeat;
-                        }
-                    }
-                    &.unpaid{
-                        padding-left: 29px;
-                        position: relative;
-                        text-transform: capitalize;
-                        &:before{
-                            .border-radius(0);
-                            left: 7px;
-                            width: 9px;
-                            content: '';
-                            margin: auto;
-                            height: 17px;
-                            position: absolute;
-                            background: url('../img/unpaid-icon.png') 0 0 no-repeat;
-                        }
-                    }
-                }
-                .pay-and-start-btn, .restart-btn, .start-btn, .stop-btn, .terminate-btn, .editPod{
-                    top: 2px;
-                    left: 0px;
-                    height: 17px;
-                    font-size: 0;
-                    position: relative;
-                    display: inline-block;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                .check-for-update, .container-update{
-                    left: 0;
-                    top: 2px;
-                    font-size: 0;
-                    position: relative;
-                    display: inline-block;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                .check-for-update{
-                    width: 14px;
-                    height: 16px;
-                    background: url('../img/check-update-ico.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -17px;
-                    }
-                }
-                .container-update{
-                    width: 24px;
-                    height: 21px;
-                    background: url('../img/container-update-ico.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -21px;
-                    }
-                }
-                .start-btn, .pay-and-start-btn{
-                    width: 12px;
-                    background: url('../img/start.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .restart-btn{
-                    width: 19px;
-                    background: url('../img/redeploy-pod.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .stop-btn{
-                    width: 17px;
-                    background: url('../img/stop.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -17px;
-                    }
-                }
-                .terminate-btn{
-                    width: 15px;
-                    background: url('../img/recycling.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .editPod{
-                    width: 20px;
-                    background: url('../img/pencil-big.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .tooltip.bottom{
-                    .opacity(1);
-                    .box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
-                    margin-top: 8px;
-                    border-color: #bdc4c9;
-                    background-color: #fff;
-                    .tooltip-arrow{
-                        display: none;
-                    }
-                    .tooltip-inner{
-                        height: 44px;
-                        color: #1d1d1d;
-                        padding: 0 12px;
-                        line-height: 44px;
-                        position: relative;
-                        text-align: center;
-                        white-space: nowrap;
-                        background-color: #fff;
-                        border: 1px solid #c7ced3;
-                        &:before{
-                            left: 46%;
-                            top: -10px;
-                            content:'';
-                            width: 14px;
-                            z-index: 9999;
-                            height: 11px;
-                            position: absolute;
-                            background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat
-                        }
-                    }
-                }
-            }
-            // FIXME: "a" is messing up with bootstrap-select
-            // a, .poditem-page-btn, .container-page-btn{
-            .poditem-page-btn, .container-page-btn{
-                padding: 0;
-                color: #3197ee;
-                font-size: 13px;
-                font-family: @regular;
-                text-decoration: none;
-                &:hover{
-                    cursor: pointer;
-                }
-            }
-            .image-tag{
-                color: #fff;
-                cursor: default;
-                font-size: 11px;
-                margin-left: 5px;
-                padding: 1px 6px 2px;
-                background-color: #9B9B9B;
-            }
-        }
-    }
-}
-.variables-table, #imagelist-table{
-    margin-top: 10px;
-}
-#imagelist-table{
-    position: relative;
-    thead{
-        tr{
-            th{
-                &:first-child{
-                    padding-left: 24px;
-                }
-            }
-        }
-    }
-    tbody{
-        tr{
-            td{
-                &:first-child{
-                    padding-left: 24px;
-                }
-            }
-        }
-    }
-}
-#ports-table, #volumes-table, .env-table, .variables-table {
-    thead{
-        tr{
-            th{
-                &:first-child{
-                    padding-left: 24px;
-                }
-            }
-        }
-    }
-    tbody{
-        tr{
-            td{
-                &:first-child{
-                    padding-left: 24px;
-                }
-            }
-        }
-    }
-}
 #steps{
     .nav-buttons{
         &.fixed{
@@ -612,43 +109,6 @@
     }
 }
 #item-info{
-    #imagelist-table{
-        .inline-fix{
-            font-size: 0;
-            .upgrade-kubes{
-                width: 52px;
-                height: 35px;
-                margin: 0 4px;
-                font-size: 13px;
-                text-align: center;
-                display: inline-block;
-                vertical-align: middle;
-                border: 1px solid #ddd;
-                -moz-appearance: textfield;
-            }
-            .upgrade-kubes-less,
-            .upgrade-kubes-more{
-                width: 18px;
-                height: 18px;
-                cursor: pointer;
-                display: inline-block;
-                vertical-align: middle;
-            }
-            .upgrade-kubes-less{
-                background: url('../img/blue-minus.png') 0 0 no-repeat;
-            }
-            .upgrade-kubes-more{
-                background: url('../img/blue-plus.png') 0 0 no-repeat;
-            }
-            input[type=number]::-webkit-inner-spin-button,
-            input[type=number]::-webkit-outer-spin-button {
-                -webkit-appearance: none;
-                -moz-appearance: none;
-                appearance: none;
-                margin: 0;
-            }
-        }
-    }
     .upgrade-summary{
         margin-top: 20px;
         padding-top: 37px;
@@ -755,267 +215,10 @@
             }
         }
     }
-    .start-btn, .stop-btn, .restart-btn, .terminate-btn, .list-btn, .stats-btn, .pay-and-start-btn, .upgrade-btn{
-        padding-left: 25px;
-        position: relative;
-        &:before{
-            .border-radius(0);
-            content: '';
-            left: 2px;
-            width: 20px;
-            height: 17px;
-            position: absolute;
-        }
-    }
-    .stats-btn, .list-btn{
-        &:before{
-            top: 4px;
-            height: 16px;
-            background: url('../img/stats-data-icon.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -17px;
-            }
-        }
-    }
-    .upgrade-btn{
-         &:before{
-            top: 6px;
-            height: 16px;
-            background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -16px;
-            }
-        }
-        &.back{
-            color: #3197ee;
-            &:before{
-                background-position: 0 -16px;
-            }
-            &:hover{
-                color: #4e5665;
-                &:before{
-                    background-position: 0 0;
-                }
-            }
-        }
-    }
-    .list-btn{
-        &:before{
-            .rotate(-90deg);
-        }
-    }
-    .start-btn, .pay-and-start-btn{
-        &:before{
-            top: 5px;
-            background: url('../img/start.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -18px;
-            }
-        }
-    }
-    .stop-btn{
-        &:before{
-            top: 5px;
-            background: url('../img/stop.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -17px;
-            }
-        }
-    }
-    .restart-btn{
-        padding-left: 28px;
-        &:before{
-            top: 5px;
-            background: url('../img/redeploy-pod.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -18px;
-            }
-        }
-    }
-    .terminate-btn{
-        &:before{
-            top: 4px;
-            background: url('../img/recycling.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -18px;
-            }
-        }
-    }
-    .no-padding{
-        font-size: 0;
-        line-height: 29px;
-        border-bottom: 1px solid #e5e5e5;
-    }
-    .col-xs-10{
-        .clearfix;
-        float: none;
-        padding-right: 0;
-        margin: 37px auto 32px;
-        .col-xs-6{
-            margin-bottom: 25px;
-            padding-right: 0;
-        }
-        .info, .servers{
-            > div{
-                color: #1d1d1d;
-                font-size: 13px;
-                line-height: 19px;
-                font-weight: normal;
-                font-family: @regular;
-                &:last-child{
-                    margin-bottom: 0;
-                }
-            }
-        }
-        .info{
-            padding-left: 94px;
-            position: relative;
-            &:before{
-                top: 0;
-                left: 0;
-                width: 80px;
-                content: '';
-                height: 70px;
-                position: absolute;
-                background: url('../img/info-ico.png') 0 0 no-repeat;
-            }
-        }
-        .servers{
-            position: relative;
-            padding-left: 103px;
-            &:last-child{
-                margin-bottom: 0;
-            }
-            &:before{
-                top: 0;
-                left: 0;
-                width: 80px;
-                content: '';
-                height: 66px;
-                position: absolute;
-                background: url('../img/servers.png') 0 0 no-repeat;
-            }
-        }
-    }
-    .pod-controls > .no-padding, .license-status-line {
-        span, a {
-            height: 40px;
-            color: #4e5665;
-            font-size: 13px;
-            margin-right: 25px;
-            vertical-align: top;
-            display: inline-block;
-            text-transform: capitalize;
-            font-family: @regular;
-            &:hover, &:active, &:focus {
-                color: #3197ee;
-                cursor: pointer;
-                text-decoration: none;
-            }
-            &:first-child{
-                color: #4e5665;
-                position: relative;
-                padding-left: 37px;
-                margin-right: 20px;
-                &:hover{
-                    color: #4e5665;
-                    cursor: default;
-                }
-                &:before{
-                    .border-radius(50%);
-                    left: 11px;
-                    width: 13px;
-                    content: '';
-                    height: 13px;
-                    bottom: 19px;
-                    position: absolute;
-                }
-            }
-            &.running, &.OK{
-                &:before{
-                    background-color: #97cd75;
-                }
-            }
-            &.stopped, &.troubles{
-                &:before{
-                    background-color: #f5544d;
-                }
-            }
-            &.terminated, &.succeeded, &.failed{
-                &:before{
-                    background-color: #c3c3c3;
-                }
-            }
-            &.pending, &.waiting{
-                &:before{
-                    .border-radius(0);
-                    left: 5px;
-                    content: '';
-                    width: 22px;
-                    bottom: 16px;
-                    height: 22px;
-                    position: absolute;
-                    background: url('../img/pending.gif') 0 0 no-repeat;
-                }
-            }
-            &.unpaid{
-                &:before{
-                    .border-radius(0);
-                    left: 13px;
-                    width: 9px;
-                    content: '';
-                    margin: auto;
-                    height: 17px;
-                    position: absolute;
-                    background: url('../img/unpaid-icon.png') 0 0 no-repeat;
-                }
-            }
-            &.rename_pod{
-                float: right;
-                margin-top: 5px;
-                margin-left: 22px;
-                position: relative;
-                margin-right: 10px;
-                line-height: 22px;
-                color: #030303;
-                border-bottom: 1px dashed #000000;
-                height: 22px;
-                &:before{
-                    top: 0px;
-                    left: -31px;
-                    width: 23px;
-                    height: 19px;
-                    content: '';
-                    position: absolute;
-                    background: url('../img/pencil-big.png') 100% 2px no-repeat;
-                }
-                &:hover{
-                    &:before{
-                        background-position: 100% bottom;
-                    }
-                }
-            }
-        }
-    }
 }
 /* end-pod-main */
 
 /* add pod */
-.add-item{
-    cursor: pointer;
-}
 
 #add-image{
     .sidebar{
@@ -1197,7 +400,8 @@
                     padding-bottom: 18px;
                     border-bottom: 1px solid #DDD;
                 }
-                .policy, .kube-type-wrapper{
+                .policy,
+                .kube-type-wrapper{
                     position: relative;
                     select{
                         margin-bottom: 0px;
@@ -1205,14 +409,16 @@
                             background: #f9f9f9;
                         }
                     }
-                    .edit-polycy-description, .edit-kube-type-description{
+                    .edit-polycy-description,
+                    .edit-kube-type-description{
                         left: 10px;
                         bottom: -20px;
                         color: #adaaaa;
                         font-size: 11px;
                         position: absolute;
                     }
-                    .edit-policy, .edit-kube-type{
+                    .edit-policy,
+                    .edit-kube-type{
                         height: 51px;
                         position: relative;
                         display: inline-block;
@@ -1240,7 +446,8 @@
                 .kube-type-wrapper{
                     margin-bottom: 50px;
                 }
-                .ports, .volumes{
+                .ports,
+                .volumes{
                     table{
                         thead{
                             tr{
@@ -1257,24 +464,11 @@
                             font-weight: normal;
                         }
                     }
-                    .col-xs-10{
-                        margin: 0;
-                    }
                     #ports-table{
                         margin-bottom: 15px;
-                        tbody{
-                            tr{
-                                td{
-                                    label{
-                                        &.custom{
-                                            margin-bottom: 0;
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
-                    #ports-table, #volumes-table{
+                    #ports-table,
+                    #volumes-table{
                         tr{
                             td{
                                 &:last-child{
@@ -1414,11 +608,13 @@
                 .volumes{
                     margin-bottom: 30px;
                 }
-                .volumes, .ports{
+                .volumes,
+                .ports{
                     table{
                         label{
-                            display: inline-block;
                             margin-bottom: 0;
+                            display: inline-block;
+                            vertical-align: middle;
                             input[type="checkbox"]{
                                 + span{
                                     width: 15px;
@@ -1534,7 +730,8 @@
                         }
                     }
                 }
-                &.environment, .entrypoint{
+                &.environment,
+                .entrypoint{
                     label{
                         display: block;
                         margin-bottom: 10px;
@@ -1589,10 +786,13 @@
             }
         }
         #tab-content{
-            .clearfix;
             .clearfix{
-                margin-bottom: 25px;
-                .image-source, #search-image-field, #private-image-field{
+                > div{
+                    margin-bottom: 25px;
+                }
+                .image-source,
+                #search-image-field,
+                #private-image-field{
                     .box-shadow(none);
                     .border-radius(0);
                     .placeholder(#b4b4b4);
@@ -1614,14 +814,16 @@
                         border-right: none;
                     }
                 }
-                #search-image-field, #private-image-field{
+                #search-image-field,
+                #private-image-field{
                     font-size: 13px;
                     border-right: 0;
                     background-color: #fff;
                 }
                 .search-image-inner{
                     height: 52px;
-                    .search-image, .select-image{
+                    .search-image,
+                    .select-image{
                         width: 100%;
                         height: 52px;
                         border: none;
@@ -1635,6 +837,17 @@
                         color: #fff;
                         font-size: 14px;
                         background-color: #2490EA;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .image-source{
+                        button{
+                            border-right: 1px solid #e5e5e5;
+                        }
+                    }
+                    #search-image-field,
+                    #private-image-field{
+                        border-right: 1px solid #e5e5e5;
                     }
                 }
             }
@@ -1793,10 +1006,11 @@
         }
     }
     .description{
-        font-size: 12px;
         margin-top: 22px;
         p{
+            font-size: 12px;
             margin-bottom: 0;
+            padding-left: 8px;
         }
     }
 }
@@ -1830,7 +1044,8 @@
         }
     }
     #details_content{
-        &.timelines-tab, &.monitoring-tab{
+        &.timelines-tab,
+        &.monitoring-tab{
             #tab-content{
                 .clearfix;
                 .col-xs-10{
@@ -1867,36 +1082,10 @@
             }
             .env-table{
                 margin-top: 0;
-            }
-        }
-        &.configuration-general-tab, &.variables-tab{
-            #tab-content{
-                .clearfix;
-                .col-xs-10{
-                    margin-bottom: 0;
-                    .info{
-                        margin-bottom: 27px;
-                    }
+                td{
+                    .word-wrap()
                 }
             }
-        }
-        &.logs-tab,  &.monitoring-tab,  &.timelines-tab, &.configuration-general-tab, &.variables-tab{
-             #tab-content{
-                .servers{
-                    position: relative;
-                    padding-left: 103px;
-                    min-height: 70px;
-                    &:before{
-                        top: 0;
-                        left: 0;
-                        width: 80px;
-                        content: '';
-                        height: 66px;
-                        position: absolute;
-                        background: url('../img/servers.png') 0 0 no-repeat;
-                    }
-                }
-             }
         }
         &.limits-tab{
             #tab-content{
@@ -1939,18 +1128,6 @@
             }
         }
         &.logs-tab{
-            #tab-content{
-                .curent-margin{
-                    margin-bottom: 27px;
-                }
-                > .col-xs-10{
-                    margin: 0px 0px 0px 3%;
-                }
-
-                .info, .servers{
-                    margin-bottom: 30px;
-                }
-            }
             .container-logs-wrapper{
                 .clearfix();
                 .export-logs {
@@ -1996,107 +1173,12 @@
                 }
             }
         }
-        .status-line{
-            .clearfix;
-            span, a{
-                color: #4e5665;
-                font-size: 13px;
-                margin-left: 20px;
-                padding-left: 25px;
-                position: relative;
-                vertical-align: top;
-                display: inline-block;
-                text-transform: capitalize;
-                &:before{
-                    .border-radius(0);
-                    .box-sizing(padding-box);
-                    content: '';
-                    left: 2px;
-                    width: 20px;
-                    height: 17px;
-                    position: absolute;
-                }
-                &:hover, &:active, &:focus {
-                    cursor: pointer;
-                    color: #3197ee;
-                    text-decoration: none;
-                }
-                &#startContainer{
-                    &:before{
-                        top: 5px;
-                        background: url('../img/start.png') 0 0 no-repeat;
-                    }
-                    &:hover{
-                        &:before{
-                            background-position: 0 -18px;
-                        }
-                    }
-                }
-                &#stopContainer{
-                    &:before{
-                        top: 5px;
-                        background: url('../img/stop.png') 0 0 no-repeat;
-                    }
-                    &:hover{
-                        &:before{
-                            background-position: 0 -17px;
-                        }
-                    }
-                }
-                &.check-for-update{
-                    &:before{
-                        top: 5px;
-                        width: 14px;
-                        height: 16px;
-                        background: url('../img/check-update-ico.png') 0 0 no-repeat;
-                    }
-                    &:hover{
-                        &:before{
-                            background-position: 0 -17px;
-                        }
-                    }
-                }
-                &.container-update{
-                    padding-left: 35px;
-                    &:before{
-                        top: 5px;
-                        width: 24px;
-                        height: 21px;
-                        background: url('../img/container-update-ico.png') 0 0 no-repeat;
-                    }
-                    &:hover{
-                        &:before{
-                            background-position: 0 -21px;
-                        }
-                    }
-                }
-                &.upgrade-btn{
-                     &:before{
-                        top: 6px;
-                        height: 16px;
-                        background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
-                    }
-                    &:hover{
-                        &:before{
-                            background-position: 0 -16px;
-                        }
-                    }
-                }
-            }
-        }
         #tab-content{
             #ports-table{
                 margin-bottom: 35px;
             }
             .volumes{
                 margin-bottom: 22px;
-            }
-            .info{
-                min-height: 70px;
-                margin-bottom: 45px;
-            }
-            .col-xs-10{
-                margin: 27px 0px 45px 3%;
             }
         }
     }

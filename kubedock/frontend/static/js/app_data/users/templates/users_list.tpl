@@ -14,14 +14,14 @@
 </div>
 <div class="container">
     <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
+        <div class="col-sm-12 col-md-2 sidebar">
             <ul class="nav nav-sidebar list-unstyled" role="tablist">
                 <li class="general active">Users</li>
                 <!-- <li class="onlinePage">Online users</li> -->
                 <li class="activityPage">Users activity</li>
             </ul>
         </div>
-        <div id="details_content" class="col-sm-10">
+        <div id="details_content" class="col-md-10 col-sm-12">
             <div class="row placeholders">
                 <div class="tab-content col-xs-12">
                     <table id="userslist-table" class="table col-sm-12 no-padding">

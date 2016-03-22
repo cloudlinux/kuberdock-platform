@@ -1,169 +1,5 @@
-#publicIPs-table,
-#persistent-volumes-table,
-#license-table{
-    .box-shadow-materials();
-    margin-bottom: 0;
-    thead{
-        background-color: transparent;
-        tr{
-            border-color: transparent;
-            th{
-                .user-select(none);
-                height: 50px;
-                color: #4e5665;
-                font-size: 13px;
-                text-align: left;
-                font-weight: normal;
-                border-bottom: none;
-                vertical-align: middle;
-                font-family: "open_sansregular";
-                &:focus{
-                    outline: 0;
-                }
-                &:first-child{
-                    padding-left: 24px;
-                }
-                .caret{
-                    margin-left: 5px;
-                }
-                .custom{
-                    span{
-                        vertical-align: middle;
-                    }
-                }
-            }
-        }
-    }
-    tbody{
-        tr{
-            background-color: #fff;
-            &.attention{
-                background-color: #fff0f0;
-                &:hover{
-                    background-color: #fff0f0;
-                }
-            }
-            &:hover{
-                background-color: #f5fafe;
-                td{
-                    .terminate-btn, .onsearsh, .unmount{
-                        &:hover{
-                            background-position: 0 -17px;
-                        }
-                    }
-                    .terminate-btn{
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                    .onsearsh{
-                        background: url('../img/onsearsh.png') 0 0 no-repeat;
-                    }
-                    .unmount{
-                        background: url('../img/unmount.png') 0 0 no-repeat;
-                    }
-                }
-            }
-            td{
-                height: 50px;
-                color: #1d1d1d;
-                padding-top: 0;
-                font-size: 13px;
-                padding-bottom: 0;
-                vertical-align: middle;
-                font-family: @regular;
-                &:first-child{
-                    padding-left: 24px;
-                }
-                &.critical{
-                    color: #f25555;
-                    .warning-info-title-ico{
-                        width: 17px;
-                        height: 17px;
-                        margin-left: 4px;
-                        background: url('../img/warning-info-title-ico.png') 0 0 no-repeat;
-                    }
-
-                }
-                .check-for-update{
-                    width: 14px;
-                    height: 16px;
-                    background: url('../img/check-update-ico.png') 0 0 no-repeat;
-                    &.start-atimation{
-                        .rotating(1s);
-                    }
-                    &:hover, &.start-atimation{
-                        cursor: pointer;
-                        background-position: 0 -17px;
-                    }
-                }
-                a, span, button{
-                    min-height: 12px;
-                    display: inline-block;
-                    vertical-align: middle;
-                }
-                span{
-                    &.running, &.OK, &.stopped,  &.troubles, &.pending, &.waiting, &.termination, &.busy, &.free{
-                        position: relative;
-                        padding-left: 22px;
-                        &:before{
-                            .border-radius(50%);
-                            left: 2px;
-                            width: 12px;
-                            content: '';
-                            height: 12px;
-                            bottom: 2px;
-                            position: absolute;
-                        }
-                    }
-                    &.busy{
-                        &:before{
-                            background-color: #ffb704;
-                        }
-                    }
-                    &.running, &.OK, &.free{
-                        &:before{
-                            background-color: #97cd75;
-                        }
-                    }
-                    &.stopped{
-                        &:before{
-                            background-color: #f5544d;
-                        }
-                    }
-                    &.troubles, &.pending, &.waiting{
-                        &:before{
-                            background-color: #f0d765;
-                        }
-                    }
-                    &.termination{
-                        &:before{
-                            background-color: #bbbfc3;
-                        }
-                    }
-                }
-                .terminate-btn, .onsearsh, .unmount{
-                    top: 2px;
-                    left: 7px;
-                    width: 20px;
-                    height: 17px;
-                    font-size: 0;
-                    margin-right: 30px;
-                    position: relative;
-                    display: inline-block;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                .terminate-btn{
-                    width: 16px;
-                }
-            }
-        }
-    }
-}
-#publicIPs-tab, #persistentVolumes-tab{
+#publicIPs-tab,
+#persistentVolumes-tab{
     .buttons{
         margin-top: 0;
         .description{
@@ -174,7 +10,10 @@
         }
     }
 }
-#settingsGeneralTab, #settingsNotificationTab, #settingsPermisionTab{
+
+#settingsGeneralTab,
+#settingsNotificationTab,
+#settingsPermisionTab{
     .content-body{
         .clearfix;
         border-bottom: 1px solid #e5e5e5;
@@ -185,7 +24,11 @@
             margin-bottom: 20px;
             display: block;
         }
-        #timezone, #conectionType, #billingAppsLink, input[type="text"], input[type="email"]{
+        #timezone,
+        #conectionType,
+        #billingAppsLink,
+        input[type="text"],
+        input[type="email"]{
             .placeholder(#b4b4b4);
             .box-shadow(none);
             outline: 0;
@@ -208,6 +51,7 @@
         }
     }
 }
+
 #settingsGeneralTab{
     .content-body{
         .image{
@@ -239,13 +83,9 @@
         }
     }
 }
+
 #settingsNotificationEditTab{
     #user-controls{
-        .status-line{
-            padding-left: 0;
-            line-height: 36px;
-            margin-bottom: 37px;
-        }
         .form-group{
             font-size: 13px;
             max-width: 100%;
@@ -267,6 +107,7 @@
         }
     }
 }
+
 #settingsNotificationTab{
     .content-body{
         .bell{
@@ -356,17 +197,7 @@
         }
     }
 }
-#permissions-table{
-    td{
-        text-transform: capitalize;
-        label{
-            font-weight: normal;
-            span{
-                margin-right: 6px;
-            }
-        }
-    }
-}
+
 .settings-user{
     #user-controls{
         .form-group {
@@ -392,95 +223,23 @@
 }
 #item-controls{
     &.licenseTab{
-        .license-status-line{
-            font-size: 0;
-            margin-bottom: 0;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #e5e5e5;
-            span{
-                height: 23px;
-                line-height: 23px;
-                position: relative;
-                font-family: @regular;
-                &:first-child {
-                    color: #4e5665;
-                    padding-left: 11px;
-                    margin-right: 25px;
-                    &:before{
-                        content: none;
-                    }
-                }
-                &:last-child{
-                    margin-right: 0;
-                }
-                &.icon{
-                    padding-left: 25px;
-                    position: relative;
-                    &:before{
-                        top: 0;
-                        left: 0;
-                        bottom: 0;
-                        content: '';
-                        margin: auto;
-                        position: absolute;
-                    }
-                    &.active, &.unknown, &.locked, &.suspended, &.ok, &.expired{
-                        padding-left: 20px;
-                        &:before{
-                            .border-radius(50%);
-                            width: 12px;
-                            height: 12px;
-                        }
-                    }
-                    &.active, &.ok{
-                        padding-left: 20px;
-                        &:before{
-                            background-color: #97cd75;
-
-                        }
-                    }
-                    &.unknown{
-                        &:before{
-                            background-color: #bac1c7;
-                        }
-                    }
-                    &.locked, &.none{
-                        &:before{
-                            background-color: #f5544d;
-                        }
-                    }
-                    &.suspended, &.expired{
-                        &:before{
-                            background-color: #ffb704;
-                        }
-                    }
-                    &.clock{
-                        &:before{
-                            width: 17px;
-                            height: 17px;
-                            background: url('../img/cklock-icon.png') 0 0 no-repeat;
-                        }
-                    }
-                    &.award{
-                        &:before{
-                            width: 17px;
-                            height: 23px;
-                            background: url('../img/award-icon.png') 0 0 no-repeat;
-                        }
-                    }
-                }
-                &:hover{
-                    color: #4e5664;
-                    cursor: default;
-                }
-            }
-        }
         .servers{
             &:before{
                 left: 40px;
                 width: 43px;
                 height: 43px;
                 background: url('../img/kuberdock-gray-ico.png') 0 0 no-repeat;
+            }
+        }
+        @media (max-width: 768px) {
+            .servers{
+                padding-left: 94px;
+                &:before{
+                    top: 0;
+                    bottom: 0;
+                    left: 12px;
+                    margin: auto;
+                }
             }
         }
     }

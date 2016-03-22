@@ -1,157 +1,3 @@
-/* user-tables */
-#userslist-table,
-#users-activities,
-#users-online-table,
-#user-profile-logs-table,
-#user-profile-general-table,
-#all-users-activities-table{
-    .box-shadow-materials();
-    thead{
-        background-color: transparent;
-        tr{
-            th{
-                .user-select(none);
-                height: 50px;
-                padding-top: 0;
-                color: #4e5665;
-                font-size: 13px;
-                cursor: default;
-                padding-bottom: 0;
-                font-weight: normal;
-                border-bottom: none;
-                font-family: @regular;
-                vertical-align: middle;
-                background-color: #F8F8F8;
-                &:first-child{
-                    padding-left: 24px;
-                }
-                &:focus{
-                    outline: 0;
-                }
-                .caret{
-                    margin-left: 5px;
-                    &.rotate{
-                        .rotate(180deg)
-                    }
-                }
-            }
-        }
-    }
-    tbody{
-        tr{
-            background-color: #fff;
-            &:hover{
-                background-color: #f5fafe;
-            }
-            td{
-                height: 50px;
-                color: #1d1d1d;
-                padding-top: 0;
-                font-size: 13px;
-                padding-bottom: 0;
-                font-family: @regular;
-                vertical-align: middle;
-                &:first-child{
-                    padding-left: 24px;
-                }
-                &.disabled-color-text{
-                    color: #b1b9c0;
-                }
-                &.actions{
-                    font-size: 0;
-                    span + span{
-                        margin-left: 10px;
-                    }
-                }
-                span{
-                    &.deleteUser, &.blockUser, &.activeteUser{
-                        position: relative;
-                        display: inline-block;
-                        &:hover{
-                            cursor: pointer;
-                        }
-                    }
-                    &.active{
-                        min-width: 69px;
-                        display: inline-block;
-                    }
-                    &.locked{
-                        min-width: 65px;
-                        display: inline-block;
-                    }
-                    &.deleteUser{
-                        width: 16px;
-                        height: 17px;
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -18px;
-                        }
-                    }
-                    &.blockUser{
-                        width: 16px;
-                        height: 15px;
-                        background: url('../img/block-user-ico.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -16px;
-                        }
-                    }
-                    &.activeteUser{
-                        width: 19px;
-                        height: 15px;
-                        background: url('../img/activate-user-ico.png') 0 0 no-repeat;
-                        &:hover{
-                            background-position: 0 -15px;
-                        }
-                    }
-                    &.active, &.locked, &.suspended{
-                        position: relative;
-                        padding-left: 22px;
-                        &:before{
-                            .border-radius(50%);
-                            top: 0;
-                            left: 2px;
-                            bottom: 0;
-                            width: 12px;
-                            content: '';
-                            height: 12px;
-                            margin: auto;
-                            position: absolute;
-                        }
-                    }
-                    &.active{
-                        &:before{
-                            background-color: #97cd75;
-                        }
-                    }
-                    &.locked{
-                        &:before{
-                            background-color: #f5544d;
-                        }
-                    }
-                    &.suspended{
-                        &:before{
-                            background-color: #ffb704;
-                        }
-                    }
-                }
-            }
-            .profileUser{
-                margin: 0;
-                border: 0;
-                padding: 0;
-                color: #3197ee;
-                font-size: 13px;
-                text-decoration: none;
-                font-family: @regular;
-                background-color: transparent;
-                &:hover{
-                    cursor: pointer;
-                    text-decoration: none;
-                }
-            }
-        }
-    }
-}
 #userGeneralTab{
     .clearfix;
     .col-xs-4{
@@ -168,8 +14,6 @@
         }
     }
 }
-/* end-user-tables */
-
 /* create edit user page */
 #user-controls{
     .clearfix;
@@ -239,16 +83,41 @@
             }
         }
     }
+    @media (max-width: 768px) {
+        .form-group{
+            max-width: 100%;
+            &:first-child{
+            position: relative;
+                &:after{
+                    content: none;
+                }
+            }
+
+        }
+    }
 }
 #all-user-activity-tab{
     .tab-content{
         .serch-control{
-            padding: 20px 0 30px;
             margin-bottom: 25px;
             border-bottom: 1px solid #e5e5e5;
             > div{
+                font-size: 13px;
                 margin: 0 5px 0 0;
                 position: relative;
+                margin-bottom: 25px;
+                ul{
+                    li{
+                        a{
+                            font-size: 13px;
+                        }
+                    }
+                }
+                .ui-datepicker{
+                    table{
+                        font-size: 13px;
+                    }
+                }
             }
             input{
                 outline: 0;
@@ -309,12 +178,10 @@
     .ui-datepicker-calendar{
         margin: 0;
         th{
+            font-size: 13px;
             font-weight: 400;
             background-color: #fff;
             border-bottom: 1px solid #dce0e0;
-        }
-        td{
-            padding: 0;
         }
         tbody{
             tr{
@@ -326,9 +193,12 @@
                     }
                 }
                 td{
+                    padding: 0;
+                    font-size: 13px;
                     &:last-child{
-                        a{
-                            border-right: transparent;
+                        border-right: none;
+                        a, span{
+                            border-right: none;
                         }
                     }
                 }
@@ -366,7 +236,7 @@
             }
         }
     }
-    a{
+    a, span{
         &.ui-state-default{
           color: #1d1d1d;
           min-width: 33px;

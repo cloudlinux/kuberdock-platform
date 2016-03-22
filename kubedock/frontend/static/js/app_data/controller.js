@@ -928,11 +928,13 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     navbar = new Menu.NavList({collection: App.menuCollection}),
                     userModel = App.currentUser;
                 that.listenTo(layoutView, 'show', function(){
+                    layoutView.nav.show(navbar);
+                    utils.preloader.show();
                     App.getTimezones().done(function(timezones){
+                        utils.preloader.hide();
                         userModel.fetch({
                             wait: true,
                             success: function(model, resp, opts){
-                                layoutView.nav.show(navbar);
                                 layoutView.main.show(new Views.ProfileEditView({ model: model, timezones : timezones}))
                             },
                             error: function(model, response){

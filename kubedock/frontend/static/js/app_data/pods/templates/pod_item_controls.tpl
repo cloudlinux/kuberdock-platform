@@ -13,27 +13,27 @@
         <span class="close"></span>
     </div>
 </div>
-<div class="no-padding">
-    <span class="status-line <%- status %>">Status: <%- status %></span>
-    <% if (ableTo('redeploy')) { %> <span class="restart-btn">restart</span> <% } %>
-    <% if (ableTo('pay-and-start')) { %> <span class="pay-and-start-btn">pay & start</span> <% } %>
-    <% if (ableTo('start')) { %> <span class="start-btn">start</span> <% } %>
-    <% if (ableTo('stop')) { %> <span class="stop-btn">stop</span> <% } %>
-    <% if (ableTo('delete')) { %> <span class="terminate-btn">delete</span> <% } %>
+<div class="status-line">
+    <span class="icon <%- status %>">Status: <%- status %></span>
+    <% if (ableTo('redeploy')) { %> <span class="icon hover restart-btn">restart</span> <% } %>
+    <% if (ableTo('pay-and-start')) { %> <span class="icon hover pay-and-start-btn">pay & start</span> <% } %>
+    <% if (ableTo('start')) { %> <span class="icon hover start-btn">start</span> <% } %>
+    <% if (ableTo('stop')) { %> <span class="icon hover stop-btn">stop</span> <% } %>
+    <% if (ableTo('delete')) { %> <span class="icon hover terminate-btn">delete</span> <% } %>
     <% if (graphs) { %>
-        <a class="list-btn" href="#pods/<%- id %>">data</a>
+        <a class="icon hover list-btn" href="#pods/<%- id %>">Data</a>
     <% } else { %>
-        <a class="stats-btn" href="#pods/<%- id %>/stats">stats</a>
+        <a class="icon hover stats-btn" href="#pods/<%- id %>/stats">Stats</a>
     <% } %>
     <% if (upgrade) { %>
-        <a class="upgrade-btn back active" href="#pods/<%- id %>">upgrade</a>
+        <a class="icon hover upgrade-btn back" href="#pods/<%- id %>">Upgrade</a>
     <% } else { %>
-        <a class="upgrade-btn" href="#pods/<%- id %>/upgrade">upgrade</a>
+        <a class="icon hover upgrade-btn" href="#pods/<%- id %>/upgrade">Upgrade</a>
     <% } %>
 </div>
 <div class="row placeholders">
-    <div class="col-xs-10 col-xs-offset-2">
-        <div class="col-xs-6 info">
+    <div class="control-icons col-md-10 col-md-offset-2 col-sm-12">
+        <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
             <% if (publicIP) { %>
                 <div>Public IP: <%- publicIP %></div>
             <% } %>
@@ -51,7 +51,7 @@
             <div class="edit">Edit pod</div>
             -->
         </div>
-        <div class="col-xs-6 servers">
+        <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 servers">
             <div>CPU: <%- limits.cpu %></div>
             <div>RAM: <%- limits.ram %></div>
             <div>HDD: <%- limits.hdd %></div>

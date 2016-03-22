@@ -14,7 +14,7 @@
     </div>
     <div class="container">
         <div class="row">
-            <div class="col-sm-3 col-md-2 sidebar">
+            <div class="col-sm-12 col-md-2 sidebar">
                 <ul class="nav nav-sidebar">
                     <li role="presentation" class="stats active">Logs</li>
                     <li role="presentation" class="monitoring go-to-stats">Monitoring</li>
@@ -29,31 +29,30 @@
                     </li> -->
                 </ul>
             </div>
-            <div id="details_content" class="col-xs-10 logs-tab no-padding">
-                <div id="tab-content">
-                    <div class="status-line <%- state %> curent-margin">Status: <%- state %>
+            <div id="details_content" class="col-md-10 col-sm-12 logs-tab no-padding">
+                <div id="tab-content" class="col-md-12">
+                    <div class="status-line">
+                        <span class="icon <%- state %>">Status: <%- state %></span>
                         <% if (state == "running"){ %>
-                            <span id="stopContainer">Stop</span>
+                            <span id="stopContainer" class="icon hover">Stop</span>
                             <% if (!updateIsAvailable) { %>
-                                <span class="check-for-update" title="Check <%- image %> for updates">Check for updates</span>
+                                <span class="icon hover check-for-update" title="Check <%- image %> for updates">Check for updates</span>
                             <% } else { %>
-                                <span class="container-update" title="Update <%- image %> container">Update</span>
+                                <span class="icon hover container-update" title="Update <%- image %> container">Update</span>
                             <% } %>
-                            <a class="upgrade-btn" href="#pods/<%- parentID %>/<%- name %>/upgrade"
+                            <a class="icon hover upgrade-btn" href="#pods/<%- parentID %>/<%- name %>/upgrade"
                                     title="Change the amount of resources for <%- image %>">
                                 Upgrade resources
                             </a>
                         <% } else  if (state == "stopped"){ %>
-                            <span id="startContainer">Start</span>
+                            <span id="startContainer" class="icon hover">Start</span>
                         <% } %>
-                        <!-- <span>Terminate</span> -->
-                        <!-- <span>Redeploy</span> -->
                         <% if (sourceUrl !== undefined) { %>
-                            <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
+                            <a class="hover icon hidden-sm hidden-xs pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
                         <% } %>
                     </div>
-                    <div class="col-xs-10">
-                        <div class="info col-xs-6">
+                    <div class="control-icons col-md-10 col-md-offset-2 col-sm-12">
+                        <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
                             <div>Image: <%- image %></div>
                             <div>Kube Type: <%- kube_type.name %></div>
                             <div>Restart policy: <%- restart_policy %></div>
@@ -66,7 +65,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xs-6 servers">
+                        <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 servers">
                             <div>CPU: <%= (kube_type.cpu * kubes).toFixed(2) %> <%- kube_type.cpu_units %></div>
                             <div>RAM: <%- kube_type.memory * kubes %> <%- kube_type.memory_units %></div>
                             <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %> </div>

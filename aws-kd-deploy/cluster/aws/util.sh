@@ -142,15 +142,19 @@ function detect-image () {
   if [[ -z "${AWS_IMAGE-}" ]]; then
     case "${AWS_REGION}" in
       ap-northeast-1)
-        AWS_IMAGE=ami-b80b6db8
+        AWS_IMAGE=ami-eec1c380
+        ;;
+        
+      ap-northeast-2)
+        AWS_IMAGE=ami-c74789a9
         ;;
 
       ap-southeast-1)
-        AWS_IMAGE=ami-2a7b6b78
+        AWS_IMAGE=ami-f068a193
         ;;
 
       ap-southeast-2)
-        AWS_IMAGE=ami-d38dc6e9
+        AWS_IMAGE=ami-fedafc9d
         ;;
 
       eu-west-1)
@@ -162,7 +166,7 @@ function detect-image () {
         ;;
 
       sa-east-1)
-        AWS_IMAGE=ami-fd0197e0
+        AWS_IMAGE=ami-26b93b4a
         ;;
 
       us-east-1)
@@ -174,7 +178,7 @@ function detect-image () {
         ;;
 
       us-west-2)
-        AWS_IMAGE=ami-d440a6e7
+        AWS_IMAGE=ami-d2c924b2
         ;;
 
       *)
@@ -376,10 +380,10 @@ function kube-up {
 
   if [[ ! -f "$AWS_SSH_KEY" ]]; then
     ssh-keygen -f "$AWS_SSH_KEY" -N ''
-    $AWS_CMD import-key-pair --key-name $AWS_KEYPAIR --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG
+    $AWS_CMD import-key-pair --key-name ${AWS_KEYPAIR:-kubernetes} --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG
   fi
 
-  $AWS_CMD import-key-pair --key-name $AWS_KEYPAIR --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG 2>&1 || true
+  $AWS_CMD import-key-pair --key-name ${AWS_KEYPAIR:-kubernetes} --public-key-material "file://$AWS_SSH_KEY.pub" > $LOG 2>&1 || true
 
   VPC_ID=$(get_vpc_id)
 
@@ -452,7 +456,7 @@ function kube-up {
     --instance-type $MASTER_SIZE \
     --subnet-id $SUBNET_ID \
     --private-ip-address $MASTER_INTERNAL_IP \
-    --key-name $AWS_KEYPAIR \
+    --key-name ${AWS_KEYPAIR:-kubernetes} \
     --security-group-ids $SEC_GROUP_ID \
     --associate-public-ip-address \
     --user-data file://${KUBE_TEMP}/master-start.sh | json_val '["Instances"][0]["InstanceId"]')
@@ -510,7 +514,7 @@ function kube-up {
       --instance-type $NODE_SIZE \
       --subnet-id $SUBNET_ID \
       --private-ip-address $INTERNAL_IP_BASE.1${i} \
-      --key-name $AWS_KEYPAIR \
+      --key-name ${AWS_KEYPAIR:-kubernetes} \
       --security-group-ids $SEC_GROUP_ID \
       ${public_ip_option} \
       --user-data "file://${KUBE_TEMP}/node-user-data-${i}" | json_val '["Instances"][0]["InstanceId"]')

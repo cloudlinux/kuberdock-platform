@@ -242,6 +242,7 @@ class UserCollection(object):
         if not all((url, username, password)):
             raise APIError("Some billing parameters are missing or "
                            "not properly configured")
+        args = {'verify': False}
         billing_data = deepcopy(data)
         billing_data.update({
             'action'      : 'addclient',
@@ -258,7 +259,7 @@ class UserCollection(object):
             'phonenumber' : '0000000',
             'package_id'  : package.id,
             'responsetype': 'json'})
-        r = requests.post(url.strip('/ ') + '/includes/api.php', data=billing_data)
+        r = requests.post(url.strip('/ ') + '/includes/api.php', data=billing_data, **args)
         if r.status_code != 200:
             raise APIError(
                 "Could not add user to billing. Make sure billing site "

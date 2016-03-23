@@ -1,4 +1,6 @@
 from copy import deepcopy
+import flask
+import json
 import unittest
 import mock
 import logging
@@ -132,6 +134,56 @@ class TestPodEventK8s(DBTestCase):
         self.assertTrue(podcollection_mock.return_value.update.called)
         bind_to_node_mock.assert_called_once_with(self._pod_id, self._node_id)
         get_node_mock.assert_called_once_with(self._node_name)
+
+
+class TestSetLimit(unittest.TestCase):
+    @mock.patch('kubedock.listeners.Pod')
+    @mock.patch('kubedock.listeners.Kube')
+    @mock.patch('kubedock.listeners.ssh_connect')
+    def test_set_limit(self, ssh_connect_mock, kube_mock, pod_mock):
+        host = 'node'
+        pod_id = 'abcd'
+        containers = {'first': 'lorem', 'second': 'ipsum'}
+        app = flask.Flask(__name__)
+
+        kube_mock.query.values.return_value = (1, 1, 'GB'),
+        pod_cls = type('Pod', (), {
+            'config': json.dumps({
+                'containers': [
+                    {'name': c, 'kubes': len(c)} for c in containers.keys()
+                ],
+                'kube_type': 1
+            })
+        })
+        pod_mock.query.filter_by.return_value.first.return_value = pod_cls
+
+        stdout = mock.Mock()
+        stdout.channel.recv_exit_status.return_value = 1
+
+        ssh = mock.Mock()
+        ssh.exec_command.return_value = (mock.Mock(), stdout, mock.Mock())
+        ssh_connect_mock.return_value = (ssh, 'ignore this message')
+
+        res = listeners.set_limit(host, pod_id, containers, app)
+        self.assertFalse(res)
+
+        ssh_connect_mock.return_value = (ssh, None)
+        res = listeners.set_limit(host, pod_id, containers, app)
+        self.assertFalse(res)
+
+        stdout.channel.recv_exit_status.return_value = 0
+        res = listeners.set_limit(host, pod_id, containers, app)
+        self.assertTrue(res)
+
+        ssh.exec_command.assert_called_with(
+            'python '
+            '/var/lib/kuberdock/scripts/fslimit.py containers '
+            'ipsum=6g lorem=5g'
+        )
+        self.assertEqual(ssh.exec_command.call_count, 2)
+
+        ssh_connect_mock.assert_called_with(host)
+        self.assertEqual(ssh_connect_mock.call_count, 3)
 
 
 if __name__ == '__main__':

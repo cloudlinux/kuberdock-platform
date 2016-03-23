@@ -1,7 +1,8 @@
 from collections import namedtuple
 from ..core import db
+from ..users.models import User
+from ..utils import send_event
 from ..models_mixin import BaseModelMixin
-#from ..nodes.models import Node
 
 # Package and Kube with id=0 are default
 # and must be undeletable (always present with id=0) for fallback
@@ -156,6 +157,13 @@ class Kube(BaseModelMixin, db.Model):
     @staticmethod
     def is_node_attachable_type(kube_type):
         return kube_type != INTERNAL_SERVICE_KUBE_TYPE
+
+    def send_event(self, name):
+        event_name, data = 'kube:{0}'.format(name), self.to_dict()
+        for (user_id,) in db.session.query(User.id).filter(
+                User.package_id.in_([p.package_id for p in self.packages])).all():
+            send_event(event_name, data, channel='user_{0}'.format(user_id))
+        send_event(event_name, data, channel='common')
 
 
 class ExtraTax(BaseModelMixin, db.Model):

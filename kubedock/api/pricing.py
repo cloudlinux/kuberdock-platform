@@ -59,7 +59,7 @@ class PackageInUse(APIError):
 @pricing.route('/userpackage', methods=['GET'], strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
-@check_permission('get', 'pods')
+@check_permission('get_own', 'pricing')
 def get_user_kube_types():
     user = KubeUtils._get_current_user()
     user = User.query.filter_by(username=user.username).first()
@@ -72,7 +72,7 @@ def get_user_kube_types():
 class PackagesAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
-    @check_permission('get', 'users')
+    @check_permission('get', 'pricing')
     def get(self, package_id=None):
         with_kubes = all_request_params().get('with_kubes')
         if package_id is None:
@@ -83,7 +83,7 @@ class PackagesAPI(KubeUtils, MethodView):
         return data.to_dict(with_kubes=with_kubes)
 
     @atomic(APIError('Could not create package', 500), nested=False)
-    @check_permission('create', 'users')
+    @check_permission('create', 'pricing')
     def post(self):
         params = check_pricing_api(self._get_params(), package_schema)
         if Package.query.filter_by(name=params['name']).first() is not None:
@@ -98,7 +98,7 @@ class PackagesAPI(KubeUtils, MethodView):
         return package.to_dict()
 
     @atomic(APIError('Could not update package', 500), nested=False)
-    @check_permission('edit', 'users')
+    @check_permission('edit', 'pricing')
     def put(self, package_id):
         package = Package.query.get(package_id)
         if package is None:
@@ -126,7 +126,7 @@ class PackagesAPI(KubeUtils, MethodView):
         return package.to_dict()
 
     @atomic(APIError('Could not delete package', 500), nested=False)
-    @check_permission('delete', 'users')
+    @check_permission('delete', 'pricing')
     def delete(self, package_id):
         package = Package.query.get(package_id)
         if package is None:
@@ -158,7 +158,7 @@ def get_default_package():
 class KubesAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
-    @check_permission('get', 'users')
+    @check_permission('get', 'pricing')
     def get(self, kube_id=None):
         if kube_id is None:
             return [i.to_dict() for i in Kube.public_kubes()]
@@ -167,13 +167,13 @@ class KubesAPI(KubeUtils, MethodView):
             raise KubeNotFound()
         return item.to_dict()
 
-    @check_permission('create', 'users')
+    @check_permission('create', 'pricing')
     def post(self):
         params = self._get_params()
         return add_kube(params)
 
     @atomic(APIError('Could not update kube', 500), nested=False)
-    @check_permission('edit', 'users')
+    @check_permission('edit', 'pricing')
     def put(self, kube_id):
         kube = Kube.query.get(kube_id)
         if kube is None:
@@ -197,10 +197,11 @@ class KubesAPI(KubeUtils, MethodView):
         for key, value in data.items():
             setattr(kube, key, value)
         db.session.flush()
+        kube.send_event('change')
         return kube.to_dict()
 
     @atomic(APIError('Could not delete kube', 500), nested=False)
-    @check_permission('delete', 'users')
+    @check_permission('delete', 'pricing')
     def delete(self, kube_id):
         kube = Kube.query.get(kube_id)
         if kube is None:
@@ -244,6 +245,7 @@ def add_kube(data):
         _remove_is_default_kube_flags()
     db.session.add(kube)
     db.session.flush()
+    kube.send_event('add')
     return kube.to_dict()
 
 
@@ -254,7 +256,7 @@ def add_kube(data):
                strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
-@check_permission('get', 'users')
+@check_permission('get', 'pricing')
 def get_package_kube_ids(package_id):
     package = Package.query.get(package_id)
     if package is None:
@@ -266,7 +268,7 @@ def get_package_kube_ids(package_id):
                strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
-@check_permission('get', 'users')
+@check_permission('get', 'pricing')
 def get_package_kube_names(package_id):
     package = Package.query.get(package_id)
     if package is None:
@@ -277,7 +279,7 @@ def get_package_kube_names(package_id):
 class PackageKubesAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
-    @check_permission('get', 'users')
+    @check_permission('get', 'pricing')
     def get(self, package_id, kube_id=None):
         package = Package.query.get(package_id)
         if package is None:
@@ -292,7 +294,7 @@ class PackageKubesAPI(KubeUtils, MethodView):
             raise KubeNotFound()
 
     @atomic(APIError('Could not add kube type to package', 500), nested=False)
-    @check_permission('create', 'users')
+    @check_permission('create', 'pricing')
     def post(self, package_id):
         if Package.query.get(package_id) is None:
             raise PackageNotFound()
@@ -314,7 +316,7 @@ class PackageKubesAPI(KubeUtils, MethodView):
         return _add_kube_type_to_package(package_id, kube_id, params['kube_price'])
 
     @atomic(APIError('Could not update kube type in package', 500), nested=False)
-    @check_permission('edit', 'users')
+    @check_permission('edit', 'pricing')
     def put(self, package_id=None, kube_id=None):
         if Package.query.get(package_id) is None:
             raise PackageNotFound()
@@ -329,7 +331,7 @@ class PackageKubesAPI(KubeUtils, MethodView):
         return _add_kube_type_to_package(package_id, kube_id, params['kube_price'])
 
     @atomic(APIError('Could not remove kube type from package', 500), nested=False)
-    @check_permission('delete', 'users')
+    @check_permission('delete', 'pricing')
     def delete(self, package_id, kube_id):
         package_kube = PackageKube.query.filter_by(package_id=package_id,
                                                    kube_id=kube_id).first()
@@ -460,7 +462,7 @@ def process_collection(data):
 @pricing.route('/license', methods=['GET'], strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
-@check_permission('read', 'system_settings')
+@check_permission('read_private', 'system_settings')
 def get_license():
     force = all_request_params().get('force', False)
     data = get_collection(force)

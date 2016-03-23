@@ -880,13 +880,16 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 return model instanceof data.PackageKube &&
                     model.get('kubeType').id == kubeID;
             });
-            return packageKube ? packageKube.get('price') : undefined;
+            return packageKube ? packageKube.get('kube_price') : undefined;
         },
         getFormattedPrice: function(price, format) {
             return this.get('prefix') +
                 numeral(price).format(format || '0.00') +
                 this.get('suffix');
         },
+    });
+    data.PackageCollection = Backbone.Collection.extend({
+        model: data.Package,
     });
 
     data.KubeType = Backbone.AssociatedModel.extend({
@@ -925,6 +928,11 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.PackageKube = Backbone.AssociatedModel.extend({
+        parse: function(obj){
+            obj['kubeType'] = App.kubeTypeCollection.get(obj.kube_id);
+            obj['package'] = App.packageCollection.get(obj.package_id);
+            return obj;
+        },
         relations: [{
             type: Backbone.One,
             key: 'kubeType',
@@ -934,7 +942,15 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             key: 'package',
             relatedModel: data.Package,
         }],
-        defaults: {price: 0},
+        defaults: {kube_price: 0},
+        initialize: function(){
+            this.on('change:package_id', function(model, value){
+                this.set('package', App.packageCollection.get(value));
+            });
+            this.on('change:kube_id', function(model, value){
+                this.set('kubeType', App.kubeTypeCollection.get(value));
+            });
+        }
     });
 
     return data;

@@ -21,7 +21,6 @@ from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
 from traceback import format_exception
 
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
-from .billing import Kube
 from .pods import Pod
 from .core import ssh_connect, db, ConnectionPool
 from .settings import NODE_TOBIND_EXTERNAL_IPS, PODS_VERBOSE_LOG
@@ -555,57 +554,6 @@ def pod_without_id_warning(name, namespace):
         'Pod with metadata.name {0} and metadata.namesapce {1} have no '
         'kuberdock-pod-uid. Maybe someone created it using kubernetes, '
         'bypass kuberdock.'.format(name, namespace))
-
-
-def set_limit(host, pod_id, containers, app):
-    ssh, errors = ssh_connect(host)
-    if errors:
-        print errors
-        return False
-    with app.app_context():
-        spaces = dict(
-            (i, (s, u)) for i, s, u in Kube.query.values(
-                Kube.id, Kube.disk_space, Kube.disk_space_units
-                )
-            )  #workaround
-
-        pod = Pod.query.filter_by(id=pod_id).first()
-
-        if pod is None:
-            unregistered_pod_warning(pod_id)
-            return False
-
-        config = json.loads(pod.config)
-        kube_type = config['kube_type']
-        #kube = Kube.query.get(kube_type) this query raises an exception
-    limits = []
-    for container in config['containers']:
-        container_name = container['name']
-        if container_name not in containers:
-            continue
-        #disk_space = kube.disk_space * container['kubes']
-        space, unit = spaces.get(kube_type, (0, 'GB'))
-        disk_space = space * container['kubes']
-        disk_space_unit = unit[0].lower() if unit else ''
-        if disk_space_unit not in ('', 'k', 'm', 'g', 't'):
-            disk_space_unit = ''
-        disk_space_str = '{0}{1}'.format(disk_space, disk_space_unit)
-        limits.append((containers[container_name], disk_space_str))
-    limits_repr = ' '.join('='.join(limit) for limit in limits)
-    _, o, e = ssh.exec_command(
-        'python /var/lib/kuberdock/scripts/fslimit.py containers '
-        '{0}'.format(limits_repr)
-    )
-    exit_status = o.channel.recv_exit_status()
-    if exit_status > 0:
-        if PODS_VERBOSE_LOG >= 2:
-            print 'O', o.read()
-            print 'E', e.read()
-        print 'Error fslimit.py with exit status {0}'.format(exit_status)
-        ssh.close()
-        return False
-    ssh.close()
-    return True
 
 
 class JSONDefaultEncoder(JSONEncoder):

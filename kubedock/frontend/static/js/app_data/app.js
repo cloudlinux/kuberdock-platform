@@ -15,17 +15,10 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 that.currentUser = new Model.CurrentUserModel(backendData.user);
 
                 // billing & resources
-                that.packageCollection = new Backbone.Collection(
-                    backendData.packages, {model: Model.Package});
-                that.kubeTypeCollection = new Model.KubeTypeCollection(
-                    backendData.kubeTypes);
+                that.packageCollection = new Model.PackageCollection(backendData.packages);
+                that.kubeTypeCollection = new Model.KubeTypeCollection(backendData.kubeTypes);
                 that.packageKubeCollection = new Backbone.Collection(
-                    _.map(backendData.packageKubes, function(pk){
-                        return {'price': pk.kube_price,
-                                'kubeType': that.kubeTypeCollection.get(pk.kube_id),
-                                'package': that.packageCollection.get(pk.package_id)};
-                    }),
-                    {model: Model.PackageKube});
+                    backendData.packageKubes, {model: Model.PackageKube, parse: true});
                 that.userPackage = that.packageCollection.get(backendData.userPackage);
 
                 that.getPodCollection = function(){
@@ -337,7 +330,7 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                 };
 
                 if (typeof(EventSource) === undefined) {
-                    console.log('ERROR: EventSource is not supported by browser');
+                    console.log('ERROR: EventSource is not supported by browser');  // eslint-disable-line no-console
                 }
                 else {
                     if (nodes) {
@@ -361,6 +354,12 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                             // 'pd:change':
                         };
                     }
+
+                    events['kube:add'] = events['kube:change'] = function(ev) {
+                        that.lastEventId = ev.lastEventId;
+                        var data = JSON.parse(ev.data);
+                        that.kubeTypeCollection.add(data, {merge: true});
+                    };
 
                     events['notify:error'] = function(ev) {
                         that.lastEventId = ev.lastEventId;
@@ -392,10 +391,10 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         source.addEventListener(eventName, handler, false);
                     });
                     source.onopen = function(){
-                        console.log('Connected!');
+                        console.log('Connected!');  // eslint-disable-line no-console
                     };
                     source.onerror = function () {
-                        console.log('SSE Error. Reconnecting...');
+                        console.log('SSE Error. Reconnecting...');  // eslint-disable-line no-console
                         if (source.readyState === 2){
                             var url = source.url;
                             if (that.lastEventId && url.indexOf('lastid') === -1) {

@@ -1376,6 +1376,9 @@ define(['app_data/app', 'app_data/model',
             this.hasBilling = options.hasBilling;
             this.payg = options.payg;
             this.kubesLimit = options.kubesLimit;
+
+            // TODO: package change, package-kube relationship change
+            this.listenTo(App.kubeTypeCollection, 'change add remove reset', this.pricingChanged);
         },
 
         templateHelpers: function() {
@@ -1534,13 +1537,26 @@ define(['app_data/app', 'app_data/model',
             return containers.get(this.model.lastEditedContainer.id);
         },
 
+        /**
+         * Got "change" event for package or kube types
+         */
+        pricingChanged: function(){
+            if (!this.model.getKubeType().get('available'))
+                this.model.unset('kube_type');  // no longer available
+            this.render();
+        },
+
         onRender: function() {
             this.ui.selectpicker.selectpicker();
             this.ui.kubeTypes.selectpicker({
-                noneSelectedText: 'No available kube types',
+                noneSelectedText: this.model.get('kube_type') === Model.KubeType.noAvailableKubeTypes
+                    ? 'No available kube types' : 'Select kube type',
             });
             this.ui.kubeQuantity.selectpicker('val', this.getCurrentContainer().get('kubes'));
-            this.ui.kubeTypes.selectpicker('val', this.model.get('kube_type'));
+            if (this.model.get('kube_type') === undefined)
+                this.ui.kubeTypes.val('').selectpicker('render');  // unselect
+            else
+                this.ui.kubeTypes.selectpicker('val', this.model.get('kube_type'));
         },
 
         editPolicy: function(){

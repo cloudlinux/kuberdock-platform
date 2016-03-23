@@ -52,28 +52,53 @@ class Registry(RegistryOrigin):
 
 acl = Registry()
 rbac_context = IdentityContext(acl)
-# check_permission = rbac_context.check_permission
 
 
 class check_permission(object):
+    """Improved version of check_permission.
+
+    Original function raises assertion error if resource was not found, but this
+    one will throw warning and deny access.
+    Also, this varsion uses exception inherited from APIError.
+
+    As an original method, this one could be used as a decorator, a context
+    manager, a boolean-like value or directly by calling method check().
+    """
+
     def __init__(self, operation, resource, **exception_kwargs):
         self.operation = operation
         self.resource = resource
         self.exception_kwargs = exception_kwargs
         self.exception_kwargs.setdefault('exception', PermissionDenied)
+        self.checker = rbac_context.check_permission(self.operation, self.resource,
+                                                     **self.exception_kwargs)
 
-    def __call__(self, m):
-        @wraps(m)
-        def _call_(*args, **kwargs):
-            if self.resource not in acl._resources:
-                # current_app.logger.error(
-                #     "RBAC failed: undefined resource '{0}'".format(
-                #         self.resource))
-                return m(*args, **kwargs)
-            return rbac_context.check_permission(
-                self.operation, self.resource, **self.exception_kwargs)(m)(
-                    *args, **kwargs)
-        return _call_
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+        return wraps(func)(wrapper)
+
+    def __enter__(self):
+        self.check()
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        pass
+
+    def __nonzero__(self):
+        return not self.undefined_resource_warning() and bool(self.checker)
+
+    def undefined_resource_warning(self):
+        if self.resource not in acl._resources:
+            current_app.logger.warn("RBAC: undefined resource '{0}'".format(
+                                    self.resource))
+            return True
+
+    def check(self):
+        if self.undefined_resource_warning():
+            raise PermissionDenied()
+        return self.checker.check()
 
 
 @rbac_context.set_roles_loader

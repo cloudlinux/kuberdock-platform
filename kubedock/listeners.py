@@ -8,7 +8,8 @@ from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
 from flask import current_app
-from .core import ConnectionPool
+from .core import ConnectionPool, ssh_connect
+from .billing.models import Kube
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
 from .users.models import User
@@ -16,7 +17,7 @@ from .settings import (
     PODS_VERBOSE_LOG,
     KUBERDOCK_INTERNAL_USER
 )
-from .utils import (get_api_url, set_limit,
+from .utils import (get_api_url,
                     unregistered_pod_warning, send_event,
                     pod_without_id_warning, k8s_json_object_hook)
 from .kapi.usage import update_states
@@ -114,6 +115,59 @@ def process_pods_event(data, app, event_time=None, live=True):
                 containers[container_name] = container_id
         if containers:
             set_limit(host, pod_id, containers, app)
+
+
+# TODO: put it in some other place if needed. It was moved from utils to resolve
+# circular imports (Kube model)
+def set_limit(host, pod_id, containers, app):
+    ssh, errors = ssh_connect(host)
+    if errors:
+        print errors
+        return False
+    with app.app_context():
+        spaces = dict(
+            (i, (s, u)) for i, s, u in Kube.query.values(
+                Kube.id, Kube.disk_space, Kube.disk_space_units
+                )
+            )  # workaround
+
+        pod = Pod.query.filter_by(id=pod_id).first()
+
+        if pod is None:
+            unregistered_pod_warning(pod_id)
+            return False
+
+        config = json.loads(pod.config)
+        kube_type = config['kube_type']
+        # kube = Kube.query.get(kube_type) this query raises an exception
+    limits = []
+    for container in config['containers']:
+        container_name = container['name']
+        if container_name not in containers:
+            continue
+        # disk_space = kube.disk_space * container['kubes']
+        space, unit = spaces.get(kube_type, (0, 'GB'))
+        disk_space = space * container['kubes']
+        disk_space_unit = unit[0].lower() if unit else ''
+        if disk_space_unit not in ('', 'k', 'm', 'g', 't'):
+            disk_space_unit = ''
+        disk_space_str = '{0}{1}'.format(disk_space, disk_space_unit)
+        limits.append((containers[container_name], disk_space_str))
+    limits_repr = ' '.join('='.join(limit) for limit in limits)
+    _, o, e = ssh.exec_command(
+        'python /var/lib/kuberdock/scripts/fslimit.py containers '
+        '{0}'.format(limits_repr)
+    )
+    exit_status = o.channel.recv_exit_status()
+    if exit_status > 0:
+        if PODS_VERBOSE_LOG >= 2:
+            print 'O', o.read()
+            print 'E', e.read()
+        print 'Error fslimit.py with exit status {0}'.format(exit_status)
+        ssh.close()
+        return False
+    ssh.close()
+    return True
 
 
 def get_node_state(node):

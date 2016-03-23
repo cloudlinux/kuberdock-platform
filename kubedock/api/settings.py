@@ -7,9 +7,9 @@ from flask.views import MethodView
 
 from ..core import db
 from ..rbac import check_permission, acl
-from ..rbac.models import Role, Resource, Permission
+# from ..rbac.models import Role, Resource, Permission
 from ..decorators import login_required_or_basic_or_token
-from ..utils import APIError, KubeUtils, register_api
+from ..utils import APIError, KubeUtils, register_api, PermissionDenied
 from ..users.utils import append_offset_to_timezone
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
@@ -19,41 +19,41 @@ from ..validation import check_system_settings
 settings = Blueprint('settings', __name__, url_prefix='/settings')
 
 
-@check_permission("get_permissions", "settings")
-def get_permissions():
-    data = []
-    roles = {r.id: r.to_dict() for r in Role.all()}
-    for res in Resource.all():
-        perms = set()
-        _roles = {}
-        for p in res.permissions:
-            perms.add(p.name)
-            role = roles[p.role_id]
-            rolename = role['rolename']
-            if rolename in _roles:
-                _roles[rolename].append(p.to_dict())
-            else:
-                _roles[rolename] = [p.to_dict()]
-        data.append({'id': res.id, 'name': res.name, 'permissions': list(perms),
-                     'roles': _roles, 'all_roles': roles})
-    return roles, data
-
-
-@settings.route('/permissions/<pid>', methods=['PUT'])
-@login_required_or_basic_or_token
-@check_permission("set_permissions", "settings")
-def permissions(pid):
-    data = request.json or request.form.to_dict()
-    allow = data.get('allow')
-    if allow not in ('true', 'false', True, False):
-        raise APIError("Value error: {0}".format(allow))
-    perm = Permission.query.get(int(pid))
-    if allow in ('true', True):
-        perm.set_allow()
-    else:
-        perm.set_deny()
-    acl.init_permissions()
-    return jsonify({'status': 'OK'})
+# @check_permission("get_permissions", "settings")
+# def get_permissions():
+#     data = []
+#     roles = {r.id: r.to_dict() for r in Role.all()}
+#     for res in Resource.all():
+#         perms = set()
+#         _roles = {}
+#         for p in res.permissions:
+#             perms.add(p.name)
+#             role = roles[p.role_id]
+#             rolename = role['rolename']
+#             if rolename in _roles:
+#                 _roles[rolename].append(p.to_dict())
+#             else:
+#                 _roles[rolename] = [p.to_dict()]
+#         data.append({'id': res.id, 'name': res.name, 'permissions': list(perms),
+#                      'roles': _roles, 'all_roles': roles})
+#     return roles, data
+#
+#
+# @settings.route('/permissions/<pid>', methods=['PUT'])
+# @login_required_or_basic_or_token
+# @check_permission("set_permissions", "settings")
+# def permissions(pid):
+#     data = request.json or request.form.to_dict()
+#     allow = data.get('allow')
+#     if allow not in ('true', 'false', True, False):
+#         raise APIError("Value error: {0}".format(allow))
+#     perm = Permission.query.get(int(pid))
+#     if allow in ('true', True):
+#         perm.set_allow()
+#     else:
+#         perm.set_deny()
+#     acl.init_permissions()
+#     return jsonify({'status': 'OK'})
 
 
 #########################
@@ -179,21 +179,20 @@ def get_all_timezones():
 
 class SystemSettingsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
-    allowed_for_user = ('billing_type', 'billing_url', 'persitent_disk_max_size',
-                        'max_kubes_per_container')
+    public_settings = ('billing_type', 'billing_url', 'persitent_disk_max_size',
+                       'max_kubes_per_container')
 
     def get(self, sid):
-        user = KubeUtils._get_current_user()
-        if sid is None:
-            if user.is_administrator():
-                return SystemSettings.get_all()
-            return [setting for setting in SystemSettings.get_all()
-                    if setting.get('name') in self.allowed_for_user]
-        data = SystemSettings.get(sid)
-        if (not user.is_administrator() and
-                data.get('name') not in self.allowed_for_user):
-            raise APIError('Access denied', 403)
-        return SystemSettings.get(sid)
+        data = SystemSettings.get_all() if sid is None else SystemSettings.get(sid)
+        if check_permission('read_private', 'system_settings'):
+            return data
+        if check_permission('read', 'system_settings'):
+            if sid is None:
+                return [setting for setting in data
+                        if setting.get('name') in self.public_settings]
+            if data.get('name') in self.public_settings:
+                return data
+        raise PermissionDenied()
 
     @check_permission('write', 'system_settings')
     def post(self):

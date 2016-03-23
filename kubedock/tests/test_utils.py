@@ -1,10 +1,8 @@
 from collections import namedtuple
 from datetime import datetime
-import json
 import unittest
 import nginx
 
-import flask
 import mock
 
 from ..testutils.testcases import DBTestCase
@@ -16,7 +14,6 @@ from ..utils import (
     from_binunit,
     parse_datetime_str,
     update_dict,
-    set_limit,
     run_ssh_command,
     all_request_params,
     get_user_role,
@@ -312,57 +309,6 @@ class TestUtilsUpdateDict(unittest.TestCase):
         }
         update_dict(dict_in, dict_diff)
         self.assertEquals(dict_in, dict_out)
-
-
-class TestUtilsSetLimit(unittest.TestCase):
-
-    @mock.patch('kubedock.utils.Pod')
-    @mock.patch('kubedock.utils.Kube')
-    @mock.patch('kubedock.utils.ssh_connect')
-    def test_set_limit(self, ssh_connect_mock, kube_mock, pod_mock):
-        host = 'node'
-        pod_id = 'abcd'
-        containers = {'first': 'lorem', 'second': 'ipsum'}
-        app = flask.Flask(__name__)
-
-        kube_mock.query.values.return_value = (1, 1, 'GB'),
-        pod_cls = type('Pod', (), {
-            'config': json.dumps({
-                'containers': [
-                    {'name': c, 'kubes': len(c)} for c in containers.keys()
-                ],
-                'kube_type': 1
-            })
-        })
-        pod_mock.query.filter_by.return_value.first.return_value = pod_cls
-
-        stdout = mock.Mock()
-        stdout.channel.recv_exit_status.return_value = 1
-
-        ssh = mock.Mock()
-        ssh.exec_command.return_value = (mock.Mock(), stdout, mock.Mock())
-        ssh_connect_mock.return_value = (ssh, 'ignore this message')
-
-        res = set_limit(host, pod_id, containers, app)
-        self.assertFalse(res)
-
-        ssh_connect_mock.return_value = (ssh, None)
-        res = set_limit(host, pod_id, containers, app)
-        self.assertFalse(res)
-
-        stdout.channel.recv_exit_status.return_value = 0
-        res = set_limit(host, pod_id, containers, app)
-        self.assertTrue(res)
-
-        ssh.exec_command.assert_called_with(
-            'python '
-            '/var/lib/kuberdock/scripts/fslimit.py containers '
-            'ipsum=6g lorem=5g'
-        )
-        self.assertEqual(ssh.exec_command.call_count, 2)
-
-        ssh_connect_mock.assert_called_with(host)
-        self.assertEqual(ssh_connect_mock.call_count, 3)
 
 
 class TestUtilsRunSSHCommand(unittest.TestCase):

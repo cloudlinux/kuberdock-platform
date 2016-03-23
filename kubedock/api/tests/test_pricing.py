@@ -1,11 +1,13 @@
 from random import random, choice, randrange
 import unittest
+import mock
 from string import ascii_letters, digits
 from uuid import uuid4
 from kubedock.testutils.testcases import APITestCase
 from kubedock.billing.models import Package, Kube, INTERNAL_SERVICE_KUBE_TYPE
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
+from kubedock import utils
 
 from kubedock.api.pricing import _format_package_version
 
@@ -29,7 +31,7 @@ def valid_package(**kwargs):
 
 def valid_kube(**kwargs):
     return dict({'name': randstr(),
-                 'cpu': 0.01 + random() * 9.98,
+                 'cpu': 0.01 + round(random() * 9.98, 4),
                  'cpu_units': 'Cores',
                  'memory': randrange(1, 99999),
                  'memory_units': 'MB',
@@ -360,6 +362,29 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
         url = Url.package_kube(self.package.id, self.kube.id)
         response = self.admin_open(url, 'DELETE')
         self.assertAPIError(response, 400, 'KubeInUse')
+
+
+class TestPricingSSE(ExtendedAPITestCase):
+    def setUp(self):
+        super(TestPricingSSE, self).setUp()
+        self.user_1, _ = self.fixtures.user_fixtures()
+        self.user_2, _ = self.fixtures.user_fixtures()
+        self.user_1.package_id = self.package.id
+        self.db.session.commit()
+
+        patcher = mock.patch('kubedock.billing.models.send_event')
+        self.addCleanup(patcher.stop)
+        self.send_event_mock = patcher.start()
+
+    def test_kube_change(self):
+        self.admin_open(Url.kube(self.kube.id), 'PUT', valid_kube())
+        updated = self.kube.to_dict()
+        self.send_event_mock.assert_has_calls([
+            mock.call('kube:change', updated, channel='user_{0}'.format(self.user_1.id)),
+            mock.call('kube:change', updated, channel='common'),
+        ])
+        # other users shouldn't receive event
+        self.assertEqual(self.send_event_mock.call_count, 2)
 
 
 class TestUtils(unittest.TestCase):

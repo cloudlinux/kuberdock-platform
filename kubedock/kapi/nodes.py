@@ -110,6 +110,8 @@ def create_node(ip, hostname, kube_id,
         check_internal_pod_data(dns_config, ku)
         dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
         PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
+
+    node.kube.send_event('change')
     return node
 
 

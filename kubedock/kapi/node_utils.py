@@ -176,6 +176,7 @@ def add_node_to_db(node):
 
 
 def delete_node_from_db(node):
+    kube = node.kube  # get kube type before deletion to send event
     db.session.query(NodeFlag).filter(NodeFlag.node_id == node.id).delete()
     db.session.delete(node)
     try:
@@ -183,6 +184,7 @@ def delete_node_from_db(node):
     except:
         db.session.rollback()
         raise
+    kube.send_event('change')
 
 
 def _node_is_active(x):

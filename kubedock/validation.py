@@ -387,6 +387,10 @@ new_pod_schema = {
                     'type': 'dict',
                     'required': False
                 },
+                'readinessProbe': {
+                    'type': 'dict',
+                    'required': False
+                },
                 'command': args_list_schema,
                 'args': args_list_schema,
                 'kubes': kubes_qty_schema,

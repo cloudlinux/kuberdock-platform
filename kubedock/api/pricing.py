@@ -437,7 +437,7 @@ def process_collection(data):
     result['data'].update(dict(zip(('pods', 'apps', 'persistentVolume'),
         (data.get('pods', {}).get('total', 0),
          data.get('predefined-apps', {}).get('count', 0),
-         data.get('persistent-volumes', {}).get('total', 0)))))
+         data.get('persistent-volumes', {}).get('count', 0)))))
 
     result['data']['memory'] = "{0:.1f}".format(
         float(result['data']['memory']) / (1024 ** 3)) # Gb

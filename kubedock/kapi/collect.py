@@ -267,15 +267,15 @@ def get_persistent_volume_info():
         db.func.max(field).label('max'),
         db.func.count(field).label('count'),
     ).filter(
-        cls.end == None,
+        cls.end_time == None,
         field > 0
     ).first()
     return {
         'count': agg_result.count,
         'min-size': agg_result.min,
         'max-size': agg_result.max,
-        'avg': agg_result.avg,
-        'std': agg_result.std
+        'avg': float(agg_result.avg),
+        'std': float(agg_result.std)
     }
 
 

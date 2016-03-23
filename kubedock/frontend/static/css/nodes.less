@@ -16,7 +16,6 @@
                 width: 80px;
                 height: 70px;
                 position: absolute;
-                position: absolute;
                 background: url('../img/info-ico.png') center no-repeat;
                 .background-size(63%);
             }
@@ -77,6 +76,7 @@
     }
 }
 /* end add-node */
+
 /* general details page */
 #tab-content{
     .details,
@@ -96,88 +96,7 @@
         }
     }
 }
-/* end general details page */
-
-#logs-page,
-#stats-page,
-#monitoring-page,
-#configuration-page{
-    .page-top-menu{
-        .clearfix;
-        display: block;
-        font-size: 0;
-        vertical-align: top;
-        margin: 13px 0;
-        > span{
-            color: #3197ee;
-            font-size: 13px;
-            font-family: @regular;
-            display: inline-block;
-            vertical-align: top;
-            margin-right: 25px;
-            &:hover{
-                cursor: pointer;
-                color: #1d1d1d;
-            }
-            &.active{
-                color: #1d1d1d;
-                &:hover{
-                    cursor: default;
-                }
-            }
-            &:first-child{
-                color: #4e5665;
-                font-size: 13px;
-                font-family: @regular;
-                display: inline-block;
-                vertical-align: top;
-                &:hover{
-                    color: #4e5665;
-                    cursor: default;
-                }
-            }
-            &:last-child{
-                margin-right: 0;
-            }
-        }
-    }
-}
-
-/* stats details page */
-#stats-page{
-    .page-top-menu{
-        span{
-            &:first-child{
-                margin-right: 0;
-            }
-        }
-        .checkbox{
-            margin: 0 0 0 25px;
-            display: inline-block;
-            vertical-align: top;
-            label{
-                color: #1d1d1d;
-                font-size: 13px;
-                font-family: @regular;
-                &.custom{
-                    span{
-                        top: -2px;
-                        width: 20px;
-                        height: 20px;
-                        margin-right: 8px;
-                        vertical-align: middle;
-                        &:before{
-                            width: 20px;
-                            height: 20px;
-                            background-position: center;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-/* end stats details page */
+/* end general details node */
 
 /* logs details page */
 #logs-page{
@@ -198,28 +117,6 @@
     }
 }
 /* end logs details page */
-
-/* monitoring details page */
-#monitoring-page{
-    .graphs{
-        margin-top: 37px;
-    }
-    .name{
-        margin-bottom: 15px;
-        font-size: 13px;
-        font-family: @regular;
-        color: #1d1d1d;
-        &.first{
-            margin-top: 15px;
-        }
-    }
-    .cpu-graph, .memory-graph, .bandwith-graph, .graph-item{
-        .clearfix;
-        display: block;
-        margin-bottom: 40px;
-    }
-}
-/* end monitoring details page */
 
 /* timelines details page */
 #timelines-page{
@@ -332,5 +229,3 @@
     }
 }
 /* end timelines details page */
-
-/* end details-node */

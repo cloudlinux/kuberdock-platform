@@ -219,7 +219,6 @@
 /* end-pod-main */
 
 /* add pod */
-
 #add-image{
     .sidebar{
         padding-left: 0;
@@ -946,33 +945,34 @@
             }
         }
         &.logs-tab{
-            .container-logs-wrapper{
-                .clearfix();
-                .export-logs {
-                    color: #4e5665;
-                    line-height: 17px;
-                    position: relative;
-                    padding-left: 24px;
-                    margin-bottom: 15px;
-                    text-decoration: none;
-                    &:hover{
-                        color: #428bca;
-                        &:before{
-                            background-position: 0 -18px;
-                        }
-                    }
+            .export-logs {
+                color: #4e5665;
+                font-size: 13px;
+                line-height: 17px;
+                position: relative;
+                padding-left: 24px;
+                margin-bottom: 20px;
+                text-decoration: none;
+                &:hover{
+                    color: #428bca;
                     &:before{
-                        top: 0;
-                        left: 0;
-                        bottom: 0;
-                        content: '';
-                        width: 15px;
-                        height: 17px;
-                        margin: auto;
-                        position: absolute;
-                        background: url('../img/export-ico.png') 0 0 no-repeat;
+                        background-position: 0 -18px;
                     }
                 }
+                &:before{
+                    top: 0;
+                    left: 0;
+                    bottom: 0;
+                    content: '';
+                    width: 15px;
+                    height: 17px;
+                    margin: auto;
+                    position: absolute;
+                    background: url('../img/export-ico.png') 0 0 no-repeat;
+                }
+            }
+            .container-logs-wrapper{
+                .clearfix();
             }
             .container-logs{
                 .box-shadow-materials();
@@ -982,7 +982,7 @@
                 padding: 20px;
                 overflow: auto;
                 font-size: 10pt;
-                margin: 15px 0 10px;
+                margin-bottom: 10px;
                 background-color: #000;
                 p{
                     margin: 0;

@@ -155,13 +155,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         template           : ippoolLeftTpl,
         childView          : views.NetworkItem,
         emptyView          : views.NetworkEmpty,
-        childViewContainer : "tbody.networks-list",
-
-        initialize: function(){
-            if (this.collection.length != 0 && !this.collection.any(function(m){return m.checked})) {
-                this.collection.models[0].checked = true;
-            }
-        }
+        childViewContainer : "tbody.networks-list"
     });
 
     views.RightView = Backbone.Marionette.CompositeView.extend({

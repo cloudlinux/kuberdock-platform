@@ -26,8 +26,8 @@
                         <span class="go-to-ports">Configuration</span>
                         <ul class="nav sub-nav">
                         </ul>
-                    </li>
-                </ul> -->
+                    </li> -->
+                </ul>
             </div>
             <div id="details_content" class="col-md-10 col-sm-12 monitoring-tab">
                 <div id="tab-content">
@@ -60,39 +60,22 @@
                             <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %></div>
                         </div>
                     </div>
-                    <div id="monitoring-page" class="col-md-12 col-sm-12 col-xs-12 no-padding clearfix">
-                        <!-- <div class="page-top-menu">
-                            <span>Choose period:</span>
-                            <span>Last 6 Hours</span>
-                            <span class="active">24 Hours</span>
-                            <span>1 week</span>
-                            <span>1 month</span>
-                            <span>1 year</span>
-                        </div>
-                        <div class="page-top-menu">
-                            <span>Select replica:</span>
-                            <span>
-                                <label class="custom">
-                                    <input type="checkbox">
-                                    <span></span>
-                                    Replica 1
-                                </label>
-                            </span>
-                            <span>
-                                <label class="custom">
-                                    <input type="checkbox">
-                                    <span></span>
-                                    Replica 2
-                                </label>
-                            </span>
-                        </div>
-                        <p class="name first">CPU graph</p>
-                        <div class="cpu-graph"></div>
-                        <p class="name">Memory graph</p>
-                        <div class="memory-graph"></div>
-                        <p class="name">Bandwith IN/OUT graph</p>
-                        <div class="bandwith-graph"></div> -->
-                    </div>
+                    <!-- <div class="col-xs-12 page-top-menu border-top">
+                        <span>Select replica:</span>
+                        <label class="custom">
+                            <input type="checkbox" checked="checked">
+                            <span></span>Replica 1
+                        </label>
+                        <label class="custom">
+                            <input type="checkbox">
+                            <span></span>Replica 2
+                        </label>
+                        <label class="custom">
+                            <input type="checkbox">
+                            <span></span>Replica 3
+                        </label>
+                    </div> -->
+                    <div id="monitoring-page" class="col-md-12 col-sm-12 col-xs-12 no-padding clearfix"></div>
                 </div>
             </div>
         </div>

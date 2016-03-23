@@ -71,11 +71,23 @@
                             <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %> </div>
                         </div>
                     </div>
-                    <div class="col-xs-12 no-padding ">
-
+                    <div class="col-xs-12 page-top-menu border-top">
+<!--                         <span>Select replica:</span>
+                        <label class="custom">
+                            <input type="radio" name="replica" checked="checked">
+                            <span></span>Replica 1
+                        </label>
+                        <label class="custom">
+                            <input type="radio" name="replica">
+                            <span></span>Replica 2
+                        </label>
+                        <label class="custom">
+                            <input type="radio" name="replica">
+                            <span></span>Replica 3
+                        </label> -->
+                        <a class="export-logs pull-right" title="Export container log to txt file" download="<%= parentID %>_<%= name %>_logs.txt" href="/api/logs/container/<%= parentID %>/<%= name %>?size=200&text=true">Export</a>
                     </div>
                     <div class="col-xs-12 no-padding container-logs-wrapper">
-                        <a class="export-logs pull-right" title="Export container log to txt file" download="<%= parentID %>_<%= name %>_logs.txt" href="/api/logs/container/<%= parentID %>/<%= name %>?size=200&text=true">Export</a>
                         <div class="container-logs">
                             <% _.each(logs, function(serie){ %>
                                 <p class="container-logs-started"><%- serie.start %>: Started</p>

@@ -4,10 +4,6 @@
 <div class="control-icons col-md-10 col-md-offset-1 clearfix">
     <div class="col-md-6 col-sm-12 info">
         <div>IP: <%- ip %></div>
-        <!--
-        <div>Kube capacity: 100</div>
-        <div>Used kubes: 50</div>
-        -->
     </div>
     <div class="col-md-6 col-sm-12 servers no-padding">
         <div>CPU: <%- resources.cpu %> cores</div>

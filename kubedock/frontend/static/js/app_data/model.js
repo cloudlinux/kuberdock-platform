@@ -369,7 +369,25 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                         if(response.data.status == 'Paid') {
                             deferred.resolveWith(model, arguments);
                         } else {
-                            window.location = response.data.redirect;
+                            utils.modalDialog({
+                                title: 'Insufficient funds',
+                                body: 'Your account funds seem to be'
+                                        +' insufficient for the action.'
+                                        +' Would you like to go to billing'
+                                        +' system to make the payment?',
+                                small: true,
+                                show: true,
+                                footer: {
+                                    buttonOk: function(){
+                                        window.location = response.data.redirect;
+                                    },
+                                    buttonCancel: function(){
+                                        deferred.rejectWith(model, []);
+                                    },
+                                    buttonOkText: 'Go to billing',
+                                    buttonCancelText: 'No, thanks',
+                                }
+                            });
                         }
                     });
                 }

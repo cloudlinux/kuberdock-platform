@@ -392,11 +392,30 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                         ).fail(
                                             utils.notifyWindow
                                         ).done(function(response){
-                                            if(response.data.status == 'Paid') {
+                                            if(response.data.status === 'Paid') {
                                                 App.navigate('pods');
                                                 that.showPods();
                                             } else {
-                                                window.location = response.data.redirect;
+                                                utils.modalDialog({
+                                                    title: 'Insufficient funds',
+                                                    body: 'Your account funds seem to be'
+                                                            +' insufficient for the action.'
+                                                            +' Would you like to go to billing'
+                                                            +' system to make the payment?',
+                                                    small: true,
+                                                    show: true,
+                                                    footer: {
+                                                        buttonOk: function(){
+                                                            window.location = response.data.redirect;
+                                                        },
+                                                        buttonCancel: function(){
+                                                            App.navigate('pods');
+                                                            that.showPods();
+                                                        },
+                                                        buttonOkText: 'Go to billing',
+                                                        buttonCancelText: 'No, thanks'
+                                                    }
+                                                });
                                             }
                                         });
                                     },

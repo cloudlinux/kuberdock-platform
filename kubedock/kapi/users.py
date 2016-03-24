@@ -16,6 +16,7 @@ from ..users.utils import enrich_tz_with_offset
 from ..settings import KUBERDOCK_INTERNAL_USER
 from .podcollection import PodCollection, POD_STATUSES
 from .pstorage import get_storage_class, delete_persistent_drives_task
+from .predefined_apps import generate
 from .licensing import is_valid as license_valid
 
 
@@ -278,6 +279,7 @@ class UserCollection(object):
             'action'      : 'addclient',
             'username'    : username,
             'password'    : md5(password).hexdigest(),
+            'password2'   : generate(8), # password for a new user
             'firstname'   : data.pop('first_name', 'kduser'),
             'lastname'    : data.pop('last_name', 'kduser'),
             'kduser'      : data.get('username', 'kduser'),

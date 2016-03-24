@@ -109,7 +109,7 @@ define(['app_data/app',
         payStartItem: function(){ this.model.cmdPayAndStart(); },
         restartItem: function(){ this.model.cmdRestart(); },
         stopItem: function(){ this.model.cmdStop(); },
-        terminateItem: function(){ this.model.cmdDelete(); },
+        deleteItem: function(){ this.model.cmdDelete(); },
 
         toggleItem: function(evt){
             evt.stopPropagation();

@@ -472,7 +472,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 });
                 that.listenTo(layoutView, 'collection:name:filter', function(value){
                     App.getNodeCollection().done(function(nodeCollection){
-                        filteredCollection = new Model.NodeCollection(
+                        var filteredCollection = new Model.NodeCollection(
                             nodeCollection.fullCollection.filter(function(model){
                                 return model.get('hostname').indexOf(value) !== -1;
                             })
@@ -511,19 +511,24 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
         showDetailedNode: function(nodeId, tab){
             var that = this;
             require(['app_data/nodes/views', 'app_data/menu/views'], function(Views, Menu){
-                var layoutView = new Views.NodeDetailedLayout({nodeId: nodeId, tab: tab}),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                App.getNodeCollection().done(function(nodeCollection){
+                    var node = nodeCollection.get(nodeId);
+                        //breadcrumbsModel = new Backbone.Model({hostname: node.get('hostname')});
+                        //sidebarModel = new Backbone.Model({tab: tab, });
 
-                that.listenTo(layoutView, 'show', function(){
-                    App.getNodeCollection().done(function(nodeCollection){
+                    if (node == null){
+                        App.navigate('nodes', {trigger: true});
+                        return;
+                    }
 
-                        var node = nodeCollection.get(nodeId);
-                            //breadcrumbsModel = new Backbone.Model({hostname: node.get('hostname')});
-                            //sidebarModel = new Backbone.Model({tab: tab, });
+                    that.listenTo(node, 'remove destroy', function(){
+                        App.navigate('nodes', {trigger: true});
+                    });
 
-                        that.listenTo(node, 'remove destroy', function(){
-                            App.navigate('nodes', {trigger: true});
-                        });
+                    var layoutView = new Views.NodeDetailedLayout({nodeId: nodeId, tab: tab}),
+                        navbar = new Menu.NavList({collection: App.menuCollection});
+
+                    that.listenTo(layoutView, 'show', function(){
 
                         layoutView.nav.show(navbar);
                         //layoutView.breadcrumbs.show(new Views.Breadcrumbs({model: breadcrumbsModel}));
@@ -579,8 +584,8 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
                         } // switch
                     });
+                    App.contents.show(layoutView);
                 });
-                App.contents.show(layoutView);
             });
         },
 
@@ -935,13 +940,14 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         userModel.fetch({
                             wait: true,
                             success: function(model, resp, opts){
-                                layoutView.main.show(new Views.ProfileEditView({ model: model, timezones : timezones}))
+                                layoutView.main.show(new Views.ProfileEditView(
+                                    { model: model, timezones : timezones}));
                             },
                             error: function(model, response){
                                 utils.notifyWindow(response);
                             },
                         });
-                    })
+                    });
                 });
                 App.contents.show(layoutView);
             });
@@ -952,7 +958,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
-                    settingsCollection = new Model.SettingsCollection();
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     App.getSystemSettingsCollection().done(function(settingsCollection){

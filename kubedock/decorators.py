@@ -64,14 +64,3 @@ def check_perms(rolename):
             return func(*args, **kwargs)
         return decorated_view
     return wrapper
-
-
-def registered_host_required(func):
-    @wraps(func)
-    def wrapped(*args, **kwargs):
-        ip = request.environ.get('REMOTE_ADDR')
-        host = RegisteredHost.query.filter_by(host=ip).first()
-        if host is None:
-            raise APIError("Host is not registered")
-        return func(*args, **kwargs)
-    return wrapped

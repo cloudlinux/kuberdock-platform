@@ -474,6 +474,7 @@
                     }
                 }
                 .bootstrap-select{
+                    max-width: 250px;
                     .no-results {
                         display: none !important;
                     }
@@ -486,12 +487,14 @@
                             > li{
                                 a{
                                     padding: 9px 20px;
+                                    font-weight: normal;
+                                    .word-wrap();
+                                    white-space: normal;
                                     &.invalid-name-pd {  // error message
                                         color: #d32f2f;
                                         cursor: auto;
                                         border: none;
                                         font-weight: normal;
-                                        white-space: normal;
                                         padding-top: 3px;
                                         padding-bottom: 3px;
                                     }
@@ -545,6 +548,7 @@
                     input{
                         .box-sizing(border-box);
                         width: 100%;
+                        min-width: 64px;
                         height: 36px;
                         margin: 0;
                         outline: none;
@@ -927,6 +931,9 @@
                     + .custom{
                         margin-left: 10px;
                     }
+                }
+                .mountPath {
+                    .word-wrap()
                 }
                 .bootstrap-select{
                     button{

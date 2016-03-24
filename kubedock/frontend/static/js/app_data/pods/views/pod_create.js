@@ -479,8 +479,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         goNext: function(evt){
-            var that = this,
-                pattern = /^[\w/.-]*$/;
+            var that = this;
 
             // remove empty ports and volumeMounts
             this.model.set('ports', this.model.get('ports').filter(
@@ -499,21 +498,8 @@ define(['app_data/app', 'app_data/model',
             for (var i = 0; i < vm.length; i++) {
                 var volumeMount = vm.at(i),
                     name = volumeMount.get('name'),
-                    mountPath = volumeMount.get('mountPath').replace(/\s+/g, '');
-                volumeMount.set('mountPath', mountPath);
+                    vol = _.findWhere(volumes, {name: name});
 
-                if (mountPath && mountPath.length < 2){
-                    utils.notifyWindow('Mount path minimum length is 3 symbols');
-                    return;
-                } else if (mountPath.length > 30){
-                    utils.notifyWindow('Mount path maximum length is 30 symbols');
-                    return;
-                } else if (!pattern.test(mountPath) ){
-                    utils.notifyWindow('Mount path should contain letters of Latin alphabet or "/", "_", "-" sumbols');
-                    return;
-                }
-
-                var vol = _.findWhere(volumes, {name: name});
                 if (vol.hasOwnProperty('persistentDisk')) {
                     var pd = vol.persistentDisk;
                     if (!pd.pdSize || !pd.pdName) {
@@ -684,7 +670,7 @@ define(['app_data/app', 'app_data/model',
         },
         events: {
             'input @ui.pdSelectSearch'      : 'searchPD',
-            'hidden.bs.select @ui.pdSelect' : 'selectPD',
+            'hide.bs.select @ui.pdSelect'   : 'selectPD',
             'change @ui.pdSize'             : 'changeSize',
             'keyup @ui.pdSize'              : 'changeSize',
             'click @ui.persistent'          : 'togglePersistent',
@@ -756,7 +742,12 @@ define(['app_data/app', 'app_data/model',
             this.ui.pdSelect.selectpicker('refresh');
 
             var name = (this.ui.pdSelect.val() || '').trim();
-            if (!name || !this.nameFormat.test(name)) return;
+            if (!name || !this.nameFormat.test(name)) {
+                var current = this.getPDModel();
+                if (current != null)
+                    this.ui.pdSelect.val(current.get('name')).selectpicker('render');
+                return;
+            }
 
             this.releasePersistentDisk();
             var pd = this.getPDModel(name);
@@ -873,7 +864,16 @@ define(['app_data/app', 'app_data/model',
                 type: 'text',
                 mode: 'inline',
                 success: function(response, newValue) {
-                    that.model.set('mountPath', newValue);
+                    var value = newValue.trim(),
+                        error = Model.Container.validateMountPath(value);
+                    // TODO: style for editable validation errors
+                    // if (error) return error;
+                    if (error) {
+                        utils.notifyWindow(error);
+                        return '';
+                    }
+
+                    that.model.set('mountPath', value);
                 }
             });
             this.ui.pdSelect.selectpicker({

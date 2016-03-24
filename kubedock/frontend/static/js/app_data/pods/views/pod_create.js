@@ -142,17 +142,20 @@ define(['app_data/app', 'app_data/model',
                                            'success');
                     },
                     validate: function(newValue) {
-                        var model = podCollection.find(
-                            function(item) {
-                                return item.get('name') == newValue;
-                            }
-                        );
-                        if (newValue.length > 63){
-                            utils.notifyWindow('The maximum length of the Pod name must be less than 63 characters');
-                            return ' ';
-                        }
-                        if (model) {
-                            utils.notifyWindow('Pod with name "' + newValue + '" already exists. Try another name.');
+                        newValue = newValue.trim();
+
+                        var msg;
+                        if (!newValue)
+                            msg = 'Please, enter pod name.';
+                        else if (newValue.length > 63)
+                            msg = 'The maximum length of the Pod name must be less than 63 characters.';
+                        else if (podCollection.findWhere({name: newValue}))
+                            msg = 'Pod with name "' + newValue + '" already exists. Try another name.';
+
+                        if (msg){
+                            // TODO: style for ieditable error messages
+                            // (use it instead of notifyWindow)
+                            utils.notifyWindow(msg);
                             return ' ';
                         }
                     }

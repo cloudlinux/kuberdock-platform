@@ -177,7 +177,7 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
         check_namespace_exists(node_ip=host)
 
         i, o, e = ssh.exec_command('ip -o -4 address show')
-        node_interface = get_node_interface(o.read())
+        node_interface = get_node_interface(o.read(), db_node.ip)
         sftp = ssh.open_sftp()
         sftp.put('fslimit.py', '/fslimit.py')
         sftp.put('make_elastic_config.py', '/make_elastic_config.py')
@@ -283,17 +283,15 @@ def send_stat():
     send(collect())
 
 
-def get_node_interface(data):
-    if not MASTER_IP:
-        return
-    ip = ipaddress.ip_address(unicode(MASTER_IP))
+def get_node_interface(data, node_ip):
+    ip = ipaddress.ip_address(unicode(node_ip))
     patt = re.compile(r'(?P<iface>\w+)\s+inet\s+(?P<ip>[0-9\/\.]+)')
     for line in data.splitlines():
         m = patt.search(line)
         if m is None:
             continue
         iface = ipaddress.ip_interface(unicode(m.group('ip')))
-        if ip in iface.network:
+        if ip == iface.ip:
             return m.group('iface')
 
 

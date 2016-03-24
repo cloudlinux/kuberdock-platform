@@ -171,7 +171,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                     that.ui.display.empty().val(evt.target.result);
                     // reset file input, so event would fire even if user
                     // selects the same file
-                    that.ui.uploader.attr('value', '');
+                    that.ui.uploader.val('');
                 };
                 reader.readAsText(file);
             },

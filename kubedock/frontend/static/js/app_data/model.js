@@ -168,7 +168,15 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             _data.volumeMounts = _.map(_data.volumeMounts || [],
                                        function(vm){ return {mountPath: vm}; });
             return new this(_data);
-        }
+        },
+        validateMountPath: function(mountPath){
+            if (mountPath && mountPath.length < 2)
+                return 'Mount path minimum length is 3 symbols';
+            else if (mountPath.length > 30)
+                return 'Mount path maximum length is 30 symbols';
+            else if (!/^[\w/.-]*$/.test(mountPath))
+                return 'Mount path should contain letters of Latin alphabet or "/", "_", "-" sumbols';
+        },
     });
 
     data.Pod = Backbone.AssociatedModel.extend({

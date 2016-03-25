@@ -211,7 +211,8 @@ function protect_cluster_reject {
     iptables_ -A KUBERDOCK -t mangle -m set --match-set kuberdock_cluster src -j ACCEPT
 
     iptables_ -A KUBERDOCK -t mangle -s "$MASTER_IP" -j ACCEPT
-    iptables_ -A KUBERDOCK -t mangle -d "$NODE_IP" -p tcp --dport 22 -j ACCEPT
+    # Allow ssh to all node's addresses except pods.
+    iptables_ -A KUBERDOCK -t mangle -p tcp --dport 22 -m set ! --match-set kuberdock_flannel dst -j ACCEPT
     iptables_ -A KUBERDOCK -t mangle -p icmp --icmp-type echo-request -j ACCEPT
 
     # Reject all other
@@ -256,7 +257,9 @@ function protect_cluster_drop {
     iptables_ -A KUBERDOCK -t mangle -m set --match-set kuberdock_cluster src -j ACCEPT
 
     iptables_ -A KUBERDOCK -t mangle -s "$MASTER_IP" -j ACCEPT
-    iptables_ -A KUBERDOCK -t mangle -d "$NODE_IP" -p tcp --dport 22 -j ACCEPT
+
+    # Allow ssh to all node's addresses except pods.
+    iptables_ -A KUBERDOCK -t mangle -p tcp --dport 22 -m set ! --match-set kuberdock_flannel dst -j ACCEPT
     iptables_ -A KUBERDOCK -t mangle -p icmp --icmp-type echo-request -j ACCEPT
 
     # Reject all other

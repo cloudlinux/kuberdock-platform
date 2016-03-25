@@ -133,7 +133,31 @@
     -moz-hyphens: auto;
     hyphens: auto;
 }
-
+.mdi(@content, @iconSize, @color, @hoverColor, @textsize : 13px, @marginRight : 5px){
+    font-size: 0;
+    &:before{
+        color: @color;
+        content: @content;
+        display: inline-block;
+        vertical-align: middle;
+        font: normal normal normal @iconSize/1 @materials;
+    }
+    span{
+        min-height: @iconSize;
+        font-size: @textsize;
+        display: inline-block;
+        vertical-align: middle;
+        margin-left: @marginRight;
+        line-height: @iconSize;
+    }
+    &:hover{
+        color: @hoverColor;
+        cursor: pointer;
+        &:before{
+            color: inherit;
+        }
+    }
+}
 /* animation */
 
 /* rotating */

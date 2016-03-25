@@ -11,7 +11,7 @@
         <div class="image-name-wrapper">
             <%- image %>
             <% if (sourceUrl !== undefined) { %>
-                <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
+                <a class="pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank"><span>Learn more about this image</span></a>
             <% } %>
         </div>
         <div class="entrypoint">

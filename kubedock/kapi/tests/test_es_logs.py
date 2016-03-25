@@ -1,23 +1,22 @@
-import pytz
+import hashlib
 import unittest
 from datetime import date, datetime, timedelta
 from uuid import uuid4
-import hashlib
-
-from kubedock.testutils.testcases import DBTestCase
-
-from kubedock.core import db
-from kubedock.pods import models as pod_models
-from kubedock.usage import models as usage_models
-from kubedock.billing import models as bill_models
 
 import mock
+import pytz
 
+from kubedock.billing import models as bill_models
+from kubedock.core import db
+from kubedock.pods import models as pod_models
+from kubedock.testutils.testcases import DBTestCase
+from kubedock.usage import models as usage_models
 from .. import es_logs
 
 
 class TestContainerLogs(DBTestCase):
     """Tests for container logs (kapi.es_logs.get_container_logs)."""
+
     def setUp(self):
         self.user, user_password = self.fixtures.user_fixtures()
         self.pod_id = str(uuid4())
@@ -61,20 +60,29 @@ class TestContainerLogs(DBTestCase):
         patcher = mock.patch.object(es_logs, 'log_query')
         self.addCleanup(patcher.stop)
         self.log_query_mock = patcher.start()
-        self.log_query_mock.side_effect = lambda *a, **kw: {  # return new mutable
-            'hits': [{'_source': {'log': '321', '@timestamp': '2015-01-01T12:12:12+00:00'}},
-                     {'_source': {'log': '654', '@timestamp': '2015-01-01T12:12:12+00:00'}},
-                     {'_source': {'log': '987', '@timestamp': '2015-01-01T12:12:12+00:00'}}],
+
+        # return new mutable
+        self.log_query_mock.side_effect = lambda *a, **kw: {
+            'hits': [{'_source': {'log': '321',
+                                  '@timestamp': '2015-01-01T12:12:12+00:00'}},
+                     {'_source': {'log': '654',
+                                  '@timestamp': '2015-01-01T12:12:12+00:00'}},
+                     {'_source': {'log': '987',
+                                  '@timestamp': '2015-01-01T12:12:12+00:00'}}],
             'total': 3}
 
         patcher = mock.patch.object(es_logs.Node, 'get_by_name')
         self.addCleanup(patcher.stop)
         self.get_by_name_mock = patcher.start()
-        self.get_by_name_mock.return_value = type('Node', (), {'ip': self.host})
+        self.get_by_name_mock.return_value = type('Node', (),
+                                                  {'ip': self.host})
 
-        hits = [{'log': '321', '@timestamp': datetime(2015, 1, 1, 12, 12, 12, tzinfo=pytz.UTC)},
-                {'log': '654', '@timestamp': datetime(2015, 1, 1, 12, 12, 12, tzinfo=pytz.UTC)},
-                {'log': '987', '@timestamp': datetime(2015, 1, 1, 12, 12, 12, tzinfo=pytz.UTC)}]
+        hits = [{'log': '321', '@timestamp': datetime(2015, 1, 1, 12, 12, 12,
+                                                      tzinfo=pytz.UTC)},
+                {'log': '654', '@timestamp': datetime(2015, 1, 1, 12, 12, 12,
+                                                      tzinfo=pytz.UTC)},
+                {'log': '987', '@timestamp': datetime(2015, 1, 1, 12, 12, 12,
+                                                      tzinfo=pytz.UTC)}]
         self.default_result = [{
             'total': 3,
             'hits': hits,
@@ -101,12 +109,16 @@ class TestContainerLogs(DBTestCase):
                                          self.user.id, size, start, end)
 
         self.log_query_mock.assert_has_calls([
-            mock.call(self.index, self.get_filters(self.container_state_2.docker_id),
+            mock.call(self.index,
+                      self.get_filters(self.container_state_2.docker_id),
                       self.host, size, start, end),
-            mock.call(self.index, self.get_filters(self.container_state_1.docker_id),
-                      self.host, size - 5, start, end),  # 3 log lines + start + end = 5
+            mock.call(self.index,
+                      self.get_filters(self.container_state_1.docker_id),
+                      self.host, size - 5, start, end),
+            # 3 log lines + start + end = 5
         ])
-        self.get_by_name_mock.assert_has_calls([mock.call(self.pod_state.hostname)] * 2)
+        self.get_by_name_mock.assert_has_calls(
+            [mock.call(self.pod_state.hostname)] * 2)
         self.assertEqual(res, self.default_result)
 
     def test_with_range(self):
@@ -139,6 +151,7 @@ class TestContainerLogs(DBTestCase):
 
 class TestLogQuery(unittest.TestCase):
     """Tests for log query generator (kapi.es_logs.log_query)."""
+
     def setUp(self):
         self.default_result = {'hits': [{'_source': {'log': '321'}},
                                         {'_source': {'log': '654'}},
@@ -155,12 +168,14 @@ class TestLogQuery(unittest.TestCase):
 
     def _check(self, start, end, time_filters=()):
         self.es_query_mock.reset_mock()
-        res = es_logs.log_query(self.index, self.filters, self.host, self.size, start, end)
+        res = es_logs.log_query(self.index, self.filters, self.host, self.size,
+                                start, end)
 
         self.assertEqual(res, self.default_result)
         self.es_query_mock.assert_called_once_with(
             self.index,
-            {'filtered': {'filter': {'and': self.filters + list(time_filters)}}},
+            {'filtered': {
+                'filter': {'and': self.filters + list(time_filters)}}},
             self.size,
             {'time_nano': {
                 'order': 'desc',
@@ -173,7 +188,8 @@ class TestLogQuery(unittest.TestCase):
     def test_time_restrictions(self):
         """Test time restrictions."""
         start, end = datetime(2015, 2, 5, 6), datetime(2015, 2, 5, 18)
-        self._check(start, end, [{'range': {'@timestamp': {'gte': start, 'lt': end}}}])
+        self._check(start, end,
+                    [{'range': {'@timestamp': {'gte': start, 'lt': end}}}])
 
         start, end = datetime(2015, 2, 5, 6), None
         self._check(start, end, [{'range': {'@timestamp': {'gte': start}}}])
@@ -207,6 +223,7 @@ class TestLogQuery(unittest.TestCase):
 
 class TestNodeLogs(unittest.TestCase):
     """Tests for node logs."""
+
     @mock.patch.object(es_logs, 'log_query')
     def test_get_node_logs(self, log_query_mock):
         """Test kapi.es_logs.get_node_logs method."""
@@ -230,6 +247,7 @@ class TestNodeLogs(unittest.TestCase):
 
 class TestCheckLogsPod(DBTestCase):
     """Tests for kapi.es_logs.check_logs_pod."""
+
     def setUp(self):
         from kubedock.nodes.models import Node
         from kubedock.users.models import User
@@ -242,17 +260,20 @@ class TestCheckLogsPod(DBTestCase):
             state='running',
         )
         self.internal_user = User.get_internal()
-        self.pod = self.fixtures.pod(name='logs pod', status=POD_STATUSES.running)
+        self.pod = self.fixtures.pod(name='logs pod',
+                                     status=POD_STATUSES.running)
 
         # disable redis caching
-        patcher = mock.patch.object(es_logs, 'check_logs_pod', es_logs._check_logs_pod)
+        patcher = mock.patch.object(es_logs, 'check_logs_pod',
+                                    es_logs._check_logs_pod)
         self.addCleanup(patcher.stop)
         self.PodCollectionMock = patcher.start()
 
         patcher = mock.patch.object(es_logs, 'PodCollection')
         self.addCleanup(patcher.stop)
         self.PodCollectionMock = patcher.start()
-        self.PodCollectionMock.return_value.get.return_value = [self.pod.to_dict()]
+        self.PodCollectionMock.return_value.get.return_value = [
+            self.pod.to_dict()]
 
         patcher = mock.patch.object(es_logs, 'get_kuberdock_logs_pod_name')
         self.addCleanup(patcher.stop)
@@ -317,7 +338,8 @@ class TestCheckLogsPod(DBTestCase):
         self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
         self.PodCollectionMock.assert_called_once_with(self.internal_user)
-        self.PodCollectionMock.return_value.get.assert_called_once_with(as_json=False)
+        self.PodCollectionMock.return_value.get.assert_called_once_with(
+            as_json=False)
 
     def test_pod_not_running(self):
         self.PodCollectionMock.return_value.get.return_value = [
@@ -326,11 +348,14 @@ class TestCheckLogsPod(DBTestCase):
         self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
         self.PodCollectionMock.assert_called_once_with(self.internal_user)
-        self.PodCollectionMock.return_value.get.assert_called_once_with(as_json=False)
+        self.PodCollectionMock.return_value.get.assert_called_once_with(
+            as_json=False)
 
     def test_container_is_running_less_than_a_minute(self):
-        usage_models.ContainerState.query.filter_by(end_time=None)\
-            .update({usage_models.ContainerState.start_time: datetime.utcnow()})
+        usage_models.ContainerState.query.filter_by(
+            end_time=None
+        ).update({usage_models.ContainerState.start_time: datetime.utcnow()})
+
         self.assertNotEqual(es_logs.check_logs_pod(self.node.ip), '')
 
     def test_ok(self):

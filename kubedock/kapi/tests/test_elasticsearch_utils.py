@@ -1,7 +1,7 @@
 import unittest
 
-from requests import RequestException
 import mock
+from requests import RequestException
 
 from .. import elasticsearch_utils
 from ...api import APIError

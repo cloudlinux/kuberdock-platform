@@ -542,8 +542,8 @@ class PersistentStorage(object):
         :param persistent_disk_id: identifier of PersistentDisk model
         :return: tuple of <allowed flag>, reason: allowed flag - True if the
         disk can be deleted. False if the disk can not be deleted. Reason -
-        short description why the disk can't be deleted if allowed flag = False,
-        Reason is None if allowed flad = True.
+        short description why the disk can't be deleted if allowed
+        flag = False, Reason is None if allowed flad = True.
         """
         return (True, None)
 
@@ -586,6 +586,7 @@ def run_remote_command(host_string, command, timeout=NODE_COMMAND_TIMEOUT,
                   warn_only=True):
         return execute_run(command, timeout=timeout, jsonresult=jsonresult,
                            catch_exitcodes=catch_exitcodes)
+
 
 def get_ceph_credentials():
     """Returns string with options for CEPH client authentication."""
@@ -767,7 +768,8 @@ class CephStorage(PersistentStorage):
         try:
             osd_stat = run_remote_command(
                 node_ip,
-                'ceph {} osd stat --format json'.format(get_ceph_credentials()),
+                'ceph {} osd stat --format json'.format(
+                    get_ceph_credentials()),
                 jsonresult=True
             )
             osdnum = osd_stat.get('num_osds')
@@ -1266,9 +1268,8 @@ class LocalStorage(PersistentStorage):
     def _add_pod_info_to_drive_list(self, drive_list, user_id=None):
         """In addition to base class method sets flag 'forbidDeletion' to false
         to every drive in drive_list, if there are any pod in 'linkedPods' list
-        of this drive.
-        Params and return value are identical to the method of the parent class.
-
+        of this drive. Params and return value are identical to the method
+        of the parent class.
         """
         res = super(LocalStorage, self)._add_pod_info_to_drive_list(
             drive_list, user_id
@@ -1444,7 +1445,7 @@ class LocalStorage(PersistentStorage):
                 config = pod.get_dbconfig()
             except (TypeError, ValueError):
                 current_app.logger.exception('Invalid pod (%s) config: %s',
-                                            pod.id, pod.config)
+                                             pod.id, pod.config)
                 continue
             vol = _get_pod_volume_by_pd_name(config, pd.name)
             if not vol:

@@ -1,20 +1,19 @@
 """Tests for kapi.pstorage module."""
 
-import unittest
 import json
+import unittest
 import uuid
 
 import mock
 
+from kubedock.billing.models import Kube
 from kubedock.core import db
 from kubedock.kapi import pstorage
-from kubedock.settings import PD_NS_SEPARATOR
-from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
-from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses, Pod
-from kubedock.billing.models import Kube
 from kubedock.nodes.models import Node
-
+from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses, Pod
+from kubedock.settings import PD_NS_SEPARATOR
 from kubedock.testutils import create_app
+from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 
 
 class TestCase(FlaskTestCase):
@@ -45,8 +44,8 @@ class TestPstorageFuncs(DBTestCase):
             })
         run_mock.assert_called_once_with(
             node,
-            'rbd ' + pstorage.get_ceph_credentials() +\
-                ' list --long --format=json',
+            'rbd ' + pstorage.get_ceph_credentials() +
+            ' list --long --format=json',
             jsonresult=True
         )
         run_mock.return_value = 'invalid format'
@@ -76,8 +75,8 @@ class TestPstorageFuncs(DBTestCase):
         res = pstorage._get_mapped_ceph_devices_for_node(node)
         run_remote_command.assert_called_once_with(
             node,
-            'rbd ' + pstorage.get_ceph_credentials() +\
-                ' showmapped --format=json',
+            'rbd ' + pstorage.get_ceph_credentials() +
+            ' showmapped --format=json',
             jsonresult=True
         )
         self.assertEqual(
@@ -100,7 +99,8 @@ class TestPstorageFuncs(DBTestCase):
         db.session.add(pd)
         db.session.commit()
 
-        ps_delete_by_id_mock = getsc_mock.return_value.return_value.delete_by_id
+        ps_delete_by_id_mock = getsc_mock.return_value. \
+            return_value.delete_by_id
 
         ps_delete_by_id_mock.return_value = 1
 
@@ -249,7 +249,8 @@ class TestPersistentStorage(DBTestCase):
         self.assertEqual({'q1', 'q'},
                          {item['name'] for item in drives})
         self.assertEqual([False, False], [item['in_use'] for item in drives])
-        self.assertEqual([False, False], [item['forbidDeletion'] for item in drives])
+        self.assertEqual([False, False], [item['forbidDeletion']
+                                          for item in drives])
 
         pod_id = str(uuid.uuid4())
         pod_name = 'somename1'
@@ -281,7 +282,8 @@ class TestPersistentStorage(DBTestCase):
                          [{'podId': pod_id, 'name': pod_name}])
         self.assertEqual(without_pods['linkedPods'], [])
         self.assertEqual([False, False], [item['in_use'] for item in drives])
-        self.assertEqual([False, False], [item['forbidDeletion'] for item in drives])
+        self.assertEqual([False, False], [item['forbidDeletion']
+                                          for item in drives])
 
         pd1.pod_id = pod.id
         db.session.commit()
@@ -296,6 +298,7 @@ class TestPersistentStorage(DBTestCase):
 
 class TestLocalStorage(DBTestCase):
     """Tests for kapi.LocalStorage class."""
+
     def setUp(self):
         super(TestLocalStorage, self).setUp()
         self.user, _ = self.fixtures.user_fixtures()
@@ -410,6 +413,7 @@ class TestLocalStorage(DBTestCase):
 
 class TestCephStorage(DBTestCase):
     """Tests for kapi.CephStorage class."""
+
     def setUp(self):
         super(TestCephStorage, self).setUp()
         self.user, _ = self.fixtures.user_fixtures()

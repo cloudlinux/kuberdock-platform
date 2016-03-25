@@ -52,13 +52,15 @@ class PredefinedAppsTestCase(APITestCase):
         self.assert200(response)
         # raw response data
         self.assertEqual(predefined_app['template'], response.data)
-        self.assertEqual('application/x-yaml', response.headers.get('Content-Type'))
+        self.assertEqual('application/x-yaml',
+                         response.headers.get('Content-Type'))
 
     # @unittest.skip('')
     def test_post_as_json(self):
         # post as json
         response = self.open(method='POST',
-                             json={'name': self.name, 'template': self.template},
+                             json={'name': self.name,
+                                   'template': self.template},
                              auth=self.adminauth)
         self.assert200(response)
         response_validator.validate(response.json)
@@ -94,13 +96,15 @@ class PredefinedAppsTestCase(APITestCase):
         new_app = {'name': 'updated yaml template name',
                    'template': 'updated yaml template'}
         url = '{0}/{1}'.format(self.url, predefined_app['id'])
-        response = self.open(url, method='PUT', json=new_app, auth=self.adminauth)
+        response = self.open(url, method='PUT', json=new_app,
+                             auth=self.adminauth)
         self.assert200(response)
         response_validator.validate(response.json)
         updated_predefined_app = response.json['data']
         self.assertDictContainsSubset(new_app, updated_predefined_app)
         self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
-        self.assertEqual(predefined_app['user_id'], updated_predefined_app['user_id'])
+        self.assertEqual(predefined_app['user_id'],
+                         updated_predefined_app['user_id'])
 
     # @unittest.skip('')
     def test_delete(self):

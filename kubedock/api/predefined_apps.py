@@ -55,8 +55,8 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         template = params.get('template')
         validate = params.get('validate') or False
 
-        return kapi_apps.PredefinedApps(user).update(app_id, name=name, template=template,
-                                           validate=validate)
+        return kapi_apps.PredefinedApps(user).update(
+            app_id, name=name, template=template, validate=validate)
 
     @KubeUtils.jsonwrap
     @maintenance_protected

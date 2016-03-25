@@ -1,25 +1,25 @@
 """Management functions for nodes.
 """
-import os
 import math
+import os
 import socket
 
-from ..utils import send_event, run_ssh_command
+from . import pstorage
+from .node_utils import add_node_to_db, delete_node_from_db
+from .podcollection import PodCollection
+from .. import tasks
+from ..api import APIError
+from ..billing import kubes_to_limits
+from ..billing.models import Kube
 from ..core import db
 from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
-from ..users.models import User
-from ..billing.models import Kube
-from ..billing import kubes_to_limits
-from ..api import APIError
 from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE)
+from ..users.models import User
+from ..utils import send_event, run_ssh_command
 from ..validation import check_internal_pod_data
-from .podcollection import PodCollection
-from .. import tasks
-from .node_utils import add_node_to_db, delete_node_from_db
-from . import pstorage
 
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
 
@@ -128,8 +128,9 @@ def mark_node_as_being_deleted(node_id):
 def delete_node(node_id=None, node=None):
     """Deletes node."""
 
-    # As long as the func is allowed to be called after mark_node_as_being_deleted
-    # func there's no need to double DB request, let's get the node object directly.
+    # As long as the func is allowed to be called after mark_node_as_being_
+    # deleted func there's no need to double DB request,
+    # let's get the node object directly.
     if node is None:
         if node_id is None:
             raise APIError('Insufficient data for operation')
@@ -189,11 +190,11 @@ def edit_node_hostname(node_id, ip, hostname):
                        status_code=404)
     if ip != m.ip:
         raise APIError("Error. Node ip can't be reassigned, "
-                        "you need delete it and create new.")
+                       "you need delete it and create new.")
     new_ip = socket.gethostbyname(hostname)
     if new_ip != m.ip:
         raise APIError("Error. Node ip can't be reassigned, "
-                        "you need delete it and create new.")
+                       "you need delete it and create new.")
     m.hostname = hostname
     try:
         db.session.commit()
@@ -222,7 +223,8 @@ def _check_node_hostname(ip, hostname):
             status, h_message = run_ssh_command(ip, "hostname -f")
             if status:
                 raise APIError(
-                    "Error while trying to get node h_name: {}".format(h_message))
+                    "Error while trying to get node h_name: {}".format(
+                        h_message))
             uname_hostname = h_message.strip()
     if uname_hostname != hostname:
         raise APIError('Wrong node name. {} resolves itself by name {}'.format(
@@ -250,7 +252,6 @@ def _deploy_node(dbnode, do_deploy, with_testing):
 def get_kuberdock_logs_config(node, name, kube_type,
                               collector_kubes, storage_kubes, master_ip,
                               internal_ku_token):
-
     # Give 2/3 of elastic kubes limits to elastic heap. It's recommended do not
     # give all memory to the heap, and leave some to Lucene.
     es_memory_limit = kubes_to_limits(

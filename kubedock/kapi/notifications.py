@@ -1,18 +1,20 @@
-from kubedock.utils import send_event
+from datetime import datetime
+
+from kubedock.core import db
 from kubedock.notifications.models import Notification, RoleForNotification
 from kubedock.rbac.models import Role
-from datetime import datetime
-from kubedock.core import db
+from kubedock.utils import send_event
 
 
 def attach_admin(message, target=None):
     """
-    Save notifications for admin in database and send SSE event to web-interface
+    Save notifications for admin in database and send SSE event to
+    web-interface
     """
     message_entry = Notification.query.filter_by(message=message).first()
     if message_entry is None:
         return
-    admin_role = Role.query.filter(Role.rolename=='Admin').one()
+    admin_role = Role.query.filter(Role.rolename == 'Admin').one()
     if [r for r in message_entry.roles if r.role == admin_role]:
         return
     evt_entry = RoleForNotification(time_stamp=datetime.now(), target=target)
@@ -24,16 +26,17 @@ def attach_admin(message, target=None):
         'description': message_entry.description,
         'target': target,
         'type': message_entry.type})
-    
-    
+
+
 def detach_admin(message):
     """
-    Delete notifications for admin from database and send SSE event to web-interface
+    Delete notifications for admin from database and send SSE event to
+    web-interface
     """
     message_entry = Notification.query.filter_by(message=message).first()
     if message_entry is None:
         return
-    admin_role = Role.query.filter(Role.rolename=='Admin').one()
+    admin_role = Role.query.filter(Role.rolename == 'Admin').one()
     messages = [r for r in message_entry.roles if r.role == admin_role]
     ids = []
     for message in messages:
@@ -62,4 +65,3 @@ def read_role_events(role=None):
                     'target': r.target,
                     'description': n.description})
     return events
-

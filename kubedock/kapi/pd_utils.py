@@ -7,8 +7,8 @@ from ..settings import (
     CEPH, AWS)
 from ..users.models import User
 
-
 ParsedPDName = namedtuple('ParsedPDName', ('drive', 'uid', 'uname'))
+
 
 def parse_pd_name(pdname):
     """Extracts user and drive name from composite persistent drive name.

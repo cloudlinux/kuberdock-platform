@@ -7,17 +7,16 @@ import unittest
 
 import mock
 
-from kubedock.core import db
-from kubedock.billing.models import Kube
-from kubedock.kapi import nodes
-from kubedock.testutils.testcases import DBTestCase
 from kubedock import settings
-from kubedock.nodes.models import Node
 from kubedock.api import APIError
+from kubedock.billing.models import Kube
+from kubedock.core import db
+from kubedock.kapi import nodes
+from kubedock.nodes.models import Node
+from kubedock.testutils.testcases import DBTestCase
 
 
 class TestNodes(DBTestCase):
-
     def setUp(self):
         self.testhost = 'testhost1'
         super(TestNodes, self).setUp()
@@ -135,7 +134,8 @@ class TestNodes(DBTestCase):
         db.session.commit()
 
         nodes.redeploy_node(node1.id)
-        add_new_node_mock.delay.assert_called_once_with(node1.id, redeploy=True)
+        add_new_node_mock.delay.assert_called_once_with(node1.id,
+                                                        redeploy=True)
 
     @mock.patch.object(nodes, 'run_ssh_command')
     def test__check_node_hostname(self, run_cmd_mock):

@@ -2,7 +2,8 @@ from flask import Blueprint, request
 from datetime import datetime
 import requests
 
-from kubedock.decorators import login_required_or_basic_or_token, maintenance_protected
+from kubedock.decorators import login_required_or_basic_or_token, \
+    maintenance_protected
 from kubedock.core import db
 from kubedock.nodes.models import RegisteredHost
 from kubedock.utils import KubeUtils, atomic
@@ -20,7 +21,8 @@ hosts = Blueprint('hosts', __name__, url_prefix='/hosts')
 def create_host():
     user = KubeUtils._get_current_user()
     if not user.is_administrator():
-        raise APIError('Insufficient permissions level', 403, type='Permission denied')
+        raise APIError('Insufficient permissions level', 403,
+                       type='Permission denied')
     ip = request.environ.get('REMOTE_ADDR')
     register_host(ip)
     return {'ip': ip}

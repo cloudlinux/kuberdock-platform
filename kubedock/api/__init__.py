@@ -76,7 +76,8 @@ def on_app_error(e):
 
 
 def on_404(e):
-    return on_app_error(APIError('Not found', status_code=404, type='NotFound'))
+    return on_app_error(APIError('Not found', status_code=404,
+                                 type='NotFound'))
 
 
 def populate_registered_hosts(app):

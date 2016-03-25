@@ -787,10 +787,14 @@ class V(cerberus.Validator):
     def _validate_kube_type_exists(self, exists, field, value):
         if exists:
             kube = Kube.query.get(value)
-            if kube is None or not kube.available:
-                self._error(field, "Pod can't be created, because cluster has "
-                                   "no nodes with such kube type, please "
-                                   "contact administrator.")
+            if kube is None:
+                self._error(field, 'Pod can\'t be created, because cluster has '
+                                   'no kube type with id "{0}", please contact '
+                                   'administrator.'.format(value))
+            elif not kube.available:
+                self._error(field, 'Pod can\'t be created, because cluster has '
+                                   'no nodes with "{0}" kube type, please '
+                                   'contact administrator.'.format(kube.name))
 
     def _validate_kube_type_in_user_package(self, exists, field, value):
         if exists and self.user:

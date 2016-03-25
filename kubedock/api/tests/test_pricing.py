@@ -7,7 +7,6 @@ from kubedock.testutils.testcases import APITestCase
 from kubedock.billing.models import Package, Kube, INTERNAL_SERVICE_KUBE_TYPE
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
-from kubedock import utils
 
 from kubedock.api.pricing import _format_package_version
 
@@ -31,7 +30,7 @@ def valid_package(**kwargs):
 
 def valid_kube(**kwargs):
     return dict({'name': randstr(),
-                 'cpu': 0.01 + round(random() * 9.98, 4),
+                 'cpu': randrange(1, 80) / 8.,
                  'cpu_units': 'Cores',
                  'memory': randrange(1, 99999),
                  'memory_units': 'MB',

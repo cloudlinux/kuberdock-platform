@@ -61,8 +61,3 @@ def update_ippool(network):
 @KubeUtils.jsonwrap
 def delete_ippool(network):
     return IpAddrPool().delete(network)
-
-
-
-
-

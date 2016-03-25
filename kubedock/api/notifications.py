@@ -33,8 +33,9 @@ def create_item():
     print data
     event = data['event']
     if NotificationTemplate.filter_by(event=data['event']).first():
-        raise APIError('Conflict: Template with event "{0}" already '
-                       'exists'.format(NotificationEvent.get_event_name(event)))
+        raise APIError(
+            'Conflict: Template with event "{0}" already '
+            'exists'.format(NotificationEvent.get_event_name(event)))
     try:
         t = NotificationTemplate.create(**data).save()
     except Exception, e:

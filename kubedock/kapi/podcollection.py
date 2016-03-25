@@ -65,12 +65,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
             for mount in container.get('volumeMounts') or []:
                 # Relative mountPaths in docker are relative to the /.
-                # It's not documented and sometimes relative paths may cause bugs in
-                # kd or k8s (for now localStorage doesn't work in some cases).
-                # So, we convert relative path to the corresponding absolute path.
-                # In future docker may change the way how relative mountPaths treated,
+                # It's not documented and sometimes relative paths may cause
+                # bugs in kd or k8s (for now localStorage doesn't work in
+                # some cases). So, we convert relative path to the
+                # corresponding absolute path. In future docker may change
+                # the way how relative mountPaths treated,
                 # see https://github.com/docker/docker/issues/20988
-                mount['mountPath'] = path.abspath(path.join('/', mount['mountPath']))
+                mount['mountPath'] = path.abspath(
+                    path.join('/', mount['mountPath']))
 
         secrets = sorted(secrets)
 
@@ -87,13 +89,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if not skip_check:
             self._check_trial(params)
             Image.check_images_availability(
-                [container['image'] for container in params['containers']], secrets)
+                [container['image'] for container in params['containers']],
+                secrets)
 
         params['namespace'] = params['id'] = str(uuid4())
         params['owner'] = self.owner
 
-        if (SystemSettings.get_by_name('billing_type').lower() != 'no billing' and
-                self.owner.fix_price and self.owner.username != KUBERDOCK_INTERNAL_USER):
+        if (SystemSettings.get_by_name(
+            'billing_type').lower() != 'no billing' and
+                self.owner.fix_price and
+                self.owner.username != KUBERDOCK_INTERNAL_USER):
             # All pods created by fixed-price users initially must have status
             # "unpaid". Status may be changed later (using command "set").
             params['status'] = POD_STATUSES.unpaid
@@ -130,9 +135,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _get_by_id(self, pod_id):
         try:
             if self.owner is None:
-                pod = (p for p in self._collection.values() if p.id == pod_id).next()
+                pod = (p for p in self._collection.values()
+                       if p.id == pod_id).next()
             else:
-                pod = (p for p in self._collection.values() if p.id == pod_id and
+                pod = (p for p in self._collection.values()
+                       if p.id == pod_id and
                        getattr(p, 'owner', '') == self.owner.username).next()
         except StopIteration:
             raise PodNotFound()
@@ -174,7 +181,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     @atomic()
     def _set_entry(self, pod, data):
         """Sets pod status in DB"""
-        # TODO: wants rethinking, we've got two kind of statuses, in DB and pod config
+        # TODO: wants rethinking, we've got two kind of statuses,
+        # in DB and pod config
         status = data.get('commandOptions', {}).get('status')
         if status not in ['unpaid', 'stopped']:
             return
@@ -192,14 +200,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         without any damage to his pods.
 
         :param pod_id: pod id
-        :param ip: ip as a string (u'1.2.3.4'), number (16909060), or PodIP instance
+        :param ip: ip as a string (u'1.2.3.4'), number (16909060),
+            or PodIP instance
         """
         if not isinstance(ip, PodIP):
             query = PodIP.query
             if pod_id:
                 query = query.filter_by(pod_id=pod_id)
             if ip:
-                query = query.filter_by(ip_address=int(ipaddress.ip_address(ip)))
+                query = query.filter_by(
+                    ip_address=int(ipaddress.ip_address(ip)))
             ip = query.first()
             if ip is None:
                 return
@@ -209,7 +219,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # TODO: AC-1662 unbind ip from nodes and delete service
         pod = ip.pod
         pod_config = pod.get_dbconfig()
-        pod_config['public_ip_before_freed'] = pod_config.pop('public_ip', None)
+        pod_config['public_ip_before_freed'] = pod_config.pop('public_ip',
+                                                              None)
         for container in pod_config['containers']:
             for port in container['ports']:
                 port['isPublic_before_freed'] = port.pop('isPublic', None)
@@ -251,7 +262,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if kube is None:
             kube = Kube.get_default_kube()
         if not kube.is_public():
-            if not self.owner or self.owner.username != KUBERDOCK_INTERNAL_USER:
+            if not self.owner or \
+                    self.owner.username != KUBERDOCK_INTERNAL_USER:
                 raise APIError('Forbidden kube type for a pods')
         pod.kube = kube
         pod.owner = self.owner
@@ -321,7 +333,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             container = (c for c in pod.containers
                          if c['name'] == container_name).next()
         except StopIteration:
-            raise APIError('Container with id {0} not found'.format(container_name))
+            raise APIError(
+                'Container with id {0} not found'.format(container_name))
         image = container['image']
         image_id = container.get('imageID')
         if image_id is None:
@@ -353,14 +366,16 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             # TODO where raise ?
             # current_app.logger.debug(rv)
 
-    def _make_secret(self, namespace, username, password, registry=DEFAULT_REGISTRY):
+    def _make_secret(self, namespace, username, password,
+                     registry=DEFAULT_REGISTRY):
         # only index.docker.io in .dockercfg allowes to use
         # image url without the registry, like wncm/mynginx
         if registry.endswith('docker.io'):
             registry = DOCKERHUB_INDEX
         auth = urlsafe_b64encode('{0}:{1}'.format(username, password))
-        secret = urlsafe_b64encode('{{"{0}": {{"auth": "{1}", "email": "a@a.a" }}}}'
-                                   .format(registry, auth))
+        secret = urlsafe_b64encode(
+            '{{"{0}": {{"auth": "{1}", "email": "a@a.a" }}}}'.format(
+                registry, auth))
 
         name = str(uuid4())
         config = {'apiVersion': KUBE_API_VERSION,
@@ -369,7 +384,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                   'data': {'.dockercfg': secret},
                   'type': 'kubernetes.io/dockercfg'}
 
-        rv = self._post(['secrets'], json.dumps(config), rest=True, ns=namespace)
+        rv = self._post(['secrets'], json.dumps(config), rest=True,
+                        ns=namespace)
         if rv['kind'] == 'Status' and rv['status'] == 'Failure':
             raise APIError(rv['message'])
         return name
@@ -379,18 +395,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         Retrieve from kubernetes all secrets attached to the pod.
 
         :param pod: pod
-        :returns: list of secrets. Each secret is a tuple (username, password, registry)
+        :returns: list of secrets. Each secret is a tuple (username, password,
+        registry)
         """
         secrets = []
         for secret in pod.secrets:
             rv = self._get(['secrets', secret], ns=pod.namespace)
             if rv['kind'] == 'Status':
                 raise APIError(rv['message'])
-            dockercfg = json.loads(urlsafe_b64decode(str(rv['data']['.dockercfg'])))
+            dockercfg = json.loads(urlsafe_b64decode(
+                str(rv['data']['.dockercfg'])))
             for registry, data in dockercfg.iteritems():
-                username, password = urlsafe_b64decode(str(data['auth'])).split(':', 1)
-                # only index.docker.io in .dockercfg allowes to use image url without
-                # the registry, like wncm/mynginx. Replace it back to default registry
+                username, password = urlsafe_b64decode(
+                    str(data['auth'])).split(':', 1)
+                # only index.docker.io in .dockercfg allowes to use image url
+                # without the registry, like wncm/mynginx.
+                # Replace it back to default registry
                 if registry == DOCKERHUB_INDEX:
                     registry = DEFAULT_REGISTRY
                 secrets.append((username, password, registry))
@@ -421,7 +441,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _drop_namespace(self, namespace):
         rv = self._del(['namespaces', namespace], ns=False)
-        self._raise_if_failure(rv, "Cannot delete namespace '{}'".format(namespace))
+        self._raise_if_failure(rv, "Cannot delete namespace '{}'".format(
+            namespace))
         return rv
 
     def _get_replicas(self, name=None):
@@ -438,7 +459,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     'replicaSelector': item['desiredState']['replicaSelector'],
                     'name': item['labels']['kuberdock-pod-uid']}
 
-                if name is not None and replica_item['replicaSelector'] != name:
+                if name is not None and \
+                        replica_item['replicaSelector'] != name:
                     continue
                 replicas.append(replica_item)
             except KeyError:
@@ -458,26 +480,33 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if namespaces:
             for namespace in namespaces:
                 data.extend(self._get(['pods'], ns=namespace)['items'])
-                services_data.extend(self._get(['services'], ns=namespace)['items'])
-                replicas_data.extend(self._get(['replicationcontrollers'], ns=namespace)['items'])
+                services_data.extend(self._get(
+                    ['services'], ns=namespace)['items'])
+                replicas_data.extend(self._get(
+                    ['replicationcontrollers'], ns=namespace)['items'])
         else:
             data.extend(self._get(['pods'])['items'])
-            services_data.extend(item for item in self._get(['services'])['items']
-                                 if item['metadata']['namespace'] != 'default')
-            replicas_data.extend(self._get(['replicationcontrollers'])['items'])
+            services_data.extend(item for item in self._get(
+                                ['services'])['items']
+                                if item['metadata']['namespace'] != 'default')
+            replicas_data.extend(
+                self._get(['replicationcontrollers'])['items'])
 
         for item in data:
             pod = Pod.populate(item)
 
             for s in services_data:
-                if self._is_related(item['metadata']['labels'], s['spec'].get('selector')):
+                if self._is_related(item['metadata']['labels'],
+                                    s['spec'].get('selector')):
                     pod.podIP = s['spec'].get('clusterIP')
                     break
 
             for r in replicas_data:
-                if self._is_related(item['metadata']['labels'], r['spec']['selector']):
+                if self._is_related(item['metadata']['labels'],
+                                    r['spec']['selector']):
                     # If replication controller manages more then one pod,
-                    # _get_pods must return only one of them (we will filter by sid)
+                    # _get_pods must return only one of them
+                    # (we will filter by sid)
                     pod.sid = r['metadata']['name']
                     pod.replicas = r['spec']['replicas']
                     break
@@ -496,7 +525,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             namespace = db_pod.namespace
             template_id = db_pod.template_id
 
-            if (db_pod.id, namespace) not in self._collection:  # exists in DB only
+            # exists in DB only
+            if (db_pod.id, namespace) not in self._collection:
                 pod = Pod(db_pod_config)
                 pod.id = db_pod.id
                 pod.status = getattr(db_pod, 'status', POD_STATUSES.stopped)
@@ -573,7 +603,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         }
         if hasattr(pod, 'clusterIP') and pod.clusterIP:
             conf['spec']['clusterIP'] = pod.clusterIP
-        return self._post(['services'], json.dumps(conf), rest=True, ns=pod.namespace)
+        return self._post(['services'], json.dumps(conf), rest=True,
+                          ns=pod.namespace)
 
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now
@@ -604,7 +635,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             for c in pod.containers:
                 if len(c.get('ports', [])) > 0:
                     service_rv = self._run_service(pod)
-                    self._raise_if_failure(service_rv, "Could not start a service")
+                    self._raise_if_failure(service_rv,
+                                           "Could not start a service")
                     db_config['service'] = service_rv['metadata']['name']
                     break
 
@@ -614,10 +646,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         try:
             self._get_replicationcontroller(pod.namespace, pod.sid)
             rc = self._put(['replicationcontrollers', pod.sid],
-                          json.dumps(config), ns=pod.namespace, rest=True)
+                           json.dumps(config), ns=pod.namespace, rest=True)
         except APIError:
             rc = self._post(['replicationcontrollers'],
-                          json.dumps(config), ns=pod.namespace, rest=True)
+                            json.dumps(config), ns=pod.namespace, rest=True)
             self._raise_if_failure(rc, "Could not start '{0}' pod".format(
                 pod.name.encode('ascii', 'replace')))
 
@@ -647,7 +679,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         elif raise_:
             raise APIError('Pod is already stopped')
 
-
     def _change_pod_config(self, pod, data):
         db_config = pod.get_config()
         update_dict(db_config, data)
@@ -675,7 +706,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         db_pod.set_dbconfig(db_config)
 
         finish_redeploy.delay(pod.id, data)
-        return PodCollection(owner=self.owner).get(pod.id, as_json=False)  # return updated pod
+        # return updated pod
+        return PodCollection(owner=self.owner).get(pod.id, as_json=False)
 
     # def _do_container_action(self, action, data):
     #     host = data.get('nodeName')
@@ -687,7 +719,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     #         command = 'docker {0} {1}'.format(action, container)
     #         status, message = run_ssh_command(host, command)
     #         if status != 0:
-    #             self._raise('Docker error: {0} ({1}).'.format(message, status))
+    #             self._raise('Docker error: {0} ({1}).'.format(
+    #               message, status))
     #         if action in ('start', 'stop'):
     #             send_event('pull_pod_state', message)
     #         rv[container] = message or 'OK'
@@ -748,9 +781,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 raise APIError(
                     u'For now two pods cannot share one Persistent Disk. '
                     u'{0}. Stop that pods before starting this one.'
-                    .format(
-                        '; '.join(
-                            'PD: {0}, Pod: {1}'.format(item.name, item.pod.name)
+                    .format('; '.join('PD: {0}, Pod: {1}'.format(
+                        item.name, item.pod.name)
                             for item in taken_by_another_pod.values()
                         )
                     )
@@ -758,7 +790,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
             # prepare drives
             try:
-                for drive_name, (storage, persistent_disk) in drives.iteritems():
+                for drive_name, (storage,
+                                 persistent_disk) in drives.iteritems():
                     storage.create(persistent_disk)
                     vid = storage.makefs(persistent_disk)
                     persistent_disk.state = PersistentDiskStatuses.CREATED
@@ -784,7 +817,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     def _is_related(labels, selector):
         """
         Check that pod with labels is related to selector
-        https://github.com/kubernetes/kubernetes/blob/master/docs/user-guide/labels.md#label-selectors
+        https://github.com/kubernetes/kubernetes/blob/master/docs/user-guide/
+            labels.md#label-selectors
         """
         # TODO: what about Set-based selectors?
         if labels is None or selector is None:
@@ -810,8 +844,8 @@ def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
     pod = pc._get_by_id(pod_id)
     rc = pc._get_replicationcontroller(pod.namespace, pod.sid)
     rc['spec']['replicas'] = size
-    rc = pc._put(['replicationcontrollers', pod.sid], json.dumps(rc),
-                  ns=pod.namespace, rest=True)
+    rc = pc._put(['replicationcontrollers',
+                  pod.sid], json.dumps(rc), ns=pod.namespace, rest=True)
     pc._raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
     retry = 0
     while rc['status']['replicas'] != size and retry < max_retries:
@@ -848,8 +882,8 @@ def restore_containers_host_ports_config(pod_containers, db_containers):
     list from kubernetes there will be no any 'hostPort' parameters.
     This function tries to restore that, so an user will see that parameters in
     client interface. 'hostPort' is stored in Pod's database config.
-    If kubernetes will return 'hostPort' for some pods (it is explicitly set for
-    internal service pods), then leave it as is.
+    If kubernetes will return 'hostPort' for some pods (it is explicitly set
+    for internal service pods), then leave it as is.
     Matching of ports in ports lists will be made by 'containerPort' parameter.
     The function updates pod_containers items and return that changed list.
 

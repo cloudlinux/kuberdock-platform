@@ -637,6 +637,7 @@ sed -i "/^ExecStart=/ {s/-t 300/-t 900/}" /etc/systemd/system/postgresql.service
 sed -i "/^TimeoutSec=/ {s/300/900/}" /etc/systemd/system/postgresql.service
 sed -i "/^After=/ {s/After=network.target/After=network.target\nBefore=emperor.uwsgi.service/}" /etc/systemd/system/postgresql.service
 do_and_log systemctl reenable postgresql
+export PGSETUP_INITDB_OPTIONS="--encoding UTF8" # fix for non-UTF8 locales
 log_it postgresql-setup initdb  # may fail, if postgres data dir is not empty (it's ok)
 do_and_log systemctl restart postgresql
 do_and_log python $KUBERDOCK_DIR/postgresql_setup.py

@@ -163,6 +163,10 @@ user_schema = {
         'empty': False,
         'unique_case_insensitive': User.username,
         'maxlength': 50,
+        'regex': {
+            'regex': re.compile(r'.*\D'),
+            'message': 'Usernames containing digits only are forbidden.',
+        }
     },
     'email': {
         'type': 'email',

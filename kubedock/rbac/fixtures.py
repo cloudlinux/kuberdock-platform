@@ -22,6 +22,7 @@ resources = {
     'images': ('get', 'isalive'),
     'predefined_apps': ('create', 'get', 'edit', 'delete'),
     'pricing': ('create', 'get', 'edit', 'delete', 'get_own'),
+    'timezone': ('get',),
 }
 
 permissions_base = {
@@ -64,6 +65,7 @@ permissions = {
         ('pricing', 'edit'): True,
         ('pricing', 'create'): True,
         ('pricing', 'delete'): True,
+        ('timezone', 'get'): True,
     }),
     'HostingPanel': dict(permissions_base, **{
         ('images', 'get'): True,
@@ -81,6 +83,7 @@ permissions = {
         ('images', 'isalive'): True,
         ('predefined_apps', 'get'): True,
         ('pricing', 'get_own'): True,  # packages, kube types
+        ('timezone', 'get'): True,
     }),
 }
 permissions['LimitedUser'] = dict(permissions['User'], **{

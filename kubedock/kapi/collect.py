@@ -2,34 +2,32 @@
 Module collect to gather and send usage case info back to developers
 """
 
-import requests
-import re
-import subprocess
-from itertools import izip
-from collections import Counter
 import json
+import subprocess
+from collections import Counter
+from itertools import izip
 
-from flask import current_app
 import ipaddress
+import requests
+from flask import current_app
 
 from kubedock.core import db, ssh_connect, ConnectionPool
-from kubedock.settings import (
-    AWS, ID_PATH, STAT_URL, CEPH, KUBERDOCK_INTERNAL_USER)
-from kubedock.kapi.users import UserCollection
-from kubedock.kapi.podcollection import PodCollection
-from kubedock.updates.models import Updates
-from kubedock.nodes.models import Node
-from kubedock.usage.models import PersistentDiskState, PodState
-from kubedock.pods.models import Pod, IPPool, PodIP
-from kubedock.users.models import User
-from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.kapi import licensing
+from kubedock.kapi.users import UserCollection
+from kubedock.nodes.models import Node
+from kubedock.pods.models import Pod, IPPool, PodIP
+from kubedock.predefined_apps.models import PredefinedApp
+from kubedock.settings import (
+    AWS, STAT_URL, CEPH, KUBERDOCK_INTERNAL_USER)
+from kubedock.updates.models import Updates
+from kubedock.usage.models import PersistentDiskState, PodState
+from kubedock.users.models import User
 
 
 def get_users_number(role='User'):
     return len([u for u in UserCollection().get()
-                if u.get('rolename') == role
-                    and u.get('username') != KUBERDOCK_INTERNAL_USER])
+                if u.get('rolename') == role and
+                u.get('username') != KUBERDOCK_INTERNAL_USER])
 
 
 # NOTE: get_pods_info does the same, but without touching k8s
@@ -193,7 +191,8 @@ def get_node_user_containers_counts(ssh):
     # exclude kuberdock service containers and kubernetes service containers
     _, o, _ = ssh.exec_command(
         'docker ps --format "{{.ID}} {{.Image}}"|'
-        'grep -v -E "^\w+[[:space:]]+(kuberdock/(elasticsearch|fluentd)|gcr.io/google_containers/)"|'
+        'grep -v -E "^\w+[[:space:]]+(kuberdock/(elasticsearch|fluentd)|'
+        'gcr.io/google_containers/)"|'
         'wc -l'
     )
     if o.channel.recv_exit_status() == 0:
@@ -257,7 +256,6 @@ def get_predefined_apps_info():
 
 
 def get_persistent_volume_info():
-
     cls = PersistentDiskState
     field = cls.size
     agg_result = db.session.query(
@@ -267,7 +265,7 @@ def get_persistent_volume_info():
         db.func.max(field).label('max'),
         db.func.count(field).label('count'),
     ).filter(
-        cls.end_time == None,
+        cls.end_time.is_(None),
         field > 0
     ).first()
     return {
@@ -288,7 +286,7 @@ def get_pods_info():
         Pod.owner_id != internal_user_id,
     ).scalar()
     running_count = db.session.query(db.func.count(PodState.id)).filter(
-        PodState.end_time == None,
+        PodState.end_time.is_(None),
         Pod.owner_id != internal_user_id,
     ).scalar()
     return {
@@ -327,10 +325,8 @@ def get_containers_summary(top_number=10):
         containers = config.get('containers', [])
         all_containers.extend(item['image'] for item in containers)
     counts = Counter(all_containers)
-    return [
-        {'image': image, 'count': count}
-        for image, count in counts.most_common(top_number)
-    ]
+    return [{'image': image, 'count': count}
+            for image, count in counts.most_common(top_number)]
 
 
 def collect():
@@ -366,7 +362,8 @@ def send(data):
         headers={'Content-Type': 'application/json'},
         json=data
     )
-    #TODO: process licensing information in server response when some licensing
+    # TODO: process licensing information in server response when some
+    # licensing
     # schema will be implemented
     answer = {'status': 'ERROR'}
     if r.status_code != 200:

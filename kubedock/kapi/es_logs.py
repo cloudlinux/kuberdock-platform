@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from dateutil.parser import parse as parse_dt
 
-from .elasticsearch_utils import execute_es_query
+from .elasticsearch_utils import execute_es_query, LogsError
 from .nodes import get_kuberdock_logs_pod_name
 from .podcollection import PodCollection, POD_STATUSES
 from ..core import ConnectionPool
@@ -14,8 +14,7 @@ from ..usage.models import ContainerState as CS
 from ..users.models import User
 
 
-class LogsError(APIError):
-    pass
+CONTAINER_POSTFIX = 'Contact the administrator if the problem persists.'
 
 
 def get_container_logs(pod_id, container_name, owner_id=None, size=100,
@@ -42,8 +41,35 @@ def get_container_logs(pod_id, container_name, owner_id=None, size=100,
         node = Node.get_by_name(container_state.pod_state.hostname)
         host = None if node is None else node.ip
         docker_id = container_state.docker_id
-        logs = log_query('docker-*', [{'term': {'container_id': docker_id}}],
-                         host, size, start, end)
+        try:
+            logs = log_query('docker-*',
+                             [{'term': {'container_id': docker_id}}],
+                             host, size, start, end)
+        except LogsError as err:
+            if err.error_code == LogsError.NO_LOGS:
+                logs = {}
+            elif err.error_code == LogsError.CONNECTION_ERROR:
+                raise APIError(
+                    'Failed to get logs. {0}'.format(CONTAINER_POSTFIX),
+                    status_code=503
+                )
+            elif err.error_code == LogsError.POD_ERROR:
+                raise APIError(err.message, status_code=502)
+            elif err.error_code == LogsError.INTERNAL_ERROR:
+                raise APIError(
+                    'Internal logs error. {0}'.format(CONTAINER_POSTFIX),
+                    status_code=500
+                )
+            else:
+                raise APIError(
+                    'Contact the administrator. '
+                    'Unknown logs error occurred: {0}'.format(err.message),
+                    status_code=500
+                )
+        except Exception as err:
+            raise APIError('Contact the administrator. '
+                           'Unknown error occurred: {0}'.format(err),
+                           status_code=500)
         hits = [line['_source'] for line in logs.get('hits', [])]
         for hit in hits:
             hit['@timestamp'] = parse_dt(hit['@timestamp'])
@@ -58,6 +84,9 @@ def get_container_logs(pod_id, container_name, owner_id=None, size=100,
         size -= len(hits) + 2  # start&stop lines
         if size <= 0:
             break
+
+    if not series:
+        raise APIError('Pod never been started yet', status_code=404)
 
     return series
 
@@ -75,13 +104,30 @@ def get_node_logs(hostname, date, size=100, host=None):
     index = 'syslog-'
     date = date or datetime.utcnow().date()
     index += date.strftime('%Y.%m.%d')
-    logs = log_query(
-        index,
-        [{'term': {'host_md5': hashlib.md5(hostname).hexdigest()}}],
-        host,
-        size
-    )
-    hits = [line['_source'] for line in logs.get('hits', [])]
+    try:
+        logs = log_query(
+            index,
+            [{'term': {'host_md5': hashlib.md5(hostname).hexdigest()}}],
+            host,
+            size
+        )
+    except LogsError as err:
+        if err.error_code == LogsError.NO_LOGS:
+            raise APIError(err.message, status_code=404)
+        elif err.error_code == LogsError.CONNECTION_ERROR:
+            raise APIError('Failed to get logs: {0}'.format(err.message),
+                           status_code=503)
+        elif err.error_code == LogsError.POD_ERROR:
+            raise APIError(err.message, status_code=502)
+        elif err.error_code == LogsError.INTERNAL_ERROR:
+            raise APIError('Internal logs error: {0}'.format(err.message),
+                           status_code=500)
+        raise APIError('Unknown logs error: {0}'.format(err.message),
+                       status_code=500)
+    except Exception as err:
+        raise APIError('Unknown error: {0}'.format(err), status_code=500)
+
+    hits = [line['_source'] for line in logs['hits']]
     return {'total': logs.get('total', len(hits)), 'hits': hits}
 
 
@@ -120,11 +166,11 @@ def log_query(index, filters=None, host=None, size=100, start=None, end=None):
     }}
     try:
         result = execute_es_query(index, query, size, order, host)
-    except Exception:
+    except LogsError:
         if host:
             error = check_logs_pod(host)
             if error:
-                raise LogsError(error)
+                raise LogsError(error, LogsError.POD_ERROR)
         raise
     return result
 

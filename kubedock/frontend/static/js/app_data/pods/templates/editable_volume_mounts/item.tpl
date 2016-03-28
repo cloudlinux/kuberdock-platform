@@ -5,7 +5,7 @@
     <label class="custom">
         <input class="persistent" value="0" <%= isPersistent ? '' : 'checked' %>
                type="radio" name="persistent-<%- name %>">
-        <span></span><i>Container<sup>**</sup></i>
+        <span></span><i>Transient<sup>**</sup></i>
     </label>
     <label class="custom">
         <input class="persistent" value="1" <%= isPersistent ? 'checked' : '' %>

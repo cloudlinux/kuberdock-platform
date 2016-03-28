@@ -15,20 +15,20 @@
 </div>
 <div class="status-line">
     <span class="icon <%- status %>">Status: <%- status %></span>
-    <% if (ableTo('redeploy')) { %> <span class="icon hover restart-btn">Restart</span> <% } %>
-    <% if (ableTo('pay-and-start')) { %> <span class="icon hover pay-and-start-btn">Pay & start</span> <% } %>
-    <% if (ableTo('start')) { %> <span class="icon hover start-btn">Start</span> <% } %>
-    <% if (ableTo('stop')) { %> <span class="icon hover stop-btn">Stop</span> <% } %>
-    <% if (ableTo('delete')) { %> <span class="icon hover terminate-btn">Delete</span> <% } %>
+    <% if (ableTo('redeploy')) { %> <span class="restart-btn"><span>Restart</span></span> <% } %>
+    <% if (ableTo('pay-and-start')) { %> <span class="pay-and-start-btn"><span>Pay & start</span></span><% } %>
+    <% if (ableTo('start')) { %> <span class="start-btn"><span>Start</span></span> <% } %>
+    <% if (ableTo('stop')) { %> <span class="stop-btn"><span>Stop</span></span> <% } %>
+    <% if (ableTo('delete')) { %> <span class="terminate-btn"><span>Delete</span></span> <% } %>
     <% if (graphs) { %>
-        <a class="icon hover list-btn" href="#pods/<%- id %>">Data</a>
+        <a class="list-btn" href="#pods/<%- id %>"><span>Data</span></a>
     <% } else { %>
-        <a class="icon hover stats-btn" href="#pods/<%- id %>/stats">Stats</a>
+        <a class="stats-btn" href="#pods/<%- id %>/stats"><span>Stats</span></a>
     <% } %>
     <% if (upgrade) { %>
-        <a class="icon hover upgrade-btn back" href="#pods/<%- id %>">Upgrade</a>
+        <a class="upgrade-btn back" href="#pods/<%- id %>"><span>Upgrade</span></a>
     <% } else { %>
-        <a class="icon hover upgrade-btn" href="#pods/<%- id %>/upgrade">Upgrade</a>
+        <a class="upgrade-btn" href="#pods/<%- id %>/upgrade"><span>Upgrade</span></a>
     <% } %>
 </div>
 <div class="control-icons col-md-10 col-md-offset-2 col-sm-12 clearfix">

@@ -1,14 +1,13 @@
 <div id="item-controls" class="licenseTab">
     <div class="status-line">
-        <span><b>License Status</b></span>
-        <span class="icon <%= status %>"><%= status ? status : 'unknown'%></span>
-        <span class="icon clock">Expiration date: <%= formatDate(expiration) %></span>
-        <span class="icon award">License type:
+        <span class="icon <%= status %>"><span>License status: <%= status ? status : 'unknown'%></span></span>
+        <span class="clock"><span>Expiration date: <%= formatDate(expiration) %></span></span>
+        <span class="award"><span>License type:
             <% if (type){ %>
                 <%= type %>
             <% } else { %>
                 unknown
-            <% }%>
+            <% }%></span>
         </span>
     </div>
     <div class="row">

@@ -41,8 +41,8 @@
                 <input type="password" id="password" placeholder="Enter password">
             </div>
         </div>
-        <div id="search-results-scroll">
-            <div id="data-collection"></div>
+        <div id="search-results-scroll" class="clearfix">
+            <div id="data-collection" class="clearfix"></div>
             <div class="search-control">
                 <% if (showPaginator){ %>
                     <div id="load-control" class="btn-more">Load more</div>

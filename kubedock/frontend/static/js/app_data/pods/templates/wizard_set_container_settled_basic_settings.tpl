@@ -17,36 +17,28 @@
             <ul class="nav nav-sidebar">
                 <li role="presentation" class="stats go-to-logs">Logs</li>
                 <li role="presentation" class="monitoring go-to-stats">Monitoring</li>
-                <!-- <li role="presentation" class="go-to-volumes">Timelines</li> -->
                 <li role="presentation" class="configuration active">General</li>
                 <li role="presentation" class="variables go-to-envs">Variables</li>
-                <!-- <li role="presentation" class="go-to-resources">Limits</li> -->
-<!--                     <li role="presentation" class="configuration active">Configuration
-                    <ul class="nav sub-nav">
-                    </ul>
-                </li> -->
             </ul>
         </div>
         <div id="details_content" class="col-md-10 col-sm-12 configuration-general-tab">
             <div id="tab-content">
                 <div class="status-line">
-                    <span class="icon <%- state %>">Status: <%- state %></span>
+                    <span class="icon <%- state %>"><span>Status: <%- state %></span></span>
                     <% if (state == "running"){ %>
-                        <span id="stopContainer" class="icon hover">Stop</span>
+                        <span id="stopContainer"><span>Stop</span></span>
                         <% if (!updateIsAvailable) { %>
-                            <span class="icon hover check-for-update" title="Check <%- image %> for updates">Check for updates</span>
+                            <span class="check-for-update" title="Check <%- image %> for updates"><span>Check for updates</span></span>
                         <% } else { %>
-                            <span class="icon hover container-update" title="Update <%- image %> container">Update</span>
+                            <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                         <% } %>
-                        <a class="icon hover upgrade-btn" href="#pods/<%- parentID %>/<%- name %>/upgrade"
-                                title="Change the amount of resources for <%- image %>">
-                            Upgrade resources
-                        </a>
+                        <a class="upgrade-btn" href="#pods/<%- parentID %>/<%- name %>/upgrade"
+                                title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                     <% } else  if (state == "stopped"){ %>
-                        <span class="icon hover hidden-sm hidden-xs" id="startContainer">Start</span>
+                        <span id="startContainer"><span>Start</span></span>
                     <% } %>
                     <% if (sourceUrl !== undefined) { %>
-                        <a class="hover icon hidden-sm hidden-xs pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank">Learn more about this image</a>
+                        <a class="hidden-sm hidden-xs pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank"><span>Learn more about this image</span></a>
                     <% } %>
                 </div>
                 <div class="control-icons col-md-10 col-md-offset-2 col-sm-12">

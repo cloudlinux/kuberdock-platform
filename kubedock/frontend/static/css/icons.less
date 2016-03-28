@@ -5,11 +5,13 @@
     font-family: @regular;
     border-bottom: 1px solid #e5e5e5;
     > *{
+        color: #4e5665;
+        min-height: 17px;
+        margin-right: 20px;
         margin-bottom: 20px;
         display: inline-block;
-        margin-right: 20px;
-        color: #4e5665;
         text-decoration: none;
+        vertical-align: middle;
         &:hover{
             text-decoration: none;
         }
@@ -17,12 +19,75 @@
             margin-right: 0;
         }
     }
+
+    /* start font icons */
+    .start-btn,
+    #startContainer,
+    .pay-and-start-btn{
+        .mdi('play_arrow',21px, #B5BBC1, #3197EE);
+    }
+    .stop-btn,
+    #stopContainer{
+        .mdi('stop',19px, #B5BBC1, #3197EE);
+        &:before{
+            .border-radius(50%);
+            border: 1px solid;
+        }
+    }
+    .terminate-btn{
+        .mdi('delete_sweep',21px, #B5BBC1, #3197EE);
+    }
+    .stats-btn{
+        .mdi('equalizer',21px, #B5BBC1, #3197EE);
+    }
+    .restart-btn{
+        .mdi('cached',21px, #B5BBC1, #3197EE);
+    }
+    .container-update{
+        .mdi('update',21px, #B5BBC1, #3197EE);
+    }
+    .check-for-update{
+        .mdi('find_replace',21px, #B5BBC1, #3197EE);
+    }
+    .list-btn{
+        .mdi('equalizer',21px, #B5BBC1, #3197EE);
+        &:before{
+            .rotate(-90deg);
+        }
+    }
+    .upgrade-btn{
+        .mdi('vertical_align_top',21px, #B5BBC1, #3197EE);
+        &.back{
+            color: #3197ee;
+            .mdi('vertical_align_bottom',21px, #3197EE, #B5BBC1);
+        }
+    }
+    .clock{
+        .mdi('schedule',21px, #B5BBC1, #B5BBC1);
+        &:hover{
+            cursor: default;
+            span{
+                color: #4e5665;
+            }
+        }
+    }
+    .award{
+        .mdi('star',21px, #B5BBC1, #B5BBC1);
+        &:hover{
+            cursor: default;
+            span{
+                color: #4e5665;
+            }
+        }
+    }
+    /* end font icons */
+
     .icon{
         padding-left: 25px;
         position: relative;
         &:before{
             top: 0;
-            left: 0;
+            left: 6px;
             bottom: 0;
             content: '';
             margin: auto;
@@ -37,20 +102,20 @@
                 text-decoration: none;
             }
         }
-        &.active,
-        &.unknown,
-        &.locked,
-        &.suspended,
+        /* start statuses */
         &.ok,
-        &.running,
         &.none,
+        &.active,
         &.locked,
-        &.stopped,
-        &.troubles,
-        &.expired,
-        &.terminated,
-        &.succeeded,
         &.failed,
+        &.unknown,
+        &.running,
+        &.stopped,
+        &.expired,
+        &.troubles,
+        &.succeeded,
+        &.suspended,
+        &.terminated,
         &.termination{
             &:before{
                 .border-radius(50%);
@@ -58,18 +123,18 @@
                 height: 12px;
             }
         }
-        &.active,
         &.ok,
+        &.active,
         &.running{
             &:before{
                 background-color: #97cd75;
             }
         }
-        &.unknown,
         &.none,
-        &.terminated,
-        &.succeeded,
         &.failed,
+        &.unknown,
+        &.succeeded,
+        &.terminated,
         &.termination{
             &:before{
                 background-color: #bac1c7;
@@ -82,32 +147,28 @@
                 background-color: #f5544d;
             }
         }
-        &.suspended,
-        &.expired{
+        &.expired,
+        &.suspended{
             &:before{
                 background-color: #ffb704;
             }
         }
-        &.clock{
-            padding-left: 25px;
+        &.unpaid{
             &:before{
-                width: 17px;
+                left: 6px;
+                content: '$';
+                margin: auto;
                 height: 17px;
-                background: url('../img/cklock-icon.png') 0 0 no-repeat;
-            }
-        }
-        &.award{
-            padding-left: 25px;
-            &:before{
-                width: 17px;
-                height: 23px;
-                background: url('../img/award-icon.png') 0 0 no-repeat;
+                color: #F4544C;
+                font-size: 19px;
+                line-height: 17px;
             }
         }
         &.pending,
-        &.waiting {
+        &.waiting{
             padding-left: 35px;
             position: relative;
+            min-height: 20.8px;
             &:before{
                 .border-radius(0);
                 top: 0;
@@ -121,175 +182,7 @@
                 background: url('../img/pending.gif') 0 0 no-repeat;
             }
         }
-        &#startContainer{
-            &:before{
-                background: url('../img/start.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -18px;
-                }
-            }
-        }
-        &#stopContainer{
-            &:before{
-                width: 17px;
-                height: 17px;
-                background: url('../img/stop.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -17px;
-                }
-            }
-        }
-        &.unpaid{
-            &:before{
-                .border-radius(0);
-                left: 13px;
-                width: 9px;
-                content: '';
-                margin: auto;
-                height: 17px;
-                position: absolute;
-                background: url('../img/unpaid-icon.png') 0 0 no-repeat;
-            }
-        }
-        &.check-for-update{
-            &:before{
-                width: 14px;
-                height: 16px;
-                background: url('../img/check-update-ico.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -17px;
-                }
-            }
-        }
-        &.container-update{
-            padding-left: 35px;
-            &:before{
-                width: 24px;
-                height: 21px;
-                background: url('../img/container-update-ico.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -21px;
-                }
-            }
-        }
-        &.upgrade-btn{
-            &:before{
-                width: 20px;
-                height: 16px;
-                background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -16px;
-                }
-            }
-        }
-        &.start-btn,
-        &.stop-btn,
-        &.restart-btn,
-        &.terminate-btn,
-        &.list-btn,
-        &.stats-btn,
-        &.pay-and-start-btn,
-        &.upgrade-btn{
-            &:before{
-                content: '';
-                width: 20px;
-                height: 17px;
-                position: absolute;
-            }
-        }
-        &.stats-btn,
-        &.list-btn{
-            &:before{
-                height: 16px;
-                background: url('../img/stats-data-icon.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -17px;
-                }
-            }
-        }
-        &.upgrade-btn{
-            &:before{
-                width: 14px;
-                height: 16px;
-                background: url('../img/upgrade-kube-icon.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -16px;
-                }
-            }
-            &.back{
-                color: #3197ee;
-                &:before{
-                    background-position: 0 -16px;
-                }
-                &:hover{
-                    color: #4e5665;
-                    &:before{
-                        background-position: 0 0;
-                    }
-                }
-            }
-        }
-        &.list-btn{
-            &:before{
-                .rotate(-90deg);
-            }
-        }
-        &.start-btn,
-        &.pay-and-start-btn{
-            &:before{
-                background: url('../img/start.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -18px;
-                }
-            }
-        }
-        &.stop-btn{
-            &:before{
-                background: url('../img/stop.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -17px;
-                }
-            }
-        }
-        &.restart-btn{
-            padding-left: 28px;
-            &:before{
-                background: url('../img/redeploy-pod.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -18px;
-                }
-            }
-        }
-        &.terminate-btn{
-            &:before{
-                background: url('../img/recycling.png') 0 0 no-repeat;
-            }
-            &:hover{
-                &:before{
-                    background-position: 0 -18px;
-                }
-            }
-        }
+        /* end statuses */
     }
 }
 .control-icons{
@@ -346,6 +239,50 @@
                 bottom: 0;
                 margin: auto;
             }
+        }
+    }
+}
+.image-link{
+    color: #4e5665;
+    .mdi('keyboard_arrow_right',20px, #B5BBC1, #3197EE);
+    &:before{
+        .border-radius(50%);
+        border: 1px solid #B5BBC1;
+    }
+    &:hover{
+        color: #3197EE;
+        span{
+            color: #3197EE;
+        }
+        &:before{
+            color: #3197EE;
+            border-color: #3197EE;
+        }
+    }
+}
+#data-collection .item .more a{
+    color: #4e5665;
+    .mdi('keyboard_arrow_right',20px, #3197EE, #3197EE);
+    &:before{
+        .border-radius(50%);
+        border: 1px solid #3197EE;
+    }
+    span{
+        color: #3197EE;
+    }
+}
+#data-collection .item .like{
+    width: 100%;
+    border: none;
+    float: right;
+    text-align: center;
+    font-family: @regular;
+    background-color: transparent;
+    .mdi('thumb_up',21px, #B5BBC1, #B5BBC1);
+    &:hover{
+        cursor: default;
+        span{
+            color: #000;
         }
     }
 }

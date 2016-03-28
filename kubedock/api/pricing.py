@@ -8,7 +8,8 @@ from ..rbac import check_permission
 from ..decorators import login_required_or_basic_or_token
 from ..utils import KubeUtils, register_api, atomic, all_request_params
 from ..users import User
-from ..validation import check_pricing_api, package_schema, kube_schema, packagekube_schema
+from ..validation import check_pricing_api, package_schema, kube_schema, \
+    packagekube_schema
 from ..billing.models import Package, Kube, PackageKube
 from ..pods.models import Pod
 from . import APIError
@@ -76,7 +77,8 @@ class PackagesAPI(KubeUtils, MethodView):
     def get(self, package_id=None):
         with_kubes = all_request_params().get('with_kubes')
         if package_id is None:
-            return [p.to_dict(with_kubes=with_kubes) for p in Package.query.all()]
+            return [p.to_dict(with_kubes=with_kubes)
+                    for p in Package.query.all()]
         data = Package.query.get(package_id)
         if data is None:
             raise PackageNotFound()
@@ -103,7 +105,8 @@ class PackagesAPI(KubeUtils, MethodView):
         package = Package.query.get(package_id)
         if package is None:
             raise PackageNotFound()
-        params = check_pricing_api(self._get_params(), package_schema, update=True)
+        params = check_pricing_api(self._get_params(), package_schema,
+                                   update=True)
 
         if 'name' in params:
             duplicate = Package.query.filter(Package.name == params['name'],
@@ -117,8 +120,9 @@ class PackagesAPI(KubeUtils, MethodView):
             package.remove_default_flags()
         elif package.is_default and is_default is not None:
             raise DefaultPackageNotRemovable(
-                'Setting "is_default" flag to false is forbidden. You can change '
-                'default package by setting another package as default.')
+                'Setting "is_default" flag to false is forbidden. '
+                'You can change default package by setting another package '
+                'as default.')
 
         for key, value in params.iteritems():
             setattr(package, key, value)
@@ -140,7 +144,8 @@ class PackagesAPI(KubeUtils, MethodView):
         PackageKube.query.filter_by(package_id=package_id).delete()
         db.session.delete(package)
 
-register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id', strict_slashes=False)
+register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id',
+             strict_slashes=False)
 
 
 @pricing.route('/packages/default', methods=['GET'], strict_slashes=False)
@@ -184,15 +189,17 @@ class KubesAPI(KubeUtils, MethodView):
         if 'name' in data:
             duplicate = Kube.get_by_name(data['name'], Kube.id != kube_id)
             if duplicate is not None:
-                raise DuplicateName('Kube with name \'{0}\' already exists. '
-                                    'Name should be unique'.format(data['name']))
+                raise DuplicateName(
+                    'Kube with name \'{0}\' already exists. '
+                    'Name should be unique'.format(data['name']))
         is_default = data.get('is_default', None)
         if is_default:
             _remove_is_default_kube_flags()
         elif kube.is_default and is_default is not None:
             raise DefaultKubeNotRemovable(
-                'Setting "is_default" flag to false is forbidden. You can change '
-                'default kube type by setting another kube type as default.')
+                'Setting "is_default" flag to false is forbidden. '
+                'You can change default kube type by setting another kube '
+                'type as default.')
 
         for key, value in data.items():
             setattr(kube, key, value)
@@ -219,7 +226,8 @@ class KubesAPI(KubeUtils, MethodView):
         PackageKube.query.filter_by(kube_id=kube_id).delete()
         db.session.delete(kube)
 
-register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id', strict_slashes=False)
+register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id',
+             strict_slashes=False)
 
 
 @pricing.route('/kubes/default', methods=['GET'], strict_slashes=False)
@@ -289,7 +297,8 @@ class PackageKubesAPI(KubeUtils, MethodView):
                     for pk in package.kubes]
         try:
             return (dict(pk.kube.to_dict(), kube_price=pk.kube_price)
-                    for pk in package.kubes if pk.kube_id == int(kube_id)).next()
+                    for pk in package.kubes
+                    if pk.kube_id == int(kube_id)).next()
         except StopIteration:
             raise KubeNotFound()
 
@@ -309,13 +318,16 @@ class PackageKubesAPI(KubeUtils, MethodView):
                 raise OperationOnInternalKube(
                     'Kube type is not allowed to use it in packages')
         else:
-            params = check_pricing_api(params, dict(kube_schema, **packagekube_schema))
+            params = check_pricing_api(params,
+                                       dict(kube_schema, **packagekube_schema))
             kube_id = add_kube({key: value for key, value in params.iteritems()
                                 if key in kube_schema}, commit=False)['id']
 
-        return _add_kube_type_to_package(package_id, kube_id, params['kube_price'])
+        return _add_kube_type_to_package(package_id, kube_id,
+                                         params['kube_price'])
 
-    @atomic(APIError('Could not update kube type in package', 500), nested=False)
+    @atomic(APIError('Could not update kube type in package', 500),
+            nested=False)
     @check_permission('edit', 'pricing')
     def put(self, package_id=None, kube_id=None):
         if Package.query.get(package_id) is None:
@@ -328,9 +340,11 @@ class PackageKubesAPI(KubeUtils, MethodView):
                 'Kube type is not allowed to use it in packages')
         params = check_pricing_api(self._get_params(), packagekube_schema)
 
-        return _add_kube_type_to_package(package_id, kube_id, params['kube_price'])
+        return _add_kube_type_to_package(package_id, kube_id,
+                                         params['kube_price'])
 
-    @atomic(APIError('Could not remove kube type from package', 500), nested=False)
+    @atomic(APIError('Could not remove kube type from package', 500),
+            nested=False)
     @check_permission('delete', 'pricing')
     def delete(self, package_id, kube_id):
         package_kube = PackageKube.query.filter_by(package_id=package_id,
@@ -344,11 +358,13 @@ class PackageKubesAPI(KubeUtils, MethodView):
         db.session.delete(package_kube)
 
 register_api(pricing, PackageKubesAPI, 'packagekubes',
-             '/packages/<int:package_id>/kubes/', 'kube_id', strict_slashes=False)
+             '/packages/<int:package_id>/kubes/', 'kube_id',
+             strict_slashes=False)
 
 
 def _add_kube_type_to_package(package_id, kube_id, kube_price):
-    package_kube = PackageKube.query.filter_by(package_id=package_id, kube_id=kube_id).first()
+    package_kube = PackageKube.query.filter_by(package_id=package_id,
+                                               kube_id=kube_id).first()
     if package_kube is None:
         package_kube = PackageKube(package_id=package_id, kube_id=kube_id)
         db.session.add(package_kube)
@@ -393,6 +409,7 @@ def _format_package_version(
 def fold():
     """Closure callable for reduce"""
     nodes = [0]
+
     def inner(a, n):
         nodes[0] += 1
         result = [nodes[0]]
@@ -423,26 +440,29 @@ def process_collection(data):
 
     result.update(dict((i, data.get(i)) for i in ('platform', 'storage')))
 
-    result['version'] = dict(zip(('KuberDock', 'kubernetes', 'docker'),
-        map(_format_package_version,
-            map(data.get, ('kuberdock', 'kubernetes', 'docker')))))
+    result['version'] = dict(
+        zip(('KuberDock', 'kubernetes', 'docker'),
+            map(_format_package_version,
+                map(data.get, ('kuberdock', 'kubernetes', 'docker')))))
 
-    result['data'] = dict(zip(('nodes', 'cores', 'memory', 'containers'),
-                    reduce(fold(),
-                        [('_',  # Node placeholder
-                          n.get('cores', 0),
-                          n.get('memory', {}).get('total', 0),
-                          n.get('user_containers', {}).get('running', 0))
-                            for n in data.get('nodes', [])],
-                                (0, 0, 0, 0))))
+    result['data'] = dict(
+        zip(('nodes', 'cores', 'memory', 'containers'),
+            reduce(fold(),
+                   [('_',  # Node placeholder
+                     n.get('cores', 0),
+                     n.get('memory', {}).get('total', 0),
+                     n.get('user_containers', {}).get('running', 0))
+                    for n in data.get('nodes', [])],
+                   (0, 0, 0, 0))))
 
-    result['data'].update(dict(zip(('pods', 'apps', 'persistentVolume'),
-        (data.get('pods', {}).get('total', 0),
-         data.get('predefined-apps', {}).get('count', 0),
-         data.get('persistent-volumes', {}).get('count', 0)))))
+    result['data'].update(dict(
+        zip(('pods', 'apps', 'persistentVolume'),
+            (data.get('pods', {}).get('total', 0),
+             data.get('predefined-apps', {}).get('count', 0),
+             data.get('persistent-volumes', {}).get('count', 0)))))
 
     result['data']['memory'] = "{0:.1f}".format(
-        float(result['data']['memory']) / (1024 ** 3)) # Gb
+        float(result['data']['memory']) / (1024 ** 3))  # Gb
     result['data'] = dict((k, [0, v]) for k, v in result['data'].items())
 
     lic_info = licensing.get_license_info()
@@ -452,7 +472,8 @@ def process_collection(data):
             result[key] = lic.get(key)
 
         default_value = 'unlimited'
-        invalid = bool(set(['none', 'expired']) & set(map(result.get, ('status', 'type'))))
+        invalid = bool(set(['none', 'expired']) & set(map(result.get,
+                                                          ('status', 'type'))))
 
         for key, value in result['data'].iteritems():
             value[0] = '-' if invalid else lic.get(key, default_value)
@@ -469,8 +490,8 @@ def get_license():
     return process_collection(data)
 
 
-
-@pricing.route('/license/installation_id', methods=['POST'], strict_slashes=False)
+@pricing.route('/license/installation_id', methods=['POST'],
+               strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
 @check_permission('write', 'system_settings')

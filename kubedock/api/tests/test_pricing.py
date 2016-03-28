@@ -61,10 +61,12 @@ class Url(object):
 
 class ExtendedAPITestCase(APITestCase):
     def setUp(self):
-        response = self.admin_open(Url.packages(), 'POST', valid_package(is_default=False))
+        response = self.admin_open(Url.packages(), 'POST',
+                                   valid_package(is_default=False))
         self.package = Package.query.get(response.json['data']['id'])
 
-        response = self.admin_open(Url.kubes(), 'POST', valid_kube(is_default=False))
+        response = self.admin_open(Url.kubes(), 'POST',
+                                   valid_kube(is_default=False))
         self.kube = Kube.query.get(response.json['data']['id'])
 
         response = self.admin_open(Url.package_kubes(self.package.id), 'POST',
@@ -83,18 +85,21 @@ class TestPackageCRUD(ExtendedAPITestCase):
 
         response = self.admin_open(Url.package(self.package.id))
         self.assert200(response)
-        self.assertDictContainsSubset({'name': self.package.name}, response.json['data'])
+        self.assertDictContainsSubset({'name': self.package.name},
+                                      response.json['data'])
 
     def test_get_list(self):
         for i in range(10):
             self.admin_open(Url.packages(), 'POST', valid_package())
         response = self.admin_open(Url.packages())
         self.assert200(response)
-        self.assertEqual(len(response.json['data']), 12)  # 10 + standard + pre-created
+        # 10 + standard + pre-created
+        self.assertEqual(len(response.json['data']), 12)
 
     def test_create(self):
         url = Url.packages()
-        response = self.admin_open(url, 'POST', valid_package(name=self.package.name))
+        response = self.admin_open(url, 'POST', valid_package(
+            name=self.package.name))
         self.assertAPIError(response, 400, 'DuplicateName')
         response = self.admin_open(url, 'POST', valid_package(name=''))
         self.assertAPIError(response, 400, 'ValidationError')
@@ -108,12 +113,15 @@ class TestPackageCRUD(ExtendedAPITestCase):
         response = self.admin_open(Url.package(self.package.id), 'PUT',
                                    valid_package(name=''))
         self.assertAPIError(response, 400, 'ValidationError')
-        response = self.admin_open(Url.package(self.package.id), 'PUT', valid_package())
+        response = self.admin_open(Url.package(self.package.id), 'PUT',
+                                   valid_package())
         self.assert200(response)
 
     def test_update_duplicate_name(self):
-        self.admin_open(Url.packages(), 'POST', {'name': 'zxc'}).json['data']['id']
-        response = self.admin_open(Url.package(self.package.id), 'PUT', {'name': 'zxc'})
+        self.admin_open(Url.packages(), 'POST',
+                        {'name': 'zxc'}).json['data']['id']
+        response = self.admin_open(Url.package(self.package.id), 'PUT',
+                                   {'name': 'zxc'})
         self.assertAPIError(response, 400, 'DuplicateName')
 
     def test_update_set_new_default_must_reset_current_default(self):
@@ -124,9 +132,10 @@ class TestPackageCRUD(ExtendedAPITestCase):
         self.assertFalse(default.is_default)
 
     def test_update_remove_default_flag(self):
-        default = self.admin_open(Url.packages(), 'POST', valid_package(is_default=True))
-        response = self.admin_open(Url.package(default.json['data']['id']), 'PUT',
-                                   valid_package(is_default=False))
+        default = self.admin_open(Url.packages(), 'POST',
+                                  valid_package(is_default=True))
+        response = self.admin_open(Url.package(default.json['data']['id']),
+                                   'PUT', valid_package(is_default=False))
         self.assertAPIError(response, 400, 'DefaultPackageNotRemovable')
 
     def test_delete(self):
@@ -143,8 +152,10 @@ class TestPackageCRUD(ExtendedAPITestCase):
         self.assertAPIError(response, 400, 'PackageInUse')
 
     def test_delete_default(self):
-        default = self.admin_open(Url.packages(), 'POST', valid_package(is_default=True))
-        response = self.admin_open(Url.package(default.json['data']['id']), 'DELETE')
+        default = self.admin_open(Url.packages(), 'POST',
+                                  valid_package(is_default=True))
+        response = self.admin_open(Url.package(
+            default.json['data']['id']), 'DELETE')
         self.assertAPIError(response, 400, 'DefaultPackageNotRemovable')
 
     def test_get_default(self):
@@ -160,7 +171,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
 
         response = self.admin_open(Url.kube(self.kube.id))
         self.assert200(response)
-        self.assertDictContainsSubset({'name': self.kube.name}, response.json['data'])
+        self.assertDictContainsSubset({'name': self.kube.name},
+                                      response.json['data'])
 
         for i in range(10):
             self.admin_open(Url.kubes(), 'POST', valid_kube())
@@ -170,7 +182,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
         self.assertEqual(len(response.json['data']), 14)
 
     def test_create(self):
-        response = self.admin_open(Url.kubes(), 'POST', valid_kube(name=self.kube.name))
+        response = self.admin_open(Url.kubes(), 'POST', valid_kube(
+            name=self.kube.name))
         self.assertAPIError(response, 400, 'DuplicateName')
         response = self.admin_open(Url.kubes(), 'POST', valid_kube(name=''))
         self.assertAPIError(response, 400, 'ValidationError')
@@ -180,7 +193,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
 
     def test_create_new_default_must_reset_current_default(self):
         default_kube_id = Kube.get_default_kube_type()
-        response = self.admin_open(Url.kubes(), 'POST', valid_kube(is_default=True))
+        response = self.admin_open(Url.kubes(), 'POST',
+                                   valid_kube(is_default=True))
         self.assert200(response)
         self.assertFalse(Kube.query.get(default_kube_id).is_default)
 
@@ -188,8 +202,10 @@ class TestKubeCRUD(ExtendedAPITestCase):
         response = self.admin_open(Url.kube(12345), 'PUT', {'name': 'asd'})
         self.assertAPIError(response, 404, 'KubeNotFound')
 
-        other = self.admin_open(Url.kubes(), 'POST', valid_kube()).json['data']
-        response = self.admin_open(Url.kube(self.kube.id), 'PUT', {'name': other['name']})
+        other = self.admin_open(Url.kubes(), 'POST',
+                                valid_kube()).json['data']
+        response = self.admin_open(Url.kube(self.kube.id), 'PUT',
+                                   {'name': other['name']})
         self.assertAPIError(response, 400, 'DuplicateName')
 
         response = self.admin_open(Url.kube(self.kube.id), 'PUT', {'name': ''})
@@ -210,7 +226,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
         self.assertFalse(Kube.query.get(default_kube_id).is_default)
 
     def test_update_remove_default_flag(self):
-        default = self.admin_open(Url.kubes(), 'POST', valid_kube(is_default=True))
+        default = self.admin_open(Url.kubes(), 'POST',
+                                  valid_kube(is_default=True))
         response = self.admin_open(Url.kube(default.json['data']['id']), 'PUT',
                                    valid_kube(is_default=False))
         self.assertAPIError(response, 400, 'DefaultKubeNotRemovable')
@@ -219,7 +236,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
         response = self.admin_open(Url.kube(12345), 'DELETE')
         self.assertAPIError(response, 404, 'KubeNotFound')
 
-        response = self.admin_open(Url.kube(INTERNAL_SERVICE_KUBE_TYPE), 'DELETE')
+        response = self.admin_open(Url.kube(INTERNAL_SERVICE_KUBE_TYPE),
+                                   'DELETE')
         self.assertAPIError(response, 403, 'OperationOnInternalKube')
 
         response = self.admin_open(Url.kube(self.kube.id), 'DELETE')
@@ -236,7 +254,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
         self.assertAPIError(response, 400, 'KubeInUse')
 
         self.db.session.delete(node)
-        pod = Pod(id=str(uuid4()), name='test', owner=self.user, kube=self.kube)
+        pod = Pod(id=str(uuid4()), name='test', owner=self.user,
+                  kube=self.kube)
         self.db.session.add(pod)
         self.db.session.commit()
 
@@ -244,8 +263,10 @@ class TestKubeCRUD(ExtendedAPITestCase):
         self.assertAPIError(response, 400, 'KubeInUse')
 
     def test_delete_default_kube(self):
-        default = self.admin_open(Url.kubes(), 'POST', valid_kube(is_default=True))
-        response = self.admin_open(Url.kube(default.json['data']['id']), 'DELETE')
+        default = self.admin_open(Url.kubes(), 'POST',
+                                  valid_kube(is_default=True))
+        response = self.admin_open(Url.kube(
+            default.json['data']['id']), 'DELETE')
         self.assertAPIError(response, 400, 'DefaultKubeNotRemovable')
 
     def test_get_default(self):
@@ -260,10 +281,12 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
         response = self.admin_open(Url.package_kube(self.package.id, 12345))
         self.assertAPIError(response, 404, 'KubeNotFound')
 
-        response = self.admin_open(Url.package_kube(self.package.id, self.kube.id))
+        response = self.admin_open(Url.package_kube(
+            self.package.id, self.kube.id))
         self.assert200(response)
         self.assertDictContainsSubset({'kube_price': self.pk.kube_price,
-                                       'id': self.kube.id, 'name': self.kube.name},
+                                       'id': self.kube.id,
+                                       'name': self.kube.name},
                                       response.json['data'])
 
     def test_get_list(self):
@@ -274,7 +297,8 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
         by_id, by_name = [self.kube.id], [self.kube.name]
         for i in range(10):
             kube = valid_package_kube()
-            by_id.append(self.admin_open(url, 'POST', kube).json['data']['kube_id'])
+            by_id.append(self.admin_open(url, 'POST',
+                                         kube).json['data']['kube_id'])
             by_name.append(kube['name'])
         expected = 11  # 10 + pre-created in setUp
 
@@ -309,7 +333,8 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
         url = Url.package_kubes(self.package.id)
         response = self.admin_open(url, 'POST', valid_package_kube(id=12345))
         self.assertAPIError(response, 404, 'KubeNotFound')
-        response = self.admin_open(url, 'POST', valid_package_kube(name=self.kube.name))
+        response = self.admin_open(url, 'POST',
+                                   valid_package_kube(name=self.kube.name))
         self.assertAPIError(response, 400, 'DuplicateName')
         response = self.admin_open(url, 'POST', valid_package_kube(name=''))
         self.assertAPIError(response, 400, 'ValidationError')
@@ -325,10 +350,12 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
         self.assertFalse(Kube.query.get(default_kube_id).is_default)
 
     def test_update(self):
-        response = self.admin_open(Url.package_kube(12345, self.kube.id), 'PUT',
+        response = self.admin_open(Url.package_kube(12345, self.kube.id),
+                                   'PUT',
                                    valid_package_kube_link())
         self.assertAPIError(response, 404, 'PackageNotFound')
-        response = self.admin_open(Url.package_kube(self.package.id, 12345), 'PUT',
+        response = self.admin_open(Url.package_kube(self.package.id, 12345),
+                                   'PUT',
                                    valid_package_kube_link())
         self.assertAPIError(response, 404, 'KubeNotFound')
 
@@ -337,14 +364,17 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
             'PUT', valid_package_kube_link(id=self.kube.id))
         self.assertAPIError(response, 403, 'OperationOnInternalKube')
 
-        response = self.admin_open(Url.package_kube(self.package.id, self.kube.id),
-                                   'PUT', valid_package_kube_link(id=self.kube.id))
+        response = self.admin_open(Url.package_kube(
+            self.package.id, self.kube.id), 'PUT',
+            valid_package_kube_link(id=self.kube.id))
         self.assert200(response)
 
     def test_delete(self):
-        response = self.admin_open(Url.package_kube(self.package.id, 12345), 'DELETE')
+        response = self.admin_open(Url.package_kube(self.package.id, 12345),
+                                   'DELETE')
         self.assertAPIError(response, 404, 'KubeNotFound')
-        response = self.admin_open(Url.package_kube(12345, self.kube.id), 'DELETE')
+        response = self.admin_open(Url.package_kube(12345, self.kube.id),
+                                   'DELETE')
         self.assertAPIError(response, 404, 'KubeNotFound')
 
         url = Url.package_kube(self.package.id, self.kube.id)
@@ -354,7 +384,8 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
     def test_delete_in_use(self):
         self.user.package = self.package
 
-        pod = Pod(id=str(uuid4()), name='test', owner=self.user, kube=self.kube)
+        pod = Pod(id=str(uuid4()), name='test', owner=self.user,
+                  kube=self.kube)
         self.db.session.add(pod)
         self.db.session.commit()
 
@@ -379,7 +410,8 @@ class TestPricingSSE(ExtendedAPITestCase):
         self.admin_open(Url.kube(self.kube.id), 'PUT', valid_kube())
         updated = self.kube.to_dict()
         self.send_event_mock.assert_has_calls([
-            mock.call('kube:change', updated, channel='user_{0}'.format(self.user_1.id)),
+            mock.call('kube:change', updated, channel='user_{0}'.format(
+                self.user_1.id)),
             mock.call('kube:change', updated, channel='common'),
         ])
         # other users shouldn't receive event

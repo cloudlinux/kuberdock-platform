@@ -30,7 +30,8 @@ def unit_stat():
     limits = None
     if node is None:
         items = KubeUnitResolver().by_unit(uuid)
-        items_list = map(operator.itemgetter(2), itertools.chain(*items.values()))
+        items_list = map(operator.itemgetter(2),
+                         itertools.chain(*items.values()))
         if uuid is not None:
             pod = Pod.query.get(uuid)
             if pod is None:
@@ -52,7 +53,8 @@ def unit_stat():
         {'title': 'CPU', 'ylabel': '%', 'series': [{'label': 'cpu load'}],
             'lines': 1, 'points': []},
 
-        {'title': 'Memory', 'ylabel': 'MB', 'series': [{'label': 'used', 'fill': True}],
+        {'title': 'Memory', 'ylabel': 'MB', 'series': [{'label': 'used',
+                                                        'fill': True}],
             'lines': 1, 'points': []},
 
         {'title': 'Network', 'ylabel': 'bps',
@@ -62,15 +64,18 @@ def unit_stat():
 
     if limits is not None:
         for graph in metrics[:2]:
-            graph['series'].insert(0, {'label': 'limit' if node is None else 'available'})
+            graph['series'].insert(
+                0, {'label': 'limit' if node is None else 'available'})
             graph['lines'] += 1
 
     for record in sorted(data):
         timetick = datetime.datetime.fromtimestamp(record[0], pytz.UTC)
-        metrics[0]['points'].append([timetick, record[1]] if limits is None else
-                                    [timetick, limits.cpu * 100, record[1]])
-        metrics[1]['points'].append([timetick, record[2]] if limits is None else
-                                    [timetick, limits.memory, record[2]])
+        metrics[0]['points'].append(
+            [timetick, record[1]] if limits is None else
+            [timetick, limits.cpu * 100, record[1]])
+        metrics[1]['points'].append(
+            [timetick, record[2]] if limits is None else
+            [timetick, limits.memory, record[2]])
         metrics[2]['points'].append([timetick, record[3], record[4]])
 
     # AC-2223: we can't monitor container's network separately
@@ -86,7 +91,8 @@ def unit_stat():
                 if key not in disk_metrics:
                     disk_metrics[key] = {
                         'title': key, 'ylabel': 'GB',
-                        'series': [{'fill': True, 'label': 'used'}, {'label': 'available'}],
+                        'series': [{'fill': True, 'label': 'used'},
+                                   {'label': 'available'}],
                         'seriesColors': ['#ff5800', '#4bb2c5'],
                         'lines': 2, 'points': []}
                 disk_metrics[key]['points'].append(value)
@@ -114,8 +120,10 @@ def process_disks(data, tick, to_skip=None):
             except ValueError:
                 continue
     for d in disks:
-        disks[d][1] = round(((sum(disks[d][1]) / len(disks[d][1])) / 1073741824.0), 2)
-        disks[d][2] = round(((sum(disks[d][2]) / len(disks[d][2])) / 1073741824.0), 2)
+        disks[d][1] = round(((sum(disks[d][1]) / len(disks[d][1])) /
+                             1073741824.0), 2)
+        disks[d][2] = round(((sum(disks[d][2]) / len(disks[d][2])) /
+                             1073741824.0), 2)
     return disks
 
 
@@ -125,17 +133,24 @@ def get_node_data(node, start, end=None):
         db.func.sum(StatWrap5Min.cpu),
         db.func.avg(StatWrap5Min.memory),
         db.func.sum(StatWrap5Min.rxb),
-        db.func.sum(StatWrap5Min.txb)).filter(
-            StatWrap5Min.time_window >= start).filter(
-            StatWrap5Min.unit_name == '/',
-            StatWrap5Min.container == '/',
-            StatWrap5Min.host == node).group_by(
-                StatWrap5Min.time_window)
-    disks = db.session.query(StatWrap5Min.time_window, StatWrap5Min.fs_data).filter(
-            StatWrap5Min.time_window >= start).filter(
-                StatWrap5Min.unit_name == '/',
-                StatWrap5Min.container == '/',
-                StatWrap5Min.host == node)
+        db.func.sum(StatWrap5Min.txb)
+    ).filter(
+        StatWrap5Min.time_window >= start
+    ).filter(
+        StatWrap5Min.unit_name == '/',
+        StatWrap5Min.container == '/',
+        StatWrap5Min.host == node
+    ).group_by(
+        StatWrap5Min.time_window)
+    disks = db.session.query(
+        StatWrap5Min.time_window,
+        StatWrap5Min.fs_data
+    ).filter(
+        StatWrap5Min.time_window >= start
+    ).filter(
+        StatWrap5Min.unit_name == '/',
+        StatWrap5Min.container == '/',
+        StatWrap5Min.host == node)
     organized = defaultdict(list)
     for record in disks:
         organized[record[0]].append(record[1])
@@ -148,10 +163,13 @@ def get_unit_data(items_list, start, end=None):
         db.func.sum(StatWrap5Min.cpu),
         db.func.avg(StatWrap5Min.memory),
         db.func.sum(StatWrap5Min.rxb),
-        db.func.sum(StatWrap5Min.txb)).filter(
-            StatWrap5Min.time_window >= start).filter(
-            StatWrap5Min.unit_name.in_(items_list)).group_by(
-                StatWrap5Min.time_window)
+        db.func.sum(StatWrap5Min.txb)
+    ).filter(
+            StatWrap5Min.time_window >= start
+    ).filter(
+            StatWrap5Min.unit_name.in_(items_list)
+    ).group_by(
+            StatWrap5Min.time_window)
     return data, None
 
 
@@ -161,9 +179,13 @@ def get_container_data(items_list, container, start, end=None):
         db.func.sum(StatWrap5Min.cpu),
         db.func.avg(StatWrap5Min.memory),
         db.func.sum(StatWrap5Min.rxb),
-        db.func.sum(StatWrap5Min.txb)).filter(
-            StatWrap5Min.time_window >= start).filter(
-                StatWrap5Min.unit_name.in_(items_list)).filter(
-                    StatWrap5Min.container.like('k8s_'+container+'%')).group_by(
-                StatWrap5Min.time_window)
+        db.func.sum(StatWrap5Min.txb)
+    ).filter(
+            StatWrap5Min.time_window >= start
+    ).filter(
+            StatWrap5Min.unit_name.in_(items_list)
+    ).filter(
+            StatWrap5Min.container.like('k8s_'+container+'%')
+    ).group_by(
+            StatWrap5Min.time_window)
     return data, None

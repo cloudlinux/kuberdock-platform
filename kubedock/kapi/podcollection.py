@@ -92,7 +92,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         params['owner'] = self.owner
 
         if (SystemSettings.get_by_name('billing_type').lower() != 'no billing' and
-                self.owner.fix_price):
+                self.owner.fix_price and self.owner.username != KUBERDOCK_INTERNAL_USER):
             # All pods created by fixed-price users initially must have status
             # "unpaid". Status may be changed later (using command "set").
             params['status'] = POD_STATUSES.unpaid

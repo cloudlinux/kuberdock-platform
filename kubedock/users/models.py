@@ -5,7 +5,7 @@ import json
 from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
 
-#from flask import current_app
+# from flask import current_app
 from flask.ext.login import UserMixin
 from ..core import db, login_manager
 from ..models_mixin import BaseModelMixin
@@ -38,7 +38,11 @@ class User(BaseModelMixin, UserMixin, db.Model):
     deleted = db.Column(db.Boolean, nullable=False, default=False)
     role_id = db.Column(db.Integer, db.ForeignKey('rbac_role.id'))
     permission_id = db.Column(db.Integer, db.ForeignKey('rbac_permission.id'))
-    package_id = db.Column(db.Integer, db.ForeignKey('packages.id'))
+    package_id = db.Column(
+        db.Integer, db.ForeignKey('packages.id'), nullable=False,
+        # Used raw query 'cause cannot import Package model (unresolvable
+        # circular dependency).
+        default=db.text('select id from packages where is_default'))
     join_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     activities = db.relationship('UserActivity', back_populates="user")

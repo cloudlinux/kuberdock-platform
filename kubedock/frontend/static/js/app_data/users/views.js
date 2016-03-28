@@ -485,6 +485,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     utils.notifyWindow("Username should contain letters of Latin alphabet only");
                     that.ui.username.addClass('error');
                     break;
+                case !/\D/g.test(that.ui.username.val()):
+                    utils.scrollTo(that.ui.username);
+                    utils.notifyWindow("Username cannot consist of digits only.");
+                    that.ui.username.addClass('error');
+                    break;
                 case existsUsername:
                     utils.scrollTo(that.ui.username);
                     utils.notifyWindow('Username should be unique');

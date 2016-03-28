@@ -28,7 +28,8 @@ class ValidationError(APIError):
 
 
 def extbool(value):
-    """Bool or string with values ('0', '1', 'true', 'false', 'yes') to bool."""
+    """Bool or string with values ('0', '1', 'true', 'false', 'yes') to bool.
+    """
     if isinstance(value, bool):
         return value
     if isinstance(value, basestring):
@@ -80,9 +81,9 @@ image_request_schema = {
 }
 
 # http://stackoverflow.com/questions/1418423/the-hostname-regex
-hostname_regex = re.compile(r"^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?"
-                            r"(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$",
-                            re.IGNORECASE)
+hostname_regex = re.compile(
+    r"^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?"
+    r"(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$", re.IGNORECASE)
 hostname_schema = {
     'type': 'string',
     'empty': False,
@@ -97,8 +98,10 @@ hostname_schema = {
 
 
 email_local_regex = re.compile(
-    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*\Z"  # dot-atom
-    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*"\Z)',  # quoted-string
+    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+"
+    r"(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*\Z"  # dot-atom
+    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|'
+    r'\\[\001-\011\013\014\016-\177])*"\Z)',  # quoted-string
     re.IGNORECASE)
 email_domain_regex = re.compile(
     r'^(?=.{1,255}$)(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+'
@@ -122,7 +125,8 @@ envvar_name_regex = {
 
 pdname_regex = {
     'regex': r'^[A-Za-z]+[A-Za-z0-9_\-]*',
-    'message': 'Latin letters, digits, undescores and dashes are expected only. '
+    'message': 'Latin letters, digits, '
+               'undescores and dashes are expected only. '
                'Must start with a letter'
 }
 
@@ -220,7 +224,8 @@ user_schema = {
 }
 
 
-args_list_schema = {'type': 'list', 'schema': {'type': 'string', 'empty': False}}
+args_list_schema = {'type': 'list', 'schema': {'type': 'string',
+                                               'empty': False}}
 env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
     'name': {
         'type': 'string',
@@ -233,20 +238,26 @@ env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
 protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
-kubes_qty_schema = {'type': 'integer', 'min': 1, 'max_kubes_per_container': True}
+kubes_qty_schema = {'type': 'integer', 'min': 1,
+                    'max_kubes_per_container': True}
 container_name_schema = {'type': 'string', 'empty': False, 'maxlength': 255}
-pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0, 'pd_size_max': True}
-pdname_schema = {'type': 'string', 'required': True, 'empty': False, 'maxlength': 36, 'regex': pdname_regex}
+pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0,
+                 'pd_size_max': True}
+pdname_schema = {'type': 'string', 'required': True, 'empty': False,
+                 'maxlength': 36, 'regex': pdname_regex}
 kube_type_schema = {'type': 'integer', 'coerce': int, 'kube_type_in_db': True}
-volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False, 'maxlength': 255}
+volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False,
+                      'maxlength': 255}
 
 update_pod_schema = {
-    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy', 'set']},
+    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy',
+                                              'set']},
     'commandOptions': {
         'type': 'dict',
         'schema': {
             'wipeOut': {'type': 'boolean', 'nullable': True},
-            'status': {'type': 'string', 'required': False, 'allowed': ['unpaid', 'stopped']}
+            'status': {'type': 'string', 'required': False,
+                       'allowed': ['unpaid', 'stopped']}
         }
     },
 
@@ -380,7 +391,8 @@ new_pod_schema = {
                 # 2) anyway we will overwrite it to "imagePullPolicy: Always"
                 # 'imagePullPolicy': {
                 #     'type': 'string',
-                #     'allowed': ['PullAlways', 'PullIfNotPresent', 'IfNotPresent'],
+                #     'allowed': ['PullAlways', 'PullIfNotPresent',
+                # 'IfNotPresent'],
                 #     'required': False
                 # },
                 'limits': {
@@ -497,8 +509,8 @@ change_pod_schema.update({
     },
     'kubes': {'type': 'strnum', 'empty': True, 'required': False},
 })
-change_pod_schema['containers']['schema']['schema']['volumeMounts']\
-['schema']['schema']['path'] = {  # NOQA
+
+change_pod_schema['containers']['schema']['schema']['volumeMounts']['schema']['schema']['path'] = {  # NOQA
     'type': 'string',
     'maxlength': PATH_LENGTH,
     'required': False
@@ -538,7 +550,7 @@ package_schema = {
     'price_over_traffic': positive_float_schema,
     'is_default': {'type': 'boolean', 'coerce': extbool, 'required': False},
     'count_type': {'type': 'string', 'maxlength': 5, 'required': False,
-           'allowed': ['payg', 'fixed']},
+                   'allowed': ['payg', 'fixed']},
 }
 
 kube_schema = {
@@ -693,8 +705,9 @@ class V(cerberus.Validator):
 
     def validate_schema(self, schema):
         """
-        Little hack to allow us to use sandard python types (or anything at all)
-        for type validation. Just map it to some string in self.type_map
+        Little hack to allow us to use sandard python types
+        (or anything at all) for type validation.
+        Just map it to some string in self.type_map
         """
         for value in schema.itervalues():
             vtype = value.get('type')
@@ -719,7 +732,8 @@ class V(cerberus.Validator):
         """
         The same as original Validator._validate_regex, but can accept
         pre-compiled regex as a parameter or a regex-object:
-        {'regex': <pattern or compiled regex>, 'message': <custom error message>}
+        {'regex': <pattern or compiled regex>,
+        'message': <custom error message>}
 
         Examples:
 
@@ -742,7 +756,8 @@ class V(cerberus.Validator):
             re_obj = re.compile(re_obj)
 
         if not re_obj.match(value):
-            self._error(field, message.format(value=value, regex=re_obj.pattern))
+            self._error(field, message.format(value=value,
+                                              regex=re_obj.pattern))
 
     def _validate_type_email(self, field, value):
         super(V, self)._validate_type_string(field, value)
@@ -787,7 +802,8 @@ class V(cerberus.Validator):
                 return
             templ = PredefinedApp.query.get(value)
             if not templ:
-                self._error(field, 'There is no template with such template_id')
+                self._error(field,
+                            'There is no template with such template_id')
 
     def _validate_kube_type_exists(self, exists, field, value):
         if exists:
@@ -808,9 +824,10 @@ class V(cerberus.Validator):
                 return
             package = User.get(self.user).package
             if value not in [k.kube_id for k in package.kubes]:
-                self._error(field, "Pod can't be created, because your package "
-                                   "\"{0}\" does not include kube type with id "
-                                   "\"{1}\"".format(package.name, value))
+                self._error(field,
+                            "Pod can't be created, because your package "
+                            "\"{0}\" does not include kube type with id "
+                            "\"{1}\"".format(package.name, value))
 
     def _validate_kube_type_in_db(self, exists, field, value):
         if exists:
@@ -856,7 +873,8 @@ class V(cerberus.Validator):
             if value not in vol_names:
                 self._error(
                     field,
-                    'Volume "{0}" is not defined in volumes list'.format(value))
+                    'Volume "{0}" is not defined in volumes list'.format(
+                        value))
 
     def _validate_volume_type_required(self, vtr, field, value):
         # Used in volumes list
@@ -875,15 +893,17 @@ class V(cerberus.Validator):
         if exists:
             max_size = SystemSettings.get_by_name('persitent_disk_max_size')
             if max_size and int(value) > int(max_size):
-                self._error(field, ('Persistent disk size must be less or equal '
-                                    'to "{0}" GB').format(max_size))
+                self._error(field, (
+                    'Persistent disk size must be less or equal '
+                    'to "{0}" GB').format(max_size))
 
     def _validate_max_kubes_per_container(self, exists, field, value):
         if exists:
             max_size = SystemSettings.get_by_name('max_kubes_per_container')
             if max_size and int(value) > int(max_size):
-                self._error(field, ('Container cannot have more than {0} kubes.'
-                                    .format(max_size)))
+                self._error(field, (
+                    'Container cannot have more than {0} kubes.'.format(
+                        max_size)))
 
     def _validate_package_exists(self, exists, field, value):
         if exists:
@@ -997,8 +1017,8 @@ class UserValidator(V):
     username_regex = {
         'regex': re.compile(r'^[A-Z0-9](?:[A-Z0-9_-]{0,23}[A-Z0-9])?$',
                             re.IGNORECASE),
-        'message': 'Username should contain only Latin letters and Numbers and '
-                   'must not be more than 25 characters in length'
+        'message': 'Username should contain only Latin letters and '
+                   'Numbers and must not be more than 25 characters in length'
     }
 
     def __init__(self, *args, **kwargs):
@@ -1057,7 +1077,9 @@ def _clear_timezone(data, keys):
 
 
 def check_pricing_api(data, schema, *args, **kwargs):
-    validated = V(allow_unknown=True)._api_validation(data, schema, *args, **kwargs)
+    validated = V(allow_unknown=True)._api_validation(data, schema,
+                                                      *args, **kwargs)
     # purge unknown
-    data = {field: value for field, value in validated.iteritems() if field in schema}
+    data = {field: value for field, value in validated.iteritems()
+            if field in schema}
     return data

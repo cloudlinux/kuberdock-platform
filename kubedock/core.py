@@ -4,7 +4,6 @@ import time
 
 import paramiko
 import redis
-#from sse import Sse
 from paramiko.ssh_exception import AuthenticationException, SSHException
 from flask_sqlalchemy_fix import SQLAlchemy
 from flask.ext.influxdb import InfluxDB
@@ -194,9 +193,9 @@ class EvtStream(object):
     def __iter__(self):
         sse = ServerSentEvents()
         if self.last_id is not None:
-            for key, value in sorted(((int(k), v)
-                    for k, v in self.conn.hgetall(self.cache_key).iteritems()),
-                        key=(lambda x: x[0])):
+            for key, value in sorted(
+                ((int(k), v) for k, v in self.conn.hgetall(
+                    self.cache_key).iteritems()), key=(lambda x: x[0])):
                 if key <= self.last_id:
                     continue
                 eid, event, data = json.loads(value)
@@ -236,7 +235,7 @@ def ssh_connect(host, timeout=10):
     except (AuthenticationException, SSHException) as e:
         error_message =\
             '{0}.\nCheck hostname, check that user from which '.format(e) +\
-            'Kuberdock runs (usually nginx) has ability to login as root on ' +\
+            'Kuberdock runs (usually nginx) has ability to login as root on ' \
             'this node, and try again'
     except socket.timeout:
         error_message = 'Connection timeout({0} sec). '.format(timeout) +\

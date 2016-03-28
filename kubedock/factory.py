@@ -9,7 +9,6 @@ from fabric.api import env
 
 from .core import db, login_manager, influx_db
 from kubedock.settings import SSH_KEY_FILENAME
-#from .utils import register_blueprints
 
 
 class APIJSONEncoder(JSONEncoder):
@@ -38,7 +37,6 @@ def create_app(package_name, package_path, settings_override=None):
     influx_db.init_app(app)
     login_manager.init_app(app)
     app.json_encoder = APIJSONEncoder
-    #register_blueprints(app, package_name, package_path)
     return app
 
 
@@ -48,8 +46,10 @@ def make_celery(app=None):
     celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
     celery.conf.update(app.config)
     TaskBase = celery.Task
+
     class ContextTask(TaskBase):
         abstract = True
+
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 env.user = 'root'

@@ -14,20 +14,26 @@ from flask import current_app
 from .users.models import SessionData
 from .core import db
 
+
 def _generate_sid():
     return str(uuid4())
+
 
 def _calc_hmac(body, secret):
     return base64.b64encode(hmac.new(secret, body, hashlib.sha1).digest())
 
+
 class FakeSessionInterface(SessionInterface):
     def open_session(self, app, req):
         pass
+
     def save_session(self, app, sess, res):
         pass
 
+
 class ManagedSession(CallbackDict, SessionMixin):
-    def __init__(self, initial=None, sid=None, new=False, randval=None, hmac_digest=None):
+    def __init__(self, initial=None, sid=None, new=False, randval=None,
+                 hmac_digest=None):
         def on_update(self):
             self.modified = True
 
@@ -40,25 +46,34 @@ class ManagedSession(CallbackDict, SessionMixin):
 
     def sign(self, secret):
         if not self.hmac_digest:
-            self.randval = ''.join(random.sample(string.lowercase+string.digits, 20))
-            self.hmac_digest = _calc_hmac('%s:%s' % (self.sid, self.randval), secret)
+            self.randval = ''.join(random.sample(
+                string.lowercase+string.digits, 20))
+            self.hmac_digest = _calc_hmac('%s:%s' % (self.sid, self.randval),
+                                          secret)
+
 
 class SessionManager(object):
     def new_session(self):
         """Creates a new session"""
         raise NotImplemented
+
     def exists(self, sid):
         """Does the given session exists"""
         raise NotImplemented
+
     def remove(self, sid):
         """Remove the session"""
         raise NotImplemented
+
     def get(self, sid, digest):
-        """Retrieve a managed session by session-id, checking the HMAC digest"""
+        """Retrieve a managed session by session-id,
+        checking the HMAC digest"""
         raise NotImplemented
+
     def put(self, session):
         """Store a managed session"""
         raise NotImplemented
+
 
 class ManagedSessionInterface(SessionInterface):
     def __init__(self, manager, skip_paths, cookie_timedelta):
@@ -88,7 +103,7 @@ class ManagedSessionInterface(SessionInterface):
         return self.manager.new_session()
 
     def save_session(self, app, session, response):
-        domain = self.get_cookie_domain(app);
+        domain = self.get_cookie_domain(app)
         if not session:
             self.manager.remove(session.sid)
             if session.modified:
@@ -96,7 +111,8 @@ class ManagedSessionInterface(SessionInterface):
             return
         if not session.modified:
             # no need to save an unaltered session
-            # TODO: put logic here to test if the cookie is older than N days, if so, update expiration date
+            # TODO: put logic here to test if the cookie is older than N days,
+            # if so, update expiration date
             return
         self.manager.put(session)
         session.modified = False
@@ -105,6 +121,7 @@ class ManagedSessionInterface(SessionInterface):
         response.set_cookie(app.session_cookie_name,
                             '%s!%s' % (session.sid, session.hmac_digest),
                             expires=cookie_exp, httponly=True, domain=domain)
+
 
 class DataBaseSessionManager(SessionManager):
 
@@ -133,7 +150,8 @@ class DataBaseSessionManager(SessionManager):
         return ManagedSession(sid=sid)
 
     def get(self, sid, digest):
-        """Retrieve a managed session by session-id, checking the HMAC digest"""
+        """Retrieve a managed session by session-id,
+        checking the HMAC digest"""
         session = db.session.query(SessionData).get(sid)
         if session is not None:
             randval, hmac_digest, data = session.expand_data()
@@ -143,7 +161,8 @@ class DataBaseSessionManager(SessionManager):
         if hmac_digest != digest:
             current_app.logger.debug('Invalid HMAC for the session')
             return self.new_session()
-        return ManagedSession(data, sid=sid, randval=randval, hmac_digest=hmac_digest)
+        return ManagedSession(data, sid=sid, randval=randval,
+                              hmac_digest=hmac_digest)
 
     def put(self, session):
         """Store a managed session"""
@@ -151,5 +170,6 @@ class DataBaseSessionManager(SessionManager):
             session.sign(self.secret)
         saved_session = db.session.query(SessionData).get(session.sid)
         if saved_session is not None:
-            saved_session.data = (session.randval, session.hmac_digest, dict(session))
+            saved_session.data = (session.randval, session.hmac_digest,
+                                  dict(session))
             db.session.commit()

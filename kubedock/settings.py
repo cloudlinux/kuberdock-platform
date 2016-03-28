@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+import ConfigParser
 
 from celery.schedules import crontab
 
@@ -20,7 +21,8 @@ PRESERVE_CONTEXT_ON_EXCEPTION = False
 TEST = False
 PRE_START_HOOK_ENABLED = False
 
-DB_ENGINE = 'postgresql+psycopg2' # more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects
+# more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects
+DB_ENGINE = 'postgresql+psycopg2'
 DB_USER = 'kuberdock'
 DB_PASSWORD = 'kuberdock2go'
 DB_NAME = 'kuberdock'
@@ -31,7 +33,7 @@ SQLALCHEMY_POOL_RECYCLE = 3600
 SQLALCHEMY_MAX_OVERFLOW = 20
 
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
-#SQLALCHEMY_ECHO=True
+# SQLALCHEMY_ECHO=True
 SECRET_KEY = os.environ.get('SECRET_KEY', '0987654321')
 
 KUBERDOCK_INTERNAL_USER = 'kuberdock-internal'
@@ -110,7 +112,8 @@ CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(hours=24)
     },
     'unmap-temp-mapped-drives': {
-        'task': 'kubedock.kapi.pstorage.unmap_temporary_mapped_ceph_drives_task',
+        'task': 'kubedock.kapi.pstorage.'
+                'unmap_temporary_mapped_ceph_drives_task',
         'schedule': crontab(minute='*')
     }
 }
@@ -137,11 +140,12 @@ PD_NAMESPACE = ''
 
 NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
-ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/v2/keys/kuberdock/network/plugin/registered_hosts'
+ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/' \
+                        'v2/keys/kuberdock/network/plugin/registered_hosts'
 
 # Import hoster settings in update case
 
-import ConfigParser
+
 cp = ConfigParser.ConfigParser()
 if cp.read(KUBERDOCK_SETTINGS_FILE):
     if cp.has_section('main'):
@@ -156,7 +160,8 @@ if cp.read(KUBERDOCK_SETTINGS_FILE):
         if cp.has_option('main', 'MASTER_TOBIND_FLANNEL'):
             MASTER_TOBIND_FLANNEL = cp.get('main', 'MASTER_TOBIND_FLANNEL')
         if cp.has_option('main', 'NODE_TOBIND_EXTERNAL_IPS'):
-            NODE_TOBIND_EXTERNAL_IPS = cp.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
+            NODE_TOBIND_EXTERNAL_IPS = cp.get('main',
+                                              'NODE_TOBIND_EXTERNAL_IPS')
         if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
             NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
         if cp.has_option('main', 'PD_NAMESPACE'):
@@ -170,7 +175,8 @@ except ImportError:
     pass
 
 # Only after local settings
-DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD, DB_NAME)
+DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD,
+                                                   DB_NAME)
 SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
 

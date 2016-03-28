@@ -10,7 +10,6 @@ class TestSystemSettings(APITestCase):
     """
     url = '/settings/sysapi'
 
-
     def setUp(self):
         super(TestSystemSettings, self).setUp()
         ss = SystemSettings(name='test_setting',
@@ -38,7 +37,6 @@ class TestSystemSettings(APITestCase):
              'description': 'test_setting_description',
              'placeholder': 'test_setting_placeholder'}, data)
 
-
     @attr('db')
     def test_edit_setting(self):
         resp1 = self.open(self.url, auth=self.adminauth)
@@ -65,7 +63,8 @@ class TestSystemSettings(APITestCase):
         self.assert200(resp1)
         sid = resp1.json.get('data')[0].get('id')
         json_data = {'value': 'test_setting_edited'}
-        resp2 = self.open(self.item_url(sid), 'PATCH', json_data, auth=self.userauth)
+        resp2 = self.open(self.item_url(sid), 'PATCH', json_data,
+                          auth=self.userauth)
         self.assert403(resp2)
 
 

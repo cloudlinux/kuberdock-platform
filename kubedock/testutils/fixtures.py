@@ -8,6 +8,8 @@ from kubedock.models import User, Pod
 from kubedock.billing.models import Package, Kube, PackageKube
 from kubedock.rbac.fixtures import add_permissions
 from kubedock.rbac.models import Role
+from kubedock.system_settings.fixtures import add_system_settings
+from kubedock.notifications.models import Notification
 from kubedock.static_pages.fixtures import generate_menu
 from kubedock.settings import KUBERDOCK_INTERNAL_USER
 
@@ -18,28 +20,41 @@ def initial_fixtures():
     # Package and Kube with id=0 are default
     # and must be undeletable (always present with id=0) for fallback
     k_internal = Kube(id=Kube.get_internal_service_kube_type(),
-                      name='Internal service', cpu=.01, cpu_units='Cores',
+                      name='Internal service', cpu=.02, cpu_units='Cores',
                       memory=64, memory_units='MB', disk_space=1,
                       disk_space_units='GB', included_traffic=0)
     k1 = Kube(id=Kube.get_default_kube_type(),
-              name='Standard', cpu=.01, cpu_units='Cores',
-              memory=64, memory_units='MB', disk_space=1,
+              name='Small', cpu=.05, cpu_units='Cores',
+              memory=16, memory_units='MB', disk_space=1,
               disk_space_units='GB', included_traffic=0,
               is_default=True)
-    k2 = Kube(name='High CPU', cpu=.02, cpu_units='Cores',
+    k2 = Kube(name='Standard', cpu=.25, cpu_units='Cores',
               memory=64, memory_units='MB', disk_space=1,
               disk_space_units='GB', included_traffic=0)
-    k3 = Kube(name='High memory', cpu=.01, cpu_units='Cores',
-              memory=256, memory_units='MB', disk_space=1,
+    k3 = Kube(name='High memory', cpu=.5, cpu_units='Cores',
+              memory=256, memory_units='MB', disk_space=2,
               disk_space_units='GB', included_traffic=0)
 
     p1 = Package(id=0, name='Standard package', first_deposit=0, currency='USD',
-                 period='hour', prefix='$', suffix=' USD', is_default=True)
+                 period='month', prefix='$', suffix=' USD', is_default=True)
 
     db.session.add(k_internal)
     PackageKube(package=p1, kube=k1, kube_price=0)
     PackageKube(package=p1, kube=k2, kube_price=0)
     PackageKube(package=p1, kube=k3, kube_price=0)
+
+    add_system_settings()
+
+    m1 = Notification(type='warning',
+                      message='LICENSE_EXPIRED',
+                      description='Your license has been expired.')
+    m2 = Notification(type='warning',
+                      message='NO_LICENSE',
+                      description='License not found.')
+    m3 = Notification(type='info',
+                      message='CLN_NOTIFICATION',
+                      description='')
+    db.session.add_all([m1, m2, m3])
 
     db.session.commit()
 
@@ -84,7 +99,7 @@ def user_fixtures(admin=False, active=True, **kwargs):
     username = 'user_' + randstr(8)
     password = randstr(10)
     role_id = Role.filter_by(
-            rolename='User' if not admin else 'Admin').first().id
+        rolename='User' if not admin else 'Admin').first().id
     email = randstr(10) + '@test.test'
 
     data = dict(username=username, password=password, active=active,

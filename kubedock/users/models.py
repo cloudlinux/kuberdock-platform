@@ -42,7 +42,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         db.Integer, db.ForeignKey('packages.id'), nullable=False,
         # Used raw query 'cause cannot import Package model (unresolvable
         # circular dependency).
-        default=db.text('select id from packages where is_default'))
+        default=db.text('(select id from packages where is_default)'))
     join_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     pods = db.relationship('Pod', backref='owner', lazy='dynamic')
     activities = db.relationship('UserActivity', back_populates="user")

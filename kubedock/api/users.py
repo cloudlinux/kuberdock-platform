@@ -32,7 +32,8 @@ def auth_another(uid=None):
     user = User.query.get(uid)
     if user is None or user.deleted:
         raise UserNotFound('User "{0}" does not exists'.format(uid))
-    session['auth_by_another'] = session.get('auth_by_another', current_user.id)
+    session['auth_by_another'] = session.get('auth_by_another',
+                                             current_user.id)
     user_logged_in_by_another.send((current_user.id, user.id))
     login_user(user)
 
@@ -62,7 +63,8 @@ def get_user_activities(user):
     data = request.args
     data_from = data.get('date_from')
     date_to = data.get('date_to')
-    return UserCollection().get_activities(user, data_from, date_to, to_dict=True)
+    return UserCollection().get_activities(user, data_from,
+                                           date_to, to_dict=True)
 
 
 @users.route('/logHistory', methods=['GET'])
@@ -94,7 +96,8 @@ class UsersAPI(KubeUtils, MethodView):
     def get(self, uid=None):
         full = not extbool(KubeUtils._get_params().get('short', False))
         with_deleted = request.args.get('with-deleted')
-        return UserCollection().get(user=uid, with_deleted=with_deleted, full=full)
+        return UserCollection().get(user=uid,
+                                    with_deleted=with_deleted, full=full)
 
     @check_permission('create', 'users')
     def post(self):

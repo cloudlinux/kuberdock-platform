@@ -60,14 +60,16 @@ def dispatch_kind(docs):
         api_version = doc.get('apiVersion')
         if api_version != KUBE_API_VERSION:
             raise APIError(
-                'Not supported apiVersion. Must be {0}'.format(KUBE_API_VERSION))
+                'Not supported apiVersion. Must be {0}'.format(
+                    KUBE_API_VERSION))
         if kind == 'Pod':
             if pod is not None:
                 raise APIError('Only one Pod per yaml is allowed')
             pod = doc
         elif kind == 'ReplicationController':
             if rc is not None:
-                raise APIError('Only one ReplicationController per yaml is allowed')
+                raise APIError(
+                    'Only one ReplicationController per yaml is allowed')
             rc = doc
         elif kind == 'Service':
             if service is not None:
@@ -103,7 +105,8 @@ def process_pod(pod, rc, service):
         'replicas': replicas,
         'kube_type': kdSection.get('kube_type', Kube.get_default_kube_type()),
         'kuberdock_template_id': kdSection.get('kuberdock_template_id'),
-        'kuberdock_resolve': kdSection.get('resolve') or spec_body.get('resolve', []),
+        'kuberdock_resolve': kdSection.get('resolve') or spec_body.get(
+            'resolve', []),
     }
 
     if 'containers' in spec_body:

@@ -1,15 +1,15 @@
 from collections import Sequence
+from numbers import Number
+
 from flask import Blueprint
 from flask.views import MethodView
-
 from . import APIError
 from ..decorators import login_required_or_basic_or_token
-from ..utils import KubeUtils, register_api
 from ..kapi import pstorage as ps
-from ..pods.models import PersistentDisk
 from ..nodes.models import Node
+from ..pods.models import PersistentDisk
 from ..rbac import check_permission
-
+from ..utils import KubeUtils, register_api
 
 pstorage = Blueprint('pstorage', __name__, url_prefix='/pstorage')
 
@@ -40,12 +40,15 @@ class PersistentStorageAPI(KubeUtils, MethodView):
             return add_kube_types(cls().get_user_unmapped_drives(user))
         if device_id is None:
             return add_kube_types(cls().get_by_user(user))
-        return add_kube_types(cls().get_by_user(user, device_id))
+        disks = cls().get_by_user(user, device_id)
+        if not disks:
+            raise PDNotFound()
+        return add_kube_types(disks)
 
     def post(self):
         user = self._get_current_user()
         params = self._get_params()
-        name, size = params.get('name', ''), params.get('size', 1)
+        name, size = self._validated_post_params(params)
         pd = PersistentDisk.query.filter_by(name=name).first()
         if pd is not None:
             raise APIError('{0} already exists'.format(name), 406)
@@ -81,6 +84,24 @@ class PersistentStorageAPI(KubeUtils, MethodView):
             )
         ps.delete_drive_by_id(device_id)
 
+    @classmethod
+    def _validated_post_params(cls, params):
+        mandatory_fields = ('name', 'size')
+        if any(f not in params for f in mandatory_fields):
+            raise APIError(
+                '[%s] are mandatory fields'
+                % ', '.join('"%s"' % f for f in mandatory_fields))
+        name, size = params.get('name'), params.get('size')
+        if not isinstance(name, basestring):
+            raise APIError('"name" must be a string')
+        if not name:
+            raise APIError('"name" must be not empty')
+        if not isinstance(size, int):
+            raise APIError('"size" must be an integer')
+        if size <= 0:
+            raise APIError('"size" must be > 0')
+        return name, size
+
 
 def add_kube_types(disks):
     if not isinstance(disks, Sequence):  # one disk
@@ -94,4 +115,5 @@ def add_kube_types(disks):
     return disks
 
 
-register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id', strict_slashes=False)
+register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id',
+             strict_slashes=False)

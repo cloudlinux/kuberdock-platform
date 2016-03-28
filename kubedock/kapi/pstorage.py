@@ -394,7 +394,7 @@ class PersistentStorage(object):
 
         if rv_code != 0:
             return None
-        self.start_stat(pd.size, pd.name, pd.owner_id)
+        self.start_stat(pd.size, pd.name, pd.owner.id)
         data = pd.to_dict()
         if self._cached_drives is not None:
             self._cached_drives.append(data)

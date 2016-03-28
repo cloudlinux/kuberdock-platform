@@ -109,6 +109,7 @@
                             <% } %>
                         </div>
                     </div>
+                    <p class="logs-description col-xs-12  no-padding">All detailed logs of container and pod would be available in few minutes after start.</p>
                 </div>
             </div>
         </div>

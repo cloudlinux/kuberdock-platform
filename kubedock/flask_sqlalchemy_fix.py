@@ -5,8 +5,9 @@ https://github.com/mitsuhiko/flask-sqlalchemy/pull/148
 is merged.
 """
 
-from flask.ext.sqlalchemy import (orm, SessionBase, SQLAlchemy as SQLAlchemyWithBug,
-                                  SignallingSession as SignallingSessionWithBug)
+from flask.ext.sqlalchemy import (
+    orm, SessionBase, SQLAlchemy as SQLAlchemyWithBug,
+    SignallingSession as SignallingSessionWithBug)
 
 
 class SignallingSession(SignallingSessionWithBug):

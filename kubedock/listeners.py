@@ -117,7 +117,8 @@ def process_pods_event(data, app, event_time=None, live=True):
             set_limit(host, pod_id, containers, app)
 
 
-# TODO: put it in some other place if needed. It was moved from utils to resolve
+# TODO: put it in some other place if needed.
+# It was moved from utils to resolve
 # circular imports (Kube model)
 def set_limit(host, pod_id, containers, app):
     ssh, errors = ssh_connect(host)
@@ -398,7 +399,8 @@ def prelist_version(url):
                         'Request result is {0}'.format(res.text))
 
 
-def listen_fabric(watch_url, list_url, func, verbose=1, k8s_json_object_hook=None):
+def listen_fabric(watch_url, list_url, func, verbose=1,
+                  k8s_json_object_hook=None):
     fn_name = func.func_name
     redis_key = 'LAST_EVENT_' + fn_name
 
@@ -428,7 +430,8 @@ def listen_fabric(watch_url, list_url, func, verbose=1, k8s_json_object_hook=Non
                     if verbose >= 3:
                         print '==EVENT CONTENT {0} ==: {1}'.format(
                             fn_name, content)
-                    data = json.loads(content, object_hook=k8s_json_object_hook)
+                    data = json.loads(content,
+                                      object_hook=k8s_json_object_hook)
                     if data['type'].lower() == 'error' and \
                        '401' in data['object']['message']:
                         # Rewind to earliest possible
@@ -540,9 +543,10 @@ def prelist_pod_states(app):
             data = res.json()
             etcd_index = res.headers['x-etcd-index']
             for node in data['node'].get('nodes', []):
-                # TODO: for now send all prelist event to process, but there are no
-                # need to send old events to frontend, just need to save them
-                # to db. Need to have separate method or filter old events by time.
+                # TODO: for now send all prelist event to process,
+                # but there are no need to send old events to frontend,
+                # just need to save them to db. Need to have separate method
+                # or filter old events by time.
                 process_pod_states(
                     {'action': 'set', 'node': node}, app, live=False)
             return int(etcd_index) + 1

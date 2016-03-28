@@ -158,8 +158,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
 
         if redeploy:
             send_logs(node_id, 'Redeploy.', log_file)
-            send_logs(node_id, 'Remove node {0} from kubernetes...'.format(host),
-                      log_file)
+            send_logs(node_id, 'Remove node {0} from kubernetes...'.format(
+                host), log_file)
             result = remove_node_by_host(host)
             send_logs(node_id, json.dumps(result, indent=2), log_file)
 
@@ -268,13 +268,15 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
             else:
                 send_logs(node_id, 'Adding Node completed successful.',
                           log_file)
-                send_logs(node_id, '===================================', log_file)
+                send_logs(node_id, '===================================',
+                          log_file)
                 send_logs(node_id, '*** During reboot node may have status '
                                    '"troubles" and it will be changed '
                                    'automatically right after node reboot, '
                                    'when kubelet.service posts live status to '
-                                   "master(if all works fine) and it's usually "
-                                   'takes few minutes ***', log_file)
+                                   'master(if all works fine) and '
+                                   'it\'s usually takes few minutes ***',
+                          log_file)
         ssh.close()
         db_node.state = 'completed'
         db.session.commit()
@@ -334,7 +336,8 @@ def fix_pods_timeline():
     # get pods from k8s
     pods = requests.get(get_api_url('pods', namespace=False))
     pods = {pod['metadata'].get('labels', {}).get('kuberdock-pod-uid'): pod
-            for pod in pods.json(object_hook=k8s_json_object_hook).get('items')}
+            for pod in pods.json(object_hook=k8s_json_object_hook).get('items')
+            }
     now = datetime.utcnow().replace(microsecond=0)
     t.append(time.time())
 
@@ -345,7 +348,8 @@ def fix_pods_timeline():
 
     for cs in css:
         if cs in updated_CS:
-            # pod was found in db and k8s, and k8s have info about this container
+            # pod was found in db and k8s,
+            # and k8s have info about this container
             continue  # ContainerState was fixed in update_states()
         cs_next = ContainerState.query.join(PodState).filter(
             PodState.pod_id == cs.pod_state.pod_id,
@@ -407,7 +411,7 @@ def clean_deleted_drives():
 def clean_drives_for_deleted_users():
     ids = [
         item.id for item in db.session.query(PersistentDisk.id).join(
-            User).filter(User.deleted == True)
+            User).filter(User.deleted.is_(True))
     ]
     delete_persistent_drives(ids)
 

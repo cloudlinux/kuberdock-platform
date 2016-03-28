@@ -53,7 +53,8 @@ class POD_STATUSES:
 
 def get_channel_key(conn, key, size=100):
     """
-    Gets the last cache id for channel. If keys amount exceeds size truncate keys
+    Gets the last cache id for channel.
+    If keys amount exceeds size truncate keys
     @param conn: object -> redis connection object
     @param key: string -> redis key for hash
     @param size: int -> key amount limit
@@ -69,7 +70,8 @@ def get_channel_key(conn, key, size=100):
     return int(keys[-1])+1
 
 
-def send_event(event_name, data, to_file=None, channel='common', prefix='SSEEVT'):
+def send_event(event_name, data, to_file=None, channel='common',
+               prefix='SSEEVT'):
     """
     Sends event via pubsub to all subscribers and cache it to be rolled back
     if missed
@@ -154,7 +156,8 @@ def k8s_json_object_hook(obj):
     return obj
 
 
-# separate function because set_roles_loader decorator don't return function. Lib bug.
+# separate function because set_roles_loader decorator don't return function.
+# Lib bug.
 def get_user_role():
     rolename = 'AnonymousUser'
     try:
@@ -207,11 +210,13 @@ class NotAuthorized(APIError):
 class atomic(object):
     """Wrap code in transaction. Can be used as decorator or context manager.
 
-    If the block of code is successfully completed, the transaction is committed.
+    If the block of code is successfully completed, the transaction is
+    committed.
     If there is an exception, the transaction is rolled back.
     Saves you from repeating `try-except-rollback` and adds `commit=True/False`
     parameter to decorated functions.
-    You can find some usage examples in `.tests.utils.TestAtomic` or `.kapi.users`.
+    You can find some usage examples in `.tests.utils.TestAtomic` or
+    `.kapi.users`.
 
     :param api_error: if not None, will be raised instead of any exception
         that is not an APIError subclass.
@@ -246,7 +251,8 @@ class atomic(object):
             g.atomics = []
 
         # need to do every __enter__()
-        nested = self.nested if self.nested_override is None else self.nested_override
+        nested = self.nested if self.nested_override is None else \
+            self.nested_override
         g.atomics.append(db.session.begin_nested() if nested else
                          db.session.registry().transaction)
         self.nested_override = None
@@ -272,7 +278,8 @@ class atomic(object):
 
     @classmethod
     def _unexpectedly_closed(cls, session, rolled_back=None):
-        msg = ("Prevented attempt to close main transaction inside `atomic` block.\n"
+        msg = ("Prevented attempt to close main transaction inside `atomic` "
+               "block.\n"
                "This error may happen if you called `db.session.{0}()`, "
                "but didn't call `db.session.begin_nested()`.")
         if has_app_context() and getattr(g, 'atomics', None):
@@ -286,13 +293,16 @@ class atomic(object):
     @classmethod
     def register(cls):
         db.event.listen(db.session, 'before_commit', cls._unexpectedly_closed)
-        db.event.listen(db.session, 'after_soft_rollback', cls._unexpectedly_closed)
+        db.event.listen(db.session, 'after_soft_rollback',
+                        cls._unexpectedly_closed)
 
     @classmethod
     def unregister(cls):
         try:
-            db.event.remove(db.session, 'before_commit', cls._unexpectedly_closed)
-            db.event.remove(db.session, 'after_soft_rollback', cls._unexpectedly_closed)
+            db.event.remove(db.session, 'before_commit',
+                            cls._unexpectedly_closed)
+            db.event.remove(db.session, 'after_soft_rollback',
+                            cls._unexpectedly_closed)
         except InvalidRequestError:  # ok, it is not registered
             pass
 atomic.register()
@@ -318,7 +328,7 @@ def compose_dnat(*params):
     :return: string -> iptables rule
     """
     IPTABLES = ('iptables -t nat -{0} PREROUTING -i {1} -p {2} '
-               '-d {3} --dport {4} -j DNAT --to-destination {5}:{6}')
+                '-d {3} --dport {4} -j DNAT --to-destination {5}:{6}')
     return IPTABLES.format(*params)
 
 
@@ -338,10 +348,12 @@ def get_available_port(host):
 
 def get_instance_data(conn, name):
     """
-    Gets amazon instance by internal DNS name and return instance id and some misc info
+    Gets amazon instance by internal DNS name and return instance id and
+    some misc info
     :param conn: object -> boto ec2 connection object
     :param name: string -> instance internal DNS name
-    :return: dict -> dict of arrays: instances, security groups, subnets and VPCs
+    :return: dict -> dict of arrays: instances, security groups,
+    subnets and VPCs
     """
     instances = []
     sg = set()
@@ -355,7 +367,8 @@ def get_instance_data(conn, name):
                 sg.add(group.id)
             sn.add(i.subnet_id)
             vpc.add(i.vpc_id)
-    return {'instances': instances, 'sg': list(sg), 'sn': list(sn), 'vpc': list(vpc)}
+    return {'instances': instances, 'sg': list(sg), 'sn': list(sn),
+            'vpc': list(vpc)}
 
 
 def get_security_group(conn, name='kuberdock-elb-default'):
@@ -391,9 +404,11 @@ def create_security_group(conn, vpc_id, name='kuberdock-elb-default'):
 # TODO: remove after handle_aws_node
 def get_current_dnat(conn):
     """
-    Gets all node iptables DNAT rules. Get host port, pod IP, pod port for a rule
+    Gets all node iptables DNAT rules. Get host port, pod IP,
+    pod port for a rule
     :param conn: object -> ssh connection object
-    :return: list -> list of namedtuples of data (host_port, pod_ip, pod_port)
+    :return: list -> list of namedtuples of data (host_port, pod_ip,
+    pod_port)
     """
     inp, out, err = conn.exec_command("iptables -t nat -L PREROUTING -n")
     rules = []
@@ -406,14 +421,15 @@ def get_current_dnat(conn):
             NetData._make(
                 map((lambda x: int(x) if x.isdigit() else x),
                     chain(*[i.split(':')[1:]
-                        for i in patt.sub('', rule).split()[-2:]]))))
+                            for i in patt.sub('', rule).split()[-2:]]))))
     return rules
 
 
 def get_load_balancer(conn, service_name):
     """
-    We name our load balancers after service name. A load balancer may have more
-    than one listener entity, so we get load balancer by name and then get its
+    We name our load balancers after service name.
+    A load balancer may have more than one listener entity,
+    so we get load balancer by name and then get its
     listeners
     :param conn: object -> boto ec2 connection object
     :param service_name: string -> service name
@@ -431,7 +447,7 @@ def register_elb_name(service, name):
     :param name: string -> DNS name to be saved
     """
     item = db.session.query(Pod).filter(
-        (Pod.status!='deleted')&(Pod.config.like('%'+service+'%'))).first()
+        (Pod.status != 'deleted') & (Pod.config.like('%'+service+'%'))).first()
     if item is None:
         return
     data = json.loads(item.config)
@@ -447,7 +463,7 @@ def get_pod_owner_id(service):
     :return: integer
     """
     item = db.session.query(Pod).filter(
-        (Pod.status!='deleted')&(Pod.config.like('%'+service+'%'))).first()
+        (Pod.status != 'deleted') & (Pod.config.like('%'+service+'%'))).first()
     if item is None:
         return
     return item.owner_id
@@ -488,7 +504,7 @@ def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
             protocol = port_spec.get('protocol', 'tcp')
 
             match = [i for i in rules
-                        if (i.pod_ip, i.pod_port) == (pod_ip, container_port)]
+                     if (i.pod_ip, i.pod_port) == (pod_ip, container_port)]
 
             port = None
             if not match:
@@ -497,8 +513,8 @@ def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
                     return False
 
                 new_rule = compose_dnat('I', NODE_TOBIND_EXTERNAL_IPS,
-                                              protocol, private_ip, port,
-                                              pod_ip, container_port)
+                                        protocol, private_ip, port,
+                                        pod_ip, container_port)
                 i, o, e = ssh.exec_command(new_rule)
 
             if not elb_rules and port:
@@ -533,20 +549,22 @@ def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
             protocol = port_spec.get('protocol', 'tcp')
 
             match = [i for i in rules
-                        if (i.pod_ip, i.pod_port) == (pod_ip, container_port)]
+                     if (i.pod_ip, i.pod_port) == (pod_ip, container_port)]
 
             if match:
                 for ruleset in match:
                     rule = compose_dnat('D', NODE_TOBIND_EXTERNAL_IPS,
-                                          protocol, private_ip, ruleset.host_port,
-                                          ruleset.pod_ip, ruleset.pod_port)
+                                        protocol, private_ip,
+                                        ruleset.host_port,
+                                        ruleset.pod_ip, ruleset.pod_port)
                     ssh.exec_command(rule)
     return True
 
 
 def unregistered_pod_warning(pod_id):
-    current_app.logger.warn('Pod with id {0} is not registered in Kuberdock '
-                            'database, but was found in kubernetes.'.format(pod_id))
+    current_app.logger.warn(
+        'Pod with id {0} is not registered in Kuberdock '
+        'database, but was found in kubernetes.'.format(pod_id))
 
 
 def pod_without_id_warning(name, namespace):
@@ -576,7 +594,7 @@ def run_ssh_command(host, command):
 
 
 def all_request_params():
-    #pretty ugly. Wants refactoring
+    # pretty ugly. Wants refactoring
     params = {}
     data = request.args.to_dict()
     if data is not None:
@@ -614,8 +632,11 @@ class KubeUtils(object):
         def wrapper(*args, **kwargs):
             user = cls._get_current_user()
             params = cls._get_params()
-            if ('command' in params and params['command'] in ['start'] or params) and user.suspended is True:
-                raise PermissionDenied('Permission denied. Your account is suspended. Your package has expired. Please upgrade it.')
+            if ('command' in params and params['command'] in ['start'] or
+                    params) and user.suspended is True:
+                raise PermissionDenied(
+                    'Permission denied. Your account is suspended. '
+                    'Your package has expired. Please upgrade it.')
             return func(*args, **kwargs)
         return wrapper
 
@@ -643,7 +664,8 @@ def from_binunit(value, unit='Byte', precision=None, rtype=None):
     :type unit: str
     :param precision: round precision
     :type precision: int
-    :param rtype: return type (default: int if unit is 'Byte' or precision <= 0, float otherwize)
+    :param rtype: return type (default: int if unit is 'Byte' or
+    precision <= 0, float otherwize)
     :type rtype: float, int or any type that can handle float as argument
     :returns: converted value
     :rtype: float, int or rtype defined

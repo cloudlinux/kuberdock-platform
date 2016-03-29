@@ -6,7 +6,7 @@ scripts.
 import os
 import re
 import subprocess
-from fabric.api import run, local as fabric_local
+from fabric.api import run, env, output, local as fabric_local
 from kubedock import settings
 from kubedock.sessions import SessionData
 
@@ -19,6 +19,15 @@ def upgrade_db(*args, **kwargs):
     if 'revision' in kwargs:
         print 'Trying to apply db revision:', kwargs.pop('revision')
     return upgrade(*args, **kwargs)
+
+
+def setup_fabric():
+    env.user = 'root'
+    env.abort_exception = UpgradeError
+    env.key_filename = settings.SSH_KEY_FILENAME
+    env.warn_only = True
+    output.stdout = False
+    output.aborts = False
 
 
 class UpgradeError(Exception):

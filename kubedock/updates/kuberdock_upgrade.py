@@ -12,7 +12,7 @@ import requests
 
 from datetime import datetime
 from importlib import import_module
-from fabric.api import env, output
+from fabric.api import env
 from sqlalchemy import or_
 from flask.ext.migrate import Migrate
 
@@ -28,6 +28,7 @@ from kubedock.updates.models import Updates, db
 from kubedock.nodes.models import Node
 from kubedock.utils import UPDATE_STATUSES, get_api_url
 from kubedock.core import ConnectionPool
+from kubedock.updates.health_check import check_cluster
 
 
 class CLI_COMMANDS:
@@ -39,6 +40,7 @@ class CLI_COMMANDS:
     after_reload = '--after-reload'
     apply_one = 'apply-one'
     concat_updates = 'concat-updates'
+    health_check_only = 'health-check-only'
 
 
 FAILED_MESSAGE = """\
@@ -347,12 +349,27 @@ def ask_upgrade():
         ans = raw_input('Do you want to upgrade it ? [y/n]:')
     return ans in ('y', 'yes')
 
+def health_check():
+    if not args.skip_health_check:
+        print "Performing cluster health check..."
+        msg = check_cluster()
+        if msg:
+            print >> sys.stderr, "There are some problems with cluster."
+            print >> sys.stderr, msg
+            print >> sys.stderr, "Please, solve problems or use key --skip-health-check.(on your own risk)"
+            return False
+        print "Health check: OK"
+    else:
+        print "Skipping health check."
+    return True
 
 def pre_upgrade():
     """
     Setup common things needed for upgrade. May be called multiple times
     :return: Error or True if any error else False
     """
+    if not health_check():
+        return True
     helpers.set_maintenance(True)
     if helpers.set_evicting_timeout('99m0s'):
         print >> sys.stderr, "Can't set pods evicting interval."
@@ -423,6 +440,10 @@ def parse_cmdline():
         '--local',
         help='Filename of local package to install for upgrade')
     root_parser.add_argument(
+        '--skip-health-check',
+        action='store_true',
+        help='Skip health check of cluster')
+    root_parser.add_argument(
         '-r', '--reinstall',
         action='store_true',
         help='Try "reinstall" instead of "install" for upgrading package')
@@ -433,6 +454,10 @@ def parse_cmdline():
         CLI_COMMANDS.upgrade,
         help='Upgrade Kuberdock. '
              'Default command, no need to specify explicitly')
+
+    health_check_only_cmd = subparsers.add_parser(
+        CLI_COMMANDS.health_check_only,
+        help='Perform cluster health check only, without upgrade')
 
     resume_upgrade_cmd = subparsers.add_parser(
         CLI_COMMANDS.resume_upgrade,
@@ -494,15 +519,6 @@ def parse_cmdline():
         return root_parser.parse_args(sys.argv[1:] + [CLI_COMMANDS.upgrade])
 
 
-def setup_fabric():
-    env.user = 'root'
-    env.abort_exception = helpers.UpgradeError
-    env.key_filename = settings.SSH_KEY_FILENAME
-    env.warn_only = True
-    output.stdout = False
-    output.aborts = False
-
-
 def concat_updates(first_update=None, last_update=None, new_update=None):
     updates = get_available_updates()
     if not first_update:
@@ -531,7 +547,7 @@ if __name__ == '__main__':
         print 'Root permissions required to run this script'
         sys.exit()
 
-    setup_fabric()
+    helpers.setup_fabric()
 
     AFTER_RELOAD = False
     if CLI_COMMANDS.after_reload in sys.argv:
@@ -629,6 +645,9 @@ if __name__ == '__main__':
                     sys.exit(0)
             else:
                 print 'Kuberdock is up to date.'
+        if args.command == CLI_COMMANDS.health_check_only:
+            health_check()
+            sys.exit(0)
 
         if args.command == CLI_COMMANDS.concat_updates:
             concat_updates(args.first_update, args.last_update, args.new_update)

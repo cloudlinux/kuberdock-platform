@@ -244,6 +244,7 @@ class TestPersistentStorage(DBTestCase):
         self.assertEqual({'q1', 'q'},
                          {item['name'] for item in drives})
         self.assertEqual([False, False], [item['in_use'] for item in drives])
+        self.assertEqual([False, False], [item['forbidDeletion'] for item in drives])
 
         pod_id = str(uuid.uuid4())
         pod_name = 'somename1'
@@ -272,9 +273,20 @@ class TestPersistentStorage(DBTestCase):
             else:
                 without_pods = drive
         self.assertEqual(with_pods['linkedPods'],
-                        [{'podId': pod_id, 'name':pod_name}])
+                         [{'podId': pod_id, 'name': pod_name}])
         self.assertEqual(without_pods['linkedPods'], [])
         self.assertEqual([False, False], [item['in_use'] for item in drives])
+        self.assertEqual([False, False], [item['forbidDeletion'] for item in drives])
+
+        pd1.pod_id = pod.id
+        db.session.commit()
+        drives = ps._get_drives_from_db(user_id=user.id)
+        pd1_data = (item for item in drives if item['id'] == pd1.id).next()
+        pd2_data = (item for item in drives if item['id'] == pd2.id).next()
+        self.assertEqual(True, pd1_data['in_use'])
+        self.assertEqual(False, pd2_data['in_use'])
+        self.assertEqual(True, pd1_data['forbidDeletion'])
+        self.assertEqual(False, pd2_data['forbidDeletion'])
 
 
 class TestLocalStorage(DBTestCase):
@@ -372,9 +384,12 @@ class TestLocalStorage(DBTestCase):
         """Tests LocalStorage._add_pod_info_to_drive_list method."""
         user_id = 1212
         drive_list = [
-            {'id': 'asdf', 'linkedPods': []},
-            {'id': 'qwer', 'linkedPods': [1, 2, 3]},
-            {'id': 'zxcv'}
+            {'id': 'asdf', 'forbidDeletion': False, 'linkedPods': []},
+            {'id': 'qwer', 'forbidDeletion': False, 'linkedPods': [1, 2, 3]},
+            {'id': 'zxcv', 'forbidDeletion': False},
+            {'id': 'asdf', 'forbidDeletion': True, 'linkedPods': []},
+            {'id': 'qwer', 'forbidDeletion': True, 'linkedPods': [1, 2, 3]},
+            {'id': 'zxcv', 'forbidDeletion': True},
         ]
         add_podinfo_mock.return_value = drive_list
         ls = pstorage.LocalStorage()
@@ -382,6 +397,9 @@ class TestLocalStorage(DBTestCase):
         self.assertFalse(drive_list[0]['forbidDeletion'])
         self.assertTrue(drive_list[1]['forbidDeletion'])
         self.assertFalse(drive_list[2]['forbidDeletion'])
+        self.assertTrue(drive_list[3]['forbidDeletion'])
+        self.assertTrue(drive_list[4]['forbidDeletion'])
+        self.assertTrue(drive_list[5]['forbidDeletion'])
         add_podinfo_mock.assert_called_once_with(drive_list, user_id)
 
 
@@ -394,7 +412,7 @@ class TestCephStorage(DBTestCase):
 
 class TestCephUtils(TestCase):
     """Tests for CEPH not db-aware utils."""
-    
+
     @mock.patch.object(pstorage, 'run_remote_command')
     @mock.patch.object(pstorage.ConnectionPool, 'get_connection')
     @mock.patch.object(pstorage, '_get_mapped_ceph_devices_for_node')

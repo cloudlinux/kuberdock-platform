@@ -1,22 +1,23 @@
 """Unit tests for kapi.images
 """
-import unittest
-import mock
 import json
+import unittest
+from unittest import TestCase
 from urllib import urlencode
 from urlparse import urlparse
 
-from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError, HTTPError
+import mock
 import responses
-
-from ..images import (Image, complement_registry, get_url, APIError)
+from requests.exceptions import ConnectTimeout, ReadTimeout, \
+    ConnectionError, HTTPError, TooManyRedirects, Timeout
 from .. import images
+from ..images import (Image, complement_registry, get_url, APIError,
+                      raise_registry_error, RegistryError)
 from ...settings import DEFAULT_REGISTRY
 from ...testutils.testcases import DBTestCase
 
 TESTUNAME = 'wncm'
 TESTPASSWORD = 'mfhhh94kw02z'
-
 
 NGINX_CONFIG = {
     u'AttachStderr': False,
@@ -92,12 +93,14 @@ class TestImagesAuth(DBTestCase):
 
         v1_image_url = registry.rstrip('/') + '/v1/repositories/' + repo +\
             '/tags/' + tag
+
         def v1_image_callback(request):
             self.assertEqual(
                 request.headers['authorization'],
                 'Token ' + token1
             )
             return (200, {}, u'"{}"'.format(image))
+
         responses.add_callback(responses.GET, v1_image_url,
                                callback=v1_image_callback)
 
@@ -109,6 +112,7 @@ class TestImagesAuth(DBTestCase):
                 'Token ' + token1
             )
             return (200, {}, json.dumps(NGINX_IMAGE_INFO))
+
         responses.add_callback(responses.GET, v1_image_config_url,
                                callback=v1_image_conf_callback)
         res = Image(image_url)._v1_request_image_info(auth)
@@ -119,6 +123,7 @@ class TestImagesAuth(DBTestCase):
         self.assertEqual(responses.calls[2].request.url, v1_image_config_url)
 
         responses.reset()
+
         def index_v1_callback_401(request):
             return (401, {}, '')
 
@@ -163,6 +168,7 @@ class TestImagesAuth(DBTestCase):
             'service': 'registry.docker.io'
         }
         token = 'qwerty'
+
         def config_request_callback(request):
             if not request.headers.get('Authorization', '').startswith('Bearer '):
                 headers = {
@@ -179,8 +185,8 @@ class TestImagesAuth(DBTestCase):
                         'history': [
                             {'v1Compatibility': json.dumps(NGINX_IMAGE_INFO)}
                         ]
-                    })
-            )
+                    }))
+
         responses.add_callback(responses.GET, v2_request_url,
                                callback=config_request_callback)
 
@@ -201,6 +207,7 @@ class TestImagesAuth(DBTestCase):
         self.assertEqual(responses.calls[2].request.url, v2_request_url)
 
         responses.reset()
+
         def config_request_callback_401(request):
             headers = {
                 'www-authenticate': 'Bearer {}'.format(
@@ -209,11 +216,13 @@ class TestImagesAuth(DBTestCase):
                 )
             }
             return (401, headers, '')
+
         responses.add_callback(responses.GET, v2_request_url,
                                callback=config_request_callback_401)
 
         def token_request_callback_401(request):
             return (401, {}, json.dumps({'token': token}))
+
         responses.add_callback(responses.GET,
                                realm + '?' + urlencode(token_params),
                                callback=token_request_callback_401,
@@ -461,6 +470,38 @@ class TestCheckRegistryStatus(unittest.TestCase):
                           adding_headers=self.v2_is_supported)
             responses.add(responses.GET, ping_url_v2, body=exception)
             check()
+
+
+class TestRaiseRegistryError(TestCase):
+    def test_no_errors(self):
+        with raise_registry_error():
+            print('Here no errors')
+
+    def test_http_error(self):
+        with self.assertRaises(RegistryError):
+            with raise_registry_error():
+                raise HTTPError()
+
+    def test_too_many_redirects_error(self):
+        with self.assertRaises(RegistryError):
+            with raise_registry_error():
+                raise TooManyRedirects()
+
+    def test_timeout_error(self):
+        with self.assertRaises(RegistryError):
+            with raise_registry_error():
+                raise Timeout()
+
+    def test_connection_error(self):
+        with self.assertRaises(RegistryError):
+            with raise_registry_error():
+                raise ConnectionError()
+
+    def test_skip_other_error(self):
+        other_error = type('OtherError', (Exception,), {})
+        with self.assertRaises(other_error):
+            with raise_registry_error():
+                raise other_error()
 
 
 if __name__ == '__main__':

@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 import json
-import re
-import requests
-from urlparse import urlparse, parse_qsl, urlsplit
 from collections import Mapping, defaultdict, namedtuple
+from contextlib import contextmanager
 from datetime import datetime
 from urllib import urlencode
+from urlparse import urlparse, parse_qsl, urlsplit
 
+import re
+import requests
 from ..core import db
 from ..pods.models import DockerfileCache, PrivateRegistryFailedLogin
-from ..utils import APIError
 from ..settings import DEFAULT_REGISTRY, DEFAULT_IMAGES_URL
+from ..utils import APIError
 
 # FIXME: private registries with self-signed certs
 requests.packages.urllib3.disable_warnings(
@@ -24,7 +25,6 @@ DOCKERHUB_V1_INDEX = 'https://index.docker.io'
 DEFAULT_REGISTRY_HOST = urlparse(DEFAULT_REGISTRY).netloc
 
 API_VERSION_HEADER = 'docker-distribution-api-version'
-
 
 #: Timeout for requests to registries in seconds
 REQUEST_TIMEOUT = 15.0
@@ -44,7 +44,20 @@ class RegistryError(APIError):
     def __init__(self, registry=DEFAULT_REGISTRY, status=''):
         message = self._msg_format.format(registry=urlparse(registry).netloc,
                                           status=status)
-        return super(RegistryError, self).__init__(message, 503)
+        super(RegistryError, self).__init__(message, 503)
+
+
+@contextmanager
+def raise_registry_error(url=DEFAULT_REGISTRY):
+    try:
+        yield
+    except (requests.exceptions.HTTPError,
+            requests.exceptions.TooManyRedirects) as e:
+        raise RegistryError(url, e.message)
+    except requests.exceptions.Timeout:
+        raise RegistryError(url, 'timeout error')
+    except requests.exceptions.ConnectionError:
+        raise RegistryError(url, 'connection error')
 
 
 def check_registry_status(url=DEFAULT_IMAGES_URL, _v2=False):
@@ -56,35 +69,26 @@ def check_registry_status(url=DEFAULT_IMAGES_URL, _v2=False):
     """
     url = urlsplit(url)._replace(path='/v2/' if _v2 else '/v1/_ping').geturl()
 
-    try:
+    with raise_registry_error(url):
         response = requests.get(url, timeout=PING_REQUEST_TIMEOUT, verify=False)
-        if not _v2 and response.status_code == 404 and \
-                response.headers.get(API_VERSION_HEADER) == 'registry/2.0':
+        need_v2 = not _v2 and response.status_code == 404 and \
+            response.headers.get(API_VERSION_HEADER) == 'registry/2.0'
+        if need_v2:
             check_registry_status(url, _v2=True)
         elif response.status_code == 401:
             return  # user is not authorized, but registry is available
         else:
             response.raise_for_status()
-    except (requests.exceptions.HTTPError,
-            requests.exceptions.TooManyRedirects) as e:
-        raise RegistryError(url, e.message)
-    except requests.exceptions.Timeout:
-        raise RegistryError(url, 'timeout error')
-    except requests.exceptions.ConnectionError:
-        raise RegistryError(url, 'connection error')
 
 
 def search_image(term, url=DEFAULT_IMAGES_URL, page=1, page_size=10):
     url = urlsplit(url)._replace(path='/v2/search/repositories').geturl()
     params = {'query': term, 'page_size': page_size, 'page': page}
-    try:
-        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-    except (requests.exceptions.HTTPError,
-            requests.exceptions.Timeout,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.TooManyRedirects):
-        check_registry_status(url)
-    return response.json()
+    with raise_registry_error(url):
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT,
+                                verify=False)
+        response.raise_for_status()
+        return response.json()
 
 
 class APIVersionError(Exception):

@@ -156,6 +156,9 @@ class BillingWHMCS(BillingCommon):
         }
         if data:
             args['data'].update(data)
+        args['headers'] = {
+            'User-Agent': 'Mozilla/5.0'
+        }
         res = self.run('post', '/includes/api.php', args)
 
         try:

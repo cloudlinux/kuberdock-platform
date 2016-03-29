@@ -99,6 +99,7 @@ clean_node(){
     del_existed $KD_KERNEL_VARS
 
     del_existed /etc/sysconfig/docker*
+    del_existed /etc/systemd/system/docker.service*
 
     del_existed /var/lib/docker
     del_existed /var/lib/kubelet
@@ -396,6 +397,13 @@ ExecStartPost=/usr/libexec/flannel/mk-docker-opts.sh -k DOCKER_NETWORK_OPTIONS -
 WantedBy=multi-user.target
 EOF
 
+mkdir -p /etc/systemd/system/docker.service.d
+
+cat > /etc/systemd/system/docker.service.d/flannel.conf << EOF
+[Service]
+EnvironmentFile=/run/flannel/docker
+EOF
+
 
 echo "Enabling Flanneld ..."
 rm -f /run/flannel/docker 2>/dev/null
@@ -430,6 +438,7 @@ EOF
 
 
 
+echo 'Configuring docker...'
 # overlayfs enable
 systemctl mask docker-storage-setup
 sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=overlay' /etc/sysconfig/docker-storage
@@ -438,7 +447,37 @@ sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=over
 # enable registries with self-sighned certs
 sed -i "s|^# \(INSECURE_REGISTRY='--insecure-registry\)'|\1=0.0.0.0/0'|" /etc/sysconfig/docker
 
-echo 'Enabling docker...'
+cat > /etc/systemd/system/docker.service << 'EOF'
+[Unit]
+Description=Docker Application Container Engine
+Documentation=http://docs.docker.com
+After=network.target
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/sysconfig/docker
+EnvironmentFile=-/etc/sysconfig/docker-storage
+EnvironmentFile=-/etc/sysconfig/docker-network
+Environment=GOTRACEBACK=crash
+ExecStart=/usr/bin/docker daemon $OPTIONS \
+          $DOCKER_STORAGE_OPTIONS \
+          $DOCKER_NETWORK_OPTIONS \
+          $ADD_REGISTRY \
+          $BLOCK_REGISTRY \
+          $INSECURE_REGISTRY
+LimitNOFILE=1048576
+LimitNPROC=1048576
+LimitCORE=infinity
+MountFlags=slave
+TimeoutStartSec=1min
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
 systemctl reenable docker
 check_status
 

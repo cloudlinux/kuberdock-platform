@@ -280,7 +280,8 @@ class PersistentStorage(object):
                 'pod_name': None if item.pod_id is None else item.pod.name,
                 'in_use': item.pod_id is not None,
                 'available': True,
-                'node_id': None
+                'node_id': None,
+                'forbidDeletion': item.pod_id is not None,
             }
             for item in query
         ]
@@ -312,7 +313,7 @@ class PersistentStorage(object):
                 config = pod.get_dbconfig()
             except (TypeError, ValueError):
                 current_app.logger.exception('Invalid pod (%s) config: %s',
-                                            pod.id, pod.config)
+                                             pod.id, pod.config)
                 continue
             for item in config.get('volumes_public', []):
                 name = item.get('persistentDisk', {}).get('pdName', '')
@@ -1226,16 +1227,13 @@ class LocalStorage(PersistentStorage):
 
     VOLUME_EXTENSION_KEY = 'hostPath'
 
-    FORBID_DELETION_DRIVE_FLAG = 'forbidDeletion'
-
-
     def __init__(self):
         super(LocalStorage, self).__init__()
 
     def _add_pod_info_to_drive_list(self, drive_list, user_id=None):
-        """In addition to base class method adds flag 'forbidDeletion' to every
-        drive in drive_list. Flag is set to True if there are any pod in
-        'linkedPods' list of the drive. Otherwise the flag will be set to False.
+        """In addition to base class method sets flag 'forbidDeletion' to false
+        to every drive in drive_list, if there are any pod in 'linkedPods' list
+        of this drive.
         Params and return value are identical to the method of the parent class.
 
         """
@@ -1243,9 +1241,8 @@ class LocalStorage(PersistentStorage):
             drive_list, user_id
         )
         for item in res:
-            item[self.FORBID_DELETION_DRIVE_FLAG] = bool(
-                item.get('linkedPods', None)
-            )
+            item['forbidDeletion'] = bool(item.get('forbidDeletion') or
+                                          item.get('linkedPods', None))
         return res
 
     @classmethod

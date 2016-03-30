@@ -393,8 +393,22 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                             utils.notifyWindow
                                         ).done(function(response){
                                             if(response.data.status === 'Paid') {
-                                                App.navigate('pods');
-                                                that.showPods();
+                                                if (model && model.id) {
+                                                    if (model.get('status') !== 'running') {
+                                                        model.set('status', 'pending');
+                                                    }
+                                                    model.get('containers').each(function(c){
+                                                        if (c.get('state') !== 'running') {
+                                                            c.set('state', 'pending');
+                                                        }
+                                                    });
+                                                    App.navigate('pods/'+model.id);
+                                                    that.showPodContainers(model.id);
+                                                }
+                                                else {
+                                                    App.navigate('pods');
+                                                    that.showPods();
+                                                }
                                             } else {
                                                 utils.modalDialog({
                                                     title: 'Insufficient funds',

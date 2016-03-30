@@ -62,7 +62,6 @@
     }
     tbody{
         tr{
-            z-index: 1;
             position: relative;
             background-color: #fff;
             &:hover,
@@ -485,10 +484,22 @@
                             border: 1px solid #e5e5e5;
                             border-top: none;
                             > li{
+                                &.disabled{
+                                    a{
+                                        span{
+                                            color: #c0c0c0;
+                                        }
+                                    }
+                                    &:hover{
+                                        a{
+                                            cursor: not-allowed;
+                                        }
+                                    }
+                                }
                                 a{
                                     padding: 9px 20px;
-                                    font-weight: normal;
                                     .word-wrap();
+                                    font-weight: normal;
                                     white-space: normal;
                                     &.invalid-name-pd {  // error message
                                         color: #d32f2f;

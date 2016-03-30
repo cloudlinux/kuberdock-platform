@@ -274,8 +274,8 @@ def get_persistent_volume_info():
         'count': agg_result.count,
         'min-size': agg_result.min,
         'max-size': agg_result.max,
-        'avg': float(agg_result.avg),
-        'std': float(agg_result.std)
+        'avg': float(agg_result.avg or 0),  # fix for None when there is no pd
+        'std': float(agg_result.std or 0)
     }
 
 

@@ -19,7 +19,7 @@ except ImportError:
     JSONDecodeError = ValueError
 
 from flask import current_app
-from .core import ConnectionPool, db, ssh_connect
+from .core import db, ssh_connect
 from .utils import (
     update_dict, get_api_url, send_event, send_logs, k8s_json_object_hook,
     get_timezone,
@@ -387,19 +387,21 @@ def clean_drives_for_deleted_users():
 
 
 @celery.task(ignore_result=True)
-def check_if_node_down(hostname, status):
-    node = Node.query.filter_by(hostname=hostname).first()
-    if node is None:
-        return
-    redis = ConnectionPool.get_connection()
-    redis.set('node_unknown_state:'+hostname, 1)
-    redis.expire('node_unknown_state:'+hostname, 180)
+def check_if_node_down(hostname):
+    # In some cases kubelet doesn't post it's status, and restart may help
+    # to make it alive. It's a workaround for kubelet bug.
+    # TODO: research the bug and remove the workaround
     ssh, error_message = ssh_connect(hostname, timeout=3)
     if error_message:
-        redis.set('node_state_' + hostname, status)
-        send_event('node:change', {'id': node.id})
+        current_app.logger.debug(
+            'Failed connect to node %s: %s',
+            hostname, error_message
+        )
         return
     i, o, e = ssh.exec_command('systemctl restart kubelet')
-    if o.channel.recv_exit_status() != 0:
-        redis.set('node_state_' + hostname, status)
-        send_event('node:change', {'id': node.id})
+    exit_status = o.channel.recv_exit_status()
+    if exit_status != 0:
+        current_app.logger.debug(
+            'Failed to restart kubelet on node: %s, exit status: %s',
+            hostname, exit_status
+        )

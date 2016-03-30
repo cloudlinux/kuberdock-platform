@@ -193,19 +193,41 @@ def process_nodes_event(data, app):
         prev_state = redis.get(key_)
         curr_state = get_node_state(node)
         if prev_state != curr_state:
+            # Flag shows that we must send notification to admin interface
+            # for this change of node's state.
+            must_send_event = True
             if 'unknown' in curr_state.lower():
-                # update event after we've learnt node state
-                if not redis.exists(pending_key):
-                    tasks.check_if_node_down.delay(hostname, curr_state)
+                # Do nothing if the node is pending
+                if redis.exists(pending_key):
+                    return
+                current_app.logger.debug(
+                    'Node %s state is unknown and pending key does not exist',
+                    hostname
+                )
+                # If the node has switched to 'unknown' from some another state
+                # (or if there was no previous state),
+                # then mark it as pending.
+                redis.set(pending_key, 1)
+                redis.expire(pending_key, 180)
+                # Additionally check node is running
+                tasks.check_if_node_down.delay(hostname)
             else:
+                # The node is in some known state, so clear pending flag for it
+                # if exists.
+                redis.delete(pending_key)
                 if event_type == 'DELETED':
-                    redis.set(key_, 'DELETED')
-                else:
-                    redis.delete(pending_key)
-                    redis.set(key_, curr_state)
+                    curr_state = 'DELETED'
+                    must_send_event = False
+
+            current_app.logger.debug('Node event: save new state: %s, %s',
+                                     key_, curr_state)
+            redis.set(key_, curr_state)
+            if must_send_event:
                 # send update in common channel for all admins
                 node = Node.query.filter_by(hostname=hostname).first()
                 if node is not None:
+                    current_app.logger.debug('Node %s - %s: fire change event',
+                                             hostname, node.id)
                     send_event('node:change', {'id': node.id})
 
 

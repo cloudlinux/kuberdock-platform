@@ -322,6 +322,9 @@ check_status
 yum_wrapper -y install python-requests
 yum_wrapper -y install python-ipaddress
 yum_wrapper -y install ipset
+# tuned - daemon to set proper performance profile.
+# It is installed by default, but ensure it is here
+yum_wrapper -y install tuned
 check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
@@ -613,6 +616,25 @@ if [ ! -z "$CEPH_CONF" ]; then
 
 fi
 
-# 15. Reboot will be executed in python function
+
+# 15. Set valid performance profile.
+# We need maximum performance to valid work of cpu limits and multipliers.
+# All CPUfreq drivers are built in as part of the kernel-tools package.
+systemctl reenable tuned
+systemctl start tuned
+# check if we are in guest VN
+systemd-detect-virt --vm --quiet
+if [ $? -ne 0 ]; then
+    # We are on host system or in some kind of container. Just set profile to
+    # maximum performance.
+    tuned-adm profile latency-performance
+else
+    # we are in guest VM, there is special profile 'virtual-guest' for guest
+    # VM's. It provides 'performance' governor for cpufreq.
+    # It is active by default on guest systems, but ensure it is there.
+    tuned-adm profile virtual-guest
+fi
+
+# 16. Reboot will be executed in python function
 
 exit 0

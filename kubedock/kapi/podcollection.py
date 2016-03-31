@@ -613,10 +613,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         config = pod.prepare()
         try:
             self._get_replicationcontroller(pod.namespace, pod.sid)
-            rc = pod._put(['replicationcontrollers', pod.sid],
+            rc = self._put(['replicationcontrollers', pod.sid],
                           json.dumps(config), ns=pod.namespace, rest=True)
         except APIError:
-            rc = pod._post(['replicationcontrollers'],
+            rc = self._post(['replicationcontrollers'],
                           json.dumps(config), ns=pod.namespace, rest=True)
             self._raise_if_failure(rc, "Could not start '{0}' pod".format(
                 pod.name.encode('ascii', 'replace')))

@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 1%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,6 +187,74 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
+* Thu Mar 31 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Korneev <skorneev@cloudlinux.com>, Nikolay Telepenin <ntelepenin@cloudlinux.com>, Aleksandr Tishin <atishin@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-2
+- AC-2489: it was possible to edit user with different password\repeat password
+- AC-2562: New Pod page Kuberdock allows to ignore error about PV limit when creating Pod
+- AC-2245: Removed limit for persistent_disk_max_size field; dangling spaces are stripped for all fields but password.
+- AC-2569: relative mount path
+- AC-2283 Removed old compatibility fixes in upgrade utility
+- AC-2503: PA: yaml upload works even if there is smth in textarea; fixed XSS in "upload yaml"
+- AC-2113: PD name validation in frontend
+- Removed certificate verification for billing user creation request
+- AC-2652: divide for multipliers in graph
+- Style refactoring;
+- AC-2189: Fix env table values length;
+- AC-2244: Fix Settings > Profile > Page blinking
+- AC-2255: node install/delete bugfix
+  Fixed bug: in case of an installation error node info in api/nodes/<id> was different from api/nodes/
+  Fixed bug: error message "Node is added successfuly" during node deletion
+  If user tries to delete node, but it doesn't exist in k8s, error should not be raised.
+- AC-2651: Service user deletion should be forbidden
+- AC-2597: display pods with status "deleting"
+- AC-2559: filter group actions for pods list
+- AC-2238: changed workflow for "succeeded" and "failed" pods "succeeded" and "failed" pods
+  now behave like "running": user can only restart, stop, or delete them.
+  Added restart buttons in pods list (both group and individual actions)
+- Styles fix: restart button in pods list
+- AC-2698: Fixed broken unittests
+- AC-1694: Add style to choose replicas checkboxes & radios
+- AC-2280: allow readinessProbe in yamls
+- AC-2528: Fixed shown count of persistent volumes. Tests for kubedock.api.pstorage
+  Fixed failed end stat for PD; fixed error when there is no PD.
+  Settings page: Persistent volume count shown 0 when user has it in running Pod.
+- container storage renamed to transient storage
+- AC-1092: fixed xss on login page; fixed delete button on pods list page
+- AC-1826: nonexistent node page redirects to nodes list page now
+- AC-2907: SSE for kube:change; Also fixed few bugs with RBAC and removed /api/permissions/ endpoint.
+  Added new rbac resource: pricing (access to kubes and packages).
+  Added operation "read_private" to "system_settings" resource. It allowes to read ALL settings.
+  Moved set_limits from utils to listenters, to resolve circular imports (utils shouldn't import Kube model)
+  Refactored frontend a little, so next time it will be easier to add/extend SSE for Kubes, Packages and PackageKube relationship.
+- AC-2717: Refactoring in accordance with style guides
+- AC-1508: pod name validation; small style fix for error messages
+- AC-2728: Add Google Materials Icon Font to Kuberdock
+- AC-2732: fixed flannel iface detection on node installation
+- AC-2166: user.package_id.nullable=False; forbid digits-only usernames
+  Fixed permissions for /timezone api endpoints
+- AC-2727: deploy.sh fails on non-utf8 locales
+- AC-2763: add node fails because service pods are "unpaid"
+- AC-2760 : Added some helpful tip under the logs window to inform user about the processes in container
+- AC-2740: more detailed error message
+- AC-2776 Added UserAgent header to requests from KuberDock to WHMCS.
+- AC-2536: Check user balance without visiting billing system; added modal messages and some bugfixes.
+- Updated test fixtures; fixed user.package_id default
+- Added users-activity list icon
+- AC-2515: Fix docker/flannel problem
+- AC-2573: pod events processing now catch PodExceedsFreeCPU error
+- AC-2746: fixed persistent volumes page for ceph-pd
+- AC-2632: fixed events processing of node states. Send events independently of kubelet restart result.
+- AC-2794: Create pod, second step: 2nd row is displayed over pd-dropdown in the 1st one fix
+- AC-2730: fixed access by 22 port to nodes interfaces
+- AC-2708: Write Persistent Storage settings before uWSGI (re)start
+- AC-2653: stop pods by setting replicas=0
+- AC-2307: added possibility to use any user for ceph client
+- AC-2524: auto install CEPH client to a node
+- AC-2534: Apply mutliplier changes on all cluster nodes in case it was changed web UI by Admin
+- AC-2733: set performance profiles on nodes
+- AC-2720: Merged update scripts 115-121 into 122
+- AC-2757: Added try/except wrapper to get received error in UI
+- Fixed podcollection unit tests
+
 * Mon Mar 14 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com> 1.0-1
 - AC-2591: Fix blank node logs
 - Fixed check for node deletion possibility

@@ -77,9 +77,14 @@ def delete_drive_by_id(drive_id):
     """
     try:
         with drive_lock(drive_id=drive_id):
-            new_pd = PersistentDisk.mark_todelete(drive_id)
-            if new_pd:
-                update_pods_volumes(new_pd)
+            pd = PersistentDisk.query.filter(
+                PersistentDisk.id == drive_id
+            ).first()
+            if pd:
+                PersistentStorage.end_stat(pd.name, pd.owner_id)
+                new_pd = PersistentDisk.mark_todelete(drive_id)
+                if new_pd:
+                    update_pods_volumes(new_pd)
     except DriveIsLockedError as err:
         raise APIError(err.message)
     delete_persistent_drives_task.delay([drive_id], mark_only=False)
@@ -439,7 +444,7 @@ class PersistentStorage(object):
                     drive_id
                 )
                 return 1
-            self.end_stat(pd.name, pd.owner_id)
+            # self.end_stat(pd.name, pd.owner_id)
             rv = self._delete_pd(pd)
         if rv == 0 and self._cached_drives:
             self._cached_drives = [

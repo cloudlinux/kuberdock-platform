@@ -15,7 +15,7 @@ from ..system_settings.models import SystemSettings
 from ..users.utils import enrich_tz_with_offset
 from ..settings import KUBERDOCK_INTERNAL_USER
 from .podcollection import PodCollection, POD_STATUSES
-from .pstorage import get_storage_class, delete_persistent_drives_task
+from .pstorage import delete_persistent_drives_task, PersistentStorage
 from .predefined_apps import generate
 from .licensing import is_valid as license_valid
 
@@ -166,6 +166,8 @@ class UserCollection(object):
         # for example DBMS in container may save data to PD for a long time.
         # So there is a regular procedure to clean such undeleted drives
         # tasks.clean_drives_for_deleted_users.
+        for pd in user.persistent_disks:
+            PersistentStorage.end_stat(pd.name, user.id)
         delete_persistent_drives_task.apply_async(
             ([pd.id for pd in user.persistent_disks],),
             countdown=10

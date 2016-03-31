@@ -1,3 +1,4 @@
+import datetime
 from fabric.api import run, put
 from sqlalchemy import Table
 from kubedock.core import db
@@ -5,6 +6,8 @@ from kubedock.nodes.models import NodeAction
 from kubedock.system_settings.models import SystemSettings
 from kubedock.rbac.fixtures import add_permissions, Permission, Resource
 from kubedock.updates import helpers
+from kubedock.usage.models import PersistentDiskState
+from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses
 
 # 00115
 DOCKER_SERVICE_FILE = '/etc/systemd/system/docker.service'
@@ -254,10 +257,40 @@ def upgrade(upd, with_testing, *args, **kwargs):
     add_permissions()
     db.session.commit()
 
+    # Fix wrong pd_states if exists.
+    wrong_states = db.session.query(PersistentDiskState).join(
+        PersistentDisk,
+        db.and_(
+            PersistentDisk.name == PersistentDiskState.pd_name,
+            PersistentDisk.owner_id == PersistentDiskState.user_id,
+            PersistentDisk.state == PersistentDiskStatuses.DELETED
+        )
+    ).filter(
+        PersistentDiskState.end_time == None
+    )
+    for state in wrong_states:
+        state.end_time = datetime.datetime.utcnow()
+    db.session.commit()
+
     helpers.close_all_sessions()
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
+    # 00119
+    upd.print_log('Allow null in User.package_id field...')
+    helpers.downgrade_db(revision='2c64986d76b9')
+
+    # 00118
+    upd.print_log('Reverting package count_type column...')
+    helpers.downgrade_db(revision='42b36be03945')
+
+    # 00117
+    upd.print_log('Downgrade permissions...')
+    Permission.query.delete()
+    Resource.query.delete()
+    add_permissions()
+    db.session.commit()
+
     # 00116
     upd.print_log('Remove system settings for CPU and Memory multipliers')
     for name in ('cpu_multiplier', 'memory_multiplier'):
@@ -270,20 +303,6 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
     table.drop(bind=db.engine, checkfirst=True)
     db.session.commit()
 
-    # 00117
-    upd.print_log('Downgrade permissions...')
-    Permission.query.delete()
-    Resource.query.delete()
-    add_permissions()
-    db.session.commit()
-
-    # 00118
-    upd.print_log('Reverting package count_type column...')
-    helpers.downgrade_db(revision='42b36be03945')
-
-    # 00119
-    upd.print_log('Allow null in User.package_id field...')
-    helpers.downgrade_db(revision='2c64986d76b9')
 
     helpers.close_all_sessions()
 

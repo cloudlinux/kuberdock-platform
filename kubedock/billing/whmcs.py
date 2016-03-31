@@ -64,11 +64,14 @@ class BillingWHMCS(BillingCommon):
     def order_pod(self, data, user=None):
         if user:
             data['client_id'] = user.clientid
-        result = self._query('orderkuberdockpod', data).get('results')
-        if result['status'] == 'Unpaid':
-            result['redirect'] = self.get_autologin_url(user, 'viewinvoice.php?id={0}'.format(result['invoice_id']))
-
-        return result
+        try:
+            result = self._query('orderkuberdockpod', data).get('results')
+            if result['status'] == 'Unpaid':
+                result['redirect'] = self.get_autologin_url(
+                    user, 'viewinvoice.php?id={0}'.format(result['invoice_id']))
+            return result
+        except Exception, e:
+            raise APIError('Could not process billing response: '+str(e))
 
     def order_kubes(self, data, user=None):
         if user:

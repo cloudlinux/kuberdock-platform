@@ -1,7 +1,52 @@
+from fabric.api import run, put
+from sqlalchemy import Table
 from kubedock.core import db
+from kubedock.nodes.models import NodeAction
+from kubedock.system_settings.models import SystemSettings
 from kubedock.rbac.fixtures import add_permissions, Permission, Resource
+from kubedock.updates import helpers
+
+# 00115
+DOCKER_SERVICE_FILE = '/etc/systemd/system/docker.service'
+DOCKER_SERVICE = r'''[Unit]
+Description=Docker Application Container Engine
+Documentation=http://docs.docker.com
+After=network.target
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/sysconfig/docker
+EnvironmentFile=-/etc/sysconfig/docker-storage
+EnvironmentFile=-/etc/sysconfig/docker-network
+Environment=GOTRACEBACK=crash
+ExecStart=/usr/bin/docker daemon $OPTIONS \\
+          $DOCKER_STORAGE_OPTIONS \\
+          $DOCKER_NETWORK_OPTIONS \\
+          $ADD_REGISTRY \\
+          $BLOCK_REGISTRY \\
+          $INSECURE_REGISTRY
+LimitNOFILE=1048576
+LimitNPROC=1048576
+LimitCORE=infinity
+MountFlags=slave
+TimeoutStartSec=1min
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target'''
+DOCKER_SERVICE_DIR = '/etc/systemd/system/docker.service.d'
+FLANNEL_CONF_FILE = '/etc/systemd/system/docker.service.d/flannel.conf'
+FLANNEL_CONF = '''[Service]
+EnvironmentFile=/run/flannel/docker'''
+
+# 00116
+# see also kubedock/system_settings/fixtures.py
+CPU_MULTIPLIER = '8'
+MEMORY_MULTIPLIER = '4'
 
 
+# 00117
 # old rbac fixtures
 RESOURCES = ("users", "nodes", "pods", "yaml_pods", "ippool",
              "notifications", "system_settings", "images", "predefined_apps")
@@ -175,19 +220,128 @@ PERMISSIONS = (
     ("predefined_apps", "HostingPanel", "delete", False),
 )
 
+# 00120
+PLUGIN_DIR = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
+    upd.print_log('Upgrading DB...')
+    helpers.upgrade_db()
+
+    # 00116
+    upd.print_log('Add system settings for CPU and Memory multipliers')
+    db.session.add_all([
+        SystemSettings(
+            name='cpu_multiplier', value=CPU_MULTIPLIER,
+            label='CPU multiplier',
+            description='Cluster CPU multiplier',
+            placeholder='Enter value for CPU multiplier'),
+        SystemSettings(
+            name='memory_multiplier', value=MEMORY_MULTIPLIER,
+            label='Memory multiplier',
+            description='Cluster Memory multiplier',
+            placeholder='Enter value for Memory multiplier'),
+    ])
+
+    upd.print_log('Create table for NodeAction model if not exists')
+    NodeAction.__table__.create(bind=db.engine, checkfirst=True)
+    db.session.commit()
+
+    # 00117
     upd.print_log('Update permissions...')
     Permission.query.delete()
     Resource.query.delete()
     add_permissions()
     db.session.commit()
 
+    helpers.close_all_sessions()
+
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
+    # 00116
+    upd.print_log('Remove system settings for CPU and Memory multipliers')
+    for name in ('cpu_multiplier', 'memory_multiplier'):
+        entry = SystemSettings.query.filter_by(name=name).first()
+        if entry is not None:
+            db.session.delete(entry)
+
+    upd.print_log('Drop table "node_actions" if exists')
+    table = Table('node_actions', db.metadata)
+    table.drop(bind=db.engine, checkfirst=True)
+    db.session.commit()
+
+    # 00117
     upd.print_log('Downgrade permissions...')
     Permission.query.delete()
     Resource.query.delete()
     add_permissions()
     db.session.commit()
+
+    # 00118
+    upd.print_log('Reverting package count_type column...')
+    helpers.downgrade_db(revision='42b36be03945')
+
+    # 00119
+    upd.print_log('Allow null in User.package_id field...')
+    helpers.downgrade_db(revision='2c64986d76b9')
+
+    helpers.close_all_sessions()
+
+
+def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    # 00115
+    upd.print_log('Updating flannel and docker services...')
+    upd.print_log(
+        run("echo '{0}' > '{1}'".format(DOCKER_SERVICE, DOCKER_SERVICE_FILE))
+    )
+    upd.print_log(run('mkdir -p {0}'.format(DOCKER_SERVICE_DIR)))
+    upd.print_log(
+        run("echo '{0}' > '{1}'".format(FLANNEL_CONF, FLANNEL_CONF_FILE))
+    )
+    upd.print_log(run('systemctl daemon-reload'))
+    upd.print_log(run('systemctl reenable docker'))
+    upd.print_log(run('systemctl reenable flanneld'))
+
+    # 00116
+    upd.print_log('Copy kubelet_args.py...')
+    put('/var/opt/kuberdock/kubelet_args.py',
+        '/var/lib/kuberdock/scripts/kubelet_args.py',
+        mode=0755)
+
+    # 00120
+    put('/var/opt/kuberdock/node_network_plugin.sh', PLUGIN_DIR + 'kuberdock')
+
+    # 00121
+    run('yum install -y tuned')
+    run('systemctl enable tuned')
+    run('systemctl start tuned')
+    result = run('systemd-detect-virt --vm --quiet')
+    if result.return_code:
+        run('tuned-adm profile latency-performance')
+    else:
+        run('tuned-adm profile virtual-guest')
+
+    # 00115 pt2, check and reboot
+    check = run(
+        'source /run/flannel/docker'
+        ' && '
+        'grep "$DOCKER_NETWORK_OPTIONS" <<< "$(ps ax)"'
+        ' > /dev/null'
+    )
+
+    if check.failed:
+        upd.print_log('Node need to be rebooted')
+        helpers.reboot_node(upd)
+
+def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
+    # 00115
+    upd.print_log('Removing custom flannel and docker services...')
+    upd.print_log(run("rm -rf '{0}'".format(DOCKER_SERVICE_DIR)))
+    upd.print_log(run("rm -rf '{0}'".format(DOCKER_SERVICE_FILE)))
+    upd.print_log(run('systemctl daemon-reload'))
+    upd.print_log(run('systemctl reenable docker'))
+    upd.print_log(run('systemctl reenable flanneld'))
+
+    # 00116
+    upd.print_log('Remove kubelet_args.py...')
+    run('rm -f /var/lib/kuberdock/scripts/kubelet_args.py')

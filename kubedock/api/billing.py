@@ -1,5 +1,6 @@
 from flask import Blueprint
-from kubedock.decorators import login_required_or_basic_or_token, maintenance_protected, registered_host_required
+from kubedock.decorators import login_required_or_basic_or_token, \
+    maintenance_protected
 from kubedock.utils import KubeUtils
 from kubedock.system_settings.models import SystemSettings
 from kubedock.billing.whmcs import BillingWHMCS

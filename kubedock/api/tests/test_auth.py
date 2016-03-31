@@ -1,4 +1,3 @@
-import unittest
 from kubedock.testutils.testcases import APITestCase
 from kubedock.testutils import fixtures
 
@@ -12,7 +11,7 @@ class AuthTestCase(APITestCase):
         super(AuthTestCase, self).setUp()
         valid_user, valid_passwd = fixtures.user_fixtures(admin=True)
         blocked_user, blocked_passwd = fixtures.user_fixtures(active=False)
-        self.valid_credentials = (valid_user.username, valid_passwd) 
+        self.valid_credentials = (valid_user.username, valid_passwd)
         self.invalid_credentials = (valid_user.username, 'bad_password')
         self.blocked_user_credentials = (blocked_user.username, blocked_passwd)
         self.name = 'test yaml app'
@@ -31,4 +30,3 @@ class AuthTestCase(APITestCase):
     def test_auth_as_blocked_user(self):
         response = self.open(url=self.url, auth=self.blocked_user_credentials)
         self.assert403(response)
-

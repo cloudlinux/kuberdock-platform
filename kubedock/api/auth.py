@@ -23,5 +23,3 @@ def token():
                 return jsonify({'status': 'OK', 'token': user.get_token()})
             raise APIError('Username or password invalid', 401)
     raise APIError('You are not authorized to access the resource', 401)
-
-

@@ -1,9 +1,9 @@
-from requests import RequestException
 import elasticsearch as elastic
+from requests import RequestException
 
-from ..settings import ELASTICSEARCH_REST_PORT
 from ..api import APIError
 from ..nodes.models import Node
+from ..settings import ELASTICSEARCH_REST_PORT
 
 
 def execute_es_query(index, query, size, sort, host=None):
@@ -37,11 +37,13 @@ def execute_es_query(index, query, size, sort, host=None):
             body=body
         )
     except (RequestException, elastic.TransportError) as err:
-        raise APIError(u'Failed to get logs from elasticsearch: {}'.format(err),
-                       status_code=404)
+        raise APIError(
+            u'Failed to get logs from elasticsearch: {}'.format(err),
+            status_code=404)
     except (elastic.ImproperlyConfigured,
             elastic.ElasticsearchException) as err:
-        raise APIError(u'Failed to execute elasticsearch query: {}'.format(err),
-                       status_code=500)
+        raise APIError(
+            u'Failed to execute elasticsearch query: {}'.format(err),
+            status_code=500)
 
     return res.get('hits', {})

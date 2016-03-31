@@ -1,15 +1,16 @@
 """Utils to extract logs from elasticsearch services."""
-from datetime import datetime, timedelta
-from dateutil.parser import parse as parse_dt
 import hashlib
+from datetime import datetime, timedelta
+
+from dateutil.parser import parse as parse_dt
 
 from .elasticsearch_utils import execute_es_query
-from .podcollection import PodCollection, POD_STATUSES
 from .nodes import get_kuberdock_logs_pod_name
+from .podcollection import PodCollection, POD_STATUSES
 from ..core import ConnectionPool
 from ..nodes.models import Node
-from ..users.models import User
 from ..usage.models import ContainerState as CS
+from ..users.models import User
 from ..utils import APIError
 
 
@@ -29,8 +30,9 @@ def get_container_logs(pod_id, container_name, owner_id=None, size=100,
     :param size: limits selection to this number (100 by default)
         (see log_query doc)
     """
-    states = CS.in_range(start, end).filter(CS.container_name == container_name,
-                                            CS.pod_state.has(pod_id=pod_id))
+    states = CS.in_range(start, end).filter(
+        CS.container_name == container_name,
+        CS.pod_state.has(pod_id=pod_id))
     if owner_id is not None:
         states = states.filter(CS.pod.has(owner_id=owner_id)).all()
 
@@ -96,8 +98,8 @@ def log_query(index, filters=None, host=None, size=100, start=None, end=None):
     If no parameters specified, then 100 last log records will be selected.
     If only 'size' was specified, then only that count of last records will be
     selected.
-    If 'starttime' was specified, then will be selected records not younger than
-    that time.
+    If 'starttime' was specified, then will be selected records not younger
+    than that time.
     If 'endtime' was specified, then will be selected records not older than
     that time.
     Records will be ordered by timestamp in descending order.

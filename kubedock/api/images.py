@@ -45,7 +45,8 @@ def search_image():
     search_key = request.args.get('searchkey', 'none')
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 10))
-    refresh_cache = request.args.get('refresh_cache', 'no').lower() in ('1', 'true')
+    refresh_cache = request.args.get('refresh_cache',
+                                     'no').lower() in ('1', 'true')
     repo_url = _get_repo_url(request.args)
 
     check_image_search(search_key)
@@ -55,11 +56,13 @@ def search_image():
     # if query is saved in DB and it's not older than 1 day return it
     if not (refresh_cache or query is None or query.outdated):
         return {'status': 'OK', 'data': query.data['results'],
-                'num_pages': query.data['num_pages'], 'page': page, 'per_page': per_page}
+                'num_pages': query.data['num_pages'],
+                'page': page, 'per_page': per_page}
 
     data = kapi_images.search_image(search_key, url=repo_url, page=page)
     data = {
-        'num_pages': data.get('count', 1) // per_page + bool(data.get('count', 1) % per_page),
+        'num_pages': data.get('count', 1) // per_page + bool(
+            data.get('count', 1) % per_page),
         'results': [{
             'source_url': kapi_images.Image(
                 image.get('repo_name', '')).source_url,

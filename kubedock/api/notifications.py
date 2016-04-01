@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from ..notifications.models import NotificationTemplate
 from ..notifications.events import NotificationEvent
-from ..rbac import check_permission
 from . import APIError
 
 
@@ -30,7 +29,6 @@ def get_template(tid):
 # @check_permission('create', 'users')
 def create_item():
     data = request.json
-    print data
     event = data['event']
     if NotificationTemplate.filter_by(event=data['event']).first():
         raise APIError(

@@ -1,19 +1,24 @@
+import json
+from uuid import uuid4
+
 import mock
-from kubedock.kapi.podcollection import PodCollection
-from kubedock.pods.models import PersistentDisk
+from kubedock.billing.models import Kube
+from kubedock.pods.models import PersistentDisk, Pod
 from kubedock.testutils.testcases import APITestCase
 
 url = '/pstorage'
 
 
 class TestPStorageApiGeneral(APITestCase):
-    def test_user_has_permissions(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_user_has_permissions(self, m1):
+        m1.return_value = []
         self.assert200(self.open(url, auth=self.userauth))
 
     def test_admin_has_no_permissions(self):
         self.assert403(self.open(url, auth=self.adminauth))
 
-    def test_not_authenticated(self):
+    def test_not_authenticated_has_no_permissions(self):
         self.assert401(self.open(url, auth=None))
 
 
@@ -23,15 +28,33 @@ class TestPStorageApiGet(APITestCase):
     def setUp(self):
         super(TestPStorageApiGet, self).setUp()
 
-        pod_dict = PodCollection(self.user).add(params={'containers': [], 'name': 'test_pod'})
-        pod_id = pod_dict['id']
-        self.free_pd = PersistentDisk.create(size=3, owner=self.user, name='free-pd')
-        self.non_free_pd = PersistentDisk.create(size=2, owner=self.user, name='non-free-pd', pod_id=pod_id)
+        pod_id = str(uuid4())
+        pod_name = 'test_pod'
+        pod = Pod.create(
+            id=pod_id, name=pod_name, owner_id=self.user.id,
+            kube_id=Kube.get_default_kube_type(),
+            config=json.dumps({
+                "volumes_public": [
+                    {
+                        "persistentDisk": {"pdSize": 1, "pdName": 'q'},
+                    }
+                ]
+
+            })
+        )
+        pod.save()
+        self.free_pd = PersistentDisk.create(size=3, owner=self.user,
+                                             name='free-pd')
+        self.non_free_pd = PersistentDisk.create(size=2, owner=self.user,
+                                                 name='non-free-pd',
+                                                 pod_id=pod_id)
         self.free_pd.save()
         self.non_free_pd.save()
         self.pod_id = pod_id
 
-    def test_get_one(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_get_one(self, m1):
+        m1.return_value = []
         device_id = self.free_pd.id
         res = self.open(self.item_url(device_id), 'GET', auth=self.userauth)
         self.assert200(res)
@@ -41,7 +64,9 @@ class TestPStorageApiGet(APITestCase):
         for k, v in data_exp.items():
             self.assertEqual(data[k], v)
 
-    def test_get_all(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_get_all(self, m1):
+        m1.return_value = []
         res = self.open(url, auth=self.userauth)
         self.assert200(res)
         self.assertEqual(res.json['status'], 'OK')
@@ -80,7 +105,9 @@ class TestPStorageApiGet(APITestCase):
         for k, v in expected.items():
             self.assertEqual(data[k], v)
 
-    def test_get_free_only(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_get_free_only(self, m1):
+        m1.return_value = []
         res = self.open(url, json={'free-only': 'true'}, auth=self.userauth)
         self.assert200(res)
         data = res.json['data']
@@ -94,7 +121,9 @@ class TestPStorageApiGet(APITestCase):
         for k, v in expected.items():
             self.assertEqual(pd_data[k], v)
 
-    def test_device_not_exists(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_device_not_exists(self, m1):
+        m1.return_value = []
         res = self.open(self.item_url('not_existed'), auth=self.userauth)
         self.assert404(res)
         self.assertEqual(res.json, {
@@ -204,7 +233,8 @@ class TestPStorageApiPost(APITestCase):
         self.assertEqual(expected, resp.json)
 
     def test_already_exists(self):
-        existed = PersistentDisk.create(owner=self.user, name=self.devices[0]['name'], size=1)
+        existed = PersistentDisk.create(owner=self.user,
+                                        name=self.devices[0]['name'], size=1)
         existed.save()
         res = self.open(url, 'POST', self.devices[0], self.userauth)
         self.assertStatus(res, 406)
@@ -232,10 +262,26 @@ class TestPStorageApiDelete(APITestCase):
     def setUp(self):
         super(TestPStorageApiDelete, self).setUp()
 
-        pod_dict = PodCollection(self.user).add(params={'containers': [], 'name': 'test_pod'})
-        pod_id = pod_dict['id']
-        self.free_pd = PersistentDisk.create(size=3, owner=self.user, name='free-pd')
-        self.non_free_pd = PersistentDisk.create(size=2, owner=self.user, name='non-free-pd', pod_id=pod_id)
+        pod_id = str(uuid4())
+        pod_name = 'test_pod'
+        pod = Pod.create(
+            id=pod_id, name=pod_name, owner_id=self.user.id,
+            kube_id=Kube.get_default_kube_type(),
+            config=json.dumps({
+                "volumes_public": [
+                    {
+                        "persistentDisk": {"pdSize": 1, "pdName": 'q'},
+                    }
+                ]
+
+            })
+        )
+        pod.save()
+        self.free_pd = PersistentDisk.create(size=3, owner=self.user,
+                                             name='free-pd')
+        self.non_free_pd = PersistentDisk.create(size=2, owner=self.user,
+                                                 name='non-free-pd',
+                                                 pod_id=pod_id)
         self.free_pd.save()
         self.non_free_pd.save()
         self.pod_id = pod_id
@@ -247,7 +293,9 @@ class TestPStorageApiDelete(APITestCase):
         self.assert200(res)
         delete_mock.assert_called_once_with(self.free_pd.id)
 
-    def test_delete_free_pd(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_delete_free_pd(self, m1):
+        m1.return_value = []
         res = self.open(self.item_url(self.free_pd.id),
                         method='DELETE', auth=self.userauth)
         self.assert200(res)
@@ -264,7 +312,9 @@ class TestPStorageApiDelete(APITestCase):
             "type": "PDIsUsed"
         })
 
-    def test_used_disk_is_not_deleted(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_used_disk_is_not_deleted(self, m1):
+        m1.return_value = []
         res = self.open(self.item_url(self.non_free_pd.id),
                         method='DELETE', auth=self.userauth)
 

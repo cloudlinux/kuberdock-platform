@@ -203,9 +203,9 @@ install_ceph_client()
   fi
 
 cat > $CEPH_BASE << EOF
-http://ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
-http://eu.ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
-http://au.ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
+http://download.ceph.com/rpm-$CEPH_VERSION/rhel7/\$basearch
+http://eu.ceph.com/rpm-$CEPH_VERSION/el7/\$basearch
+http://au.ceph.com/rpm-$CEPH_VERSION/el7/\$basearch
 EOF
 
 cat > $CEPH_REPO << EOF

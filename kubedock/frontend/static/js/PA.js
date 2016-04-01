@@ -367,7 +367,8 @@
             spec = this.getSpec(pod),
             kuberdock = pod.kuberdock;
 
-        pod.kuberdock.kube_type = podPlan.kubeType;
+        kuberdock.appPackage = {name: appPackage.name, goodFor: appPackage.goodFor};
+        kuberdock.kube_type = podPlan.kubeType;
 
         var kubesByContainerName = {};
         podPlan.containers.forEach(

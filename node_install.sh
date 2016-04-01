@@ -385,6 +385,8 @@ Requires=flanneld.service
 
 [Service]
 ExecStart=/usr/bin/env python2 $PLUGIN_DIR/kuberdock.py watch
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

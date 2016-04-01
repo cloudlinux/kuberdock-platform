@@ -266,10 +266,10 @@ def process_events_event(data, app):
     elif reason == 'FailedScheduling':
         with app.app_context():
             pod = Pod.query.get(pod_id)
-            pod_name = pod.name
             if pod is None:
                 unregistered_pod_warning(pod_id)
                 return
+            pod_name = pod.name
             user = User.query.filter(User.id == pod.owner_id).first()
             if user is None:
                 current_app.logger.warning('Unknown user for pod %s', pod_id)

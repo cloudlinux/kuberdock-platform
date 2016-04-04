@@ -134,11 +134,15 @@ class APITestCase(DBTestCase):
         msg = 'Wrong response: {0} expected. Got: {1}'.format(type, response.json)
         self.assertEqual(response.json.get('type'), type, msg)
 
-    def admin_open(self, *args, **kwargs):
+    def user_open(self, *args, **kwargs):
         """Open as admin with permission check"""
         self.assertAPIError(self.open(*args, **dict(kwargs, auth=None)),
                             401, 'NotAuthorized')
-        self.assertAPIError(self.open(*args, **dict(kwargs, auth=self.userauth)),
+        return self.open(*args, **dict(kwargs, auth=self.userauth))
+
+    def admin_open(self, *args, **kwargs):
+        """Open as admin with permission check"""
+        self.assertAPIError(self.user_open(*args, **kwargs),
                             403, 'PermissionDenied')
         return self.open(*args, **dict(kwargs, auth=self.adminauth))
 

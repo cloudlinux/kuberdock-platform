@@ -2,12 +2,12 @@ define(['marionette'], function(Marionette){
     "use strict";
     var router = Marionette.AppRouter.extend({
         appRoutes: {
+            ''                                : 'index',
             'pods'                            : 'showPods',
             'pods/:id'                        : 'showPodContainers',
             'pods/:id/stats'                  : 'showPodStats',
             'pods/:id(/:container)/upgrade'   : 'showPodUpgrade',
-            'newpod'                          : backendData.user.rolename  === 'LimitedUser' ?
-                                                'showPods' : 'createPod',
+            'newpod'                          : 'createPod',
             'pods/poditem/:id/:name'          : 'showPodContainer',
             'nodes'                           : 'showNodes',
             'nodes/add'                       : 'showAddNode',
@@ -21,9 +21,7 @@ define(['marionette'], function(Marionette){
             'users/profile/:id/general'       : 'showProfileUser',
             'users/profile/:id/logHistory'    : 'showProfileUserLogHistory',
             'predefined-apps'                 : 'listPredefinedApps',
-            'settings'                        : backendData.user.rolename  === 'Admin'
-                                                    ? 'showGeneralSettings'
-                                                    : 'editProfileSettings',
+            'settings'                        : 'showSettings',
             'settings/general'                : 'showGeneralSettings',
             'settings/license'                : 'showLicense',
             'settings/profile'                : 'editProfileSettings',

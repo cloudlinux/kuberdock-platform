@@ -2,7 +2,7 @@ import json
 from pytz import common_timezones, timezone
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-# from flask.ext.login import current_user
+from flask.ext.login import current_user
 from flask.views import MethodView
 
 from ..core import db
@@ -13,6 +13,8 @@ from ..utils import APIError, KubeUtils, register_api, PermissionDenied
 from ..users.utils import append_offset_to_timezone
 from ..notifications.events import EVENTS, NotificationEvent
 from ..notifications.models import NotificationTemplate
+from ..kapi.notifications import read_role_events
+from ..static_pages.models import MenuItem
 from ..system_settings.models import SystemSettings
 from ..validation import check_system_settings
 
@@ -149,6 +151,20 @@ settings = Blueprint('settings', __name__, url_prefix='/settings')
 #             raise APIError("Template '{0}' delete failed: {1}".format(
 #                 tid, e.message))
 #     raise APIError("Template {0} doesn't exists".format(tid), 404)
+
+
+@settings.route('/notifications', methods=['GET'])
+@login_required_or_basic_or_token
+@KubeUtils.jsonwrap
+def get_notifications():
+    return read_role_events(current_user.role)
+
+
+@settings.route('/menu', methods=['GET'])
+@login_required_or_basic_or_token
+@KubeUtils.jsonwrap
+def get_menu():
+    return MenuItem.get_menu()
 
 
 @settings.route('/timezone', methods=['GET'])

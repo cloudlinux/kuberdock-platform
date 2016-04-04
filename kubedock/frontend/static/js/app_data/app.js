@@ -1,4 +1,4 @@
-define(['backbone', 'marionette'], function(Backbone, Marionette){
+define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionette, Utils){
     "use strict";
     var App = new Backbone.Marionette.Application({
         regions: {
@@ -7,287 +7,86 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
         },
 
         initialize: function(){
-            var that = this;
+            this._cache = backendData;
             this.lastEventId = null;
-            require(['app_data/model', 'app_data/utils'], function(Model, Utils){
-                that.storage = window.localStorage || window.sessionStorage || {};
-                that.menuCollection = new Model.MenuCollection(backendData.menu);
-                that.currentUser = new Model.CurrentUserModel(backendData.user);
+            this.storage = window.localStorage || window.sessionStorage || {};
+        },
 
-                // billing & resources
-                that.packageCollection = new Model.PackageCollection(backendData.packages);
-                that.kubeTypeCollection = new Model.KubeTypeCollection(backendData.kubeTypes);
-                that.packageKubeCollection = new Backbone.Collection(
-                    backendData.packageKubes, {model: Model.PackageKube, parse: true});
-                that.userPackage = that.packageCollection.get(backendData.userPackage);
+        /**
+         * These resources must be fetched every time user logins in, and they
+         * are widely used immediately after start, so let's just save them as
+         * properties, so we won't need to go async every time we need them.
+         */
+        prepareInitialData: function(){
+            var deferred = new $.Deferred();
+            $.when(App.getCurrentUser(),
+                   App.getMenuCollection(),
+                   App.getPackages()).done(function(user, menu, packages){
+                App.menuCollection = menu;
+                App.currentUser = user;
+                App.userPackage = packages.get(user.get('package_id'));
+                deferred.resolveWith(App);
+            }).fail(function(){ deferred.rejectWith(App, arguments); });
+            return deferred;
+        },
 
-                that.getPodCollection = function(){
-                    var deferred = $.Deferred();
-                    if (_.has(that, 'podCollection')) {
-                        deferred.resolveWith(that, [that.podCollection]);
-                    }
-                    else {
-                        that.podCollection = new Model.PodCollection();
-                        if (backendData.podCollection !== undefined) {
-                            that.podCollection.fullCollection.reset(
-                                backendData.podCollection);
-                            deferred.resolveWith(that, [that.podCollection]);
-                        }
-                        else {
-                            that.podCollection.fetch({
-                                wait: true,
-                                success: function(collection, response, options){
-                                    deferred.resolveWith(that, [collection]);
-                                },
-                                error: function(collection, response) {
-                                    Utils.notifyWindow(response);
-                                    deferred.rejectWith(that, [response]);
-                                },
-                            });
-                        }
-                    }
-                    return deferred.promise();
-                };
 
-                that.getNodeCollection = function(){
-                    var deferred = $.Deferred();
-                    if (_.has(that, 'nodeCollection')) {
-                        deferred.resolveWith(that, [that.nodeCollection]);
-                    }
-                    else {
-                        that.nodeCollection = new Model.NodeCollection();
-                        if (backendData.nodeCollection) {
-                            that.nodeCollection.fullCollection.reset(
-                                backendData.nodeCollection);
-                            deferred.resolveWith(that, [that.nodeCollection]);
-                        }
-                        else {
-                            that.nodeCollection.fetch({
-                                wait: true,
-                                success: function(collection, response, options){
-                                    deferred.resolveWith(that, [collection]);
-                                },
-                                error: function(collection, response) {
-                                    Utils.notifyWindow(response);
-                                    deferred.rejectWith(that, [response]);
-                                },
-                            });
-                        }
-                    }
-                    return deferred.promise();
-                };
-
-                that.getUserCollection = function(){
-                    var deferred = $.Deferred();
-                    if (_.has(that, 'userCollection')) {
-                        deferred.resolveWith(that, [that.userCollection]);
-                    }
-                    else {
-                        new Model.UsersPageableCollection().fetch({
-                            wait: true,
-                            success: function(collection, response, options){
-                                deferred.resolveWith(that, [collection]);
-                                that.userCollection = collection;
-                            },
-                            error: function(collection, response) {
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            },
-                        });
-                    }
-                    return deferred.promise();
-                };
-
-                that.getKubeTypes = function(){
-                    var deferred = $.Deferred();
-                    if (typeof kubeTypes === 'undefined') {
-                        $.get('/api/pricing/kubes')
-                            .done(function(data){
-                                deferred.resolveWith(
-                                    that,  [_.has(data, 'data') ? data.data : data]);
-                            })
-                            .fail(function(response){
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            });
-                    }
-                    else {
-                        deferred.resolveWith(that, [kubeTypes]);
-                    }
-                    return deferred.promise();
-                };
-
-                that.getTimezones = function(){
-                    var deferred = $.Deferred();
-                    if (!_.has(that, 'timezoneList')) {
-                        $.get('/api/settings/timezone-list')
-                            .done(function(data){
-                                that.timezoneList = _.has(data, 'data') ? data.data : data;
-                                deferred.resolveWith(that,  [that.timezoneList]);
-                            })
-                            .fail(function(response){
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            });
-                    }
-                    else {
-                        deferred.resolveWith(that, [that.timezoneList]);
-                    }
-                    return deferred.promise();
-                };
-
-                that.getRoles = function(){
-                    var deferred = $.Deferred();
-                    if (typeof roles === 'undefined') {
-                        $.get('/api/users/roles')
-                            .done(function(data){
-                                deferred.resolveWith(
-                                    that,  [_.has(data, 'data') ? data.data : data]);
-                            })
-                            .fail(function(response){
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            });
-                    }
-                    else {
-                        deferred.resolveWith(that, [roles]);
-                    }
-                    return deferred.promise();
-                };
-
-                that.getPackages = function(){
-                    var deferred = $.Deferred();
-                    if (typeof packages === 'undefined') {
-                        $.get('/api/pricing/packages')
-                            .done(function(data){
-                                deferred.resolveWith(
-                                    that,  [_.has(data, 'data') ? data.data : data]);
-                            })
-                            .fail(function(response){
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            });
-                    }
-                    else {
-                        deferred.resolveWith(that, [packages]);
-                    }
-                    return deferred.promise();
-                };
-
-                that.getIPPoolCollection = function(){
-                    var deferred = $.Deferred();
-                    if (_.has(that, 'ippoolCollection')) {
-                        deferred.resolveWith(that, [that.ippoolCollection]);
-                    }
-                    else {
-                        that.ippoolCollection = new Model.NetworkCollection();
-                        that.ippoolCollection.fetch({
-                            wait: true,
-                            success: function(collection, response, options){
-                                deferred.resolveWith(that, [collection]);
-                            },
-                            error: function(collection, response) {
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            },
-                        });
-                    }
-                    return deferred.promise();
-                };
-
-                that.getSystemSettingsCollection = function(){
-                    var deferred = $.Deferred();
-                    if (_.has(that, 'systemSettingsCollection')) {
-                        deferred.resolveWith(that, [that.systemSettingsCollection]);
-                    }
-                    else {
-                        that.systemSettingsCollection = new Model.SettingsCollection();
-                        that.systemSettingsCollection.fetch({
-                            wait: true,
-                            success: function(collection, response, options){
-                                deferred.resolveWith(that, [collection]);
-                            },
-                            error: function(collection, response){
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            },
-                        });
-                    }
-                    return deferred.promise();
-                };
-
-                that.getLicenseModel = function(){
-                    var deferred = $.Deferred();
-                    if (_.has(that, 'licenseModel')) {
-                        deferred.resolveWith(that, [that.licenseModel]);
-                    }
-                    else {
-                        that.LicenseModel = new Model.LicenseModel();
-                        that.LicenseModel.fetch({
-                            wait: true,
-                            success: function(collection, response, options){
-                                deferred.resolveWith(that, [collection]);
-                            },
-                            error: function(collection, response){
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(that, [response]);
-                            },
-                        });
-                    }
-                    return deferred.promise();
-                };
-
-                that.getNotificationCollection = function(){
-                    var deferred = $.Deferred();
-                    if (_.has(that, 'notificationCollection')) {
-                        deferred.resolveWith(that, [that.notificationCollection]);
-                    }
-                    else {
-                        that.notificationCollection = new Backbone.Collection();
-                        if (backendData.adviseCollection) {
-                            that.notificationCollection.reset(
-                                backendData.adviseCollection);
-                            deferred.resolveWith(that, [that.notificationCollection]);
-                        }
-                        deferred.resolveWith(that, [that.notificationCollection]);
-                    }
-                    return deferred.promise();
-                };
-
-                that.updateContainer = function(containerModel){
-                    var performUpdate = function () {
-                        Utils.preloader.show();
-                        return containerModel.update()
-                            .always(Utils.preloader.hide)
-                            .fail(Utils.notifyWindow);
-                    };
-
-                    Utils.modalDialog({
-                        title: 'Update container',
-                        body: "During update whole pod will be restarted. Continue?",
-                        small: true,
-                        show: true,
-                        footer: {buttonOk: performUpdate, buttonCancel: true}
+        /**
+         * Create a function that will return promise for Backbone.Model,
+         * Backbone.Collection, or plain data. It will try to find resource in
+         * App._cache (initially it's a copy of backendData), and, if failed,
+         * try to fetch from server and put in App._cache.
+         * TODO: maybe it better to use Models everywhere, get rid of urls and plain data.
+         *
+         * @param {String} name - unique name of the resource.
+         *      Used as id in _cache (and backendData)
+         * @param {(Backbone.Model|Backbone.Collection)} ResourceClass -
+         *      Used to fetch data from server or convert backendData.
+         * @param {String} url - may be used instead of ResourceClass to
+         *      get raw data.
+         * @returns {Function} - function that returns a Promise
+         */
+        resourcePromiser: function(name, ResourceClass){
+            var cache = this._cache, url;
+            if (typeof ResourceClass === 'string'){
+                url = ResourceClass;
+                ResourceClass = null;
+            }
+            return _.bind(function(){
+                var deferred = $.Deferred();
+                if (cache[name] != null) {
+                    if (ResourceClass != null && !(cache[name] instanceof ResourceClass))
+                        cache[name] = new ResourceClass(cache[name]);
+                    deferred.resolveWith(this, [cache[name]]);
+                } else if (ResourceClass != null) {
+                    new ResourceClass().fetch({
+                        wait: true,
+                        success: function(resource){
+                            deferred.resolveWith(this, [cache[name] = resource]);
+                        },
+                        error: function(resource, response) {
+                            Utils.notifyWindow(response);
+                            deferred.rejectWith(this, [response]);
+                        },
                     });
-                };
-
-                that.checkContainerForUpdate = function(containerModel){
-                    Utils.preloader.show();
-                    return containerModel.checkForUpdate()
-                        .always(Utils.preloader.hide)
-                        .fail(Utils.notifyWindow)
-                        .done(function(rs){
-                            if (!rs.data)
-                                Utils.notifyWindow('No updates found', 'success');
-                        });
-                };
-            });
-        }
+                } else {
+                    $.get(url).done(function(data){
+                        cache[name] = _.has(data, 'data') ? data.data : data;
+                        deferred.resolveWith(this, [cache[name]]);
+                    }).fail(function(response){
+                        Utils.notifyWindow(response);
+                        deferred.rejectWith(this, [response]);
+                    });
+                }
+                return deferred.promise();
+            }, this);
+        },
     });
 
     App.navigate = function(route, options){
         options || (options = {});
         Backbone.history.navigate(route, options);
+        return App;  // for chaining
     };
 
     App.getCurrentRoute = function(){
@@ -296,15 +95,16 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
 
     App.on('start', function(){
         var that = this;
-        require(['app_data/controller', 'app_data/router', 'app_data/utils'],
-                function(Controller, Router, Utils){
+        Utils.preloader.show();
+        require(['app_data/controller', 'app_data/router'],
+                function(Controller, Router){
 
-            var controller = new Controller();
+            var controller = App.controller = new Controller();
             new Router({controller: controller});
 
             function eventHandler(nodes, url){
                 if (url === undefined) url = "/api/stream";
-                var source = new EventSource(url),
+                var source = App.sseEventSource = new EventSource(url),
                     events;
                 var collectionEvent = function(collectionGetter, eventType){
                     eventType = eventType || 'change';
@@ -408,21 +208,14 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
             }
 
             if (Backbone.history) {
-                Backbone.history.start({root: '/'});
-
-                eventHandler(backendData.destination === 'nodes');
-                controller.showNotifications();
-                //console.log('impersontated', backendData.impersonated ? true : false);
-                if (App.getCurrentRoute() === "") {
-                    if (backendData.destination === 'nodes') {
-                        App.navigate('nodes');
-                        controller.showNodes();
-                    }
-                    else {
-                        App.navigate('pods');
-                        controller.showPods();
-                    }
-                }
+                Backbone.history.start({root: '/', silent: true});
+                Utils.preloader.hide();
+                App.prepareInitialData().done(function(){
+                    // trigger Routers for the current url
+                    Backbone.history.loadUrl(App.getCurrentRoute());
+                    controller.showNotifications();
+                    eventHandler(App.currentUser.get('rolename') == 'Admin');
+                });
             }
         });
     });

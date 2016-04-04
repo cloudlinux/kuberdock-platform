@@ -65,6 +65,6 @@ requirejs.config({
     waitSeconds: 30
 });
 
-require(['app_data/app', 'notify'], function(App, notify){
+require(['app_data/app', 'app_data/model'], function(App){
     App.start();
 });

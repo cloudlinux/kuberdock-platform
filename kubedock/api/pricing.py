@@ -6,7 +6,8 @@ import re
 from ..core import db, ConnectionPool
 from ..rbac import check_permission
 from ..decorators import login_required_or_basic_or_token
-from ..utils import KubeUtils, register_api, atomic, all_request_params
+from ..utils import (KubeUtils, register_api, atomic, all_request_params,
+                     PermissionDenied)
 from ..users import User
 from ..validation import check_pricing_api, package_schema, kube_schema, \
     packagekube_schema
@@ -73,16 +74,24 @@ def get_user_kube_types():
 class PackagesAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
 
-    @check_permission('get', 'pricing')
     def get(self, package_id=None):
         with_kubes = all_request_params().get('with_kubes')
-        if package_id is None:
-            return [p.to_dict(with_kubes=with_kubes)
-                    for p in Package.query.all()]
-        data = Package.query.get(package_id)
-        if data is None:
-            raise PackageNotFound()
-        return data.to_dict(with_kubes=with_kubes)
+        if check_permission('get', 'pricing'):
+            if package_id is None:
+                return [p.to_dict(with_kubes=with_kubes)
+                        for p in Package.query.all()]
+            data = Package.query.get(package_id)
+            if data is None:
+                raise PackageNotFound()
+            return data.to_dict(with_kubes=with_kubes)
+        elif check_permission('get_own', 'pricing'):
+            user_package = KubeUtils._get_current_user().package
+            if package_id is None:
+                return [user_package.to_dict(with_kubes=with_kubes)]
+            if package_id != user_package.id:  # can get only own package
+                raise PackageNotFound()
+            return user_package.to_dict(with_kubes=with_kubes)
+        raise PermissionDenied()
 
     @atomic(APIError('Could not create package', 500), nested=False)
     @check_permission('create', 'pricing')
@@ -145,7 +154,7 @@ class PackagesAPI(KubeUtils, MethodView):
         db.session.delete(package)
 
 register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id',
-             strict_slashes=False)
+             'int', strict_slashes=False)
 
 
 @pricing.route('/packages/default', methods=['GET'], strict_slashes=False)

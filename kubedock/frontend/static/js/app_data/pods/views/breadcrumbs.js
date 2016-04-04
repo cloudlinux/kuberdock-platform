@@ -1,6 +1,6 @@
 define(['app_data/app',
         'tpl!app_data/pods/templates/breadcrumbs.tpl'],
-    function(Pods, breadcrumbsTpl){
+    function(App, breadcrumbsTpl){
 
         var misc = {};
 
@@ -19,6 +19,8 @@ define(['app_data/app',
                 'click @ui.navSearch'   : 'showSearch',
                 'blur @ui.pod_search'   : 'closeSearch',
             },
+
+            templateHelpers: function(){ return {user: App.currentUser}; },
 
             filterCollection: function(evt){
                 evt.stopPropagation();

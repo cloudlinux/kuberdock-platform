@@ -71,6 +71,7 @@ define(['app_data/app',
         templateHelpers: function(){
             return {
                 kubes: this.model.getKubes(),
+                kubeType: this.model.getKubeType(),
                 checked: !!this.model.is_checked,
                 ableTo: _.bind(this.model.ableTo, this.model),
             };

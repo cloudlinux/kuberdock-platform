@@ -276,6 +276,9 @@ else
     if [ "$ISAMAZON" = true ];then
         MASTER_IP=$FIRST_IP
         MASTER_TOBIND_FLANNEL=$FIRST_IFACE
+    elif [ "$KD_AUTODEPLOY" = true ];then
+        MASTER_IP=$FIRST_IP
+        MASTER_TOBIND_FLANNEL=$FIRST_IFACE
     else
         read -p "Enter inner network interface IP address [$FIRST_IP]: " MASTER_IP
         if [ -z "$MASTER_IP" ]; then
@@ -298,6 +301,8 @@ echo "MASTER_TOBIND_FLANNEL was set to $MASTER_TOBIND_FLANNEL" >> $DEPLOY_LOG_FI
 
 # We question here for a node interface to bind external IPs to
 if [ "$ISAMAZON" = true ];then
+    NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
+elif [ "$KD_AUTODEPLOY" = true ];then
     NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
 else
     read -p "Enter interface to bind public IP addresses on nodes [$MASTER_TOBIND_FLANNEL]: " NODE_TOBIND_EXTERNAL_IPS
@@ -670,6 +675,10 @@ ADMIN_PASSWORD="CHANGE_ME"
 ADMIN_PASSWORD=$(tr -dc 'A-Za-z0-9_' < /dev/urandom | head -c20)
 do_and_log python manage.py createdb $ADMIN_PASSWORD
 do_and_log python manage.py auth-key 1> /dev/null
+
+if [ "$KD_AUTODEPLOY" = true ];then
+    echo $ADMIN_PASSWORD > ~/kd_adminpass
+fi
 
 
 #11. Start services

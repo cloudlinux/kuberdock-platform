@@ -346,7 +346,7 @@ else
     if [ "$HAS_CEPH" = yes ]; then
 
         CEPH_CONF_DIR=$KUBERDOCK_LIB_DIR/conf
-        [ -d $CEPH_CONF_DIR ] || mkdir $CEPH_CONF_DIR
+        [ -d $CEPH_CONF_DIR ] || mkdir -p $CEPH_CONF_DIR
         cp "$CEPH_CONFIG_PATH" $CEPH_CONF_DIR/ceph.conf || exit 1
         cp "$CEPH_KEYRING_PATH" $CEPH_CONF_DIR || exit 1
 

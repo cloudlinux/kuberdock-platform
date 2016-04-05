@@ -1,7 +1,7 @@
 Version: 1.0
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 3%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,7 +187,16 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
-* Thu Mar 31 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Korneev <skorneev@cloudlinux.com>, Nikolay Telepenin <ntelepenin@cloudlinux.com>, Aleksandr Tishin <atishin@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-2
+* Tue Apr 05 2016 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Korneev <skorneev@cloudlinux.com>, Nikolay Telepenin <ntelepenin@cloudlinux.com>, Aleksandr Tishin <atishin@cloudlinux.com> 1.0-3
+- AC-2820: keep appPackage.name and appPackage.goodFor in filled yaml
+- Fixed pod existence check in listeners
+- AC-1330: actualized ceph package mirrors
+- AC-1513: Fixed tests. Now it works without kube-apiserver.
+- AC-2307: fixed mkdir for ceph conf directory
+- AC-2361: fixed typo
+- AC-2750: Fix ipsets are not updated after kuberdock-watcher failed
+
+* Thu Mar 31 2016 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Sergey Korneev <skorneev@cloudlinux.com>, Aleksandr Tishin <atishin@cloudlinux.com>, Vadim Musin <vmusin@cloudlinux.com> 1.0-2
 - AC-2489: it was possible to edit user with different password\repeat password
 - AC-2562: New Pod page Kuberdock allows to ignore error about PV limit when creating Pod
 - AC-2245: Removed limit for persistent_disk_max_size field; dangling spaces are stripped for all fields but password.

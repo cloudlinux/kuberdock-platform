@@ -24,12 +24,13 @@ show_help() {
     echo "-u|--user      : Specify kuberdock admin username (if not specified 'hostingPanel' is used)"
     echo "-t|--testing   : Use testing repositories"
     echo "-k|--kuberdock : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
+    echo "-i|--interface   : Network interface to use"
     echo "-h|--help      : Show this help"
     exit 0
 }
 
 
-TEMP=$(getopt -o k:u:th -l kuberdock:,user:,testing,help -n 'kcli-deploy.sh' -- "$@")
+TEMP=$(getopt -o k:u:i:th -l kuberdock:,user:,interface:,testing,help -n 'kcli-deploy.sh' -- "$@")
 eval set -- "$TEMP"
 
 
@@ -43,6 +44,9 @@ while true;do
         ;;
         -t|--testing)
             TESTING=true;shift;
+        ;;
+        -i|--interface)
+            IFACE=$2;shift 2;
         ;;
         -h|--help)
             show_help;break
@@ -153,6 +157,11 @@ sed -i "s/^FLANNEL_ETCD=.*$/FLANNEL_ETCD=\"http:\/\/$KD_HOST:8123\"/" $FLANNEL_C
 sed -i "s/^FLANNEL_ETCD_KEY=.*$/FLANNEL_ETCD_KEY=\"\/kuberdock\/network\"/" $FLANNEL_CONFIG
 
 sed -i "s/^KUBE_MASTER=.*$/KUBE_MASTER=\"--master=http:\/\/$KD_HOST:8118\"/" $PROXY_CONFIG
+
+if [ -n "$IFACE" ];then
+   sed -i "s/^#\?FLANNEL_OPTIONS=.*$/FLANNEL_OPTIONS=\"--iface=$IFACE\"/" $FLANNEL_CONFIG
+fi
+
 
 VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
 if [ "$VER" == "7" ];then

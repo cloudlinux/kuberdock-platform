@@ -226,6 +226,21 @@ PERMISSIONS = (
 # 00120
 PLUGIN_DIR = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
 
+# 00123
+PLUGIN_PY = PLUGIN_DIR + 'kuberdock.py'
+WATCHER_SERVICE = """[Unit]
+Description=KuberDock Network Plugin watcher
+After=flanneld.service
+Requires=flanneld.service
+
+[Service]
+ExecStart=/usr/bin/env python2 {0} watch
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target""".format(PLUGIN_PY)
+
 
 def upgrade(upd, with_testing, *args, **kwargs):
     upd.print_log('Upgrading DB...')
@@ -339,6 +354,14 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
         run('tuned-adm profile latency-performance')
     else:
         run('tuned-adm profile virtual-guest')
+
+    # 00123
+    put('/var/opt/kuberdock/node_network_plugin.py', PLUGIN_PY, mode=0755)
+    run('echo "{0}" > "{1}"'.format(
+        WATCHER_SERVICE, '/etc/systemd/system/kuberdock-watcher.service'
+    ))
+    run('systemctl daemon-reload')
+    run('systemctl restart kuberdock-watcher')
 
     # 00115 pt2, check and reboot
     check = run(

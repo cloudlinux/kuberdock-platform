@@ -5,6 +5,7 @@ from __future__ import print_function
 import re
 import os
 import sys
+import time
 import json
 import subprocess
 from ConfigParser import ConfigParser
@@ -256,11 +257,12 @@ def watch(callback, args=None, path=None):
     etcd = ETCD(path)
     while True:
         try:
+            callback(*args)
             etcd.wait()
         except KeyboardInterrupt:
             break
-        else:
-            callback(*args)
+        except requests.RequestException:
+            time.sleep(5)
 
 
 def send_feedback(namespace, k8s_pod, message):

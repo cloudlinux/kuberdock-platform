@@ -1005,7 +1005,7 @@ do_cleanup()
 
     log_it echo "Remove dirs..."
     for i in /var/run/kubernetes /etc/kubernetes /var/run/flannel /root/.etcd-ca \
-             /var/opt/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
+             /var/opt/kuberdock /var/lib/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
              /etc/etcd/etcd.conf /var/lib/etcd; do
         rm -rf $i
     done

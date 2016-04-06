@@ -115,7 +115,7 @@ class PodState(BaseModelMixin, db.Model):
         """
         entity = cls.query.filter(
             cls.pod_id == pod_id,
-            cls.end_time == None,
+            cls.end_time.is_(None),
             cls.hostname == hostname
         ).order_by(cls.start_time.desc()).first()
         return entity

@@ -1,25 +1,17 @@
 #!/usr/bin/env python2
 
-from __future__ import print_function
 import json
 import time
 import logging
-import logging.handlers
 import requests
 from datetime import datetime
 from websocket import create_connection
 
-logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-handler = logging.handlers.RotatingFileHandler(
-    "/var/log/k8s2etcd.log", maxBytes=1048576, backupCount=10)
-form = logging.Formatter('%(asctime)s %(name)-12s %(levelname)s:%(message)s')
-handler.setFormatter(form)
-logger.addHandler(handler)
+logger = logging.getLogger()
 
 attempts = 3
 attempt_timeout = 1
-filename = 'index.txt'
+index_file = '/var/lib/kuberdock/k8s2etcd_resourceVersion'
 loop_timeout = 0.2
 
 watch_url = 'ws://127.0.0.1:8080/api/v1/pods?watch=true&resourceVersion={}'
@@ -28,13 +20,13 @@ etcd_url = 'http://127.0.0.1:4001/v2/keys/kuberdock/pod_states'
 
 
 def store(resource_version):
-    with open(filename, 'w') as f:
+    with open(index_file, 'w') as f:
         f.write('{0:d}'.format(int(resource_version)))
 
 
 def get():
     try:
-        with open(filename) as f:
+        with open(index_file) as f:
             rv = int(f.read())
             return rv
     except:
@@ -45,7 +37,7 @@ def prelist():
     """ Just get resourceVersion from list """
     res = requests.get(list_url)
     if res.ok:
-        return res.json()['metadata']['resourceVersion']
+        return int(res.json()['metadata']['resourceVersion'])
     else:
         raise Exception("Error during pre list resource version")
 
@@ -67,9 +59,11 @@ def process(content):
 resourceVersion = get()
 while True:
     try:
-        if not resourceVersion:
+        if resourceVersion is None:
             resourceVersion = prelist()
-        logger.debug("start watch from {}".format(resourceVersion))
+        else:
+            resourceVersion = min(resourceVersion, prelist())
+        logger.info("start watch from {}".format(resourceVersion))
         ws = create_connection(watch_url.format(resourceVersion))
         while True:
             content = ws.recv()

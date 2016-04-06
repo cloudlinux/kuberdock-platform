@@ -2,10 +2,13 @@ import re
 import string
 import random
 from collections import Mapping, Sequence
+from numbers import Number
+from copy import deepcopy
 
 import yaml
 
 from ..utils import APIError
+from ..billing.models import Kube
 from ..predefined_apps.models import PredefinedApp as PredefinedAppModel
 from ..validation import ValidationError, V, predefined_app_schema
 
@@ -70,16 +73,16 @@ class PredefinedApps(object):
         app.delete()
 
 
-FIELD_PARSER = re.compile(
-    r'\$(?:'                  # match $$ (escaped $) or $VAR[|default:<>|Label]$
-        r'(?P<name>[\w\-]+)'  # name: alphanumeric, -, _
-        r'(?:\|default:'      # default and label: any symbol except \,|,$; or any escaped symbol
-            r'(?P<default>(?:[^\\\|\$]|\\[\s\S])+|)'
-            r'\|'
-            r'(?P<label>(?:[^\\\|\$]|\\[\s\S])+|)'
-        r')?'                 # default and label are optioanl
-    r')?\$'
-)  # NOQA
+FIELD_PARSER = re.compile(ur'''
+    \$(?:                  # match $$ (escaped $) or $VAR[|default:<>|Label]$
+        (?P<name>[\w\-]+)  # name: alphanumeric, -, _
+        (?:\|default:      # default and label: any symbol except \,|,$; or any escaped symbol
+            (?P<default>(?:[^\\\|\$]|\\[\s\S])+|)
+            \|
+            (?P<label>(?:[^\\\|\$]|\\[\s\S])+|)
+        )?                 # default and label are optioanl
+    )?\$
+''', re.X)  # NOQA
 
 
 def validate_template(template):
@@ -276,6 +279,101 @@ def fill(target, fields):
             return [_fill(value) for value in target]
         return target
     return _fill(target), used_fields
+
+
+def apply_package(target, pkg):
+    kuberdock = target['kuberdock']
+    spec = find_root(target)
+    kuberdock.pop('appPackages', None)
+    kuberdock['appPackage'] = {'name': pkg['name'],
+                               'goodFor': pkg['goodFor']}
+
+    if pkg.get('packagePostDescription') is not None:
+        kuberdock['postDescription'] = (kuberdock.get('postDescription', '') +
+                                        '\n' + pkg['packagePostDescription'])
+
+    pods = pkg.get('pods')
+    if pods:
+        pod_plan = pods[0]
+
+        if pod_plan.get('kubeType') is not None:
+            kuberdock['kube_type'] = pod_plan.get('kubeType')
+        elif kuberdock.get('kube_type') is None:
+            kuberdock['kube_type'] = Kube.get_default_kube().id
+
+
+        kubes_by_container = {c['name']: c.get('kubes')
+                              for c in pod_plan.get('containers') or []}
+        for container in spec['containers']:
+            container['kubes'] = (kubes_by_container.get(container['name']) or
+                                  container.get('kubes') or 1)
+
+        pd_by_volume = {pd['name']: pd.get('pdSize')
+                        for pd in pod_plan.get('persistentDisks') or []}
+        for volume in spec.get('volumes') or []:
+            pd = volume.get('persistentDisk')
+            if pd:
+                pd['pdSize'] = (pd_by_volume.get(volume['name']) or
+                                pd.get('pdSize') or 1)
+
+        if 'publicIP' in pkg and not pkg.get('publicIP'):
+            for container in spec['containers']:
+                for port in container.get('ports') or []:
+                    port['isPublic'] = False
+
+    return target
+
+
+def compare(template, filled_yaml):
+    preprocessed_tpl, fields = preprocess(template)
+    loaded_tpl = load(preprocessed_tpl, fields)
+    filled_yaml = deepcopy(filled_yaml)
+
+    kuberdock = filled_yaml.get('kuberdock')
+    kuberdock.pop('kuberdock_template_id', None)
+    if (not isinstance(kuberdock, Mapping) or
+            not isinstance(kuberdock.get('appPackage'), Mapping)):
+        return False
+    package = kuberdock.get('appPackage')
+    packages_by_name = {pkg['name']: pkg
+                        for pkg in loaded_tpl['kuberdock']['appPackages']}
+    package = packages_by_name.get(package.get('name'))
+    if package is None:
+        return False
+    apply_package(loaded_tpl, package)
+
+    fields_set = set(fields.itervalues())
+    any_field_regex = re.compile('(?:%USER_DOMAIN%|{0})'.format(
+        '|'.join(field.uid for field in fields_set)))
+    stack = [(loaded_tpl, filled_yaml)]
+    while stack:
+        tpl, filled = stack.pop()
+        if tpl == filled:
+            continue
+        elif isinstance(tpl, Mapping) and isinstance(filled, Mapping):  # dict
+            for key, a_value in tpl.iteritems():
+                if key not in filled:
+                    return False
+                stack.append((a_value, filled.pop(key)))
+            if filled:  # filled yaml has keys that aren't presented in template
+                return False
+        elif isinstance(tpl, basestring) and isinstance(filled, basestring):
+            # string that contains $VARS$
+            if not re.match(any_field_regex.sub('.*', re.escape(tpl)), filled):
+                return False
+        elif isinstance(tpl, Sequence) and isinstance(filled, Sequence):  # list
+            if len(tpl) != len(filled):
+                return False
+            stack.extend(zip(tpl, filled))
+        elif tpl in fields_set:  # plain $VAR$ (not in sting)
+            if isinstance(filled, (Number, basestring)) or filled is None:
+                if not hasattr(tpl, 'value'):
+                    tpl.value = filled
+                elif tpl.value != filled:
+                    return False
+        else:  # unknown type or type mismatch
+            return False
+    return True
 
 
 class TemplateField(object):

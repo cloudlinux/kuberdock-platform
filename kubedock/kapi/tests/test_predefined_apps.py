@@ -4,6 +4,7 @@ import unittest
 import mock
 import re
 
+from copy import deepcopy
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.kapi import predefined_apps as kapi_papps
 
@@ -190,6 +191,44 @@ class TestValidateTemplate(DBTestCase):
         kapi_papps.check_plans.side_effect = kapi_papps.ValidationError
         with self.assertRaises(kapi_papps.ValidationError):
             kapi_papps.validate_template(template)
+
+
+class TestCompare(DBTestCase):
+    """
+    kapi.predefined_apps.compare is expected to return False if yaml could not
+    be created using specified template.
+    """
+    def setUp(self):
+        self.template = VALID_TEMPLATE1
+
+        preprocessed_tpl, fields = kapi_papps.preprocess(self.template)
+        loaded_template = kapi_papps.load(preprocessed_tpl, fields)
+        kapi_papps.apply_package(loaded_template,
+                                 loaded_template['kuberdock']['appPackages'][1])
+        self.filled_template, fields = kapi_papps.fill(loaded_template, fields)
+
+    def test_compare_ok(self):
+        self.assertTrue(kapi_papps.compare(self.template, self.filled_template))
+
+    def test_compare_fails(self):
+        filled_template = deepcopy(self.filled_template)
+        container = filled_template['spec']['template']['spec']['containers'][0]
+        container['kubes'] += 1
+        filled_template['spec']['template']['spec']['containers'][0]['kubes'] += 1
+        self.assertFalse(kapi_papps.compare(self.template, filled_template))
+
+        filled_template = deepcopy(self.filled_template)
+        filled_template['kuberdock']['kube_type'] += 1
+        self.assertFalse(kapi_papps.compare(self.template, filled_template))
+
+        filled_template = deepcopy(self.filled_template)
+        del filled_template['kuberdock']['kube_type']
+        self.assertFalse(kapi_papps.compare(self.template, filled_template))
+
+        filled_template = deepcopy(self.filled_template)
+        container = filled_template['spec']['template']['spec']['containers'][0]
+        container['image'] = 'qwertyuiop'
+        self.assertFalse(kapi_papps.compare(self.template, filled_template))
 
 
 class TestCheckPlans(DBTestCase):

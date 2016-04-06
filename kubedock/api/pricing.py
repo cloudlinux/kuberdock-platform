@@ -476,7 +476,12 @@ def process_collection(data):
                                                           ('status', 'type'))))
 
         for key, value in result['data'].iteritems():
-            value[0] = '-' if invalid else lic.get(key, default_value)
+            if invalid:
+                value[0] = '-'
+            else:
+                value[0] = lic.get(key, default_value)
+                if str(value[0]) == '0':
+                    value[0] = default_value
     return result
 
 

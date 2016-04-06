@@ -61,6 +61,18 @@
         }
     }
     tbody{
+        &.networks-list{
+            tr{
+                &:hover{
+                    cursor: pointer;
+                }
+                &.checked{
+                    &:hover{
+                        cursor: default;
+                    }
+                }
+            }
+        }
         tr{
             position: relative;
             background-color: #fff;

@@ -969,8 +969,15 @@ def check_internal_pod_data(data, user=None):
 
 def check_system_settings(data):
     validator = V()
-    name = data.get('name')
-    value = data.get('value')
+    name = data.get('name', '')
+    value = data.get('value', '')
+
+    # Purely cosmetic issue: forbid leading '+'
+    if name in ['persitent_disk_max_size', 'cpu_multiplier',
+                'memory_multiplier']:
+        if not re.match(r'[0-9]', value):
+            raise APIError('Value is expected to start with digits')
+
     if name == 'persitent_disk_max_size':
         if not validator.validate({'value': value},
                                   {'value': persistent_disk_max_size_schema}):

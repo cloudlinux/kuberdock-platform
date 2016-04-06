@@ -167,11 +167,16 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 var file = evt.target.files[0],
                     reader = new FileReader(),
                     that = this;
+                // reset file input, so event would fire even if user
+                // selects the same file
+                that.ui.uploader.val('');
+
+                if (!file.type.match(/(?:application\/(?:x-yaml|json)|text.*)/)){
+                    utils.notifyWindow('Please, upload an yaml file.');
+                    return;
+                }
                 reader.onload = function(evt){
                     that.ui.display.empty().val(evt.target.result);
-                    // reset file input, so event would fire even if user
-                    // selects the same file
-                    that.ui.uploader.val('');
                 };
                 reader.readAsText(file);
             },

@@ -509,6 +509,7 @@ change_pod_schema['containers']['schema']['schema']['volumeMounts']\
 
 positive_float_schema = {'coerce': float, 'min': 0}
 positive_integer_schema = {'coerce': int, 'min': 0}
+positive_non_zero_integer_schema = {'coerce': int, 'min': 1}
 billing_name_schema = {'type': 'string', 'maxlength': 64,
                        'required': True, 'empty': False}
 
@@ -560,10 +561,6 @@ kube_schema = {
 packagekube_schema = {
     'kube_price': dict(positive_float_schema, required=True),
     'id': positive_integer_schema
-}
-
-persistent_disk_max_size_schema = {
-    'coerce': int, 'min': 1
 }
 
 cpu_multiplier_schema = {
@@ -974,14 +971,16 @@ def check_system_settings(data):
 
     # Purely cosmetic issue: forbid leading '+'
     if name in ['persitent_disk_max_size', 'cpu_multiplier',
-                'memory_multiplier']:
+                'memory_multiplier', 'max_kubes_per_container']:
         if not re.match(r'[0-9]', value):
-            raise APIError('Value is expected to start with digits')
+            fmt = 'Value for "{0}" is expected to start with digits'
+            raise APIError(fmt.format(' '.join(name.split('_')).capitalize(),))
 
-    if name == 'persitent_disk_max_size':
+    if name in ['persitent_disk_max_size', 'max_kubes_per_container']:
         if not validator.validate({'value': value},
-                                  {'value': persistent_disk_max_size_schema}):
-            raise APIError('Incorrect value for PD size limit')
+                                  {'value': positive_non_zero_integer_schema}):
+            fmt = 'Incorrect value for "{0}" limit'
+            raise APIError(fmt.format(' '.join(name.split('_')).capitalize(),))
     elif name == 'cpu_multiplier':
         if not validator.validate({'value': value},
                                   {'value': cpu_multiplier_schema}):

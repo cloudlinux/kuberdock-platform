@@ -1,7 +1,7 @@
-Version: 1.0
+Version: 1.1
 Name: kuberdock
 Summary: KuberDock
-Release: 3%{?dist}.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,6 +187,11 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
+* Thu Apr 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 1.1-1
+- AC-1545: Predefined apps > 'Upload YAML' allows not YAML format.
+- AC-2245: added validation for kube max size. Added certain field name in error
+- AC-2809: Fix Grammar mistake below PV list
+
 * Tue Apr 05 2016 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com>, Sergey Korneev <skorneev@cloudlinux.com>, Nikolay Telepenin <ntelepenin@cloudlinux.com>, Aleksandr Tishin <atishin@cloudlinux.com> 1.0-3
 - AC-2820: keep appPackage.name and appPackage.goodFor in filled yaml
 - Fixed pod existence check in listeners

@@ -14,7 +14,7 @@
                     <tbody></tbody>
                 </table>
                 <div class="buttons clearfix">
-                    <div class="description pull-left">* Each persistent volume billed as usual regardless on it`s status</div>
+                    <div class="description pull-left">* Each persistent volume billed as usual regardless of its status</div>
                 </div>
             </div>
         </div>

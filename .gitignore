@@ -13,3 +13,7 @@ media
 settings.cfg
 local_settings.py
 celerybeat-schedule
+.vagrant
+*.retry
+*.rpm
+celerybeat.pid

@@ -179,16 +179,21 @@ class NodeManager(Command):
 class ResetPass(Command):
 
     chars = string.digits + string.letters
-    option_list = (Option('--generate', dest='generate',
-                          default=False, action='store_true'),)
+    option_list = (
+        Option('--generate', dest='generate', default=False,
+               action='store_true'),
+        Option('--set', dest='new_password', required=False),
+    )
 
-    def run(self, generate):
+    def run(self, generate, new_password):
         print "Change password for admin."
         u = db.session.query(User).filter(User.username == 'admin').first()
         new_pass = None
         if generate:
             new_pass = ''.join(choice(self.chars) for _ in range(10))
             print "New password: {}".format(new_pass)
+        elif new_password:
+            new_pass = new_password
         else:
             for i in range(3):
                 first_attempt = prompt_pass("Enter new password")

@@ -1,0 +1,70 @@
+- name: Install additional dev packages
+  yum: name={{ item }} state=latest
+  with_items:
+      - epel-release
+  when: is_dev_install
+
+- name: Install additional dev packages
+  yum: name={{ item }} state=latest
+  with_items:
+      - rpm-build
+      - git
+      - nodejs
+      - nodejs-less
+      - nodejs-clean-css
+  when: is_dev_install
+
+- name: Building RPM from source
+  command: bash /vagrant/dev-utils/build-rpm.sh
+  when: is_dev_install
+  environment:
+    KD_GIT_REF: "{{ lookup('env','KD_GIT_REF') }}"
+
+- find: paths=/vagrant/ patterns="kuberdock*.rpm" 
+  register: rpm_exist
+
+- fail: msg="There is not any kuberdock*.rpm files found."
+  when: rpm_exist.matched <= 0
+
+- name: Unpack deploy.sh
+  command: bash /vagrant/dev-utils/unpack-rpm.sh
+  when: (not is_dev_install and rpm_exist.matched > 0)
+
+- name: Cleanup
+  shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
+
+- name: Deploy 
+  shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash /vagrant/deploy.sh
+  when: rpm_exist.matched > 0
+
+- name: Reset password
+  shell: python /vagrant/manage.py reset-password --set admin
+
+- name: Install additional packages
+  yum: name={{ item }} state=latest
+  with_items:
+      - tmux
+
+- name: Disable stuff
+  service: name=emperor.uwsgi state=stopped
+  when: is_dev_install
+
+- name: Create tmux session
+  shell: tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}' 
+  when: is_dev_install
+
+- name: Up wsgi
+  command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "sudo python wsgi.py" chdir=/vagrant
+  when: is_dev_install
+  
+- name: Up celery
+  command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "{{ item }}" C-m chdir=/vagrant
+  with_items:
+    - "sudo -u nginx /usr/bin/celery -A kubedock.tasks --autoscale=16,4 worker -Ofair"
+    - "sudo /usr/bin/celery -A kubedock.tasks beat -s /tmp/celerybeat-schedule"
+  when: is_dev_install
+
+- name: Fetching key
+  fetch: src={{ pub_key }} dest=/tmp/kd_rsa.pub fail_on_missing=yes flat=yes
+
+

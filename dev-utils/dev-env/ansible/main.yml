@@ -1,0 +1,20 @@
+---
+
+- name: Setup common tasks
+  hosts: all
+  become: yes
+  roles:
+      - common
+
+- hosts: master
+  become: yes
+  roles:
+      - master
+
+- hosts: node
+  become: yes
+  roles:
+      - node
+
+  post_tasks:
+      - debug: msg="https://{{ groups['master'][0] }}:5000 [user:admin, password:admin]"

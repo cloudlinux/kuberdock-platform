@@ -517,7 +517,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
 
         self.test_service_name = 'service-eu53y'
         self.pod_collection._run_service = mock.Mock(
-            return_value={'metadata': {'name': self.test_service_name}})
+            return_value={'metadata': {'name': self.test_service_name},
+                          'spec': {'clusterIP': '1.1.1.1'}})
 
         self.valid_config = '{"valid": "config"}'
         self.test_pod = fake_pod(
@@ -1002,7 +1003,7 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
         get_mock.assert_has_calls([
             mock.call([api], ns=namespace)
             for namespace in namespaces
-            for api in ('pods', 'services', 'replicationcontrollers')
+            for api in ('pods', 'replicationcontrollers')
         ])
 
     @mock.patch('kubedock.kapi.podcollection.Pod')
@@ -1039,42 +1040,6 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
 
         self.assertItemsEqual(pod_collection._collection.iterkeys(),
                               [('pod1', namespace), ('pod2', namespace)])
-
-    @mock.patch('kubedock.kapi.podcollection.Pod')
-    @mock.patch.object(podcollection.PodCollection, '_get')
-    def test_services(self, get_mock, PodMock):
-        """ _get_pods should take pod IP from the service this pod belong. """
-        namespace = str(uuid4())
-        ip_dispatcher = {'api': '1.1.1.1', 'db': '2.2.2.2'}
-        get_mock.side_effect = lambda res, ns=None: {  # fake kubernates API
-            'pods': {'items': [{'metadata': {'labels': {'app': app}}}
-                               for app in ('api', 'api', 'api', 'db', 'db')]},
-            'services': {'items': [
-                {'spec': {'selector': {'app': 'api'},
-                          'clusterIP': ip_dispatcher['api']}},
-                {'spec': {'selector': {'app': 'db'},
-                          'clusterIP': ip_dispatcher['db']}},
-            ]},
-            'replicationcontrollers': {'items': []}
-        }[res[0]]
-
-        generated_pods = set()
-
-        def _get_uniq_fake_pod(item):
-            pod = self._get_uniq_fake_pod()
-            pod._app = item['metadata']['labels']['app']
-            pod.namespace = namespace
-            generated_pods.add(pod)
-            return pod
-        PodMock.populate.side_effect = _get_uniq_fake_pod
-
-        pod_collection = podcollection.PodCollection(self.user)
-        pod_collection._get_pods([namespace])
-
-        for pod in pod_collection._collection.itervalues():
-            self.assertEqual(pod.podIP, ip_dispatcher[pod._app])
-            self.assertIn(pod, generated_pods)
-            generated_pods.remove(pod)
 
     @mock.patch('kubedock.kapi.podcollection.Pod')
     @mock.patch.object(podcollection.PodCollection, '_get')

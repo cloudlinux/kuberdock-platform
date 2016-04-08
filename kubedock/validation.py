@@ -276,7 +276,7 @@ update_pod_schema = {
 
 new_pod_schema = {
     'name': dict(pod_name_schema, required=True),
-    'clusterIP': {
+    'podIP': {
         'type': 'ipv4',
         'nullable': True,
         'internal_only': True,

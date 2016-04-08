@@ -260,7 +260,6 @@ def get_kuberdock_logs_config(node, name, kube_type,
     es_heap_limit = (es_memory_limit * 2) / 3
     return {
         "name": name,
-        "clusterIP": None,
         "replicas": 1,
         "kube_type": kube_type,
         "node": node,
@@ -362,7 +361,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
 def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     return {
         "name": "kuberdock-dns",
-        "clusterIP": ip,
+        "podIP": ip,
         "replicas": 1,
         "kube_type": Kube.get_internal_service_kube_type(),
         "node": None,

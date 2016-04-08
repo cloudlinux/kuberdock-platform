@@ -474,32 +474,20 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod_index = set()
 
         data = []
-        services_data = []
         replicas_data = []
 
         if namespaces:
             for namespace in namespaces:
                 data.extend(self._get(['pods'], ns=namespace)['items'])
-                services_data.extend(self._get(
-                    ['services'], ns=namespace)['items'])
                 replicas_data.extend(self._get(
                     ['replicationcontrollers'], ns=namespace)['items'])
         else:
             data.extend(self._get(['pods'])['items'])
-            services_data.extend(item for item in self._get(
-                                ['services'])['items']
-                                if item['metadata']['namespace'] != 'default')
             replicas_data.extend(
                 self._get(['replicationcontrollers'])['items'])
 
         for item in data:
             pod = Pod.populate(item)
-
-            for s in services_data:
-                if self._is_related(item['metadata']['labels'],
-                                    s['spec'].get('selector')):
-                    pod.podIP = s['spec'].get('clusterIP')
-                    break
 
             for r in replicas_data:
                 if self._is_related(item['metadata']['labels'],
@@ -542,6 +530,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.volumes_public = db_pod_config.get('volumes_public')
                 pod.kube_type = db_pod_config.get('kube_type')
                 pod.node = db_pod_config.get('node')
+                pod.podIP = db_pod_config.get('podIP')
 
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
@@ -601,8 +590,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 'sessionAffinity': 'None'   # may be ClientIP is better
             }
         }
-        if hasattr(pod, 'clusterIP') and pod.clusterIP:
-            conf['spec']['clusterIP'] = pod.clusterIP
+        if hasattr(pod, 'podIP') and pod.podIP:
+            conf['spec']['clusterIP'] = pod.podIP
         return self._post(['services'], json.dumps(conf), rest=True,
                           ns=pod.namespace)
 
@@ -638,6 +627,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     self._raise_if_failure(service_rv,
                                            "Could not start a service")
                     db_config['service'] = service_rv['metadata']['name']
+                    db_config['podIP'] = service_rv['spec']['clusterIP']
                     break
 
         self.replace_config(pod, db_config)

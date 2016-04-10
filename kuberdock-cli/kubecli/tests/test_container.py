@@ -1,16 +1,14 @@
 """Tests for container.container.py classes"""
-import os
-import unittest
-import json
-import tempfile
-import shutil
 import copy
+import json
+import os
+import shutil
+import tempfile
+import unittest
 
 import mock
-
 from kubecli.container import container
 from kubecli.image import image
-
 
 PODAPI_GET_RESULT1 = {
     'data': [
@@ -39,6 +37,7 @@ PSTORAGE_GET_RESPONSE = {
         {'id': '2', 'name': 'test2', 'size': 2, 'in_use': False}
     ]
 }
+
 
 class TestKubeCtl(unittest.TestCase):
     """Tests for container.KubeCtl class"""
@@ -97,7 +96,7 @@ class TestKubeCtl(unittest.TestCase):
             kctl = container.KubeCtl(json=False, filename=f, resource='pod')
             kctl.create()
         post_mock.assert_called_once_with(container.POD_CREATE_API_PATH,
-                {'data': 'one\ntwo'})
+                                          {'data': 'one\ntwo'})
 
     @mock.patch.object(container.KubeQuery, 'post')
     def test_create_template(self, post_mock):
@@ -113,7 +112,8 @@ class TestKubeCtl(unittest.TestCase):
                                      name='test')
             kctl.create()
         post_mock.assert_called_once_with(container.PREDEFINED_APPS_PATH,
-                {'template': 'one\ntwo', 'origin': 'cpanel', 'name': 'test'})
+                                          {'template': 'one\ntwo',
+                                           'origin': 'cpanel', 'name': 'test'})
 
 
 class TestKuberDock(unittest.TestCase):
@@ -164,7 +164,7 @@ class TestKuberDock(unittest.TestCase):
         get_mock.return_value = {"data": []}
 
         kd = container.KuberDock(name=name, action='create',
-                restartPolicy="Always")
+                                 restartPolicy="Always")
         kd.create()
         with open(kd._data_path) as fin:
             data = json.load(fin)
@@ -172,8 +172,8 @@ class TestKuberDock(unittest.TestCase):
         self.assertEqual(data['restartPolicy'], "Always")
 
         kd = container.KuberDock(name=name, action='set',
-            restartPolicy="Never",
-            kube_type=11)
+                                 restartPolicy="Never",
+                                 kube_type=11)
         kd.set()
         with open(kd._data_path) as fin:
             data = json.load(fin)
@@ -181,13 +181,13 @@ class TestKuberDock(unittest.TestCase):
         self.assertEqual(data['restartPolicy'], "Never")
         self.assertEqual(data['kube_type'], 11)
         kd = container.KuberDock(name=name, action='set',
-            container_port='+123:45:udp',
-            mount_path='/sample',
-            kubes=2,
-            env='one:1,two:2',
-            persistent_drive='/dev/sda1',
-            size=1,
-            image=imagename)
+                                 container_port='+123:45:udp',
+                                 mount_path='/sample',
+                                 kubes=2,
+                                 env='one:1,two:2',
+                                 persistent_drive='/dev/sda1',
+                                 size=1,
+                                 image=imagename)
         kd.set()
 
         with open(kd._data_path) as fin:
@@ -233,7 +233,8 @@ class TestKuberDock(unittest.TestCase):
     @mock.patch.object(container.KuberDock, '_load')
     @mock.patch.object(container.KubeQuery, 'get')
     @mock.patch.object(container.KubeQuery, 'post')
-    def test_show_list_called_by_list_env(self, _post, _get, _load, _os_path, _po):
+    def test_show_list_called_by_list_env(self, _post, _get, _load, _os_path,
+                                          _po):
         """
         Tests if show_list is called when --list-env is passed
         """
@@ -243,13 +244,14 @@ class TestKuberDock(unittest.TestCase):
         _load.return_value = True
         c = container.KuberDock(list_env=True, image='test', kubes=1)
         c._resolve_data_path('test')
-        c.containers = [{'image':'test',
-                         'env':[
-                            {'name':'ONE','value':'first'},
-                            {'name':'TWO','value':'second'}]}]
+        c.containers = [{'image': 'test',
+                         'env': [
+                             {'name': 'ONE', 'value': 'first'},
+                             {'name': 'TWO', 'value': 'second'}]}]
         c.set()
         _po.assert_called_once_with([
-            {'name':'ONE','value':'first'},{'name':'TWO','value':'second'}])
+            {'name': 'ONE', 'value': 'first'},
+            {'name': 'TWO', 'value': 'second'}])
 
     @mock.patch.object(container.KuberDock, '_delete_env')
     @mock.patch.object(container.KuberDock, '_list_env')
@@ -257,7 +259,8 @@ class TestKuberDock(unittest.TestCase):
     @mock.patch.object(container.KuberDock, '_load')
     @mock.patch.object(container.KubeQuery, 'get')
     @mock.patch.object(container.KubeQuery, 'post')
-    def test_delete_env_called(self, _post, _get, _load, _os_path, _list, _delete):
+    def test_delete_env_called(self, _post, _get, _load, _os_path, _list,
+                               _delete):
         """
         Tests if _delete_env is called when --delete-env is passed
         """
@@ -265,7 +268,8 @@ class TestKuberDock(unittest.TestCase):
         _get.return_value = {"data": []}
         _get.return_value = {"status": "OK"}
         _load.return_value = True
-        c = container.KuberDock(list_env=False, image='test', kubes=1, delete_env='ONE')
+        c = container.KuberDock(list_env=False, image='test', kubes=1,
+                                delete_env='ONE')
         c._resolve_data_path('test')
         c.set()
         self.assertFalse(_list.called)
@@ -285,16 +289,15 @@ class TestKuberDock(unittest.TestCase):
         _load.return_value = True
         c = container.KuberDock(delete_env='TWO,THREE', image='test', kubes=1)
         c._resolve_data_path('test')
-        c.containers = [{'image':'test',
-                         'env':[
-                            {'name':'ONE','value':'first'},
-                            {'name':'TWO','value':'second'},
-                            {'name':'THREE','value':'third'}]}]
+        c.containers = [{'image': 'test',
+                         'env': [
+                             {'name': 'ONE', 'value': 'first'},
+                             {'name': 'TWO', 'value': 'second'},
+                             {'name': 'THREE', 'value': 'third'}]}]
         c.set()
-        check_model = [{'name':'ONE','value':'first'}]
+        check_model = [{'name': 'ONE', 'value': 'first'}]
         self.assertEqual(check_model, c.containers[0]['env'],
                          "Only one item is expected after ENV deletion")
-
 
     @mock.patch.object(container.KubeQuery, 'get')
     @mock.patch.object(container.KubeQuery, 'post')
@@ -320,16 +323,16 @@ class TestKuberDock(unittest.TestCase):
 
         # create pod, set one container parameters
         kd = container.KuberDock(name=name, action='create',
-                restartPolicy="Always", kube_type="Standard")
+                                 restartPolicy="Always", kube_type="Standard")
         kd.create()
         kd = container.KuberDock(name=name, action='set',
-            container_port='+123:45:udp',
-            mount_path='/sample',
-            kubes=2,
-            env='one:1,two:2',
-            persistent_drive='/dev/sda1',
-            size=1,
-            image=imagename)
+                                 container_port='+123:45:udp',
+                                 mount_path='/sample',
+                                 kubes=2,
+                                 env='one:1,two:2',
+                                 persistent_drive='/dev/sda1',
+                                 size=1,
+                                 image=imagename)
         kd.set()
 
         # save pod to the server
@@ -347,7 +350,7 @@ class TestKuberDock(unittest.TestCase):
         """Test for KuberDock.list method."""
         name = "test1"
         kd = container.KuberDock(name=name, action='create',
-                restartPolicy="Always", kube_type="Standard")
+                                 restartPolicy="Always", kube_type="Standard")
         kd.create()
 
         kd = container.KuberDock()
@@ -440,7 +443,7 @@ class TestKuberDock(unittest.TestCase):
         """Test for KuberDock.stop method."""
         name = "test1"
         kd = container.KuberDock(name=name, action='create',
-                restartPolicy="Always", kube_type="Standard")
+                                 restartPolicy="Always", kube_type="Standard")
         kd.create()
         self.assertTrue(os.path.exists(kd._data_path))
         kd = container.KuberDock(name=name)
@@ -469,7 +472,8 @@ class TestKuberDock(unittest.TestCase):
         kd = container.KuberDock(search_string='name', registry='', page=0)
         kd.search()
         get_mock.assert_called_once_with(image.IMAGES_PATH,
-            {'url': 'http://', 'searchkey': 'name', 'page': 0})
+                                         {'url': 'http://',
+                                          'searchkey': 'name', 'page': 0})
         showlist_mock.assert_called_once_with(get_mock.return_value['data'])
 
     @mock.patch.object(container.PrintOut, 'show')
@@ -490,7 +494,7 @@ class TestKuberDock(unittest.TestCase):
         kd = container.KuberDock(image='some_image')
         kd.image_info()
         post_mock.assert_called_once_with(image.IMAGES_PATH + 'new',
-            {'image': 'some_image'})
+                                          {'image': 'some_image'})
         show_mock.assert_called_once_with(post_mock.return_value['data'])
 
     def test_describe(self):

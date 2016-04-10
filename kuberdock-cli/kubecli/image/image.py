@@ -1,8 +1,8 @@
-from ..helper import KubeQuery, PrintOut
 from ..api_common import (PODAPI_PATH, IMAGES_PATH)
+from ..helper import KubeQuery, PrintOut
+
 
 class Image(object):
-
     def __init__(self, data=None, **kw):
         self.as_json = kw.get('json', False)
         self.data = data or {}
@@ -26,8 +26,8 @@ class Image(object):
         fields = (('name', 24), ('description', 76))
         printout = PrintOut(as_json=self.as_json, fields=fields)
         if not self.as_json:
-            data = [dict((k,v) for k,v in i.items()
-                if k in ['name', 'description'])
+            data = [dict((k, v) for k, v in i.items()
+                         if k in ['name', 'description'])
                     for i in data]
         printout.show_list(data)
 

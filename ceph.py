@@ -1,11 +1,11 @@
 import argparse
 import os
-import tempfile
 import shutil
+import tempfile
+
 from fabric.api import cd, env, get, run, put, settings
 
-
-TMPDIR='/tmp'
+TMPDIR = '/tmp'
 
 
 def parse_args():
@@ -14,10 +14,14 @@ def parse_args():
     args.add_argument('-C', '--ceph', help="Name of IP address of ceph admin node")
     args.add_argument('-u', '--user', default='root', help="Username")
     args.add_argument('-p', '--password', help="Password")
-    args.add_argument('-d', '--deploy-dir', default='/var/opt/deploy', help="Directory to put deploy script to")
-    args.add_argument('-D', '--deploy-script', default='ceph_install.sh', help="Deploy script")
-    args.add_argument('-w', '--app-dir', default='/var/opt/kuberdock', help="Directory of web-application")
-    args.add_argument('-c', '--conf-dir', default='/etc/ceph', help="Directory of ceph-configs")
+    args.add_argument('-d', '--deploy-dir', default='/var/opt/deploy',
+                      help="Directory to put deploy script to")
+    args.add_argument('-D', '--deploy-script', default='ceph_install.sh',
+                      help="Deploy script")
+    args.add_argument('-w', '--app-dir', default='/var/opt/kuberdock',
+                      help="Directory of web-application")
+    args.add_argument('-c', '--conf-dir', default='/etc/ceph',
+                      help="Directory of ceph-configs")
     args.add_argument('-T', '--temp-dir', default=TMPDIR, help="Temp directory")
     return args.parse_args()
 
@@ -34,7 +38,7 @@ if __name__ == '__main__':
             except OSError:
                 tmp_store = tempfile.mkdtemp(prefix='kuberdock_', dir=TMPDIR)
             get(args.conf_dir + '/ceph.*', tmp_store)
-            
+
     with settings(host_string=args.node):
         with settings(warn_only=True):
             run('mkdir ' + args.conf_dir)

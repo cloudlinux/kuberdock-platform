@@ -1,14 +1,15 @@
-import os
+import ConfigParser
+import collections
 import json
 import logging
 import operator
-import requests
-import ConfigParser
-import collections
+import os
 import warnings
-
-from requests.auth import HTTPBasicAuth
 from functools import wraps
+
+import requests
+from requests.auth import HTTPBasicAuth
+
 
 class NullHandler(logging.Handler):
     def emit(self, record):
@@ -45,7 +46,8 @@ class KubeQuery(object):
 
     def _raise_error(self, error_string):
         if self.jsonify_errors:
-            raise SystemExit(json.dumps({'status': 'ERROR', 'message': error_string}))
+            raise SystemExit(
+                json.dumps({'status': 'ERROR', 'message': error_string}))
         else:
             raise SystemExit(error_string)
 
@@ -96,7 +98,7 @@ class KubeQuery(object):
         args['data'] = data
         if rest:
             args['headers'] = {'Content-type': 'application/json',
-                            'Accept': 'text/plain'}
+                               'Accept': 'text/plain'}
         return self._run('put', res, args)
 
     def delete(self, res):
@@ -167,7 +169,8 @@ class PrintOut(object):
         try:
             print json.dumps(data)
         except (ValueError, TypeError):
-            print json.dumps({'status': 'ERROR', 'message': 'Unparseable format'})
+            print json.dumps(
+                {'status': 'ERROR', 'message': 'Unparseable format'})
 
     def _print(self, data):
         if isinstance(data, collections.Mapping):
@@ -198,14 +201,16 @@ class PrintOut(object):
             raise SystemExit("Unknown format")
 
     def _print_header(self):
-        fmt = ''.join( ['{{{0}:<{1[1]}}}'.format(i, v)
-                for i, v in enumerate(self.fields)])
-        print fmt.format(*[i[0].upper().replace('_', ' ') for i in self.fields])
+        fmt = ''.join(['{{{0}:<{1[1]}}}'.format(i, v)
+                       for i, v in enumerate(self.fields)])
+        print fmt.format(
+            *[i[0].upper().replace('_', ' ') for i in self.fields])
 
     def _list_data(self, data):
         if self.fields is None:
             self.fields = list((k, 32) for k, v in data.items())
-        fmt = ''.join(['{{{0[0]}:<{0[1]}.{0[1]}}}'.format(i) for i in self.fields])
+        fmt = ''.join(
+            ['{{{0[0]}:<{0[1]}.{0[1]}}}'.format(i) for i in self.fields])
         try:
             print fmt.format(**data)
         except ValueError:
@@ -234,16 +239,21 @@ def parse_config(path):
     try:
         configs = conf.read(path)
     except ConfigParser.MissingSectionHeaderError as e:
-        raise SystemExit("Parsing error: missing section header in INI file. {0}".format(str(e)))
+        raise SystemExit(
+            "Parsing error: missing section header in INI file. {0}".format(
+                str(e)))
     except ConfigParser.DuplicateSectionError as e:
-        raise SystemExit("Parsing error: duplicate section header. {0}".format(str(e)))
+        raise SystemExit(
+            "Parsing error: duplicate section header. {0}".format(str(e)))
     except ConfigParser.ParsingError as e:
         raise SystemExit("Parsing error: common error. {0}".format(str(e)))
     except IOError as e:
         raise SystemExit("Parsing error: I/O common error. {0}".format(str(e)))
-    if len(configs) == 0:   # no configs found
+    if len(configs) == 0:  # no configs found
         raise SystemExit(
-            "Config '{0}' not found. Try to specify a custom one with option '--config'".format(path))
+            "Config '{0}' not found. Try to specify a "
+            "custom one with option '--config'".format(
+                path))
     for section in conf.sections():
         data.update(dict(conf.items(section)))
     return data
@@ -271,12 +281,15 @@ def create_user_config(args):
 def echo(func):
     """
     Decorator that checks if PrintOut class has been already instantiated
-    If no and output set to JSON --> print out a dumb message like {"status": "OK"}
+    If no and output set to JSON --> print out a dumb message like
+    {"status": "OK"}
     """
+
     @wraps(func)
     def inner(*args, **kw):
         func(*args, **kw)
         if getattr(args[0], 'as_json', False):
             if not getattr(PrintOut, 'instantiated', False):
                 print json.dumps({'status': 'OK'})
+
     return inner

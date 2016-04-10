@@ -9,25 +9,28 @@ import subprocess
 import warnings
 from pipes import quote
 
-from ..image.image import Image
-from ..helper import KubeQuery, PrintOut, echo
-from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
-    IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH, PREDEFINED_APPS_PATH,
-    REGISTER_PATH)
 from .. import exceptions
-
+from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
+                          IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH,
+                          PREDEFINED_APPS_PATH,
+                          REGISTER_PATH)
+from ..helper import KubeQuery, PrintOut, echo
+from ..image.image import Image
 
 # Some common error messages
 ERR_NO_SUCH_ITEM = "No such item"
-ERR_INVALID_KUBE_TYPE = "Valid kube type must be set. "\
-                        "Run 'kuberdock kube-types' to get available kube types"
-ERR_SPECIFY_IMAGE_OPTION = "You must specify an image with option "\
+ERR_INVALID_KUBE_TYPE = "Valid kube type must be set. " \
+                        "Run 'kuberdock kube-types' " \
+                        "to get available kube types"
+ERR_SPECIFY_IMAGE_OPTION = "You must specify an image with option " \
                            "'-C|--container'"
+
 
 class ResourceCommon(object):
     """Helper class for all resource objects.
     Stores common resource parameters.
     """
+
     def __init__(self, ctl, printout=False, as_json=False):
         """
         :param ctl: Controller object, must provide 'query' attribute
@@ -59,7 +62,8 @@ class PodResource(object):
         self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
 
     def _find_pod_by_name(self, data):
-        with warnings.catch_warnings(): # Restore default behaviour on __exit__
+        # Restore default behaviour on __exit__
+        with warnings.catch_warnings():
             # make warnings to raise the exception
             warnings.simplefilter('error', UnicodeWarning)
             for i in data:
@@ -69,6 +73,7 @@ class PodResource(object):
                 except UnicodeWarning:
                     if i['name'].encode('UTF-8') == self.name:
                         return i
+
     def _get(self):
         query = self.resource.query()
         data = query.unwrap(query.get(PODAPI_PATH))
@@ -153,7 +158,8 @@ class PodResource(object):
 
 
 class TemplateResource(object):
-    def __init__(self, ctl, id=None, filename=None, name=None, origin='unknown',
+    def __init__(self, ctl, id=None, filename=None, name=None,
+                 origin='unknown',
                  json=False, printout=False, **_):
         self.app_id = id
         self.fin = filename
@@ -179,7 +185,8 @@ class TemplateResource(object):
     def create(self):
         yaml_content = self.fin.read()
         if not yaml_content:
-            raise exceptions.NotApplicable('Empty file content', as_json=self.as_json)
+            raise exceptions.NotApplicable('Empty file content',
+                                           as_json=self.as_json)
         query = self.resource.query()
         answer = query.post(PREDEFINED_APPS_PATH, {'template': yaml_content,
                                                    'origin': self.origin,
@@ -199,7 +206,8 @@ class TemplateResource(object):
             raise SystemExit(u'Failed to delete app template {0}: {1}'.format(
                 self.app_id, str(answer)))
         self.resource.printout(
-            "Application template has been deleted, id = {0}".format(self.app_id)
+            "Application template has been deleted, id = {0}".format(
+                self.app_id)
         )
 
     def update(self):
@@ -223,7 +231,8 @@ class TemplateResource(object):
 
 
 class TemplatesResource(object):
-    def __init__(self, ctl, page=None, origin=None, printout=False, json=json, **_):
+    def __init__(self, ctl, page=None, origin=None, printout=False, json=json,
+                 **_):
         self.page = page
         self.origin = origin
         self.resource = ResourceCommon(ctl, printout=printout, as_json=json)
@@ -238,7 +247,8 @@ class TemplatesResource(object):
             raise SystemExit('Failed to get list of predefined apps templates')
         data = query.unwrap(answer)
         if self.origin is not None:
-            data = [i for i in data if i.get('origin', 'unknown') == self.origin]
+            data = [i for i in data if
+                    i.get('origin', 'unknown') == self.origin]
         self.resource.printout(data)
         return data
 
@@ -249,6 +259,7 @@ RESOURCE_MAP = {
     'template': TemplateResource,
     'templates': TemplatesResource
 }
+
 
 class KubeCtl(object):
     """
@@ -267,7 +278,9 @@ class KubeCtl(object):
 
     def _get_pod(self):
         data = self.query.unwrap(self.query.get(PODAPI_PATH))
-        with warnings.catch_warnings(): # Restore default behaviour on __exit__
+
+        # Restore default behaviour on __exit__
+        with warnings.catch_warnings():
             # make warnings to raise the exception
             warnings.simplefilter('error', UnicodeWarning)
             for i in data:
@@ -310,7 +323,8 @@ class KubeCtl(object):
     @echo
     def delete(self):
         """
-        Gets a list of user pods, filter out one of them by name and deletes it.
+        Gets a list of user pods,
+        filter out one of them by name and deletes it.
         """
         resource = self._get_resource(True)
         if not resource:
@@ -345,8 +359,10 @@ class KubeCtl(object):
             service_ip = pod[0].get('podIP')
             if service_ip is None:
                 return
-            params = ['/sbin/iptables', '-t', 'nat', '-C', 'OUTPUT', '-d', service_ip,
-                      '-m', 'owner', '!', '--uid-owner', self.uid, '-j', 'DNAT',
+            params = ['/sbin/iptables', '-t', 'nat', '-C', 'OUTPUT', '-d',
+                      service_ip,
+                      '-m', 'owner', '!', '--uid-owner', self.uid, '-j',
+                      'DNAT',
                       '--to-destination', '233.252.0.254']
             try:
                 subprocess.check_call(params, stdout=open('/dev/null', 'a'),
@@ -401,8 +417,10 @@ class KubeCtl(object):
             data = self.query.get(AUTH_TOKEN_PATH)
             token = data['token']
         try:
-            fmt = """echo /usr/libexec/suidwrap '"{0}"' {1} |at now + 2 minute > /dev/null 2>&1"""
-            subprocess.check_call([fmt.format(token, quote(self.name))], shell=True)
+            fmt = 'echo /usr/libexec/suidwrap "{0}" {1} ' \
+                  '|at now + 2 minute > /dev/null 2>&1'
+            subprocess.check_call([fmt.format(token, quote(self.name))],
+                                  shell=True)
         except (KeyError, TypeError, subprocess.CalledProcessError):
             return
 
@@ -459,8 +477,9 @@ class KuberDock(KubeCtl):
         """
         if not self._initialized:
             raise exceptions.NotApplicable(
-                """Pod data missing or contains garbage. Try running "kcli kuberdock forget" """
-                """then "kcli kuberdock create" to recreate pod to be created""",
+                """Pod data missing or contains garbage.
+                Try running "kcli kuberdock forget"
+                then "kcli kuberdock create" to recreate pod to be created""",
                 as_json=self.as_json)
         data = self._prepare(final=True)
         kube_types = self._get_kube_types()
@@ -500,7 +519,8 @@ class KuberDock(KubeCtl):
         printout = PrintOut(wants_header=True,
                             fields=(('id', 12), ('name', 32)),
                             as_json=self.as_json)
-        data = [{'name': k, 'id': v} for k, v in self._get_kube_types().iteritems()]
+        data = [{'name': k, 'id': v} for k, v in
+                self._get_kube_types().iteritems()]
         data.sort()
         printout.show_list(data)
 
@@ -646,7 +666,7 @@ class KuberDock(KubeCtl):
             with open(self._data_path) as data:
                 for attr, val in json.load(data).items():
                     setattr(self, attr, val)
-        except (IOError, ValueError, TypeError): # no file, no JSON
+        except (IOError, ValueError, TypeError):  # no file, no JSON
             return False
         return True
 
@@ -654,7 +674,8 @@ class KuberDock(KubeCtl):
         if not hasattr(self, 'image'):
             raise exceptions.NotApplicable('To show envvars image is expected',
                                            as_json=self.as_json)
-        po = PrintOut(as_json=self.as_json, fields=(('name', 32), ('value', 48)))
+        po = PrintOut(as_json=self.as_json,
+                      fields=(('name', 32), ('value', 48)))
         for c in self.containers:
             if c.get('image') == self.image:
                 po.show_list(c.get('env', []))
@@ -702,13 +723,13 @@ class KuberDock(KubeCtl):
                 c['volumeMounts'] = []
                 continue
 
-            if final:   # We cannot send volumeMount if has no match in volumes
+            if final:  # We cannot send volumeMount if has no match in volumes
                 c['volumeMounts'] = [v for v in c['volumeMounts']
-                                    if v.get('mountPath') and v.get('name')]
+                                     if v.get('mountPath') and v.get('name')]
                 continue
 
             c['volumeMounts'] = [v for v in c['volumeMounts']
-                                if v.get('mountPath')]
+                                 if v.get('mountPath')]
 
             if hasattr(self, 'persistent_drive'):
                 if getattr(self, 'image', None) != c['image']:
@@ -762,18 +783,21 @@ class KuberDock(KubeCtl):
         #                      ^host port (optional)
         #                          ^protocol (tcp|udp) (optional)
         patt = re.compile(
-            "^(?P<public>\+)?(?P<container_port>\d+)\:?(?P<host_port>\d+)?\:?"\
+            "^(?P<public>\+)"
+            "?(?P<container_port>\d+)\:"
+            "?(?P<host_port>\d+)?\:?"
             "(?P<protocol>tcp|udp)?$"
         )
         ports = []
 
         min_port = 1
-        max_port = 2**16
+        max_port = 2 ** 16
 
         right_format_error_message = \
-            "Wrong port format. "\
-            "Example: +453:54:udp where '+' is a public IP, "\
-            "453 - container port, 54 - pod port, 'udp' - protocol (tcp or udp)"
+            "Wrong port format. " \
+            "Example: +453:54:udp where '+' is a public IP, " \
+            "453 - container port, 54 - pod port, " \
+            "'udp' - protocol (tcp or udp)"
 
         for p in getattr(self, 'container_port').strip().split(','):
             m = patt.match(p)
@@ -782,7 +806,8 @@ class KuberDock(KubeCtl):
                 container_port = int(m.group('container_port'))
                 host_port = m.group('host_port')
                 host_port = int(host_port) if host_port else container_port
-                protocol = m.group('protocol') if m.group('protocol') else 'tcp'
+                protocol = m.group('protocol') if m.group(
+                    'protocol') else 'tcp'
                 if any([container_port < min_port,
                         container_port >= max_port,
                         host_port < min_port,
@@ -825,14 +850,14 @@ class KuberDock(KubeCtl):
     def _delete_env(self, container):
         """Deletes environment variables"""
         container['env'] = [i for i in container['env']
-                    if i['name'] not in self.delete_env.split(',')]
+                            if i['name'] not in self.delete_env.split(',')]
 
     def _add_or_update_env(self, container):
         """Adds or modifies environment variables"""
         existing = set(item['name'] for item in container['env'])
         data_to_add = [dict(zip(['name', 'value'], item.strip().split(':')))
-                    for item in self.env.strip().split(',')
-                    if len(item.split(':')) == 2]
+                       for item in self.env.strip().split(',')
+                       if len(item.split(':')) == 2]
         for i in container['env']:
             for j in data_to_add:
                 if i['name'] == j['name']:
@@ -870,9 +895,10 @@ class KuberDock(KubeCtl):
         """
         for item in self.containers:
             if item.get('image') == self.image:
-                return Image(item, **self._args)   # return once configured image
+                return Image(item,
+                             **self._args)  # return once configured image
 
-        _n = self._generate_image_name(self.image)    # new image
+        _n = self._generate_image_name(self.image)  # new image
         image = {'image': self.image, 'name': _n}
         try:
             pulled = self.query.unwrap(
@@ -882,7 +908,7 @@ class KuberDock(KubeCtl):
 
         if 'volumeMounts' in pulled:
             pulled['volumeMounts'] = [{'mountPath': x}
-                for x in pulled['volumeMounts']]
+                                      for x in pulled['volumeMounts']]
         if 'ports' in pulled:
             pulled['ports'] = [
                 {
@@ -891,7 +917,7 @@ class KuberDock(KubeCtl):
                     'hostPort': x.get('number'),
                     'protocol': x.get('protocol')
                 } for x in pulled['ports']
-            ]
+                ]
         image.update(pulled)
         self.containers.append(image)
         return Image(image, **self._args)
@@ -921,4 +947,5 @@ class KuberDock(KubeCtl):
         os.unlink(self._data_path)
 
     def _delete_container_image(self):
-        self.containers = [c for c in self.containers if c['image'] != self.delete]
+        self.containers = [c for c in self.containers if
+                           c['image'] != self.delete]

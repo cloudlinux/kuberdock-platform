@@ -21,9 +21,12 @@ class UserCRUDTestCase(APITestCase):
         # get list
         response = self.admin_open()
         self.assert200(response)
-        user, admin = self.user.to_dict(full=True), self.admin.to_dict(full=True)
-        user['join_date'] = user['join_date'].replace(tzinfo=pytz.utc).isoformat()
-        admin['join_date'] = admin['join_date'].replace(tzinfo=pytz.utc).isoformat()
+        user, admin = self.user.to_dict(full=True), self.admin.to_dict(
+            full=True)
+        user['join_date'] = user['join_date'].replace(
+            tzinfo=pytz.utc).isoformat()
+        admin['join_date'] = admin['join_date'].replace(
+            tzinfo=pytz.utc).isoformat()
         self.assertIn(user, response.json['data'])
         self.assertIn(admin, response.json['data'])
         # short
@@ -57,7 +60,8 @@ class UserCRUDTestCase(APITestCase):
         # add
         response = self.admin_open(method='POST', json=data)
         self.assert200(response)
-        self.assertEqual(User.get(data['username']).to_dict(), response.json['data'])
+        self.assertEqual(User.get(data['username']).to_dict(),
+                         response.json['data'])
 
         # check conversion of extended boolean fields
         data['username'] += '1'
@@ -146,7 +150,8 @@ class UserCRUDTestCase(APITestCase):
         db.session.add(pod)
         db.session.commit()
 
-        # change package: new package doesn't have kube_type of some of user's pods
+        # change package: new package doesn't have kube_type of some of user's
+        # pods
         data = {'package': package1.name}
         self.assert400(self.admin_open(url=url, method='PUT', json=data))
 
@@ -164,11 +169,13 @@ class UserCRUDTestCase(APITestCase):
         min_pod = {'restartPolicy': 'Always', 'kube_type': 0, 'containers': [{
             'image': 'nginx', 'name': 'fk8i0gai',
             'args': ['nginx', '-g', 'daemon off;'],
-            'ports': [{'protocol': 'tcp', 'isPublic': True, 'containerPort': 80}],
+            'ports': [{'protocol': 'tcp', 'isPublic': True,
+                       'containerPort': 80}],
         }]}
 
         # pod-1
-        res = PodCollection(user).add(dict(min_pod, name='pod-1'), skip_check=False)
+        res = PodCollection(user).add(dict(min_pod, name='pod-1'),
+                                      skip_check=False)
         pod_1 = Pod.query.get(res['id'])
         pod_1.with_ip_conf = {
             'public_ip': res['public_ip'],
@@ -180,7 +187,8 @@ class UserCRUDTestCase(APITestCase):
         }
 
         # pod-2
-        res = PodCollection(user).add(dict(min_pod, name='pod-2'), skip_check=False)
+        res = PodCollection(user).add(dict(min_pod, name='pod-2'),
+                                      skip_check=False)
         pod_2 = Pod.query.get(res['id'])
         pod_2.with_ip_conf = {
             'public_ip': res['public_ip'],
@@ -205,7 +213,8 @@ class UserCRUDTestCase(APITestCase):
             self.assertFalse(port.get('isPublic_before_freed'))
             self.assertFalse(conf.get('public_ip_before_freed'))
             self.assertTrue(port.get('isPublic'))
-            self.assertEqual(conf.get('public_ip'), unicode(ip_address(podip.ip_address)))
+            self.assertEqual(conf.get('public_ip'),
+                             unicode(ip_address(podip.ip_address)))
             return True
 
         def _count_pods_with_public_ip():
@@ -221,15 +230,17 @@ class UserCRUDTestCase(APITestCase):
         self.assertEqual(_count_pods_with_public_ip(), 0,
                          'all pods must lose public ip')
 
-        # unsuspend must be atomic, so if one pod cannot get public ip, all won't
+        # unsuspend must be atomic, so if one pod cannot get public ip,
+        # all won't
         ippool.block_ip(ippool.free_hosts(as_int=True)[0])
         db.session.commit()
 
         data = {'suspended': False}
         response = self.admin_open(url=url, method='PUT', json=data)
         self.assertAPIError(response, 400, 'NoFreeIPs')
-        self.assertEqual(_count_pods_with_public_ip(), 0, "operation must be "
-                         "atomic, so if one pod can't get public ip, all won't")
+        self.assertEqual(_count_pods_with_public_ip(), 0,
+                         "operation must be  atomic, so if one pod can't get "
+                         "public ip, all won't")
 
         # unblock ip in ippool to be able to unsuspend user
         ippool.unblock_ip(ippool.get_blocked_set(as_int=True).pop())
@@ -262,8 +273,10 @@ class TestUsers(APITestCase):
         response = self.admin_open(self.item_url('a', 12345))
         self.assertAPIError(response, 404, 'UserNotFound')
 
-        login = UserActivity(action=UserActivity.LOGIN_A, user_id=self.admin.id)
-        logout = UserActivity(action=UserActivity.LOGOUT_A, user_id=self.admin.id)
+        login = UserActivity(action=UserActivity.LOGIN_A,
+                             user_id=self.admin.id)
+        logout = UserActivity(action=UserActivity.LOGOUT_A,
+                              user_id=self.admin.id)
         db.session.add_all([login, logout])
         db.session.commit()
 
@@ -271,8 +284,10 @@ class TestUsers(APITestCase):
         self.assert200(response)
         login_ts = {'ts': login.ts.replace(tzinfo=pytz.UTC).isoformat()}
         logout_ts = {'ts': logout.ts.replace(tzinfo=pytz.UTC).isoformat()}
-        self.assertEqual(login.to_dict(include=login_ts), response.json['data'][-2])
-        self.assertEqual(logout.to_dict(include=logout_ts), response.json['data'][-1])
+        self.assertEqual(login.to_dict(include=login_ts),
+                         response.json['data'][-2])
+        self.assertEqual(logout.to_dict(include=logout_ts),
+                         response.json['data'][-1])
 
     def test_editself(self):
         url = self.item_url('editself')

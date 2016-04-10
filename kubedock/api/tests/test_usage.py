@@ -32,7 +32,8 @@ usage_per_user_schema = {
                             'schema': {
                                 'start': {'type': int, 'required': True},
                                 'end': {'type': int, 'required': True},
-                                'kubes': {'type': int, 'required': True}}}}}}}},
+                                'kubes': {'type': int, 'required': True
+                                          }}}}}}}},
     'pd_usage': {
         'type': list, 'required': False,
         'schema': {
@@ -57,7 +58,8 @@ class UsageResponseValidator(V):
     """Validator for testing usage api"""
     get_schema = {
         'status': {'type': str, 'required': True, 'allowed': ['OK', 'error']},
-        'data': {'type': dict, 'required': True, 'schema': usage_per_user_schema}
+        'data': {'type': dict, 'required': True,
+                 'schema': usage_per_user_schema}
     }
     get_list_schema = {
         'status': {'type': str, 'required': True, 'allowed': ['OK', 'error']},
@@ -85,14 +87,15 @@ class UsageTestCase(APITestCase):
         self.adminauth = (self.admin.username, admin_password)
 
         # create test data
-        another_user, _ = fixtures.user_fixtures(username='another_user',
-                                                 email='another_user@test.test')
+        another_user, _ = fixtures.user_fixtures(
+            username='another_user', email='another_user@test.test')
         config = '{"containers":[{"kubes":1}]}'
         self.ips = [(Pod(id=str(uuid4()), owner_id=user.id, name='pod1',
                          kube_id=0, config=config).save(), u'192.168.43.132'),
                     (Pod(id=str(uuid4()), owner_id=user.id, name='pod2',
                          kube_id=0, config=config).save(), u'192.168.43.133'),
-                    (Pod(id=str(uuid4()), owner_id=another_user.id, name='pod3',
+                    (Pod(id=str(uuid4()), owner_id=another_user.id,
+                         name='pod3',
                          kube_id=0, config=config).save(), u'192.168.43.134')]
         for pod, ip in self.ips:
             IpState.start(pod.id, int(ip_address(ip)))
@@ -120,8 +123,10 @@ class UsageTestCase(APITestCase):
         if not validator.validate_get(response.json):
             self.fail(validator.errors)
 
-        self.assertEqual(len(response.json['data']['ip_usage']), 2)  # first user only
-        self.assertEqual(len(response.json['data']['pd_usage']), 2)  # first user only
+        # first user only
+        self.assertEqual(len(response.json['data']['ip_usage']), 2)
+        # first user only
+        self.assertEqual(len(response.json['data']['pd_usage']), 2)
 
     # @unittest.skip('')
     def test_get_all(self):

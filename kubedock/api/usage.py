@@ -18,6 +18,7 @@ usage = Blueprint('usage', __name__, url_prefix='/usage')
 DATE_FROM = 'date_from'
 DATE_TO = 'date_to'
 
+
 @usage.route('/', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
@@ -65,7 +66,7 @@ def filter_query_by_date(query, model, date_from, date_to):
     query = query.filter(
         db.or_(model.start_time.between(date_from, date_to),
                model.end_time.between(date_from, date_to),
-               db.and_(model.end_time == None, model.start_time < date_to)))
+               db.and_(model.end_time.is_(None), model.start_time < date_to)))
     return query
 
 
@@ -100,7 +101,8 @@ def get_ip_states(user, date_from, date_to):
 
 def get_pd_states(user, date_from, date_to):
     query = PersistentDiskState.query.filter(PersistentDiskState.user == user)
-    query = filter_query_by_date(query, PersistentDiskState, date_from, date_to)
+    query = filter_query_by_date(query, PersistentDiskState,
+                                 date_from, date_to)
     pd_states = query.all()
     return [pd_state.to_dict(exclude=['user_id']) for pd_state in pd_states]
 

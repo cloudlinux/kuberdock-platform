@@ -180,6 +180,11 @@ def _check_node_can_be_deleted(node_id):
         raise APIError(
             "Node can't be deleted. Reason: {}".format(reason)
         )
+    if Node.query.get(node_id).state == 'pending':
+        raise APIError(
+            "Node can't be deleted. "
+            "Reason: Node is in pending state. Please wait"
+        )
 
 
 def edit_node_hostname(node_id, ip, hostname):

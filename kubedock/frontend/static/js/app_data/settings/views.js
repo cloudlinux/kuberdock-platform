@@ -27,7 +27,7 @@ define(['app_data/app', 'marionette',
                 name = this.model.get('name');
 
             if (billing === 'No billing' && _.contains(
-                    ['billing_url', 'billing_username', 'billing_password'], name))
+                    ['billing_url', 'billing_username', 'billing_password', 'sso_secret_key'], name))
                 className += ' hidden';
             return className;
         },

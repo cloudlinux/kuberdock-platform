@@ -60,7 +60,7 @@ define(['app_data/app', 'marionette',
 
             // toggle billing settings, depending on selected billing type
             if (this.model.get('name') === 'billing_type'){
-                $('#billing_url, #billing_username, #billing_password').parent()
+                $('#billing_url, #billing_username, #billing_password, #sso_secret_key').parent()
                     .toggleClass('hidden', this.model.get('value') === 'No billing');
             }
         },

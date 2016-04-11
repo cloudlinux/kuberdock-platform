@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2014 The Kubernetes Authors All rights reserved.
+# Copyright 2015 The Kubernetes Authors All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,25 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Tear down a Kubernetes cluster.
+# Wait for background jobs to finish. Return with
+# an error status if any of the jobs failed.
+kube::util::wait-for-jobs() {
+  local fail=0
+  local job
+  for job in $(jobs -p); do
+    wait "${job}" || fail=$((fail + 1))
+  done
+  return ${fail}
+}
 
-set -o errexit
-set -o nounset
-set -o pipefail
-
-KUBERNETES_PROVIDER='aws'
-KUBE_ROOT=$(dirname "${BASH_SOURCE}")/..
-
-if [ -f "${KUBE_ROOT}/cluster/env.sh" ]; then
-    source "${KUBE_ROOT}/cluster/env.sh"
-fi
-
-source "${KUBE_ROOT}/cluster/kube-env.sh"
-source "${KUBE_ROOT}/cluster/kube-util.sh"
-
-echo "Bringing down cluster using provider: $KUBERNETES_PROVIDER"
-
-verify-prereqs
-kube-down
-
-echo "Done"

@@ -8,6 +8,8 @@ from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
 from kubedock.settings import KUBE_API_VERSION
 from kubedock.billing.models import Kube
+from kubedock.predefined_apps.models import PredefinedApp
+from kubedock.kapi.predefined_apps import compare
 from kubedock.rbac import check_permission
 
 yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
@@ -33,6 +35,13 @@ class YamlAPI(KubeUtils, MethodView):
             raise APIError('Incorrect yaml, parsing failed: "{0}"'.format(e))
         new_pod = dispatch_kind(parsed_data)
         check_new_pod_data(new_pod, user)
+
+        if user.role.rolename == 'LimitedUser':
+            template_id = new_pod.get('kuberdock_template_id')
+            template = (PredefinedApp.query.get(template_id).template
+                        if template_id else None)
+            if template is None or not compare(template, parsed_data[0]):
+                raise APIError('Only Predefined Apps are allowed.')
 
         try:
             res = PodCollection(user).add(new_pod)

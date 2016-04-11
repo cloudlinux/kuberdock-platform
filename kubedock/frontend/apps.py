@@ -67,6 +67,7 @@ def index(app_hash):
             data.update(
                 appPackageID=kuberdock['appPackages'].index(plan),
                 billing_url=billing_url,
+                template_id=app['id'],
                 max_pd_size=max_pd_size,
                 fields=sorted(fields.itervalues(), key=sort_key),
                 plan_fields=plan_fields,

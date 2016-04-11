@@ -454,6 +454,7 @@
                     customFields = document.getElementsByClassName('custom-field'),
                     submitButton = document.getElementById('submit-button'),
                     backButton = document.getElementById('back-button'),
+                    templateID = {{ template_id|tojson|safe }},
                     app = new PA({
                         defaultKubeType: {{ default_kube_type_id|tojson|safe }},
                         userPackage: {{ package|tojson|safe }},
@@ -494,7 +495,7 @@
                     // if you need to test PA without whmcs, just uncomment this
                     // block. It will work only if you are logged in Kuberdock.
                     // Also, you can see compiled yaml in console.
-                    var yml = app.templateToApp(appPackageID, getValues()),
+                    var yml = app.templateToApp(appPackageID, getValues(), templateID),
                         desc = yml.kuberdock.postDescription,
                         r = new XMLHttpRequest();
                     console.log(jsyaml.safeDump(yml));
@@ -532,7 +533,7 @@
                         return;
                     }
 
-                    var yml = app.templateToApp(appPackageID, getValues()),
+                    var yml = app.templateToApp(appPackageID, getValues(), templateID),
                         url = billingUrl
                             + (billingUrl.indexOf('?') === -1 ? '?' : '&')
                             + 'yaml=' + encodeURIComponent(jsyaml.safeDump(yml))

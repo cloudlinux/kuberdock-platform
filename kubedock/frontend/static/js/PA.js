@@ -403,11 +403,13 @@
      * @param {Object} values - see PA#fill
      * @returns {Object} filled template with appPackage applied
      */
-    PA.prototype.templateToApp = function(appPackageID, values){
+    PA.prototype.templateToApp = function(appPackageID, values, templateID){
         var filled = this.fill(values).filledTemplate,
             appPackage = filled.kuberdock.appPackages[appPackageID];
         this.fillAppPackageWithDefaults(appPackage, filled);
         delete filled.kuberdock.appPackages;
+        if (templateID != null)
+            filled.kuberdock.kuberdock_template_id = templateID;
         return this.applyAppPackage(filled, appPackage);
     };
 

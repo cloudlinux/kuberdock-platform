@@ -59,9 +59,10 @@ class MenuItem(BaseModelMixin, db.Model):
     @classmethod
     def get_menu(cls):
         role_name = get_user_role()
-        items = cls.filter(cls.menu_id == Menu.REGION_NAVBAR,
-                           cls.parent_id == None,
-                           cls.is_active).order_by(cls.ordering).all()
+        items = cls.query.join(Menu).filter(
+            Menu.region == Menu.REGION_NAVBAR,
+            cls.parent_id.is_(None),
+            cls.is_active).order_by(cls.ordering).all()
         menu = OrderedDict()
         role = Role.filter(Role.rolename == role_name).first()
         for item in items:
@@ -70,9 +71,10 @@ class MenuItem(BaseModelMixin, db.Model):
                 menu[item.name] = {}
                 if item.path:
                     menu[item.name]['path'] = item.path
-        children = cls.filter(cls.menu_id == Menu.REGION_NAVBAR,
-                              cls.parent_id != None,
-                              cls.is_active).order_by(cls.ordering).all()
+        children = cls.query.join(Menu).filter(
+            Menu.region == Menu.REGION_NAVBAR,
+            cls.parent_id.isnot(None),
+            cls.is_active).order_by(cls.ordering).all()
         for child in children:
             parent_name = child.parent.name
             if parent_name in menu:

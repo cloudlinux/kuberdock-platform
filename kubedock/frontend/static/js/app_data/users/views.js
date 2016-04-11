@@ -431,7 +431,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         events: {
             'click @ui.users_page'                  : 'back',
-            'click @ui.user_cancel_btn'             : 'back',
+            'click @ui.user_cancel_btn'             : 'cancel',
             'click @ui.user_add_btn'                : 'onSave',
             'focus @ui.input'                       : 'removeError',
             'input @ui.input'                       : 'changeValue',
@@ -590,8 +590,16 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         back: function(){
-           App.navigate('users', {trigger: true});
+            App.navigate('users', {trigger: true});
         },
+
+        cancel: function(){
+            if (this.model ){
+                App.navigate('users/profile/' + this.model.id + '/general', {trigger: true});
+            } else {
+                this.back();
+            }
+        }
     });
 
     views.UserProfileViewLogHistory = views.UserCreateView.extend({

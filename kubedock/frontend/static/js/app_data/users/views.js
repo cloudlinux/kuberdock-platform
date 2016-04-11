@@ -278,7 +278,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         foncusInput: function(e){
             var target = $(e.target);
-            target.prev('input').focus();
+            target.parent().find('input').focus();
         },
 
         removeError: function(evt){

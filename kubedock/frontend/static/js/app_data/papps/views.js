@@ -166,12 +166,13 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             handleUpload: function(evt){
                 var file = evt.target.files[0],
                     reader = new FileReader(),
+                    mimeRegEx = /(?:application\/(?:(?:x-)?yaml|json)|text.*)/,
                     that = this;
                 // reset file input, so event would fire even if user
                 // selects the same file
                 that.ui.uploader.val('');
 
-                if (!file.type.match(/(?:application\/(?:x-yaml|json)|text.*)/)){
+                if (file.type && !file.type.match(mimeRegEx)){
                     utils.notifyWindow('Please, upload an yaml file.');
                     return;
                 }

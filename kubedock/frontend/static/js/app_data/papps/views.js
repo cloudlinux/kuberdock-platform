@@ -126,7 +126,9 @@ define(['app_data/app', 'app_data/utils', 'marionette',
 
             events: {
                 'click @ui.save'      : 'saveApp',
-                'change @ui.uploader' : 'handleUpload'
+                'change @ui.uploader' : 'handleUpload',
+                'focus @ui.appname'   : 'removeError',
+                'focus @ui.display'   : 'removeError',
             },
 
             triggers: {
@@ -182,14 +184,33 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 reader.readAsText(file);
             },
 
+            removeError: function(evt){
+                var target = $(evt.target);
+                if (target.hasClass('error')) target.removeClass('error');
+            },
+
             saveApp: function(env){
                 env.stopPropagation();
                 env.preventDefault();
                 var name = this.ui.appname.val(),
                     origin = this.ui.origin.val(),
                     template = this.ui.display.val();
-                if ((!name) || (!template)) {
-                    utils.notifyWindow('Name and template is expected to be filled');
+                if (name.length > 30){
+                    utils.hasScroll(this.ui.appname);
+                    this.ui.appname.addClass('error');
+                    utils.notifyWindow('Max length 30 symbols');
+                    return;
+                }
+                if (!name) {
+                    utils.notifyWindow('Name is expected to be filled');
+                    this.ui.appname.addClass('error');
+                    utils.hasScroll(this.ui.appname);
+                    return;
+                }
+                if (!template){
+                    utils.notifyWindow('Template is expected to be filled');
+                    this.ui.display.addClass('error');
+                    utils.hasScroll(this.ui.display);
                     return;
                 }
                 this.model.set({name: name, origin: origin, template: template});

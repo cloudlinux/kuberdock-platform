@@ -19,11 +19,15 @@ class NodesUrl(object):
 
 
 class TestNodeCRUD(APITestCase):
-    def test_list(self):
+    @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
+    def test_list(self, get_nodes_collection):
+        get_nodes_collection.return_value = []
+
         response = self.admin_open(
             NodesUrl.list(), 'GET')
 
         self.assert200(response)
+        get_nodes_collection.assert_called_once_with()
 
     @mock.patch('kubedock.kapi.node_utils.get_one_node')
     def test_one(self, get_one_node):

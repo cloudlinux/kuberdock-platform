@@ -1,7 +1,7 @@
 Version: 1.1
 Name: kuberdock
 Summary: KuberDock
-Release: 1%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,6 +187,9 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
+* Tue Apr 12 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 1.1-2
+- Fixed non-uploading predefined apps yaml file on windows systems
+
 * Thu Apr 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 1.1-1
 - AC-1545: Predefined apps > 'Upload YAML' allows not YAML format.
 - AC-2245: added validation for kube max size. Added certain field name in error

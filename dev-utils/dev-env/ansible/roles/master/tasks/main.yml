@@ -45,6 +45,12 @@
   with_items:
       - tmux
 
+- name: Patching a licensing
+  lineinfile:
+      dest: /vagrant/kubedock/kapi/licensing.py
+      line: "def is_valid(): return True" 
+      state: present
+
 - name: Disable stuff
   service: name=emperor.uwsgi state=stopped
   when: is_dev_install
@@ -56,7 +62,22 @@
 - name: Up wsgi
   command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "sudo python wsgi.py" chdir=/vagrant
   when: is_dev_install
-  
+
+- name: Hide modified license file from git
+  become: False
+  command: git update-index --assume-unchanged ../../kubedock/kapi/licensing.py
+  delegate_to: localhost
+
+- name: Patching a UI
+  lineinfile:
+      dest: /var/opt/kuberdock/kubedock/frontend/templates/apps/index.html
+      regexp: "{{ item }}"
+      state: absent
+  with_items:
+      - "^(.*)remove this line to uncomment$"
+      - "^(.*)remove next line to uncomment (end of block)$"
+      - "^([ ]+)#}$"
+
 - name: Up celery
   command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "{{ item }}" C-m chdir=/vagrant
   with_items:

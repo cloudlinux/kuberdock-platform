@@ -442,7 +442,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         onRender: function(){
             this.ui.timezone.val('UTC (+0000)');
-            this.ui.selectpicker.selectpicker();
+            this.ui.selectpicker.selectpicker({ size: 7});
         },
 
         onSave: function(){
@@ -765,7 +765,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.ui.role_select.val(this.model.get('rolename'));
             this.ui.package_select.val(this.model.get('package'));
             this.ui.user_add_btn.html('Save');
-            this.ui.selectpicker.selectpicker();
+            this.ui.selectpicker.selectpicker({size: 7});
         },
 
         changeValue: function(){

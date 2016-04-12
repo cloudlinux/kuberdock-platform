@@ -770,10 +770,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 free_on_exit = True
                 raise APIError(
                     u'For now two pods cannot share one Persistent Disk. '
-                    u'{0}. Stop that pods before starting this one.'
+                    u'{0}. Stop these pods before starting this one.'
                     .format('; '.join('PD: {0}, Pod: {1}'.format(
                         item.name, item.pod.name)
-                            for item in taken_by_another_pod.values()
+                            for item in taken_by_another_pod
                         )
                     )
                 )

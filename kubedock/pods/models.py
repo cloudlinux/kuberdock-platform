@@ -421,21 +421,26 @@ class PersistentDisk(BaseModelMixin, db.Model):
         any free drives to the target pod.
 
         """
-        all_drives = cls.filter(cls.drive_name.in_(drives)).all()
-        taken_by_another = {item.drive_name: item for item in all_drives if
-                            (item.pod_id != pod_id and item.pod_id is not None)}
-        if taken_by_another:
-            return [], taken_by_another
-        now_taken = [item.drive_name for item in all_drives
-                     if item.pod_id is None]
-        if now_taken:
-            cls.filter(
-                cls.drive_name.in_(now_taken)
-            ).update(
-                {'pod_id': pod_id}, synchronize_session=False
-            )
-            db.session.commit()
-        return now_taken, {}
+        db.session.expire_all()
+        current_app.logger.debug("Locking drives %s for pod id %s" % (drives, pod_id))
+        all_drives = cls.filter(
+            cls.drive_name.in_(drives)).with_for_update().all()
+        current_app.logger.debug("LOCKED drives %s for pod id %s" % (drives, pod_id))
+
+        free = [item for item in all_drives if
+                item.pod_id is None]
+        now_taken = []
+        taken_by_another = [item for item in all_drives if
+                            (item.pod_id is not None and item.pod_id != pod_id)]
+        if not taken_by_another:
+            for drive in free:
+                drive.pod_id = pod_id
+            now_taken = free
+
+        current_app.logger.debug("Releasing drives %s for pod id %s" % (drives, pod_id))
+        db.session.commit()
+        current_app.logger.debug("RELEASED drives %s for pod id %s" % (drives, pod_id))
+        return now_taken, taken_by_another
 
     @classmethod
     def free(cls, pod_id):

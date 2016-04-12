@@ -1480,7 +1480,7 @@ class TestPodComposePersistent(DBTestCase):
             {'name': 'vol-2', 'persistentDisk': {'pdName': 'wncm',
                                                  'pdSize': 5}},
             {'name': 'vol-3', 'persistentDisk': {'pdName': 'default-1'}},
-            {'name': 'vol-4', 'persistentDisk': {'pdName': 'present-2'}},
+            {'name': 'vol-4', 'persistentDisk': {'pdName': 'present-2', 'pdSize': 2}},
         ]
         volumes_public = [
             {'name': 'vol-1', 'localStorage': True},

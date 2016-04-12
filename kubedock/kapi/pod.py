@@ -9,7 +9,7 @@ from .images import Image
 from .pstorage import get_storage_class
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
-from ..pods.models import db, PersistentDisk, Pod as DBPod
+from ..pods.models import db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
     NODE_LOCAL_STORAGE_PREFIX
 from ..users.models import User
@@ -154,6 +154,10 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             persistent_disk = PersistentDisk(name=name, owner_id=self.owner.id,
                                              size=pd.get('pdSize', 1))
             db.session.add(persistent_disk)
+        else:
+            if persistent_disk.state == PersistentDiskStatuses.DELETED:
+                persistent_disk.size = pd.get('pdSize', 1)
+            persistent_disk.state = PersistentDiskStatuses.PENDING
         if volume_public['persistentDisk'].get('pdSize') is None:
             volume_public['persistentDisk']['pdSize'] = persistent_disk.size
         pd_cls = get_storage_class()

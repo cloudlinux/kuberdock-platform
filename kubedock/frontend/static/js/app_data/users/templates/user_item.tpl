@@ -16,12 +16,12 @@
     <% } %>
 </td>
 <td class="actions col-sm-1">
-    <% if (active) { %>
-        <span class="blockUser" title="Lock user <%- username %>"></span>
-    <% } else { %>
+    <% if (!active) { %>
         <span class="activeteUser" title="Activate user <%- username %>"></span>
+    <% } else if (actions.lock){ %>
+        <span class="blockUser" title="Lock user <%- username %>"></span>
     <% } %>
-    <% if (deletable){ %>
-    <span class="deleteUser" class="pull-right" title="Remove <%- username %>"></span>
+    <% if (actions.delete){ %>
+        <span class="deleteUser" class="pull-right" title="Remove <%- username %>"></span>
     <% } %>
 </td>

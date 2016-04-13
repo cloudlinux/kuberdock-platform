@@ -16,8 +16,8 @@
         <div class="control-group">
             <button id="edit_user">Edit user</button>
             <button id="login_this_user">Login as this user</button>
-            <% if (deletable){ %>
-            <button id="delete_user">Delete</button>
+            <% if (actions.delete){ %>
+                <button id="delete_user">Delete</button>
             <% } %>
         </div>
     </div>

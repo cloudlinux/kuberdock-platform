@@ -182,7 +182,6 @@ class User(BaseModelMixin, UserMixin, db.Model):
             data['join_date'] = self.join_date
             data['last_activity'] = last_activity if last_activity else ''
             data['last_login'] = last_login if last_login else None
-            data['deletable'] = True
         return data
 
     def history_logged_in(self):

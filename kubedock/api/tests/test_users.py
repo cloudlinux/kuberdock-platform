@@ -21,16 +21,29 @@ class UserCRUDTestCase(APITestCase):
         # get list
         response = self.admin_open()
         self.assert200(response)
-        user, admin = self.user.to_dict(full=True), self.admin.to_dict(full=True)
-        user['join_date'] = user['join_date'].replace(tzinfo=pytz.utc).isoformat()
-        admin['join_date'] = admin['join_date'].replace(tzinfo=pytz.utc).isoformat()
+        user, admin = self.user.to_dict(full=True), self.admin.to_dict(
+            full=True)
+        user['join_date'] = user['join_date'].replace(
+            tzinfo=pytz.utc).isoformat()
+        admin['join_date'] = admin['join_date'].replace(
+            tzinfo=pytz.utc).isoformat()
+        user_short, admin_short = self.user.to_dict(), self.admin.to_dict()
+        self_actions = {'lock': False, 'suspend': False, 'delete': False}
+        actions = {'lock': True, 'suspend': True, 'delete': True}
+        user_short['actions'] = user['actions'] = actions
+        admin_short['actions'] = admin['actions'] = self_actions
+
+        from pprint import pprint
+        pprint(user)
+        pprint(response.json['data'])
+
         self.assertIn(user, response.json['data'])
         self.assertIn(admin, response.json['data'])
         # short
         response = self.admin_open(self.url + '?short=true')
         self.assert200(response)
-        self.assertIn(self.user.to_dict(), response.json['data'])
-        self.assertIn(self.admin.to_dict(), response.json['data'])
+        self.assertIn(user_short, response.json['data'])
+        self.assertIn(admin_short, response.json['data'])
 
         # get one
         response = self.admin_open(self.item_url(12345))
@@ -43,7 +56,7 @@ class UserCRUDTestCase(APITestCase):
         self.assertAPIError(response, 404, 'UserNotFound')
         response = self.admin_open(self.item_url(self.user.id) + '?short=true')
         self.assert200(response)
-        self.assertEqual(self.user.to_dict(), response.json['data'])
+        self.assertEqual(user_short, response.json['data'])
 
     # @unittest.skip('')
     @mock.patch('kubedock.kapi.users.license_valid', lambda *a, **kw: True)

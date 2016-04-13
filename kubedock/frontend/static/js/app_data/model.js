@@ -636,6 +636,16 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         urlRoot: '/api/users/all',
         parse: unwrapper,
 
+        defaults: function(){
+            return {
+                actions: {
+                    'lock': true,
+                    'delete': true,
+                    'suspend': true,
+                },
+            };
+        },
+
         deleteUserConfirmDialog: function(options, text, force){
             var that = this;
             text = text || ('Are you sure you want to delete user "' +

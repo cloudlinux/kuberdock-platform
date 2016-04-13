@@ -1017,32 +1017,75 @@ define(['app_data/app', 'app_data/model',
         },
 
         finalStep: function(){
-            var env = this.model.get('env');
-
-            this.model.set('env',env = _.filter(env, function(item){ return item.name; }));
-
-            var successName = true,
+            var that = this,
+                validName = true,
+                firstSumbol = true,
                 successValue = true,
-                pattern = /^[a-zA-Z][a-zA-Z0-9-_\.]*$/;
+                maxNamelength = true,
+                notDublicateName = true,
+                env = this.model.get('env'),
+                paternFirstSumbol = /^[a-zA-Z]/,
+                paternValidName = /^[a-zA-Z0-9-_\.]*$/;
 
-            _.each(this.ui.nameField, function(item){
-                if (!pattern.test(item.value)){
-                    $(item).addClass('error');
-                    successName = false;
+            /* get only not empty env from model */
+            this.model.set('env', env = _.filter(env, function(item){ return item.name; }));
+
+            /* validation & triming extra spacing */
+            _.each(env, function(envItem, indexEnv){
+                var name = that.ui.nameField[indexEnv];
+                envItem.name = name.value.trim();
+                $(name).val(envItem.name);
+                if (!paternFirstSumbol.test(envItem.name)){
+                    $(name).addClass('error');
+                    firstSumbol = false;
                 }
-            });
+                if (!paternValidName.test(envItem.name)){
+                    $(name).addClass('error');
+                    validName = false;
+                }
+                if (envItem.name.length > 255){
+                    $(name).addClass('error');
+                    maxNamelength = false;
+                }
 
-            _.each(this.ui.valueField, function(item){
-                if (!item.value){
-                    $(item).addClass('error');
+                var value = that.ui.valueField[indexEnv];
+                envItem.value = value.value.trim();
+                $(value).val(envItem.value);
+                if (!envItem.value){
+                    $(value).addClass('error');
                     successValue = false;
                 }
             });
 
+            /* check to uniq values */
+            var uniqEnvs = _.uniq(env, function(item){ return item.name; }),
+                difference = _.difference(env, uniqEnvs);
+
+            if (difference.length != 0){
+                _.each(difference, function(item){
+                    _.each(that.ui.nameField, function(field){
+                        if (field.value == item.name) $(field).addClass('error');
+                    })
+                });
+                difference.length = 0;
+                notDublicateName = false;
+            }
+
+            /* scroling to error */
             if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
+
+            /* error messages */
+            if (!maxNamelength) utils.notifyWindow('Max length 255 sumbols');
             if (!successValue) utils.notifyWindow('Variables value must be set');
-            if (!successName) utils.notifyWindow('First symbol must be letter in variables name');
-            if (successName && successValue) this.trigger('step:complete');
+            if (!firstSumbol) utils.notifyWindow('First symbol must be letter in variables name');
+            if (!notDublicateName) utils.notifyWindow('You can\'t has duplicate environment variables names');
+            if (!validName) utils.notifyWindow('Environment variables names are expected to be in the field latin character and "-", ".", "_" sumbols only');
+
+            /* save data & navigate to next step */
+            if (firstSumbol && successValue && notDublicateName && validName && maxNamelength){
+                this.model.set('env', env);
+                this.trigger('step:complete');
+            }
         },
 
         addItem: function(evt){

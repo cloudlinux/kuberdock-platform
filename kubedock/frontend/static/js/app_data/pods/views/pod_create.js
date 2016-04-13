@@ -1075,11 +1075,11 @@ define(['app_data/app', 'app_data/model',
             if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
 
             /* error messages */
-            if (!maxNamelength) utils.notifyWindow('Max length 255 sumbols');
+            if (!maxNamelength) utils.notifyWindow('Max length is 255 symbols');
             if (!successValue) utils.notifyWindow('Variables value must be set');
             if (!firstSumbol) utils.notifyWindow('First symbol must be letter in variables name');
-            if (!notDublicateName) utils.notifyWindow('You can\'t has duplicate environment variables names');
-            if (!validName) utils.notifyWindow('Environment variables names are expected to be in the field latin character and "-", ".", "_" sumbols only');
+            if (!notDublicateName) utils.notifyWindow('Duplicate variable names are not allowed');
+            if (!validName) utils.notifyWindow('Variable name should contain only Latin letters or ".", "_", "-" symbols');
 
             /* save data & navigate to next step */
             if (firstSumbol && successValue && notDublicateName && validName && maxNamelength){

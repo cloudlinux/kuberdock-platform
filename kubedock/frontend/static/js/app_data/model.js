@@ -175,7 +175,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             else if (mountPath.length > 30)
                 return 'Mount path maximum length is 30 symbols';
             else if (!/^[\w/.-]*$/.test(mountPath))
-                return 'Mount path should contain letters of Latin alphabet or "/", "_", "-" sumbols';
+                return 'Mount path should contain letters of Latin alphabet or "/", "_", "-" symbols';
         },
     });
 

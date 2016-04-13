@@ -4,8 +4,9 @@ from collections import namedtuple
 
 import mock
 
-from kubedock.kapi import pd_utils
 from kubedock import settings
+from kubedock.kapi import pd_utils
+
 
 class TestPdUtils(unittest.TestCase):
     """Tests for pd_utils functions."""

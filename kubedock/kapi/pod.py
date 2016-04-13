@@ -1,20 +1,19 @@
 import json
 import os
 import shlex
-from uuid import uuid4
 from copy import deepcopy
-from .helpers import KubeQuery, ModelQuery, Utilities
+from uuid import uuid4
 
-from .pstorage import get_storage_class
+from .helpers import KubeQuery, ModelQuery, Utilities
 from .images import Image
+from .pstorage import get_storage_class
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
-from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
-                        NODE_LOCAL_STORAGE_PREFIX
-from ..utils import POD_STATUSES
 from ..pods.models import db, PersistentDisk
+from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
+    NODE_LOCAL_STORAGE_PREFIX
 from ..users.models import User
-
+from ..utils import POD_STATUSES
 
 ORIGIN_ROOT = 'originroot'
 OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
@@ -84,15 +83,24 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         continue
                     for container in pod.containers:
                         if container['name'] == pod_item['name']:
-                            state, stateDetails = pod_item.pop('state').items()[0]
+                            state, stateDetails = pod_item.pop(
+                                'state').items()[0]
                             pod_item['state'] = state
-                            pod_item['startedAt'] = stateDetails.get('startedAt')
+                            pod_item['startedAt'] = stateDetails.get(
+                                'startedAt')
                             if state == 'terminated':
-                                pod_item['exitCode'] = stateDetails.get('exitCode')
-                                pod_item['finishedAt'] = stateDetails.get('finishedAt')
-                            container_id = pod_item.get('containerID', container['name'])
-                            pod_item['containerID'] = _del_docker_prefix(container_id)
-                            image_id = pod_item.get('imageID', container['image'])
+                                pod_item['exitCode'] = stateDetails.get(
+                                    'exitCode')
+                                pod_item['finishedAt'] = stateDetails.get(
+                                    'finishedAt')
+                            container_id = pod_item.get(
+                                'containerID',
+                                container['name'])
+                            pod_item['containerID'] = _del_docker_prefix(
+                                container_id)
+                            image_id = pod_item.get(
+                                'imageID',
+                                container['image'])
                             pod_item['imageID'] = _del_docker_prefix(image_id)
                             container.update(pod_item)
             else:
@@ -191,7 +199,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         if isinstance(local_storage, dict) and 'path' in local_storage:
             path = local_storage['path']
         else:
-            path = os.path.join(NODE_LOCAL_STORAGE_PREFIX, self.id, volume['name'])
+            path = os.path.join(NODE_LOCAL_STORAGE_PREFIX, self.id,
+                                volume['name'])
         volume['hostPath'] = {'path': path}
 
     # We can't use pod's ports from spec because we strip hostPort from them
@@ -199,7 +208,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         return json.dumps([c.get('ports', []) for c in self.containers])
 
     def _dump_kubes(self):
-        return json.dumps({c.get('name'): c.get('kubes', 1) for c in self.containers})
+        return json.dumps(
+            {c.get('name'): c.get('kubes', 1) for c in self.containers})
 
     def extract_volume_annotations(self, volumes):
         if not volumes:
@@ -226,7 +236,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             container['volumeMounts'] = [
                 item for item in container.get('volumeMounts', [])
                 if item['name'] in existing_vols
-            ]
+                ]
             containers.append(
                 self._prepare_container(container, kube_type, volumes)
             )
@@ -264,7 +274,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     "spec": {
                         "volumes": volumes,
                         "containers": containers,
-                        "restartPolicy": getattr(self, 'restartPolicy', 'Always'),
+                        "restartPolicy": getattr(self, 'restartPolicy',
+                                                 'Always'),
                         "imagePullSecrets": [{"name": secret}
                                              for secret in secrets]
                     }
@@ -274,7 +285,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod_config = config['spec']['template']
 
         # Internal services may run on any nodes, do not care of kube type of
-        # the node. All other kube types must be binded to the appropriate nodes
+        # the node. All other kube types must be binded to the appropriate
+        # nodes
         if Kube.is_node_attachable_type(kube_type):
             pod_config['spec']['nodeSelector'] = {
                 "kuberdock-kube-type": "type_{0}".format(kube_type)
@@ -282,9 +294,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         else:
             pod_config['spec']['nodeSelector'] = {}
         if hasattr(self, 'node') and self.node:
-            pod_config['spec']['nodeSelector']['kuberdock-node-hostname'] = self.node
+            pod_config['spec']['nodeSelector']['kuberdock-node-hostname'] = \
+                self.node
         if hasattr(self, 'public_ip'):
-            pod_config['metadata']['labels']['kuberdock-public-ip'] = self.public_ip
+            pod_config['metadata']['labels']['kuberdock-public-ip'] = \
+                self.public_ip
         return config
 
     def _update_volume_path(self, name, vid):
@@ -316,7 +330,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             kubes = int(data.pop('kubes'))
         except (KeyError, ValueError):
             pass
-        else:   # if we create pod, not start stopped
+        else:  # if we create pod, not start stopped
             data.update(kubes_to_limits(kubes, kube_type))
 
         wd = data.get('workingDir', '.')
@@ -325,7 +339,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
         for p in data.get('ports', []):
             p['protocol'] = p.get('protocol', 'TCP').upper()
-            p.pop('isPublic', None)     # Non-kubernetes param
+            p.pop('isPublic', None)  # Non-kubernetes param
 
         if self.owner != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
@@ -338,31 +352,31 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         return data
 
     def add_origin_root(self, container, volumes):
-        '''If there are lifecycle in container, then mount origin root from
+        """If there are lifecycle in container, then mount origin root from
         docker overlay path. Need this for container hooks.
-        '''
+        """
         if 'lifecycle' in container:
             image = Image(container['image'])
             image_id = image.get_id()
             volume_name = '-'.join([container['name'], ORIGIN_ROOT])
             volumes.append(
-                {u'hostPath':
-                 {u'path': OVERLAY_PATH.format(image_id)},
+                {u'hostPath': {u'path': OVERLAY_PATH.format(image_id)},
                  u'name': volume_name})
             container['volumeMounts'].append(
                 {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
                  u'name': volume_name})
 
     def add_securety_labels(self, container, volumes):
-        '''Add SELinuxOptions to volumes. For now, just add docker `:Z` option
+        """Add SELinuxOptions to volumes. For now, just add docker `:Z` option
         to mountPath.
-        '''
+        """
         # TODO: after k8s 1.2 version, use
         # `pod.Spec.SecurityContext.SELinuxOptions`
         for volume_mount in container.get('volumeMounts', ()):
             for volume in volumes:
                 if ('rbd' in volume and
                         volume.get('name') == volume_mount.get('name')):
+
                     mountPath = volume_mount.get('mountPath', '')
                     if mountPath and mountPath[-2:] not in (':Z', ':z'):
                         volume_mount['mountPath'] += ':Z'

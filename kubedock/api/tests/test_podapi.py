@@ -1,9 +1,9 @@
+from random import randint
 from uuid import uuid4
 
 import mock
 
-from kubedock.kapi import podcollection
-from kubedock.kapi.podcollection import PodCollection
+from kubedock.kapi.podcollection import PodNotFound
 from kubedock.testutils.testcases import APITestCase
 
 
@@ -30,7 +30,10 @@ class PodAPIUrl(object):
 
 
 class TestPodAPI(APITestCase):
-    def test_get_not_found(self):
+    @mock.patch('kubedock.api.podapi.PodCollection')
+    def test_get_not_found(self, PodCollection):
+        PodCollection().get.side_effect = PodNotFound()
+
         response = self.open(
             PodAPIUrl.get(12345), 'GET', auth=self.userauth)
 
@@ -43,8 +46,10 @@ class TestPodAPI(APITestCase):
         self.assertAPIError(response, 400, 'APIError')
 
     @mock.patch('kubedock.validation.V._validate_kube_type_exists')
-    @mock.patch('kubedock.kapi.images.Image._check_availability')
-    def test_post(self, *_):
+    # @mock.patch('kubedock.kapi.images.Image._check_availability')
+    @mock.patch('kubedock.api.podapi.PodCollection')
+    def test_post(self, PodCollection, *_):
+        PodCollection().add.return_value = {}
         response = self.open(
             PodAPIUrl.post(), 'POST', valid_create_pod_params(),
             auth=self.userauth)
@@ -57,37 +62,41 @@ class TestPodAPI(APITestCase):
 
         self.assertAPIError(response, 404, 'PodNotFound')
 
-    @mock.patch('kubedock.kapi.images.Image._check_availability')
-    def test_put(self, *_):
-        pod_collection = PodCollection(self.user).add(
-            valid_create_pod_params())
+    @mock.patch('kubedock.api.podapi.Pod')
+    @mock.patch('kubedock.api.podapi.PodCollection')
+    def test_put(self, PodCollection, Pod):
+        pod_id = randint(1, 1000)
+        PodCollection().update.return_value = {}
+        Pod.query = mock.Mock()
 
         response = self.open(
-            PodAPIUrl.put(pod_collection['id']), 'PUT', {},
+            PodAPIUrl.put(pod_id), 'PUT', {},
             auth=self.userauth)
 
         self.assert200(response)
 
-    def test_delete_not_found(self):
+    @mock.patch('kubedock.api.podapi.PodCollection')
+    def test_delete_not_found(self, PodCollection):
+        PodCollection().delete.side_effect = PodNotFound()
+
         response = self.open(
             PodAPIUrl.delete(123), 'DELETE', {}, auth=self.userauth)
 
         self.assertAPIError(response, 404, 'PodNotFound')
 
-    @mock.patch('kubedock.kapi.images.Image._check_availability')
-    def test_delete(self, *_):
-        pod_collection = PodCollection(self.user).add(
-            valid_create_pod_params())
+    @mock.patch('kubedock.api.podapi.PodCollection')
+    def test_delete(self, PodCollection):
+        delete_id = randint(1, 1000)
+        PodCollection().delete.return_value = delete_id
 
         response = self.open(
-            PodAPIUrl.delete(pod_collection['id']),
-            'DELETE', {}, auth=self.userauth)
+            PodAPIUrl.delete(delete_id), 'DELETE', {}, auth=self.userauth)
 
         self.assert200(response)
 
-    @mock.patch.object(podcollection.PodCollection, 'check_updates')
-    def test_check_updates(self, check_updates):
-        check_updates.return_value = False
+    @mock.patch('kubedock.api.podapi.PodCollection')
+    def test_check_updates(self, PodCollection):
+        PodCollection().check_updates.return_value = False
 
         pod_id = str(uuid4())
         container_name = 'just name'
@@ -98,11 +107,12 @@ class TestPodAPI(APITestCase):
 
         self.assert200(response)
 
-        check_updates.assert_called_once_with(pod_id, container_name)
+        PodCollection().check_updates.assert_called_once_with(
+            pod_id, container_name)
 
-    @mock.patch.object(podcollection.PodCollection, 'update_container')
-    def test_update_container(self, check_updates):
-        check_updates.return_value = {}
+    @mock.patch('kubedock.api.podapi.PodCollection')
+    def test_update_container(self, PodCollection):
+        PodCollection().update_container.return_value = {}
 
         pod_id = str(uuid4())
         container_name = 'just name'
@@ -113,4 +123,5 @@ class TestPodAPI(APITestCase):
 
         self.assert200(response)
 
-        check_updates.assert_called_once_with(pod_id, container_name)
+        PodCollection().update_container.assert_called_once_with(
+            pod_id, container_name)

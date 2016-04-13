@@ -1,7 +1,6 @@
 import mock
 
 from kubedock.api import yaml_api
-from kubedock.kapi import podcollection
 from kubedock.testutils.testcases import APITestCase
 
 _CORRECT_REDIS_YML = """
@@ -133,9 +132,10 @@ class TestYamlAPI(APITestCase):
 
     @mock.patch.object(yaml_api, 'send_event')
     @mock.patch('kubedock.validation.V._validate_kube_type_exists')
-    @mock.patch.object(podcollection.PodCollection, 'add')
-    def test_correct_yaml(self, add, *_):
-        add.return_value = {}
+    @mock.patch('kubedock.api.yaml_api.PodCollection')
+    def test_correct_yaml(self, PodCollection, *_):
+        PodCollection().add.return_value = {}
+
         for yml_config in [_CORRECT_NGINX_YAML, _CORRECT_REDIS_YML]:
             response = self.open(YamlURL.post(), 'POST', {
                 'data': yml_config

@@ -1,4 +1,3 @@
 tmux_session_name: kd_tmux_session
 pub_key: /var/lib/nginx/.ssh/id_rsa.pub
 is_dev_install: "{{ lookup('env','KD_DEV_INSTALL') }}"
-

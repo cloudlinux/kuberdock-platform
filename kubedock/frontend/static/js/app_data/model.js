@@ -635,6 +635,19 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     data.UserModel = Backbone.Model.extend({
         urlRoot: '/api/users/all',
         parse: unwrapper,
+        defaults: function(){
+            return {
+                username: '',
+                first_name: '',
+                last_name: '',
+                middle_initials: '',
+                email: '',
+                timezone: 'UTC (+0000)',
+                rolename: 'User',
+                active: true,
+                suspended: false,
+            };
+        },
 
         deleteUserConfirmDialog: function(options, text, force){
             var that = this;

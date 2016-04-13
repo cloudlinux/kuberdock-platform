@@ -83,11 +83,11 @@ define(['backbone', 'marionette'], function(Backbone, Marionette){
                         deferred.resolveWith(that, [that.userCollection]);
                     }
                     else {
-                        that.userCollection = new Model.UsersPageableCollection();
-                        that.userCollection.fetch({
+                        new Model.UsersPageableCollection().fetch({
                             wait: true,
                             success: function(collection, response, options){
                                 deferred.resolveWith(that, [collection]);
+                                that.userCollection = collection;
                             },
                             error: function(collection, response) {
                                 Utils.notifyWindow(response);

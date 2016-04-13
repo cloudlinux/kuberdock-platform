@@ -63,8 +63,8 @@ def get_user_activities(user):
     data = request.args
     data_from = data.get('date_from')
     date_to = data.get('date_to')
-    return UserCollection().get_activities(user, data_from,
-                                           date_to, to_dict=True)
+    return UserCollection(KubeUtils._get_current_user()).get_activities(
+        user, data_from, date_to, to_dict=True)
 
 
 @users.route('/logHistory', methods=['GET'])
@@ -96,24 +96,24 @@ class UsersAPI(KubeUtils, MethodView):
     def get(self, uid=None):
         full = not extbool(KubeUtils._get_params().get('short', False))
         with_deleted = request.args.get('with-deleted')
-        return UserCollection().get(user=uid,
-                                    with_deleted=with_deleted, full=full)
+        return UserCollection(KubeUtils._get_current_user()).get(
+            user=uid, with_deleted=with_deleted, full=full)
 
     @check_permission('create', 'users')
     def post(self):
         data = KubeUtils._get_params()
-        return UserCollection().create(data)
+        return UserCollection(KubeUtils._get_current_user()).create(data)
 
     @check_permission('edit', 'users')
     def put(self, uid):
         data = KubeUtils._get_params()
-        return UserCollection().update(uid, data)
+        return UserCollection(KubeUtils._get_current_user()).update(uid, data)
     patch = put
 
     @check_permission('delete', 'users')
     def delete(self, uid):
         force = KubeUtils._get_params().get('force', False)
-        return UserCollection().delete(uid, force)
+        return UserCollection(KubeUtils._get_current_user()).delete(uid, force)
 register_api(users, UsersAPI, 'podapi', '/all/', 'uid', strict_slashes=False)
 
 
@@ -130,7 +130,8 @@ def get_self():
 def edit_self():
     uid = KubeUtils._get_current_user().id
     data = KubeUtils._get_params()
-    return UserCollection().update_profile(uid, data)
+    doer = KubeUtils._get_current_user()
+    return UserCollection(doer).update_profile(uid, data)
 
 
 @users.route('/undelete/<uid>', methods=['POST'])
@@ -138,4 +139,4 @@ def edit_self():
 @check_permission('create', 'users')
 @KubeUtils.jsonwrap
 def undelete_item(uid):
-    return UserCollection().undelete(uid)
+    return UserCollection(KubeUtils._get_current_user()).undelete(uid)

@@ -1041,16 +1041,12 @@ class UserValidator(V):
             if Role.by_rolename(value) is None:
                 self._error(field, "Role doesn't exists")
 
-    def validate_user_create(self, data):
+    def validate_user(self, data, update=False):
         data = _clear_timezone(data, ['timezone'])
-        return self._api_validation(data, user_schema)
-
-    def validate_user_update(self, data):
-        data = _clear_timezone(data, ['timezone'])
-        data = self._api_validation(data, user_schema, update=True)
-        if self.allow_unknown:  # filter unknown
-            return {key: value for key, value in data.iteritems()
-                    if key in user_schema}
+        data = self._api_validation(data, user_schema, update=update)
+        # TODO: with cerberus 0.10, just use "purge_unknown" option
+        data = {key: value for key, value in data.iteritems()
+                if key in user_schema}
         return data
 
     def _validate_type_username(self, field, value):

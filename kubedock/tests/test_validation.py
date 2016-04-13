@@ -3,6 +3,7 @@ import unittest
 import mock
 import random
 import string
+from functools import partial
 from .. import validation
 
 
@@ -57,7 +58,7 @@ class TestUserCreateValidation(unittest.TestCase):
         self.addCleanup(patcher.stop)
         self.unique_validation_mock = patcher.start()
 
-        self.validator = UserValidator().validate_user_create
+        self.validator = UserValidator().validate_user
 
     @staticmethod
     def randstr(length=10, symbols=string.ascii_letters):
@@ -236,7 +237,7 @@ class TestUserEditValidation(TestUserCreateValidation):
     def setUp(self):
         super(TestUserEditValidation, self).setUp()
 
-        self.validator = UserValidator(id=1).validate_user_update
+        self.validator = partial(UserValidator(id=1).validate_user, update=True)
 
     def assertRequired(self, *args, **kwargs):  # partial update allowed
         pass

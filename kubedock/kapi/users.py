@@ -8,7 +8,7 @@ from ..core import db
 from ..utils import APIError, atomic
 from ..validation import UserValidator
 from ..billing.models import Package
-from ..pods.models import Pod, PersistentDisk
+from ..pods.models import Pod
 from ..rbac.models import Role
 from ..users.models import User, UserActivity
 from ..system_settings.models import SystemSettings
@@ -24,8 +24,7 @@ HOSTING_PANEL = 'hostingPanel'
 
 
 class ResourceReleaseError(APIError):
-    """Occurs when some of user's resources couldn't be released."""
-    type = 'ResourceReleaseError'
+    message = "Some of user's resources couldn't be released."
 
 
 class UserNotFound(APIError):
@@ -33,7 +32,32 @@ class UserNotFound(APIError):
     status_code = 404
 
 
+class UserIsNotDeleteable(APIError):
+    status_code = 403
+
+    def __init__(self, username):
+        self.message = 'User {0} is undeletable'.format(username)
+
+
+class UserIsNotLockable(APIError):
+    status_code = 403
+
+    def __init__(self, username):
+        self.message = 'User {0} cannot be locked'.format(username)
+
+
+class UserIsNotSuspendable(APIError):
+    status_code = 403
+
+    def __init__(self, username):
+        self.message = 'User {0} cannot be suspended'.format(username)
+
+
 class UserCollection(object):
+    def __init__(self, doer=None):
+        self.doer = doer
+
+
     def get(self, user=None, with_deleted=False, full=False):
         """Get user or list of users
 
@@ -44,10 +68,13 @@ class UserCollection(object):
         """
         users = User.query if with_deleted else User.not_deleted
         if user is None:
-            return self._set_deletability([u.to_dict(full=full) for u in users.all()])
+            return [dict(u.to_dict(full=full),
+                         actions=self._get_applicability(u))
+                    for u in users.all()]
 
         user = self._convert_user(user)
-        return user.to_dict(full=full)
+        return dict(user.to_dict(full=full),
+                    actions=self._get_applicability(user))
 
     @atomic(APIError("Couldn't create user.", 500, 'UserCreateError'), nested=False)
     @enrich_tz_with_offset(['timezone'])
@@ -55,7 +82,7 @@ class UserCollection(object):
         """Create user"""
         if not license_valid():
             raise APIError("Action forbidden. Please check your license")
-        data = UserValidator().validate_user_create(data)
+        data = UserValidator(allow_unknown=True).validate_user(data)
         role = Role.by_rolename(data['rolename'])
         package = Package.by_name(data['package'])
         self.get_client_id(data, package)
@@ -79,7 +106,8 @@ class UserCollection(object):
         """
         user = self._convert_user(user)
 
-        data = UserValidator(id=user.id, allow_unknown=True).validate_user_update(data)
+        validator = UserValidator(id=user.id, allow_unknown=True)
+        data = validator.validate_user(data, update=True)
         if 'rolename' in data:
             rolename = data.pop('rolename', 'User')
             r = Role.by_rolename(rolename)
@@ -106,6 +134,7 @@ class UserCollection(object):
 
         if 'suspended' in data and data['suspended'] != user.suspended and user.active:
             if data['suspended']:
+                self._is_suspendable(user, raise_=True)
                 self._suspend_user(user)
             else:
                 self._unsuspend_user(user)
@@ -116,6 +145,7 @@ class UserCollection(object):
                 if not user.suspended:
                     self._unsuspend_user(user)
             else:
+                self._is_lockable(user, raise_=True)
                 user.logout(commit=False)
                 if not user.suspended:
                     self._suspend_user(user)
@@ -134,7 +164,8 @@ class UserCollection(object):
         :raises APIError:
         """
         user = self._convert_user(user)
-        data = UserValidator(id=user.id, allow_unknown=True).validate_user_update(data)
+        validator = UserValidator(id=user.id, allow_unknown=True)
+        data = validator.validate_user(data, update=True)
         user.update(data, for_profile=True)
         db.session.flush()
         return user.to_dict()
@@ -148,8 +179,7 @@ class UserCollection(object):
         :raises APIError: if user was not found
         """
         user = self._convert_user(user)
-        if not self._is_deletable(user):
-            raise APIError('User {0} is undeletable'.format(user.username), 403)
+        self._is_deletable(user, raise_=True)
         uid = user.id
         user.logout(commit=False)
 
@@ -220,30 +250,34 @@ class UserCollection(object):
             raise UserNotFound('User "{0}" does not exists'.format(user))
         return result
 
-    @staticmethod
-    def _set_deletability(collection):
-        """Marks a collection user as deletable or not"""
-        admins = []
-        for user in collection:
-            if user.get('rolename') == 'Admin':
-                admins.append(user)
-                continue
-            if user.get('username') in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL):
-                user['deletable'] = False
-        if len(admins) == 1:
-            for admin in admins:
-                admin['deletable'] = False
-        return collection
+    def _get_applicability(self, user):
+        """Mark applicable actions for user."""
+        return {
+            'lock': self._is_lockable(user),
+            'delete': self._is_deletable(user),
+            'suspend': self._is_suspendable(user),
+        }
 
-    @staticmethod
-    def _is_deletable(user):
-        if user.is_administrator():
-            if len([u for u in User.query.filter_by(deleted=False).all()
-                        if u.role.rolename == 'Admin']) == 1:
-                return False
-        if user.username in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL):
-            return False
-        return True
+    def _is_deletable(self, user, raise_=False):
+        able = (self.doer != user and
+                user.username not in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL))
+        if raise_ and not able:
+            raise UserIsNotDeleteable(user.username)
+        return able
+
+    def _is_lockable(self, user, raise_=False):
+        able = (self.doer != user and
+                user.username not in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL))
+        if raise_ and not able:
+            raise UserIsNotLockable(user.username)
+        return able
+
+    def _is_suspendable(self, user, raise_=False):
+        able = (not user.is_administrator() and
+                user.username not in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL))
+        if raise_ and not able:
+            raise UserIsNotSuspendable(user.username)
+        return able
 
     @staticmethod
     @atomic()

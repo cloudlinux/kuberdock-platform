@@ -34,7 +34,8 @@ settings = Blueprint('settings', __name__, url_prefix='/settings')
 #                 _roles[rolename].append(p.to_dict())
 #             else:
 #                 _roles[rolename] = [p.to_dict()]
-#         data.append({'id': res.id, 'name': res.name, 'permissions': list(perms),
+#         data.append({'id': res.id, 'name': res.name,
+#                       'permissions': list(perms),
 #                      'roles': _roles, 'all_roles': roles})
 #     return roles, data
 #
@@ -56,8 +57,8 @@ settings = Blueprint('settings', __name__, url_prefix='/settings')
 #     return jsonify({'status': 'OK'})
 
 
-#########################
-### Notifications API ###
+#####################
+# Notifications API #
 # def to_dict(x):
 #     return dict(id=x.id, subject=x.subject, event=EVENTS[x.event],
 #                 event_id=x.event, text_plain=x.text_plain,
@@ -95,7 +96,8 @@ settings = Blueprint('settings', __name__, url_prefix='/settings')
 #     t = model.filter_by(event=data['event']).first()
 #     if t:
 #         raise APIError('Conflict: Template with event "{0}" already '
-#                        'exists'.format(NotificationEvent.get_event_name(event)))
+#                        'exists'.format(NotificationEvent.get_event_name(
+#                        event)))
 #     try:
 #         t = model(**data)
 #         db.session.add(t)
@@ -179,11 +181,12 @@ def get_all_timezones():
 
 class SystemSettingsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
-    public_settings = ('billing_type', 'billing_url', 'persitent_disk_max_size',
-                       'max_kubes_per_container')
+    public_settings = ('billing_type', 'billing_url',
+                       'persitent_disk_max_size', 'max_kubes_per_container')
 
     def get(self, sid):
-        data = SystemSettings.get_all() if sid is None else SystemSettings.get(sid)
+        data = SystemSettings.get_all() if sid is None \
+            else SystemSettings.get(sid)
         if check_permission('read_private', 'system_settings'):
             return data
         if check_permission('read', 'system_settings'):
@@ -211,4 +214,5 @@ class SystemSettingsAPI(KubeUtils, MethodView):
     def delete(self, sid):
         pass
 
-register_api(settings, SystemSettingsAPI, 'settings', '/sysapi/', 'sid', 'int', strict_slashes=False)
+register_api(settings, SystemSettingsAPI, 'settings', '/sysapi/', 'sid', 'int',
+             strict_slashes=False)

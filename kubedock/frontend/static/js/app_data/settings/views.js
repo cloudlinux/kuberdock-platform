@@ -360,7 +360,7 @@ define(['app_data/app', 'marionette',
             this.ui.middle_initials.val(this.model.get('middle_initials'));
             this.ui.email.val(this.model.get('email'));
             this.ui.timezone.val(this.model.get('timezone'));
-            this.ui.timezone.selectpicker();
+            this.ui.timezone.selectpicker({ size: 7 });
         },
 
         changeValue: function(){

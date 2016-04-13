@@ -285,8 +285,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         _getActivities: function(username, dateFrom, dateTo){
-            var that = this,
-                now = utils.dateYYYYMMDD();
+            var that = this;
 
             if (dateFrom > dateTo){
                 this.ui.dateFrom.addClass('error');
@@ -385,7 +384,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         }
     });
 
-    views.UserCreateView = Backbone.Marionette.ItemView.extend({
+    views.UserFormBaseView = Backbone.Marionette.ItemView.extend({
         template : userCreateTpl,
         tagName  : 'div',
 
@@ -393,6 +392,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.roles = options.roles;
             this.packages = options.packages;
             this.timezones = options.timezones;
+            this.listenTo(this, 'render',
+                function(){ this.ui.selectpicker.selectpicker({size: 7}); });
         },
 
         templateHelpers: function(){
@@ -425,29 +426,32 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         events: {
-            'click @ui.users_page'                  : 'back',
-            'click @ui.user_cancel_btn'             : 'back',
-            'click @ui.user_add_btn'                : 'onSave',
-            'focus @ui.input'                       : 'removeError',
-            'input @ui.input'                       : 'changeValue',
-            'change @ui.selectpicker'               : 'changeValue',
-            'change @ui.input[type="checkbox"]'     : 'changeValue',
-            'change @ui.timezone'                   : 'changeValue'
+            'click @ui.users_page'     : 'toUserList',
+            'click @ui.user_cancel_btn': 'toUserList',
+            'focus @ui.input'          : 'removeError',
         },
 
-        onRender: function(){
-            this.ui.timezone.val('UTC (+0000)');
-            this.ui.selectpicker.selectpicker();
+        getData: function(){
+            return {
+                'username'        : this.ui.username.val(),
+                'first_name'      : this.ui.first_name.val(),
+                'last_name'       : this.ui.last_name.val(),
+                'middle_initials' : this.ui.middle_initials.val(),
+                'password'        : this.ui.password.val(),
+                'email'           : this.ui.email.val(),
+                'timezone'        : this.ui.timezone.val(),
+                'active'          : this.ui.user_status.val() === 1,
+                'suspended'       : this.ui.user_suspend.prop('checked'),
+                'rolename'        : this.ui.role_select.val(),
+                'package'         : this.ui.package_select.val(),
+            };
         },
 
-        onSave: function(){
-            var that = this;
-            App.getUserCollection().done(function(userCollection){
-                var users = userCollection.models,
-                    existsUsername = false,
-                    existsEmail = false,
-                    username = that.ui.username.val(),
-                    firtsName = that.ui.first_name.val(),
+        validate: function(isNew){
+            var that = this,
+                deferred = new $.Deferred();
+            App.getUserCollection().done(function(users){
+                var firtsName = that.ui.first_name.val(),
                     lastName = that.ui.last_name.val(),
                     middleInitials = that.ui.middle_initials.val(),
                     spaces = /\s/g,
@@ -459,124 +463,66 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 that.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
                 that.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
                 that.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+                that.ui.email.val(that.ui.email.val().trim());
+                if (isNew)
+                    that.ui.username.val(that.ui.username.val().trim());
 
-                existsEmail = _.any(users, function(user){ if (user.get('email') == that.ui.email.val()) return true; });
-                existsUsername = _.any(users, function(user){ if (user.get('username') == that.ui.username.val()) return true; });
+
+                var existsUsername = isNew && _.invoke(users.pluck('username'), 'toLowerCase')
+                        .indexOf(that.ui.username.val().toLowerCase()) !== -1,
+                    existsEmail = users.chain().without(this.model).pluck('attributes')
+                        .pluck('email').filter().invoke('toLowerCase')
+                        .indexOf(that.ui.email.val().toLowerCase()).value() !== -1;
+
+                that.ui.input.removeClass('error');
 
                 switch (true) {
                 /* username */
-                case that.ui.username.val() == '':
-                    utils.scrollTo(that.ui.username);
-                    utils.notifyWindow("Empty username");
-                    that.ui.username.addClass('error');
+                case isNew && !that.ui.username.val():
+                    that.addError(that.ui.username, 'Empty username');
                     break;
-                case that.ui.username.val().length >= 26:
-                    utils.scrollTo(that.ui.username);
-                    utils.notifyWindow("Maximum length should be 25 symbols");
-                    that.ui.username.addClass('error');
+                case isNew && !patternLatin.test(that.ui.username.val()):
+                    that.addError(that.ui.username, 'Username should contain letters '
+                                                    + 'of Latin alphabet only');
                     break;
-                case !patternLatin.test(that.ui.username.val()):
-                    utils.scrollTo(that.ui.username);
-                    utils.notifyWindow("Username should contain letters of Latin alphabet only");
-                    that.ui.username.addClass('error');
+                case isNew && !/\D/g.test(that.ui.username.val()):
+                    that.addError(that.ui.username, 'Username cannot consist of digits only.');
                     break;
-                case !/\D/g.test(that.ui.username.val()):
-                    utils.scrollTo(that.ui.username);
-                    utils.notifyWindow("Username cannot consist of digits only.");
-                    that.ui.username.addClass('error');
-                    break;
-                case existsUsername:
-                    utils.scrollTo(that.ui.username);
-                    utils.notifyWindow('Username should be unique');
-                    that.ui.username.addClass('error');
-                    break;
-                /* first name */
-                case that.ui.first_name.val().length >= 26:
-                    utils.scrollTo(that.ui.first_name);
-                    that.ui.first_name.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
-                    break;
-                /* last name */
-                case that.ui.last_name.val().length >= 26:
-                    utils.scrollTo(that.ui.last_name);
-                    that.ui.last_name.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
-                    break;
-                /* middle initials */
-                case that.ui.middle_initials.val().length >= 26:
-                    utils.scrollTo(that.ui.middle_initials);
-                    that.ui.middle_initials.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
+                case isNew && existsUsername:
+                    that.addError(that.ui.username, 'Username should be unique');
                     break;
                 /* password */
-                case !that.ui.password.val() || (that.ui.password.val() !== that.ui.password_again.val()):
-                    utils.scrollTo(that.ui.password);
-                    that.ui.password.addClass('error');
+                case that.ui.password.val() !== that.ui.password_again.val():
+                    that.addError(that.ui.password, "Passwords don't match");
                     that.ui.password_again.addClass('error');
-                    utils.notifyWindow("Empty password or don't match");
                     break;
-                case that.ui.password.val().length >= 26:
-                    utils.scrollTo(that.ui.password);
-                    that.ui.password.addClass('error');
+                case isNew && !that.ui.password.val():
+                    that.addError(that.ui.password, 'Empty password');
                     that.ui.password_again.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
                     break;
                 /* email */
-                case that.ui.email.val() == '':
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow("Empty E-mail");
+                case !that.ui.email.val():
+                    that.addError(that.ui.email, 'Empty E-mail');
                     break;
-                case that.ui.email.val() !== '' && !pattern.test(that.ui.email.val()):
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow("E-mail must be correct");
+                case !pattern.test(that.ui.email.val()):
+                    that.addError(that.ui.email, 'E-mail must be correct');
                     break;
-                case that.ui.email.val().length >= 51:
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow("Maximum length should be 50 symbols");
-                    break;
-                case existsEmail && that.ui.email.val() !== '':
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow('Email should be unique');
-                    break;
-                /* timezone */
-                case that.ui.timezone.val() == '':
-                    utils.scrollTo(that.ui.timezone);
-                    that.ui.timezone.addClass('error');
-                    utils.notifyWindow("Empty Timezone");
+                case existsEmail:
+                    that.addError(that.ui.email, 'Email should be unique');
                     break;
                 default:
-                    utils.preloader.show();
-                    userCollection.create({
-                        'username'        : username,
-                        'first_name'      : that.ui.first_name.val(),
-                        'last_name'       : that.ui.last_name.val(),
-                        'middle_initials' : that.ui.middle_initials.val(),
-                        'password'        : that.ui.password.val(),
-                        'email'           : that.ui.email.val(),
-                        'timezone'        : that.ui.timezone.val(),
-                        'active'          : (that.ui.user_status.val() == 1),
-                        'suspended'       : that.ui.user_suspend.prop('checked'),
-                        'rolename'        : that.ui.role_select.val(),
-                        'package'         : that.ui.package_select.val(),
-                    }, {
-                        wait: true,
-                        complete: utils.preloader.hide,
-                        success: function(data, response){
-                            App.navigate('users', {trigger: true});
-                            utils.notifyWindow('User "' + username + '" created successfully',
-                                               'success');
-                        },
-                        error: function(collection, response){
-                            utils.notifyWindow(response);
-                        },
-                    });
+                    deferred.resolve();
+                    return;
                 }
+                deferred.reject();
             });
+            return deferred.promise();
+        },
+
+        addError: function(el, message){
+            utils.scrollTo(el);
+            el.addClass('error');
+            utils.notifyWindow(message);
         },
 
         removeError: function(evt){
@@ -584,12 +530,35 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             if (target.hasClass('error')) target.removeClass('error');
         },
 
-        back: function(){
-           App.navigate('users', {trigger: true});
+        toUserList: function(){ App.navigate('users', {trigger: true}); },
+    });
+
+    views.UserCreateView = views.UserFormBaseView.extend({
+        events: function(){
+            return _.extend({}, this.constructor.__super__.events, {
+                'click @ui.user_cancel_btn': 'toUserList',
+                'click @ui.user_add_btn'   : 'onSave',
+            });
+        },
+
+        onSave: function(){
+            var that = this;
+            $.when(App.getUserCollection(), this.validate(true)).done(function(users){
+                utils.preloader.show();
+                that.model.save(that.getData(), {wait: true})
+                    .always(utils.preloader.hide)
+                    .fail(utils.notifyWindow)
+                    .done(function(){
+                        users.add(that.model);
+                        App.navigate('users', {trigger: true});
+                        utils.notifyWindow('User "' + that.model.get('username')
+                                           + '" created successfully', 'success');
+                    });
+            });
         },
     });
 
-    views.UserProfileViewLogHistory = views.UserCreateView.extend({
+    views.UserProfileViewLogHistory = Backbone.Marionette.ItemView.extend({
         template : userProfileLogHistoryTpl,
         tagName  : 'div',
 
@@ -738,168 +707,52 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         }
     });
 
-    views.UsersEditView = views.UserCreateView.extend({     // inherit
-        onRender: function(){
-            this.ui.first_name.val(this.model.get('first_name'));
-            this.ui.last_name.val(this.model.get('last_name'));
-            this.ui.middle_initials.val(this.model.get('middle_initials'));
-            this.ui.email.val(this.model.get('email'));
-            this.ui.timezone.val(this.model.get('timezone'));
-            this.ui.user_status.val((this.model.get('active') == true ? 1 : 0));
-            this.ui.user_suspend.prop('checked', (this.model.get('suspended') == true));
-            this.ui.role_select.val(this.model.get('rolename'));
-            this.ui.package_select.val(this.model.get('package'));
-            this.ui.user_add_btn.html('Save');
-            this.ui.selectpicker.selectpicker();
+    views.UsersEditView = views.UserFormBaseView.extend({
+        events: function(){
+            return _.extend({}, this.constructor.__super__.events, {
+                'click @ui.user_cancel_btn'        : 'cancel',
+                'click @ui.user_add_btn'           : 'onSave',
+                'input @ui.input'                  : 'changeValue',
+                'change @ui.selectpicker'          : 'changeValue',
+                'change @ui.input[type="checkbox"]': 'changeValue',
+            });
         },
 
         changeValue: function(){
-            var equal,
-            oldData = {
-                'email'           : this.model.get('email'),
-                'active'          : this.model.get('active'),
-                'suspended'       : this.model.get('suspended'),
-                'rolename'        : this.model.get('rolename'),
-                'package'         : this.model.get('package'),
-                'first_name'      : this.model.get('first_name'),
-                'last_name'       : this.model.get('last_name'),
-                'middle_initials' : this.model.get('middle_initials'),
-                'password'        : '',
-                'timezone'        : this.model.get('timezone').split(' (', 1)[0],
-            },
-            newData = {
-                'email'           : this.ui.email.val(),
-                'active'          : (this.ui.user_status.val() == 1),
-                'suspended'       : this.ui.user_suspend.prop('checked'),
-                'rolename'        : this.ui.role_select.val(),
-                'package'         : this.ui.package_select.val(),
-                'first_name'      : this.ui.first_name.val(),
-                'last_name'       : this.ui.last_name.val(),
-                'middle_initials' : this.ui.middle_initials.val(),
-                'password'        : this.ui.password.val(),
-                'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
-            };
+            var orig = _.mapObject(this.model.attributes,
+                                   function(val){ return val === null ? '' : val; }),
+                changed = !_.isMatch(orig, this.getData());
+            changed ? this.ui.user_add_btn.show() : this.ui.user_add_btn.hide();
+        },
 
-            equal = _.isEqual(oldData, newData);
-            equal === false ? this.ui.user_add_btn.show() : this.ui.user_add_btn.hide();
+        cancel: function(){
+            App.navigate('users/profile/' + this.model.id + '/general', {trigger: true});
+        },
+
+        getData: function(){
+            var data = _.omit(this.constructor.__super__.getData.call(this), 'username');
+            if (!data.password)  // ignore if not specified
+                delete data.password;
+            return data;
         },
 
         onSave: function(){
             var that = this;
-            App.getUserCollection().done(function(userCollection){
-                var existsEmail = false,
-                    users = userCollection.models,
-                    firtsName = that.ui.first_name.val(),
-                    lastName = that.ui.last_name.val(),
-                    middleInitials = that.ui.middle_initials.val(),
-                    spaces = /\s/g,
-                    numbers = /\d/g,
-                    symbols = /[!"#$%&'()*+,\-.\/\\:;<=>?@[\]^_`{\|}~]/g,
-                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i,
-                    pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
-                that.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
-                that.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
-                that.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
-
-                if (that.model.get('email') !== that.ui.email.val()){
-                    existsEmail = _.any(users, function(user){
-                        if (user.get('email') == that.ui.email.val()) return true;
+            $.when(App.getUserCollection(), this.validate(false)).done(function(users){
+                utils.preloader.show();
+                that.model.save(that.getData(), {wait: true, patch: true})
+                    .always(utils.preloader.hide)
+                    .fail(utils.notifyWindow)
+                    .done(function(){
+                        App.navigate('users/profile/' + that.model.id + '/general',
+                                     {trigger: true});
+                        utils.notifyWindow(
+                            'Changes to user "' + that.model.get('username') +
+                                '" saved successfully',
+                            'success');
                     });
-                }
-
-                var data = {
-                    'email'           : that.ui.email.val(),
-                    'active'          : (that.ui.user_status.val() == 1),
-                    'suspended'       : that.ui.user_suspend.prop('checked'),
-                    'rolename'        : that.ui.role_select.val(),
-                    'package'         : that.ui.package_select.val(),
-                    'first_name'      : that.ui.first_name.val(),
-                    'last_name'       : that.ui.last_name.val(),
-                    'middle_initials' : that.ui.middle_initials.val(),
-                    'timezone'        : that.ui.timezone.val(),
-                };
-
-                switch (true) {
-                /* first name */
-                case that.ui.first_name.val().length >= 26:
-                    utils.scrollTo(that.ui.first_name);
-                    that.ui.first_name.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
-                    break;
-                /* last name */
-                case that.ui.last_name.val().length >= 26:
-                    utils.scrollTo(that.ui.last_name);
-                    that.ui.last_name.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
-                    break;
-                /* middle initials */
-                case that.ui.middle_initials.val().length >= 26:
-                    utils.scrollTo(that.ui.middle_initials);
-                    that.ui.middle_initials.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
-                    break;
-                /* password */
-                case that.ui.password.val() !== that.ui.password_again.val():
-                    utils.scrollTo(that.ui.password);
-                    that.ui.password.addClass('error');
-                    that.ui.password_again.addClass('error');
-                    utils.notifyWindow("Passwords don't match");
-                    break;
-                case that.ui.password.val().length >= 26:
-                    utils.scrollTo(that.ui.password);
-                    that.ui.password.addClass('error');
-                    that.ui.password_again.addClass('error');
-                    utils.notifyWindow("Maximum length should be 25 symbols");
-                    break;
-                /* email */
-                case that.ui.email.val() == '':
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow("Empty E-mail");
-                    break;
-                case that.ui.email.val() !== '' && !pattern.test(that.ui.email.val()):
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow("E-mail must be correct");
-                    break;
-                case that.ui.email.val().length >= 51:
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow("Maximum length should be 50 symbols");
-                    break;
-                case existsEmail && that.ui.email.val() !== '':
-                    utils.scrollTo(that.ui.email);
-                    that.ui.email.addClass('error');
-                    utils.notifyWindow('Email should be unique');
-                    break;
-                /* timezone */
-                case that.ui.timezone.val() == '':
-                    utils.scrollTo(that.ui.timezone);
-                    that.ui.timezone.addClass('error');
-                    utils.notifyWindow("Empty Timezone");
-                    break;
-                default:
-                    if (that.ui.password.val())  // update only if specified
-                        data.password = that.ui.password.val();
-
-                    that.model.save(data, {wait: true, patch: true})
-                        .fail(utils.notifyWindow)
-                        .done(function(){
-                            App.navigate('users/profile/' + that.model.id + '/general',
-                                         {trigger: true});
-                            utils.notifyWindow(
-                                'Changes to user "' + that.model.get('username') +
-                                    '" saved successfully',
-                                'success');
-                        });
-                }
             });
-        },
-
-        back: function(){
-            App.navigate('users', {trigger: true});
         },
     });
 

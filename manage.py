@@ -37,6 +37,8 @@ from flask.ext.script.commands import InvalidCommand
 from flask.ext.migrate import Migrate, MigrateCommand, upgrade, stamp
 from flask.ext.migrate import migrate as migrate_func
 
+from sqlalchemy.orm.exc import NoResultFound
+
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 
@@ -177,6 +179,10 @@ class NodeManager(Command):
             print res.to_dict()
 
 
+def generate_new_pass():
+    return ''.join(choice(string.digits + string.letters) for _ in range(10))
+
+
 class ResetPass(Command):
 
     chars = string.digits + string.letters
@@ -185,13 +191,12 @@ class ResetPass(Command):
                action='store_true'),
         Option('--set', dest='new_password', required=False),
     )
-
     def run(self, generate, new_password):
         print "Change password for admin."
         u = db.session.query(User).filter(User.username == 'admin').first()
         new_pass = None
         if generate:
-            new_pass = ''.join(choice(self.chars) for _ in range(10))
+            new_pass = generate_new_pass()
             print "New password: {}".format(new_pass)
         elif new_password:
             new_pass = new_password
@@ -284,6 +289,37 @@ class CreateIPPool(Command):
         })
 
 
+class CreateUser(Command):
+    """ Creates a new user
+    """
+
+    option_list = (
+        Option('-u', '--username', dest='username', required=True,
+               help='User name'),
+        Option('-p', '--password', dest='password', required=False,
+               help='User password'),
+        Option('-r', '--rolename', dest='rolename', required=True,
+               help='User role name'),
+    )
+
+    def run(self, username, password, rolename):
+        try:
+            role = Role.filter_by(rolename=rolename).one()
+        except NoResultFound:
+            raise InvalidCommand('Role with name `%s` not found' % rolename)
+
+        if User.filter_by(username=username).first():
+            raise InvalidCommand('User `%s` already exists' % username)
+
+        if not password:
+            password = generate_new_pass()
+            print "New password: {}".format(new_pass)
+
+        u = User.create(username=username, password=password, role=role,
+                        active=True, package_id=0)
+        db.session.add(u)
+        db.session.commit()
+
 
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
@@ -307,6 +343,7 @@ manager.add_command('node-flag', NodeFlagCmd())
 manager.add_command('node-info', NodeInfoCmd())
 manager.add_command('auth-key', AuthKey())
 manager.add_command('create-ip-pool', CreateIPPool())
+manager.add_command('create-user', CreateUser())
 
 
 if __name__ == '__main__':

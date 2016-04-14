@@ -457,7 +457,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     spaces = /\s/g,
                     numbers = /\d/g,
                     symbols = /[!"#$%&'()*+,\-.\/\\:;<=>?@[\]^_`{\|}~]/g,
-                    patternLatin = /^[A-Z0-9](?:[A-Z0-9_-]*[A-Z0-9])?$/i,
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
                 that.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
@@ -479,56 +478,60 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 switch (true) {
                 /* username */
                 case isNew && !that.ui.username.val():
-                    that.addError(that.ui.username, 'Empty username');
+                    that.addError(that.ui.username, 'Username is required.');
                     break;
                 case isNew && that.ui.username.val().length > 25:
-                    that.addError(that.ui.username, 'Maximum length is 25 symbols');
+                    that.addError(that.ui.username, 'Maximum length is 25 symbols.');
                     break;
-                case isNew && !patternLatin.test(that.ui.username.val()):
-                    that.addError(that.ui.username, 'Username should contain letters '
-                                                    + 'of Latin alphabet only');
+                case isNew && !/^[A-Z\d_-]+$/i.test(that.ui.username.val()):
+                    that.addError(that.ui.username,
+                                  'Only "-", "_" and alphanumeric symbols are allowed.');
+                    break;
+                case isNew && !/^[A-Z\d](?:.*[A-Z\d])?$/i.test(that.ui.username.val()):
+                    that.addError(that.ui.username,
+                                  'Username should start and end with a letter or digit.');
                     break;
                 case isNew && !/\D/g.test(that.ui.username.val()):
                     that.addError(that.ui.username, 'Username cannot consist of digits only.');
                     break;
                 case isNew && existsUsername:
-                    that.addError(that.ui.username, 'Username should be unique');
+                    that.addError(that.ui.username, 'Username should be unique.');
                     break;
                 /* name */
                 case that.ui.first_name.val().length > 25:
-                    that.addError(that.ui.first_name, 'Maximum length is 25 symbols');
+                    that.addError(that.ui.first_name, 'Maximum length is 25 symbols.');
                     break;
                 case that.ui.last_name.val().length > 25:
-                    that.addError(that.ui.last_name, 'Maximum length is 25 symbols');
+                    that.addError(that.ui.last_name, 'Maximum length is 25 symbols.');
                     break;
                 case that.ui.middle_initials.val().length > 25:
-                    that.addError(that.ui.middle_initials, 'Maximum length is 25 symbols');
+                    that.addError(that.ui.middle_initials, 'Maximum length is 25 symbols.');
                     break;
                 /* password */
                 case that.ui.password.val() !== that.ui.password_again.val():
-                    that.addError(that.ui.password, "Passwords don't match");
+                    that.addError(that.ui.password, "Passwords don't match.");
                     that.ui.password_again.addClass('error');
                     break;
                 case isNew && !that.ui.password.val():
-                    that.addError(that.ui.password, 'Empty password');
+                    that.addError(that.ui.password, 'Password is required.');
                     that.ui.password_again.addClass('error');
                     break;
                 case that.ui.password.val().length > 25:
-                    that.addError(that.ui.password, 'Maximum length is 25 symbols');
+                    that.addError(that.ui.password, 'Maximum length is 25 symbols.');
                     that.ui.password_again.addClass('error');
                     break;
                 /* email */
                 case !that.ui.email.val():
-                    that.addError(that.ui.email, 'Empty E-mail');
+                    that.addError(that.ui.email, 'E-mail is required.');
                     break;
                 case !pattern.test(that.ui.email.val()):
-                    that.addError(that.ui.email, 'E-mail must be correct');
+                    that.addError(that.ui.email, 'The E-mail format is invalid.');
                     break;
-                case that.ui.email.val().length > 25:
-                    that.addError(that.ui.email, 'Maximum length is 50 symbols');
+                case that.ui.email.val().length > 50:
+                    that.addError(that.ui.email, 'Maximum length is 50 symbols.');
                     break;
                 case existsEmail:
-                    that.addError(that.ui.email, 'Email should be unique');
+                    that.addError(that.ui.email, 'E-mail should be unique.');
                     break;
                 default:
                     deferred.resolve();

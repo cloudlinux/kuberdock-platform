@@ -47,7 +47,7 @@ def login():
             return redirect(url_for('main.index'))
 
     if username is not None and (passwd is not None or token is not None):
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(User.username_iequal(username)).first()
         error = 'Invalid credentials provided'
         if user is None or user.deleted:
             pass

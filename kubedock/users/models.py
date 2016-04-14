@@ -72,6 +72,11 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return cls.get(0)
 
     @classmethod
+    def username_iequal(cls, username):
+        """Get case-insensitive comparison condition for query.filter"""
+        return db.func.lower(cls.username) == username.lower()
+
+    @classmethod
     def get(cls, uid):
         """Get User by id, username or User object."""
         if uid is None:
@@ -94,7 +99,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
     @classmethod
     def search_usernames(cls, s, with_deleted=False):
         users = cls.query if with_deleted else cls.not_deleted
-        usernames = list(users.filter(cls.username.contains(s)).values(cls.username))
+        condition = db.func.lower(cls.username).contains(s.lower())
+        usernames = list(users.filter(condition).values(cls.username))
         return zip(*usernames)[0] if usernames else []
 
     @property

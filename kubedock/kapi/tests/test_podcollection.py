@@ -605,14 +605,16 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
 
         self.test_pod.containers[0]['ports'] = saved_ports
 
+    @mock.patch.object(podcollection.PodCollection, '_get_replicationcontroller')
     @mock.patch.object(podcollection.PodCollection, '_post')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_normal_second_start(self, mk_ns, post_):
+    def test_pod_normal_second_start(self, mk_ns, post_, mk_get_rc):
         """
         Test second _start_pod in usual case
         :type post_: mock.Mock
         """
 
+        mk_get_rc.side_effect = APIError('no rc')
         self.test_pod.get_config = mock.Mock(
             return_value={'volumes': [], 'service': self.test_service_name})
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)

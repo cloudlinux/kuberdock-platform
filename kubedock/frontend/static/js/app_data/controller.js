@@ -706,7 +706,12 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     $.when(App.getRoles(), App.getPackages(), App.getTimezones()).done(function(roles, packages, timezones){
-                        layoutView.main.show(new Views.UserCreateView({ roles: roles, packages: packages, timezones: timezones }));
+                        layoutView.main.show(new Views.UserCreateView({
+                            model: new Model.UserModel(),
+                            roles: roles,
+                            packages: packages,
+                            timezones: timezones,
+                        }));
                     });
                 });
                 App.contents.show(layoutView);

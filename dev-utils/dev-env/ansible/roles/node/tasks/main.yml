@@ -14,4 +14,3 @@
   shell: python /vagrant/manage.py add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
-

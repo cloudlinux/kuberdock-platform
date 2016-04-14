@@ -92,3 +92,7 @@
   command: bash /vagrant/dev-utils/prepare_test_env.sh
   when: is_dev_install
 
+- name: Create IP pool
+  shell: python /vagrant/manage.py create-ip-pool -s "192.168.77.0/24" -e 1-30
+
+

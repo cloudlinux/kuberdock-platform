@@ -30,6 +30,7 @@ from kubedock.updates.helpers import get_maintenance
 from kubedock import tasks
 from kubedock.kapi import licensing
 from kubedock.kapi.pstorage import check_namespace_exists
+from kubedock.kapi import ippool
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.script.commands import InvalidCommand
@@ -266,6 +267,24 @@ class AuthKey(Command):
         print key
 
 
+class CreateIPPool(Command):
+    """ Creates IP pool
+    """
+    option_list = (
+        Option('-s', '--subnet', dest='subnet', required=True,
+               help='Network with mask'),
+        Option('-e', '--exclude', dest='exclude', required=False,
+               help='Excluded ips'),
+    )
+
+    def run(self, subnet, exclude):
+        ippool.IpAddrPool().create({
+            'network': subnet.decode(),
+            'autoblock': exclude
+        })
+
+
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -287,6 +306,7 @@ manager.add_command('reset-password', ResetPass())
 manager.add_command('node-flag', NodeFlagCmd())
 manager.add_command('node-info', NodeInfoCmd())
 manager.add_command('auth-key', AuthKey())
+manager.add_command('create-ip-pool', CreateIPPool())
 
 
 if __name__ == '__main__':

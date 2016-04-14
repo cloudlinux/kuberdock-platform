@@ -646,11 +646,6 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 rolename: 'User',
                 active: true,
                 suspended: false,
-            };
-        },
-
-        defaults: function(){
-            return {
                 actions: {
                     'lock': true,
                     'delete': true,

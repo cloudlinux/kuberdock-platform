@@ -188,6 +188,10 @@ define(['app_data/app', 'marionette',
                         utils.notifyWindow('Empty installation ID is not allowed.');
                         return ' ';  // return string - means validation not passed
                     }
+                    if (newValue.trim().length > 32){
+                        utils.notifyWindow('Maximum length is 25 symbols');
+                        return ' ';
+                    }
                 },
                 success: function(response, newValue) {
                     that.model.set(_.has(response, 'data') ? response.data : response);

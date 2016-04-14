@@ -475,7 +475,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
                 var existsUsername = isNew && _.invoke(users.pluck('username'), 'toLowerCase')
                         .indexOf(that.ui.username.val().toLowerCase()) !== -1,
-                    existsEmail = users.chain().without(this.model).pluck('attributes')
+                    existsEmail = users.chain().without(that.model).pluck('attributes')
                         .pluck('email').filter().invoke('toLowerCase')
                         .indexOf(that.ui.email.val().toLowerCase()).value() !== -1;
 

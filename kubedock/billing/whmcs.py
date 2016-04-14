@@ -126,8 +126,11 @@ class BillingWHMCS(BillingCommon):
         :param user: User model
         :param goto: where to send the user after successful authentication.
         """
-        whmcs_url = self._make_url('dologin.php')
         auth_key = SystemSettings.get_by_name('sso_secret_key')
+        if not auth_key:
+            return self._make_url(goto)
+
+        whmcs_url = self._make_url('dologin.php')
         timestamp = str(int(time()))
         email = user.email
         auth_hash = hashlib.sha1(email + timestamp + auth_key).hexdigest()

@@ -21,29 +21,29 @@
                 <% if (isNew) { %>
                     <div class="form-group">
                         <label for="username">Username</label>
-                        <input type="text" maxlength="25" name="username" class="form-control" id="username">
+                        <input type="text" name="username" class="form-control" id="username">
                     </div>
                 <% } %>
                 <div class="form-group">
                     <label for="firstname">First name</label>
-                    <input type="text" maxlength="25" name="firstname" class="form-control" id="firstname" value="<%- first_name %>">
+                    <input type="text" name="firstname" class="form-control" id="firstname" value="<%- first_name %>">
                 </div>
                 <div class="form-group">
                     <label for="lastname">Last name</label>
-                    <input type="text" maxlength="25" name="lastname" class="form-control" id="lastname" value="<%- last_name %>">
+                    <input type="text" name="lastname" class="form-control" id="lastname" value="<%- last_name %>">
                 </div>
                 <div class="form-group">
                     <label for="middle_initials">Middle initials</label>
-                    <input type="text" maxlength="25" name="middle_initials" class="form-control" id="middle_initials" value="<%- middle_initials %>">
+                    <input type="text" name="middle_initials" class="form-control" id="middle_initials" value="<%- middle_initials %>">
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" maxlength="25" class="form-control" id="password" name="password" placeholder="Password">
-                    <input type="password" maxlength="25" class="form-control" id="password-again" name="password-again" placeholder="Repeat password">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+                    <input type="password" class="form-control" id="password-again" name="password-again" placeholder="Repeat password">
                 </div>
                 <div class="form-group">
                     <label for="email">E-mail</label>
-                    <input type="email" maxlength="50" name="email" class="form-control" id="email" value="<%- email %>">
+                    <input type="email" name="email" class="form-control" id="email" value="<%- email %>">
                 </div>
                 <div class="form-group">
                     <label for="timezone">Timezone</label>

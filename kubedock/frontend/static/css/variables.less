@@ -58,8 +58,10 @@
 }
 .opacity (@opacity) {
     -webkit-opacity:    @opacity;
+    -khtml-opacity:     @opacity;
     -moz-opacity:       @opacity;
     opacity:            @opacity;
+    zoom: 1;
 }
 .animation (@name, @duration: 300ms, @ease: ease) {
     -webkit-animation: @name @duration @ease;
@@ -140,15 +142,16 @@
         content: @content;
         display: inline-block;
         vertical-align: middle;
+        max-width: @iconSize + 2px;
         font: normal normal normal @iconSize/1 @materials;
     }
     span{
         min-height: @iconSize;
         font-size: @textsize;
         display: inline-block;
-        vertical-align: middle;
-        margin-left: @marginRight;
         line-height: @iconSize;
+        vertical-align: middle;
+        padding-left: @marginRight;
     }
     &:hover{
         color: @hoverColor;
@@ -198,4 +201,17 @@
     20% { -webkit-transform: rotate(27deg); transform:rotate(27deg); }
     30% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
     100% { -webkit-transform: rotate(0deg); transform:rotate(0deg); }
+}
+
+// bounceIn
+@-webkit-keyframes bounceIn {
+    0%  { .opacity(0); .transform(scale3d(1, 1, 1)); }
+    20% { .transform(scale3d(.1, .1, .1)); }
+    100% { .transform(scale3d(1, 1, 1)); }
+
+}
+@keyframes bounceIn {
+    0%  { .opacity(0); .transform(scale3d(1, 1, 1)); }
+    20% { .transform(scale3d(.1, .1, .1)); }
+    100% { .transform(scale3d(1, 1, 1)); }
 }

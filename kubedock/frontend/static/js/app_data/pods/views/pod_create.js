@@ -20,7 +20,7 @@ define(['app_data/app', 'app_data/model',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
         'app_data/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot',
-        'jqplot-axis-renderer', 'nicescroll', 'numeral', 'selectpicker'],
+        'jqplot-axis-renderer', 'nicescroll', 'numeral', 'selectpicker', 'tooltip'],
        function(App, Model,
                 layoutWizardTpl,
                 breadcrumbHeaderTpl,
@@ -1437,6 +1437,7 @@ define(['app_data/app', 'app_data/model',
             'editKubeTypeDescription' : '.edit-kube-type-description',
             'main'                    : '#add-image',
             'selectpicker'            : '.selectpicker',
+            'tooltip'                 : '[data-toggle="tooltip"]'
         },
 
         events: {
@@ -1562,6 +1563,7 @@ define(['app_data/app', 'app_data/model',
 
         onRender: function() {
             this.ui.selectpicker.selectpicker();
+            this.ui.tooltip.tooltip();
             this.ui.kubeTypes.selectpicker({
                 noneSelectedText: this.model.get('kube_type') === Model.KubeType.noAvailableKubeTypes
                     ? 'No available kube types' : 'Select kube type',

@@ -1,0 +1,108 @@
+//
+// Tooltips
+// --------------------------------------------------
+@zindex-tooltip : 2060;
+@tooltip-opacity : 1;
+@tooltip-bg : #484848;
+@tooltip-color : #fff;
+@tooltip-font-size : 10px;
+@tooltip-lineheigh : 13px;
+@border-radius-base : 2px;
+@tooltip-arrow-width : 6px;
+@tooltip-max-width : 500px;
+@tooltip-padding : 7px 15px;
+@tooltip-arrow-color : #484848;
+@tooltip-animation-duration : 0.15s;
+
+// Base class
+.tooltip {
+    .opacity(0);
+    display: block;
+    position: absolute;
+    z-index: @zindex-tooltip;
+    font-size: @tooltip-font-size;
+    &.in     { .opacity(@tooltip-opacity); filter: alpha(opacity=100);}
+    &.top    { margin-top:  -7px; padding: @tooltip-arrow-width 0; }
+    &.right  { margin-left:  7px; padding: 0 @tooltip-arrow-width; }
+    &.bottom { margin-top:   7px; padding: @tooltip-arrow-width 0; }
+    &.left   { margin-left: -7px; padding: 0 @tooltip-arrow-width; }
+}
+
+// Wrapper for the tooltip content
+.tooltip-inner {
+    .border-radius(@border-radius-base);
+    text-align: center;
+    color: @tooltip-color;
+    padding: @tooltip-padding;
+    background-color: @tooltip-bg;
+    max-width: @tooltip-max-width;
+    line-height: @tooltip-lineheigh;
+}
+
+// Arrows
+.tooltip-arrow {
+    width: 0;
+    height: 0;
+    position: absolute;
+    border-style: solid;
+    border-color: transparent;
+}
+// Note: Deprecated .top-left, .top-right, .bottom-left, and .bottom-right as of v3.3.1
+.tooltip {
+    &.top .tooltip-arrow {
+        bottom: 0;
+        left: 50%;
+        margin-left: -@tooltip-arrow-width;
+        border-top-color: @tooltip-arrow-color;
+        border-width: @tooltip-arrow-width @tooltip-arrow-width 0;
+    }
+    &.top-left .tooltip-arrow {
+        bottom: 0;
+        right: @tooltip-arrow-width;
+        margin-bottom: -@tooltip-arrow-width;
+        border-top-color: @tooltip-arrow-color;
+        border-width: @tooltip-arrow-width @tooltip-arrow-width 0;
+    }
+    &.top-right .tooltip-arrow {
+        bottom: 0;
+        left: @tooltip-arrow-width;
+        margin-bottom: -@tooltip-arrow-width;
+        border-top-color: @tooltip-arrow-color;
+        border-width: @tooltip-arrow-width @tooltip-arrow-width 0;
+    }
+    &.right .tooltip-arrow {
+        top: 50%;
+        left: 0;
+        margin-top: -@tooltip-arrow-width;
+        border-right-color: @tooltip-arrow-color;
+        border-width: @tooltip-arrow-width @tooltip-arrow-width @tooltip-arrow-width 0;
+    }
+    &.left .tooltip-arrow {
+        top: 50%;
+        right: 0;
+        margin-top: -@tooltip-arrow-width;
+        border-left-color: @tooltip-arrow-color;
+        border-width: @tooltip-arrow-width 0 @tooltip-arrow-width @tooltip-arrow-width;
+    }
+    &.bottom .tooltip-arrow {
+        top: 0;
+        left: 50%;
+        margin-left: -@tooltip-arrow-width;
+        border-bottom-color: @tooltip-arrow-color;
+        border-width: 0 @tooltip-arrow-width @tooltip-arrow-width;
+    }
+    &.bottom-left .tooltip-arrow {
+        top: 0;
+        right: @tooltip-arrow-width;
+        margin-top: -@tooltip-arrow-width;
+        border-bottom-color: @tooltip-arrow-color;
+        border-width: 0 @tooltip-arrow-width @tooltip-arrow-width;
+    }
+    &.bottom-right .tooltip-arrow {
+        top: 0;
+        left: @tooltip-arrow-width;
+        margin-top: -@tooltip-arrow-width;
+        border-bottom-color: @tooltip-arrow-color;
+        border-width: 0 @tooltip-arrow-width @tooltip-arrow-width;
+    }
+}

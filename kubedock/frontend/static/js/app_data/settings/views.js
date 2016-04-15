@@ -4,7 +4,7 @@ define(['app_data/app', 'marionette',
         'tpl!app_data/settings/templates/general_settings.tpl',
         'tpl!app_data/settings/templates/general_settings_item.tpl',
         'tpl!app_data/settings/templates/license.tpl',
-        'app_data/utils', 'bootstrap', 'bootstrap-editable', 'selectpicker'],
+        'app_data/utils', 'bootstrap', 'bootstrap-editable', 'selectpicker', 'tooltip'],
        function(App, Marionette,
                 settingsLayoutTpl, userEditTpl, generalSettingsTpl,
                 generalSettingsItemTpl, licenseTpl, utils){
@@ -160,8 +160,9 @@ define(['app_data/app', 'marionette',
         },
 
         ui: {
-            peditable : '.peditable',
-            updateStats: '.check-for-update'
+            peditable   : '.peditable',
+            updateStats : '.check-for-update',
+            tooltip     : '[data-toggle="tooltip"]'
         },
 
         events: {
@@ -170,6 +171,7 @@ define(['app_data/app', 'marionette',
 
         onRender: function(){
             var that = this;
+            this.ui.tooltip.tooltip();
             this.ui.peditable.editable({
                 type: 'text',
                 mode: 'inline',

@@ -61,61 +61,67 @@
                 <td><b>Current state</b></td>
                 <% if(data.nodes[3]) {%>
                     <td class="critical">
-                        <%= data.nodes[1] %>
-                        <span class="warning-info-title-ico" title="The number of this nodes is under limit"></span>
+                        <span class="warning-info-title-ico" data-toggle="tooltip" data-placement="right" title="The number of this nodes is under limit">
+                            <span><%= data.nodes[1] %></span>
+                        </span>
                     </td>
                 <% } else { %>
                     <td><%= data.nodes[1] %></td>
                 <% } %>
                 <% if(data.cores[3]) {%>
                     <td class="critical">
-                        <%= data.cores[1] %>
-                        <span class="warning-info-title-ico" title="The number of this cores is under limit"></span>
+                        <span class="warning-info-title-ico" data-toggle="tooltip" data-placement="right" title="The number of this cores is under limit">
+                            <span><%= data.cores[1] %></span>
+                        </span>
                     </td>
                 <% } else { %>
                     <td><%= data.cores[1] %></td>
                 <% } %>
                 <% if(data.memory[3]) {%>
                     <td class="critical">
-                        <%= data.memory[1] %>
-                        <span class="warning-info-title-ico" title="The size of this memory is under limit"></span>
+                        <span class="warning-info-title-ico" data-toggle="tooltip" data-placement="left" title="The size of this memory is under limit">
+                            <span><%= data.memory[1] %></span>
+                        </span>
                     </td>
                 <% } else { %>
                     <td><%= data.memory[1] %></td>
                 <% } %>
                 <% if(data.containers[3]) {%>
                     <td class="critical">
-                        <%= data.containers[1] %>
-                        <span class="warning-info-title-ico" title="The number of this containers is under limit"></span>
+                        <span class="warning-info-title-ico" data-toggle="tooltip" data-placement="left" title="The number of this containers is under limit">
+                            <span><%= data.containers[1] %></span>
+                        </span>
                     </td>
                 <% } else { %>
                     <td><%= data.containers[1] %></td>
                 <% } %>
                 <% if(data.pods[3]) {%>
                     <td class="critical">
-                        <%= data.pods[1] %>
-                        <span class="warning-info-title-ico" title="The number of this users pods is under limit"></span>
+                        <span class="warning-info-title-ico" data-toggle="tooltip" data-placement="left" title="The number of this users pods is under limit">
+                            <span><%= data.pods[1] %></span>
+                        </span>
                     </td>
                 <% } else { %>
                     <td><%= data.pods[1] %></td>
                 <% } %>
                 <% if(data.apps[3]) {%>
                     <td class="critical">
-                        <%= data.apps[1] %>
-                        <span class="warning-info-title-ico" title="The number of this apps is under limit"></span>
+                        <span class="warning-info-title-ico" data-toggle="tooltip" data-placement="left" title="The number of this apps is under limit">
+                            <span><%= data.apps[1] %></span>
+                        </span>
                     </td>
                 <% } else { %>
                     <td><%= data.apps[1] %></td>
                 <% } %>
                 <% if(data.persistentVolume[3]) {%>
                     <td class="critical">
-                        <%= data.persistentVolume[1] %>
-                        <span class="warning-info-title-ico" title="The size of this persistent volumes is under limit"></span>
+                        <span class="warning-info-title-ico" data-toggle="tooltip" data-placement="left" title="The size of this persistent volumes is under limit">    <span><%= data.persistentVolume[1] %></span>
+                        </span>
                     </td>
                 <% } else { %>
                     <td><%= data.persistentVolume[1] %></td>
                 <% } %>
-                <td>
+                <td class="font-fix">
                     <span class="check-for-update" title="Update status"></span>
                 </td>
             </tr>

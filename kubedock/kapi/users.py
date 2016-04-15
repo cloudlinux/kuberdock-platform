@@ -20,9 +20,6 @@ from .predefined_apps import generate
 from .licensing import is_valid as license_valid
 
 
-HOSTING_PANEL = 'hostingPanel'
-
-
 class ResourceReleaseError(APIError):
     message = "Some of user's resources couldn't be released."
 
@@ -259,22 +256,20 @@ class UserCollection(object):
         }
 
     def _is_deletable(self, user, raise_=False):
-        able = (self.doer != user and
-                user.username not in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL))
+        able = (self.doer != user and user.username != KUBERDOCK_INTERNAL_USER)
         if raise_ and not able:
             raise UserIsNotDeleteable(user.username)
         return able
 
     def _is_lockable(self, user, raise_=False):
-        able = (self.doer != user and
-                user.username not in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL))
+        able = (self.doer != user and user.username != KUBERDOCK_INTERNAL_USER)
         if raise_ and not able:
             raise UserIsNotLockable(user.username)
         return able
 
     def _is_suspendable(self, user, raise_=False):
         able = (not user.is_administrator() and
-                user.username not in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL))
+                user.username != KUBERDOCK_INTERNAL_USER)
         if raise_ and not able:
             raise UserIsNotSuspendable(user.username)
         return able

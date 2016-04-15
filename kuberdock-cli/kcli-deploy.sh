@@ -21,7 +21,7 @@ fi
 
 
 show_help() {
-    echo "-u|--user      : Specify kuberdock admin username (if not specified 'hostingPanel' is used)"
+    echo "-u|--user      : Specify kuberdock admin username (if not specified 'admin' is used)"
     echo "-t|--testing   : Use testing repositories"
     echo "-k|--kuberdock : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
     echo "-i|--interface   : Network interface to use"
@@ -96,7 +96,7 @@ fi
 if [ -z "$KD_USER" ];then
     read -r -p "Enter KuberDock admin username: " KD_USER
     if [ -z "$KD_USER" ];then
-        KD_USER="hostingPanel"
+        KD_USER="admin"
     fi
 fi
 
@@ -104,7 +104,7 @@ if [ -z "$KD_PASSWORD" ];then
     read -s -r -p "Enter KuberDock admin password: " KD_PASSWORD
     echo
     if [ -z "$KD_PASSWORD" ];then
-        KD_PASSWORD="hostingPanel"
+        KD_PASSWORD="admin"
     fi
 fi
 
@@ -192,4 +192,3 @@ else
     do_and_log chkconfig atd on
     do_and_log service atd start
 fi
-

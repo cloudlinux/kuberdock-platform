@@ -4,6 +4,7 @@ import json
 import logging
 import operator
 import os
+import stat
 import warnings
 from functools import wraps
 
@@ -260,22 +261,15 @@ def parse_config(path):
 
 
 def create_user_config(args):
-    path = os.path.expanduser(args.config)
     default_path = os.path.expanduser('~/.kubecli.conf')
-    old_default_path = '/etc/kubecli.conf'
 
     if not os.path.exists(default_path):
-        conf = ConfigParser.ConfigParser()
-        conf.optionxform = str
-        if os.path.exists(path):
-            conf.read(path)
-        elif os.path.exists(old_default_path):
-            conf.read(old_default_path)
-        else:
-            raise SystemExit("Config '{0}' not found. Try to specify a custom "
-                             "one with option '--config'".format(path))
         with open(default_path, 'wb') as config:
-            conf.write(config)
+            config.write('[defaults]\n'
+                         'user = <YOUR USERNAME HERE>\n'
+                         'password = <YOUR PASSWORD HERE>\n')
+        os.chmod(default_path, stat.S_IRUSR|stat.S_IWUSR)
+
 
 
 def echo(func):

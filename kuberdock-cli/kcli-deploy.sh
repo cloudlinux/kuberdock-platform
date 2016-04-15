@@ -133,9 +133,22 @@ yum_wrapper -y install kuberdock-cli
 
 sed -i -e "/^url/ {s|[ \t]*\$||}" -e "/^url/ {s|[^/]\+$|$KD_HOST|}" $GLOBAL_KCLI_CONFIG
 
-cp $GLOBAL_KCLI_CONFIG $ROOT_KCLI_CONFIG
-sed -i -e "/^user/ {s|[ \t]*\$||}" -e "/^user/ {s|[^= \t]\+\$|$KD_USER|}" $ROOT_KCLI_CONFIG
-sed -i -e "/^password/ {s|[ \t]*\$||}" -e "/^password/ {s|[^= \t]\+\$|$KD_PASSWORD|}" $ROOT_KCLI_CONFIG
+TOKEN=$(curl -s -k --connect-timeout 1 --user "$KD_USER:$KD_PASSWORD" "$KD_HOST/api/auth/token"|tr -d " \t\r\n")
+echo $TOKEN|grep -qi token
+if [ $? -eq 0 ];then
+    TOKEN=$(echo $TOKEN|sed "s/.*\"token\":\"\(.*\)\".*/\1/I")
+    cat > $NAME <<EOF
+[defaults]
+# token to talk to kuberdock
+token = $TOKEN
+EOF
+    chmod 0600 $ROOT_KCLI_CONFIG
+else
+    echo "Could not get token from KuberDock."
+    echo "Check KuberDock host connectivity, username and password correctness"
+    exit 1
+fi
+
 
 echo -n "Registering host in KuberDock... "
 REGISTER_INFO=$(kcli kubectl register 2>&1)

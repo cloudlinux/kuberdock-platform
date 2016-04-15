@@ -138,15 +138,6 @@ class Creator(Command):
             db.session.add(ku)
         db.session.commit()
 
-        # Special user for cPanel
-        r = Role.filter_by(rolename='HostingPanel').first()
-        u = User.filter_by(username='hostingPanel').first()
-        if not u:
-            u = User.create(username='hostingPanel', password='hostingPanel',
-                            role=r, active=True)
-            db.session.add(u)
-            db.session.commit()
-
         generate_menu()
 
         # Fix packages id next val

@@ -20,9 +20,6 @@ from .predefined_apps import generate
 from .licensing import is_valid as license_valid
 
 
-HOSTING_PANEL = 'hostingPanel'
-
-
 class ResourceReleaseError(APIError):
     """Occurs when some of user's resources couldn't be released."""
     type = 'ResourceReleaseError'
@@ -220,30 +217,32 @@ class UserCollection(object):
             raise UserNotFound('User "{0}" does not exists'.format(user))
         return result
 
-    @staticmethod
-    def _set_deletability(collection):
-        """Marks a collection user as deletable or not"""
-        admins = []
-        for user in collection:
-            if user.get('rolename') == 'Admin':
-                admins.append(user)
-                continue
-            if user.get('username') in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL):
-                user['deletable'] = False
-        if len(admins) == 1:
-            for admin in admins:
-                admin['deletable'] = False
-        return collection
+    def _get_applicability(self, user):
+        """Mark applicable actions for user."""
+        return {
+            'lock': self._is_lockable(user),
+            'delete': self._is_deletable(user),
+            'suspend': self._is_suspendable(user),
+        }
 
-    @staticmethod
-    def _is_deletable(user):
-        if user.is_administrator():
-            if len([u for u in User.query.filter_by(deleted=False).all()
-                        if u.role.rolename == 'Admin']) == 1:
-                return False
-        if user.username in (KUBERDOCK_INTERNAL_USER, HOSTING_PANEL):
-            return False
-        return True
+    def _is_deletable(self, user, raise_=False):
+        able = (self.doer != user and user.username != KUBERDOCK_INTERNAL_USER)
+        if raise_ and not able:
+            raise UserIsNotDeleteable(user.username)
+        return able
+
+    def _is_lockable(self, user, raise_=False):
+        able = (self.doer != user and user.username != KUBERDOCK_INTERNAL_USER)
+        if raise_ and not able:
+            raise UserIsNotLockable(user.username)
+        return able
+
+    def _is_suspendable(self, user, raise_=False):
+        able = (not user.is_administrator() and
+                user.username != KUBERDOCK_INTERNAL_USER)
+        if raise_ and not able:
+            raise UserIsNotSuspendable(user.username)
+        return able
 
     @staticmethod
     @atomic()

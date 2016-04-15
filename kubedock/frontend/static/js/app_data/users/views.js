@@ -398,14 +398,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         templateHelpers: function(){
-            var roles = _.filter(this.roles, function(r){ return r !== 'HostingPanel'; }),
-                packages = this.packages,
-                timezones = this.timezones;
             return {
-                roles: roles,
-                packages: packages,
-                defaultRole: 'User',
-                timezones: timezones,
+                isNew: this.model.isNew(),
+                roles: this.roles,
+                packages: this.packages,
+                timezones: this.timezones,
             };
         },
 

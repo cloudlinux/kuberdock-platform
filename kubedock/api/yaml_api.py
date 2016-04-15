@@ -1,4 +1,5 @@
 import yaml
+from copy import deepcopy
 from flask import Blueprint
 from flask.views import MethodView
 from kubedock.decorators import (login_required_or_basic_or_token,
@@ -106,6 +107,7 @@ def process_pod(pod, rc, service):
         spec_body = pod.get('spec', {})
         replicas = spec_body.get('replicas', 1)
 
+    spec_body = deepcopy(spec_body)
     kdSection = doc.get('kuberdock', {})
 
     new_pod = {

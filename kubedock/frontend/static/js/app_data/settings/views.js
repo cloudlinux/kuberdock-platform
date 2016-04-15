@@ -189,7 +189,7 @@ define(['app_data/app', 'marionette',
                         return ' ';  // return string - means validation not passed
                     }
                     if (newValue.trim().length > 32){
-                        utils.notifyWindow('Maximum length is 25 symbols');
+                        utils.notifyWindow('Maximum length is 32 symbols');
                         return ' ';
                     }
                 },

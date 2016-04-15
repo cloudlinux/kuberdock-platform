@@ -39,12 +39,27 @@ ETCD_POD_STATES_URL = ETCD_URL.format('/'.join([
     ETCD_KUBERDOCK, ETCD_POD_STATES]))
 
 
-def filter_event(data):
-    metadata = data['object']['metadata']
-    if metadata['name'] in ('kubernetes', 'kubernetes-ro'):
-        return None
+def filter_event(data, app):
+    # Type of event is an optional field
+    evt_type = data.get('type')
+    with app.app_context():
+        if evt_type == u'ERROR' or evt_type is None:
+            current_app.logger.warning(
+                'An error detected in events: %s', data
+            )
+            return None
 
-    return data
+        # Object is an optional field. Name in metadata is optional too.
+        metadata = data.get('object', {}).get('metadata', {})
+        name = metadata.get('name')
+        if name in ('kubernetes', 'kubernetes-ro') or name is None:
+            if name is None:
+                current_app.logger.warning(
+                    'Empty name in event object metadata: %s', data
+                )
+            return None
+
+        return data
 
 
 def get_pod_state(pod):
@@ -442,7 +457,7 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                     evt_version = data['object']['metadata']['resourceVersion']
                     last_saved = redis.get(redis_key)
                     if int(evt_version) > int(last_saved or '0'):
-                        data = filter_event(data)
+                        data = filter_event(data, app)
                         if data:
                             func(data, app)
                         redis.set(redis_key, evt_version)
@@ -566,9 +581,10 @@ def process_pod_states(data, app, live=True):
     _, ts = key.rsplit('/', 1)
     obj = data['node']['value']
     k8s_obj = json.loads(obj, object_hook=k8s_json_object_hook)
-    k8s_obj = filter_event(k8s_obj)
-    event_time = datetime.fromtimestamp(float(ts))
-    process_pods_event(k8s_obj, app, event_time, live)
+    k8s_obj = filter_event(k8s_obj, app)
+    if k8s_obj is not None:
+        event_time = datetime.fromtimestamp(float(ts))
+        process_pods_event(k8s_obj, app, event_time, live)
     r = requests.delete(ETCD_URL.format(key))
     if not r.ok:
         print "error while delete:{}".format(r.text)

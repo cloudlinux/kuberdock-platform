@@ -839,30 +839,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         isImpersonated: function(){  // TODO-JWT: get this data from token
             return backendData.impersonated;
         },
+        roleIs: function(/* ...roles */){
+            for (var i = 0; i < arguments.length; i++){
+                if (this.get('rolename') === arguments[i])
+                    return true;
+            }
+            return false;
+        },
     });
     App.getCurrentUser = App.resourcePromiser('user', data.CurrentUserModel);
-
-    data.PermissionModel = Backbone.Model.extend({
-        urlRoot: '/api/settings/permissions',
-        parse: unwrapper
-    });
-
-    data.PermissionsCollection = Backbone.Collection.extend({
-        url: '/api/settings/permissions',
-        model: data.PermissionModel,
-        parse: unwrapper
-    });
-
-    data.NotificationModel = Backbone.Model.extend({
-        urlRoot: '/api/settings/notifications',
-        parse: unwrapper
-    });
-
-    data.NotificationsCollection = Backbone.Collection.extend({
-        url: '/api/settings/notifications',
-        model: data.NotificationModel,
-        parse: unwrapper
-    });
 
     data.SettingsModel = Backbone.Model.extend({
         urlRoot: '/api/settings/sysapi',

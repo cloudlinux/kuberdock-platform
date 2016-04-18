@@ -11,7 +11,7 @@
     <% }) %>
     </ul>
     <div class="control-group">
-        <% if (backendData.user.rolename !== 'LimitedUser'){ %>
+        <% if (user.get('rolename') !== 'LimitedUser'){ %>
             <a id="<%- buttonID %>" href="<%- buttonLink %>"><%- buttonTitle %></a>
         <% } %>
         <div class="nav-search" id="nav-search"></div>

@@ -52,7 +52,7 @@
                     <div class="control-icons col-md-10 col-md-offset-2 col-sm-12">
                         <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
                             <div>Image: <%- image %></div>
-                            <div>Kube Type: <%- kube_type.name %></div>
+                            <div>Kube Type: <%- kube_type.get('name') %></div>
                             <div>Restart policy: <%- restart_policy %></div>
                             <div class="editGroup">
                                 Number of Kubes: <!-- <span class="editContainerKubes"> --><%- kubes %><!--</span>-->
@@ -64,9 +64,9 @@
                             </div>
                         </div>
                         <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 servers">
-                            <div>CPU: <%= (kube_type.cpu * kubes).toFixed(2) %> <%- kube_type.cpu_units %></div>
-                            <div>RAM: <%- kube_type.memory * kubes %> <%- kube_type.memory_units %></div>
-                            <div>HDD: <%- kube_type.disk_space * kubes %> <%- kube_type.disk_space_units %> </div>
+                            <div>CPU: <%- limits.cpu %></div>
+                            <div>RAM: <%- limits.ram %></div>
+                            <div>HDD: <%- limits.hdd %></div>
                         </div>
                     </div>
                     <div class="col-xs-12 page-top-menu border-top">

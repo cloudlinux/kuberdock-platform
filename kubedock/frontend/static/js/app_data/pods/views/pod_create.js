@@ -395,6 +395,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function(){
+            this.pod.recalcInfo();
             return {
                 parentID: this.pod.id,
                 volumes: this.pod.get('volumes'),
@@ -402,14 +403,15 @@ define(['app_data/app', 'app_data/model',
                 kube_type: this.pod.getKubeType(),
                 restart_policy: this.pod.get('restartPolicy'),
                 podName: this.pod.get('name'),
+                limits: this.model.limits,
             };
         },
 
         startContainer: function(){ this.pod.cmdStart(); },
         stopContainer: function(){ this.pod.cmdStop(); },
-        updateContainer: function(){ App.updateContainer(this.model); },
+        updateContainer: function(){ this.model.update(); },
         checkContainerForUpdate: function(){
-            App.checkContainerForUpdate(this.model).done(this.render);
+            this.model.checkForUpdate().done(this.render);
         },
     });
 
@@ -979,24 +981,16 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function(){
-            var kubeType,
-                pod = this.model.getPod();
-
-            if (!pod.detached){
-                var kube_id = pod.get('kube_type');
-                _.each(backendData.kubeTypes, function(kube){
-                    if(parseInt(kube.id) == parseInt(kube_id))
-                        kubeType = kube;
-                });
-            }
-
+            var pod = this.model.getPod();
+            pod.recalcInfo();
             return {
                 parentID: pod.id,
                 updateIsAvailable: this.model.updateIsAvailable,
                 sourceUrl: this.model.get('sourceUrl'),
                 detached: pod.detached,
                 ip: this.model.get('ip'),
-                kube_type: kubeType,
+                kube_type: pod.getKubeType(),
+                limits: this.model.limits,
                 restart_policy: pod.get('restartPolicy'),
                 podName: pod.get('name'),
             };
@@ -1004,11 +998,9 @@ define(['app_data/app', 'app_data/model',
 
         startContainer: function(){ this.model.getPod().cmdStart(); },
         stopContainer: function(){ this.model.getPod().cmdStop(); },
-        updateContainer: function(){
-            App.updateContainer(this.model);
-        },
+        updateContainer: function(){ this.model.update(); },
         checkContainerForUpdate: function(){
-            App.checkContainerForUpdate(this.model).done(this.render);
+            this.model.checkForUpdate().done(this.render);
         },
 
         removeError: function(evt){
@@ -1227,16 +1219,8 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function(){
-            var pod = this.model.getPod(),
-                kubeType;
-            if (!pod.detached){
-                var kube_id = pod.get('kube_type');
-                _.each(backendData.kubeTypes, function(kube){
-                    if(parseInt(kube.id) == parseInt(kube_id))
-                        kubeType = kube;
-                });
-            }
-
+            var pod = this.model.getPod();
+            pod.recalcInfo();
             return {
                 updateIsAvailable: this.model.updateIsAvailable,
                 parentID: pod.id,
@@ -1244,7 +1228,8 @@ define(['app_data/app', 'app_data/model',
                 image: this.model.get('image'),
                 name: this.model.get('name'),
                 state: this.model.get('state'),
-                kube_type: kubeType,
+                kube_type: pod.getKubeType(),
+                limits: this.model.limits,
                 restart_policy: pod.get('restartPolicy'),
                 kubes: this.model.get('kubes'),
                 podName: pod.get('name'),
@@ -1254,11 +1239,9 @@ define(['app_data/app', 'app_data/model',
 
         startContainer: function(){ this.model.getPod().cmdStart(); },
         stopContainer: function(){ this.model.getPod().cmdStop(); },
-        updateContainer: function(){
-            App.updateContainer(this.model);
-        },
+        updateContainer: function(){ this.model.update(); },
         checkContainerForUpdate: function(){
-            App.checkContainerForUpdate(this.model).done(this.render);
+            this.model.checkForUpdate().done(this.render);
         },
     });
 
@@ -1309,21 +1292,15 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function(){
-            var pod = this.model.getPod(),
-                kubeType;
-            if (!pod.detached) {
-                var kube_id = pod.get('kube_type');
-                _.each(backendData.kubeTypes, function(kube){
-                    if(parseInt(kube.id) == parseInt(kube_id))
-                        kubeType = kube;
-                });
-            }
+            var pod = this.model.getPod();
+            pod.recalcInfo();
             return {
                 parentID: pod.id,
                 updateIsAvailable: this.model.updateIsAvailable,
                 sourceUrl: this.model.get('sourceUrl'),
                 podName: pod.get('name'),
-                kube_type: kubeType,
+                kube_type: pod.getKubeType(),
+                limits: this.model.limits,
                 restart_policy: pod.get('restartPolicy'),
                 logs: this.model.logs,
                 logsError: this.model.logsError,
@@ -1403,12 +1380,9 @@ define(['app_data/app', 'app_data/model',
         startItem: function(){ this.model.getPod().cmdStart(); },
         stopItem: function(){ this.model.getPod().cmdStop(); },
 
-        updateContainer: function(){
-            App.updateContainer(this.model);
-        },
-
+        updateContainer: function(){ this.model.update(); },
         checkContainerForUpdate: function(){
-            App.checkContainerForUpdate(this.model).done(this.render);
+            this.model.checkForUpdate().done(this.render);
         }
     });
 

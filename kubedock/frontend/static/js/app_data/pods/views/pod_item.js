@@ -102,12 +102,9 @@ define(['app_data/app',
             'change': 'render'
         },
 
-        updateItem: function(){
-            App.updateContainer(this.model);
-        },
-
+        updateItem: function(){ this.model.update(); },
         checkForUpdate: function(){
-            App.checkContainerForUpdate(this.model).done(this.render);
+            this.model.checkForUpdate().done(this.render);
         },
 
         containerPage: function(evt){

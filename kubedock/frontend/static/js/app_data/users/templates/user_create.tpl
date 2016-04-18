@@ -64,9 +64,11 @@
                 <div class="form-group">
                     <label for="package-select">Package</label>
                     <select id="package-select" name="package-select" class="selectpicker">
-                    <% _.each(packages, function(p){ %>
+                    <% packages.each(function(p){ %>
                         <option <%= (typeof package != 'undefined'
-                                     && package === p.name) ? 'selected' : '' %>><%= p.name %></option>
+                                     && package === p.name) ? 'selected' : '' %>>
+                            <%= p.get('name') %>
+                        </option>
                     <% }) %>
                     </select>
                 </div>

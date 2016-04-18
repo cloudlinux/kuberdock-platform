@@ -1,5 +1,6 @@
-define(['app_data/app', 'backbone', 'app_data/utils',
-        'backbone-paginator', 'backbone-associations', 'notify'], function(App, Backbone, utils){
+define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
+        'backbone-paginator', 'backbone-associations', 'notify'],
+       function(Backbone, numeral, App, utils){
     'use strict';
 
     var data = {},
@@ -109,17 +110,36 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         },
         getPod: function(){ return ((this.collection || {}).parents || [])[0]; },
         checkForUpdate: function(){
+            utils.preloader.show();
             return $.ajax({
                 url: this.getPod().url() + '/' + this.id + '/update',
                 context: this,
-            }).done(function(rs){ this.updateIsAvailable = rs.data; });
+            }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(rs){
+                this.updateIsAvailable = rs.data;
+                if (!rs.data)
+                    utils.notifyWindow('No updates found', 'success');
+            });
         },
         update: function(){
-            return $.ajax({
-                url: this.getPod().url() + '/' + this.id + '/update',
-                type: 'POST',
-                context: this,
-            }).done(function(){ this.updateIsAvailable = undefined; });
+            var model = this;
+            utils.modalDialog({
+                title: 'Update container',
+                body: "During update whole pod will be restarted. Continue?",
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        utils.preloader.show();
+                        $.ajax({
+                            url: model.getPod().url() + '/' + model.id + '/update',
+                            type: 'POST',
+                            context: model,
+                        }).always(utils.preloader.hide).fail(utils.notifyWindow)
+                            .done(function(){ model.updateIsAvailable = undefined; });
+                    },
+                    buttonCancel: true,
+                },
+            });
         },
         getLogs: function(size){
             size = size || 100;
@@ -289,6 +309,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         },
 
         recalcInfo: function(pkg) {
+            pkg = pkg || App.userPackage;
             var containers = this.get('containers'),
                 volumes = this.get('volumes'),
                 kube = this.getKubeType(),
@@ -511,6 +532,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         },
         checkedItems: function(){ return this.fullCollection.filter(function(m){ return m.is_checked; }); },
     });
+    App.getPodCollection = App.resourcePromiser('podCollection', data.PodCollection);
 
     data.ImageCollection = Backbone.Collection.extend({
         url: '/api/images/',
@@ -585,6 +607,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             pageSize: 10
         }
     });
+    App.getNodeCollection = App.resourcePromiser('nodeCollection', data.NodeCollection);
 
     data.StatsCollection = Backbone.Collection.extend({
         url: '/api/stats',
@@ -740,6 +763,9 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             pageSize: 20
         }
     });
+    App.getUserCollection = App.resourcePromiser('userCollection', data.UsersPageableCollection);
+    App.getTimezones = App.resourcePromiser('timezoneList', '/api/settings/timezone-list');
+    App.getRoles = App.resourcePromiser('roles', '/api/users/roles');
 
     data.ActivitiesCollection = Backbone.PageableCollection.extend({
         url: '/api/users/a/:id',
@@ -810,7 +836,11 @@ define(['app_data/app', 'backbone', 'app_data/utils',
             return utils.localizeDatetime({dt: dt, tz: this.get('timezone'),
                                            formatString: formatString});
         },
+        isImpersonated: function(){  // TODO-JWT: get this data from token
+            return backendData.impersonated;
+        },
     });
+    App.getCurrentUser = App.resourcePromiser('user', data.CurrentUserModel);
 
     data.PermissionModel = Backbone.Model.extend({
         urlRoot: '/api/settings/permissions',
@@ -846,6 +876,8 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         comparator: function(model){ return model.id; },
         byName: function(name){ return this.findWhere({name: name}); },
     });
+    App.getSystemSettingsCollection = App.resourcePromiser(
+        'systemSettingsCollection', data.SettingsCollection);
 
     data.NetworkModel = Backbone.Model.extend({
         urlRoot: '/api/ippool/',
@@ -857,6 +889,7 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         model: data.NetworkModel,
         parse: unwrapper
     });
+    App.getIPPoolCollection = App.resourcePromiser('ippoolCollection', data.NetworkCollection);
 
     data.UserAddressModel = Backbone.Model.extend({
         defaults: {
@@ -878,18 +911,31 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.MenuCollection = Backbone.Collection.extend({
-        model: data.MenuModel
+        url: '/api/settings/menu',
+        model: data.MenuModel,
+        parse: unwrapper,
     });
+    App.getMenuCollection = App.resourcePromiser('menu', data.MenuCollection);
+
+    data.NotificationCollection = Backbone.Collection.extend({
+        url: '/api/settings/notifications',
+        parse: unwrapper,
+    });
+    App.getNotificationCollection = App.resourcePromiser(
+        'notifications', data.NotificationCollection);
 
     data.LicenseModel = Backbone.Model.extend({
         parse: unwrapper,
         url: '/api/pricing/license'
     });
+    App.getLicenseModel = App.resourcePromiser('licenseModel', data.LicenseModel);
 
 
     // Billing & resources
 
     data.Package = Backbone.AssociatedModel.extend({
+        url: function(){ return '/api/pricing/packages/' + this.id + '?with_kubes=1'; },
+        parse: unwrapper,
         defaults: function(){
             return {
                 currency: 'USD',
@@ -903,6 +949,23 @@ define(['app_data/app', 'backbone', 'app_data/utils',
                 price_pstorage: 0,
                 suffix: ' USD',
             };
+        },
+        initialize: function(attributes, options){
+            var kubes = this.get('kubes');
+            this.unset('kubes');
+            if (App.packageCollection == null)
+                App.packageCollection = new data.PackageCollection();
+            if (App.kubeTypeCollection == null)
+                App.kubeTypeCollection = new data.KubeTypeCollection();
+            if (App.packageKubeCollection == null)
+                App.packageKubeCollection = new data.PackageKubeCollection();
+            App.packageCollection.add(this);
+            _.each(kubes, function(kube){
+                App.kubeTypeCollection.add(kube);
+                App.packageKubeCollection.add({package_id: this.id,
+                                               kube_id: kube.id,
+                                               kube_price: kube.price});
+            }, this);
         },
         getKubeTypes: function() {
             var kubes = _.chain(this.parents)
@@ -925,8 +988,11 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         },
     });
     data.PackageCollection = Backbone.Collection.extend({
+        url: '/api/pricing/packages/?with_kubes=1',
         model: data.Package,
+        parse: unwrapper,
     });
+    App.getPackages = App.resourcePromiser('packages', data.PackageCollection),
 
     data.KubeType = Backbone.AssociatedModel.extend({
         defaults: function(){
@@ -964,11 +1030,6 @@ define(['app_data/app', 'backbone', 'app_data/utils',
     });
 
     data.PackageKube = Backbone.AssociatedModel.extend({
-        parse: function(obj){
-            obj['kubeType'] = App.kubeTypeCollection.get(obj.kube_id);
-            obj['package'] = App.packageCollection.get(obj.package_id);
-            return obj;
-        },
         relations: [{
             type: Backbone.One,
             key: 'kubeType',
@@ -980,13 +1041,16 @@ define(['app_data/app', 'backbone', 'app_data/utils',
         }],
         defaults: {kube_price: 0},
         initialize: function(){
-            this.on('change:package_id', function(model, value){
-                this.set('package', App.packageCollection.get(value));
-            });
-            this.on('change:kube_id', function(model, value){
-                this.set('kubeType', App.kubeTypeCollection.get(value));
-            });
-        }
+            this.reattach();
+            this.on('change:package_id change:kube_id', this.reattach);
+        },
+        reattach: function(){
+            this.set('kubeType', App.kubeTypeCollection.get(this.get('kube_id')));
+            this.set('package', App.packageCollection.get(this.get('package_id')));
+        },
+    });
+    data.PackageKubeCollection = Backbone.Collection.extend({
+        model: data.PackageKube,
     });
 
     return data;

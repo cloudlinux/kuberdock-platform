@@ -46,10 +46,6 @@
             <div class="loader"></div>
         </div>
 
-        <script type="text/javascript">
-            var current_username = "{{current_user.username }}",
-                administrator = "{{ current_user.is_administrator() }}" === "True" ? true : false;
-        </script>
         {% endblock %}
 
         {% block app_js_asset %}

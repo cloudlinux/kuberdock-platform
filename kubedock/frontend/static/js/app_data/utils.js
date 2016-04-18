@@ -1,4 +1,4 @@
-define(['moment-timezone', 'notify'], function(moment){
+define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
     'use strict';
     var utils = {};
 
@@ -199,26 +199,6 @@ define(['moment-timezone', 'notify'], function(moment){
             console.log(e);  // eslint-disable-line no-console
         }
         return moment(dt).format(formatString);
-    };
-
-    // TODO: crate models Package and Kube; use backbone-associations for relations
-    utils.getUserPackage = function(full) {
-        var pkg = _.findWhere(backendData.packages, {id: backendData.userPackage});
-        if (full) {
-            var kubes = _.indexBy(backendData.kubeTypes, 'id');
-            pkg.kubes = _.chain(backendData.packageKubes).where({package_id: pkg.id})
-                .each(function(packageKube){
-                    _.extend(packageKube, kubes[packageKube.kube_id]);
-                }).value();
-        }
-        return pkg;
-    };
-
-    // TODO: it should be a method of Package model
-    utils.getFormattedPrice = function(pkg, price, format) {
-        format = format !== undefined ? format : '0.00';
-
-        return pkg.prefix + numeral(price).format(format) + pkg.suffix;
     };
 
     utils.getBillingUrl = function(billingcollection){

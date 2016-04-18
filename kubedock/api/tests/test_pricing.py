@@ -75,15 +75,18 @@ class ExtendedAPITestCase(APITestCase):
 
 
 class TestPackageCRUD(ExtendedAPITestCase):
-    def test_get_not_found(self):
-        response = self.admin_open(Url.package(12345))
-        self.assertAPIError(response, 404, 'PackageNotFound')
-
     def test_get_one(self):
-        response = self.admin_open(Url.package(12345))
+        response = self.user_open(Url.package(12345))
         self.assertAPIError(response, 404, 'PackageNotFound')
 
-        response = self.admin_open(Url.package(self.package.id))
+        # user can get only own package
+        response = self.user_open(Url.package(self.package.id))
+        self.assertAPIError(response, 404, 'PackageNotFound')
+        response = self.user_open(Url.package(self.user.package_id))
+        self.assert200(response)
+
+        # admin can get any package
+        response = self.open(Url.package(self.package.id), auth=self.adminauth)
         self.assert200(response)
         self.assertDictContainsSubset({'name': self.package.name},
                                       response.json['data'])
@@ -91,7 +94,13 @@ class TestPackageCRUD(ExtendedAPITestCase):
     def test_get_list(self):
         for i in range(10):
             self.admin_open(Url.packages(), 'POST', valid_package())
-        response = self.admin_open(Url.packages())
+
+        response = self.user_open(Url.packages())
+        self.assert200(response)
+        # only user's own package
+        self.assertEqual(len(response.json['data']), 1)
+
+        response = self.open(Url.packages(), auth=self.adminauth)
         self.assert200(response)
         # 10 + standard + pre-created
         self.assertEqual(len(response.json['data']), 12)

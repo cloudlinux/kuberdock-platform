@@ -2,7 +2,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
     //"use strict";
 
     var controller = Marionette.Object.extend({
-
+        index: function(){
+            var admin = App.currentUser.get('rolename') === 'Admin';
+            App.navigate(admin ? 'nodes' : 'pods', {trigger: true});
+        },
         showPods: function(){
             var that = this;
             require(['app_data/pods/views/pods_list',
@@ -227,6 +230,8 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
         createPod: function(){
             "use strict";
+            if (App.currentUser.get('rolename') === 'LimitedUser')
+                return App.navigate('pods', {trigger: true});
             var that = this;
             require(['app_data/utils',
                      'app_data/pods/views/pod_create',
@@ -725,11 +730,13 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
-                    $.when(App.getUserCollection(), App.getKubeTypes(),
-                           App.getRoles(), App.getPackages(), App.getTimezones()).done(function(userCollection, kubeTypes, roles, packages, timezones){
+                    $.when(App.getUserCollection(), App.getRoles(),
+                           App.getTimezones()).done(function(userCollection, roles, timezones){
                         var model = userCollection.fullCollection.get(Number(userId)),
-                            view = new Views.UsersEditView({ model: model, kubeTypes: kubeTypes,
-                                                           roles: roles, packages: packages, timezones: timezones});
+                            view = new Views.UsersEditView({
+                                model: model, kubeTypes: App.kubeTypeCollection,
+                                roles: roles, packages: App.packageCollection,
+                                timezones: timezones});
                         layoutView.main.show(view);
                         $('#pager').hide();
                         $('#user-header h2').text('Edit');
@@ -746,9 +753,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
-                    $.when(App.getUserCollection(), App.getKubeTypes()).done(function(userCollection, kubeTypes){
+                    App.getUserCollection().done(function(userCollection){
                         var userModel = userCollection.fullCollection.get(Number(userId)),
-                            userProfileView = new Views.UserProfileView({ model: userModel, kubeTypes: kubeTypes });
+                            userProfileView = new Views.UserProfileView({
+                                model: userModel, kubeTypes: App.kubeTypeCollection});
                         layoutView.main.show(userProfileView);
                     });
                 });
@@ -917,14 +925,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             });
         },
 
-        showSettings: function(){
-            var layout_view = new App.Views.SettingsLayout();
-            this.listenTo(layout_view, 'show', function(){
-                layout_view.main.show();
-            });
-            App.contents.show(layout_view);
-        },
-
         showPermissionSettings: function(){
             var layout_view = new App.Views.SettingsLayout();
             var permissions_view = new App.Views.PermissionsListView({
@@ -965,6 +965,12 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 layout_view.main.show(notifications_edit_view);
             });
             App.contents.show(layout_view);
+        },
+
+        showSettings: function(){
+            return App.currentUser.get('rolename') === 'Admin'
+                ? this.showGeneralSettings()
+                : this.editProfileSettings();
         },
 
         editProfileSettings: function(){
@@ -1014,7 +1020,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
-                    licenseModel = new Model.LicenseModel();
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     utils.preloader.show();
@@ -1134,7 +1139,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
         },
 
         attachNotification: function(data){
-            var that = this;
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
                     notificationCollection.add(data);
@@ -1146,7 +1150,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
         detachNotification: function(data){
             if (!App.message.hasView()) { return; }
-            var that = this;
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
                     'use strict';

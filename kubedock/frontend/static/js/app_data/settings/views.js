@@ -346,7 +346,6 @@ define(['app_data/app', 'marionette',
         },
 
         templateHelpers: function(){
-            var timezones = this.timezones;
             return {
                 edit: this.model.in_edit,
                 first_name: this.model.get('first_name'),
@@ -354,7 +353,7 @@ define(['app_data/app', 'marionette',
                 middle_initials: this.model.get('middle_initials'),
                 email: this.model.get('email'),
                 timezone: this.model.get('timezone'),
-                timezones : timezones
+                timezones: this.timezones,
             };
         },
 
@@ -542,6 +541,8 @@ define(['app_data/app', 'marionette',
         events: {
             'click @ui.tabButton' : 'changeTab'
         },
+
+        templateHelpers: function(){ return {user: App.currentUser}; },
 
         onBeforeShow: function(){
             utils.preloader.show();

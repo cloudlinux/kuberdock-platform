@@ -16,8 +16,8 @@
     <div class="col-md-6 col-sm-12">
         <label for="extra-options">Kube Type</label>
         <select class="kube_type selectpicker" id="extra-options">
-        <% _.each(kubeTypes, function(t){ %>
-            <option value="<%= t.id %>"><%= t.name %></option>
+        <% kubeTypes.each(function(kube){ %>
+            <option value="<%= kube.id %>"><%= kube.get('name') %></option>
         <% }) %>
         </select>
     </div>

@@ -72,10 +72,10 @@
                                         <tr>
                                             <%
                                                 var podConfig = JSON.parse(pod.config),
-                                                    kubeType = kubeTypes[podConfig.kube_type];
+                                                    kubeType = kubeTypes.get(podConfig.kube_type);
                                             %>
                                             <td><%- pod.name %></td>
-                                            <td><%- kubeType %></td>
+                                            <td><%- kubeType ? kubeType.get('name') : '' %></td>
                                             <td><%- pod.kubes %></td>
                                         </tr>
                                     <% }) %>

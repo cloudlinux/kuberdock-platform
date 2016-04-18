@@ -16,6 +16,7 @@ define(['app_data/app', 'marionette',
         template            : navListTpl,
         childView           : views.NavListItem,
         childViewContainer  : 'ul#menu-items',
+        templateHelpers: function(){ return {user: App.currentUser}; },
     });
 
     return views;

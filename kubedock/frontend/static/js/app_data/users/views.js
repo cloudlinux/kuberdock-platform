@@ -699,7 +699,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 last_login: last_login ? App.currentUser.localizeDatetime(last_login) : '',
                 last_activity: last_activity ? App.currentUser.localizeDatetime(last_activity) : '',
                 pods: pods ? pods : [],
-                kubeTypes: _.object(_.map(this.kubeTypes, function(t){return [t.id, t.name]})),
+                kubeTypes: this.kubeTypes,
                 'kubes': kubesCount,
                 toHHMMSS: utils.toHHMMSS,
             };

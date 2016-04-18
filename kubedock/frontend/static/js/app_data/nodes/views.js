@@ -121,14 +121,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         templateHelpers: function(){
             var model = this.model,
-                kubeType = '';
-            _.each(backendData.kubeTypes, function(itm){
-                if(itm.id == model.get('kube_type'))
-                    kubeType = itm.name;
-            });
+                kubeType = App.kubeTypeCollection.get(model.get('kube_type'));
             return {
-                'kubeType' : kubeType
-            }
+                'kubeType': kubeType ? kubeType.get('name') : '',
+            };
         },
 
         deleteNode: function() {
@@ -305,8 +301,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             }
         },
 
-        templateHelpers: {
-            kubeTypes: backendData.kubeTypes
+        templateHelpers: function(){
+            return {
+                kubeTypes: App.kubeTypeCollection,
+            };
         },
 
         complete: function () {

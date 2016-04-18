@@ -26,7 +26,7 @@
         <span class="stopped">stopped</span>
     <% } %>
 </td>
-<td><%- _.find(backendData.kubeTypes, function(e) { return e.id == kube_type; }).name %></td>
+<td><%- kubeType.get('name') %></td>
 <td><%- kubes %></td>
 <td class="actions">
     <% if (ableTo('start')) { %> <span class="start-btn" title="Run <%- name %> pod"></span> <% } %>

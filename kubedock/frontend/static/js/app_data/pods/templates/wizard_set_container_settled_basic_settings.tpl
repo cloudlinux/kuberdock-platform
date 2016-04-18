@@ -49,9 +49,9 @@
                         <div>Number of Kubes: <%- kubes %></div>
                     </div>
                     <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 servers">
-                        <div>CPU: <%- (kube_type.get('cpu') * kubes).toFixed(2) %> <%- kube_type.get('cpu_units') %></div>
-                        <div>RAM: <%- kube_type.get('memory') * kubes %> <%- kube_type.get('memory_units') %></div>
-                        <div>HDD: <%- kube_type.get('disk_space') * kubes %> <%- kube_type.get('disk_space_units') %></div>
+                        <div>CPU: <%- limits.cpu %></div>
+                        <div>RAM: <%- limits.ram %></div>
+                        <div>HDD: <%- limits.hdd %></div>
                     </div>
                 </div>
                 <div class="col-xs-12 no-padding">

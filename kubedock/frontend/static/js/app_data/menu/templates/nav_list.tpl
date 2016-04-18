@@ -1,7 +1,7 @@
-<% if (backendData.impersonated){ %>
+<% if (user.isImpersonated()){ %>
 <div class="login-view-mode-wrapper">
     <span class="glass pull-left">User View Mode</span>
-    <span>Logged in as user: <b><%= backendData.current_username %></b></span>
+    <span>Logged in as user: <b><%= user.get('username') %></b></span>
     <a href="/logoutA">Exit Mode</a>
 </div>
 <% } %>
@@ -23,12 +23,12 @@
                 <ul id="menu-items" class="nav navbar-nav"></ul>
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown profile-menu">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown"><%- backendData.current_username || 'administrator' %><b class="caret"></b></a>
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown"><%- user.get('username') %><b class="caret"></b></a>
                         <ul class="dropdown-menu">
-                            <% if (backendData.user.rolename !== 'Admin'){ %>
+                            <% if (user.get('rolename') !== 'Admin'){ %>
                                 <li><a class="routable" href="#settings">Settings</a></li>
                             <% } %>
-                            <% if (!backendData.impersonated){ %>
+                            <% if (!user.isImpersonated()){ %>
                                 <li><a href="/logout">Logout </a></li>
                             <% } %>
                         </ul>

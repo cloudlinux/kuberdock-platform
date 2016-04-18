@@ -69,8 +69,8 @@ def _process_args():
     parser.add_argument('-c', '--cycles', default=1, type=int, help="Number of cycles to run")
     parser.add_argument('-t', '--kube-type', default=1, type=int, help="Kube type")
     parser.add_argument('-w', '--workload', choices=_workloads.keys(), help="Test to perform")
-    parser.add_argument('-u', '--user', default='hostingPanel', help="KuberDock admin user name")
-    parser.add_argument('-p', '--password', default='hostingPanel', help="KuberDock admin user password")
+    parser.add_argument('-u', '--user', default='admin', help="KuberDock admin user name")
+    parser.add_argument('-p', '--password', default='admin', help="KuberDock admin user password")
     parser.add_argument('-H', '--host', default='https://127.0.0.1', help="KuberDock http url")
     parser.add_argument('-l', '--linear', action='store_true', help="linear mode")
     parser.add_argument('--ab-concurrency', action='store', type=int,
@@ -368,4 +368,3 @@ def main(args):
 if __name__ == '__main__':
     args = _process_args()
     main(args)
-

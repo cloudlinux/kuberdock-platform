@@ -8,7 +8,6 @@ ROLES = (
     ("User", False),
     ("LimitedUser", False),
     ("TrialUser", False),
-    ("HostingPanel", True),
 )
 
 resources = {
@@ -66,11 +65,6 @@ permissions = {
         ('pricing', 'create'): True,
         ('pricing', 'delete'): True,
         ('timezone', 'get'): True,
-    }),
-    'HostingPanel': dict(permissions_base, **{
-        ('images', 'get'): True,
-        ('images', 'isalive'): True,
-        ('predefined_apps', 'get'): True,
     }),
     'User': dict(permissions_base, **{
         ('pods', 'create'): True,

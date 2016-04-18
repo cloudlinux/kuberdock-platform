@@ -27,7 +27,7 @@ class NoBilling(BillingCommon):
             }
         }
 
-        if user.role.rolename == 'HostingPanel':
+        if user.role.rolename == 'Admin':
             response['packages'] = [p.to_dict(with_kubes=True) for p in Package.query.all()]
 
         return response

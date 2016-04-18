@@ -1,0 +1,17 @@
+# Allow running vagrant cmd from repo root 
+#export VAGRANT_CWD=~/repos/AppCloud/dev-utils/dev-env/
+
+# Build specific ref instead of current state of the repo
+#export KD_GIT_REF=kuberdock@1.1-1 
+
+# Do additional tricks like build rpm from source, stop wsgi on master, 
+# run tmux on master and so on
+#export KD_DEV_INSTALL=true
+
+# Resources allocation
+#export KD_MASTER_MEMORY=4096
+#export KD_MASTER_CPUS=4
+
+#export KD_NODES_COUNT=1
+#export KD_NODE_MEMORY=2048
+#export KD_NODE_CPUS=1

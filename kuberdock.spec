@@ -190,6 +190,8 @@ fi
 * Mon Apr 18 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 1.1.1-1
 - Fixed non-uploading predefined apps yaml file on windows systems
 - AC-2964: remove hostingPanel user and role
+- AC-2861: forbid actions "suspend", "lock", "delete" for some users
+- AC-844: user create/edit validation improvements
 
 * Thu Apr 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 1.1-1
 - AC-1545: Predefined apps > 'Upload YAML' allows not YAML format.

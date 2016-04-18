@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 1.0
-Release: 1%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,12 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+* Mon Apr 18 2016 Igor Savenko <bliss@cloudlinux.com> 1.0-2
+- AC-2963: removed passwords from /etc/kubecli.conf;
+  restricted file permissions for ~/.kubecli.conf;
+  removed excessive data from ~/.kubecli.conf.
+- AC-2827: To kcli-deploy.sh added command line argument to specify iface for flannel
+
 * Mon Mar 14 2016 Igor Savenko <bliss@cloudlinux.com> 1.0-1
 - raised tag
 

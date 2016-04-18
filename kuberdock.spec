@@ -1,7 +1,7 @@
-Version: 1.1
+Version: 1.1.1
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,8 +187,9 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
-* Tue Apr 12 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 1.1-2
+* Mon Apr 18 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 1.1.1-1
 - Fixed non-uploading predefined apps yaml file on windows systems
+- AC-2964: remove hostingPanel user and role
 
 * Thu Apr 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 1.1-1
 - AC-1545: Predefined apps > 'Upload YAML' allows not YAML format.

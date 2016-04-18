@@ -311,7 +311,7 @@ define(['app_data/app', 'marionette',
 
         removeError: function(evt){
             var target = $(evt.target);
-            if (target.hasClass('error')) target.removeClass('error');
+            if (target.hasClass('error')) target.parent().find('.notifyjs-metro-error').click();
         },
 
         onSave: function(){
@@ -337,20 +337,17 @@ define(['app_data/app', 'marionette',
 
             if (data.email == '') {
                 utils.scrollTo(this.ui.email);
-                this.ui.email.addClass('error');
-                utils.notifyWindow("Empty E-mail");
+                utils.notifyInline('Empty E-mail',this.ui.email);
                 return;
             } else if (!pattern.test(data.email)) {
                 utils.scrollTo(this.ui.email);
-                this.ui.email.addClass('error');
-                utils.notifyWindow("E-mail must be correct");
+                utils.notifyInline('E-mail must be correct',this.ui.email);
                 return;
             }
             if (this.ui.password.val() !== this.ui.password_again.val()) {
                 utils.scrollTo(this.ui.password);
                 this.ui.password.addClass('error');
-                this.ui.password_again.addClass('error');
-                utils.notifyWindow("Passwords don't match");
+                utils.notifyInline("Passwords don\'t match",this.ui.password_again);
                 return;
             }
             if (this.ui.password.val())  // update only if specified

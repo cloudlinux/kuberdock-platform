@@ -1005,16 +1005,14 @@ define(['app_data/app', 'app_data/model',
 
         removeError: function(evt){
             var target = $(evt.target);
-            if (target.hasClass('error')) target.removeClass('error');
+            if (target.hasClass('error')){
+                target.parent().find('.notifyjs-metro-error').click();
+            }
         },
 
         finalStep: function(){
             var that = this,
-                validName = true,
-                firstSumbol = true,
-                successValue = true,
-                maxNamelength = true,
-                notDublicateName = true,
+                valid = true,
                 env = this.model.get('env'),
                 paternFirstSumbol = /^[a-zA-Z]/,
                 paternValidName = /^[a-zA-Z0-9-_\.]*$/;
@@ -1028,24 +1026,24 @@ define(['app_data/app', 'app_data/model',
                 envItem.name = name.value.trim();
                 $(name).val(envItem.name);
                 if (!paternFirstSumbol.test(envItem.name)){
-                    $(name).addClass('error');
-                    firstSumbol = false;
+                    utils.notifyInline('First symbol must be letter in variables name',name);
+                    valid = false;
                 }
                 if (!paternValidName.test(envItem.name)){
-                    $(name).addClass('error');
-                    validName = false;
+                    utils.notifyInline('Variable name should contain only Latin letters or ".", "_", "-" symbols',name);
+                    valid = false;
                 }
                 if (envItem.name.length > 255){
-                    $(name).addClass('error');
-                    maxNamelength = false;
+                    utils.notifyInline('Max length is 255 symbols',name);
+                    valid = false;
                 }
 
                 var value = that.ui.valueField[indexEnv];
                 envItem.value = value.value.trim();
                 $(value).val(envItem.value);
                 if (!envItem.value){
-                    $(value).addClass('error');
-                    successValue = false;
+                    utils.notifyInline('Variables value must be set',value);
+                    valid = false;
                 }
             });
 
@@ -1056,25 +1054,21 @@ define(['app_data/app', 'app_data/model',
             if (difference.length != 0){
                 _.each(difference, function(item){
                     _.each(that.ui.nameField, function(field){
-                        if (field.value == item.name) $(field).addClass('error');
+                        if (field.value == item.name){
+                            $(field).addClass('error');
+                            utils.notifyInline('Duplicate variable names are not allowed',field);
+                        }
                     })
                 });
                 difference.length = 0;
-                notDublicateName = false;
+                valid = false;
             }
 
             /* scroling to error */
             if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
 
-            /* error messages */
-            if (!maxNamelength) utils.notifyWindow('Max length is 255 symbols');
-            if (!successValue) utils.notifyWindow('Variables value must be set');
-            if (!firstSumbol) utils.notifyWindow('First symbol must be letter in variables name');
-            if (!notDublicateName) utils.notifyWindow('Duplicate variable names are not allowed');
-            if (!validName) utils.notifyWindow('Variable name should contain only Latin letters or ".", "_", "-" symbols');
-
             /* save data & navigate to next step */
-            if (firstSumbol && successValue && notDublicateName && validName && maxNamelength){
+            if (valid){
                 this.model.set('env', env);
                 this.trigger('step:complete');
             }

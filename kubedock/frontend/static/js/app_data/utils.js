@@ -145,6 +145,10 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
                   "<span class='notify-close'/>" +
               "</div>"
     });
+    $.notify.addStyle("metro", {
+        html: "<div>\n<div class='text-wrapper'>\n<span data-notify-text></span>\n</div>\n</div>",
+    });
+
     // close errors only if there is no selected text (let user copy error message)
     $(document).on('click', '.notifyjs-bootstrap-error', function(event) {
         event.stopPropagation();
@@ -171,6 +175,32 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             scrollTop: el-50
         }, 500);
     };
+
+    /* inline eroror hint */
+    utils.notifyInline = function (message, el){
+        var item = $(el);
+        item.notify(message, {
+            arrow : false,
+            style : 'metro',
+            autoHide: false,
+            showDuration: 100,
+            hideDuration: 100,
+            showAnimation: "fadeIn",
+            hideAnimation: "fadeOut",
+            elementPosition: 'bottom left',
+        });
+        var messageHeight = $(el).parent().find('.text-wrapper').height()
+        item.css('margin-bottom', messageHeight+10);
+        item.addClass('error');
+    }
+
+    $(document).on('click', '.notifyjs-metro-error', function(event) {
+        event.stopPropagation();
+        var item = $(this).parents('td, .form-group').find('input');
+        item.css('margin','');
+        item.removeClass('error').focus();
+        $(this).trigger('notify-hide');
+    });
 
     /* Returns string representing date&time with timezone converted to
      * the given `tz`.

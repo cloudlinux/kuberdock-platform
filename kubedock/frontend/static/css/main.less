@@ -1124,6 +1124,36 @@ body{
             }
         }
     }
+    .notifyjs-wrapper{
+        position: relative;
+        display: block;
+        width: 100%;
+        .notifyjs-arrow{
+            display: none !important;
+        }
+        .notifyjs-metro-base {
+            position: relative;
+            color: #1d1d1d;
+            span{
+                font-size: 12px;
+                font-weight: normal;
+                vertical-align: middle;
+            }
+            &.notifyjs-metro-error{
+                span{
+                    color: red;
+                }
+            }
+            .text-wrapper {
+                display: inline-block;
+                vertical-align: top;
+                text-align: left;
+                margin: 0px 0px 0px 5px;
+                clear: both;
+            }
+
+        }
+    }
     /*end alert messages */
     @import "tables.less";
     @import "pods.less";

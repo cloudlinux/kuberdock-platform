@@ -466,7 +466,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 if (isNew)
                     that.ui.username.val(that.ui.username.val().trim());
 
-
                 var existsUsername = isNew && _.invoke(users.pluck('username'), 'toLowerCase')
                         .indexOf(that.ui.username.val().toLowerCase()) !== -1,
                     existsEmail = users.chain().without(that.model).pluck('attributes')
@@ -509,16 +508,16 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     break;
                 /* password */
                 case that.ui.password.val() !== that.ui.password_again.val():
-                    that.addError(that.ui.password, "Passwords don't match.");
-                    that.ui.password_again.addClass('error');
+                    that.addError(that.ui.password_again, "Passwords don't match.");
+                    that.ui.password.addClass('error');
                     break;
                 case isNew && !that.ui.password.val():
-                    that.addError(that.ui.password, 'Password is required.');
-                    that.ui.password_again.addClass('error');
+                    that.addError(that.ui.password_again, 'Password is required.');
+                    that.ui.password.addClass('error');
                     break;
                 case that.ui.password.val().length > 25:
-                    that.addError(that.ui.password, 'Maximum length is 25 symbols.');
-                    that.ui.password_again.addClass('error');
+                    that.addError(that.ui.password_again, 'Maximum length is 25 symbols.');
+                    that.ui.password.addClass('error');
                     break;
                 /* email */
                 case !that.ui.email.val():
@@ -544,13 +543,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         addError: function(el, message){
             utils.scrollTo(el);
-            el.addClass('error');
-            utils.notifyWindow(message);
+            utils.notifyInline(message,el);
         },
 
         removeError: function(evt){
             var target = $(evt.target);
-            if (target.hasClass('error')) target.removeClass('error');
+            if (target.hasClass('error')){
+                target.parent().find('.notifyjs-metro-error').click();
+            }
         },
 
         toUserList: function(){ App.navigate('users', {trigger: true}); },

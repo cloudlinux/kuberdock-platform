@@ -15,7 +15,8 @@ from kubedock.core import db, ssh_connect, ConnectionPool
 from kubedock.kapi import licensing
 from kubedock.kapi.users import UserCollection
 from kubedock.nodes.models import Node
-from kubedock.pods.models import Pod, IPPool, PodIP
+from kubedock.pods.models import (
+    Pod, IPPool, PodIP, PersistentDisk, PersistentDiskStatuses)
 from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.settings import (
     AWS, STAT_URL, CEPH, KUBERDOCK_INTERNAL_USER)
@@ -256,7 +257,7 @@ def get_predefined_apps_info():
 
 
 def get_persistent_volume_info():
-    cls = PersistentDiskState
+    cls = PersistentDisk
     field = cls.size
     agg_result = db.session.query(
         db.func.avg(field).label('avg'),
@@ -264,16 +265,18 @@ def get_persistent_volume_info():
         db.func.min(field).label('min'),
         db.func.max(field).label('max'),
         db.func.count(field).label('count'),
+        db.func.sum(field).label('total_size'),
     ).filter(
-        cls.end_time.is_(None),
-        field > 0
+        ~cls.state.in_([PersistentDiskStatuses.TODELETE,
+                        PersistentDiskStatuses.DELETED])
     ).first()
     return {
         'count': agg_result.count,
         'min-size': agg_result.min,
         'max-size': agg_result.max,
         'avg': float(agg_result.avg or 0),  # fix for None when there is no pd
-        'std': float(agg_result.std or 0)
+        'std': float(agg_result.std or 0),
+        'total-size': agg_result.total_size or 0
     }
 
 

@@ -2,6 +2,7 @@ from flask import Blueprint, current_app
 from flask.views import MethodView
 import json
 import re
+from collections import Counter
 
 from ..core import db, ConnectionPool
 from ..rbac import check_permission
@@ -417,22 +418,6 @@ def _format_package_version(
     return major_v + ''.join(x for x in match.groups() if x is not None)
 
 
-def fold():
-    """Closure callable for reduce"""
-    nodes = [0]
-
-    def inner(a, n):
-        nodes[0] += 1
-        result = [nodes[0]]
-        for i in range(1, len(a)):
-            try:
-                result.append(a[i] + int(n[i]))
-            except ValueError:
-                result.append(a[i])
-        return tuple(result)
-    return inner
-
-
 def get_collection(force=False, key='KDCOLLECTION'):
     """Get collected data from redis or directly (and then cache'em)"""
     redis = ConnectionPool.get_connection()
@@ -446,53 +431,65 @@ def get_collection(force=False, key='KDCOLLECTION'):
 
 
 def process_collection(data):
-    result = {'status': 'unknown', 'expiration': '', 'type': '',
-              'installationID': data.get('installation-id', '')}
+    result = {
+        'status': 'unknown',
+        'expiration': '',
+        'type': '',
+        'installationID': data.get('installation-id', '')
+    }
 
-    result.update(dict((i, data.get(i)) for i in ('platform', 'storage')))
+    result.update({
+        key: data.get(key) for key in ('platform', 'storage')
+    })
 
-    result['version'] = dict(
-        zip(('KuberDock', 'kubernetes', 'docker'),
-            map(_format_package_version,
-                map(data.get, ('kuberdock', 'kubernetes', 'docker')))))
+    result['version'] = {
+        dest_key or src_key: _format_package_version(data.get(src_key))
+        for dest_key, src_key in
+        (('KuberDock', 'kuberdock'), (None, 'kubernetes'), (None, 'docker'))
+    }
 
-    result['data'] = dict(
-        zip(('nodes', 'cores', 'memory', 'containers'),
-            reduce(fold(),
-                   [('_',  # Node placeholder
-                     n.get('cores', 0),
-                     n.get('memory', {}).get('total', 0),
-                     n.get('user_containers', {}).get('running', 0))
-                    for n in data.get('nodes', [])],
-                   (0, 0, 0, 0))))
+    nodes = data.get('nodes', [])
+    result['data'] = {
+        'nodes': len(nodes),
+        'cores': sum(n.get('cores', 0) for n in nodes),
+        'memory': sum(int(n.get('memory', {}).get('total', 0)) for n in nodes),
+        'containers': sum(
+            n.get('user_containers', {}).get('running', 0) for n in nodes
+        )
+    }
 
-    result['data'].update(dict(
-        zip(('pods', 'apps', 'persistentVolume'),
-            (data.get('pods', {}).get('total', 0),
-             data.get('predefined-apps', {}).get('count', 0),
-             data.get('persistent-volumes', {}).get('count', 0)))))
+    result['data'].update({
+        'pods': data.get('pods', {}).get('total', 0),
+        'apps': data.get('predefined-apps', {}).get('count', 0),
+        'persistentVolume': data.get(
+            'persistent-volumes', {}).get('total-size', 0)
+    })
 
     result['data']['memory'] = "{0:.1f}".format(
         float(result['data']['memory']) / (1024 ** 3))  # Gb
-    result['data'] = dict((k, [0, v]) for k, v in result['data'].items())
+    result['data'] = {k: [0, v] for k, v in result['data'].iteritems()}
 
     lic_info = licensing.get_license_info()
-    if lic_info is not None:
-        lic = lic_info.get('data', {}).get('license', {})
-        for key in 'status', 'expiration', 'type':
-            result[key] = lic.get(key)
+    if lic_info is None:
+        return result
 
-        default_value = 'unlimited'
-        invalid = bool(set(['none', 'expired']) & set(map(result.get,
-                                                          ('status', 'type'))))
+    lic = lic_info.get('data', {}).get('license', {})
+    for key in 'status', 'expiration', 'type':
+        result[key] = lic.get(key)
 
-        for key, value in result['data'].iteritems():
-            if invalid:
-                value[0] = '-'
-            else:
-                value[0] = lic.get(key, default_value)
-                if str(value[0]) == '0':
-                    value[0] = default_value
+    default_value = 'unlimited'
+    invalid = bool({'none', 'expired'} & {result.get(key) for key in
+                                            ('status', 'type')})
+    invalid = any(result.get(key) in ('none', 'expired')
+                  for key in ('status', 'type'))
+
+    for key, value in result['data'].iteritems():
+        if invalid:
+            value[0] = '-'
+        else:
+            value[0] = lic.get(key, default_value)
+            if str(value[0]) == '0':
+                value[0] = default_value
     return result
 
 

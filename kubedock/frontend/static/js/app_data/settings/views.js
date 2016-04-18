@@ -1,20 +1,13 @@
 define(['app_data/app', 'marionette',
         'tpl!app_data/settings/templates/settings_layout.tpl',
-        'tpl!app_data/settings/templates/permissions.tpl',
-        'tpl!app_data/settings/templates/permission_item.tpl',
         'tpl!app_data/settings/templates/user_edit.tpl',
-        'tpl!app_data/settings/templates/notification_settings.tpl',
-        'tpl!app_data/settings/templates/notification_item.tpl',
-        'tpl!app_data/settings/templates/notification_create.tpl',
         'tpl!app_data/settings/templates/general_settings.tpl',
         'tpl!app_data/settings/templates/general_settings_item.tpl',
         'tpl!app_data/settings/templates/license.tpl',
         'app_data/utils', 'bootstrap', 'bootstrap-editable', 'selectpicker'],
        function(App, Marionette,
-                settingsLayoutTpl, permissionsTpl, permissionItemTpl,
-                userEditTpl, notificationSettingsTpl, notificationItemTpl,
-                notificationCreateTpl, generalSettingsTpl, generalSettingsItemTpl,
-                licenseTpl, utils){
+                settingsLayoutTpl, userEditTpl, generalSettingsTpl,
+                generalSettingsItemTpl, licenseTpl, utils){
     var views = {};
 
     views.GeneralItemView = Marionette.ItemView.extend({
@@ -206,111 +199,6 @@ define(['app_data/app', 'marionette',
         }
     });
 
-    /*eslint-disable */
-
-    views.NotificationCreateView = Backbone.Marionette.ItemView.extend({
-        template: notificationCreateTpl,
-
-        ui: {
-            'label'      : 'label[for="id_event"]',
-            'event'      : 'select#id_event',
-            'text_plain' : 'textarea#id_text_plain',
-            'text_html'  : 'textarea#id_text_html',
-            'as_html'    : 'input#id_as_html',
-            'event_keys' : '#event_keys',
-            'save'       : 'button#template-add-btn',
-            'back'       : 'button#template-back-btn'
-        },
-
-        events: {
-            'click @ui.save'         : 'onSave',
-            'click @ui.back'         : 'back',
-            'change select#id_event' : 'onSelectEvent'
-        },
-
-        onRender: function() {
-            var curEventKeys = eventsKeysList[this.ui.event.val()];
-            this.ui.event_keys.html(curEventKeys.join('<br/>'));
-            this.ui.event.show();
-            this.ui.label.text("Event");
-        },
-
-        back: function(){
-            App.navigate('/notifications/', {trigger: true});
-        },
-
-        onSave: function(){
-            // temp validation
-            App.Data.templates.create({
-                'event': this.ui.event.val(),
-                'text_plain': this.ui.text_plain.val(),
-                'text_html': this.ui.text_html.val(),
-                'as_html': this.ui.as_html.prop('checked')
-            }, {
-                wait: true,
-                success: function(){
-                    App.navigate('/notifications', {trigger: true})
-                }
-            });
-        },
-
-        onSelectEvent: function(){
-            var curEventKeys = eventsKeysList[this.ui.event.val()];
-            this.ui.event_keys.html(curEventKeys.join('<br/>'));
-        }
-    });
-
-    views.NotificationEditView = views.NotificationCreateView.extend({
-        onRender: function(){
-            var curEventKeys = eventsKeysList[this.ui.event.val()];
-            this.ui.event_keys.html(curEventKeys.join('<br/>'));
-            this.ui.event.hide();
-            this.ui.label.text("Event: " + this.model.get('event').name);
-            this.ui.text_plain.val(this.model.get('text_plain'));
-            this.ui.text_html.val(this.model.get('text_html'));
-            this.ui.as_html.prop('checked', this.model.get('as_html'));
-        },
-
-        onSave: function(){
-            // temp validation
-            var data = {
-                'event': this.ui.event.val(),
-                'text_plain': this.ui.text_plain.text(),
-                'text_html': this.ui.text_html.text(),
-                'as_html': this.ui.as_html.prop('checked')
-            };
-
-            this.model.set(data);
-
-            this.model.save(undefined, {
-                wait: true,
-                success: function(){
-                    App.navigate('/notifications', {trigger: true})
-                }
-            });
-        }
-    });
-
-    views.NotificationItemView = Marionette.ItemView.extend({
-        template: notificationItemTpl,
-
-        events: {
-            'click span': 'editTemplate'
-        },
-
-        editTemplate: function(){
-            App.navigate('/notifications/edit/' + this.model.id + '/', {trigger: true});
-        }
-    });
-
-    views.NotificationsView = Marionette.CompositeView.extend({
-        template: notificationSettingsTpl,
-        childViewContainer: '#notification-templates',
-        childView: views.NotificationItemView
-    });
-
-    /*eslint-enable */
-
     /* Profile edit */
     views.ProfileEditView = Backbone.Marionette.ItemView.extend({
         template: userEditTpl,
@@ -477,54 +365,6 @@ define(['app_data/app', 'marionette',
                 });
         }
     });
-
-    /*eslint-disable */
-
-    views.PermissionItemView = Marionette.ItemView.extend({
-        template: permissionItemTpl,
-        tagName: 'tr',
-    });
-
-    views.PermissionsListView = Marionette.CompositeView.extend({
-        template: permissionsTpl,
-        childView: views.PermissionItemView,
-        childViewContainer: "tbody",
-
-        ui: {
-            permTable: '#permissions-table',
-            permToggle: '.perm-toggle'
-        },
-
-        events: {
-            'change input.perm-toggle': 'togglePerm'
-        },
-
-        onRender: function(){
-            var that = this,
-                tr = this.ui.permTable.find('thead').append('<tr>')
-                    .find('tr').append('<th>');
-            $.each(roles, function(id, itm){
-                tr.append($('<th>').text(itm.rolename));
-            });
-        },
-
-        togglePerm: function(evt){
-            var $el = $(evt.target),
-                pid = $el.data('pid'),
-                checked = $el.is(':checked');
-            $.ajax({
-                url: '/api/settings/permissions/' + pid,
-                type: 'PUT',
-                data: {'allow': checked},
-                success: function(rs){
-                    utils.notifyWindow('Permission changed successfully', 'success');
-                },
-                error: utils.notifyWindow,
-            });
-        }
-    });
-
-    /*eslint-enable */
 
     views.SettingsLayout = Marionette.LayoutView.extend({
         template: settingsLayoutTpl,

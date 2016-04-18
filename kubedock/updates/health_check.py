@@ -102,19 +102,19 @@ def get_internal_pods_state():
 
 def get_disk_usage(local=True):
     if local:
-        rv = subprocess.check_output(['df', '-h'])
+        rv = subprocess.check_output(['df', '--output=source,pcent,target'])
     else:
-        rv = run('df -h', quiet=True, timeout=SSH_TIMEOUT)
-    lines = rv.splitlines()
-    r = re.compile('((?!Filesystem|tmpfs|cdrom|SEPID).)*$')
+        rv = run("df --output=source,pcent,target", quiet=True, timeout=SSH_TIMEOUT)
+    lines = rv.splitlines()[1:]
+    r = re.compile('((?!tmpfs|cdrom|SEPID).)*$')
     lines = filter(r.match, lines)
-    usage = [(line.split()[4], line.split()[0]) for line in lines]
+    usage = [line.split()[:-1] for line in lines]
     return usage
 
 
 def check_disk_space(local=True):
     usage = get_disk_usage(local)
-    warn = [disk for disk in usage if int(disk[0][:-1]) > MAX_DISK_PERCENTAGE]
+    warn = [disk for disk in usage if int(disk[1][:-1]) > MAX_DISK_PERCENTAGE]
     return ', '.join([' - '.join(disk) for disk in warn]) if warn else True
 
 

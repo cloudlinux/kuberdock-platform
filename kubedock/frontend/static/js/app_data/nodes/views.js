@@ -552,13 +552,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             if (this.niceScroll !== undefined)
                 this.niceScroll.remove();
             this.niceScroll = this.ui.textarea.niceScroll({
-                cursorcolor: "#69AEDF",
+                cursorcolor: "#E7F4FF",
                 cursorwidth: "12px",
                 cursorborder: "none",
                 cursorborderradius: "none",
-                background: "#E7F4FF",
+                background: "transparent",
                 autohidemode: false,
-                railoffset: 'bottom'
+                railoffset: 'bottom',
+                hidecursordelay: 0
             });
         },
 

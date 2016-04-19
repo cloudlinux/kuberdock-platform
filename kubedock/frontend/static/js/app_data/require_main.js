@@ -25,7 +25,7 @@ requirejs.config({
         jscrollpane            : 'lib/jquery.jscrollpane.min',
         mask                   : 'lib/jquery.mask',
         dde                    : 'lib/dropdowns-enhancement',
-        nicescroll             : 'lib/jquery.nicescroll',
+        nicescroll             : 'lib/nicescroll.min',
         bbcode                 : "lib/bbCodeParser.min",
         tooltip                : 'lib/tooltip'
     },

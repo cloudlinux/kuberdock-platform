@@ -89,29 +89,29 @@ class TestHealthCheck(unittest.TestCase):
 
     @mock.patch.object(health_check, 'get_disk_usage')
     def test_check_disk_space(self, mock_get_disk_usage):
-        mock_get_disk_usage.return_value = [('36%', '/dev/sda1')]
+        mock_get_disk_usage.return_value = [['/dev/sda1', '36%']]
         msg = health_check.check_disk_space()
         self.assertEquals(msg, True)
         health_check.MAX_DISK_PERCENTAGE = 50
-        mock_get_disk_usage.return_value = [('55%', '/dev/sda1')]
+        mock_get_disk_usage.return_value = [['/dev/sda1', '55%']]
         msg = health_check.check_disk_space()
         self.assertGreater(len(msg), 0)
 
     @mock.patch.object(subprocess, 'check_output')
     def test_get_disk_usage(self, mock_check_output):
         df_output = """Filesystem      Size  Used Avail Use% Mounted on
-        /dev/sda3        61G  7.6G   53G  13% /
-        devtmpfs        910M     0  910M   0% /dev
-        tmpfs           919M     0  919M   0% /dev/shm
-        tmpfs           919M   93M  826M  11% /run
-        tmpfs           919M     0  919M   0% /sys/fs/cgroup
-        /dev/sda1       494M  165M  329M  34% /boot
-        tmpfs           184M     0  184M   0% /run/user/0
-        /dev/rbd0      1014M  253M  762M  25% /var/lib/kubelet/plugins/kubernetes.io/rbd/rbd/136.243.221.231-image-joomla_mysql_xvptye29__SEPID__4
-        /dev/rbd1      1014M   73M  942M   8% /var/lib/kubelet/plugins/kubernetes.io/rbd/rbd/136.243.221.231-image-joomla_www_xvptye29__SEPID__4"""
+        /dev/sda3       13% /
+        devtmpfs        0% /dev
+        tmpfs           0% /dev/shm
+        tmpfs           11% /run
+        tmpfs           0% /sys/fs/cgroup
+        /dev/sda1       34% /boot
+        tmpfs           0% /run/user/0
+        /dev/rbd0      25% /var/lib/kubelet/plugins/kubernetes.io/rbd/rbd/136.243.221.231-image-joomla_mysql_xvptye29__SEPID__4
+        /dev/rbd1      8% /var/lib/kubelet/plugins/kubernetes.io/rbd/rbd/136.243.221.231-image-joomla_www_xvptye29__SEPID__4"""
         mock_check_output.return_value = df_output
         usage = health_check.get_disk_usage()
-        self.assertEqual(usage,[('13%', '/dev/sda3'), ('34%', '/dev/sda1')])
+        self.assertEqual(usage,[['/dev/sda3', '13%'], ['/dev/sda1', '34%']])
 
     @mock.patch.object(health_check, 'get_nodes_collection')
     @mock.patch.object(health_check, 'get_node_state')

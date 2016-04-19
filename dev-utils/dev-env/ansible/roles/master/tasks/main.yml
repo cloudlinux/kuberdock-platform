@@ -88,4 +88,7 @@
 - name: Fetching key
   fetch: src={{ pub_key }} dest=/tmp/kd_rsa.pub fail_on_missing=yes flat=yes
 
+- name: Prepare test env
+  command: bash /vagrant/dev-utils/prepare_test_env.sh
+  when: is_dev_install
 

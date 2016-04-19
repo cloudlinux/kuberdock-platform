@@ -100,10 +100,11 @@ def get_dockerfile_data():
 @images.route('/isalive', methods=['GET'])
 @login_required_or_basic_or_token
 @check_permission('isalive', 'images')
+@KubeUtils.jsonwrap
 def ping_registry():
     repo_url = _get_repo_url(request.args)
     kapi_images.check_registry_status(repo_url)
-    return {'status': 'OK', 'data': True}
+    return True
 
 
 def _get_repo_url(args):

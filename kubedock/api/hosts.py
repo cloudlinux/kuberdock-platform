@@ -22,7 +22,7 @@ def create_host():
     user = KubeUtils._get_current_user()
     if not user.is_administrator():
         raise APIError('Insufficient permissions level', 403,
-                       type='Permission denied')
+                       type='PermissionDenied')
     ip = request.environ.get('REMOTE_ADDR')
     register_host(ip)
     return {'ip': ip}

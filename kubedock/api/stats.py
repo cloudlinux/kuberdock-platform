@@ -3,25 +3,29 @@ from flask import Blueprint, jsonify
 from ..core import db
 from ..stats import StatWrap5Min
 from ..pods.models import Pod
-from ..kubedata.kubestat import KubeUnitResolver, KubeStat
-import operator
-import itertools
+from ..kubedata.kubestat import KubeStat
+from ..rbac import check_permission
 import time
 import datetime
 from collections import defaultdict, namedtuple
 from ..decorators import login_required_or_basic_or_token
-from ..utils import all_request_params, APIError, from_binunit
+from ..utils import all_request_params, APIError, PermissionDenied, KubeUtils
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 
 
-@stats.route('/', methods=['GET'])
+@stats.route('/', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
 def unit_stat():
+    user = KubeUtils._get_current_user()
     params = all_request_params()
-    uuid = params.get('unit')
+    pod_id = params.get('unit')
     container = params.get('container')
     node = params.get('node')
+
+    if (node is not None and not check_permission('get', 'nodes') or
+            pod_id is not None and not check_permission('get', 'pods')):
+        raise PermissionDenied()
 
     # start = request.args.get('start')
     # end = request.args.get('end')
@@ -29,19 +33,17 @@ def unit_stat():
 
     limits = None
     if node is None:
-        items = KubeUnitResolver().by_unit(uuid)
-        items_list = map(operator.itemgetter(2),
-                         itertools.chain(*items.values()))
-        if uuid is not None:
-            pod = Pod.query.get(uuid)
+        if pod_id is not None:
+            pod = Pod.query.filter(Pod.owner_id == user.id,
+                                   Pod.id == pod_id).first()
             if pod is None:
                 raise APIError('Pod not found', 404, 'PodNotFound')
 
             limits = pod.get_limits(container)
             if container is None:
-                data, disks = get_unit_data(items_list, start)
+                data, disks = get_unit_data(pod_id, start)
             else:
-                data, disks = get_container_data(items_list, container, start)
+                data, disks = get_container_data(pod_id, container, start)
     else:
         capacity = dict(KubeStat._get_nodes_info()).get(node)
         if capacity is not None:
@@ -135,8 +137,7 @@ def get_node_data(node, start, end=None):
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)
     ).filter(
-        StatWrap5Min.time_window >= start
-    ).filter(
+        StatWrap5Min.time_window >= start,
         StatWrap5Min.unit_name == '/',
         StatWrap5Min.container == '/',
         StatWrap5Min.host == node
@@ -146,8 +147,7 @@ def get_node_data(node, start, end=None):
         StatWrap5Min.time_window,
         StatWrap5Min.fs_data
     ).filter(
-        StatWrap5Min.time_window >= start
-    ).filter(
+        StatWrap5Min.time_window >= start,
         StatWrap5Min.unit_name == '/',
         StatWrap5Min.container == '/',
         StatWrap5Min.host == node)
@@ -157,7 +157,7 @@ def get_node_data(node, start, end=None):
     return data, organized
 
 
-def get_unit_data(items_list, start, end=None):
+def get_unit_data(pod_id, start, end=None):
     data = db.session.query(
         StatWrap5Min.time_window,
         db.func.sum(StatWrap5Min.cpu),
@@ -165,15 +165,14 @@ def get_unit_data(items_list, start, end=None):
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)
     ).filter(
-            StatWrap5Min.time_window >= start
-    ).filter(
-            StatWrap5Min.unit_name.in_(items_list)
+        StatWrap5Min.time_window >= start,
+        StatWrap5Min.unit_name == pod_id,
     ).group_by(
-            StatWrap5Min.time_window)
+        StatWrap5Min.time_window)
     return data, None
 
 
-def get_container_data(items_list, container, start, end=None):
+def get_container_data(pod_id, container, start, end=None):
     data = db.session.query(
         StatWrap5Min.time_window,
         db.func.sum(StatWrap5Min.cpu),
@@ -181,11 +180,9 @@ def get_container_data(items_list, container, start, end=None):
         db.func.sum(StatWrap5Min.rxb),
         db.func.sum(StatWrap5Min.txb)
     ).filter(
-            StatWrap5Min.time_window >= start
-    ).filter(
-            StatWrap5Min.unit_name.in_(items_list)
-    ).filter(
-            StatWrap5Min.container.like('k8s_'+container+'%')
+        StatWrap5Min.time_window >= start,
+        StatWrap5Min.unit_name == pod_id,
+        StatWrap5Min.container.like('k8s_' + container + '%'),
     ).group_by(
-            StatWrap5Min.time_window)
+        StatWrap5Min.time_window)
     return data, None

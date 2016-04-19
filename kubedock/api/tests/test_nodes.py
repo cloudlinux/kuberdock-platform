@@ -122,18 +122,18 @@ class TestNodeCRUD(APITestCase):
         self.assert200(response)
 
     def test_checkhostname(self):
-        response = self.open(
+        response = self.admin_open(
             NodesUrl.check_host('localhost'), 'GET')
 
         self.assert200(response)
 
     def test_checkhostname_invalid_hostname(self):
-        response = self.open(
+        response = self.admin_open(
             NodesUrl.check_host('127.0.0.1'), 'GET')
 
         self.assertAPIError(response, 400, 'APIError')
 
-        response = self.open(
+        response = self.admin_open(
             NodesUrl.check_host(''), 'GET')
 
         self.assertAPIError(response, 400, 'APIError')

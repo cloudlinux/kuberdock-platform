@@ -10,6 +10,7 @@ from kubedock.core import db
 from kubedock.users.models import User, UserActivity
 from kubedock.pods.models import Pod
 from kubedock.billing.models import Package, PackageKube, Kube
+from kubedock.kapi import podcollection as kapi_podcollection
 
 
 class UserCRUDTestCase(APITestCase):
@@ -111,17 +112,19 @@ class UserCRUDTestCase(APITestCase):
         for field, value in data.iteritems():
             self.assertEqual(value, getattr(user, field))
 
-    # @unittest.skip('')
-    @attr('k8s')
-    def test_delete(self):
+    @mock.patch.object(kapi_podcollection.PodCollection, '_run')
+    def test_delete(self, PodCollection):
+        user, _ = self.fixtures.user_fixtures()
         # delete
-        logging.getLogger('UserFullTestCase.delete').info(
-            'This test will work only with k8s.')
+        self.assert200(self.admin_open(self.item_url(user.id), 'DELETE'))
+        self.db.session.expire_all()
+        self.assertTrue(user.deleted)
+        # undelete
+        url = '/users/undelete/{0}'.format(user.id)
+        self.assert200(self.admin_open(url, 'POST'))
+        self.db.session.expire_all()
+        self.assertFalse(user.deleted)
 
-        self.assert200(self.admin_open(self.item_url(self.user.id), 'DELETE'))
-        self.assertIsNone(User.not_deleted.filter_by(id=self.user.id).first())
-
-    # @unittest.skip('')
     def test_change_package(self, *args):
         """
         AC-1003
@@ -165,9 +168,9 @@ class UserCRUDTestCase(APITestCase):
         data = {'package': package1.name}
         self.assert400(self.admin_open(url=url, method='PUT', json=data))
 
-    @attr('k8s')
-    @mock.patch('kubedock.kapi.podcollection.license_valid', lambda: True)
-    def test_suspend(self):
+    @mock.patch.object(kapi_podcollection, 'license_valid', lambda: True)
+    @mock.patch.object(kapi_podcollection.PodCollection, '_run')
+    def test_suspend(self, _run):
         """AC-1608 In case of unsuspend, return all public IPs"""
         from kubedock.kapi.podcollection import PodCollection
         from kubedock.pods.models import PodIP, IPPool
@@ -279,6 +282,23 @@ class TestUsers(APITestCase):
         self.assertItemsEqual(['Admin', 'User', 'TrialUser', 'LimitedUser'],
                               response.json['data'])
 
+    def test_get_log_history(self):
+        response = self.admin_open(self.item_url('logHistory'),
+                                   query_string={'uid': self.user.id})
+        self.assert200(response)  # only admin has permission
+        # TODO: check response; 404 case; check date_from, date_to params
+
+    def test_get_online(self):
+        response = self.admin_open(self.item_url('online'))
+        self.assert200(response)  # only admin has permission
+        # TODO: check response; 404 case
+
+    def test_login_as(self):
+        response = self.admin_open(self.item_url('loginA'), method='POST',
+                                   query_string={'user_id': self.user.id})
+        self.assert200(response)  # only admin has permission
+        # TODO: check response; 404 case; login as self;
+
     def test_get_user_activities(self):
         response = self.admin_open(self.item_url('a', 12345))
         self.assertAPIError(response, 404, 'UserNotFound')
@@ -299,16 +319,24 @@ class TestUsers(APITestCase):
         self.assertEqual(logout.to_dict(include=logout_ts),
                          response.json['data'][-1])
 
+
+class TestSelf(APITestCase):
+    url = '/users/editself'
+
     def test_editself(self):
-        url = self.item_url('editself')
         data = {'password': str(uuid4())[:25]}
 
-        response = self.open(url, 'PATCH', data)
-        self.assertAPIError(response, 401, 'NotAuthorized')
-        response = self.open(url, 'PATCH', data, auth=self.userauth)
+        response = self.user_open(method='PATCH', json=data)
         self.assert200(response)
-        response = self.open(url, 'PATCH', data, auth=self.userauth)
+        response = self.user_open(method='PATCH', json=data)
+        # password has changed
         self.assertAPIError(response, 401, 'NotAuthorized')
+
+    def test_get_self(self):
+        response = self.user_open()
+        self.assert200(response)
+        self.assertEqual(response.json['data'],
+                         self.user.to_dict(for_profile=True))
 
 
 if __name__ == '__main__':

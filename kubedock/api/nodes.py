@@ -89,6 +89,8 @@ def delete_item(node_id):
 
 @nodes.route('/checkhost/', methods=['GET'])
 @nodes.route('/checkhost/<hostname>', methods=['GET'])
+@login_required_or_basic_or_token
+@check_permission('get', 'nodes')
 def check_host(hostname=''):
     check_hostname(hostname)
     return jsonify({'status': 'OK'})

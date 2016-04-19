@@ -48,67 +48,67 @@ class YamlURL(object):
 
 class TestYamlAPI(APITestCase):
     def test_invalid_data(self):
-        response = self.open(YamlURL.post(), 'POST', auth=self.userauth)
+        response = self.user_open(YamlURL.post(), 'POST')
         self.assertAPIError(response, 400, 'APIError')
 
     def test_invalid_yml_file(self):
-        response = self.open(YamlURL.post(), 'POST', {
+        response = self.user_open(YamlURL.post(), 'POST', {
             'data': """
             - a
             b
             """
-        }, auth=self.userauth)
+        })
         self.assertAPIError(response, 400, 'APIError')
 
     def test_no_object(self):
-        response = self.open(YamlURL.post(), 'POST', {
+        response = self.user_open(YamlURL.post(), 'POST', {
             'data': ""
-        }, auth=self.userauth)
+        })
         self.assertAPIError(response, 400, 'APIError')
 
     def test_no_document(self):
-        response = self.open(YamlURL.post(), 'POST', {
+        response = self.user_open(YamlURL.post(), 'POST', {
             'data': "123123"
-        }, auth=self.userauth)
+        })
         self.assertAPIError(response, 400, 'APIError')
 
     def test_no_kind(self):
-        response = self.open(YamlURL.post(), 'POST', {
+        response = self.user_open(YamlURL.post(), 'POST', {
             'data': """
             apiVersion: 1
             """
-        }, auth=self.userauth)
+        })
         self.assertAPIError(response, 400, 'APIError')
 
     def test_no_api_version(self):
-        response = self.open(YamlURL.post(), 'POST', {
+        response = self.user_open(YamlURL.post(), 'POST', {
             'data': """
             kind: Pod
             """
-        }, auth=self.userauth)
+        })
         self.assertAPIError(response, 400, 'APIError')
 
     def test_usupported_object_kind(self):
-        response = self.open(YamlURL.post(), 'POST', {
+        response = self.user_open(YamlURL.post(), 'POST', {
             'data': """
             apiVersion: v1
             kind:
                 - Pod
                 - Pod2
             """
-        }, auth=self.userauth)
+        })
         self.assertAPIError(response, 400, 'APIError')
 
     def test_duplicate_kind(self):
         for kind in ['Pod', 'ReplicationController', 'Service']:
-            response = self.open(YamlURL.post(), 'POST', {
+            response = self.user_open(YamlURL.post(), 'POST', {
                 'data': "---\n"
                         "apiVersion: v1\n"
                         "kind: {0}\n"
                         "---\n"
                         "apiVersion: v1\n"
                         "kind: {0}\n".format(kind)
-            }, auth=self.userauth)
+            })
             self.assertAPIError(response, 400, 'APIError')
 
     def test_invalid_pod_and_rc(self):
@@ -125,9 +125,9 @@ class TestYamlAPI(APITestCase):
         )
 
         for item in data:
-            response = self.open(YamlURL.post(), 'POST', {
+            response = self.user_open(YamlURL.post(), 'POST', {
                 'data': item
-            }, auth=self.userauth)
+            })
             self.assertAPIError(response, 400, 'APIError')
 
     @mock.patch.object(yaml_api, 'send_event')
@@ -137,7 +137,7 @@ class TestYamlAPI(APITestCase):
         PodCollection().add.return_value = {}
 
         for yml_config in [_CORRECT_NGINX_YAML, _CORRECT_REDIS_YML]:
-            response = self.open(YamlURL.post(), 'POST', {
+            response = self.user_open(YamlURL.post(), 'POST', {
                 'data': yml_config
-            }, auth=self.userauth)
+            })
             self.assert200(response)

@@ -5,6 +5,7 @@ import mock
 
 from kubedock.kapi.podcollection import PodNotFound
 from kubedock.testutils.testcases import APITestCase
+from kubedock.system_settings.models import SystemSettings
 
 
 def valid_create_pod_params():
@@ -34,14 +35,12 @@ class TestPodAPI(APITestCase):
     def test_get_not_found(self, PodCollection):
         PodCollection().get.side_effect = PodNotFound()
 
-        response = self.open(
-            PodAPIUrl.get(12345), 'GET', auth=self.userauth)
+        response = self.user_open(PodAPIUrl.get(12345), 'GET')
 
         self.assertAPIError(response, 404, 'PodNotFound')
 
     def test_post_invalid_params(self):
-        response = self.open(
-            PodAPIUrl.post(), 'POST', {}, auth=self.userauth)
+        response = self.user_open(PodAPIUrl.post(), 'POST', {})
 
         self.assertAPIError(response, 400, 'APIError')
 
@@ -50,37 +49,45 @@ class TestPodAPI(APITestCase):
     @mock.patch('kubedock.api.podapi.PodCollection')
     def test_post(self, PodCollection, *_):
         PodCollection().add.return_value = {}
-        response = self.open(
-            PodAPIUrl.post(), 'POST', valid_create_pod_params(),
-            auth=self.userauth)
+        response = self.user_open(
+            PodAPIUrl.post(), 'POST', valid_create_pod_params())
 
         self.assert200(response)
 
     def test_put_invalid(self):
-        response = self.open(
-            PodAPIUrl.put(str(uuid4())), 'PUT', {}, auth=self.userauth)
+        response = self.user_open(PodAPIUrl.put(str(uuid4())), 'PUT', {})
 
         self.assertAPIError(response, 404, 'PodNotFound')
 
-    @mock.patch('kubedock.api.podapi.Pod')
     @mock.patch('kubedock.api.podapi.PodCollection')
-    def test_put(self, PodCollection, Pod):
-        pod_id = randint(1, 1000)
+    def test_put(self, PodCollection):
         PodCollection().update.return_value = {}
-        Pod.query = mock.Mock()
+        pod = self.fixtures.pod(status='unpaid')
+        pod_config = pod.get_dbconfig()
 
-        response = self.open(
-            PodAPIUrl.put(pod_id), 'PUT', {},
-            auth=self.userauth)
-
+        response = self.user_open(PodAPIUrl.put(pod.id), 'PUT', {})
         self.assert200(response)
+
+        # check fix-price users restrictions
+        SystemSettings.set_by_name('billing_type', 'whmcs')
+        self.user.count_type = 'fixed'
+        self.db.session.commit()
+        # only admin has permission to remove "unpaid" status
+        set_paid = {'command': 'set', 'commandOptions': {'status': 'stopped'}}
+        response = self.admin_open(PodAPIUrl.put(pod.id), 'PUT', set_paid)
+        self.assert200(response)
+        # only admin has permission to upgrade pod
+        upgrade = {'command': 'redeploy', 'containers': [
+            dict(c, kubes=c['kubes'] + 1) for c in pod_config['containers']]}
+        response = self.admin_open(PodAPIUrl.put(pod.id), 'PUT', upgrade)
+        self.assert200(response)
+
 
     @mock.patch('kubedock.api.podapi.PodCollection')
     def test_delete_not_found(self, PodCollection):
         PodCollection().delete.side_effect = PodNotFound()
 
-        response = self.open(
-            PodAPIUrl.delete(123), 'DELETE', {}, auth=self.userauth)
+        response = self.user_open(PodAPIUrl.delete(123), 'DELETE', {})
 
         self.assertAPIError(response, 404, 'PodNotFound')
 
@@ -89,8 +96,7 @@ class TestPodAPI(APITestCase):
         delete_id = randint(1, 1000)
         PodCollection().delete.return_value = delete_id
 
-        response = self.open(
-            PodAPIUrl.delete(delete_id), 'DELETE', {}, auth=self.userauth)
+        response = self.user_open(PodAPIUrl.delete(delete_id), 'DELETE', {})
 
         self.assert200(response)
 
@@ -101,9 +107,8 @@ class TestPodAPI(APITestCase):
         pod_id = str(uuid4())
         container_name = 'just name'
 
-        response = self.open(
-            PodAPIUrl.check_updates(pod_id, container_name),
-            'GET', {}, auth=self.userauth)
+        response = self.user_open(
+            PodAPIUrl.check_updates(pod_id, container_name), 'GET', {})
 
         self.assert200(response)
 
@@ -117,9 +122,8 @@ class TestPodAPI(APITestCase):
         pod_id = str(uuid4())
         container_name = 'just name'
 
-        response = self.open(
-            PodAPIUrl.check_updates(pod_id, container_name),
-            'POST', {}, auth=self.userauth)
+        response = self.user_open(
+            PodAPIUrl.check_updates(pod_id, container_name), 'POST', {})
 
         self.assert200(response)
 

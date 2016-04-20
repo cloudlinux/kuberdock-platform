@@ -1,0 +1,15 @@
+- name: Patching a UI
+  lineinfile:
+      dest: "{{ src_prefix }}/kubedock/frontend/templates/apps/index.html"
+      regexp: "{{ item }}"
+      state: absent
+  with_items:
+      - "^(.*)remove this line to uncomment$"
+      - "^(.*)remove next line to uncomment (end of block)$"
+      - "^([ ]+)#}$"
+
+- name: Hide modified UI file from git
+  become: False
+  command: git update-index --assume-unchanged ../../kubedock/frontend/templates/apps/index.html
+  delegate_to: localhost
+

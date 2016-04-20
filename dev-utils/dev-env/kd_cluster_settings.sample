@@ -16,9 +16,13 @@
 #export KD_NODE_MEMORY=2048
 #export KD_NODE_CPUS=1
 
-
 # All dotfiles will be copied from this folder before deploy
 #export KD_DOT_FILES=/path/to/dir
 
 # Some script which should be executed after master is ready
 #export KD_MASTER_HOOK=my_hook.sh
+
+# if set to path - copied to master
+# if set to empty line - not copied not patched
+# if not set - code is patched to not check the license
+# export KD_LICENSE=/path/to/license

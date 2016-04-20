@@ -54,7 +54,7 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
-* Mon Apr 18 2016 Igor Savenko <bliss@cloudlinux.com> 1.0-2
+* Wed Apr 20 2016 Igor Savenko <bliss@cloudlinux.com> 1.0-2
 - AC-2963: removed passwords from /etc/kubecli.conf;
   restricted file permissions for ~/.kubecli.conf;
   removed excessive data from ~/.kubecli.conf.

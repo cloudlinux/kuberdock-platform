@@ -12,6 +12,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
+GLOBAL_CONFIG = '/etc/kubecli.conf'
+
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
@@ -223,13 +225,13 @@ class PrintOut(object):
 def make_config(args):
     create_user_config(args)
     excludes = ['call', 'config']
-    config = parse_config(os.path.expanduser(args.config))
+    config = parse_config(GLOBAL_CONFIG)
+    config.update(parse_config(os.path.expanduser(args.config)))
     for k, v in vars(args).items():
         if k in excludes:
             continue
         if v is not None:
             config[k] = v
-
     return config
 
 

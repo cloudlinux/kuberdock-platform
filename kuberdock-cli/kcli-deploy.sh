@@ -3,7 +3,7 @@
 FLANNEL_CONFIG=/etc/sysconfig/flanneld
 PROXY_CONFIG=/etc/kubernetes/config
 GLOBAL_KCLI_CONFIG=/etc/kubecli.conf
-ROOT_KCLI_CONFIG=/root/.kubecli.conf
+KCLI_CONFIG=.kubecli.conf
 DEPLOY_LOG_FILE=/var/log/kuberdock_client_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 
@@ -90,6 +90,8 @@ if [ -z "$KD_HOST" ];then
     read -r -p "Enter KuberDock host name or IP address: " KD_HOST
     if [ -z "$KD_HOST" ];then
         KD_HOST="127.0.0.1"
+    else
+        KD_HOST=$(echo $KD_HOST|sed 's/^https\?:\/\///')
     fi
 fi
 
@@ -133,16 +135,18 @@ yum_wrapper -y install kuberdock-cli
 
 sed -i -e "/^url/ {s|[ \t]*\$||}" -e "/^url/ {s|[^/]\+$|$KD_HOST|}" $GLOBAL_KCLI_CONFIG
 
-TOKEN=$(curl -s -k --connect-timeout 1 --user "$KD_USER:$KD_PASSWORD" "$KD_HOST/api/auth/token"|tr -d " \t\r\n")
+KD_URL="https://$KD_HOST"
+TOKEN=$(curl -s -k --connect-timeout 1 --user "$KD_USER:$KD_PASSWORD" "$KD_URL/api/auth/token"|tr -d " \t\r\n")
 echo $TOKEN|grep -qi token
 if [ $? -eq 0 ];then
     TOKEN=$(echo $TOKEN|sed "s/.*\"token\":\"\(.*\)\".*/\1/I")
-    cat > $NAME <<EOF
+    KCLI_CONFIG_PATH="$HOME/$KCLI_CONFIG"
+    cat > $KCLI_CONFIG_PATH << EOF
 [defaults]
 # token to talk to kuberdock
 token = $TOKEN
 EOF
-    chmod 0600 $ROOT_KCLI_CONFIG
+    chmod 0600 $KCLI_CONFIG_PATH
 else
     echo "Could not get token from KuberDock."
     echo "Check KuberDock host connectivity, username and password correctness"

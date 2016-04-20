@@ -1,0 +1,11 @@
+- name: Install kcli
+  yum: name=http://repo.cloudlinux.com/kuberdock-client/7/x86_64/kuberdock-cli-1.0-0.el7.rc.2.cloudlinux.x86_64.rpm state=present
+
+- name: Write kcli auth (test_user only for now!)
+  lineinfile:
+      dest: "/etc/kubecli.conf"
+      line: "{{ item }}"
+      state: present
+  with_items:
+      - "user = test_user"
+      - "password = test_user"

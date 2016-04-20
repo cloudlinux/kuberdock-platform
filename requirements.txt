@@ -47,3 +47,4 @@ wsgiref==0.1.2
 fabric==1.10.2
 python-dateutil==2.4.2
 python-nginx
+pyyaml

@@ -61,4 +61,5 @@
       - alt_test_user
 
 - include: predefined_apps.yml
+- include: kcli.yml
 

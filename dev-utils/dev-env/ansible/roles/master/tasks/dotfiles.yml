@@ -1,0 +1,17 @@
+- name: Dotfiles existance
+  stat: path="{{ dotfiles }}"
+  delegate_to: localhost
+  become: False
+  register: dotfiles_stat
+
+- name: Search all dot files
+  find: paths="{{ dotfiles }}" patterns=".*" hidden=True
+  delegate_to: localhost
+  become: False
+  register: dotfiles_list
+  when: dotfiles_stat.stat.isdir is defined and dotfiles_stat.stat.isdir
+
+- name: Copy all dotfiles from host
+  copy: src={{ item.path }} dest="~"
+  when: dotfiles_stat.stat.isdir is defined and dotfiles_stat.stat.isdir
+  with_items: '{{dotfiles_list.files}}'

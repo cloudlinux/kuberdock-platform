@@ -1,0 +1,15 @@
+- name: Hook existance
+  stat: path="{{ hook }}"
+  delegate_to: localhost
+  become: False
+  register: hook_stat
+
+- debug: msg = "{{ hook_stat }}"
+
+- name: Copy hook file from host
+  copy: src={{ hook }} dest="/tmp/hook.sh"
+  when: hook_stat.stat.exists
+
+- name: Run hook
+  command: bash /tmp/hook.sh
+  when: hook_stat.stat.exists

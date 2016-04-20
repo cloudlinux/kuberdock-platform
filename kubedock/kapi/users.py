@@ -241,7 +241,7 @@ class UserCollection(object):
 
     @staticmethod
     def _convert_user(user):
-        """Transform id, username, or User to User."""
+        """Transform id, case-insensitive username, or User to User."""
         result = User.get(user)
         if result is None:
             raise UserNotFound('User "{0}" does not exists'.format(user))

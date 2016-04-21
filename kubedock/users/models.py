@@ -78,7 +78,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
 
     @classmethod
     def get(cls, uid):
-        """Get User by id, username or User object."""
+        """Get User by id, case-insensitive username or User object."""
         if uid is None:
             return
         if isinstance(uid, cls):
@@ -86,7 +86,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
         uid = str(uid)
         if uid.isdigit():
             return cls.query.get(uid)
-        return cls.query.filter_by(username=uid).first()
+        return cls.query.filter(cls.username_iequal(uid)).first()
 
     @classmethod
     def get_online_collection(cls, to_json=None):

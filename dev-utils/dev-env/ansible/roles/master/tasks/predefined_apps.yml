@@ -1,0 +1,13 @@
+---
+
+- name: Get predefined apps
+  git: repo="{{ predefined_apps_repo }}"
+       dest="{{ predefined_apps_dest }}"
+
+- name: Find all apps 
+  find: paths="{{ predefined_apps_dest }}" patterns=*.yaml
+  register: predefined_apps
+
+- name: Add predefined apps
+  shell: python /vagrant/manage.py add-predefined-app --name {{ item.path | basename | splitext | first }} -t {{ item.path }}
+  with_items: predefined_apps.files

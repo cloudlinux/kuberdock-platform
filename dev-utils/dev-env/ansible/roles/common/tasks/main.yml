@@ -1,5 +1,5 @@
-#- name: upgrade all packages
-  #yum: name=* state=latest
+- name: upgrade all packages
+  yum: name=* state=latest
 
 - name: "Build hosts file"
   lineinfile: dest=/etc/hosts line="{{ hostvars[item].ansible_all_ipv4_addresses | last }} {{ hostvars[item].ansible_hostname }}" state=present

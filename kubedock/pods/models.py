@@ -13,11 +13,18 @@ from ..core import db
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT
 from ..models_mixin import BaseModelMixin
 from ..users.models import User
-#from ..nodes.models import Node
 from ..kapi import pd_utils
 
 
 class Pod(BaseModelMixin, db.Model):
+    """
+    Notes:
+        Status of pod is taken from kubernetes if it possible or from database.
+        If pod is running, it exists in kubernetes, if it stopped, it exists in database only.
+        So pod in database can has only statuses ['stopped', 'deleted', 'unpaid', 'pending'].
+        If pod is running, it's status is taken from kubernetes.
+        It's historically.
+    """
     __tablename__ = 'pods'
     __table_args__ = (db.UniqueConstraint('name', 'owner_id'),)
 

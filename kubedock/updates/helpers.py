@@ -169,6 +169,14 @@ def restart_service(service):
     return subprocess.call(['systemctl', 'restart', service])
 
 
+def stop_service(service):
+    return subprocess.call(['systemctl', 'stop', service])
+
+
+def start_service(service):
+    return subprocess.call(['systemctl', 'start', service])
+
+
 # do it inside update scripts
 def close_all_sessions():
     return SessionData.query.delete()

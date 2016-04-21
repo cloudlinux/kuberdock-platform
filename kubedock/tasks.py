@@ -329,6 +329,7 @@ def fix_pods_timeline():
     """
     Create ContainerStates that wasn't created and
     close the ones that must be closed.
+    Close PodStates that wasn't closed.
     """
     t = [time.time()]
     css = ContainerState.query.filter(ContainerState.end_time.is_(None))
@@ -363,6 +364,19 @@ def fix_pods_timeline():
             cs.end_time = now
             cs.exit_code, cs.reason = ContainerState.REASONS.pod_was_stopped
 
+    # Close states for deleted pods if not closed.
+    # Actually it is needed to be run once, but let it be run regularly.
+    # Needed because there was bug in k8s2etcd service.
+    # Sometime later it can be deleted (now is 2016-04-06).
+    non_consistent_pss = db.session.query(PodState) \
+        .join(PodState.pod).filter(
+        Pod.status == 'deleted',
+        PodState.end_time.is_(None))
+    closed_states = 0
+    for ps in non_consistent_pss:
+        ps.end_time = datetime.utcnow()
+        closed_states += 1
+
     try:
         db.session.commit()
     except Exception:
@@ -371,6 +385,7 @@ def fix_pods_timeline():
     t.append(time.time())
     current_app.logger.debug('Fixed pods timeline: {0}'.format(
         ['{0:.3f}'.format(t2-t1) for t1, t2 in zip(t[:-1], t[1:])]))
+    current_app.logger.debug('Closed %s pod_states', closed_states)
 
 
 def add_k8s_node_labels(nodename, labels):

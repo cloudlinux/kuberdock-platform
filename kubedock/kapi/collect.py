@@ -285,7 +285,9 @@ def get_pods_info():
         Pod.status != 'deleted',
         Pod.owner_id != internal_user_id,
     ).scalar()
-    running_count = db.session.query(db.func.count(PodState.id)).filter(
+    running_count = db.session.query(db.func.count(PodState.id))\
+        .join(PodState.pod) \
+        .filter(
         PodState.end_time.is_(None),
         Pod.owner_id != internal_user_id,
     ).scalar()

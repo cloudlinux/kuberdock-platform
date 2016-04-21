@@ -12,6 +12,7 @@ from ..validation import V
 
 
 LICENSE_PATH = '/var/opt/kuberdock/.license'
+HELPDESK_LINK = 'https://helpdesk.cloudlinux.com'
 
 
 PUBLIC_KEY =\
@@ -70,7 +71,7 @@ def _check_license(data):
     if is_status_ok(data):
         detach_admin('NO_LICENSE')
     else:
-        attach_admin('NO_LICENSE', ' Please visit http://kuberdock.com')
+        attach_admin('NO_LICENSE', ' Please visit ' + HELPDESK_LINK)
 
 
 def _check_notifications(data):
@@ -78,7 +79,7 @@ def _check_notifications(data):
     notification = data.get('data', {}).get('license', {}).get('notification')
     if notification:
         message = notification.get('message', 'default message')
-        url = notification.get('url', 'http://kuberdock.com')
+        url = notification.get('url', HELPDESK_LINK)
         target = '{0} {1}'.format(message, url)
         attach_admin('CLN_NOTIFICATION', target)
 

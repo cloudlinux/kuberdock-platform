@@ -3,6 +3,7 @@ from kubedock.rbac.fixtures import (
     add_roles, _add_permissions, permissions_base,
 )
 from kubedock.users.models import User, db
+from kubedock.updates import helpers
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
@@ -13,6 +14,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     Role.query.filter(Role.rolename == 'HostingPanel').delete()
     add_permissions()
     db.session.commit()
+    helpers.close_all_sessions()
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
@@ -31,3 +33,4 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
     _add_permissions([(resource, role.rolename, action, allow)
                       for (resource, action), allow in perms.iteritems()])
     db.session.commit()
+    helpers.close_all_sessions()

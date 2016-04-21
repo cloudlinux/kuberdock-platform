@@ -80,43 +80,35 @@ class UsageTestCase(APITestCase):
     url = '/usage'
 
     def setUp(self):
-        super(UsageTestCase, self).setUp()
-        user, user_password = fixtures.user_fixtures()
-        self.admin, admin_password = fixtures.admin_fixtures()
-        self.userauth = (user.username, user_password)
-        self.adminauth = (self.admin.username, admin_password)
-
         # create test data
-        another_user, _ = fixtures.user_fixtures(
+        self.another_user, _ = fixtures.user_fixtures(
             username='another_user', email='another_user@test.test')
         config = '{"containers":[{"kubes":1}]}'
-        self.ips = [(Pod(id=str(uuid4()), owner_id=user.id, name='pod1',
+        self.ips = [(Pod(id=str(uuid4()), owner_id=self.user.id, name='pod1',
                          kube_id=0, config=config).save(), u'192.168.43.132'),
-                    (Pod(id=str(uuid4()), owner_id=user.id, name='pod2',
+                    (Pod(id=str(uuid4()), owner_id=self.user.id, name='pod2',
                          kube_id=0, config=config).save(), u'192.168.43.133'),
-                    (Pod(id=str(uuid4()), owner_id=another_user.id,
+                    (Pod(id=str(uuid4()), owner_id=self.another_user.id,
                          name='pod3',
                          kube_id=0, config=config).save(), u'192.168.43.134')]
         for pod, ip in self.ips:
             IpState.start(pod.id, int(ip_address(ip)))
-        self.pds = [(user.id, 'first_disk', 2), (user.id, 'second_disk', 16),
-                    (another_user.id, 'third_disk', 3)]
+        self.pds = [(self.user.id, 'first_disk', 2),
+                    (self.user.id, 'second_disk', 16),
+                    (self.another_user.id, 'third_disk', 3)]
         for user_id, name, size in self.pds:
             PersistentDiskState.start(user_id, name, size)
         sleep(1)
         IpState.end(self.ips[0][0].id, int(ip_address(self.ips[0][1])))
         PersistentDiskState.end(self.pds[0][0], self.pds[0][1])
         self.stop_date = datetime.utcnow()
-        self.user, self.another_user = user, another_user
 
     # @unittest.skip('')
     def test_get_by_user(self):
-        url = '{0}/{1}'.format(self.url, "FooBarUser")
-        self.assert404(self.open(url, auth=self.adminauth))
-        url = '{0}/{1}'.format(self.url, self.user.username)
-        self.assert401(self.open(url))
-        self.assert403(self.open(url, auth=self.userauth))
-        response = self.open(url, auth=self.adminauth)
+        response = self.admin_open(self.item_url('FooBarUser'))
+        self.assertAPIError(response, 404, 'UserNotFound')
+
+        response = self.admin_open(self.item_url(self.user.username))
         self.assert200(response)  # only Admin has permission
 
         validator = UsageResponseValidator()
@@ -130,9 +122,7 @@ class UsageTestCase(APITestCase):
 
     # @unittest.skip('')
     def test_get_all(self):
-        self.assert401(self.open())
-        self.assert403(self.open(auth=self.userauth))
-        response = self.open(auth=self.adminauth)
+        response = self.admin_open()
         self.assert200(response)  # only Admin has permission
 
         validator = UsageResponseValidator()
@@ -146,8 +136,8 @@ class UsageTestCase(APITestCase):
         self.assertEqual(len(data[self.another_user.username]['pd_usage']), 1)
 
     def test_date_filter(self):
-        url = '{0}/?date_from={1}'.format(self.url, self.stop_date.isoformat())
-        response = self.open(url, auth=self.adminauth)
+        response = self.admin_open(
+            query_string={'date_from': self.stop_date.isoformat()})
         data = response.json['data']
         self.assertEqual(len(data[self.user.username]['ip_usage']), 1)
         self.assertEqual(len(data[self.another_user.username]['ip_usage']), 1)
@@ -155,8 +145,8 @@ class UsageTestCase(APITestCase):
         self.assertEqual(len(data[self.another_user.username]['pd_usage']), 1)
 
     def test_date_error(self):
-        url = '{0}/?date_from={1}'.format(self.url, '2016-01-00T00:00:00')
-        response = self.open(url, auth=self.adminauth)
+        response = self.admin_open(
+            query_string={'date_from': '2016-01-00T00:00:00'})
         self.assertAPIError(response, 400, 'APIError')
 
 

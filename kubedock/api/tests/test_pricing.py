@@ -168,7 +168,7 @@ class TestPackageCRUD(ExtendedAPITestCase):
         self.assertAPIError(response, 400, 'DefaultPackageNotRemovable')
 
     def test_get_default(self):
-        response = self.open(Url.package_default(), auth=self.userauth)
+        response = self.admin_open(Url.package_default())
         self.assert200(response)
 
 
@@ -279,7 +279,7 @@ class TestKubeCRUD(ExtendedAPITestCase):
         self.assertAPIError(response, 400, 'DefaultKubeNotRemovable')
 
     def test_get_default(self):
-        response = self.open(Url.kube_default(), auth=self.userauth)
+        response = self.admin_open(Url.kube_default())
         self.assert200(response)
 
 
@@ -329,9 +329,7 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
 
         self.user.package = self.package
         self.db.session.commit()
-        response = self.open('/pricing/userpackage')
-        self.assertAPIError(response, 401, 'NotAuthorized')
-        response = self.open('/pricing/userpackage', auth=self.userauth)
+        response = self.user_open('/pricing/userpackage')
         self.assertEqual(len(response.json['data']), expected)
 
     def test_create(self):
@@ -425,6 +423,38 @@ class TestPricingSSE(ExtendedAPITestCase):
         ])
         # other users shouldn't receive event
         self.assertEqual(self.send_event_mock.call_count, 2)
+
+
+class TestLicense(APITestCase):
+    url = '/pricing/license'
+
+    @mock.patch('kubedock.api.pricing.get_collection')
+    @mock.patch('kubedock.api.pricing.process_collection')
+    def test_get_license(self, process_collection, get_collection):
+        process_collection.return_value = {}
+        self.assert200(self.admin_open())
+        get_collection.assert_called_once_with(False)
+        # TODO: cover `process_collection` with unittests
+        process_collection.assert_called_once_with(get_collection.return_value)
+
+    @mock.patch('kubedock.api.pricing.licensing')
+    @mock.patch('kubedock.api.pricing.collect')
+    @mock.patch('kubedock.api.pricing.process_collection')
+    def test_set_installation_id(self, process_collection, collect, licensing):
+        process_collection.return_value = {}
+        collect.send.return_value = {'status': 'OK'}
+
+        url = '{0}/installation_id'.format(self.url)
+        installation_id = str(uuid4())
+        response = self.admin_open(url, 'POST', json={'value': installation_id})
+        self.assert200(response)
+
+        licensing.update_installation_id.assert_called_once_with(
+            installation_id)
+        collect.collect.assert_called_once_with()
+        collect.send.assert_called_once_with(collect.collect.return_value)
+        # TODO: cover `process_collection` with unittests
+        process_collection.assert_called_once_with(collect.collect.return_value)
 
 
 class TestUtils(unittest.TestCase):

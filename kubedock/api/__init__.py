@@ -25,7 +25,6 @@ def create_app(settings_override=None, fake_sessions=False):
     from .nodes import nodes
     from .stats import stats
     from .users import users
-    from .notifications import notifications
     from .usage import usage
     from .pricing import pricing
     from .ippool import ippool
@@ -39,7 +38,7 @@ def create_app(settings_override=None, fake_sessions=False):
     from .hosts import hosts
     from .billing import billing
 
-    for bp in (images, stream, nodes, stats, users, notifications, yamlapi,
+    for bp in (images, stream, nodes, stats, users, yamlapi,
                usage, pricing, ippool, settings, podapi, auth,
                pstorage, predefined_apps, logs, hosts, billing):
         app.register_blueprint(bp)

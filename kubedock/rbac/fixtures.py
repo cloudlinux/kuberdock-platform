@@ -75,7 +75,6 @@ permissions = {
         ('system_settings', 'read'): True,
         ('images', 'get'): True,
         ('images', 'isalive'): True,
-        ('predefined_apps', 'get'): True,
         ('pricing', 'get_own'): True,  # packages, kube types
         ('timezone', 'get'): True,
     }),

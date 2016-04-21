@@ -18,20 +18,13 @@ class TestLogsAPI(APITestCase):
     """Tests for /api/logs endpoint"""
     url = '/logs'
 
-    def setUp(self):
-        super(TestLogsAPI, self).setUp()
-        self.admin, admin_password = fixtures.admin_fixtures()
-        self.user, self.user_password = fixtures.user_fixtures()
-        self.adminauth = (self.admin.username, admin_password)
-        self.userauth = (self.user.username, self.user_password)
-
     @mock.patch.object(api_logs.es_logs, 'get_container_logs')
     def test_get_container_log(self, es_logs_mock):
         pod_id, container_name = '123', '456'
         url = self.url + '/container/{0}/{1}'.format(pod_id, container_name)
 
         es_logs_mock.return_value = {'1': 2}
-        response = self.open(url, auth=self.userauth)
+        response = self.user_open(url)
         es_logs_mock.assert_called_once_with(
             pod_id, container_name, self.user.id, 100, None, None)
         self.assert200(response)
@@ -41,21 +34,17 @@ class TestLogsAPI(APITestCase):
         endtime = '2015-01-02T12:12:12'
         size = 233
         params = {'starttime': starttime, 'endtime': endtime, 'size': size}
-        response = self.open(
+        response = self.user_open(
             url + '?{}'.format(
                 '&'.join(str(key) + '=' + str(value)
                          for key, value in params.iteritems())
             ),
-            auth=self.userauth
         )
         es_logs_mock.assert_called_with(
             pod_id, container_name, self.user.id, size,
             datetime.datetime(2015, 1, 1, 12, 12, 12),
             datetime.datetime(2015, 1, 2, 12, 12, 12))
         self.assert200(response)
-
-        response = self.open(url)
-        self.assert401(response)
 
     @mock.patch.object(api_logs.es_logs, 'get_node_logs')
     def test_api_get_node_logs(self, get_logs_mock):
@@ -71,17 +60,13 @@ class TestLogsAPI(APITestCase):
         db.session.commit()
 
         url = self.url + '/node/' + hostname
-        response = self.open(url)
-        self.assert401(response)
-        response = self.open(url, auth=self.userauth)
-        self.assert403(response)
         # unknown hostname
-        response = self.open(url, auth=self.adminauth)
+        response = self.admin_open(url)
         self.assert404(response)
 
         url = self.url + '/node/' + host2
         get_logs_mock.return_value = {'2': 3}
-        response = self.open(url, auth=self.adminauth)
+        response = self.admin_open(url)
         self.assert200(response)
         self.assertEqual(
             response.json,
@@ -94,11 +79,7 @@ class TestLogsAPI(APITestCase):
         missing_podid = str(uuid4())
         endpoint = self.url + '/pod-states/'
         url = endpoint + missing_podid + '/0'
-        response = self.open(url)
-        # no auth information
-        self.assert401(response)
-
-        response = self.open(url, auth=self.userauth)
+        response = self.user_open(url, auth=self.userauth)
         # pod not found
         self.assert404(response)
 
@@ -124,7 +105,7 @@ class TestLogsAPI(APITestCase):
         db.session.add_all([pod1, pod2])
         db.session.commit()
         url = endpoint + pod2.id + '/0'
-        response = self.open(url, auth=self.userauth)
+        response = self.user_open(url)
         # pod belongs to another user
         self.assert403(response)
 

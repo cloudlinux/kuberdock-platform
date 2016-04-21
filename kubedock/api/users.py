@@ -1,5 +1,5 @@
 from flask import Blueprint, request, current_app, session
-from flask.ext.login import login_user, current_user
+from flask.ext.login import login_user
 from flask.views import MethodView
 
 from . import APIError
@@ -22,19 +22,20 @@ users = Blueprint('users', __name__, url_prefix='/users')
 @KubeUtils.jsonwrap
 def auth_another(uid=None):
     data = KubeUtils._get_params()
+    user = KubeUtils._get_current_user()
     uid = uid if uid else data['user_id']
     try:
         uid = int(uid)
     except (TypeError, ValueError):
         raise APIError("User UID is expected")
-    if current_user.id == uid:
+    if user.id == uid:
         raise APIError("Logging in as admin is pointless")
     user = User.query.get(uid)
     if user is None or user.deleted:
         raise UserNotFound('User "{0}" does not exists'.format(uid))
     session['auth_by_another'] = session.get('auth_by_another',
-                                             current_user.id)
-    user_logged_in_by_another.send((current_user.id, user.id))
+                                             user.id)
+    user_logged_in_by_another.send((user.id, user.id))
     login_user(user)
 
 
@@ -67,7 +68,7 @@ def get_user_activities(user):
         user, data_from, date_to, to_dict=True)
 
 
-@users.route('/logHistory', methods=['GET'])
+@users.route('/logHistory', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
@@ -81,7 +82,7 @@ def get_user_log_history():
     return UserActivity.get_sessions(uid, data_from, date_to)
 
 
-@users.route('/online/', methods=['GET'])
+@users.route('/online', methods=['GET'], strict_slashes=False)
 @login_required_or_basic_or_token
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
@@ -121,7 +122,7 @@ register_api(users, UsersAPI, 'podapi', '/all/', 'uid', strict_slashes=False)
 @login_required_or_basic_or_token
 @KubeUtils.jsonwrap
 def get_self():
-    return current_user.to_dict(for_profile=True)
+    return KubeUtils._get_current_user().to_dict(for_profile=True)
 
 
 @users.route('/editself', methods=['PUT', 'PATCH'])

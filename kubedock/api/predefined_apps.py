@@ -71,6 +71,8 @@ register_api(predefined_apps, PredefinedAppsAPI, 'predefined_apps', '/',
 
 @predefined_apps.route('/validate-template', methods=['POST'],
                        endpoint='validate_template', strict_slashes=False)
+@login_required_or_basic_or_token
+@check_permission('create', 'predefined_apps')
 @KubeUtils.jsonwrap
 def validate_template():
     params = all_request_params()

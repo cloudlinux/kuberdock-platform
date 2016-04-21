@@ -160,6 +160,7 @@ register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id',
 @pricing.route('/packages/default', methods=['GET'], strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
+@check_permission('get', 'pricing')
 def get_default_package():
     package = Package.get_default()
     if package is None:
@@ -242,6 +243,7 @@ register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id',
 @pricing.route('/kubes/default', methods=['GET'], strict_slashes=False)
 @KubeUtils.jsonwrap
 @login_required_or_basic_or_token
+@check_permission('get', 'pricing')
 def get_default_kube():
     kube = Kube.get_default_kube()
     if kube is None:

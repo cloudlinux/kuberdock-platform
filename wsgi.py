@@ -60,6 +60,7 @@ except ImportError:
 else:
     if uwsgi.worker_id() == 1:
         d = gevent.spawn(listeners.listen_pods, back_app)
+        gevent.spawn(listeners.listen_services, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
         e = gevent.spawn(listeners.listen_events, back_app)
         if PRE_START_HOOK_ENABLED:
@@ -73,6 +74,7 @@ if __name__ == "__main__":
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN'):
         d = gevent.spawn(listeners.listen_pods, back_app)
+        gevent.spawn(listeners.listen_services, back_app)
         f = gevent.spawn(listeners.listen_nodes, back_app)
         e = gevent.spawn(listeners.listen_events, back_app)
         if PRE_START_HOOK_ENABLED:

@@ -21,10 +21,11 @@ from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
 from ..system_settings.models import SystemSettings
-from ..utils import POD_STATUSES, atomic, update_dict
+from ..utils import POD_STATUSES, atomic, update_dict, send_event
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
+UNKNOWN_ADDRESS = 'Unknown'
 
 
 def get_user_namespaces(user):
@@ -151,7 +152,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         """Assign some free IP address to the pod."""
         conf = pod.get_dbconfig()
         if AWS:
-            conf['public_aws'] = pod.public_aws = True
+            conf.setdefault('public_aws', UNKNOWN_ADDRESS)
         else:
             ip_address = IPPool.get_free_host(as_int=True)
             if ip_address is None:
@@ -463,8 +464,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if namespaces:
             for namespace in namespaces:
                 data.extend(self._get(['pods'], ns=namespace)['items'])
-                replicas_data.extend(self._get(
-                    ['replicationcontrollers'], ns=namespace)['items'])
+                replicas = self._get(['replicationcontrollers'], ns=namespace)
+                replicas_data.extend(replicas['items'])
         else:
             pods = self._get(['pods'])
             data.extend(pods.get('items', {}))
@@ -473,6 +474,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         for item in data:
             pod = Pod.populate(item)
+            self.check_public_address(pod)
 
             for r in replicas_data:
                 if self._is_related(item['metadata']['labels'],
@@ -489,6 +491,48 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if pod.sid not in pod_index:
                 self._collection[pod.id, pod.namespace] = pod
                 pod_index.add(pod.sid)
+
+    @staticmethod
+    def format_lbservice_name(pod_id):
+        """Format name of service for LoadBalancer from pod id"""
+        return "{}-lbservice".format(pod_id[:54])
+
+    def check_public_address(self, pod):
+        """Check if public address not set and try to get it from
+        services. Update public address if found one.
+        """
+        if AWS:
+            if getattr(pod, 'public_aws', UNKNOWN_ADDRESS) == UNKNOWN_ADDRESS:
+                label_selector = 'name={}'.format(
+                    self.format_lbservice_name(pod.id))
+                services_list = self._get(['services'],
+                                          {'labelSelector': label_selector},
+                                          ns=pod.namespace)
+                services = services_list['items']
+                for service in services:
+                    # For now, we just pick first service in list
+                    # (it must be only one for AWS)
+                    hostname = self.update_public_address(service, pod.id)
+                    if hostname:
+                        break
+
+    @staticmethod
+    def update_public_address(service, pod_id, send=False):
+        """Try to get public address from service and if found update in DB
+        and send event
+        """
+        if service['spec']['type'] == 'LoadBalancer':
+            ingress = service['status']['loadBalancer'].get('ingress', [])
+            if ingress and 'hostname' in ingress[0]:
+                hostname = ingress[0]['hostname']
+                pod = DBPod.query.get(pod_id)
+                conf = pod.get_dbconfig()
+                conf['public_aws'] = hostname
+                pod.set_dbconfig(conf)
+                if send:
+                    channel = 'user_{}'.format(pod.owner_id)
+                    send_event('pod:change', {'id': pod_id}, channel=channel)
+                return hostname
 
     def _merge(self):
         """ Merge pods retrieved from kubernates api with data from DB """
@@ -544,8 +588,31 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 container['limits'] = repr_limits(container['kubes'],
                                                   pod.kube_type)
 
+    def ingress_public_ports(self, pod_id, namespace, ports):
+        """Ingress public ports with cloudprovider specific methods
+        """
+        if AWS and ports:
+            conf = {
+                'kind': 'Service',
+                'apiVersion': KUBE_API_VERSION,
+                'metadata': {
+                    'generateName': 'lbservice-',
+                    'labels': {'name': self.format_lbservice_name(pod_id)},
+                },
+                'spec': {
+                    'selector': {'kuberdock-pod-uid': pod_id},
+                    'ports': ports,
+                    'type': 'LoadBalancer',
+                    'sessionAffinity': 'None'
+                }
+            }
+            data = json.dumps(conf)
+            rv = self._post(['services'], data, rest=True, ns=namespace)
+            self._raise_if_failure(rv, "Could not ingress public ports")
+
     def _run_service(self, pod):
         ports = []
+        public_ports = []
         for ci, c in enumerate(getattr(pod, 'containers', [])):
             for pi, p in enumerate(c.get('ports', [])):
                 host_port = p.get('hostPort', None) or p.get('containerPort')
@@ -555,7 +622,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     "port": host_port,
                     "protocol": p.get('protocol', 'TCP').upper(),
                     "targetPort": p.get('containerPort')})
-
+                if p.get('isPublic', False):
+                    public_ports.append({
+                        "name": port_name,
+                        "port": host_port,
+                        "protocol": p.get('protocol', 'TCP').upper(),
+                        "targetPort": p.get('containerPort')})
         conf = {
             'kind': 'Service',
             'apiVersion': KUBE_API_VERSION,
@@ -572,8 +644,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         }
         if hasattr(pod, 'podIP') and pod.podIP:
             conf['spec']['clusterIP'] = pod.podIP
-        return self._post(['services'], json.dumps(conf), rest=True,
-                          ns=pod.namespace)
+        self.ingress_public_ports(pod.id, pod.namespace, public_ports)
+        data = json.dumps(conf)
+        return self._post(['services'], data, rest=True, ns=pod.namespace)
 
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now

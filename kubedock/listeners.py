@@ -350,6 +350,19 @@ def has_local_storage(volumes):
     return False
 
 
+def process_service_event_k8s(data, app):
+    event_type = data['type']
+    if event_type not in ('MODIFIED', 'ADDED'):
+        return
+
+    service = data['object']
+    pod_id = service['spec'].get('selector', {}).get('kuberdock-pod-uid')
+    if not pod_id:
+        return
+    with app.app_context():
+        PodCollection.update_public_address(service, pod_id, send=True)
+
+
 def process_pods_event_k8s(data, app):
     """Binds pods and persistent disks to a node in a case when starts a pod
     with volumes on local storage backend.
@@ -650,6 +663,13 @@ listen_pods = listen_fabric(
     get_api_url('pods', namespace=False, watch=True),
     get_api_url('pods', namespace=False),
     process_pods_event_k8s,
+    PODS_VERBOSE_LOG
+)
+
+listen_services = listen_fabric(
+    get_api_url('services', namespace=False, watch=True),
+    get_api_url('services', namespace=False),
+    process_service_event_k8s,
     PODS_VERBOSE_LOG
 )
 

@@ -2,6 +2,7 @@ import unittest
 import base64
 import os
 import logging
+import sqlalchemy
 from datetime import timedelta
 from json import dumps as json_dumps
 
@@ -16,14 +17,17 @@ from kubedock.core import db
 def prepareDB():
     global _db_is_ready
     if not _db_is_ready:
+        meta = sqlalchemy.MetaData(bind=db.engine)
+        meta.reflect()
+        for tbl in reversed(meta.sorted_tables):
+            db.engine.execute(tbl.delete())
+        meta.drop_all()
         db.reflect()
-        db.drop_all()
         db.create_all()
         fixtures.initial_fixtures()
         db.session.commit()
         _db_is_ready = True
 _db_is_ready = bool(os.getenv('DB_IS_READY', False))
-
 
 TestCase = unittest.TestCase
 

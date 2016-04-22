@@ -55,6 +55,7 @@ class POD_STATUSES:
     succeeded = 'succeeded'
     failed = 'failed'
     unpaid = 'unpaid'
+    preparing = 'preparing'
 
 
 def get_channel_key(conn, key, size=100):
@@ -858,3 +859,26 @@ def retry(f, retry_pause, max_retries, exc=None, *f_args, **f_kwargs):
         time.sleep(retry_pause)
     if exc:
         raise exc
+
+
+def send_pod_status_update(pod_status, db_pod, event_type):
+    """Sends pod status change to frontend.
+    Must be executed in application context.
+    """
+    key_ = 'pod_state_' + db_pod.id
+
+    redis = ConnectionPool.get_connection()
+    prev_state = redis.get(key_)
+    user_id = db_pod.owner_id
+    if not prev_state:
+        redis.set(key_, pod_status)
+    else:
+        current = pod_status
+        deleted = event_type == 'DELETED'
+        if prev_state != current or deleted:
+            redis.set(key_, 'DELETED' if deleted else current)
+            event = ('pod:delete'
+                     if db_pod.status in ('deleting', 'deleted') else
+                     'pod:change')
+            send_event_to_role(event, {'id': db_pod.id}, 'Admin')
+            send_event_to_user(event, {'id': db_pod.id}, user_id)

@@ -2,23 +2,31 @@ import json
 import os
 import shlex
 from copy import deepcopy
+from collections import namedtuple
+
 from flask import current_app
 
-from .helpers import KubeQuery, ModelQuery, Utilities, APIError
+from . import helpers
+from ..exceptions import APIError
 from .images import Image
 from .pstorage import get_storage_class
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
-from ..pods.models import db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod
+from ..pods.models import (
+    db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod)
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
     NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
+from . import podutils
 
 ORIGIN_ROOT = 'originroot'
 OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
 
 
-class Pod(KubeQuery, ModelQuery, Utilities):
+PodOwnerTuple = namedtuple('PodOwnerTuple', ['id', 'username'])
+
+
+class Pod(object):
     """
     Represents related k8s resources: RC, Service and all replicas (Pods).
 
@@ -41,14 +49,30 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     """
     def __init__(self, data=None):
+        owner = None
         if data is not None:
             for c in data['containers']:
                 if len(c.get('args', [])) == 1:
                     # it seems the args has been changed
                     # or may be its length is only 1 item
                     c['args'] = self._parse_cmd_string(c['args'][0])
+            if 'owner' in data:
+                owner = data.pop('owner')
             for k, v in data.items():
                 setattr(self, k, v)
+        self.set_owner(owner)
+
+    def set_owner(self, owner):
+        """Set owner field as a named tuple with minimal necessary fields.
+        It is needed to pass Pod object to async celery task, to prevent
+        DetachedInstanceError, because of another session in celery task.
+        :param owner: object of 'User' model
+
+        """
+        if owner is not None:
+            self.owner = PodOwnerTuple(id=owner.id, username=owner.username)
+        else:
+            self.owner = PodOwnerTuple(None, None)
 
     @staticmethod
     def populate(data):
@@ -117,6 +141,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         # unneeded fields in API output
         hide_fields = ['node', 'labels', 'namespace', 'secrets', 'owner']
         data = vars(self).copy()
+
+        # Temporary hack to hide unsupported statuses in frontend.
+        # TODO: remove it when frontend will support additional status
+        # 'preparing'
+        if data.get('status') == POD_STATUSES.preparing:
+            data['status'] = POD_STATUSES.pending
+
         data['volumes'] = data.pop('volumes_public', [])
         for container in data.get('containers', ()):
             new_volumes = []
@@ -317,7 +348,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             kube_type = Kube.get_default_kube_type()
 
         if not data.get('name'):
-            data['name'] = self._make_name_from_image(data.get('image', ''))
+            data['name'] = podutils.make_name_from_image(data.get('image', ''))
 
         if volumes is None:
             volumes = []
@@ -375,7 +406,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         try:
             return list(lex)
         except ValueError:
-            self._raise('Incorrect cmd string')
+            podutils.raise_('Incorrect cmd string')
 
     def _forge_dockers(self, status='stopped'):
         for container in self.containers:
@@ -397,6 +428,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             raise APIError('Pod with name "{0}" already exists. '
                            'Try another name.'.format(self.name),
                            status_code=409, type='PodNameConflict')
+
+    def set_status(self, status):
+        """Updates pod status in database"""
+        helpers.set_pod_status(self.id, status)
+        self.status = status
 
     def __repr__(self):
         name = getattr(self, 'name', '').encode('ascii', 'replace')

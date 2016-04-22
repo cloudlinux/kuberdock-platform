@@ -29,3 +29,14 @@
 
 # if set no wsgi will be started
 #export KD_NO_WSGI=1
+
+# Auth for Openstack
+#export KD_OS_USERNAME=your_username
+#export KD_OS_PASSWORD=super_password
+
+# Auth for Open Nebula
+#export KD_ONE_USERNAME=your_username
+#export KD_ONE_PASSWORD=super_password
+
+# Path to private key for vagrant autentication in the OpenNebula
+# export KD_ONE_PRIVATE_KEY=~/.ssh/id_rsa

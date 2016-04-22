@@ -484,6 +484,9 @@
                 }
                 &.containerProtocol{
                     text-transform: uppercase;
+                    &:hover{
+                        cursor: pointer;
+                    }
                     *{
                         text-transform: uppercase;
                     }
@@ -513,8 +516,8 @@
                                     }
                                 }
                                 a{
-                                    padding: 9px 20px;
                                     .word-wrap();
+                                    line-height: 36px;
                                     font-weight: normal;
                                     white-space: normal;
                                     &.invalid-name-pd {  // error message
@@ -576,7 +579,7 @@
                         .box-sizing(border-box);
                         width: 100%;
                         min-width: 64px;
-                        height: 36px;
+                        height: 33px;
                         margin: 0;
                         outline: none;
                         padding: 0 0 0 20px;
@@ -934,6 +937,37 @@
                 &:last-child{
                     padding-right: 24px;
                 }
+                .editable-container{
+                    &.editable-inline{
+                        .form-inline{
+                            top: 0;
+                            .control-group{
+                                .editable-input{
+                                    vertical-align: middle;
+                                    input{
+                                        &.form-control{
+                                            height: 33px;
+                                        }
+                                    }
+                                }
+                                .editable-buttons{
+                                    top: 5px;
+                                    .editable-submit{
+                                        height: 22px;
+                                        i{
+                                            &.glyphicon-ok{
+                                                &:before{
+                                                    line-height: 24px;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
                 label.custom{
                     font-size: 0;
                     font-weight: 400;
@@ -964,7 +998,10 @@
                 }
                 .bootstrap-select{
                     button{
-                        height: 36px;
+                        height: 32px;
+                        .caret{
+                            border-top-color: #B5BBC1;
+                        }
                     }
                     &.btn-group{
                         .dropdown-toggle{
@@ -1071,24 +1108,31 @@
         }
     }
 }
-.volumes,
-.ports{
+.ports,
+.volumes{
     table{
-        label{
+        label.custom{
             margin-bottom: 0;
             display: inline-block;
             vertical-align: middle;
+        }
+    }
+}
+.ports{
+    table{
+        label.custom{
             input[type="checkbox"]{
+                &:checked{
+                    + span {
+                        &:before{
+                            top: -3px;
+                        }
+                    }
+                }
                 + span{
                     width: 15px;
                     height: 15px;
                     margin-right: 0;
-                    &:before{
-                        top: -3px;
-                        left: -5px;
-                        width: 21px;
-                        height: 21px;
-                    }
                 }
             }
         }

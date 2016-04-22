@@ -288,18 +288,52 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             },
 
             copyLink: function(evt){
-                var successful,
-                    target = $(evt.target),
-                    link = target.parent().find('textarea');
+                var target = $(evt.target),
+                    link = target.children('span').text();
 
-                link.select();
-                successful = document.execCommand('copy');
+                this.copyToClipboard(link);
+            },
 
-                if (successful) {
+            copyToClipboard :function (textToClipboard) {
+                var that = this,
+                    success = true;
+                if (window.clipboardData) {
+                    window.clipboardData.setData("Text", textToClipboard)
+                } else {
+                    var forExecElement = that.createElementForExecCommand(textToClipboard);
+                    that.selectContent(forExecElement);
+                    var supported = true;
+                    try {
+                        if (window.netscape && netscape.security) {
+                            netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect")
+                        }
+                        success = document.execCommand("copy", false, null)
+                    } catch (e) {
+                        success = false
+                    }
+                    document.body.removeChild(forExecElement)
+                }
+                if (success) {
                     utils.notifyWindow('Link copied to buffer', 'success');
                 } else {
                     utils.notifyWindow('Your browser does not support this action. Click on application name and copy link from address bar.');
                 }
+            },
+
+            createElementForExecCommand: function (textToClipboard) {
+                var forExecElement = $('<div>'+ textToClipboard + '</div>')
+                    .css({ position : 'absolute', left : '-10000px', top : '-10000px'})
+                    .attr('contentEditable', true);
+                $('body').append(forExecElement);
+                return forExecElement[0];
+            },
+
+            selectContent: function(element) {
+                var rangeToSelect = document.createRange();
+                rangeToSelect.selectNodeContents(element);
+                var selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(rangeToSelect)
             }
         });
 

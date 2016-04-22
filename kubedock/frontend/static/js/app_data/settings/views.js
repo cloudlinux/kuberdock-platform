@@ -402,18 +402,16 @@ define(['app_data/app', 'marionette',
         },
 
         onRender: function(){
-            var href = window.location.pathname.split('/'),
-                tabs = this.ui.tabButton,
-                that = this;
+            var that = this,
+                tabs = that.ui.tabButton,
+                href = window.location.hash.split('/')[1];
 
-            $('#page-preloader').hide();
-
-            href = href[href.length - 2];
+            utils.preloader.hide();
 
             _.each(tabs, function(item){
                 if (item.className == href) {
                     $(item).addClass('active');
-                } else if (href == 'settings') {
+                } else if (!href) {
                     that.ui.general.addClass('active');
                 }
                 else {

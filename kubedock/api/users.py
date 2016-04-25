@@ -22,20 +22,20 @@ users = Blueprint('users', __name__, url_prefix='/users')
 @KubeUtils.jsonwrap
 def auth_another(uid=None):
     data = KubeUtils._get_params()
-    user = KubeUtils._get_current_user()
+    original_user = KubeUtils._get_current_user()
     uid = uid if uid else data['user_id']
     try:
         uid = int(uid)
     except (TypeError, ValueError):
         raise APIError("User UID is expected")
-    if user.id == uid:
+    if original_user.id == uid:
         raise APIError("Logging in as admin is pointless")
     user = User.query.get(uid)
     if user is None or user.deleted:
         raise UserNotFound('User "{0}" does not exists'.format(uid))
     session['auth_by_another'] = session.get('auth_by_another',
-                                             user.id)
-    user_logged_in_by_another.send((user.id, user.id))
+                                             original_user.id)
+    user_logged_in_by_another.send((original_user.id, user.id))
     login_user(user)
 
 

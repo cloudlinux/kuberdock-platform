@@ -5,3 +5,7 @@
   lineinfile: dest=/etc/hosts line="{{ hostvars[item].ansible_all_ipv4_addresses | last }} {{ hostvars[item].ansible_hostname }}" state=present
   when: hostvars[item].ansible_default_ipv4.address is defined
   with_items: "{{ groups.all }}"
+
+- include: dotfiles.yml
+
+- include: hook.yml

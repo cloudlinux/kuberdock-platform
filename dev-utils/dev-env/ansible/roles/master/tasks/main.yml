@@ -14,8 +14,6 @@
       - nodejs-clean-css
   when: is_dev_install
 
-- include: dotfiles.yml
-
 - name: Building RPM from source
   command: bash /vagrant/dev-utils/build-rpm.sh
   when: is_dev_install

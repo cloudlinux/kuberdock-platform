@@ -1,0 +1,2 @@
+dotfiles: "{{ lookup('env','KD_DOT_FILES') }}"
+hook: "{{ lookup('env','KD_MASTER_HOOK') }}"

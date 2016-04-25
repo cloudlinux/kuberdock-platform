@@ -92,5 +92,3 @@
       - test_user
       - alt_test_user
 
-- include: hook.yml
-

@@ -17,4 +17,4 @@
       - node
 
   post_tasks:
-      - debug: msg="https://{{ groups['master'][0] }}:5000 [user:admin, password:admin]"
+      - debug: msg="https://{{ hostvars[groups['master'][0]].ansible_all_ipv4_addresses | last }}:5000 [user:admin, password:admin]"

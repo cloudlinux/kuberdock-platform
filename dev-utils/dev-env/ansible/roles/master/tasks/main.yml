@@ -47,9 +47,17 @@
   with_items:
       - tmux
 
+- set_fact:
+      src_prefix: /var/opt/kuberdock
+
+- name: UI for dev
+  set_fact:
+      src_prefix: /vagrant
+  when: is_dev_install
+
 - name: Patching a licensing
   lineinfile:
-      dest: /vagrant/kubedock/kapi/licensing.py
+      dest: "{{ src_prefix }}/kubedock/kapi/licensing.py"
       line: "def is_valid(): return True" 
       state: present
 
@@ -72,7 +80,7 @@
 
 - name: Patching a UI
   lineinfile:
-      dest: /var/opt/kuberdock/kubedock/frontend/templates/apps/index.html
+      dest: "{{ src_prefix }}/kubedock/frontend/templates/apps/index.html"
       regexp: "{{ item }}"
       state: absent
   with_items:

@@ -48,7 +48,32 @@ define(['app_data/app', 'marionette',
                 this.model.set({value: trimmedValue});
             }
             else {
-                this.model.set({value: value});
+                var that = this,
+                    modelName = this.model.get('name'),
+                    modelValue = this.model.get('value');
+
+                if ((modelName === 'memory_multiplier' && Number(value) < Number(modelValue)) ||
+                    (modelName === 'cpu_multiplier' && Number(value) < Number(modelValue))) {
+                    tgt.val(modelValue);
+                    utils.modalDialogDelete({
+                        title: "Change settings?",
+                        body: "Decreasing multipliers will affect all nodes " +
+                              "and users pods that can fail in case there is" +
+                              " no resources for it to run",
+                        small: true,
+                        show: true,
+                        footer: {
+                            buttonOk: function(){
+                                tgt.val(value);
+                                that.model.set({value: value});
+                            },
+                            buttonOkText: 'Confirm',
+                            buttonCancel: true
+                        }
+                    });
+                } else {
+                    this.model.set({value: value});
+                }
             }
 
             // toggle billing settings, depending on selected billing type
@@ -79,6 +104,7 @@ define(['app_data/app', 'marionette',
 
         submitSettings: function(){
             var changed = this.collection.filter(function(m){ return m.hasChanged('value'); });
+
             if (changed.length) {
                 _.each(changed, function(m){
                     m.save(null, {wait: true})

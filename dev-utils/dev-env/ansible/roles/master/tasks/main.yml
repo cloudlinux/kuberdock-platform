@@ -88,6 +88,11 @@
       - "^(.*)remove next line to uncomment (end of block)$"
       - "^([ ]+)#}$"
 
+- name: Hide modified UI file from git
+  become: False
+  command: git update-index --assume-unchanged ../../kubedock/frontend/templates/apps/index.html
+  delegate_to: localhost
+
 - name: Up celery
   command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "{{ item }}" C-m chdir=/vagrant
   with_items:

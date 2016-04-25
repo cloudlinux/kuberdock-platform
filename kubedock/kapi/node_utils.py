@@ -81,6 +81,7 @@ def _fix_missed_nodes(nodes, kuberenetes_nodes_hosts):
     res = list(nodes)
 
     for host in kuberenetes_nodes_hosts:
+        host = host.lower()
         if host not in db_hosts:
             try:
                 resolved_ip = socket.gethostbyname(host)

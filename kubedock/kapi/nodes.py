@@ -40,6 +40,8 @@ def create_node(ip, hostname, kube_id,
     :param with_testing: enables/disables testing repository for deployment
     :return: database entity for created node
     """
+    # Store all hostnames in lowercase
+    hostname = hostname.lower()
     if Node.get_by_name(hostname) is not None:
         raise APIError('Conflict, Node with hostname "{0}" already exists'
                        .format(hostname), status_code=409)
@@ -199,6 +201,7 @@ def edit_node_hostname(node_id, ip, hostname):
     if ip != m.ip:
         raise APIError("Error. Node ip can't be reassigned, "
                        "you need delete it and create new.")
+    hostname = hostname.lower()
     new_ip = socket.gethostbyname(hostname)
     if new_ip != m.ip:
         raise APIError("Error. Node ip can't be reassigned, "
@@ -226,6 +229,7 @@ def _check_node_hostname(ip, hostname):
         raise APIError(
             "Error while trying to get node name: {}".format(message))
     uname_hostname = message.strip()
+    uname_hostname = uname_hostname.lower()
     if uname_hostname != hostname:
         if uname_hostname in hostname:
             status, h_message = run_ssh_command(ip, "hostname -f")
@@ -234,6 +238,7 @@ def _check_node_hostname(ip, hostname):
                     "Error while trying to get node h_name: {}".format(
                         h_message))
             uname_hostname = h_message.strip()
+            uname_hostname = uname_hostname.lower()
     if uname_hostname != hostname:
         raise APIError('Wrong node name. {} resolves itself by name {}'.format(
             hostname, uname_hostname))

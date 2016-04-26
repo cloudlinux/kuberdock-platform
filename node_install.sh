@@ -149,9 +149,10 @@ check_status()
 echo "Node OS: $(cat /etc/redhat-release)"
 
 if [[ $(getenforce) != 'Enforcing' ]];then
-    echo "Seems like SELinux is disabled on this node."\
-    "You should enable it (may require to reboot node) and restart node "\
-    "installation again."
+    echo -e "Seems like SELinux is either disabled or is in a permissive" \
+    "mode on this node."\
+    "\nYou should set it to \"enforcing\" mode in /etc/selinux/config," \
+    "reboot the node and restart node installation."
     exit 3
 fi
 

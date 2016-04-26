@@ -23,9 +23,10 @@
 #export KD_MASTER_HOOK=my_hook.sh
 
 # if set to path - copied to master
-# if set to empty line - not copied not patched
-# if not set - code is patched to not check the license
+# if set to “patch" - patched
+# if not set - not copied not patched
 # export KD_LICENSE=/path/to/license
+export KD_LICENSE=patch
 
 # if set no wsgi will be started
 #export KD_NO_WSGI=1

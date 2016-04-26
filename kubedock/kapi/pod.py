@@ -73,6 +73,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.volumes = spec.get('volumes', [])
         pod.containers = spec.get('containers', [])
         pod.restartPolicy = spec.get('restartPolicy')
+        pod.dnsPolicy = spec.get('dnsPolicy')
 
         if pod.status in (POD_STATUSES.running, POD_STATUSES.succeeded,
                           POD_STATUSES.failed):
@@ -264,10 +265,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         }
                     },
                     "spec": {
+                        "securityContext": {'seLinuxOptions': {}},
                         "volumes": volumes,
                         "containers": containers,
                         "restartPolicy": getattr(self, 'restartPolicy',
                                                  'Always'),
+                        "dnsPolicy": getattr(self, 'dnsPolicy',
+                                             'ClusterFirst'),
                         "imagePullSecrets": [{"name": secret}
                                              for secret in secrets]
                     }
@@ -344,7 +348,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 p.pop('hostPort', None)
 
         self.add_origin_root(data, volumes)
-        self.add_securety_labels(data, volumes)
 
         data['imagePullPolicy'] = 'Always'
         return data
@@ -363,21 +366,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             container['volumeMounts'].append(
                 {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
                  u'name': volume_name})
-
-    def add_securety_labels(self, container, volumes):
-        """Add SELinuxOptions to volumes. For now, just add docker `:Z` option
-        to mountPath.
-        """
-        # TODO: after k8s 1.2 version, use
-        # `pod.Spec.SecurityContext.SELinuxOptions`
-        for volume_mount in container.get('volumeMounts', ()):
-            for volume in volumes:
-                if ('rbd' in volume and
-                        volume.get('name') == volume_mount.get('name')):
-
-                    mountPath = volume_mount.get('mountPath', '')
-                    if mountPath and mountPath[-2:] not in (':Z', ':z'):
-                        volume_mount['mountPath'] += ':Z'
 
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)

@@ -306,6 +306,10 @@ new_pod_schema = {
         'type': 'string', 'required': True,
         'allowed': ['Always', 'OnFailure', 'Never']
     },
+    'dnsPolicy': {
+        'type': 'string', 'required': False,
+        'allowed': ['ClusterFirst', 'Default']
+    },
     'status': {
         'type': 'string', 'required': False,
         'allowed': ['stopped', 'unpaid']

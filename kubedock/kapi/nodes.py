@@ -52,7 +52,7 @@ def create_node(ip, hostname, kube_id,
         ip = socket.gethostbyname(hostname)
     if ip == MASTER_IP:
         raise APIError('Looks like you are trying to add MASTER as NODE, '
-                       'this kind of setups is not supported at this '
+                       'this kind of setup is not supported at this '
                        'moment')
     _check_node_hostname(ip, hostname)
     node = Node(ip=ip, hostname=hostname, kube_id=kube_id, state='pending')

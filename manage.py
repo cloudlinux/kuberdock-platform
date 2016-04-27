@@ -89,9 +89,9 @@ class Creator(Command):
                   memory=256, memory_units='MB', disk_space=2,
                   disk_space_units='GB', included_traffic=0)
 
-        p1 = Package(id=0, name='Standard package', first_deposit=0, currency='USD',
-                     period='month', prefix='$', suffix=' USD', is_default=True)
-
+        p1 = Package(id=0, name='Standard package', first_deposit=0,
+                     currency='USD', period='month', prefix='$',
+                     suffix=' USD', is_default=True)
         db.session.add(k_internal)
         PackageKube(package=p1, kube=k1, kube_price=0)
         PackageKube(package=p1, kube=k2, kube_price=0)
@@ -365,6 +365,52 @@ class CreateUser(Command):
         db.session.commit()
 
 
+class AddPredefinedApp(Command):
+    """Adds a predefined app
+    """
+
+    option_list = (
+        Option('-n', '--name', dest='name', required=True,
+               help="Predefined app's name"),
+        Option('-t', '--template', dest='template', required=True,
+               help="Predefined app's template"),
+        Option('-u', '--user', dest='username', required=False,
+               help='User name'),
+        Option('-o', '--origin', dest='origin', required=False,
+               help='Origin'),
+        Option('-f', '--no-validation', dest='no_validation',
+               action='store_true'),
+    )
+
+    def run(self, name, template, username, origin, no_validation):
+        from kubedock.kapi.predefined_apps import PredefinedApps
+
+        if username is None:
+            role = Role.filter_by(rolename='Admin').first()
+            user = User.filter_by(role=role).first()
+            if not user:
+                raise InvalidCommand('No username was specified, so user with '
+                                     'Admin role was searched but not found.')
+        else:
+            user = User.filter_by(username=username).first()
+            if not user:
+                raise InvalidCommand('User with `{0}` username not '
+                                     'found'.format(username))
+
+        try:
+            with open(template, 'r') as tf:
+                template_data = tf.read()
+        except IOError as err:
+            raise InvalidCommand("Can not load template: %s" % err)
+
+        result = PredefinedApps(user).create(
+            name=name,
+            template=template_data,
+            origin=origin or 'kuberdock',
+            validate=not no_validation
+        )
+        print(result)
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -389,6 +435,7 @@ manager.add_command('node-info', NodeInfoCmd())
 manager.add_command('auth-key', AuthKey())
 manager.add_command('create-ip-pool', CreateIPPool())
 manager.add_command('create-user', CreateUser())
+manager.add_command('add-predefined-app', AddPredefinedApp())
 
 
 if __name__ == '__main__':

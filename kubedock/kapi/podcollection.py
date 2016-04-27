@@ -417,7 +417,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _get_namespaces(self):
         data = self._get(['namespaces'], ns=False)
-        namespaces = [i['metadata']['name'] for i in data['items']]
+        namespaces = [i['metadata']['name'] for i in data.get('items', {})]
         if self.owner is None:
             return namespaces
         user_namespaces = get_user_namespaces(self.owner)
@@ -466,9 +466,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 replicas_data.extend(self._get(
                     ['replicationcontrollers'], ns=namespace)['items'])
         else:
-            data.extend(self._get(['pods'])['items'])
-            replicas_data.extend(
-                self._get(['replicationcontrollers'])['items'])
+            pods = self._get(['pods'])
+            data.extend(pods.get('items', {}))
+            replicas = self._get(['replicationcontrollers'])
+            replicas_data.extend(replicas.get('items', {}))
 
         for item in data:
             pod = Pod.populate(item)

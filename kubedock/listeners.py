@@ -4,6 +4,7 @@ import json
 import os
 import requests
 from datetime import datetime
+from socket import error as socket_error
 from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
@@ -37,6 +38,7 @@ ETCD_EXTENDED_STATUSES_URL = ETCD_URL.format('/'.join([
 ETCD_POD_STATES = 'pod_states'
 ETCD_POD_STATES_URL = ETCD_URL.format('/'.join([
     ETCD_KUBERDOCK, ETCD_POD_STATES]))
+MAX_ATTEMPTS = 10
 
 
 def filter_event(data, app):
@@ -100,25 +102,23 @@ def process_pods_event(data, app, event_time=None, live=True):
     pod_id = pod['metadata'].get('labels', {}).get('kuberdock-pod-uid')
 
     if pod_id is None:
-        with app.app_context():
-            pod_without_id_warning(pod['metadata']['name'],
-                                   pod['metadata']['namespace'])
+        pod_without_id_warning(pod['metadata']['name'],
+                                pod['metadata']['namespace'])
         return
 
     # save states in database
-    with app.app_context():
-        db_pod = Pod.query.get(pod_id)
-        if db_pod is None:
-            unregistered_pod_warning(pod_id)
-            return
+    db_pod = Pod.query.get(pod_id)
+    if db_pod is None:
+        unregistered_pod_warning(pod_id)
+        return
 
-        # if live, we need to send events to frontend
-        if live:
-            send_pod_status_update(pod, db_pod, event_type, app)
+    # if live, we need to send events to frontend
+    if live:
+        send_pod_status_update(pod, db_pod, event_type, app)
 
-        host = pod['spec'].get('nodeName')
+    host = pod['spec'].get('nodeName')
 
-        update_states(pod, event_type=event_type, event_time=event_time)
+    update_states(pod, event_type=event_type, event_time=event_time)
 
     if event_type == 'MODIFIED':
         # fs limits
@@ -140,21 +140,20 @@ def set_limit(host, pod_id, containers, app):
     if errors:
         print errors
         return False
-    with app.app_context():
-        spaces = dict(
-            (i, (s, u)) for i, s, u in Kube.query.values(
-                Kube.id, Kube.disk_space, Kube.disk_space_units
-                )
-            )  # workaround
+    spaces = dict(
+        (i, (s, u)) for i, s, u in Kube.query.values(
+            Kube.id, Kube.disk_space, Kube.disk_space_units
+            )
+        )  # workaround
 
-        pod = Pod.query.filter_by(id=pod_id).first()
+    pod = Pod.query.filter_by(id=pod_id).first()
 
-        if pod is None:
-            unregistered_pod_warning(pod_id)
-            return False
+    if pod is None:
+        unregistered_pod_warning(pod_id)
+        return False
 
-        config = json.loads(pod.config)
-        kube_type = pod.kube_id
+    config = json.loads(pod.config)
+    kube_type = pod.kube_id
         # kube = Kube.query.get(kube_type) this query raises an exception
     limits = []
     for container in config['containers']:
@@ -420,6 +419,7 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
     redis_key = 'LAST_EVENT_' + fn_name
 
     def result(app):
+        retry = 0
         while True:
             try:
                 if verbose >= 2:
@@ -436,7 +436,10 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                     # Only after connection to ensure last_saved was correct
                     # before save it to redis
                     redis.set(redis_key, last_saved)
-                except WebSocketException as e:
+                    if verbose >= 3:
+                        print "{}: start watch on event {}".format(
+                            fn_name, last_saved)
+                except (socket_error, WebSocketException) as e:
                     print e.__repr__()
                     gevent.sleep(0.1)
                     continue
@@ -454,16 +457,38 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                                           MAX_ETCD_VERSIONS)
                         redis.set(redis_key, new_version)
                         break
+                    data = filter_event(data, app)
+                    if not data:
+                        continue
                     evt_version = data['object']['metadata']['resourceVersion']
+                    if verbose >= 3:
+                        print "{}: have new event {}".format(
+                            fn_name, evt_version)
                     last_saved = redis.get(redis_key)
                     if int(evt_version) > int(last_saved or '0'):
-                        data = filter_event(data, app)
-                        if data:
+                        if retry < MAX_ATTEMPTS:
+                            if verbose >= 3:
+                                print "{}: try to process {}".format(
+                                    fn_name, evt_version)
                             func(data, app)
+                        else:
+                            message = "Problems in the listeners module have\
+                                been encountered. Please contact KuberDock\
+                                Support (see Settings, the License page)"
+                            with app.app_context():
+                                send_event('notify:error',
+                                           {'message': message})
+                                current_app.logger.error(
+                                    'skip event {}'.format(data))
+
                         redis.set(redis_key, evt_version)
+                    retry = 0
             except KeyboardInterrupt:
                 break
             except Exception as e:
+                retry += 1
+                if verbose >= 3:
+                    print "{}: retry={}".format(fn_name, retry)
                 if not (isinstance(e, WebSocketConnectionClosedException) and
                         e.message == 'Connection is already closed.'):
                     print('{0}\n...restarting listen {1}...'
@@ -476,34 +501,61 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
     fn_name = func.func_name
 
     def result(app):
+        retry = 0
         index = 0
-        while True:
-            try:
-                if verbose >= 2:
-                    print '==START WATCH {0}==pid:{1}'.format(
-                        fn_name, os.getpid())
-                if not index and list_func:
-                    index = list_func(app)
-                r = requests.get(url, params={'wait': True,
-                                              'recursive': True,
-                                              'waitIndex': index})
-                if verbose >= 3:
-                    print '==EVENT CONTENT {0} ==: {1}'.format(
-                        fn_name, r.text)
-                data = r.json()
-                # The event in requested index is outdated and cleared
-                if data.get('errorCode') == 401:
-                    print "The event in requested index is outdated and "\
-                            "cleared. Skip all events and wait for new one"
-                    index = 0
+        with app.app_context():
+            while True:
+                try:
+                    if verbose >= 2:
+                        print '==START WATCH {0}==pid:{1}'.format(
+                            fn_name, os.getpid())
+                    if not index and list_func:
+                        index = list_func(app)
+                    if verbose >= 3:
+                        print "{}: start watch on event {}".format(
+                            fn_name, index)
+                    r = requests.get(url, params={'wait': True,
+                                                'recursive': True,
+                                                'waitIndex': index})
+                    if not r.ok:
+                        current_app.logger.error(
+                            "{}: Can't connect to etcd".format(fn_name))
+                        gevent.sleep(1)
+                        continue
+                    if verbose >= 3:
+                        print '==EVENT CONTENT {0} ==: {1}'.format(
+                            fn_name, r.text)
+                    data = r.json()
+                    # The event in requested index is outdated and cleared
+                    if data.get('errorCode') == 401:
+                        print "The event in requested index is outdated and "\
+                                "cleared. Skip all events and wait for new one"
+                        index = 0
+                        continue
+                    if retry < MAX_ATTEMPTS:
+                        if verbose >= 3:
+                            print "{}: try to process {}".format(fn_name, index)
+                        func(data, app)
+                    else:
+                        message = "Problems in the listeners module have been\
+                            encountered. Please contact KuberDock Support\
+                            (see Settings, the License page)"
+                        send_event('notify:error', {'message': message})
+                        current_app.logger.error('skip event {}'.format(data))
+                    index = int(data['node']['modifiedIndex']) + 1
+                    retry = 0
+                except KeyboardInterrupt:
+                    break
+                except requests.exceptions.RequestException:
+                    current_app.logger.exception('Error while etcd connect')
+                    gevent.sleep(1)
                     continue
-                func(data, app)
-                index = int(data['node']['modifiedIndex']) + 1
-            except KeyboardInterrupt:
-                break
-            except Exception as e:
-                print repr(e), '...restarting listen {0}...'.format(fn_name)
-                gevent.sleep(0.2)
+                except Exception as e:
+                    retry += 1
+                    if verbose >= 3:
+                        print "{}: retry={}".format(fn_name, retry)
+                    print repr(e), '...restarting listen {0}...'.format(fn_name)
+                    gevent.sleep(0.2)
     return result
 
 
@@ -562,8 +614,12 @@ def prelist_pod_states(app):
                 # but there are no need to send old events to frontend,
                 # just need to save them to db. Need to have separate method
                 # or filter old events by time.
-                process_pod_states(
-                    {'action': 'set', 'node': node}, app, live=False)
+                try:
+                    process_pod_states(
+                        {'action': 'set', 'node': node}, app, live=False)
+                except Exception:
+                    current_app.logger.exception(
+                        "Error while process event {}".format(node))
             return int(etcd_index) + 1
         elif res.json().get('errorCode') != 100:
             raise ValueError()

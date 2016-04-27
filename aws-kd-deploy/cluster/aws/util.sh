@@ -1050,9 +1050,28 @@ function deploy-master(){
     ls -l $AWS_SSH_KEY
 
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y update | cat" < <(cat) 2>"$LOG"
-    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y install wget | cat" < <(cat) 2>"$LOG"
+    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y install wget rpm2cpio | cat" < <(cat) 2>"$LOG"
     echo "Kubernetes cluster created."
-    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; wget ${DEPLOY_SH} | cat" < <(cat) 2>"$LOG"
+
+    if [[ ! -z ${REMOTE_PACKAGE} ]]; then
+      echo "WARNING: KeberDock will download from ${REMOTE_PACKAGE}"
+      wget ${REMOTE_PACKAGE} < <(cat) 2>"$LOG"
+    fi
+
+    LOCAL_PACKAGE=$(ls -1 |awk '/kuberdock.*\.rpm/ {print $1; exit}')
+    if [[ ! -z $LOCAL_PACKAGE ]]; then
+      echo 'WARNING: Installation from local package. Using repository is strongly recommended.'
+      echo 'To do this just move kuberdock package file to any other dir from deploy script.'
+      echo "Upload ${LOCAL_PACKAGE} to Master (${KUBE_MASTER_IP})"
+      scp -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" \
+        ${LOCAL_PACKAGE} ${SSH_USER}@${KUBE_MASTER_IP}:~/
+      ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" \
+        "stty raw -echo; rpm2cpio ${LOCAL_PACKAGE} | \
+         cpio -i --to-stdout ./var/opt/kuberdock/deploy.sh > deploy.sh | cat" < <(cat) 2>"$LOG"
+    else
+      ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" \
+        "stty raw -echo; wget ${DEPLOY_SH} | cat" < <(cat) 2>"$LOG"
+    fi
 
     if [[ ${TESTING} == "yes" ]]; then
 	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo ROUTE_TABLE_ID=${ROUTE_TABLE_ID} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} bash -l deploy.sh -t" < <(cat) 2>"$LOG"

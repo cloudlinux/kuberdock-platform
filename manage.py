@@ -3,6 +3,7 @@ import sys
 import pytz
 import logging
 import string
+import time
 from random import choice
 from datetime import datetime
 import uuid
@@ -31,6 +32,7 @@ from kubedock import tasks
 from kubedock.kapi import licensing
 from kubedock.kapi.pstorage import check_namespace_exists
 from kubedock.kapi import ippool
+from kubedock.kapi.node_utils import get_one_node
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.script.commands import InvalidCommand
@@ -40,6 +42,9 @@ from flask.ext.migrate import migrate as migrate_func
 from sqlalchemy.orm.exc import NoResultFound
 
 logging.getLogger("requests").setLevel(logging.WARNING)
+
+WAIT_TIMEOUT = 1200  # seconds
+WAIT_RETRY_DELAY = 5
 
 
 class Creator(Command):
@@ -155,15 +160,38 @@ class Updater(Command):
         upgrade()
 
 
+class WaitTimeoutException(Exception):
+    pass
+
+
+def wait_for_nodes(nodes_list, timeout):
+    _timeout = time.time() + (timeout or WAIT_TIMEOUT)
+    host_list = set(nodes_list)
+
+    while host_list:
+        if time.time() > _timeout:
+            raise WaitTimeoutException()
+
+        time.sleep(WAIT_RETRY_DELAY)
+
+        for node_host in nodes_list:
+            node = Node.get_by_name(node_host)
+            status = get_one_node(node.id)['status']
+            if status == 'running':
+                hosts_list.remove(node_host)
+
+
 class NodeManager(Command):
     option_list = (
         Option('--hostname', dest='hostname', required=True),
         Option('--kube-type', dest='kube_type', type=int, required=True),
         Option('--do-deploy', dest='do_deploy', action='store_true'),
+        Option('--wait', dest='wait', action='store_true'),
+        Option('--timeout', dest='timeout', required=False, type=int),
         Option('-t', '--testing', dest='testing', action='store_true'),
     )
 
-    def run(self, hostname, kube_type, do_deploy, testing):
+    def run(self, hostname, kube_type, do_deploy, wait, timeout, testing):
         if get_maintenance():
             raise InvalidCommand(
                 'Kuberdock is in maintenance mode. Operation canceled'
@@ -177,6 +205,21 @@ class NodeManager(Command):
             print e
         else:
             print res.to_dict()
+            if wait:
+                wait_for_nodes([hostname, ], timeout)
+
+
+class WaitForNodes(Command):
+    """Wait for nodes to become ready.
+    """
+    option_list = (
+        Option('--nodes', dest='nodes', required=True),
+        Option('--timeout', dest='timeout', required=False, type=int),
+    )
+
+    def run(self, nodes, timeout):
+        nodes_list = nodes.split(',')
+        wait_for_nodes(nodes_list, timeout)
 
 
 def generate_new_pass():
@@ -191,6 +234,7 @@ class ResetPass(Command):
                action='store_true'),
         Option('--set', dest='new_password', required=False),
     )
+
     def run(self, generate, new_password):
         print "Change password for admin."
         u = db.session.query(User).filter(User.username == 'admin').first()
@@ -338,6 +382,7 @@ manager.add_command('db', MigrateCommand)
 manager.add_command('createdb', Creator())
 manager.add_command('updatedb', Updater())
 manager.add_command('add_node', NodeManager())
+manager.add_command('wait-for-nodes', WaitForNodes())
 manager.add_command('reset-password', ResetPass())
 manager.add_command('node-flag', NodeFlagCmd())
 manager.add_command('node-info', NodeInfoCmd())

@@ -34,7 +34,7 @@
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
 
 - name: Deploy 
-  shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash /vagrant/deploy.sh
+  shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash deploy.sh chdir=/vagrant
   when: rpm_exist.matched > 0
 
 - name: Reset password

@@ -26,3 +26,6 @@
 # if set to empty line - not copied not patched
 # if not set - code is patched to not check the license
 # export KD_LICENSE=/path/to/license
+
+# if set no wsgi will be started
+#export KD_NO_WSGI=1

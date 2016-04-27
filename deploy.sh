@@ -648,9 +648,13 @@ chmod 600 $KUBERNETES_CONF_DIR/configfile_for_nodes
 
 #9. Configure kubernetes
 log_it echo "Configure kubernetes"
+if [ "$ISAMAZON" = true ];then
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--cloud-provider=aws --token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP  --watch-cache=false\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--cloud-provider=aws\"|}" $KUBERNETES_CONF_DIR/controller-manager
+else
 sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP  --watch-cache=false\"|}" $KUBERNETES_CONF_DIR/apiserver
+fi
 sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission_control=NamespaceLifecycle,NamespaceExists,SecurityContextDeny|}" $KUBERNETES_CONF_DIR/apiserver
-sed -i "/^KUBE_ALLOW_PRIV/ {s/--allow_privileged=false/--allow_privileged=true/}" $KUBERNETES_CONF_DIR/config
 
 
 #10. Create and populate DB
@@ -812,6 +816,27 @@ ExecStart=/usr/bin/kube-apiserver \
 	    \$KUBE_API_ARGS
 Restart=on-failure
 Type=notify
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+EOF
+cat > /etc/systemd/system/kube-controller-manager.service << EOF
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/kubernetes/config
+EnvironmentFile=-/etc/kubernetes/controller-manager
+User=kube
+ExecStart=/usr/bin/kube-controller-manager \
+            \$KUBE_LOGTOSTDERR \
+            \$KUBE_LOG_LEVEL \
+            \$KUBE_MASTER \
+            \$KUBE_CONTROLLER_MANAGER_ARGS
+Restart=on-failure
 LimitNOFILE=65536
 
 [Install]

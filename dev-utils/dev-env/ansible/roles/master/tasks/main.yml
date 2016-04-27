@@ -42,9 +42,12 @@
 
 - name: Deploy 
   shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash deploy.sh {{ add_testing_repo }} chdir=/vagrant
-  when: rpm_exist.matched > 0
+  when: rpm_exist.matched > 0 and not use_ceph
   tags:
       - deploy
+
+- include: ceph.yml
+  when: use_ceph
 
 - name: Reset password
   shell: python /vagrant/manage.py reset-password --set admin
@@ -52,6 +55,8 @@
 - name: Install additional packages
   yum: name={{ item }} state=latest
   with_items:
+      - tmux
+  tags:
       - tmux
 
 - name: UI for dev

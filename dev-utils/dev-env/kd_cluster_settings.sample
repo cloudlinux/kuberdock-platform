@@ -72,3 +72,9 @@
 # Uncomment to enable testing repo for deploy.sh and node_install.sh
 # default: nothing
 #export KD_TESTING_REPO=true
+
+# running KuberDock deploy script with CEPH support
+#export KD_CEPH=1
+#export KD_CEPH_USER=your_ceph_user 
+#export KD_CEPH_CONFIG=/path/to/ceph.conf 
+#export KD_CEPH_USER_KEYRING=/path/to/client.your_ceph_user.keyring

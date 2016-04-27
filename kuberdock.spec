@@ -1,7 +1,7 @@
-Version: 1.1
+Version: 1.2
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,7 +187,7 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
-* Wed Apr 13 2016 Igor Savenko <bliss@cloudlinux.com> 1.1-2
+* Wed Apr 13 2016 Igor Savenko <bliss@cloudlinux.com> 1.2-1
 - Raised tag to comply with bugfix release
 
 * Thu Apr 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 1.1-1

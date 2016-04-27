@@ -2,6 +2,7 @@
 """
 import json
 import unittest
+from copy import deepcopy
 from unittest import TestCase
 from urllib import urlencode
 from urlparse import urlparse
@@ -12,7 +13,8 @@ from requests.exceptions import ConnectTimeout, ReadTimeout, \
     ConnectionError, HTTPError, TooManyRedirects, Timeout
 from .. import images
 from ..images import (Image, complement_registry, get_url, APIError,
-                      raise_registry_error, RegistryError)
+                      raise_registry_error, RegistryError,
+                      ImageNotAvailable, CommandIsMissing)
 from ...settings import DEFAULT_REGISTRY
 from ...testutils.testcases import DBTestCase
 
@@ -56,7 +58,8 @@ class TestImagesCache(DBTestCase):
         request_config_mock.return_value = NGINX_IMAGE_INFO
         result = Image('nginx').get_container_config()
         request_config_mock.assert_called_once_with(Image('nginx'), None)
-        self.assertEqual(result, Image('nginx')._prepare_response(NGINX_CONFIG))
+        expected = Image('nginx')._prepare_response(NGINX_IMAGE_INFO)
+        self.assertEqual(result, expected)
 
         # check and clear cache
         cache = images.DockerfileCache.query.all()
@@ -175,7 +178,8 @@ class TestImagesAuth(DBTestCase):
                     'www-authenticate': 'Bearer {}'.format(
                         ','.join('{}="{}"'.format(key, value) for key, value
                                  in dict(realm=realm, **token_params).items())
-                    )
+                    ),
+                    images.API_VERSION_HEADER: 'registry/2.0',
                 }
                 return (401, headers, '')
             self.assertEqual(request.headers['Authorization'],
@@ -312,57 +316,92 @@ class TestImages(unittest.TestCase):
         for data, result in test_pairs.iteritems():
             self.assertEqual(get_url(*data), result)
 
+    @mock.patch.object(images, 'check_registry_status', mock.Mock())
     @mock.patch.object(Image, '_v1_request_image_info', autospec=True)
     @mock.patch.object(Image, '_v2_request_image_info', autospec=True)
-    def test_check_images_availability(self, v2_mock, v1_mock):
-        """Check kapi.images.Image.check_images_availability function"""
+    def test_check_containers(self, v2_mock, v1_mock):
+        """Check kapi.images.Image.check_containers function"""
         v2_mock.return_value = None
         v1_mock.return_value = None
 
-        with self.assertRaises(APIError):
-            Image.check_images_availability(['nginx'])
-        v1_mock.assert_called_once_with(Image('nginx'), None, True)
-        v2_mock.assert_called_once_with(Image('nginx'), None, True)
+        container = {'image': 'i', 'name': 'n', 'command': 'c', 'args': 'e'}
 
+        with self.assertRaises(ImageNotAvailable):  # n/a
+            Image.check_containers([dict(container, image='nginx')])
+        v1_mock.assert_called_once_with(Image('nginx'), None, just_check=True)
+        v2_mock.assert_called_once_with(
+            Image('nginx'), None, just_check=True, raise_=True)
+
+        # available through docker registry v1 api
         v1_mock.reset_mock()
         v2_mock.reset_mock()
         v1_mock.return_value = True
-        Image.check_images_availability(['nginx'])
+        Image.check_containers([dict(container, image='nginx')])
         self.assertTrue(v1_mock.called)
         self.assertFalse(v2_mock.called)
 
+        # available only through docker registry v2 api
         v1_mock.reset_mock()
         v2_mock.reset_mock()
         v1_mock.return_value = None
         v2_mock.return_value = True
-        Image.check_images_availability(['nginx'])
+        Image.check_containers([dict(container, image='nginx')])
         self.assertTrue(v1_mock.called)
         self.assertTrue(v2_mock.called)
 
+        # try all secrets
         v1_mock.reset_mock()
         v2_mock.reset_mock()
         v1_mock.return_value = None
         v2_mock.return_value = None
         with self.assertRaises(APIError):
-            Image.check_images_availability(
-                ['quay.io/quay/redis', 'u1/test_private'],
+            Image.check_containers(
+                [dict(container, image='quay.io/quay/redis'),
+                 dict(container, image='u1/test_private')],
                 [('uname1', 'pwd1', 'quay.io')]
             )
         image = Image('quay.io/quay/redis')
-        v1_mock.assert_any_call(image, None, True)
-        v1_mock.assert_any_call(image, ('uname1', 'pwd1'), True)
-        v2_mock.assert_any_call(image, None, True)
-        v2_mock.assert_any_call(image, ('uname1', 'pwd1'), True)
+        v1_mock.assert_any_call(image, None, just_check=True)
+        v1_mock.assert_any_call(image, ('uname1', 'pwd1'), just_check=True)
+        v2_mock.assert_any_call(image, None, just_check=True, raise_=True)
+        v2_mock.assert_any_call(
+            image, ('uname1', 'pwd1'), just_check=True, raise_=True)
 
         v1_mock.reset_mock()
         v2_mock.reset_mock()
         v1_mock.return_value = True
-        Image.check_images_availability(
-            ['quay.io/quay/redis', 'u1/test_private'],
+        Image.check_containers(
+            [dict(container, image='quay.io/quay/redis'),
+             dict(container, image='u1/test_private')],
             [('uname1', 'pwd1', 'quay.io')]
         )
-        v1_mock.assert_any_call(Image('quay.io/quay/redis'), None, True)
-        v1_mock.assert_any_call(Image('u1/test_private'), None, True)
+        v1_mock.assert_any_call(
+            Image('quay.io/quay/redis'), None, just_check=True)
+        v1_mock.assert_any_call(Image('u1/test_private'), None, just_check=True)
+
+        # CMD and ENTRYPOINT check
+        v1_mock.reset_mock()
+        v2_mock.reset_mock()
+        v1_mock.return_value = None
+        v2_mock.return_value = NGINX_IMAGE_INFO
+        Image.check_containers(
+            [dict(container, image='nginx', command=[], args=[])], [])
+        v1_mock.assert_called_once_with(Image('nginx'), None, just_check=False)
+        v2_mock.assert_called_once_with(
+            Image('nginx'), None, just_check=False, raise_=True)
+
+        v1_mock.reset_mock()
+        v2_mock.reset_mock()
+        image_without_command = deepcopy(NGINX_IMAGE_INFO)
+        image_without_command['config'].pop('Cmd')
+        image_without_command['config'].pop('Entrypoint')
+        v2_mock.return_value = image_without_command
+        with self.assertRaises(CommandIsMissing):
+            Image.check_containers(
+                [dict(container, image='alpine', command=[], args=[])], [])
+        v1_mock.assert_called_once_with(Image('alpine'), None, just_check=False)
+        v2_mock.assert_called_once_with(
+            Image('alpine'), None, just_check=False, raise_=True)
 
     @mock.patch.object(Image, '_request_image_info', autospec=True)
     def test_get_id(self, request_image_info_mock):

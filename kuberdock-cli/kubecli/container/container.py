@@ -448,8 +448,8 @@ class KuberDock(KubeCtl):
         self._data_path = None
         # Need to set resource type from KubeCtl
         args['resource'] = 'pod'
-        self._initialized = self._load(args)
         super(KuberDock, self).__init__(**args)
+        self._initialized = self._load(args)
 
     def create(self):
         self.set()
@@ -872,8 +872,13 @@ class KuberDock(KubeCtl):
         """
         if self._kube_path is not None:
             return
-        uid = os.geteuid()
-        homedir = pwd.getpwuid(uid).pw_dir
+
+        if hasattr(self, 'config'):
+            homedir = os.path.dirname(os.path.expanduser(self.config))
+        else:
+            uid = os.geteuid()
+            homedir = pwd.getpwuid(uid).pw_dir
+
         self._kube_path = os.path.join(homedir, self.KUBEDIR)
 
     def _resolve_data_path(self, name):

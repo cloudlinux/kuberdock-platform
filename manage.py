@@ -178,7 +178,7 @@ def wait_for_nodes(nodes_list, timeout):
             node = Node.get_by_name(node_host)
             status = get_one_node(node.id)['status']
             if status == 'running':
-                hosts_list.remove(node_host)
+                host_list.remove(node_host)
 
 
 class NodeManager(Command):

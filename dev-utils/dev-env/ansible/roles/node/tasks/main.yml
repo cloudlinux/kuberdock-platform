@@ -14,3 +14,15 @@
   shell: python /vagrant/manage.py add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
+
+- set_fact: _hostname={{ hostvars[item].ansible_hostname }}
+  with_items: groups['node']
+  register: _hostnames
+
+- set_fact: hostnames="{{ _hostnames.results|map(attribute='ansible_facts._hostname')|list|join(',')}}"
+
+- name: Wait for nodes
+  run_once: true
+  shell: python /vagrant/manage.py wait-for-nodes --nodes "{{ hostnames }}"
+  delegate_facts: True
+  delegate_to: "{{ groups['master'][0] }}"

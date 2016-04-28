@@ -58,6 +58,19 @@
   service: name=emperor.uwsgi state=stopped
   when: is_dev_install
 
+- seboolean: name=httpd_can_network_connect state=yes persistent=yes
+  notify:
+    - restart nginx
+
+- name: Proxy pass for nginx
+  replace: 
+    dest: /etc/nginx/conf.d/kuberdock-ssl.conf
+    regexp: "include uwsgi_params;\n[ ]*uwsgi_pass 127.0.0.1:8009;" 
+    replace: "proxy_pass http://127.0.0.1:5000;"
+    backup: yes
+  notify:
+    - restart nginx
+
 - name: Create tmux session
   shell: tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}' 
   when: is_dev_install

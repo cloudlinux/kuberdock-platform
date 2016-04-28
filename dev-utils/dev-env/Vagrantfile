@@ -61,6 +61,7 @@ Vagrant.configure(2) do |config|
             one.memory = nodeMemory
             one.title = 'node'
           end
+          node.vm.synced_folder "../../", "/vagrant", disabled: true
       end
   end
 

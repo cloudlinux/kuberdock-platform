@@ -164,6 +164,10 @@ class WaitTimeoutException(Exception):
     pass
 
 
+class WaitTroubleException(Exception):
+    pass
+
+
 def wait_for_nodes(nodes_list, timeout):
     _timeout = time.time() + (timeout or WAIT_TIMEOUT)
     host_list = set(nodes_list)
@@ -177,7 +181,9 @@ def wait_for_nodes(nodes_list, timeout):
         for node_host in nodes_list:
             node = Node.get_by_name(node_host)
             status = get_one_node(node.id)['status']
-            if status == 'running':
+            if status == 'troubles':
+                raise WaitTroubleException()
+            elif status == 'running':
                 host_list.remove(node_host)
 
 

@@ -23,7 +23,7 @@ class BillingCommon(object):
         return
 
     @abstractmethod
-    def order_product(self, data):
+    def order_product(self, data, user=None):
         return
 
     @abstractmethod

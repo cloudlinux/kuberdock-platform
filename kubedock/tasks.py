@@ -26,8 +26,6 @@ from .utils import (
     update_dict, get_api_url, send_event, send_logs, k8s_json_object_hook,
     get_timezone,
 )
-from .stats import StatWrap5Min
-from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, PodState, PersistentDisk, User
 from .nodes.models import Node, NodeAction, NodeFlag, NodeFlagNames
 from .users.models import SessionData
@@ -78,7 +76,7 @@ def get_services_nodelay(namespace=None):
 def create_service_nodelay(data, namespace=None):
     r = requests.post(get_api_url('services', namespace=namespace),
                       data=json.dumps(data))
-    return r.text   # TODO must return json()
+    return r.text  # TODO must return json()
 
 
 def delete_pod_nodelay(item, namespace=None):
@@ -160,7 +158,7 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             db_node.state = 'completed'
             db.session.commit()
             return mes
-        except OSError:     # no rpm
+        except OSError:  # no rpm
             current_master_kubernetes = 'kubernetes-master'
         current_master_kubernetes = current_master_kubernetes.replace(
             'master', 'node')
@@ -227,9 +225,9 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             )
 
         sftp.close()
-        deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
-                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
-                     'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} '\
+        deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} ' \
+                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} ' \
+                     'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} ' \
                      'bash /node_install.sh'
         if CEPH:
             deploy_cmd = 'CEPH_CONF={} '.format(
@@ -326,26 +324,6 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
 
 
 @celery.task()
-@exclusive_task(60 * 30)
-def pull_hourly_stats():
-    try:
-        data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
-    except Exception:
-        current_app.logger.exception(
-            'Skip pulling statistics because of error.')
-        return
-    time_windows = set(map(operator.itemgetter('time_window'), data))
-    rv = db.session.query(StatWrap5Min).filter(
-        StatWrap5Min.time_window.in_(time_windows))
-    existing_windows = set(map((lambda x: x.time_window), rv))
-    for entry in data:
-        if entry['time_window'] in existing_windows:
-            continue
-        db.session.add(StatWrap5Min(**entry))
-    db.session.commit()
-
-
-@celery.task()
 def send_stat():
     send(collect())
 
@@ -423,7 +401,7 @@ def fix_pods_timeline():
         raise
     t.append(time.time())
     current_app.logger.debug('Fixed pods timeline: {0}'.format(
-        ['{0:.3f}'.format(t2-t1) for t1, t2 in zip(t[:-1], t[1:])]))
+        ['{0:.3f}'.format(t2 - t1) for t1, t2 in zip(t[:-1], t[1:])]))
     current_app.logger.debug('Closed %s pod_states', closed_states)
 
 
@@ -496,7 +474,7 @@ def check_if_node_down(hostname):
 def process_node_actions(action_type=None, node_host=None):
     actions = db.session.query(NodeAction).filter(
         NodeAction.timestamp > (datetime.utcnow() - timedelta(minutes=35))
-        ).order_by(NodeAction.timestamp)
+    ).order_by(NodeAction.timestamp)
     if action_type is not None:
         actions = actions.filter(NodeAction.type == action_type)
     if node_host is not None:

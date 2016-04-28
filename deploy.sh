@@ -429,8 +429,6 @@ else
     log_it echo 'Adding cluster-only visible ports...'
     # kube-apiserver insecure ro
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="7080" protocol="tcp" accept"
-    # influxdb
-    do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="8086" protocol="tcp" accept"
     # cluster dns
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="tcp" accept"
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="udp" accept"
@@ -624,22 +622,9 @@ EOF
 do_and_log systemctl reenable kuberdock-k8s2etcd
 do_and_log systemctl restart kuberdock-k8s2etcd
 
+# change influxdb listening interface
+sed -i 's/\":8086\"/\"127\.0\.0\.1:8086\"/' /etc/influxdb/influxdb.conf
 
-# Systemd to sysvinit backwards compatibility has been broken
-# after updating to centos 7.2.
-# so we need to create an influxdb unit-file at the moment
-cat > /etc/systemd/system/influxdb.service << EOF
-[Unit]
-Description=InfluxDB Server
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/influxdb -pidfile /opt/influxdb/shared/influxdb.pid -config /opt/influxdb/shared/config.toml
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload
 # Start early or curl connection refused
 do_and_log systemctl reenable influxdb
 do_and_log systemctl restart influxdb
@@ -815,11 +800,12 @@ do_and_log systemctl restart dnsmasq
 
 
 
-#14 Create cadvisor database
+#14 Create k8s database
 # Only after influxdb is fully loaded
-curl -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "cadvisor"}'
+influx -execute "create user root with password 'root' with all privileges"
+influx -execute "create database k8s"
 if [ $? -ne 0 ];then
-    log_it echo "Error create cadvisor database"
+    log_it echo "Error create k8s database"
     echo $EXIT_MESSAGE
     exit 1
 fi
@@ -880,9 +866,9 @@ EOF
 systemctl daemon-reload
 
 log_it echo "Starting kubernetes..."
-for i in kube-apiserver kube-controller-manager kube-scheduler;
+for i in kube-apiserver kube-controller-manager kube-scheduler heapster;
     do do_and_log systemctl reenable $i;done
-for i in kube-apiserver kube-controller-manager kube-scheduler;
+for i in kube-apiserver kube-controller-manager kube-scheduler heapster;
     do do_and_log systemctl restart $i;done
 
 
@@ -978,10 +964,11 @@ do_cleanup()
 
     log_it echo "Stop and disable services..."
     for i in nginx emperor.uwsgi flanneld redis postgresql influxdb kuberdock-k8s2etcd etcd \
-             kube-apiserver kube-controller-manager kube-scheduler;do
+             kube-apiserver kube-controller-manager kube-scheduler heapster;do
         log_it systemctl disable $i
     done
-    for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kuberdock-k8s2etcd kube-scheduler;do
+    for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kuberdock-k8s2etcd kube-scheduler \
+             heapster;do
         log_it systemctl stop $i
     done
 
@@ -995,15 +982,10 @@ do_cleanup()
     log_it echo "Cleaning up redis..."
     log_it redis-cli flushall
     log_it echo "Cleaning up influxdb..."
-    curl -X DELETE 'http://localhost:8086/db/cadvisor?u=root&p=root'
+    influx -execute "drop database k8s"
     for i in flanneld redis influxdb etcd;do
         log_it systemctl stop $i
     done
-
-    # '\n' because curl is a previous command
-    log_it echo -e "\nDeleting custom influxdb.service..."
-    log_it rm /etc/systemd/system/influxdb.service
-    log_it systemctl daemon-reload
 
     log_it echo "Trying to remove postgres role and database..."
     su -c 'dropdb kuberdock && dropuser kuberdock' - postgres

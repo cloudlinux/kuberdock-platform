@@ -1,8 +1,6 @@
 tmux_session_name: kd_tmux_session
 pub_key: /var/lib/nginx/.ssh/id_rsa.pub
 is_dev_install: "{{ lookup('env','KD_DEV_INSTALL') }}"
-dotfiles: "{{ lookup('env','KD_DOT_FILES') }}"
-hook: "{{ lookup('env','KD_MASTER_HOOK') }}"
 license_path: "{{ lookup('env','KD_LICENSE') }}"
 copy_license_to: '/var/opt/kuberdock/.license'
 no_wsgi: "{{ lookup('env','KD_NO_WSGI') }}"

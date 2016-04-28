@@ -22,6 +22,8 @@
 
 - find: paths=/vagrant/ patterns="kuberdock*.rpm" 
   register: rpm_exist
+  tags:
+      - deploy
 
 - fail: msg="There is not any kuberdock*.rpm files found."
   when: rpm_exist.matched <= 0
@@ -34,8 +36,10 @@
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
 
 - name: Deploy 
-  shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash deploy.sh chdir=/vagrant
+  shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash deploy.sh {{ add_testing_repo }} chdir=/vagrant
   when: rpm_exist.matched > 0
+  tags:
+      - deploy
 
 - name: Reset password
   shell: python /vagrant/manage.py reset-password --set admin

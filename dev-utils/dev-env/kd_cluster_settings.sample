@@ -8,6 +8,9 @@
 # run tmux on master and so on
 #export KD_DEV_INSTALL=true
 
+# Uncomment to enable testing repo for deploy.sh and node_install.sh
+#export KD_TESTING_REPO=true
+
 # Resources allocation
 #export KD_MASTER_MEMORY=4096
 #export KD_MASTER_CPUS=4

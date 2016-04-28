@@ -1,7 +1,7 @@
 Version: 1.1.1
 Name: kuberdock
 Summary: KuberDock
-Release: 1%{?dist}.cloudlinux
+Release: 2%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -187,6 +187,9 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
+* Thu Apr 28 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 1.1.1-2
+- 00123_update.py bugfix
+
 * Mon Apr 18 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 1.1.1-1
 - Fixed non-uploading predefined apps yaml file on windows systems
 - AC-2964: remove hostingPanel user and role

@@ -11,9 +11,11 @@
   command: setenforce 1
 
 - name: Add node to master
-  shell: python /vagrant/manage.py add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy
+  shell: python /vagrant/manage.py add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy {{ add_testing_repo }}
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
+  tags:
+    - deploy
 
 - set_fact: _hostname={{ hostvars[item].ansible_hostname }}
   with_items: groups['node']

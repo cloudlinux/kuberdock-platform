@@ -9,5 +9,5 @@
   register: predefined_apps
 
 - name: Add predefined apps
-  shell: python /vagrant/manage.py add-predefined-app --name {{ item.path | basename | splitext | first }} -t {{ item.path }}
-  with_items: predefined_apps.files
+  shell: python /vagrant/manage.py add-predefined-app --name "{{ item.path | basename | splitext | first }}" -t "{{ item.path }}"
+  with_items: "{{ predefined_apps.files }}"

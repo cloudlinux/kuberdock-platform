@@ -18,7 +18,7 @@
   command: bash /vagrant/dev-utils/build-rpm.sh
   when: is_dev_install
   environment:
-    KD_GIT_REF: "{{ lookup('env','KD_GIT_REF') }}"
+    KD_GIT_REF: "{{ git_ref | default('') }}"
 
 - find: paths=/vagrant/ patterns="kuberdock*.rpm" 
   register: rpm_exist
@@ -55,6 +55,7 @@
   when: is_dev_install
 
 - include: license.yml
+  when: license_path is defined and license_path
 
 - include: billing.yml
 

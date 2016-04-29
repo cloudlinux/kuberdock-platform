@@ -19,7 +19,7 @@
                 </select>
             </div>
             <div class="col-md-7 no-padding">
-                <input type="text" id="search-image-field" class="form-control" placeholder="Enter image name or part of image name">
+                <input type="text" id="search-image-field" class="form-control" value="<%= query %>" placeholder="Enter image name or part of image name">
             </div>
             <div class="col-md-1 no-padding search-image-inner">
                 <button class="search-image" type="button"></button>

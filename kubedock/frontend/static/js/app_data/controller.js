@@ -319,7 +319,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                     query: query
                                 });
                                 if (collection.length == 0) {
-                                    utils.notifyWindow('We couldn\'t find any results for this search');
+                                    utils.notifyWindow('We couldn\'t find any results for this search', 'success');
                                 }
                             },
                             error: processCollectionLoadError,

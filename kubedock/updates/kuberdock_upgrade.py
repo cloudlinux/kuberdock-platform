@@ -59,9 +59,6 @@ SUCCESSFUL_UPDATE_MESSAGE = """
 ********************
 Kuberdock has been restarted.
 Maintenance mode is now disabled.
-Before upgrade to next available version we STRONGLY RECOMMEND to check that \
-All nodes are healthy and finished reboot if they were rebooted. Also check \
-that kuberdock-internal pods are in "Running" state.
 ********************
 """
 

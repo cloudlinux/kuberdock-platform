@@ -31,7 +31,7 @@ def get_user_namespaces(user):
 
 
 class NoFreeIPs(APIError):
-    message = 'There are no free IP-addresses'
+    message = 'There are no free public IP-addresses, contact KuberDock administrator'
 
 
 class PodNotFound(APIError):

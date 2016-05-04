@@ -388,7 +388,6 @@ body{
                     &#rename_node,
                     &#delete_node,
                     &#delete_user,
-                    &#redeploy_node,
                     &#create_network,
                     &#login_this_user{
                         outline: 0;
@@ -404,7 +403,6 @@ body{
                         }
                     }
                     &#edit_user,
-                    &#redeploy_node,
                     &#login_this_user{
                         margin-right: 25px;
                         padding: 0 0 0 38px;
@@ -458,12 +456,6 @@ body{
                             content: '';
                             height: 21px;
                             background: url('../img/delete-node.png') 0 0 no-repeat;
-                        }
-                    }
-                    &#redeploy_node{
-                        padding: 0 0 0 33px;
-                        &:before{
-                            background: url('../img/redeploy.png') 0 0 no-repeat;
                         }
                     }
                 }
@@ -1013,25 +1005,16 @@ body{
                 .box-shadow(none);
                 border: none;
                 .modal-header{
-                    height: 64px;
-                    padding: 0 30px;
+                    padding: 19px 30px;
+                    position: relative;
                     .border-radius(none);
                     .close{
+                        .opacity(1);
                         outline: 0;
-                        width: 14px;
-                        height: 16px;
-                        margin-right: 0;
-                        margin-top: 24px;
-                        background: url('../img/modal-cross.png') 0 0 no-repeat;
-                        &:hover{
-                            .opacity(1);
-                            background-position: 0 -16px;
-                        }
                     }
                     .modal-title{
                         color: #1e1e1e;
                         font-size: 17px;
-                        line-height: 63px;
                         font-family: @regular;
                     }
                 }

@@ -233,7 +233,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         appendLoader: function(control){
-            var loader = $('<div id="load-control" class="btn-more animation">Loading ...</div>');
+            var loader = $('<div id="load-control" class="btn-more animation"><span>Loading ...</span></div>');
             if (control === undefined) {
                 this.ui.searchControl.empty().append(loader);
             } else {

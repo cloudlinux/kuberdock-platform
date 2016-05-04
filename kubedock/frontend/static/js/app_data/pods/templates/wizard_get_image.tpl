@@ -45,7 +45,7 @@
             <div id="data-collection" class="clearfix"></div>
             <div class="search-control">
                 <% if (showPaginator){ %>
-                    <div id="load-control" class="btn-more">Load more</div>
+                    <div id="load-control" class="btn-more"><span>Load more</span></div>
                 <% } %>
             </div>
         </div>

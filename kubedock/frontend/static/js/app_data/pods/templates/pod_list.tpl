@@ -1,17 +1,17 @@
 <div class="col-md-12 no-padding">
     <div class="podsControl" style="display:<%- checked.length ? 'block' : 'none' %>">
-        <span class="count"><%- checked.length %><%- (checked.length > 1) ? ' Items' : ' Item' %></span>
+        <span class="count"><span><%- checked.length %><%- (checked.length > 1) ? ' Items' : ' Item' %></span></span>
         <% if (_.any(_.invoke(checked, 'ableTo', 'start'))) { %>
-            <span class="runPods" title="Run">Run</span>
+            <span class="runPods" title="Run"><span>Run</span></span>
         <% } %>
         <% if (_.any(_.invoke(checked, 'ableTo', 'redeploy'))) { %>
-            <span class="restartPods" title="Restart">Restart</span>
+            <span class="restartPods" title="Restart"><span>Restart</span></span>
         <% } %>
         <% if (_.any(_.invoke(checked, 'ableTo', 'stop'))) { %>
-            <span class="stopPods" title="Stop">Stop</span>
+            <span class="stopPods" title="Stop"><span>Stop</span></span>
         <% } %>
         <% if (_.any(_.invoke(checked, 'ableTo', 'delete'))) { %>
-            <span class="removePods" title="Delete">Delete</span>
+            <span class="removePods" title="Delete"><span>Delete</span></span>
         <% } %>
     </div>
     <table id="podlist-table" class="table">

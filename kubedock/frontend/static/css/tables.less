@@ -148,11 +148,6 @@
                         margin-left: 4px;
                     }
                 }
-                .copy-link{
-                    span{
-                        font-size: 0;
-                    }
-                }
                 span{
                     &.OK,
                     &.busy,
@@ -223,70 +218,6 @@
                         }
                     }
                 }
-                .check-for-update{
-                    width: 14px;
-                    height: 16px;
-                    display: inline-block;
-                    vertical-align: middle;
-                    background: url('../img/check-update-ico.png') 0 0 no-repeat;
-                    &.start-atimation{
-                        .rotating(1s);
-                    }
-                    &:hover,
-                    &.start-atimation{
-                        cursor: pointer;
-                        background-position: 0 -17px;
-                    }
-                }
-                /* remove icon start*/
-                .deleteNode,
-                .deleteUser,
-                .delete-item,
-                .terminate-btn,
-                #deleteNetwork{
-                    width: 16px;
-                    height: 17px;
-                    position: relative;
-                    display: inline-block;
-                    vertical-align: middle;
-                    background: url('../img/recycling.png') 0 0 no-repeat;
-                    &:hover{
-                        cursor: pointer;
-                        background-position: 0 -18px;
-                    }
-                    &.disabled {
-                        .opacity(0.7);
-                        &:hover{
-                            cursor: not-allowed;
-                        }
-                    }
-                }
-                /* remove icon end*/
-                .blockUser,
-                .activeteUser{
-                    position: relative;
-                    display: inline-block;
-                    vertical-align: middle;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                .blockUser{
-                    width: 16px;
-                    height: 15px;
-                    background: url('../img/block-user-ico.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -16px;
-                    }
-                }
-                .activeteUser{
-                    width: 19px;
-                    height: 15px;
-                    background: url('../img/activate-user-ico.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -15px;
-                    }
-                }
                 .unmount,
                 .onsearsh{
                     width: 20px;
@@ -304,78 +235,6 @@
                 }
                 .unmount{
                     background: url('../img/unmount.png') 0 0 no-repeat;
-                }
-                .block_ip,
-                .unbind_ip,
-                .unblock_ip{
-                    height: 17px;
-                    font-size: 0;
-                    position: relative;
-                    vertical-align: middle;
-                    display: inline-block;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                .block_ip{
-                    width: 17px;
-                    background: url('../img/stop.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -17px;
-                    }
-                }
-                .unbind_ip{
-                    width: 14px;
-                    background: url('../img/unblock.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -17px;
-                    }
-                }
-                .unblock_ip{
-                    width: 13px;
-                    background: url('../img/start.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .edit-item{
-                    top: 0;
-                    left: 0;
-                    bottom: 0;
-                    height: 17px;
-                    margin: auto;
-                    font-size: 0;
-                    position: relative;
-                    display: inline-block;
-                    vertical-align: middle;
-                    background: url('../img/pencil-big.png') 0 0 no-repeat;
-                    width: 20px;
-                    &:hover{
-                        cursor: pointer;
-                        background-position: 0 -17px;
-                    }
-                }
-                .copy-link{
-                    position: relative;
-                    padding-left: 22px;
-                    &:before{
-                        top: 0;
-                        left: 0;
-                        bottom: 0;
-                        width: 16px;
-                        content: '';
-                        margin: auto;
-                        height: 16px;
-                        background:url('../img/link.png') 0 0 no-repeat;
-                        position: absolute;
-                    }
-                    &:hover{
-                        color: #3197ee;
-                        cursor: pointer;
-                        &:before{
-                            background-position: 0 -16px;
-                        }
-                    }
                 }
                 .profileUser,
                 .detailedNode{
@@ -426,7 +285,7 @@
                     text-align: center;
                     label.custom{
                         max-width: 12px;
-                        margin-top: 4px;
+                        margin-top: 6px;
                     }
                 }
             }
@@ -723,85 +582,6 @@
                         }
                     }
                 }
-                .pay-and-start-btn,
-                .start-btn,
-                .restart-btn,
-                .stop-btn,
-                .terminate-btn,
-                .editPod{
-                    top: 2px;
-                    left: 0px;
-                    height: 17px;
-                    font-size: 0;
-                    position: relative;
-                    display: inline-block;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                .check-for-update,
-                .container-update{
-                    left: 0;
-                    font-size: 0;
-                    position: relative;
-                    vertical-align: middle;
-                    display: inline-block;
-                    &:hover{
-                        cursor: pointer;
-                    }
-                }
-                .check-for-update{
-                    width: 14px;
-                    height: 16px;
-                    background: url('../img/check-update-ico.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -17px;
-                    }
-                }
-                .container-update{
-                    width: 24px;
-                    height: 21px;
-                    background: url('../img/container-update-ico.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -21px;
-                    }
-                }
-                .start-btn,
-                .pay-and-start-btn{
-                    width: 12px;
-                    background: url('../img/start.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .restart-btn{
-                    width: 19px;
-                    background: url('../img/redeploy-pod.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .stop-btn{
-                    width: 17px;
-                    background: url('../img/stop.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -17px;
-                    }
-                }
-                .terminate-btn{
-                    width: 15px;
-                    background: url('../img/recycling.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
-                .editPod{
-                    width: 20px;
-                    background: url('../img/pencil-big.png') 0 0 no-repeat;
-                    &:hover{
-                        background-position: 0 -18px;
-                    }
-                }
                 .tooltip.bottom{
                     .opacity(1);
                     .box-shadow(0px 1px 1px 0px rgba(250,250,250,1));
@@ -1000,22 +780,6 @@
                         .dropdown-toggle{
                             font-size: 13px;
                             padding-right: 39px;
-                        }
-                    }
-                }
-                span{
-                    &.remove-port,
-                    &.remove-volume{
-                        left: 7px;
-                        width: 15px;
-                        height: 17px;
-                        font-size: 0;
-                        display: inline-block;
-                        vertical-align: middle;
-                        background: url('../img/recycling.png') 0 0 no-repeat;
-                        &:hover{
-                            cursor: pointer;
-                            background-position: 0 -18px;
                         }
                     }
                 }

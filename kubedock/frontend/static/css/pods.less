@@ -17,74 +17,25 @@
     height: 50px;
     display: none;
     margin-left: 50px;
-    line-height: 52px;
+    padding: 12px 0px;
     position: absolute;
     background-color: #F8F8F8;
     .count{
-        color: #1d1d1d;
-        font-size: 13px;
-        font-family: @semibold;
-    }
-    .removePods, .stopPods, .runPods, .restartPods{
-        color: #4e5665;
-        font-size: 13px;
-        position: relative;
-        padding-left: 40px;
-        &:before{
-            top: 1px;
-            left: 20px;
-            width: 20px;
-            content: '';
-            height: 17px;
-            position: absolute;
+        font-size: 0;
+        span{
+            color: #1d1d1d;
+            font-size: 13px;
+            min-height: 21px;
+            font-family: @semibold;
+            vertical-align: middle;
             display: inline-block;
         }
-        &:hover{
-            color: #3197ee;
-            cursor: pointer;
-        }
     }
-    .removePods{
-        &:before{
-            background: url('../img/recycling.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -18px;
-            }
-        }
-    }
-    .stopPods{
-        &:before{
-            left: 18px;
-            background: url('../img/stop.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -17px;
-            }
-        }
-    }
-    .runPods{
-        &:before{
-            background: url('../img/start.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -18px;
-            }
-        }
-    }
+    .runPods,
+    .stopPods,
+    .removePods,
     .restartPods{
-        padding-left: 44px;
-        &:before{
-            background: url('../img/redeploy-pod.png') 0 0 no-repeat;
-        }
-        &:hover{
-            &:before{
-                background-position: 0 -18px;
-            }
-        }
+        margin-left: 20px;
     }
 }
 #item-info{
@@ -248,14 +199,16 @@
                         background-color: #fff;
                         border: 1px solid #e5e5e5;
                         &:before{
-                            top: -13px;
-                            right: 6px;
-                            content: '';
-                            width: 67px;
-                            height: 64px;
+                            .rotate(180deg);
+                            right: 0;
+                            top: -41px;
+                            color: #b5bbc1;
+                            max-width: 55px;
+                            content: 'attach_file';
+                            display: inline-block;
+                            vertical-align: middle;
                             position: absolute;
-                            background: url('../img/clip.png') 0 0 no-repeat;
-                            .background-size(73%);
+                            font: normal normal normal 55px/55px @materials;
                         }
                         table{
                             width: 100%;
@@ -285,48 +238,6 @@
                         }
                         label{
                             margin-bottom: 15px;
-                        }
-                        button{
-                            outline: 0;
-                            width: 17px;
-                            border: none;
-                            color: #ffffff;
-                            background: none;
-                            margin-left: 10px;
-                            line-height: 17px;
-                            position: relative;
-                            display: inline-block;
-                            font-family: @regular;
-                            &:before{
-                                top: 0px;
-                                left: 0px;
-                                content: '';
-                                position: absolute;
-                            }
-                            &.delete-item{
-                                &:before{
-                                    width: 16px;
-                                    height: 17px;
-                                    background: url('../img/recycling.png') 0 0 no-repeat;
-                                }
-                                &:hover{
-                                    &:before{
-                                        background-position: 0 -18px;
-                                    }
-                                }
-                            }
-                            &.edit-item{
-                                &:before{
-                                    width: 18px;
-                                    height: 17px;
-                                    background: url('../img/pencil-big.png') 0 0 no-repeat;
-                                }
-                                &:hover{
-                                    &:before{
-                                        background-position: 0 -18px;
-                                    }
-                                }
-                            }
                         }
                         .clearfix{
                             margin-bottom: 0;
@@ -529,17 +440,9 @@
                             }
                         }
                         .remove-env{
-                            top: 20px;
-                            bottom: 0;
-                            left: 10px;
-                            width: 15px;
-                            height: 17px;
+                            top: 15px;
+                            left: 12px;
                             position: absolute;
-                            background: url('../img/recycling.png') 0 0 no-repeat;
-                            &:hover{
-                                cursor: pointer;
-                                background-position: 0 -18px;
-                            }
                         }
                     }
                 }
@@ -642,9 +545,8 @@
                         border: none;
                     }
                     .search-image{
-                        font-size: 0;
-                        color: transparent;
-                        background: #2490EA url('../img/search-ico-big.png') center center no-repeat;
+                        .mdi('search',32px, #fff, #fff);
+                        background-color: #2490EA;
                     }
                     .select-image{
                         color: #fff;
@@ -733,6 +635,7 @@
                     }
                 }
                 .search-control{
+                    margin-bottom: 0;
                     text-align: center;
                     > div {
                         padding: 12px;
@@ -744,17 +647,7 @@
                             margin-bottom: 0;
                             position: relative;
                             padding-left: 26px;
-                            &:before{
-                                top: 4px;
-                                left: -5px;
-                                bottom: 0;
-                                width: 16px;
-                                content: '';
-                                height: 16px;
-                                position: relative;
-                                display: inline-block;
-                                background: url('../img/load-more.png') 0 0 no-repeat;
-                            }
+                            .mdi('cached',21px, #3197EE, #3197EE);
                             &.animation{
                                 &:before{
                                     .rotating(1s);

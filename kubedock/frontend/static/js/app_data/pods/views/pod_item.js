@@ -1,6 +1,5 @@
 define(['app_data/app',
         'tpl!app_data/pods/templates/layout_pod_item.tpl',
-        'tpl!app_data/pods/templates/page_header_title.tpl',
         'tpl!app_data/pods/templates/page_info_panel.tpl',
         'tpl!app_data/pods/templates/page_container_item.tpl',
         'tpl!app_data/pods/templates/pod_item_controls.tpl',
@@ -11,7 +10,6 @@ define(['app_data/app',
         'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral', 'bbcode'],
        function(App,
                 layoutPodItemTpl,
-                pageHeaderTitleTpl,
                 pageInfoPanelTpl,
                 pageContainerItemTpl,
                 podItemControlsTpl,
@@ -27,7 +25,7 @@ define(['app_data/app',
 
         regions: {
             nav      : '#item-navbar',
-            masthead : '#masthead-title',
+            header   : '#item-header',
             controls : '#item-controls',
             info     : '#item-info',
             contents : '#layout-contents'
@@ -47,10 +45,6 @@ define(['app_data/app',
         showPodsList: function(){
             App.navigate('pods', {trigger: true});
         }
-    });
-
-    podItem.PageHeader = Backbone.Marionette.ItemView.extend({
-        template: pageHeaderTitleTpl
     });
 
     // View for showing a single container item as a container in containers list

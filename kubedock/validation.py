@@ -257,7 +257,8 @@ update_pod_schema = {
         'schema': {
             'wipeOut': {'type': 'boolean', 'nullable': True},
             'status': {'type': 'string', 'required': False,
-                       'allowed': ['unpaid', 'stopped']}
+                       'allowed': ['unpaid', 'stopped']},
+            'name': pod_name_schema,
         }
     },
 

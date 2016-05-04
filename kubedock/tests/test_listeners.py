@@ -148,11 +148,11 @@ class TestSetLimit(unittest.TestCase):
 
         kube_mock.query.values.return_value = (1, 1, 'GB'),
         pod_cls = type('Pod', (), {
+            'kube_id': 1,
             'config': json.dumps({
                 'containers': [
                     {'name': c, 'kubes': len(c)} for c in containers.keys()
                 ],
-                'kube_type': 1
             })
         })
         pod_mock.query.filter_by.return_value.first.return_value = pod_cls

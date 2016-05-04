@@ -525,7 +525,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         searchIn: function(val){
             return this.fullCollection.models.filter(function(i){
-                return i.get('name').indexOf(val) === 0;
+                return i.get('name').indexOf(val) !== -1;
             });
         },
         allChecked: function(){
@@ -901,6 +901,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         url: '/api/ippool/userstat',
         model: data.UserAddressModel,
         parse: unwrapper
+    });
+
+    data.BreadcrumbsControls = Backbone.Model.extend({
+        defaults: {button: false, search: false},
     });
 
     data.MenuModel = Backbone.Model.extend({

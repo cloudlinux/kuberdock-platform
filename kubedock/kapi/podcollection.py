@@ -14,7 +14,7 @@ from .pstorage import (get_storage_class_by_volume_info, get_storage_class,
 from .helpers import KubeQuery, ModelQuery, Utilities
 from .licensing import is_valid as license_valid
 from ..core import db
-from ..billing import repr_limits, Kube
+from ..billing import repr_limits
 from ..kd_celery import celery
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
@@ -54,36 +54,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if not skip_check and not license_valid():
             raise APIError("Action forbidden. Please contact support.")
 
-        secrets = set()  # username, password, full_registry
+        # TODO: with cerberus 0.10 use "default" normalization rule
         for container in params['containers']:
-            if not container.get('sourceUrl'):
-                container['sourceUrl'] = Image(container['image']).source_url
-            secret = container.pop('secret', None)
-            if secret is not None:
-                secrets.add((secret['username'], secret['password'],
-                             Image(container['image']).full_registry))
+            container.setdefault('sourceUrl',
+                                 Image(container['image']).source_url)
+            container.setdefault('kubes', 1)
+        params.setdefault('volumes', [])
 
-            for mount in container.get('volumeMounts') or []:
-                # Relative mountPaths in docker are relative to the /.
-                # It's not documented and sometimes relative paths may cause
-                # bugs in kd or k8s (for now localStorage doesn't work in
-                # some cases). So, we convert relative path to the
-                # corresponding absolute path. In future docker may change
-                # the way how relative mountPaths treated,
-                # see https://github.com/docker/docker/issues/20988
-                mount['mountPath'] = path.abspath(
-                    path.join('/', mount['mountPath']))
-
-        secrets = sorted(secrets)
+        secrets = sorted(extract_secrets(params['containers']))
+        fix_relative_mount_paths(params['containers'])
 
         storage_cls = get_storage_class()
         if storage_cls:
+            persistent_volumes = [vol for vol in params['volumes']
+                                  if 'persistentDisk' in vol]
             if not storage_cls.are_pod_volumes_compatible(
-                        [item for item in params.get('volumes', [])
-                            if 'persistentDisk' in item],
-                        self.owner.id,
-                        params
-                    ):
+                    persistent_volumes, self.owner.id, params):
                 raise APIError("Invalid combination of persistent disks")
 
         if not skip_check:
@@ -91,19 +77,23 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             Image.check_containers(params['containers'], secrets)
 
         params['namespace'] = params['id'] = str(uuid4())
+        params['sid'] = str(uuid4())  # TODO: do we really need this field?
         params['owner'] = self.owner
 
-        if (SystemSettings.get_by_name(
-            'billing_type').lower() != 'no billing' and
-                self.owner.fix_price and
-                self.owner.username != KUBERDOCK_INTERNAL_USER):
+        billing_type = SystemSettings.get_by_name('billing_type').lower()
+        if (not skip_check and billing_type != 'no billing' and
+                self.owner.fix_price):
             # All pods created by fixed-price users initially must have status
             # "unpaid". Status may be changed later (using command "set").
             params['status'] = POD_STATUSES.unpaid
+        params.setdefault('status', POD_STATUSES.stopped)
 
-        pod = Pod.create(params)
-        pod.compose_persistent(self.owner)
+        pod = Pod(params)
+        pod.check_name()
+        # create PD models in db and change volumes schema in config
+        pod.compose_persistent()
         self._make_namespace(pod.namespace)
+        # create secrets in k8s and add IDs in config
         pod.secrets = [self._make_secret(pod.namespace, *secret)
                        for secret in secrets]
 
@@ -123,7 +113,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pods = [p.as_dict() for p in self._collection.values()]
             else:
                 pods = [p.as_dict() for p in self._collection.values()
-                        if getattr(p, 'owner', '') == self.owner.username]
+                        if getattr(p, 'owner', '') == self.owner]
         else:
             pods = self._get_by_id(pod_id).as_dict()
         if as_json:
@@ -138,7 +128,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             else:
                 pod = (p for p in self._collection.values()
                        if p.id == pod_id and
-                       getattr(p, 'owner', '') == self.owner.username).next()
+                       getattr(p, 'owner', '') == self.owner).next()
         except StopIteration:
             raise PodNotFound()
         return pod
@@ -178,13 +168,18 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     @atomic()
     def _set_entry(self, pod, data):
-        """Sets pod status in DB"""
-        # TODO: wants rethinking, we've got two kind of statuses,
-        # in DB and pod config
-        status = data.get('commandOptions', {}).get('status')
-        if status not in ['unpaid', 'stopped']:
-            return
-        DBPod.query.get(pod.id).status = status
+        """Immediately set fields "status" and "name" in DB."""
+        db_pod = DBPod.query.get(pod.id)
+        commandOptions = data['commandOptions']
+        if commandOptions.get('status'):
+            if pod.status in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
+                pod.status = db_pod.status  # only if not in k8s
+            db_pod.status = commandOptions['status']
+        if commandOptions.get('name'):
+            pod.name = commandOptions['name']
+            pod.check_name()
+            db_pod.name = pod.name
+        return pod.as_dict()
 
     @staticmethod
     @atomic()
@@ -247,23 +242,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         cls._set_public_ip(pod)
 
     def _save_pod(self, obj, set_public_ip):
-        kube_type = getattr(obj, 'kube_type', Kube.get_default_kube_type())
         template_id = getattr(obj, 'kuberdock_template_id', None)
-        for i in 'kuberdock_template_id', 'owner':
-            # to prevent save to config
-            if hasattr(obj, i):
-                delattr(obj, i)
-        pod = DBPod(name=obj.name, config=json.dumps(vars(obj)), id=obj.id,
+        excluded = ('kuberdock_template_id',  # duplicates of model's fields
+                    'owner', 'kube_type', 'status', 'id', 'name')
+        data = {k: v for k, v in vars(obj).iteritems() if k not in excluded}
+        pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
                     status=getattr(obj, 'status', POD_STATUSES.stopped),
                     template_id=template_id)
-        kube = db.session.query(Kube).get(kube_type)
-        if kube is None:
-            kube = Kube.get_default_kube()
-        if not kube.is_public():
-            if not self.owner or \
-                    self.owner.username != KUBERDOCK_INTERNAL_USER:
-                raise APIError('Forbidden kube type for a pods')
-        pod.kube = kube
+        pod.kube_id = obj.kube_type
         pod.owner = self.owner
         try:
             db.session.add(pod)
@@ -300,7 +286,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def delete(self, pod_id, force=False):
         pod = self._get_by_id(pod_id)
-        if pod.owner == KUBERDOCK_INTERNAL_USER and not force:
+        if pod.owner.username == KUBERDOCK_INTERNAL_USER and not force:
             self._raise('Service pod cannot be removed', 400)
 
         DBPod.query.get(pod_id).mark_as_deleting()
@@ -337,7 +323,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         image_id = container.get('imageID')
         if image_id is None:
             return False
-        image_id_in_registry = Image(image).get_id(self._get_secrets(pod))
+        secrets = self._get_secrets(pod).values()
+        image_id_in_registry = Image(image).get_id(secrets)
         if image_id_in_registry is None:
             raise APIError('Image not found in registry')
         return image_id != image_id_in_registry
@@ -392,11 +379,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         """
         Retrieve from kubernetes all secrets attached to the pod.
 
-        :param pod: pod
-        :returns: list of secrets. Each secret is a tuple (username, password,
-        registry)
+        :param pod: kubedock.kapi.pod.Pod
+        :returns: mapping of secrets name to (username, password, registry)
         """
-        secrets = []
+        secrets = {}
         for secret in pod.secrets:
             rv = self._get(['secrets', secret], ns=pod.namespace)
             if rv['kind'] == 'Status':
@@ -411,7 +397,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 # Replace it back to default registry
                 if registry == DOCKERHUB_INDEX:
                     registry = DEFAULT_REGISTRY
-                secrets.append((username, password, registry))
+                secrets[secret] = (username, password, registry)
         return secrets
 
     def _get_replicationcontroller(self, namespace, name):
@@ -427,15 +413,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _get_namespaces(self):
         data = self._get(['namespaces'], ns=False)
+        namespaces = [i['metadata']['name'] for i in data['items']]
         if self.owner is None:
-            return [i['metadata']['name'] for i in data['items']]
-        namespaces = []
+            return namespaces
         user_namespaces = get_user_namespaces(self.owner)
-        for namespace in data['items']:
-            ns_name = namespace.get('metadata', {}).get('name', '')
-            if ns_name in user_namespaces:
-                namespaces.append(ns_name)
-        return namespaces
+        return [ns for ns in namespaces if ns in user_namespaces]
 
     def _drop_namespace(self, namespace):
         rv = self._del(['namespaces', namespace], ns=False)
@@ -516,22 +498,19 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod = Pod(db_pod_config)
                 pod.id = db_pod.id
                 pod.status = getattr(db_pod, 'status', POD_STATUSES.stopped)
-                pod.template_id = template_id
                 pod._forge_dockers()
                 self._collection[pod.id, namespace] = pod
             else:
                 pod = self._collection[db_pod.id, namespace]
-                pod.name = db_pod.name
-                pod.template_id = template_id
-                # TODO if remove _is_related then add podIP attribute here
-                # pod.service = json.loads(db_pod.config).get('service')
                 pod.volumes_public = db_pod_config.get('volumes_public')
-                pod.kube_type = db_pod_config.get('kube_type')
                 pod.node = db_pod_config.get('node')
                 pod.podIP = db_pod_config.get('podIP')
+                pod.service = db_pod_config.get('service')
 
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
+                if db_pod_config.get('public_aws'):
+                    pod.public_aws = db_pod_config['public_aws']
 
                 pod.secrets = db_pod_config.get('secrets', [])
                 a = pod.containers
@@ -540,16 +519,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.containers = self.merge_lists(a, b, 'name')
                 restore_containers_host_ports_config(pod.containers, b)
 
+            pod.name = db_pod.name
+            pod.owner = db_pod.owner
+            pod.template_id = template_id
+            pod.kube_type = db_pod.kube_id
+
             if db_pod.status == 'deleting':
                 pod.status = 'deleting'
-
-            if db_pod_config.get('public_aws'):
-                pod.public_aws = db_pod_config['public_aws']
-
-            if not hasattr(pod, 'owner'):
-                pod.owner = db_pod.owner.username
-
-            if not hasattr(pod, 'status'):
+            elif not hasattr(pod, 'status'):
                 pod.status = POD_STATUSES.stopped
 
             for container in pod.containers:
@@ -560,7 +537,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                         container['state'] = 'failed'
                 container.pop('resources', None)
                 container['limits'] = repr_limits(container['kubes'],
-                                                  db_pod_config['kube_type'])
+                                                  pod.kube_type)
 
     def _run_service(self, pod):
         ports = []
@@ -926,3 +903,32 @@ def restore_fake_volume_mounts(k8s_containers, kd_containers):
                 vol_mounts.append(vm)
         if vol_mounts:
             container['volumeMounts'] = vol_mounts
+
+
+def extract_secrets(containers):
+    """Get set of secrets from list of containers."""
+    secrets = set()  # each item is tuple: (username, password, full_registry)
+    for container in containers:
+        secret = container.pop('secret', None)
+        if secret is not None:
+            secrets.add((secret['username'], secret['password'],
+                         Image(container['image']).full_registry))
+    return secrets
+
+
+def fix_relative_mount_paths(containers):
+    """
+    Convert relative mount paths in list of container into absolute ones.
+
+    Relative mountPaths in docker are relative to the /.
+    It's not documented and sometimes relative paths may cause
+    bugs in kd or k8s (for now localStorage doesn't work in
+    some cases). So, we convert relative path to the
+    corresponding absolute path. In future docker may change
+    the way how relative mountPaths treated,
+    see https://github.com/docker/docker/issues/20988
+    """
+    for container in containers:
+        for mount in container.get('volumeMounts') or []:
+            mount['mountPath'] = path.abspath(
+                path.join('/', mount['mountPath']))

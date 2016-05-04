@@ -113,61 +113,6 @@ define(['app_data/app', 'app_data/model',
         }
     });
 
-    newItem.PodHeaderView = Backbone.Marionette.ItemView.extend({
-        template: breadcrumbHeaderTpl,
-        tagName: 'div',
-
-        initialize: function(options){
-            this.model = options.model;
-        },
-
-        ui: {
-            podsList     : '.podsList',
-            peditable    : '.peditable',
-        },
-
-        events: {
-            'click @ui.podsList' : 'showPodsList',
-        },
-
-        onRender: function(){
-            var that = this;
-            App.getPodCollection().done(function(podCollection){
-                that.ui.peditable.editable({
-                    type: 'text',
-                    mode: 'inline',
-                    success: function(response, newValue) {
-                        that.model.set({name: newValue});
-                        utils.notifyWindow('New pod name "' + newValue + '" is saved',
-                                           'success');
-                    },
-                    validate: function(newValue) {
-                        newValue = newValue.trim();
-
-                        var msg;
-                        if (!newValue)
-                            msg = 'Please, enter pod name.';
-                        else if (newValue.length > 63)
-                            msg = 'The maximum length of the Pod name must be less than 63 characters.';
-                        else if (podCollection.findWhere({name: newValue}))
-                            msg = 'Pod with name "' + newValue + '" already exists. Try another name.';
-
-                        if (msg){
-                            // TODO: style for ieditable error messages
-                            // (use it instead of notifyWindow)
-                            utils.notifyWindow(msg);
-                            return ' ';
-                        }
-                    }
-                });
-            });
-        },
-
-        showPodsList: function(){
-            App.navigate('pods', {trigger: true});
-        }
-    });
-
     newItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
         template: wizardImageCollectionItemTpl,
         tagName: 'div',

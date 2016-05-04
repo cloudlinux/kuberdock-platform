@@ -154,7 +154,7 @@ def set_limit(host, pod_id, containers, app):
             return False
 
         config = json.loads(pod.config)
-        kube_type = config['kube_type']
+        kube_type = pod.kube_id
         # kube = Kube.query.get(kube_type) this query raises an exception
     limits = []
     for container in config['containers']:

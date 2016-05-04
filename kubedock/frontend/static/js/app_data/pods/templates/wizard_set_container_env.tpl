@@ -1,4 +1,4 @@
-<% if (detached) { %>
+<% if (detached) { /* TODO: spit in 2 tpls */ %>
     <div class="container" id="add-image">
         <div class="col-md-3 col-sm-12 sidebar">
             <ul class="nav nav-sidebar">
@@ -65,19 +65,6 @@
     </div>
 <% } else { %>
 <div id="container-page">
-    <div class="breadcrumbs-wrapper">
-        <div class="container breadcrumbs" id="breadcrumbs">
-            <ul class="breadcrumb">
-                <li>
-                    <a href="/#pods">Pods</a>
-                </li>
-                <li>
-                    <a href="/#pods/<%- parentID %>"><%- podName %></a>
-                </li>
-                <li class="active"><%- image %> (<%- name %>)</li>
-            </ul>
-        </div>
-    </div>
     <div class="container">
         <div class="row">
             <div class="col-sm-12 col-md-2 sidebar">

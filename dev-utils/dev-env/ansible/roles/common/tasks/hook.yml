@@ -4,8 +4,6 @@
   become: False
   register: hook_stat
 
-- debug: msg = "{{ hook_stat }}"
-
 - name: Copy hook file from host
   copy: src={{ hook }} dest="/tmp/hook.sh"
   when: hook_stat.stat.exists

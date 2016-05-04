@@ -74,6 +74,7 @@
     backup: yes
   notify:
     - restart nginx
+  when: is_dev_install
 
 - name: Create tmux session
   shell: tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}' 

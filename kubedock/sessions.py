@@ -11,16 +11,17 @@ from werkzeug.datastructures import CallbackDict
 from flask.sessions import SessionInterface, SessionMixin
 
 from flask import current_app
-from .users.models import SessionData
+from .users.models import SessionData, User
 from .core import db
+from .login import process_jwt, make_session
 
 
 def _generate_sid():
     return str(uuid4())
 
 
-def _calc_hmac(body, secret):
-    return base64.b64encode(hmac.new(secret, body, hashlib.sha1).digest())
+#def _calc_hmac(body, secret):
+#    return base64.b64encode(hmac.new(secret, body, hashlib.sha1).digest())
 
 
 class FakeSessionInterface(SessionInterface):
@@ -32,8 +33,7 @@ class FakeSessionInterface(SessionInterface):
 
 
 class ManagedSession(CallbackDict, SessionMixin):
-    def __init__(self, initial=None, sid=None, new=False, randval=None,
-                 hmac_digest=None):
+    def __init__(self, initial=None, sid=None, new=False):
         def on_update(self):
             self.modified = True
 
@@ -41,15 +41,15 @@ class ManagedSession(CallbackDict, SessionMixin):
         self.sid = sid
         self.new = new
         self.modified = False
-        self.randval = randval
-        self.hmac_digest = hmac_digest
+        #self.randval = randval
+        #self.hmac_digest = hmac_digest
 
-    def sign(self, secret):
-        if not self.hmac_digest:
-            self.randval = ''.join(random.sample(
-                string.lowercase+string.digits, 20))
-            self.hmac_digest = _calc_hmac('%s:%s' % (self.sid, self.randval),
-                                          secret)
+    #def sign(self, secret):
+    #    if not self.hmac_digest:
+    #        self.randval = ''.join(random.sample(
+    #            string.lowercase+string.digits, 20))
+    #        self.hmac_digest = _calc_hmac('%s:%s' % (self.sid, self.randval),
+    #                                      secret)
 
 
 class SessionManager(object):
@@ -76,58 +76,40 @@ class SessionManager(object):
 
 
 class ManagedSessionInterface(SessionInterface):
-    def __init__(self, manager, skip_paths, cookie_timedelta):
+    def __init__(self, manager, time_delta):
         self.manager = manager
-        self.skip_paths = skip_paths
-        self.cookie_timedelta = cookie_timedelta
-
-    def get_expiration_time(self, app, session):
-        if session.permanent:
-            return app.permament_session_lifetime
-        return datetime.datetime.now() + self.cookie_timedelta
+        self.time_delta = time_delta
 
     def open_session(self, app, request):
-        cookie_val = request.cookies.get(app.session_cookie_name)
-
-        if not cookie_val or '!' not in cookie_val:
-            # Don't bother creating a cookie for static resources
-            for sp in self.skip_paths:
-                if request.path.startswith(sp):
-                    return None
-            # cookie missing
-            # current_app.logger.debug('missing cookie')
+        token = request.headers.get('X-Auth-Token', request.args.get('token2'))
+        if not token:
             return self.manager.new_session()
-        sid, digest = cookie_val.split('!', 1)
-        if self.manager.exists(sid):
-            return self.manager.get(sid, digest)
-        return self.manager.new_session()
+        current_app.logger.debug(token)
+        data = process_jwt(token, False)
+        if data is None:
+            print 'open_session deleting token: {0}'.format(token)
+            self.manager.remove(token=token)
+            return self.manager.new_session()
+        return self.manager.get(data)
 
     def save_session(self, app, session, response):
-        domain = self.get_cookie_domain(app)
         if not session:
-            self.manager.remove(session.sid)
-            if session.modified:
-                response.delete_cookie(app.session_cookie_name, domain=domain)
+            self.manager.remove(sid=session.sid)
             return
         if not session.modified:
-            # no need to save an unaltered session
-            # TODO: put logic here to test if the cookie is older than N days,
-            # if so, update expiration date
             return
-        self.manager.put(session)
+        user = User.query.get(int(session.get('user_id')))
+        token = make_session(user, expire=self.time_delta)
+        response.headers['X-Auth-Token'] = token
+        self.manager.put(session, token)
         session.modified = False
-
-        cookie_exp = self.get_expiration_time(app, session)
-        response.set_cookie(app.session_cookie_name,
-                            '%s!%s' % (session.sid, session.hmac_digest),
-                            expires=cookie_exp, httponly=True, domain=domain)
 
 
 class DataBaseSessionManager(SessionManager):
 
     def __init__(self, secret):
         self.secret = secret
-
+        
     def exists(self, sid):
         try:
             if db.session.query(SessionData).get(sid) is not None:
@@ -136,9 +118,13 @@ class DataBaseSessionManager(SessionManager):
         except ResourceClosedError:
             return False
 
-    def remove(self, sid):
-        # current_app.logger.debug('removing session %s' % sid)
-        session = db.session.query(SessionData).get(sid)
+    def remove(self, sid=None, token=None):
+        if not sid and not token:
+            return
+        if sid:
+            session = db.session.query(SessionData).get(sid)
+        elif token:
+            session = db.session.query(SessionData).filter_by(token=token).first()
         if session is not None:
             db.session.delete(session)
             db.session.commit()
@@ -149,27 +135,17 @@ class DataBaseSessionManager(SessionManager):
         db.session.commit()
         return ManagedSession(sid=sid)
 
-    def get(self, sid, digest):
-        """Retrieve a managed session by session-id,
-        checking the HMAC digest"""
-        session = db.session.query(SessionData).get(sid)
-        if session is not None:
-            randval, hmac_digest, data = session.expand_data()
-        if not data:
-            current_app.logger.debug('missing data?')
-            return self.new_session()
-        if hmac_digest != digest:
-            current_app.logger.debug('Invalid HMAC for the session')
-            return self.new_session()
-        return ManagedSession(data, sid=sid, randval=randval,
-                              hmac_digest=hmac_digest)
+    def get(self, data):
+        _valid_fields = ('sid', '_fresh', 'user_id', '_id')
+        return ManagedSession(dict((k, v) for k, v in data.items()
+            if k in _valid_fields))
 
-    def put(self, session):
+    def put(self, session, token):
         """Store a managed session"""
-        if not session.hmac_digest:
-            session.sign(self.secret)
+        if session.sid is None or token is None:
+            return
         saved_session = db.session.query(SessionData).get(session.sid)
-        if saved_session is not None:
-            saved_session.data = (session.randval, session.hmac_digest,
-                                  dict(session))
-            db.session.commit()
+        if saved_session is None:
+            return
+        saved_session.token = token
+        db.session.commit()

@@ -13,61 +13,61 @@ from ..api.users import auth_another
 auth = Blueprint('auth', __name__)
 
 
-@login_manager.request_loader
-def load_users_from_request(request):
-    token = request.args.get('token', '')
-    if 'token' in request.form:
-        token = request.form['token']
-    if token:
-        username = token.split('|', 1)[0] or None
-        user = User.filter(
-            User.username == username, User.active, not_(User.deleted)).first()
-        if user and user.verify_token(token):
-            login_user(user)
-            user_logged_in.send((user.id, request.remote_addr))
-            return user
-
-
-@auth.route('/login', methods=['GET', 'POST'])
-def login():
-    username = request.form.get('login-form-username-field')
-    passwd = request.form.get('login-form-password-field')
-    token = request.args.get('token', request.form.get('token'))
-    if token:
-        username = token.split('|', 1)[0] or None
-
-    if current_user.is_authenticated():
-        if token and current_user.username != username:
-            if current_user.is_administrator():
-                user = User.filter(User.username == username).first()
-                auth_another(user.id)
-            else:
-                logout()
-        else:
-            return redirect(url_for('main.index'))
-
-    if username is not None and (passwd is not None or token is not None):
-        user = User.query.filter(User.username_iequal(username)).first()
-        error = 'Invalid credentials provided'
-        if user is None or user.deleted:
-            pass
-        elif not user.active:
-            error = 'User "{0}" is blocked'.format(username)
-        elif passwd is not None and user.verify_password(passwd) or user.verify_token(token):
-            login_user(user)
-            user_logged_in.send((user.id, request.remote_addr))
-            main_index = url_for('main.index')
-            next_ = request.args.get('next') or main_index
-            return redirect(next_)
-        flash(error, 'error')
-    return render_template('auth/login.html')
-
-
-@auth.route('/logout')
-@login_required
-def logout():
-    user_logged_out.send(current_user.id)
-    logout_user()
-    session.pop('auth_by_another', None)
-    flash('You have been logged out')
-    return redirect(url_for('main.index'))
+#@login_manager.request_loader
+#def load_users_from_request(request):
+#    token = request.args.get('token', '')
+#    if 'token' in request.form:
+#        token = request.form['token']
+#    if token:
+#        username = token.split('|', 1)[0] or None
+#        user = User.filter(
+#            User.username == username, User.active, not_(User.deleted)).first()
+#        if user and user.verify_token(token):
+#            login_user(user)
+#            user_logged_in.send((user.id, request.remote_addr))
+#            return user
+#
+#
+#@auth.route('/login', methods=['GET', 'POST'])
+#def login():
+#    username = request.form.get('login-form-username-field')
+#    passwd = request.form.get('login-form-password-field')
+#    token = request.args.get('token', request.form.get('token'))
+#    if token:
+#        username = token.split('|', 1)[0] or None
+#
+#    if current_user.is_authenticated():
+#        if token and current_user.username != username:
+#            if current_user.is_administrator():
+#                user = User.filter(User.username == username).first()
+#                auth_another(user.id)
+#            else:
+#                logout()
+#        else:
+#            return redirect(url_for('main.index'))
+#
+#    if username is not None and (passwd is not None or token is not None):
+#        user = User.query.filter(User.username_iequal(username)).first()
+#        error = 'Invalid credentials provided'
+#        if user is None or user.deleted:
+#            pass
+#        elif not user.active:
+#            error = 'User "{0}" is blocked'.format(username)
+#        elif passwd is not None and user.verify_password(passwd) or user.verify_token(token):
+#            login_user(user)
+#            user_logged_in.send((user.id, request.remote_addr))
+#            main_index = url_for('main.index')
+#            next_ = request.args.get('next') or main_index
+#            return redirect(next_)
+#        flash(error, 'error')
+#    return render_template('auth/login.html')
+#
+#
+#@auth.route('/logout')
+#@login_required
+#def logout():
+#    user_logged_out.send(current_user.id)
+#    logout_user()
+#    session.pop('auth_by_another', None)
+#    flash('You have been logged out')
+#    return redirect(url_for('main.index'))

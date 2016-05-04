@@ -1,7 +1,7 @@
 from flask import Blueprint, Response, jsonify, request
 from flask.views import MethodView
-from ..decorators import (login_required_or_basic_or_token,
-                          maintenance_protected)
+from ..decorators import maintenance_protected
+from ..login import auth_required
 from ..utils import KubeUtils, register_api, APIError, all_request_params
 from ..kapi import predefined_apps as kapi_apps
 from ..rbac import check_permission
@@ -12,7 +12,7 @@ predefined_apps = Blueprint('predefined_apps', __name__,
 
 
 class PredefinedAppsAPI(KubeUtils, MethodView):
-    decorators = [login_required_or_basic_or_token]
+    decorators = [auth_required]
 
     @check_permission('get', 'predefined_apps')
     def get(self, app_id=None):
@@ -71,7 +71,7 @@ register_api(predefined_apps, PredefinedAppsAPI, 'predefined_apps', '/',
 
 @predefined_apps.route('/validate-template', methods=['POST'],
                        endpoint='validate_template', strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('create', 'predefined_apps')
 @KubeUtils.jsonwrap
 def validate_template():

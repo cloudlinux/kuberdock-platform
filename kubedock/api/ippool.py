@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..utils import KubeUtils
 from ..kapi.ippool import IpAddrPool
 from ..rbac import check_permission
@@ -11,7 +11,7 @@ ippool = Blueprint('ippool', __name__, url_prefix='/ippool')
 
 @ippool.route('/', methods=['GET'], strict_slashes=False)
 @ippool.route('/<path:network>', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'ippool')
 @KubeUtils.jsonwrap
 def get_ippool(network=None):
@@ -23,14 +23,14 @@ def get_ippool(network=None):
 
 
 # @ippool.route('/getFreeHost', methods=['GET'], strict_slashes=False)
-# @login_required_or_basic_or_token
+# @auth_required
 # @KubeUtils.jsonwrap
 # def get_free_address():
 #     return IpAddrPool().get_free()
 
 
 @ippool.route('/userstat', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @KubeUtils.jsonwrap
 def get_user_address():
     user = KubeUtils._get_current_user()
@@ -38,7 +38,7 @@ def get_user_address():
 
 
 @ippool.route('/', methods=['POST'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('create', 'ippool')
 @KubeUtils.jsonwrap
 def create_item():
@@ -47,7 +47,7 @@ def create_item():
 
 
 @ippool.route('/<path:network>', methods=['PUT'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('edit', 'ippool')
 @KubeUtils.jsonwrap
 def update_ippool(network):
@@ -56,7 +56,7 @@ def update_ippool(network):
 
 
 @ippool.route('/<path:network>', methods=['DELETE'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('delete', 'ippool')
 @KubeUtils.jsonwrap
 def delete_ippool(network):

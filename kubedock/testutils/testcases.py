@@ -102,7 +102,7 @@ class APITestCase(DBTestCase):
         from kubedock.rbac import acl
 
         self.app.session_interface = sessions.ManagedSessionInterface(
-            sessions.DataBaseSessionManager(self.SECRET_KEY), [], timedelta(days=1))
+            sessions.DataBaseSessionManager(self.SECRET_KEY), timedelta(days=1))
         acl.init_permissions()
 
         self.user, user_password = fixtures.user_fixtures()

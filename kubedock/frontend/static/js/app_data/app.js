@@ -7,9 +7,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         },
 
         initialize: function(){
-            this._cache = backendData;
+            //this._cache = backendData;
+            this._cache = {};
             this.lastEventId = null;
             this.storage = window.localStorage || window.sessionStorage || {};
+            //delete this.storage.authData;
         },
 
         /**
@@ -19,17 +21,30 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
          */
         prepareInitialData: function(){
             var deferred = new $.Deferred();
-            $.when(App.getCurrentUser(),
-                   App.getMenuCollection(),
-                   App.getPackages()).done(function(user, menu, packages){
-                App.menuCollection = menu;
-                App.currentUser = user;
-                App.userPackage = packages.get(user.get('package_id'));
-                deferred.resolveWith(App);
-            }).fail(function(){ deferred.rejectWith(App, arguments); });
+            App.getAuth().done(function(){
+                $.when(App.getCurrentUser(),
+                       App.getMenuCollection(),
+                       App.getPackages()).done(function(user, menu, packages){
+                    App.menuCollection = menu;
+                    App.currentUser = user;
+                    App.userPackage = packages.get(user.get('package_id'));
+                    deferred.resolveWith(App);
+                }).fail(function(){ deferred.rejectWith(App, arguments); });
+            });
             return deferred;
         },
 
+        logout: function(){
+            // remove old resources
+            //for (var resource in App._cache) delete App._cache[resource];
+            //if (App.sseEventSource) {  // close SSE stream
+            //    App.sseEventSource.close();
+            //    delete App.sseEventSource;
+            //    clearTimeout(App.eventHandlerReconnectTimeout);
+            //}
+            //$.get('/api/auth/logout');  // TODO-JWT: instead of this we'll need to remove token from App.storage
+            return App;
+        },
 
         /**
          * Create a function that will return promise for Backbone.Model,
@@ -59,15 +74,24 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                         cache[name] = new ResourceClass(cache[name]);
                     deferred.resolveWith(this, [cache[name]]);
                 } else if (ResourceClass != null) {
-                    new ResourceClass().fetch({
-                        wait: true,
-                        success: function(resource){
-                            deferred.resolveWith(this, [cache[name] = resource]);
-                        },
-                        error: function(resource, response) {
-                            Utils.notifyWindow(response);
-                            deferred.rejectWith(this, [response]);
-                        },
+                    App.getAuth().done(function(authData){
+                        new ResourceClass().fetch({
+                            wait: true,
+                            headers: {'X-Auth-Token': authData.token},
+                            success: function(resource, resp, options){
+                                var token = options.xhr.getResponseHeader('X-Auth-Token');
+                                if (token) {
+                                    var auth = JSON.parse(App.storage.authData);
+                                    auth.token = token;
+                                    App.storage.authData = JSON.stringify(auth);
+                                }
+                                deferred.resolveWith(this, [cache[name] = resource]);
+                            },
+                            error: function(resource, response) {
+                                Utils.notifyWindow(response);
+                                deferred.rejectWith(this, [response]);
+                            },
+                        });
                     });
                 } else {
                     $.get(url).done(function(data){
@@ -93,17 +117,50 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         return Backbone.history.fragment;
     };
 
-    App.on('start', function(){
+    App.getAuth = function(){
+        console.log('getAuth called...');
+        var deferred = $.Deferred();
+        if (_.has(this.storage, 'authData')){
+            deferred.resolveWith(this, [JSON.parse(this.storage.authData)]);
+        }
+        else {
+            require(['app_data/login/views', 'app_data/model'], function (Views, Model) {
+                App.message.empty();  // hide any notification
+                var loginView = new Views.LoginView();
+                App.listenTo(loginView,'action:signin', function(data){
+                    new Model.AuthModel().save(data, {
+                        wait:true,
+                        success: function(model, resp, opts){
+                            model.unset('password');
+                            data = model.attributes;
+                            App.storage.authData = JSON.stringify(data);
+                            deferred.resolveWith(App, [data]);
+                        },
+                        error: function(resp){
+                            deferred.rejectWith(App, []);
+                        }
+                    });
+                });
+                console.log('About to show login view');
+                App.contents.show(loginView);
+            });
+        }
+        return deferred.promise();
+    };
+
+    App.initApp = function(){
         var that = this;
-        Utils.preloader.show();
+        //Utils.preloader.show();
         require(['app_data/controller', 'app_data/router'],
                 function(Controller, Router){
 
             var controller = App.controller = new Controller();
             new Router({controller: controller});
 
-            function eventHandler(nodes, url){
-                if (url === undefined) url = "/api/stream";
+            function eventHandler(nodes, url, token){
+                if (url == null) url = "/api/stream";
+                if (!/token2/.test(url)) url += ('?token2=' + token);
+                console.log('eventing to:'+url);
                 var source = App.sseEventSource = new EventSource(url),
                     events;
                 var collectionEvent = function(collectionGetter, eventType){
@@ -128,7 +185,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                         });
                     };
                 };
-
+                
                 if (typeof(EventSource) === undefined) {
                     console.log('ERROR: EventSource is not supported by browser');  // eslint-disable-line no-console
                 }
@@ -195,30 +252,39 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                     };
                     source.onerror = function () {
                         console.log('SSE Error. Reconnecting...');  // eslint-disable-line no-console
+                        console.log(source);
                         if (source.readyState === 2){
                             var url = source.url;
                             if (that.lastEventId && url.indexOf('lastid') === -1) {
                                 url += "?lastid=" + encodeURIComponent(that.lastEventId);
                             }
                             source.close();
-                            setTimeout(_.partial(eventHandler, nodes, url), 5000);
+                            setTimeout(_.partial(eventHandler, nodes, url, token), 5000);
                         }
                     };
                 }
             }
 
             if (Backbone.history) {
-                Backbone.history.start({root: '/', silent: true});
-                Utils.preloader.hide();
-                App.prepareInitialData().done(function(){
-                    // trigger Routers for the current url
-                    Backbone.history.loadUrl(App.getCurrentRoute());
-                    controller.showNotifications();
-                    eventHandler(App.currentUser.get('rolename') == 'Admin');
+                try {
+                    Backbone.history.start({root: '/', silent: true});
+                }
+                catch(e){;}
+                //Utils.preloader.hide();
+                App.getAuth().done(function(authData){
+                    App.prepareInitialData().done(function(){
+                        // trigger Routers for the current url
+                        Backbone.history.loadUrl(App.getCurrentRoute());
+                        controller.showNotifications();
+                        console.log('init');
+                        eventHandler(App.currentUser.get('rolename') === 'Admin', null, authData.token);
+                    });
                 });
             }
         });
-    });
-
+    };
+    
+    App.on('start', App.initApp);
+    
     return App;
 });

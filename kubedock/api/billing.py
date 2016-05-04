@@ -1,6 +1,6 @@
 from flask import Blueprint
-from kubedock.decorators import login_required_or_basic_or_token, \
-    maintenance_protected
+from kubedock.decorators import maintenance_protected
+from kubedock.login import auth_required
 from kubedock.utils import KubeUtils
 from kubedock.system_settings.models import SystemSettings
 from kubedock.billing.whmcs import BillingWHMCS
@@ -11,7 +11,7 @@ billing = Blueprint('billing', __name__, url_prefix='/billing')
 
 
 @billing.route('/info', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def get_billing_info():
@@ -21,7 +21,7 @@ def get_billing_info():
 
 
 @billing.route('/paymentmethods', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def payment_methods():
@@ -30,7 +30,7 @@ def payment_methods():
 
 
 @billing.route('/order', methods=['POST'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def order_product():
@@ -44,7 +44,7 @@ def order_product():
 
 
 @billing.route('/orderKubes', methods=['POST'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def order_kubes():

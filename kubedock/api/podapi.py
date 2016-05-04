@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask.views import MethodView
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..decorators import maintenance_protected
 from ..utils import KubeUtils, register_api, PermissionDenied
 from ..kapi.podcollection import PodCollection, PodNotFound
@@ -15,7 +15,7 @@ podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
 class PodsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, KubeUtils.pod_start_permissions,
-                  login_required_or_basic_or_token]
+                  auth_required]
 
     @check_permission('get', 'pods')
     def get(self, pod_id):
@@ -79,7 +79,7 @@ register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)
 @podapi.route('/<pod_id>/<container_name>/update', methods=['GET'],
               strict_slashes=False)
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'pods')
 def check_updates(pod_id, container_name):
     user = KubeUtils._get_current_user()
@@ -89,7 +89,7 @@ def check_updates(pod_id, container_name):
 @podapi.route('/<pod_id>/<container_name>/update', methods=['POST'],
               strict_slashes=False)
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'pods')
 def update_container(pod_id, container_name):
     user = KubeUtils._get_current_user()

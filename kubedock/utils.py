@@ -12,7 +12,7 @@ import nginx
 
 import subprocess
 from collections import namedtuple
-from flask import current_app, request, jsonify, g, has_app_context
+from flask import current_app, request, jsonify, g, has_app_context, Response
 from flask.ext.login import current_user, logout_user
 from functools import wraps
 from itertools import chain
@@ -623,7 +623,10 @@ class KubeUtils(object):
     def jsonwrap(cls, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            return jsonify({'status': 'OK', 'data': func(*args, **kwargs)})
+            rv = func(*args, **kwargs)
+            if isinstance(rv, Response):
+                return rv
+            return jsonify({'status': 'OK', 'data': rv})
         return wrapper
 
     @classmethod

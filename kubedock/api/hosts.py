@@ -2,8 +2,8 @@ from flask import Blueprint, request
 from datetime import datetime
 import requests
 
-from kubedock.decorators import login_required_or_basic_or_token, \
-    maintenance_protected
+from kubedock.decorators import maintenance_protected
+from kubedock.login import auth_required
 from kubedock.core import db
 from kubedock.nodes.models import RegisteredHost
 from kubedock.utils import KubeUtils, atomic
@@ -15,7 +15,7 @@ hosts = Blueprint('hosts', __name__, url_prefix='/hosts')
 
 
 @hosts.route('/register', methods=['POST'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
 def create_host():

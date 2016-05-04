@@ -9,14 +9,13 @@ from ..utils import APIError, PermissionDenied
 
 
 def create_app(settings_override=None, fake_sessions=False):
-    skip_paths = []
     app = factory.create_app(__name__, __path__, settings_override)
     if fake_sessions:
         app.session_interface = sessions.FakeSessionInterface()
     else:
         app.session_interface = sessions.ManagedSessionInterface(
             sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
-            skip_paths, datetime.timedelta(days=1))
+            datetime.timedelta(seconds=60))
 
     # registering blueprings
     from .main import main
@@ -32,12 +31,6 @@ def create_app(settings_override=None, fake_sessions=False):
     if not app.debug:
         for e in [500, 404]:
             app.errorhandler(e)(handle_error)
-
-    # context processors
-    from ..users.context_processors import users_helpers
-    from ..static_pages.context_processors import pages_helpers
-    app.context_processor(users_helpers)
-    app.context_processor(pages_helpers)
 
     with app.app_context():
         acl.init_permissions()

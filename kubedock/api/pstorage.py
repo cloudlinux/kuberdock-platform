@@ -4,7 +4,7 @@ from numbers import Number
 from flask import Blueprint
 from flask.views import MethodView
 from . import APIError
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..kapi import pstorage as ps
 from ..nodes.models import Node
 from ..pods.models import PersistentDisk
@@ -25,7 +25,7 @@ class PDIsUsed(APIError):
 
 class PersistentStorageAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, check_permission('get', 'pods'),
-                  login_required_or_basic_or_token]
+                  auth_required]
 
     @staticmethod
     def _resolve_storage():

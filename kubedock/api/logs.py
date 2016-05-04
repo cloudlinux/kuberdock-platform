@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify, Response
 from flask.ext.login import current_user
 
 from ..rbac import check_permission
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..utils import parse_datetime_str, KubeUtils
 from ..kapi import es_logs, usage
 from ..users.models import User
@@ -19,7 +19,7 @@ logs = Blueprint('logs', __name__, url_prefix='/logs')
 
 
 @logs.route('/container/<pod_id>/<container_id>', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 def api_get_container_logs(pod_id, container_id):
     """Return logs from specified container.
     Optional parameters (submitted via ?key=value&...):
@@ -78,7 +78,7 @@ def api_get_container_logs(pod_id, container_id):
 
 
 @logs.route('/node/<hostname>', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'nodes')
 @KubeUtils.jsonwrap
 def api_get_node_logs(hostname):
@@ -103,7 +103,7 @@ def api_get_node_logs(hostname):
 
 
 @logs.route('/pod-states/<pod_id>/<depth>', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @KubeUtils.jsonwrap
 def api_get_pod_states(pod_id, depth):
     """Extracts pod history.

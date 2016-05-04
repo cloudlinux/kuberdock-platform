@@ -6,7 +6,8 @@ from sqlalchemy.dialects import postgresql
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # from flask import current_app
-from flask.ext.login import UserMixin
+#from flask.ext.login import UserMixin
+from ..login import UserMixin
 from ..core import db, login_manager
 from ..models_mixin import BaseModelMixin
 from .signals import (
@@ -19,8 +20,13 @@ from ..settings import DEFAULT_TIMEZONE
 
 
 @login_manager.user_loader
-def load_users(user_id):
+def load_user_by_id(user_id):
     return User.query.get(int(user_id))
+
+
+@login_manager.token_loader
+def load_user_by_token(token):
+    return User.query.filter_by(token=token).first()
 
 
 class User(BaseModelMixin, UserMixin, db.Model):
@@ -361,21 +367,17 @@ class UserActivity(BaseModelMixin, db.Model):
 class SessionData(db.Model):
     __tablename__ = 'session_data'
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
-    #: tuple of (randval, hmac_digest, data)
-    data = db.Column(db.PickleType, nullable=True)
+    token = db.Column(db.Text, nullable=False)
     time_stamp = db.Column(db.DateTime, nullable=False)
+    role_id = db.Column(db.Integer, nullable=False)
 
-    def __init__(self, id, data=None):
+    def __init__(self, id, token=None):
         self.id = id
-        self.data = data
+        self.token = token
         self.time_stamp = datetime.datetime.utcnow()
 
-    def expand_data(self):
-        """Returns tuple of (randval, hmac_digest, data)."""
-        return self.data or (None, None, None)
-
     def __repr__(self):
-        return "<SessionData(id='%s', data='%s', time_stamp='%s')>" % (
+        return "<SessionData(id='%s', token='%s', time_stamp='%s')>" % (
             self.id, self.data, self.time_stamp)
 
 

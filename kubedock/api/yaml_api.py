@@ -2,8 +2,8 @@ import yaml
 from copy import deepcopy
 from flask import Blueprint
 from flask.views import MethodView
-from kubedock.decorators import (login_required_or_basic_or_token,
-                                 maintenance_protected)
+from kubedock.decorators import maintenance_protected
+from kubedock.login import auth_required
 from kubedock.utils import KubeUtils, register_api, APIError, send_event
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
@@ -21,7 +21,7 @@ class YamlAPI(KubeUtils, MethodView):
         KubeUtils.jsonwrap,
         check_permission('create', 'yaml_pods'),
         KubeUtils.pod_start_permissions,
-        login_required_or_basic_or_token
+        auth_required
     )
 
     @maintenance_protected

@@ -5,7 +5,7 @@ from flask.ext.login import current_user
 from flask.views import MethodView
 
 from ..rbac import check_permission
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..utils import KubeUtils, register_api, PermissionDenied
 from ..users.utils import append_offset_to_timezone
 from ..kapi.notifications import read_role_events
@@ -38,7 +38,7 @@ settings = Blueprint('settings', __name__, url_prefix='/settings')
 #
 #
 # @settings.route('/permissions/<pid>', methods=['PUT'])
-# @login_required_or_basic_or_token
+# @auth_required
 # @check_permission("set_permissions", "settings")
 # def permissions(pid):
 #     data = request.json or request.form.to_dict()
@@ -55,21 +55,21 @@ settings = Blueprint('settings', __name__, url_prefix='/settings')
 
 
 @settings.route('/notifications', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @KubeUtils.jsonwrap
 def get_notifications():
     return read_role_events(KubeUtils._get_current_user().role)
 
 
 @settings.route('/menu', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @KubeUtils.jsonwrap
 def get_menu():
     return MenuItem.get_menu()
 
 
 @settings.route('/timezone', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'timezone')
 def get_timezone():
     search_result_length = 5
@@ -88,7 +88,7 @@ def get_timezone():
 
 
 @settings.route('/timezone-list', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'timezone')
 def get_all_timezones():
     data = ['{0} ({1})'.format(tz, datetime.now(timezone(tz)).strftime('%z'))
@@ -97,7 +97,7 @@ def get_all_timezones():
 
 
 class SystemSettingsAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+    decorators = [KubeUtils.jsonwrap, auth_required]
     public_settings = ('billing_type', 'billing_url',
                        'persitent_disk_max_size', 'max_kubes_per_container')
 

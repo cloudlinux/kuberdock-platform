@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 
 from ..rbac import check_permission
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..utils import KubeUtils
 from ..users import User
 from ..kapi.users import UserNotFound
@@ -20,7 +20,7 @@ DATE_TO = 'date_to'
 
 
 @usage.route('/', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_total_usage():
@@ -34,7 +34,7 @@ def get_total_usage():
 
 
 @usage.route('/<uid>', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_usage(uid):

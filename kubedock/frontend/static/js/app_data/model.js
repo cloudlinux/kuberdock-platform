@@ -837,7 +837,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                                            formatString: formatString});
         },
         isImpersonated: function(){  // TODO-JWT: get this data from token
-            return backendData.impersonated;
+            //return backendData.impersonated;
+            return false;
         },
         roleIs: function(/* ...roles */){
             for (var i = 0; i < arguments.length; i++){
@@ -977,7 +978,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         model: data.Package,
         parse: unwrapper,
     });
-    App.getPackages = App.resourcePromiser('packages', data.PackageCollection),
+    App.getPackages = App.resourcePromiser('packages', data.PackageCollection);
 
     data.KubeType = Backbone.AssociatedModel.extend({
         defaults: function(){
@@ -1036,6 +1037,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
     data.PackageKubeCollection = Backbone.Collection.extend({
         model: data.PackageKube,
+    });
+    
+    data.AuthModel = Backbone.Model.extend({
+        urlRoot: '/api/auth/token2',
+        defaults: {
+            username: 'Nameless'
+        },
+        parse: function(data){return data['status'] === 'OK' ? _.omit(data, 'status') : {}}
     });
 
     return data;

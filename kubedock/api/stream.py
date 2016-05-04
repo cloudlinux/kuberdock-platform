@@ -1,13 +1,13 @@
 from flask import Blueprint, current_app, request
-from flask.ext.login import current_user
 from ..core import ConnectionPool, EvtStream
-from ..decorators import login_required_or_basic_or_token
+from ..login import current_user, auth_required
+
 
 stream = Blueprint('stream', __name__, url_prefix='/stream')
 
 
 @stream.route('')
-@login_required_or_basic_or_token
+@auth_required
 def send_stream():
     conn = ConnectionPool.get_connection()
     if current_user.is_administrator():

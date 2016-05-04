@@ -8,14 +8,14 @@ from ..rbac import check_permission
 import time
 import datetime
 from collections import defaultdict, namedtuple
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..utils import all_request_params, APIError, PermissionDenied, KubeUtils
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 
 
 @stats.route('/', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 def unit_stat():
     user = KubeUtils._get_current_user()
     params = all_request_params()

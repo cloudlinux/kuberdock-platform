@@ -18,7 +18,6 @@ privateKey = ENV['KD_ONE_PRIVATE_KEY'] || '~/.ssh/id_rsa'
 
 Vagrant.configure(2) do |config|
   config.vm.box = "bento/centos-7.2"
-  config.vm.synced_folder "../../", "/vagrant"
 
   config.ssh.username = 'root'
   config.ssh.insert_key = 'true'
@@ -34,6 +33,7 @@ Vagrant.configure(2) do |config|
     one.template_id = 4
     override.ssh.private_key_path = privateKey
     override.ssh.pty = true
+    config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".venv/"]
   end
 
   config.vm.provider :openstack do |os, override|

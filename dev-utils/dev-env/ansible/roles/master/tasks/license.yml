@@ -20,6 +20,8 @@
       line: "def is_valid(): return True" 
       state: present
   when: license_path == 'patch'
+  notify:
+      - restart emperor
   tags:
       - license
       - patch

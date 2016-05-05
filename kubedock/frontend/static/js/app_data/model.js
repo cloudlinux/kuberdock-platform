@@ -774,7 +774,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
         mode: 'client',
         state: {
-            pageSize: 20
+            pageSize: 10
         }
     });
     App.getUserCollection = App.resourcePromiser('userCollection', data.UsersPageableCollection);

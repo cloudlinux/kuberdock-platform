@@ -36,6 +36,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         ui: {
             deleteNetwork : '#deleteNetwork',
+            tooltip       : '[data-toggle="tooltip"]'
         },
 
         events: {
@@ -46,25 +47,50 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             $(this.el).attr('data-id', this.model.get('network'));
         },
 
+        templateHelpers: function(){
+            var forbidDeletionMsg,
+                allocation = this.model.get('allocation'),
+                hasBusyIp = _.any(allocation.map(function(i){return i[2];}), function(i){return i === 'busy' ;});
+
+            if (!hasBusyIp){
+                forbidDeletionMsg = null;
+            } else {
+                forbidDeletionMsg = 'Сannot be deleted, because '
+                    + (allocation.length == 1
+                            ? 'pod "' + _.pluck(allocation, '1') + '" use this subnet'
+                            : 'pods: "' + _.pluck(allocation, '1').join('", "') + '" use this subnet');
+            }
+
+            return {
+                forbidDeletionMsg: forbidDeletionMsg
+            };
+        },
+
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
+
         deleteNetwork_btn: function(evt){
             evt.stopPropagation();
-            var that = this;
-            utils.modalDialogDelete({
-                    title: 'Delete network',
-                    body: "Are you sure you want to delete network '" +
+            var that = this,
+                target = $(evt.target);
+
+            if (!target.hasClass('disabled')){
+                utils.modalDialogDelete({
+                    title: 'Delete subnet',
+                    body: "Are you sure you want to delete subnet '" +
                         this.model.get('network') + "'?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        utils.preloader.show();
-                        that.model.destroy({wait: true})
-                            .always(utils.preloader.hide)
-                            .fail(utils.notifyWindow);
-                    },
-                    buttonCancel: true
-                }
-            });
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            utils.preloader.show();
+                            that.model.destroy({wait: true})
+                                .always(utils.preloader.hide)
+                                .fail(utils.notifyWindow);
+                        },
+                        buttonCancel: true
+                    }
+                });
+            }
         },
     });
 

@@ -1016,12 +1016,7 @@ define(['app_data/app', 'app_data/model',
             this.model.checkForUpdate().done(this.render);
         },
 
-        removeError: function(evt){
-            var target = $(evt.target);
-            if (target.hasClass('error')){
-                target.parent().find('.notifyjs-metro-error').click();
-            }
-        },
+        removeError: function(evt){ utils.removeError($(evt.target)); },
 
         finalStep: function(){
             var that = this,

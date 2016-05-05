@@ -744,6 +744,17 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 error: utils.notifyWindow,
             }, options));
         },
+    }, {
+        checkUsernameFormat: function(username){
+            if (username.length > 25)
+                return 'Maximum length is 25 symbols.';
+            if (!/^[A-Z\d_-]+$/i.test(username))
+                return 'Only "-", "_" and alphanumeric symbols are allowed.';
+            if (!/^[A-Z\d](?:.*[A-Z\d])?$/i.test(username))
+                return 'Username should start and end with a letter or digit.';
+            if (!/\D/g.test(username))
+                return 'Username cannot consist of digits only.';
+        },
     });
 
     data.UsersCollection = Backbone.Collection.extend({

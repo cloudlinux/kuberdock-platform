@@ -337,10 +337,7 @@ define(['app_data/app', 'marionette',
             });
         },*/
 
-        removeError: function(evt){
-            var target = $(evt.target);
-            if (target.hasClass('error')) target.parent().find('.notifyjs-metro-error').click();
-        },
+        removeError: function(evt){ utils.removeError($(evt.target)); },
 
         onSave: function(){
             var firtsName = this.ui.first_name.val(),

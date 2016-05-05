@@ -1,7 +1,7 @@
 define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils, Model){
     //"use strict";
 
-    var controller = Marionette.Object.extend({
+    var controller = {
         index: function(){
             var admin = App.currentUser.get('rolename') === 'Admin';
             App.navigate(admin ? 'nodes' : 'pods', {trigger: true});
@@ -1180,6 +1180,16 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                 App.contents.show(layoutView);
             });
         }
+    };
+
+    controller = _.mapObject(controller, function(method, name){
+        if (_.contains(['showPodBase'], name))
+            return method;
+        return _.wrap(method, function(method){
+            var that = this, args = _.rest(arguments);
+            return App.getAuth().done(function(){ method.apply(that, args); });
+        });
     });
-    return controller;
+
+    return Marionette.Object.extend(controller);
 });

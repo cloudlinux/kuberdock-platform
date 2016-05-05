@@ -3,6 +3,31 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
        function(Backbone, numeral, App, utils){
     'use strict';
 
+    Backbone.syncOrig = Backbone.sync;
+    Backbone.sync = function(method, model, options){
+        var args = _.toArray(arguments);
+        if (model.noauth)
+            return Backbone.syncOrig.apply(Backbone, args);
+
+        var deferred = new $.Deferred();
+        App.getAuth().done(function(auth){
+            options.headers = _.extend(options.headers || {},
+                                       {'X-Auth-Token': auth.token});
+            Backbone.syncOrig.apply(Backbone, args)
+                .done(function(){ deferred.resolveWith(this, arguments); })
+                .fail(function(){ deferred.rejectWith(this, arguments); })
+                .done(function(resp, status, xhr){
+                    var token = xhr.getResponseHeader('X-Auth-Token');
+                    if (token) {
+                        var auth = JSON.parse(App.storage.authData);
+                        auth.token = token;
+                        App.storage.authData = JSON.stringify(auth);
+                    }
+                });
+        }).fail(function(){ deferred.rejectWith(options.context, []); });
+        return deferred.promise();
+    };
+
     var data = {},
         unwrapper = function(response) {
             var data = response.hasOwnProperty('data') ? response['data'] : response;
@@ -1038,8 +1063,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.PackageKubeCollection = Backbone.Collection.extend({
         model: data.PackageKube,
     });
-    
+
     data.AuthModel = Backbone.Model.extend({
+        noauth: true,
         urlRoot: '/api/auth/token2',
         defaults: {
             username: 'Nameless'

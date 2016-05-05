@@ -28,7 +28,7 @@ class AnonymousUserMixin(object):
 
 
 class UserMixin(object):
-    
+
     def is_active(self):
         return True
 
@@ -57,14 +57,14 @@ class UserMixin(object):
 
 
 class LoginManager(object):
-    
+
     def __init__(self, app=None):
         self.anonymous_user = AnonymousUserMixin
         self.user_callback = None
         self.token_callback = None
         if app is not None:
             self.init_app(app)
-        
+
     def init_app(self, app):
         app.login_manager = self
 
@@ -99,7 +99,7 @@ class LoginManager(object):
             #user_loaded_from_header.send(app, user=_get_user())
         else:
             self.reload_user()
-    
+
     def _load_user(self):
         is_missing_user_id = 'user_id' not in session
         if is_missing_user_id:
@@ -113,7 +113,7 @@ class LoginManager(object):
 
     def reload_user(self, user=None):
         ctx = _request_ctx_stack.top
-        
+
         if user is None:
             user_id = session.get('user_id')
             if user_id is None:
@@ -211,8 +211,8 @@ def make_session(user, expire=None, login=True):
         _request_ctx_stack.top.user = user
     token = s.dumps(data)
     return token.decode('ascii')
-    
-    
+
+
 def _check_user(user):
     if user is None or user.deleted:
         abort(401)
@@ -224,8 +224,11 @@ def auth_required(func):
     @wraps(func)
     def wrapper(*args, **kw):
         current_app.logger.debug([current_user, request.base_url])
-        if not current_user.is_authenticated():
-            user = None
+
+        user = None
+        if current_user.is_authenticated():
+            user = current_user
+        else:
             token2 = _header_loader() or _token2_loader()
             if token2:
                 user = current_app.login_manager.user_callback(token2.get('user_id'))
@@ -233,13 +236,18 @@ def auth_required(func):
                 login_user(user)
             else:
                 token = request.args.get('token')
-                user = current_app.login_manager.token_callback(token)
-                _check_user(user)
+                if token:
+                    user = current_app.login_manager.token_callback(token)
+                    _check_user(user)
+
+        if user:
             g.user = user
-        else:
-            user = current_user
-        rv = func(*args, **kw)
-        if isinstance(rv, Response) and 'X-Auth-Token' not in rv.headers:
-            rv.headers['X-Auth-Token'] = make_session(user, login=False)
-        return rv
+            rv = func(*args, **kw)
+            if isinstance(rv, Response) and 'X-Auth-Token' not in rv.headers:
+                rv.headers['X-Auth-Token'] = make_session(user, login=False)
+            return rv
+
+        # TODO: fix cyclic dependency core-login-utils and move import out of here
+        from .utils import NotAuthorized
+        raise NotAuthorized()
     return wrapper

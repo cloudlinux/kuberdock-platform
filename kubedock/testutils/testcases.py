@@ -119,9 +119,14 @@ class APITestCase(DBTestCase):
         if headers is None:
             headers = {}
         if auth is not None:
-            headers['Authorization'] = 'Basic ' + base64.b64encode(
-                '{0}:{1}'.format(*auth)
+            resp = self.client.open(
+                '/auth/token2', method='POST',
+                content_type='application/json',
+                data=json_dumps({'username': auth[0], 'password': auth[1]}),
             )
+            if resp.status_code != 200:
+                return resp
+            headers['X-Auth-Token'] = resp.json.get('token')
         if json is not None:
             kwargs.setdefault('data', json_dumps(json))
             kwargs.setdefault('content_type', 'application/json')

@@ -120,10 +120,9 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
     App.getAuth = function(){
         console.log('getAuth called...');
         var deferred = $.Deferred();
-        if (_.has(this.storage, 'authData')){
+        if (this.storage.authData != null){
             deferred.resolveWith(this, [JSON.parse(this.storage.authData)]);
-        }
-        else {
+        } else {
             require(['app_data/login/views', 'app_data/model'], function (Views, Model) {
                 App.message.empty();  // hide any notification
                 var loginView = new Views.LoginView();
@@ -148,8 +147,125 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         return deferred.promise();
     };
 
+    /**
+     * @param {string} [options.url='/api/stream']
+     * @param {number} [options.lastID]
+     */
+    App.eventHandler = function(options){
+        options = options || {};
+        App.getAuth().done(function(auth){
+            var url = options.url || '/api/stream',
+                lastID = options.lastID,
+                token = auth.token,
+                nodes = App.currentUser.roleIs('Admin'),
+                that = this;
+
+            url += (url.indexOf('?') === -1 ? '?' : '&')
+                + $.param(lastID != null ? {token2: token, lastid: lastID} : {token2: token});
+            console.log('eventing to:', url);
+            var source = App.sseEventSource = new EventSource(url),
+                events;
+            var collectionEvent = function(collectionGetter, eventType){
+                eventType = eventType || 'change';
+                return function(ev){
+                    collectionGetter.apply(that).done(function(collection){
+                        that.lastEventId = ev.lastEventId;
+                        var data = JSON.parse(ev.data);
+                        if (eventType === 'delete'){
+                            collection.fullCollection.remove(data.id);
+                            return;
+                        }
+                        var item = collection.fullCollection.get(data.id);
+                        if (item) {
+                            item.fetch({statusCode: null}).fail(function(xhr){
+                                if (xhr.status == 404)  // "delete" event was missed
+                                    collection.remove(item);
+                            });
+                        } else {  // it's a new item, or we've missed some event
+                            collection.fetch();
+                        }
+                    });
+                };
+            };
+
+            if (typeof(EventSource) === undefined) {
+                console.log('ERROR: EventSource is not supported by browser');  // eslint-disable-line no-console
+                return;
+            }
+            if (nodes) {
+                events = {
+                    'node:change': collectionEvent(that.getNodeCollection),
+                    // 'ippool:change': collectionEvent(that.getIPPoolCollection),
+                    // 'user:change': collectionEvent(that.getUserCollection),
+                    'node:installLog': function(ev){
+                        that.getNodeCollection().done(function(collection){
+                            var decoded = JSON.parse(ev.data),
+                                node = collection.get(decoded.id);
+                            if (typeof(node) !== 'undefined')
+                                node.appendLogs(decoded.data);
+                        });
+                    },
+                };
+            } else {
+                events = {
+                    'pod:change': collectionEvent(that.getPodCollection),
+                    'pod:delete': collectionEvent(that.getPodCollection, 'delete'),
+                    // 'pd:change':
+                };
+            }
+
+            events['kube:add'] = events['kube:change'] = function(ev) {
+                that.lastEventId = ev.lastEventId;
+                var data = JSON.parse(ev.data);
+                that.kubeTypeCollection.add(data, {merge: true});
+            };
+
+            events['notify:error'] = function(ev) {
+                that.lastEventId = ev.lastEventId;
+                var data = JSON.parse(ev.data);
+                Utils.notifyWindow(data.message);
+            };
+
+            events['node:deleted'] = function(ev) {
+                that.lastEventId = ev.lastEventId;
+                var data = JSON.parse(ev.data);
+                Utils.notifyWindow(data.message, 'success');
+                App.navigate('nodes');
+                App.controller.showNodes({deleted: data.id});
+            };
+
+            events['advise:show'] = function(ev) {
+                that.lastEventId = ev.lastEventId;
+                var data = JSON.parse(ev.data);
+                App.controller.attachNotification(data);
+            };
+
+            events['advise:hide'] = function(ev) {
+                that.lastEventId = ev.lastEventId;
+                var data = JSON.parse(ev.data);
+                App.controller.detachNotification(data);
+            };
+
+            _.mapObject(events, function(handler, eventName){
+                source.addEventListener(eventName, handler, false);
+            });
+            source.onopen = function(){
+                console.log('Connected!');  // eslint-disable-line no-console
+            };
+            source.onerror = function () {
+                console.log('SSE Error. Reconnecting...');  // eslint-disable-line no-console
+                console.log(source);
+                if (source.readyState !== 2)
+                    return;
+                source.close();
+                var lastEventId = that.lastEventId || options.lastID,
+                    newOptions = _.extend(_.clone(options), {lastID: lastEventId});
+                setTimeout(_.bind(that.eventHandler, that, newOptions), 5000);
+            };
+        });
+    };
+
     App.initApp = function(){
-        var that = this;
         //Utils.preloader.show();
         require(['app_data/controller', 'app_data/router'],
                 function(Controller, Router){
@@ -157,134 +273,23 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             var controller = App.controller = new Controller();
             new Router({controller: controller});
 
-            function eventHandler(nodes, url, token){
-                if (url == null) url = "/api/stream";
-                if (!/token2/.test(url)) url += ('?token2=' + token);
-                console.log('eventing to:'+url);
-                var source = App.sseEventSource = new EventSource(url),
-                    events;
-                var collectionEvent = function(collectionGetter, eventType){
-                    eventType = eventType || 'change';
-                    return function(ev){
-                        collectionGetter.apply(that).done(function(collection){
-                            that.lastEventId = ev.lastEventId;
-                            var data = JSON.parse(ev.data);
-                            if (eventType === 'delete'){
-                                collection.fullCollection.remove(data.id);
-                                return;
-                            }
-                            var item = collection.fullCollection.get(data.id);
-                            if (item) {
-                                item.fetch({statusCode: null}).fail(function(xhr){
-                                    if (xhr.status == 404)  // "delete" event was missed
-                                        collection.remove(item);
-                                });
-                            } else {  // it's a new item, or we've missed some event
-                                collection.fetch();
-                            }
-                        });
-                    };
-                };
-                
-                if (typeof(EventSource) === undefined) {
-                    console.log('ERROR: EventSource is not supported by browser');  // eslint-disable-line no-console
-                }
-                else {
-                    if (nodes) {
-                        events = {
-                            'node:change': collectionEvent(that.getNodeCollection),
-                            // 'ippool:change': collectionEvent(that.getIPPoolCollection),
-                            // 'user:change': collectionEvent(that.getUserCollection),
-                            'node:installLog': function(ev){
-                                that.getNodeCollection().done(function(collection){
-                                    var decoded = JSON.parse(ev.data),
-                                        node = collection.get(decoded.id);
-                                    if (typeof(node) !== 'undefined')
-                                        node.appendLogs(decoded.data);
-                                });
-                            },
-                        };
-                    } else {
-                        events = {
-                            'pod:change': collectionEvent(that.getPodCollection),
-                            'pod:delete': collectionEvent(that.getPodCollection, 'delete'),
-                            // 'pd:change':
-                        };
-                    }
-
-                    events['kube:add'] = events['kube:change'] = function(ev) {
-                        that.lastEventId = ev.lastEventId;
-                        var data = JSON.parse(ev.data);
-                        that.kubeTypeCollection.add(data, {merge: true});
-                    };
-
-                    events['notify:error'] = function(ev) {
-                        that.lastEventId = ev.lastEventId;
-                        var data = JSON.parse(ev.data);
-                        Utils.notifyWindow(data.message);
-                    };
-
-                    events['node:deleted'] = function(ev) {
-                        that.lastEventId = ev.lastEventId;
-                        var data = JSON.parse(ev.data);
-                        Utils.notifyWindow(data.message, 'success');
-                        App.navigate('nodes');
-                        controller.showNodes({deleted: data.id});
-                    };
-
-                    events['advise:show'] = function(ev) {
-                        that.lastEventId = ev.lastEventId;
-                        var data = JSON.parse(ev.data);
-                        controller.attachNotification(data);
-                    };
-
-                    events['advise:hide'] = function(ev) {
-                        that.lastEventId = ev.lastEventId;
-                        var data = JSON.parse(ev.data);
-                        controller.detachNotification(data);
-                    };
-
-                    _.mapObject(events, function(handler, eventName){
-                        source.addEventListener(eventName, handler, false);
-                    });
-                    source.onopen = function(){
-                        console.log('Connected!');  // eslint-disable-line no-console
-                    };
-                    source.onerror = function () {
-                        console.log('SSE Error. Reconnecting...');  // eslint-disable-line no-console
-                        console.log(source);
-                        if (source.readyState === 2){
-                            var url = source.url;
-                            if (that.lastEventId && url.indexOf('lastid') === -1) {
-                                url += "?lastid=" + encodeURIComponent(that.lastEventId);
-                            }
-                            source.close();
-                            setTimeout(_.partial(eventHandler, nodes, url, token), 5000);
-                        }
-                    };
-                }
-            }
-
             if (Backbone.history) {
                 try {
                     Backbone.history.start({root: '/', silent: true});
-                }
-                catch(e){;}
+                } catch(e){;}  // eslint-disable-line no-extra-semi
                 //Utils.preloader.hide();
-                App.getAuth().done(function(authData){
-                    App.prepareInitialData().done(function(){
-                        // trigger Routers for the current url
-                        Backbone.history.loadUrl(App.getCurrentRoute());
-                        controller.showNotifications();
-                        console.log('init');
-                        eventHandler(App.currentUser.get('rolename') === 'Admin', null, authData.token);
-                    });
+                App.prepareInitialData().done(function(){
+                    // trigger Routers for the current url
+                    Backbone.history.loadUrl(App.getCurrentRoute());
+                    controller.showNotifications();
+                    console.log('init');
+                    App.eventHandler();
                 });
             }
         });
     };
-    
+
     App.on('start', App.initApp);
-    
+
     return App;
 });

@@ -11,9 +11,8 @@
   when: ceph_user_keyring != ""
   tags:
       - ceph
+        
+- set_fact:
+    ceph_params: --ceph-user "{{ ceph_user }}" --ceph-config "{{ ceph_config_dest }}" --ceph-user-keyring "{{ ceph_user_keyring_dest }}"
 
-- name: Deploy with CEPH
-  shell: echo "{{ ansible_default_ipv4.address }}" | bash deploy.sh {{ non_floating_ips_mode }} {{ add_testing_repo }} --ceph-user "{{ ceph_user }}" --ceph-config "{{ ceph_config_dest }}" --ceph-user-keyring "{{ ceph_user_keyring_dest }}" chdir=/vagrant
-  tags:
-      - ceph
 

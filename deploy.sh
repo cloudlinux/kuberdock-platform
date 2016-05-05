@@ -1072,14 +1072,66 @@ do_cleanup()
 
 }
 
+#####################
+# Fail log delivery #
+#####################
+
+SENTRY_SETTINGS_URL="http://repo.cloudlinux.com/kuberdock/settings.json"
+SENTRY_SETTINGS=$(curl -s $SENTRY_SETTINGS_URL)
+SENTRY_DSN=$(echo $SENTRY_SETTINGS | sed -E 's/^.*"https:\/\/(.*):(.*)@(.*)\/(.*)".*/\1,\2,\3,\4/')
+SENTRYVERSION=7
+
+SENTRYKEY=$(echo $SENTRY_DSN | cut -f1 -d,)
+SENTRYSECRET=$(echo $SENTRY_DSN | cut -f2 -d,)
+SENTRYURL=$(echo $SENTRY_DSN | cut -f3 -d,)
+SENTRYPROJECTID=$(echo $SENTRY_DSN | cut -f4 -d,)
+
+ERRORLOGFILE=error.log
+
+DATA_TEMPLATE='{'\
+'\"project\": \"$SENTRYPROJECTID\", '\
+'\"logger\": \"bash\", '\
+'\"platform\": \"other\", '\
+'\"message\": \"Deploy error\", '\
+'\"event_id\": \"$eventid\", '\
+'\"level\": \"error\", '\
+'\"extra\":{\"fullLog\":\"$logs\"}, '\
+'\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"}}'
+
+
+sentryWrapper() {
+   cmnd="$@"
+   $cmnd 2>&1 | tee $ERRORLOGFILE ; ( exit ${PIPESTATUS} )
+   ERROR_CODE=$?
+   if [ ${ERROR_CODE} != 0 ] ;then
+     eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
+     printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $ERRORLOGFILE. \n"
+
+     if [ -z ${KD_OWNER_EMAIL} ]; then
+         read -p "Do you agree to send it to our support team? If so, just specify an email and we contact you back: " -r KD_OWNER_EMAIL
+     fi
+     echo
+     if [ ! -z ${KD_OWNER_EMAIL} ] ;then
+         logs=$(while read line; do echo -n "${line}\\n"; done < $ERRORLOGFILE)
+         uname=$(uname -a)
+         data=$(eval echo $DATA_TEMPLATE)
+         echo
+         curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
+"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null && echo "Information about your problem has been sent to our support team."
+     fi
+     echo "Done."
+     exit ${ERROR_CODE}
+   fi
+}
+
+
 
 #########
 # Start #
 #########
 
-
 if [ "$CLEANUP" = yes ];then
-    do_cleanup
+    sentryWrapper do_cleanup
 else
-    do_deploy
+    sentryWrapper do_deploy
 fi

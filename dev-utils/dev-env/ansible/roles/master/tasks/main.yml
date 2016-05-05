@@ -4,6 +4,11 @@
       - epel-release
   when: is_dev_install
 
+- name: Install additional packages
+  yum: name={{ item }} state=latest
+  with_items:
+      - git
+
 - name: Install additional dev packages
   yum: name={{ item }} state=latest
   with_items:

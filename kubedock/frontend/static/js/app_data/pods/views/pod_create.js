@@ -193,7 +193,8 @@ define(['app_data/app', 'app_data/model',
         templateHelpers: function(){
             var showPaginator = this.collection.length ? true : false;
             return {
-                showPaginator: showPaginator
+                showPaginator: showPaginator,
+                query : this.query,
             };
         },
 

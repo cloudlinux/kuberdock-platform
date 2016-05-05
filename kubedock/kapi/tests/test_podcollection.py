@@ -724,19 +724,19 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
 
     @mock.patch.object(podcollection.PodCollection, '_make_secret',
                        mock.Mock())
-    @mock.patch.object(podcollection.Image, 'check_images_availability')
-    def test_check_images_availability_called(self, check_, create_):
-        images = ['wncm/test_image:4', 'quay.io/wncm/test_image']
+    @mock.patch.object(podcollection.Image, 'check_containers')
+    def test_check_containers_called(self, check_, create_):
         secrets = [('test_user', 'test_password', mock.ANY),
                    ('test_user2', 'test_password2', 'https://quay.io')]
-        params = dict(self.params, containers=[
-            {'image': images[0], 'secret': {'username': secrets[0][0],
-                                            'password': secrets[0][1]}},
-            {'image': images[1], 'secret': {'username': secrets[1][0],
-                                            'password': secrets[1][1]}},
-        ])
+        containers = [
+            {'image': 'wncm/test_image:4', 'name': 'a', 'args': ['nginx'],
+             'secret': {'username': secrets[0][0], 'password': secrets[0][1]}},
+            {'image': 'quay.io/wncm/test_image', 'name': 'b', 'args': ['nginx'],
+             'secret': {'username': secrets[1][0], 'password': secrets[1][1]}},
+        ]
+        params = dict(self.params, containers=containers)
         self.pod_collection.add(params)
-        check_.assert_called_once_with(images, secrets)
+        check_.assert_called_once_with(containers, secrets)
 
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
     def test_make_namespace_called(self, make_namespace_, create_):

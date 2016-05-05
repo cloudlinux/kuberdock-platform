@@ -88,9 +88,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         if not skip_check:
             self._check_trial(params)
-            Image.check_images_availability(
-                [container['image'] for container in params['containers']],
-                secrets)
+            Image.check_containers(params['containers'], secrets)
 
         params['namespace'] = params['id'] = str(uuid4())
         params['owner'] = self.owner

@@ -472,15 +472,19 @@ define(['app_data/app', 'app_data/model',
 
         changeCommand: function(evt){
             evt.stopPropagation();
-            var cmd = $(evt.target).val();
-            if (cmd != '') {
-                this.model.set('args', _.map(
-                    cmd.match(/(?:[^\s"']+|(?:"|')[^"']*(?:"|'))/g),
-                    function(i){
-                        return i.replace(/^["']|["']$/g, '');
-                    })
-                );
+            var tgt = $(evt.target),
+                cmd = tgt.val().trim();
+            if (!cmd){
+                // Explicitly replace empty command with CMD from image
+                // (in case of empty command in container spec, docker will use
+                // CMD from image)
+                tgt.val(this.filterCommand(this.model.get('args')));
+                return;
             }
+            this.model.set('args', _.map(
+                cmd.match(/(?:[^\s"']+|("|').*?\1)/g),
+                function(i){ return i.replace(/^["']|["']$/g, ''); })
+            );
         },
 
         goNext: function(evt){
@@ -511,10 +515,19 @@ define(['app_data/app', 'app_data/model',
                         utils.notifyWindow('Persistent options must be set!');
                         return;
                     } else if (pd.pdSize > that.pod.pdSizeLimit){
-                        utils.notifyWindow('A persistent disk size isn\'t expected to exceed ' + that.pod.pdSizeLimit + ' GB');
-                        return
+                        utils.notifyWindow('A persistent disk size isn\'t expected '
+                                           + 'to exceed ' + that.pod.pdSizeLimit + ' GB');
+                        return;
                     }
                 }
+            }
+
+            /* check CMD and ENTRYPOINT */
+            if (!this.model.get('command').length && !this.model.get('args').length
+                    && !this.model.originalCommand.length && !this.model.originalArgs.length){
+                utils.notifyWindow('Please, specify value of the Command field.');
+                utils.scrollTo(this.ui.input_command);
+                return;
             }
 
             /* check ports */
@@ -1058,7 +1071,7 @@ define(['app_data/app', 'app_data/model',
                             $(field).addClass('error');
                             utils.notifyInline('Duplicate variable names are not allowed',field);
                         }
-                    })
+                    });
                 });
                 difference.length = 0;
                 valid = false;

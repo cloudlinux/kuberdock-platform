@@ -187,7 +187,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             });
             _data.volumeMounts = _.map(_data.volumeMounts || [],
                                        function(vm){ return {mountPath: vm}; });
-            return new this(_data);
+            var container = new this(_data);
+            container.originalCommand = container.get('command').slice(0);
+            container.originalArgs = container.get('args').slice(0);
+            return container;
         },
         validateMountPath: function(mountPath){
             if (mountPath && mountPath.length < 2)

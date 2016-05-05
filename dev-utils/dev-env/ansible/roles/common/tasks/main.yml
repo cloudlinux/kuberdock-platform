@@ -1,3 +1,6 @@
+- name: RPM proxy configure
+  include: rpm_proxy.yml
+
 - name: upgrade all packages
   yum: name=* state=latest
 

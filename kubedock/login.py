@@ -1,10 +1,9 @@
 from flask import (current_app, g, request, abort, has_request_context,
-                   _request_ctx_stack, session, Response)
+                   _request_ctx_stack, session)
 from functools import wraps
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer,
                           BadSignature, SignatureExpired)
 from hashlib import md5
-import datetime
 from werkzeug.local import LocalProxy
 
 
@@ -62,6 +61,8 @@ class LoginManager(object):
         self.anonymous_user = AnonymousUserMixin
         self.user_callback = None
         self.token_callback = None
+        self.cleaner_callback = None
+        self.adder_callback = None
         if app is not None:
             self.init_app(app)
 
@@ -76,39 +77,16 @@ class LoginManager(object):
         self.token_callback = callback
         return callback
 
-    def _load_from_token2(self, token='token2'):
-        user = None
-        token = _token2_loader(token)
-        if token and self.user_callback:
-            user = self.user_callback(token.get('user_id'))
-        if user is not None:
-            self.reload_user(user=user)
-            #app = current_app._get_current_object()
-            #user_loaded_from_header.send(app, user=_get_user())
-        else:
-            self.reload_user()
+    def session_cleaner(self, callback):
+        self.cleaner_callback = callback
+        return callback
 
-    def _load_from_header(self, header='X-Auth-Token'):
-        user = None
-        token = _header_loader(header)
-        if token and self.user_callback:
-            user = self.user_callback(token.get('user_id'))
-        if user is not None:
-            self.reload_user(user=user)
-            #app = current_app._get_current_object()
-            #user_loaded_from_header.send(app, user=_get_user())
-        else:
-            self.reload_user()
+    def session_adder(self, callback):
+        self.adder_callback = callback
+        return callback
 
     def _load_user(self):
-        is_missing_user_id = 'user_id' not in session
-        if is_missing_user_id:
-            header_name = 'X-Auth-Token'
-            if header_name in request.headers:
-                return self._load_from_header(request.headers[header_name])
-            token_name = 'token2'
-            if token_name in request.args:
-                return self._load_from_token2(request.args[token_name])
+        # We simply have no additional places to look for users auth data
         return self.reload_user()
 
     def reload_user(self, user=None):
@@ -146,69 +124,28 @@ def _create_identifier():
     return h.hexdigest()
 
 
-def login_user(user):
+def login_user(user, DB=True):
     user_id = getattr(user, ID_ATTRIBUTE)()
     session['user_id'] = user_id
     session['_fresh'] = True
     session['_id'] = _create_identifier()
     _request_ctx_stack.top.user = user
+    if DB and current_app.login_manager.adder_callback:
+        current_app.login_manager.adder_callback(session.sid, user.role_id)
     return True
 
 
-def logout_user():
+def logout_user(DB=True):
     for key in ('user_id', '_fresh'):
         session.pop(key, None)
+    if DB and current_app.login_manager.cleaner_callback:
+        current_app.login_manager.cleaner_callback(session.sid)
 
 
 def _get_user():
     if has_request_context() and not hasattr(_request_ctx_stack.top, 'user'):
         current_app.login_manager._load_user()
     return getattr(_request_ctx_stack.top, 'user', None)
-
-
-def process_jwt(token, throw=True):
-    s = Serializer(current_app.config.get('SECRET_KEY'))
-    try:
-        data, header = s.loads(token, return_header=True)
-        return data
-    except (BadSignature, SignatureExpired):
-        if throw:
-            abort(401)
-
-
-def _header_loader(header='X-Auth-Token'):
-    auth = request.headers.get(header)
-    if auth is None:
-        return
-    return process_jwt(auth)
-
-
-def _token2_loader(token='token2'):
-    auth = request.args.get(token)
-    if auth is None:
-        return
-    return process_jwt(auth)
-
-
-#def make_session(user):
-#    secret = current_app.config.get('SECRET_KEY')
-#    lifetime = current_app.config.get('SESSION_LIFETIME')
-#    user_id = getattr(user, ID_ATTRIBUTE)()
-#    data = {
-#        'id': session.sid,
-#        '_id': session.get('_id'),
-#        '_fresh': False,
-#        'user_id': user_id}
-#    if login:
-#        session['user_id'] = user_id
-#        session['_fresh'] = data['_fresh'] = True
-#        session['_id'] = _create_identifier()
-#        _request_ctx_stack.top.user = user
-#        secret = current_app.config.get('SECRET_KEY')
-#        lifetime = current_app.config.get('SESSION_LIFETIME')
-#        s = Serializer(secret, lifetime)
-#    token = s.dumps(dict(dict(session), sid=session.sid))
-#    return token.decode('ascii')
 
 
 def auth_required(func):

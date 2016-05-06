@@ -13,13 +13,13 @@ import nginx
 import subprocess
 from collections import namedtuple
 from flask import current_app, request, jsonify, g, has_app_context, Response
-from flask.ext.login import current_user, logout_user
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
 from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
 from traceback import format_exception
 
+from .login import current_user, logout_user
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .pods import Pod
 from .core import ssh_connect, db, ConnectionPool

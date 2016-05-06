@@ -866,13 +866,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.CurrentUserModel = Backbone.Model.extend({
         url: function(){ return '/api/users/editself'; },
         parse: unwrapper,
+        defaults: {
+            impersonated: false
+        },
         localizeDatetime: function(dt, formatString){
             return utils.localizeDatetime({dt: dt, tz: this.get('timezone'),
                                            formatString: formatString});
         },
         isImpersonated: function(){  // TODO-JWT: get this data from token
-            //return backendData.impersonated;
-            return false;
+            return this.get('impersonated');
         },
         roleIs: function(/* ...roles */){
             for (var i = 0; i < arguments.length; i++){

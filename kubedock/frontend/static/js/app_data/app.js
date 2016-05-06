@@ -156,8 +156,9 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 that = this;
 
             url += (url.indexOf('?') === -1 ? '?' : '&')
-                + $.param(lastID != null ? {token2: token, lastid: lastID} : {token2: token});
-            console.log('eventing to:', url);
+                + $.param(lastID != null
+                          ? {token2: token, lastid: lastID, id: auth.id}
+                          : {token2: token, id: auth.id});
             var source = App.sseEventSource = new EventSource(url),
                 events;
             var collectionEvent = function(collectionGetter, eventType){

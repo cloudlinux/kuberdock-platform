@@ -3,6 +3,7 @@ import hashlib
 import json
 
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.exc import ResourceClosedError, IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # from flask import current_app
@@ -26,7 +27,30 @@ def load_user_by_id(user_id):
 
 @login_manager.token_loader
 def load_user_by_token(token):
+    if token is None:
+        return
     return User.query.filter_by(token=token).first()
+
+
+@login_manager.session_cleaner
+def clean_session(sid):
+    if sid is None:
+        return
+    session = SessionData.query.get(sid)
+    if session is None:
+        return
+    db.session.delete(session)
+    db.session.commit()
+
+@login_manager.session_adder
+def add_session(sid, rid):
+    if sid is None:
+        return
+    try:
+        db.session.add(SessionData(id=sid, role_id=rid))
+        db.session.commit()
+    except (ResourceClosedError, IntegrityError):
+        db.session.rollback()
 
 
 class User(BaseModelMixin, UserMixin, db.Model):
@@ -367,12 +391,12 @@ class UserActivity(BaseModelMixin, db.Model):
 class SessionData(db.Model):
     __tablename__ = 'session_data'
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
-    time_stamp = db.Column(db.DateTime, nullable=True)
-    role_id = db.Column(db.Integer, nullable=True)
+    time_stamp = db.Column(db.DateTime, nullable=False)
+    role_id = db.Column(db.Integer, nullable=False)
 
-    def __init__(self, id, token=None):
+    def __init__(self, id, role_id=None):
         self.id = id
-        self.token = token
+        self.role_id = role_id
         self.time_stamp = datetime.datetime.utcnow()
 
     def __repr__(self):

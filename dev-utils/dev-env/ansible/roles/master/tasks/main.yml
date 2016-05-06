@@ -116,7 +116,7 @@
   when: is_dev_install
 
 - name: Create IP pool
-  shell: python /vagrant/manage.py create-ip-pool -s "192.168.77.0/24" -e 1-30
+  shell: python /vagrant/manage.py create-ip-pool -s "{{ (ansible_all_ipv4_addresses | last).split('.')[:3]|join('.')}}.0/24" -e 1-30
 
 - name: Create users
   shell: python /vagrant/manage.py create-user -u {{ item }} -p {{ item }} -r User

@@ -367,7 +367,6 @@ class UserActivity(BaseModelMixin, db.Model):
 class SessionData(db.Model):
     __tablename__ = 'session_data'
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
-    token = db.Column(db.Text, nullable=True)
     time_stamp = db.Column(db.DateTime, nullable=True)
     role_id = db.Column(db.Integer, nullable=True)
 

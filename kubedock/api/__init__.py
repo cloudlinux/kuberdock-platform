@@ -6,7 +6,7 @@ from fabric.api import env, run, put, output
 from .. import factory
 from .. import sessions
 from ..utils import APIError
-from kubedock.settings import SSH_KEY_FILENAME
+from kubedock.settings import SSH_KEY_FILENAME, SESSION_LIFETIME
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -15,8 +15,7 @@ def create_app(settings_override=None, fake_sessions=False):
         app.session_interface = sessions.FakeSessionInterface()
     else:
         app.session_interface = sessions.ManagedSessionInterface(
-            sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
-            datetime.timedelta(seconds=60))
+            sessions.DataBaseSessionManager(), SESSION_LIFETIME)
 
     # registering blueprings
     from .images import images

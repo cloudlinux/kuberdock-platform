@@ -1,11 +1,11 @@
 from flask import Blueprint, request, current_app, session
-from flask.ext.login import login_user
+#from flask.ext.login import login_user
 from flask.views import MethodView
 
 from . import APIError
 from ..rbac import check_permission
 from ..rbac.models import Role
-from ..login import auth_required
+from ..login import auth_required, login_user
 from ..utils import KubeUtils, register_api
 from ..validation import extbool
 from ..users.models import User, UserActivity

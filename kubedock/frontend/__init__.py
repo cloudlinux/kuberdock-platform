@@ -6,6 +6,7 @@ from .. import factory
 from .. import sessions
 from ..rbac import acl, get_user_role
 from ..utils import APIError, PermissionDenied
+from kubedock.settings import SESSION_LIFETIME
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -14,8 +15,7 @@ def create_app(settings_override=None, fake_sessions=False):
         app.session_interface = sessions.FakeSessionInterface()
     else:
         app.session_interface = sessions.ManagedSessionInterface(
-            sessions.DataBaseSessionManager(app.config['SECRET_KEY']),
-            datetime.timedelta(seconds=60))
+            sessions.DataBaseSessionManager(), SESSION_LIFETIME)
 
     # registering blueprings
     from .main import main

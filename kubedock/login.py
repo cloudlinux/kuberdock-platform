@@ -79,8 +79,8 @@ class LoginManager(object):
     def _load_from_token2(self, token='token2'):
         user = None
         token = _token2_loader(token)
-        if token and self.username_callback:
-            user = self.username_callback(token.get('username'))
+        if token and self.user_callback:
+            user = self.user_callback(token.get('user_id'))
         if user is not None:
             self.reload_user(user=user)
             #app = current_app._get_current_object()
@@ -91,8 +91,8 @@ class LoginManager(object):
     def _load_from_header(self, header='X-Auth-Token'):
         user = None
         token = _header_loader(header)
-        if token and self.username_callback:
-            user = self.username_callback(token.get('username'))
+        if token and self.user_callback:
+            user = self.user_callback(token.get('user_id'))
         if user is not None:
             self.reload_user(user=user)
             #app = current_app._get_current_object()
@@ -113,7 +113,6 @@ class LoginManager(object):
 
     def reload_user(self, user=None):
         ctx = _request_ctx_stack.top
-
         if user is None:
             user_id = session.get('user_id')
             if user_id is None:
@@ -191,63 +190,37 @@ def _token2_loader(token='token2'):
     return process_jwt(auth)
 
 
-def make_session(user, expire=None, login=True):
-    if expire is None:
-        expire = 60
-    else:
-        if isinstance(expire, datetime.timedelta):
-            expire=int(expire.total_seconds())
-    s = Serializer(current_app.config.get('SECRET_KEY'), expires_in=expire)
-    user_id = getattr(user, ID_ATTRIBUTE)()
-    data = {
-        'id': session.sid,
-        '_id': session.get('_id'),
-        '_fresh': False,
-        'user_id': user_id}
-    if login:
-        session['user_id'] = user_id
-        session['_fresh'] = data['_fresh'] = True
-        session['_id'] = _create_identifier()
-        _request_ctx_stack.top.user = user
-    token = s.dumps(data)
-    return token.decode('ascii')
-
-
-def _check_user(user):
-    if user is None or user.deleted:
-        abort(401)
-    if not user.active:
-        abort(403)
+#def make_session(user):
+#    secret = current_app.config.get('SECRET_KEY')
+#    lifetime = current_app.config.get('SESSION_LIFETIME')
+#    user_id = getattr(user, ID_ATTRIBUTE)()
+#    data = {
+#        'id': session.sid,
+#        '_id': session.get('_id'),
+#        '_fresh': False,
+#        'user_id': user_id}
+#    if login:
+#        session['user_id'] = user_id
+#        session['_fresh'] = data['_fresh'] = True
+#        session['_id'] = _create_identifier()
+#        _request_ctx_stack.top.user = user
+#        secret = current_app.config.get('SECRET_KEY')
+#        lifetime = current_app.config.get('SESSION_LIFETIME')
+#        s = Serializer(secret, lifetime)
+#    token = s.dumps(dict(dict(session), sid=session.sid))
+#    return token.decode('ascii')
 
 
 def auth_required(func):
     @wraps(func)
     def wrapper(*args, **kw):
-        current_app.logger.debug([current_user, request.base_url])
-
-        user = None
-        if current_user.is_authenticated():
-            user = current_user
-        else:
-            token2 = _header_loader() or _token2_loader()
-            if token2:
-                user = current_app.login_manager.user_callback(token2.get('user_id'))
-                _check_user(user)
-                login_user(user)
-            else:
-                token = request.args.get('token')
-                if token:
-                    user = current_app.login_manager.token_callback(token)
-                    _check_user(user)
-
-        if user:
+        if not current_user.is_authenticated():
+            token = request.args.get('token')
+            user = current_app.login_manager.token_callback(token)
+            if user is None or user.deleted:
+                abort(401)
+            if not user.active:
+                abort(403)
             g.user = user
-            rv = func(*args, **kw)
-            if isinstance(rv, Response) and 'X-Auth-Token' not in rv.headers:
-                rv.headers['X-Auth-Token'] = make_session(user, login=False)
-            return rv
-
-        # TODO: fix cyclic dependency core-login-utils and move import out of here
-        from .utils import NotAuthorized
-        raise NotAuthorized()
+        return func(*args, **kw)
     return wrapper

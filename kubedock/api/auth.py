@@ -1,9 +1,10 @@
 from flask import Blueprint, current_app, request, jsonify, abort, session
-
+from uuid import uuid4
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from . import APIError
 from ..users import User
 #from ..users.signals import user_logged_in
-from ..login import auth_required, make_session, current_user
+from ..login import auth_required, login_user, current_user
 
 auth = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -38,11 +39,18 @@ def token2():
         abort(403)
     if not user.verify_password(password):
         abort(401)
-    token = make_session(user)
+    login_user(user)
+    if session.sid is None:
+        session.sid = str(uuid4())
+    secret = current_app.config.get('SECRET_KEY')
+    lifetime = current_app.config.get('SESSION_LIFETIME')
+    s = Serializer(secret, lifetime)
+    token = s.dumps(dict(dict(session), sid=session.sid))
+
     return jsonify({
         'status': 'OK',
         'id': session.sid,
-        'token': token})
+        'token': token.decode('ascii')})
 
 
 @auth.route('/logout', methods=['GET'])

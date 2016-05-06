@@ -28,3 +28,4 @@
   shell: python /vagrant/manage.py wait-for-nodes --nodes "{{ hostnames }}" --timeout 2400
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
+  changed_when: False

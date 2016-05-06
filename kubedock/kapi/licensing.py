@@ -101,14 +101,14 @@ def is_status_ok(lic):
 
 
 def is_timestamp_ok(lic):
-    updated = lic.get('updated', False)
-    if not updated:
+    days_expired_license_is_valid_for = 3
+    try:
+        expiration = lic['data']['license']['expiration']
+        expiration = dateutil.parser.parse(expiration)
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        return (now - expiration).days <= days_expired_license_is_valid_for
+    except (ValueError, KeyError):
         return False
-    updated = dateutil.parser.parse(updated)
-    now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-    if (now - updated).days > 3:
-        return False
-    return True
 
 
 def is_valid():

@@ -17,4 +17,9 @@
       - node
 
   post_tasks:
-      - debug: msg="https://{{ hostvars[groups['master'][0]].ansible_all_ipv4_addresses | last }}:5000 [user:admin, password:admin]"
+      - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_all_ipv4_addresses | last }}"
+      - debug: msg="http://{{ kd_url }}:5000 [user:admin, password:admin]"
+        when: is_dev_install
+      - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
+        when: not is_dev_install
+

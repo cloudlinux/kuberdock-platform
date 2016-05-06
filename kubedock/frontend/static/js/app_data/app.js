@@ -74,27 +74,21 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                         cache[name] = new ResourceClass(cache[name]);
                     deferred.resolveWith(this, [cache[name]]);
                 } else if (ResourceClass != null) {
-                    App.getAuth().done(function(authData){
-                        new ResourceClass().fetch({
-                            wait: true,
-                            headers: {'X-Auth-Token': authData.token},
-                            success: function(resource, resp, options){
-                                var token = options.xhr.getResponseHeader('X-Auth-Token');
-                                if (token) {
-                                    var auth = JSON.parse(App.storage.authData);
-                                    auth.token = token;
-                                    App.storage.authData = JSON.stringify(auth);
-                                }
-                                deferred.resolveWith(this, [cache[name] = resource]);
-                            },
-                            error: function(resource, response) {
-                                Utils.notifyWindow(response);
-                                deferred.rejectWith(this, [response]);
-                            },
-                        });
+                    new ResourceClass().fetch({
+                        wait: true,
+                        success: function(resource, resp, options){
+                            deferred.resolveWith(this, [cache[name] = resource]);
+                        },
+                        error: function(resource, response) {
+                            Utils.notifyWindow(response);
+                            deferred.rejectWith(this, [response]);
+                        },
                     });
                 } else {
-                    $.get(url).done(function(data){
+                    $.ajax({
+                        authWrap: true,
+                        url: url,
+                    }).done(function(data){
                         cache[name] = _.has(data, 'data') ? data.data : data;
                         deferred.resolveWith(this, [cache[name]]);
                     }).fail(function(response){
@@ -141,6 +135,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                     });
                 });
                 console.log('About to show login view');
+                Utils.preloader.hide();  // hide preloader if there is any
                 App.contents.show(loginView);
             });
         }
@@ -266,6 +261,38 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
     };
 
     App.initApp = function(){
+        $.ajaxTransport("+*", function(options, origOptions, xhr){
+            if (options.authWrap){
+                return {
+                    send: function(headers, callback){
+                        App.getAuth().done(function(auth){
+                            options.headers = _.extend(options.headers || {},
+                                                       {'X-Auth-Token': auth.token});
+                            delete options.authWrap;
+
+                            $.ajax(options).then(
+                                function(data, textStatus, xhr){
+                                    var token = xhr.getResponseHeader('X-Auth-Token');
+                                    if (token) {
+                                        var auth = JSON.parse(App.storage.authData);
+                                        auth.token = token;
+                                        App.storage.authData = JSON.stringify(auth);
+                                    }
+                                    callback(xhr.status, textStatus, {json: data});
+                                },
+                                function(xhr, textStatus, errorThrown){
+                                    callback(xhr.status, textStatus, errorThrown);
+                                }
+                            );
+                        });
+                    },
+                    abort: function() {
+                        xhr.abort();
+                    },
+                };
+            }
+        });
+
         //Utils.preloader.show();
         require(['app_data/controller', 'app_data/router'],
                 function(Controller, Router){

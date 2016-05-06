@@ -112,6 +112,12 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             require(['app_data/app'], function(App){
                 console.log('Deleting expired data');
                 delete App.storage.authData;
+                delete App.packageCollection;
+                delete App.kubeTypeCollection;
+                delete App.packageKubeCollection;
+                delete App.menuCollection;
+                delete App.currentUser;
+                delete App.userPackage;
                 for (var resource in App._cache) delete App._cache[resource];
                 if (App.sseEventSource) {  // close SSE stream
                     App.sseEventSource.close();

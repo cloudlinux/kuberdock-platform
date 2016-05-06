@@ -395,7 +395,8 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                 podCollection.fullCollection.create(data, {
                                     wait: true,
                                     success: function(model){
-                                        $.ajax({
+                                        $.ajax({  // TODO: use Backbone.Model
+                                            authWrap: true,
                                             type: 'POST',
                                             contentType: 'application/json; charset=utf-8',
                                             url: '/api/billing/order',
@@ -477,7 +478,8 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     });
                     that.listenTo(wizardLayout, 'image:selected', function(image, auth){
                         utils.preloader.show();
-                        $.ajax({
+                        $.ajax({  // TODO: use Backbone.Model
+                            authWrap: true,
                             type: 'POST',
                             contentType: 'application/json; charset=utf-8',
                             url: '/api/images/new',
@@ -668,7 +670,8 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             var that = this,
                 layout_view = new App.Views.UsersLayout();
 
-            $.ajax({
+            $.ajax({  // TODO: use Backbone.Model
+                authWrap: true,
                 'url': '/api/users/a/' + user_id,
                 success: function(rs){
                     UsersApp.Data.activities = new UsersApp.Data.ActivitiesCollection(rs.data);

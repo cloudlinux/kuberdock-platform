@@ -96,11 +96,12 @@ def check_host(hostname=''):
     return jsonify({'status': 'OK'})
 
 
-@nodes.route('/redeploy/<node_id>', methods=['GET'])
-@auth_required
-@check_permission('redeploy', 'nodes')
-@maintenance_protected
-def redeploy_item(node_id):
-    check_int_id(node_id)
-    kapi_nodes.redeploy_node(node_id)
-    return jsonify({'status': 'OK'})
+# FIXME: why GET?
+# @nodes.route('/redeploy/<node_id>', methods=['GET'])
+# @auth_required
+# @check_permission('redeploy', 'nodes')
+# @maintenance_protected
+# def redeploy_item(node_id):
+#     check_int_id(node_id)
+#     kapi_nodes.redeploy_node(node_id)
+#     return jsonify({'status': 'OK'})

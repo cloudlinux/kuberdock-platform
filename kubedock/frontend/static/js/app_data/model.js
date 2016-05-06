@@ -135,15 +135,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         getPod: function(){ return ((this.collection || {}).parents || [])[0]; },
         checkForUpdate: function(){
+            var container = this;
             utils.preloader.show();
-            return $.ajax({
-                url: this.getPod().url() + '/' + this.id + '/update',
-                context: this,
-            }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(rs){
-                this.updateIsAvailable = rs.data;
-                if (!rs.data)
-                    utils.notifyWindow('No updates found', 'success');
-            });
+            return new data.ContainerUpdate({}, {container: container}).fetch()
+                .always(utils.preloader.hide).fail(utils.notifyWindow)
+                .done(function(rs){
+                    container.updateIsAvailable = rs.data;
+                    if (!rs.data)
+                        utils.notifyWindow('No updates found', 'success');
+                });
         },
         update: function(){
             var model = this;
@@ -155,11 +155,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 footer: {
                     buttonOk: function(){
                         utils.preloader.show();
-                        $.ajax({
-                            url: model.getPod().url() + '/' + model.id + '/update',
-                            type: 'POST',
-                            context: model,
-                        }).always(utils.preloader.hide).fail(utils.notifyWindow)
+                        new data.ContainerUpdate({}, {container: model}).save()
+                            .always(utils.preloader.hide).fail(utils.notifyWindow)
                             .done(function(){ model.updateIsAvailable = undefined; });
                     },
                     buttonCancel: true,
@@ -170,7 +167,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             size = size || 100;
             var pod_id = this.getPod().id,
                 name = this.get('name');
-            return $.ajax({
+            return $.ajax({  // TODO: use Backbone.Model
+                authWrap: true,
                 url: '/api/logs/container/' + pod_id + '/' + name + '?size=' + size,
                 context: this,
                 success: function(data){
@@ -221,6 +219,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 return 'Mount path maximum length is 30 symbols';
             else if (!/^[\w/.-]*$/.test(mountPath))
                 return 'Mount path should contain letters of Latin alphabet or "/", "_", "-" symbols';
+        },
+    });
+
+    data.ContainerUpdate = Backbone.Model.extend({
+        url: function(){
+            return this.container.getPod().url() + '/' + this.container.id + '/update';
+        },
+        initialize: function(attributes, options){
+            this.container = options.container;
         },
     });
 
@@ -400,7 +407,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 }
                 else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
                     utils.preloader.show();
-                    $.ajax({
+                    $.ajax({  // TODO: use Backbone.Model
+                        authWrap: true,
                         type: 'POST',
                         contentType: 'application/json; charset=utf-8',
                         url: '/api/billing/order',
@@ -588,7 +596,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         getLogs: function(size){
             size = size || 100;
-            return $.ajax({
+            return $.ajax({  // TODO: use Backbone.Model
+                authWrap: true,
                 url: '/api/logs/node/' + this.get('hostname') + '?size=' + size,
                 context: this,
                 success: function(data) {
@@ -757,7 +766,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         login: function(options){
             utils.preloader.show();
-            return $.ajax(_.extend({
+            return $.ajax(_.extend({  // TODO: use Backbone.Model
+                authWrap: true,
                 url: '/api/users/loginA',
                 type: 'POST',
                 data: {user_id: this.id},

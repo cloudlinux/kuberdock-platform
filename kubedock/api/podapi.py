@@ -78,8 +78,8 @@ register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)
 
 @podapi.route('/<pod_id>/<container_name>/update', methods=['GET'],
               strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get', 'pods')
 def check_updates(pod_id, container_name):
     user = KubeUtils._get_current_user()
@@ -88,8 +88,8 @@ def check_updates(pod_id, container_name):
 
 @podapi.route('/<pod_id>/<container_name>/update', methods=['POST'],
               strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get', 'pods')
 def update_container(pod_id, container_name):
     user = KubeUtils._get_current_user()

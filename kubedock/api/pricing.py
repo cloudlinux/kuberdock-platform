@@ -60,8 +60,8 @@ class PackageInUse(APIError):
 
 
 @pricing.route('/userpackage', methods=['GET'], strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get_own', 'pricing')
 def get_user_kube_types():
     user = KubeUtils._get_current_user()
@@ -159,8 +159,8 @@ register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id',
 
 
 @pricing.route('/packages/default', methods=['GET'], strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
 def get_default_package():
     package = Package.get_default()
@@ -242,8 +242,8 @@ register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id',
 
 
 @pricing.route('/kubes/default', methods=['GET'], strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
 def get_default_kube():
     kube = Kube.get_default_kube()
@@ -274,8 +274,8 @@ def add_kube(data):
 
 @pricing.route('/packages/<int:package_id>/kubes-by-id', methods=['GET'],
                strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
 def get_package_kube_ids(package_id):
     package = Package.query.get(package_id)
@@ -286,8 +286,8 @@ def get_package_kube_ids(package_id):
 
 @pricing.route('/packages/<int:package_id>/kubes-by-name', methods=['GET'],
                strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
 def get_package_kube_names(package_id):
     package = Package.query.get(package_id)
@@ -494,8 +494,8 @@ def process_collection(data):
 
 
 @pricing.route('/license', methods=['GET'], strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('read_private', 'system_settings')
 def get_license():
     force = all_request_params().get('force', False)
@@ -505,8 +505,8 @@ def get_license():
 
 @pricing.route('/license/installation_id', methods=['POST'],
                strict_slashes=False)
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('write', 'system_settings')
 def set_installation_id():
     params = all_request_params()

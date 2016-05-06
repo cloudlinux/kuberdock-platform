@@ -297,7 +297,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
             if (username && dateFrom && dateTo){
                 utils.preloader.show();
-                $.ajax({
+                $.ajax({  // TODO: use Backbone.Model
+                    authWrap: true,
                     url: '/api/users/a/' + username,
                     data: {date_from: dateFrom, date_to: dateTo},
                     dataType: 'JSON',
@@ -349,7 +350,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 autoSelect: false,
                 source: function(query, process){
                     that.ui.username.data('ready', false);
-                    $.ajax({
+                    $.ajax({  // TODO: use Backbone.Model
+                        authWrap: true,
                         url: '/api/users/q',
                         data: {'s': that.ui.username.val()},
                         cache: false,
@@ -606,7 +608,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var that = this;
 
             utils.preloader.show();
-            $.ajax({
+            $.ajax({  // TODO: use Backbone.Model
+                authWrap: true,
                 url: '/api/users/logHistory',
                 data: {'uid': this.model.get('id')},
                 success: function(rs){

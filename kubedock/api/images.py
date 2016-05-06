@@ -38,8 +38,8 @@ def headerize(func):
 
 
 @images.route('/', methods=['GET'])
-@headerize
 @auth_required
+@headerize
 @check_permission('get', 'images')
 def search_image():
     search_key = request.args.get('searchkey', 'none')
@@ -86,8 +86,8 @@ def search_image():
 
 
 @images.route('/new', methods=['POST'])
-@KubeUtils.jsonwrap
 @auth_required
+@KubeUtils.jsonwrap
 @check_permission('get', 'images')
 def get_dockerfile_data():
     params = KubeUtils._get_params()

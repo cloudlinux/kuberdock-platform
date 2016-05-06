@@ -153,13 +153,14 @@ define(['app_data/app',
             this.upgrade = !!options.upgrade;
 
             // if got postDescription, save it
-            if (backendData.postDescription){
-                var r = /(%PUBLIC_ADDRESS%)/gi,
-                    publicIP = this.model.get('public_ip') || "...";
-                App.storage['postDescription.' + this.model.id] =
-                    backendData.postDescription.replace(r, publicIP);
-                delete backendData.postDescription;
-            }
+            // FIXME: AC-3127
+            // if (backendData.postDescription){
+            //     var r = /(%PUBLIC_ADDRESS%)/gi,
+            //         publicIP = this.model.get('public_ip') || "...";
+            //     App.storage['postDescription.' + this.model.id] =
+            //         backendData.postDescription.replace(r, publicIP);
+            //     delete backendData.postDescription;
+            // }
             // if have saved postDescription, put it in model
             var postDescription = App.storage['postDescription.' + this.model.id];
             if (postDescription)
@@ -412,7 +413,8 @@ define(['app_data/app',
                 col.add(that.model, {merge: true});
                 if (that.fixedPrice){
                     utils.preloader.show();
-                    $.ajax({
+                    $.ajax({  // TODO: use Backbone.model
+                        authWrap: true,
                         type: 'POST',
                         contentType: 'application/json; charset=utf-8',
                         url: '/api/billing/orderKubes',

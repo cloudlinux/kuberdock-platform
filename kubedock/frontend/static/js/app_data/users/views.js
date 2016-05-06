@@ -302,8 +302,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     url: '/api/users/a/' + username,
                     data: {date_from: dateFrom, date_to: dateTo},
                     dataType: 'JSON',
-                    success: function(rs){
-                        console.log(rs)
+                }).always(utils.preloader.hide).error(utils.notifyWindow)
+                    .done(function(rs){
                         if(rs.data){
                             that.ui.tbody.empty();
                             if(rs.data.length == 0){
@@ -320,13 +320,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                                         '<td>' + itm.remote_ip + '</td>'
                                        // '<td>' + itm.ts + '</td>'
                                     ));
-                                })
+                                });
                             }
                         }
-                    },
-                    complete: utils.preloader.hide,
-                    error: utils.notifyWindow,
-                });
+                    });
             }
         },
 
@@ -355,9 +352,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         url: '/api/users/q',
                         data: {'s': that.ui.username.val()},
                         cache: false,
-                        success: function(rs){ process(rs.data); },
-                        error: utils.notifyWindow,
-                    })
+                    }).fail(utils.notifyWindow).done(function(rs){ process(rs.data); });
                 },
                 updater: function(v){
                     that.ui.username.data('ready', true);
@@ -612,7 +607,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 authWrap: true,
                 url: '/api/users/logHistory',
                 data: {'uid': this.model.get('id')},
-                success: function(rs){
+            }).always(utils.preloader.hide).fail(utils.notifyWindow)
+                .done(function(rs){
                     if (rs.data.length != 0){
                         _.each(rs.data, function(itm){
                             that.ui.tb.append($('<tr>').append(
@@ -620,15 +616,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                                 '<td>' + utils.toHHMMSS(itm[1]) + '</td>' +
                                 '<td>' + App.currentUser.localizeDatetime(itm[2]) + '</td>' +
                                 '<td>' + itm[3] + '</td>'
-                            ))
+                            ));
                         });
                     } else {
                         that.ui.tb.append($('<tr>').append('<td colspan="4" class="text-center">There is no login history for this user</td>'));
                     }
-                },
-                complete: utils.preloader.hide,
-                error: utils.notifyWindow,
-            });
+                });
         },
 
         login_this_user: function(){

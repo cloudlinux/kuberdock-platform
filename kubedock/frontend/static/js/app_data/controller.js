@@ -478,23 +478,16 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     });
                     that.listenTo(wizardLayout, 'image:selected', function(image, auth){
                         utils.preloader.show();
-                        $.ajax({  // TODO: use Backbone.Model
-                            authWrap: true,
-                            type: 'POST',
-                            contentType: 'application/json; charset=utf-8',
-                            url: '/api/images/new',
-                            data: JSON.stringify({image: image, auth: auth})
-                        }).always(
-                            utils.preloader.hide
-                        ).fail(
-                            utils.notifyWindow
-                        ).done(function(data){
-                            var newContainer = Model.Container.fromImage(data.data);
-                            model.get('containers').remove(model.lastEditedContainer.id);
-                            model.get('containers').add(newContainer);
-                            model.lastEditedContainer.id = newContainer.id;
-                            wizardLayout.trigger('step:portconf');
-                        });
+                        new Model.Image().fetch({
+                            data: JSON.stringify({image: image, auth: auth}),
+                            success: function(image){
+                                var newContainer = Model.Container.fromImage(image);
+                                model.get('containers').remove(model.lastEditedContainer.id);
+                                model.get('containers').add(newContainer);
+                                model.lastEditedContainer.id = newContainer.id;
+                                wizardLayout.trigger('step:portconf');
+                            },
+                        }).always(utils.preloader.hide).fail(utils.notifyWindow);
                     });
                     App.contents.show(wizardLayout);
                 });
@@ -648,49 +641,46 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             });
         },
 
-        /* eslint-disable */
         // TODO: remove all stuff in this block
-        showOnlineUsers: function(){
-            var layout_view = new App.Views.UsersLayout(),
-                online_users_list_view = new App.Views.OnlineUsersListView({
-                    collection: App.Data.onlineUsers
-                }),
-                user_list_pager = new App.Views.PaginatorView({
-                    view: online_users_list_view
-                });
-
-            this.listenTo(layout_view, 'show', function(){
-                layout_view.main.show(online_users_list_view);
-                layout_view.pager.show(user_list_pager);
-            });
-            App.contents.show(layout_view);
-        },
-
-        showUserActivity: function(user_id){
-            var that = this,
-                layout_view = new App.Views.UsersLayout();
-
-            $.ajax({  // TODO: use Backbone.Model
-                authWrap: true,
-                'url': '/api/users/a/' + user_id,
-                success: function(rs){
-                    UsersApp.Data.activities = new UsersApp.Data.ActivitiesCollection(rs.data);
-                    var activities_view = new App.Views.UsersActivityView({
-                            collection: UsersApp.Data.activities
-                        }),
-                        activities_list_pager = new App.Views.PaginatorView({
-                            view: activities_view
-                        });
-
-                    that.listenTo(layout_view, 'show', function(){
-                        layout_view.main.show(activities_view);
-                        layout_view.pager.show(activities_list_pager);
-                    });
-                    App.contents.show(layout_view);
-                },
-            });
-        },
-        /* eslint-enable */
+        // showOnlineUsers: function(){
+        //     var layout_view = new App.Views.UsersLayout(),
+        //         online_users_list_view = new App.Views.OnlineUsersListView({
+        //             collection: App.Data.onlineUsers
+        //         }),
+        //         user_list_pager = new App.Views.PaginatorView({
+        //             view: online_users_list_view
+        //         });
+        //
+        //     this.listenTo(layout_view, 'show', function(){
+        //         layout_view.main.show(online_users_list_view);
+        //         layout_view.pager.show(user_list_pager);
+        //     });
+        //     App.contents.show(layout_view);
+        // },
+        //
+        // showUserActivity: function(user_id){
+        //     var that = this,
+        //         layout_view = new App.Views.UsersLayout();
+        //
+        //     $.ajax({
+        //         'url': '/api/users/a/' + user_id,
+        //         success: function(rs){
+        //             UsersApp.Data.activities = new UsersApp.Data.ActivitiesCollection(rs.data);
+        //             var activities_view = new App.Views.UsersActivityView({
+        //                     collection: UsersApp.Data.activities
+        //                 }),
+        //                 activities_list_pager = new App.Views.PaginatorView({
+        //                     view: activities_view
+        //                 });
+        //
+        //             that.listenTo(layout_view, 'show', function(){
+        //                 layout_view.main.show(activities_view);
+        //                 layout_view.pager.show(activities_list_pager);
+        //             });
+        //             App.contents.show(layout_view);
+        //         },
+        //     });
+        // },
 
         showUsers: function(){
             if (!App.currentUser.roleIs('Admin'))

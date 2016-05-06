@@ -10,14 +10,14 @@ from itsdangerous import (JSONWebSignatureSerializer as FallbackSerializer,
                           TimedJSONWebSignatureSerializer as Serializer,
                           BadSignature, SignatureExpired)
 
-from sqlalchemy.exc import ResourceClosedError
+from sqlalchemy.exc import ResourceClosedError, IntegrityError
 from werkzeug.datastructures import CallbackDict
 from flask.sessions import SessionInterface, SessionMixin
 
 from flask import current_app
 from .users.models import SessionData, User
 from .core import db
-#from .login import process_jwt, make_session, 
+#from .login import process_jwt, make_session,
 
 
 def _generate_sid():
@@ -128,12 +128,19 @@ class DataBaseSessionManager(SessionManager):
         sid = data.pop('sid', None)
         if sid is None:
             sid = _generate_sid()
-            db.session.add(SessionData(id=sid))
-            db.session.commit()
+            try:
+                db.session.add(SessionData(id=sid))
+                db.session.commit()
+            except (ResourceClosedError, IntegrityError):
+                db.session.rollback()
             return ManagedSession(sid=sid, initial=data)
         saved = SessionData.query.get(sid)
         if saved is None:
-            db.session.add(SessionData(id=sid))
-            db.session.commit()
+            try:
+                db.session.add(SessionData(id=sid))
+                db.session.commit()
+            except (ResourceClosedError, IntegrityError):
+                db.session.rollback()
             return ManagedSession(sid=sid, initial=data)
+        current_app.logger.debug([data, sid])
         return ManagedSession(sid=sid, initial=data)

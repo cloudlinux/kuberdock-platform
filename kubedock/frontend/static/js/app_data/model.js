@@ -19,7 +19,6 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 .done(function(resp, status, xhr){
                     var token = xhr.getResponseHeader('X-Auth-Token');
                     if (token) {
-                        var auth = JSON.parse(App.storage.authData);
                         auth.token = token;
                         App.storage.authData = JSON.stringify(auth);
                     }
@@ -171,32 +170,30 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 authWrap: true,
                 url: '/api/logs/container/' + pod_id + '/' + name + '?size=' + size,
                 context: this,
-                success: function(data){
-                    var seriesByTime = _.indexBy(this.logs, 'start');
-                    _.each(data.data.reverse(), function(serie) {
-                        var lines = serie.hits.reverse(),
-                            oldSerie = seriesByTime[serie.start];
-                        _.each(lines, function(line){
-                            line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
-                        });
-                        serie.start = App.currentUser.localizeDatetime(serie.start);
-                        if (serie.end)
-                            serie.end = App.currentUser.localizeDatetime(serie.end);
-                        if (lines.length && oldSerie && oldSerie.hits.length) {
-                            // if we have some logs, append only new lines
-                            var first = lines[0],
-                                index = _.sortedIndex(oldSerie.hits, first, 'time_nano');
-                            lines.unshift.apply(lines, _.first(oldSerie.hits, index));
-                        }
+            }).done(function(data){
+                var seriesByTime = _.indexBy(this.logs, 'start');
+                _.each(data.data.reverse(), function(serie) {
+                    var lines = serie.hits.reverse(),
+                        oldSerie = seriesByTime[serie.start];
+                    _.each(lines, function(line){
+                        line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
                     });
-                    this.logs = data.data;
-                    this.logsError = data.data.length ? null : 'Logs not found';
-                },
-                error: function(xhr) {
-                    var data = xhr.responseJSON;
-                    if (data && data.data !== undefined)
-                        this.logsError = data.data;
-                },
+                    serie.start = App.currentUser.localizeDatetime(serie.start);
+                    if (serie.end)
+                        serie.end = App.currentUser.localizeDatetime(serie.end);
+                    if (lines.length && oldSerie && oldSerie.hits.length) {
+                        // if we have some logs, append only new lines
+                        var first = lines[0],
+                            index = _.sortedIndex(oldSerie.hits, first, 'time_nano');
+                        lines.unshift.apply(lines, _.first(oldSerie.hits, index));
+                    }
+                });
+                this.logs = data.data;
+                this.logsError = data.data.length ? null : 'Logs not found';
+            }).fail(function(xhr) {
+                var data = xhr.responseJSON;
+                if (data && data.data !== undefined)
+                    this.logsError = data.data;
             });
         },
     }, {  // Class Methods
@@ -526,12 +523,17 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     data.Image = Backbone.Model.extend({
-
+        url: '/api/images/new',
         defaults: {
             image: 'Imageless'
         },
-
-        parse: unwrapper
+        parse: unwrapper,
+        fetch: function(options){
+            return Backbone.Model.prototype.fetch.call(this, _.extend({
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+            }, options));
+        },
     });
 
     data.Stat = Backbone.Model.extend({
@@ -600,30 +602,27 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 authWrap: true,
                 url: '/api/logs/node/' + this.get('hostname') + '?size=' + size,
                 context: this,
-                success: function(data) {
-                    var oldLines = this.get('logs'),
-                        lines = data.data.hits.reverse();
+            }).done(function(data) {
+                var oldLines = this.get('logs'),
+                    lines = data.data.hits.reverse();
 
-                    _.each(lines, function(line){
-                        line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
-                    });
-                    if (lines.length && oldLines.length) {
-                        // if we have some logs, append only new lines
-                        var first = lines[0],
-                            index_to = _.sortedIndex(oldLines, first, 'time_nano'),
-                            index_from = Math.max(0, index_to + lines.length - this.logsLimit);
-                        lines.unshift.apply(lines, oldLines.slice(index_from, index_to));
-                    }
+                _.each(lines, function(line){
+                    line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
+                });
+                if (lines.length && oldLines.length) {
+                    // if we have some logs, append only new lines
+                    var first = lines[0],
+                        index_to = _.sortedIndex(oldLines, first, 'time_nano'),
+                        index_from = Math.max(0, index_to + lines.length - this.logsLimit);
+                    lines.unshift.apply(lines, oldLines.slice(index_from, index_to));
+                }
 
-                    this.set('logs', lines);
-                    this.set('logsError', null);
-                },
-                error: function(xhr) {
-                    var data = xhr.responseJSON;
-                    if (data && data.data !== undefined)
-                        this.set('logsError', data.data);
-                },
-                statusCode: null,
+                this.set('logs', lines);
+                this.set('logsError', null);
+            }).fail(function(xhr) {
+                var data = xhr.responseJSON;
+                if (data && data.data !== undefined)
+                    this.set('logsError', data.data);
             });
         },
         appendLogs: function(data){
@@ -771,10 +770,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 url: '/api/users/loginA',
                 type: 'POST',
                 data: {user_id: this.id},
-                success: function(){ window.location.href = '/'; },
-                complete: utils.preloader.hide,
-                error: utils.notifyWindow,
-            }, options));
+            }, options))
+                .done(function(){ window.location.href = '/'; })
+                .always(utils.preloader.hide)
+                .error(utils.notifyWindow);
         },
     });
 

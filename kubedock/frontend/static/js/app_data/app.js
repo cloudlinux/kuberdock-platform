@@ -274,14 +274,13 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                                 function(data, textStatus, xhr){
                                     var token = xhr.getResponseHeader('X-Auth-Token');
                                     if (token) {
-                                        var auth = JSON.parse(App.storage.authData);
                                         auth.token = token;
                                         App.storage.authData = JSON.stringify(auth);
                                     }
                                     callback(xhr.status, textStatus, {json: data});
                                 },
-                                function(xhr, textStatus, errorThrown){
-                                    callback(xhr.status, textStatus, errorThrown);
+                                function(xhr, textStatus){
+                                    callback(xhr.status, textStatus);
                                 }
                             );
                         });

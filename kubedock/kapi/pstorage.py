@@ -1416,9 +1416,14 @@ class LocalStorage(PersistentStorage):
 
     @classmethod
     def check_node_is_locked(cls, node_id):
-        """For local storage node is used if there is any PD on this node.
+        """For local storage we assume that node is used if there is any PD on
+        this node.
         """
-        pd_list = PersistentDisk.get_by_node_id(node_id).all()
+        pd_list = PersistentDisk.get_by_node_id(node_id).filter(
+            ~PersistentDisk.state.in_([
+                PersistentDiskStatuses.TODELETE, PersistentDiskStatuses.DELETED
+            ])
+        ).all()
         if not pd_list:
             return (False, None)
         users = User.query.filter(
@@ -1516,7 +1521,11 @@ def get_storage_class_by_volume_info(volume):
     return None
 
 
-def check_node_is_locked(node_id):
+def check_node_is_locked(node_id, cleanup=False):
+    """Checks if node can't be deleted because of persistent storages on it.
+    Optionally can delete from DB deleted PD's if they are binded to the node
+    (cleanup flag).
+    """
     storage_cls = get_storage_class()
     if not storage_cls:
         return (False, None)
@@ -1526,7 +1535,23 @@ def check_node_is_locked(node_id):
                             for name, disks in reason.iteritems())
         reason = ('users Persistent volumes located on the node \n'
                   'owner name: list of persistent disks\n' + pd_list)
+    elif cleanup:
+        clean_deleted_pd_binded_to_node(node_id)
     return (is_locked, reason)
+
+
+def clean_deleted_pd_binded_to_node(node_id):
+    """Removes (from DB) deleted and marked for deletion PDs binded to given
+    node.
+    It is needed when node is being deleted. We don't want to block node
+    deletion if there are no active PD on it, but we have to delete
+    all bindings to that node.
+    """
+    PersistentDisk.get_by_node_id(node_id).filter(
+        PersistentDisk.state.in_(
+            [PersistentDiskStatuses.TODELETE, PersistentDiskStatuses.DELETED]
+        )
+    ).delete(synchronize_session=False)
 
 
 def drive_can_be_deleted(pd_id):

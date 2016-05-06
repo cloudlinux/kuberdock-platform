@@ -563,8 +563,6 @@ class PersistentDisk(BaseModelMixin, db.Model):
         :param node_id: identifier if a Node model
         :return: SQLAlchemy query
         """
-        if node_id is None:
-            return []
         return cls.query.filter(cls.node_id == node_id)
 
 

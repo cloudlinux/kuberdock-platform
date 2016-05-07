@@ -691,16 +691,15 @@ body{
         &.controls{
             &.open{
                 .dropdown-toggle{
+                    background-color: #fff;
                     .box-shadow(none);
                     .ic_reorder{
                         &:before{
-                            .transition (all 300ms);
                             .rotate(90deg);
                         }
                     }
                     .caret{
                         .rotate(180deg);
-                        .transition (all 300ms);
                     }
                 }
             }
@@ -1700,6 +1699,23 @@ body{
     }
     /* end select styles */
 }
+
+/* dropdown animation */
+.open > .dropdown-menu {
+    .transform(scale(1, 1));
+}
+.dropdown-menu {
+    .transform-origin(top);
+    -webkit-animation-fill-mode: forwards;
+    animation-fill-mode: forwards;
+    .transform(scale(1, 0));
+    display: block;
+    .transition(all 0.3s ease-out)
+}
+.dropup .dropdown-menu {
+    .transform-origin(bottom);
+}
+/* end dropdown animation */
 #page-preloader{
     top: 0;
     left: 0;

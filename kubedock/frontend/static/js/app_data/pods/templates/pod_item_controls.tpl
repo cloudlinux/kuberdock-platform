@@ -28,7 +28,7 @@
     <div class="btn-group controls pull-right">
         <span type="button" class="dropdown-toggle" data-toggle="dropdown">
             <span class="ic_reorder">
-                <span>Actions</span>
+                <span>Manage pod</span>
                 <i class="caret"></i>
             </span>
         </span>

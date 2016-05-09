@@ -6,6 +6,22 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             var admin = App.currentUser.get('rolename') === 'Admin';
             App.navigate(admin ? 'nodes' : 'pods', {trigger: true});
         },
+        showLogin: function(options){
+            var deferred = new $.Deferred();
+            require(['app_data/login/views'], function(Views){
+                var loginView = new Views.LoginView(options);
+                App.message.empty();  // hide any notification
+                utils.preloader.hide();  // hide preloader if there is any
+                App.listenTo(loginView,'action:signin', function(authModel){
+                    authModel.unset('password');
+                    App.storage.authData = JSON.stringify(authModel);
+                    deferred.resolveWith(App, [authModel.toJSON()]);
+                });
+                console.log('About to show login view');
+                App.contents.show(loginView);
+            });
+            return deferred;
+        },
         showPods: function(){
             if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
                 return this.pageNotFound();
@@ -56,6 +72,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
         /**
          * Show basic pod page layout, menu, breadcrumbs.
+         * @param {string} id - pod id
          * @returns jquery promise
          */
         showPodBase: function(id){
@@ -1174,15 +1191,6 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             });
         }
     };
-
-    controller = _.mapObject(controller, function(method, name){
-        if (_.contains(['showPodBase'], name))
-            return method;
-        return _.wrap(method, function(method){
-            var that = this, args = _.rest(arguments);
-            return App.getAuth().done(function(){ method.apply(that, args); });
-        });
-    });
 
     return Marionette.Object.extend(controller);
 });

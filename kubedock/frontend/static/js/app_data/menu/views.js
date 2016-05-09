@@ -28,29 +28,19 @@ define(['app_data/app', 'app_data/utils', 'marionette',
         logoutAs: function(evt){
             evt.stopPropagation();
             utils.preloader.show();
-            return $.ajax(_.extend({  // TODO: use Backbone.Model
-                authWrap: true,
-                url: '/api/users/logoutA',
-                type: 'GET',
-            }))
-            .done(function(){ window.location.href = '/'; })
-            .always(utils.preloader.hide)
-            .error(utils.notifyWindow);
+            var nextURL = 'users/profile/' + App.currentUser.id + '/general';
+            return new Backbone.Model().fetch({url: '/api/users/logoutA'})
+                .done(function(){ App.navigate(nextURL).cleanUp(/*keepToken*/true); })
+                .always(utils.preloader.hide)
+                .fail(utils.notifyWindow);
         },
         logout: function(evt){
             evt.stopPropagation();
             utils.preloader.show();
-            return $.ajax(_.extend({  // TODO: use Backbone.Model
-                authWrap: true,
-                url: '/api/users/logout',
-                type: 'GET',
-            }))
-            .done(function(){
-                delete App.storage.authData;
-                window.location.href = '/';
-            })
-            .always(utils.preloader.hide)
-            .error(utils.notifyWindow);
+            return new Backbone.Model().fetch({url: '/api/users/logout'})
+                .done(function(){ App.navigate('').cleanUp(); })
+                .always(utils.preloader.hide)
+                .fail(utils.notifyWindow);
         }
     });
 

@@ -400,8 +400,8 @@ class SessionData(db.Model):
         self.time_stamp = datetime.datetime.utcnow()
 
     def __repr__(self):
-        return "<SessionData(id='%s', token='%s', time_stamp='%s')>" % (
-            self.id, self.data, self.time_stamp)
+        return "<SessionData(id='%s', role_id='%s', time_stamp='%s')>" % (
+            self.id, self.role_id, self.time_stamp)
 
 
 #####################

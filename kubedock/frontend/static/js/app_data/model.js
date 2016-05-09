@@ -14,14 +14,18 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             options.headers = _.extend(options.headers || {},
                                        {'X-Auth-Token': auth.token});
             Backbone.syncOrig.apply(Backbone, args)
-                .done(function(){ deferred.resolveWith(this, arguments); })
-                .fail(function(){ deferred.rejectWith(this, arguments); })
+                .fail(function(xhr, status, error){
+                    if (xhr && (xhr.status === 401 || xhr.status === 403))
+                        App.cleanUp();
+                    deferred.rejectWith(this, [xhr, status, error]);
+                })
                 .done(function(resp, status, xhr){
                     var token = xhr.getResponseHeader('X-Auth-Token');
                     if (token) {
                         auth.token = token;
-                        App.storage.authData = JSON.stringify(auth);
+                        App.updateAuth(auth);
                     }
+                    deferred.resolveWith(this, [resp, status, xhr]);
                 });
         }).fail(function(){ deferred.rejectWith(options.context, []); });
         return deferred.promise();
@@ -765,15 +769,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         login: function(options){
             utils.preloader.show();
-            return $.ajax(_.extend({  // TODO: use Backbone.Model
-                authWrap: true,
-                url: '/api/users/loginA',
-                type: 'POST',
-                data: {user_id: this.id},
-            }, options))
-                .done(function(){ window.location.href = '/'; })
+            return new Backbone.Model()
+                .save({user_id: this.id}, _.extend({url: '/api/users/loginA'}, options))
+                .done(function(){ App.navigate('').cleanUp(/*keepToken*/true); })
                 .always(utils.preloader.hide)
-                .error(utils.notifyWindow);
+                .fail(utils.notifyWindow);
         },
     });
 

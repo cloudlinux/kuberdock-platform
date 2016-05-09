@@ -302,7 +302,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     url: '/api/users/a/' + username,
                     data: {date_from: dateFrom, date_to: dateTo},
                     dataType: 'JSON',
-                }).always(utils.preloader.hide).error(utils.notifyWindow)
+                }).always(utils.preloader.hide).fail(utils.notifyWindow)
                     .done(function(rs){
                         if(rs.data){
                             that.ui.tbody.empty();

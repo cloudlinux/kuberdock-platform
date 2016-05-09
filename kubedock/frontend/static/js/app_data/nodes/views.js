@@ -528,7 +528,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var that = this;
             this.model.getLogs(/*size=*/100).always(function(){
                 // callbacks are called with model as a context
-                if (!this.destroyed) {
+                if (!that.destroyed) {
                     this.set('timeout', setTimeout(that.getLogs, 10000));
                     that.render();
                 }

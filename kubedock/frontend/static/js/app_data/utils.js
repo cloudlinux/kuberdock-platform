@@ -108,25 +108,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         }
         type = type || 'error';
 
-        if (data && (Number(data.status) === 401 || Number(data.status) === 403)){
-            require(['app_data/app'], function(App){
-                console.log('Deleting expired data');
-                delete App.storage.authData;
-                delete App.packageCollection;
-                delete App.kubeTypeCollection;
-                delete App.packageKubeCollection;
-                delete App.menuCollection;
-                delete App.currentUser;
-                delete App.userPackage;
-                for (var resource in App._cache) delete App._cache[resource];
-                if (App.sseEventSource) {  // close SSE stream
-                    App.sseEventSource.close();
-                    delete App.sseEventSource;
-                    clearTimeout(App.eventHandlerReconnectTimeout);
-                }
-                App.initApp();
-            });
-        } else if (type === 'error') {
+        if (type === 'error') {
             // do not hide error messages automatically
             // also, group identical messages
             var notifyElement = utils.notifyList[msg];

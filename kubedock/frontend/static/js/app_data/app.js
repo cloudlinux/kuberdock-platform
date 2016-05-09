@@ -15,35 +15,39 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         },
 
         /**
-         * These resources must be fetched every time user logins in, and they
-         * are widely used immediately after start, so let's just save them as
-         * properties, so we won't need to go async every time we need them.
+         * Remove auth data and all cached data; reinitialize app.
+         *
+         * @param {boolean} keepToken - use it for loginAs/logoutAs
+         * @returns {Promise} - promise to be logged in :)
          */
-        prepareInitialData: function(){
-            var deferred = new $.Deferred();
-            App.getAuth().done(function(){
-                $.when(App.getCurrentUser(),
-                       App.getMenuCollection(),
-                       App.getPackages()).done(function(user, menu, packages){
-                    App.menuCollection = menu;
-                    App.currentUser = user;
-                    App.userPackage = packages.get(user.get('package_id'));
-                    deferred.resolveWith(App);
-                }).fail(function(){ deferred.rejectWith(App, arguments); });
-            });
-            return deferred;
+        cleanUp: function(keepToken){
+            console.log('Deleting expired data');
+            $.xhrPool.abortAll();
+            if (!keepToken)
+                delete App.storage.authData;  // delete token
+            _.each([  // delete all initial data
+                'menuCollection', 'currentUser', 'userPackage',
+                'packageCollection', 'kubeTypeCollection', 'packageKubeCollection'
+            ], function(name){ delete App[name]; });
+            for (var resource in App._cache) delete App._cache[resource];
+            if (App.sseEventSource) {  // close SSE stream
+                App.sseEventSource.close();
+                delete App.sseEventSource;
+                clearTimeout(App.eventHandlerReconnectTimeout);
+            }
+            return App.initApp();
         },
 
-        logout: function(){
-            // remove old resources
-            //for (var resource in App._cache) delete App._cache[resource];
-            //if (App.sseEventSource) {  // close SSE stream
-            //    App.sseEventSource.close();
-            //    delete App.sseEventSource;
-            //    clearTimeout(App.eventHandlerReconnectTimeout);
-            //}
-            //$.get('/api/auth/logout');  // TODO-JWT: instead of this we'll need to remove token from App.storage
-            return App;
+        /**
+         * Update token in storage.
+         *
+         * @param {Object} authData - modified data from App.getAuth
+         */
+        updateAuth: function(authData){
+            var actualAuthData = JSON.parse(App.storage.authData || 'null');
+            // check that it is the same session
+            if (actualAuthData && authData.id === actualAuthData.id)
+                App.storage.authData = JSON.stringify(authData);
         },
 
         /**
@@ -111,38 +115,25 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         return Backbone.history.fragment;
     };
 
+    /**
+     * Get user's auth data. If user is not logged in, show login view and
+     * return auth data as soon as user logs in.
+     *
+     * @returns {Promise} - promise of auth data
+     */
     App.getAuth = function(){
         console.log('getAuth called...');
-        var deferred = $.Deferred();
-        if (this.storage.authData != null){
-            deferred.resolveWith(this, [JSON.parse(this.storage.authData)]);
-        } else {
-            require(['app_data/login/views', 'app_data/model'], function (Views, Model) {
-                App.message.empty();  // hide any notification
-                var loginView = new Views.LoginView();
-                App.listenTo(loginView,'action:signin', function(data){
-                    new Model.AuthModel().save(data, {
-                        wait:true,
-                        success: function(model, resp, opts){
-                            model.unset('password');
-                            data = model.attributes;
-                            App.storage.authData = JSON.stringify(data);
-                            deferred.resolveWith(App, [data]);
-                        },
-                        error: function(resp){
-                            deferred.rejectWith(App, []);
-                        }
-                    });
-                });
-                console.log('About to show login view');
-                Utils.preloader.hide();  // hide preloader if there is any
-                App.contents.show(loginView);
-            });
-        }
-        return deferred.promise();
+        var cachedAuthData = this.storage.authData;
+        if (cachedAuthData != null)
+            return $.Deferred().resolveWith(this, [JSON.parse(cachedAuthData)]).promise();
+        else
+            return App.controller.showLogin();
     };
 
     /**
+     * Connect to SSE stream
+     *
+     * @param {Object} [options]
      * @param {string} [options.url='/api/stream']
      * @param {number} [options.lastID]
      */
@@ -261,39 +252,36 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         });
     };
 
+    /**
+     * Prepare initial data, connect to SSE, render the first view.
+     *
+     * @returns {Promise}
+     */
     App.initApp = function(){
-        $.ajaxTransport("+*", function(options, origOptions, xhr){
-            if (options.authWrap){
-                return {
-                    send: function(headers, callback){
-                        App.getAuth().done(function(auth){
-                            options.headers = _.extend(options.headers || {},
-                                                       {'X-Auth-Token': auth.token});
-                            delete options.authWrap;
-
-                            $.ajax(options).then(
-                                function(data, textStatus, xhr){
-                                    var token = xhr.getResponseHeader('X-Auth-Token');
-                                    if (token) {
-                                        auth.token = token;
-                                        App.storage.authData = JSON.stringify(auth);
-                                    }
-                                    callback(xhr.status, textStatus, {json: data});
-                                },
-                                function(xhr, textStatus){
-                                    callback(xhr.status, textStatus);
-                                }
-                            );
-                        });
-                    },
-                    abort: function() {
-                        xhr.abort();
-                    },
-                };
-            }
+        var deferred = new $.Deferred();
+        App.getAuth().done(function(){
+            $.when(App.getCurrentUser(),
+                   App.getMenuCollection(),
+                   App.getPackages()).done(function(user, menu, packages){
+                // These resources must be fetched every time user logins in, and they
+                // are widely used immediately after start, so let's just save them as
+                // properties, so we won't need to go async every time we need them.
+                App.menuCollection = menu;
+                App.currentUser = user;
+                App.userPackage = packages.get(user.get('package_id'));
+                // open SSE stream
+                App.eventHandler();
+                // trigger Routers for the current url
+                Backbone.history.loadUrl(App.getCurrentRoute());
+                App.controller.showNotifications();
+                deferred.resolveWith(App);
+            }).fail(function(){ deferred.rejectWith(App, arguments); });
         });
+        return deferred;
+    },
 
-        //Utils.preloader.show();
+    App.on('start', function(){
+        Utils.preloader.show();
         require(['app_data/controller', 'app_data/router'],
                 function(Controller, Router){
 
@@ -301,22 +289,63 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             new Router({controller: controller});
 
             if (Backbone.history) {
-                try {
-                    Backbone.history.start({root: '/', silent: true});
-                } catch(e){;}  // eslint-disable-line no-extra-semi
-                //Utils.preloader.hide();
-                App.prepareInitialData().done(function(){
-                    // trigger Routers for the current url
-                    Backbone.history.loadUrl(App.getCurrentRoute());
-                    controller.showNotifications();
-                    console.log('init');
-                    App.eventHandler();
-                });
+                Backbone.history.start({root: '/', silent: true});
+                Utils.preloader.hide();
+                App.initApp();
             }
         });
-    };
+    });
 
-    App.on('start', App.initApp);
+    // TODO: find a better way
+    $.ajaxTransport("+*", function(options, origOptions, xhr){
+        if (options.authWrap){
+            var wrappedXHR;
+            return {
+                send: function(headers, callback){
+                    App.getAuth().done(function(auth){
+                        options.headers = _.extend(options.headers || {},
+                                                   {'X-Auth-Token': auth.token});
+                        delete options.authWrap;
+
+                        wrappedXHR = $.ajax(options).then(
+                            function(data, textStatus, xhr){
+                                var token = xhr.getResponseHeader('X-Auth-Token');
+                                if (token) {
+                                    auth.token = token;
+                                    App.updateAuth(auth);
+                                }
+                                var result = _.mapObject(
+                                    $.ajaxSettings.responseFields,
+                                    function(prop){ return xhr[prop]; });
+                                callback(xhr.status, textStatus, result,
+                                         xhr.getAllResponseHeaders());
+                            },
+                            function(xhr, textStatus){
+                                if (xhr && (xhr.status === 401 || xhr.status === 403))
+                                    App.cleanUp();
+                                callback(xhr.status, textStatus);
+                            }
+                        );
+                    });
+                },
+                abort: function() {
+                    if (wrappedXHR)
+                        wrappedXHR.abort();
+                    xhr.abort();
+                },
+            };
+        }
+    });
+    $.xhrPool = [];
+    $(document).ajaxSend(function(e, xhr){
+        $.xhrPool.push(xhr);
+    });
+    $(document).ajaxComplete(function(e, xhr){
+        $.xhrPool.splice(_.indexOf($.xhrPool, xhr), 1);
+    });
+    $.xhrPool.abortAll = function() {
+        _.each(this.splice(0), function(xhr){ xhr.abort(); });
+    };
 
     return App;
 });

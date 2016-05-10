@@ -33,6 +33,18 @@ REQUEST_TIMEOUT = 15.0
 PING_REQUEST_TIMEOUT = 5.0
 
 
+class ImageNotAvailable(APIError):
+    def __init__(self, image):
+        self.message = 'Image {0} is not available'.format(image)
+
+
+class CommandIsMissing(APIError):
+    def __init__(self, image, container):
+        self.message = ('You need to specify CMD or ENTRYPOINT for container '
+                        '"{0}", \'cause image "{1}" doesn\'t provide one.'
+                        .format(container, image))
+
+
 class RegistryError(APIError):
     """
     Raised when the whole registry is not available.
@@ -336,13 +348,14 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
                 'hub.docker.com/r/' + self.repo if not self.is_official else
                 'hub.docker.com/_/' + self.repo.replace('library/', '', 1))
 
-    def _v2_request_image_info(self, auth, just_check=False):
+    def _v2_request_image_info(self, auth, just_check=False, raise_=False):
         """Config request via V2 API
         Get info about image from manifest using Docker Registry API v2
 
         :param auth: (username, password) or None
         :param just_check: only check image availability, do not extract
             configuration
+        :param raise_: raise APIVersionError or just return None
         :returns: full image info (True if just_check=True) or None
         :raise APIVersionError: for check requests - if registry doesn't support
             api v2
@@ -353,11 +366,14 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         url = get_url(self.full_registry, 'v2', self.repo, 'manifests', self.tag)
         try:
             response = s.get(url, auth=DockerAuth(auth), timeout=REQUEST_TIMEOUT)
-            if just_check:
-                if response.status_code == 200:
-                    return True
-                if response.headers.get(API_VERSION_HEADER) != 'registry/2.0':
+            if response.status_code != 200:
+                version = response.headers.get(API_VERSION_HEADER)
+                if raise_ and version != 'registry/2.0':
                     raise APIVersionError()
+                return None
+
+            if just_check:
+                return True
 
             v2_data = _json_or_none(response)
             try:
@@ -407,14 +423,17 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         """
         return self._v2_request_image_info(auth) or self._v1_request_image_info(auth)
 
-    def _prepare_response(self, raw_config, auth=None):
+    def _prepare_response(self, image_info, auth=None):
         """
         Create api response using raw container config from docker registry.
 
-        :param raw_config: container config from docker registry
+        :param image_info: raw data from docker registry api
+            /v1/images/(image_id)/json or analogous from
+            /v2/<name>/manifests/<reference> response.history[0].v1Compatibility
         :param auth: (username, password) or None
         :returns: simplified container config
         """
+        raw_config = image_info['config']
         if not raw_config.get('Env'):
             raw_config['Env'] = []
         if not raw_config.get('ExposedPorts'):
@@ -461,7 +480,7 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         if image_info is None or 'config' not in image_info:
             check_registry_status(self.full_registry)
             raise APIError('Couldn\'t get the image')
-        data = self._prepare_response(image_info['config'], auth)
+        data = self._prepare_response(image_info, auth)
 
         if cache_enabled:
             if cached_config is None:
@@ -473,24 +492,34 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             db.session.commit()
         return data
 
-    def _check_availability(self, registries):
+    def _check_availability(self, registries, fast=True):
+        """
+        Try to get image from registry.
+
+        :param registries: mapping of registry to dict with bool 'v2_available'
+            and list of secrets
+        :param fast: if true, do not try to get full image config
+        """
         registry = registries[self.full_registry]
 
         for auth in registry['auth']:
             # For now too many registries don't support
             # Docker Registry v2 API, so we'll try v1 first.
-            if self._v1_request_image_info(auth, True):
-                return True
+            image_info = self._v1_request_image_info(auth, just_check=fast)
+            if image_info and (fast or 'config' in image_info):
+                return True if fast else image_info['config']
 
             if registry['v2_available']:  # if v1 didn't work and v2 is available
                 try:
-                    if self._v2_request_image_info(auth, True):
-                        return True
+                    image_info = self._v2_request_image_info(
+                        auth, just_check=fast, raise_=True)
+                    if image_info and (fast or 'config' in image_info):
+                        return True if fast else image_info['config']
                 except APIVersionError:
                     registry['v2_available'] = False
 
         check_registry_status(self.full_registry)
-        raise APIError('image {0} is not available'.format(self))
+        raise ImageNotAvailable(self)
 
     def get_id(self, secrets=()):
         """
@@ -509,21 +538,33 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
                 return image_info['id']
 
     @classmethod
-    def check_images_availability(cls, images, secrets=()):
+    def check_containers(cls, containers, secrets=()):
         """
         Check if all images are available using provided credentials.
         Tries to check image availability wihout credentials and if it failed, will
         try all specified credentials for the registry until successful result.
 
-        :param images: list of images
+        Also, if container doesn't specify neither CMD nor ENTRYPOINT, check
+        that at least one of them is presented in image config.
+
+        :param containers: list of containers
+            each must have name and image and may have command and args
         :param secrets: list of secrets
             Each secret must be iterable (username, password, registry)
         :raises APIError: if some image is not available
         """
+        print(cls, containers, secrets)
         registries = defaultdict(lambda: {'v2_available': True, 'auth': [None]})
         for username, password, registry in secrets:
             registry = complement_registry(registry)
             registries[registry]['auth'].append((username, password))
 
-        for image in images:
-            cls(image)._check_availability(registries)
+        for container in containers:
+            image = cls(container['image'])
+            if not (container.get('args') or container.get('command')):
+                # need extra check: image must have CMD or ENTRYPOINT
+                image_data = image._check_availability(registries, fast=False)
+                if not (image_data.get('Cmd') or image_data.get('Entrypoint')):
+                    raise CommandIsMissing(image, container['name'])
+            else:
+                image._check_availability(registries)

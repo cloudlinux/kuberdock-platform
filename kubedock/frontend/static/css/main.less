@@ -639,6 +639,28 @@ body{
         }
     }
 
+    /* page-404 */
+    .page-404{
+        .page-404_image{
+            img{
+                max-width: 100%;
+            }
+        }
+        .page-404_text{
+            color: #9f9f9f;
+            h1{
+                font-size: 51px;
+                line-height: 51px;
+                font-weight: bold;
+                margin-left: -3px;
+            }
+            p{
+                font-size: 16px;
+                font-weight: 400;
+            }
+        }
+    }
+
     .buttons{
         .clearfix;
         font-size: 0;
@@ -695,16 +717,15 @@ body{
         &.controls{
             &.open{
                 .dropdown-toggle{
+                    background-color: #fff;
                     .box-shadow(none);
                     .ic_reorder{
                         &:before{
-                            .transition (all 300ms);
                             .rotate(90deg);
                         }
                     }
                     .caret{
                         .rotate(180deg);
-                        .transition (all 300ms);
                     }
                 }
             }
@@ -1704,6 +1725,23 @@ body{
     }
     /* end select styles */
 }
+
+/* dropdown animation */
+.open > .dropdown-menu {
+    .transform(scale(1, 1));
+}
+.dropdown-menu {
+    .transform-origin(top);
+    -webkit-animation-fill-mode: forwards;
+    animation-fill-mode: forwards;
+    .transform(scale(1, 0));
+    display: block;
+    .transition(all 0.3s ease-out)
+}
+.dropup .dropdown-menu {
+    .transform-origin(bottom);
+}
+/* end dropdown animation */
 #page-preloader{
     top: 0;
     left: 0;

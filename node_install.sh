@@ -317,7 +317,7 @@ yum_wrapper -y install docker
 check_status
 yum_wrapper -y install flannel-0.5.3
 check_status
-yum_wrapper -y install kuberdock-cadvisor
+yum_wrapper -y install kuberdock-cadvisor-0.19.5
 check_status
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests

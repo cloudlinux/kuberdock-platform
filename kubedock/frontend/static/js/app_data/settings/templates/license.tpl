@@ -41,7 +41,7 @@
                 <th>Containers</th>
                 <th>Users pods</th>
                 <th>Predefined apps</th>
-                <th>Persistent volume</th>
+                <th>Persistent volume (GB)</th>
                 <th>Actions</th>
             </tr>
         </thead>

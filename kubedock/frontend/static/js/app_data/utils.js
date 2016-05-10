@@ -181,23 +181,30 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             arrow : false,
             style : 'metro',
             autoHide: false,
+            clickToHide: true,
             showDuration: 100,
             hideDuration: 100,
             showAnimation: "fadeIn",
             hideAnimation: "fadeOut",
             elementPosition: 'bottom left',
         });
-        var messageHeight = $(el).parent().find('.text-wrapper').height()
+        var messageHeight = $(el).parent().find('.text-wrapper').height();
         item.css('margin-bottom', messageHeight+10);
         item.addClass('error');
-    }
+    };
+    // Just a shortcut to remove error from input (or group of inputs)
+    utils.removeError = function(el){
+        if (el.hasClass('error'))
+            el.parents('td, .form-group').find('.notifyjs-metro-error').trigger('notify-hide');
+    };
 
+    $(document).on('notify-hide', '.notifyjs-metro-error', function(event) {
+        $(this).parents('td, .form-group').find('input')
+            .css('margin','').removeClass('error');
+    });
     $(document).on('click', '.notifyjs-metro-error', function(event) {
-        event.stopPropagation();
-        var item = $(this).parents('td, .form-group').find('input');
-        item.css('margin','');
-        item.removeClass('error').focus();
-        $(this).trigger('notify-hide');
+        $(this).trigger('notify-hide')
+            .parents('.notifyjs-wrapper').next('input').focus();
     });
 
     /* Returns string representing date&time with timezone converted to

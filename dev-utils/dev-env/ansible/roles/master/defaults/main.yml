@@ -1,0 +1,5 @@
+---
+
+is_dev_install: false
+no_wsgi: false
+git_ref: ""

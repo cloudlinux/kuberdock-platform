@@ -1,9 +1,14 @@
 tmux_session_name: kd_tmux_session
 pub_key: /var/lib/nginx/.ssh/id_rsa.pub
-is_dev_install: "{{ lookup('env','KD_DEV_INSTALL') }}"
-license_path: "{{ lookup('env','KD_LICENSE') }}"
 copy_license_to: '/var/opt/kuberdock/.license'
-no_wsgi: "{{ lookup('env','KD_NO_WSGI') }}"
 src_prefix: /var/opt/kuberdock
 predefined_apps_repo: https://github.com/cloudlinux/kuberdock_predefined_apps.git
 predefined_apps_dest: /tmp/kuberdock_predefined_apps
+
+use_ceph: "{{ lookup('env','KD_CEPH') }}"
+ceph_user: "{{ lookup('env','KD_CEPH_USER') }}"
+ceph_config: "{{ lookup('env','KD_CEPH_CONFIG') }}"
+ceph_user_keyring: "{{ lookup('env','KD_CEPH_USER_KEYRING') }}"
+
+ceph_config_dest: "/tmp/ceph.conf"
+ceph_user_keyring_dest: "/tmp/ceph.keyring"

@@ -13,7 +13,7 @@ BuildRequires: nodejs-less
 BuildRequires: nodejs-clean-css
 
 Requires: nginx
-Requires: influxdb
+Requires: influxdb == 0.8.8-1
 Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2

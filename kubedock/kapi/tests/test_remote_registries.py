@@ -1,11 +1,12 @@
 """Tests for interconnection with remote registries.
 Strongly depends on availability of hub.docker.com, quay.io, gcr.io.
 """
+import mock
 import unittest
 
 import requests
 
-from ..images import Image, APIError
+from ..images import Image, APIError, ImageNotAvailable, CommandIsMissing
 from .. import images
 from ...settings import DEFAULT_REGISTRY
 from ...validation import (V, args_list_schema, env_schema, path_schema,
@@ -100,21 +101,26 @@ class TestGetContainerConfig(DBTestCase):
 
 
 @attr('docker_registry')
-class TestCheckImagesAvailability(DBTestCase):
+class TestCheckContainers(DBTestCase):
+    def _container(self, image='i', name='n', command='c', args='a'):
+        return dict({'image': image, 'name': name,
+                     'command': command, 'args': args})
+
     def test_default_registry_public(self):
-        Image.check_images_availability(['nginx'])
+        Image.check_containers([self._container('nginx')])
 
     # @unittest.skip('TODO: dockerhub too many failed login attempts')
     def test_default_registry_private(self):
-        Image.check_images_availability(['nginx', DOCKERHUB_PRIVATE_REPO], [
-            (DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD, DEFAULT_REGISTRY)
-        ])
+        Image.check_containers(
+            [self._container('nginx'), self._container(DOCKERHUB_PRIVATE_REPO)],
+            [(DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD, DEFAULT_REGISTRY)])
 
         # first failed login
-        with self.assertRaises(APIError) as err:
-            Image.check_images_availability(['nginx', DOCKERHUB_PRIVATE_REPO], [
-                (DOCKERHUB_USERNAME, 'wrong_password', DEFAULT_REGISTRY)
-            ])
+        with self.assertRaises(ImageNotAvailable) as err:
+            Image.check_containers(
+                [self._container('nginx'),
+                 self._container(DOCKERHUB_PRIVATE_REPO)],
+                [(DOCKERHUB_USERNAME, 'wrong_password', DEFAULT_REGISTRY)])
         self.assertTrue(err.exception.message.endswith('is not available'))
         failed_logins = images.PrivateRegistryFailedLogin.all()
         self.assertEqual(len(failed_logins), 1)
@@ -123,9 +129,10 @@ class TestCheckImagesAvailability(DBTestCase):
         # second failed login
         with self.assertRaises(APIError) as err:
             # second call should return a message about waiting some seconds
-            Image.check_images_availability(['nginx', DOCKERHUB_PRIVATE_REPO], [
-                (DOCKERHUB_USERNAME, 'wrong_password', DEFAULT_REGISTRY)
-            ])
+            Image.check_containers(
+                [self._container('nginx'),
+                 self._container(DOCKERHUB_PRIVATE_REPO)],
+                [(DOCKERHUB_USERNAME, 'wrong_password', DEFAULT_REGISTRY)])
         self.assertEqual(err.exception.status_code,
                          requests.codes.too_many_requests)
         failed_logins = images.PrivateRegistryFailedLogin.all()
@@ -134,35 +141,41 @@ class TestCheckImagesAvailability(DBTestCase):
         self.assertEqual(failed1, failed2)
         self.assertEqual(failed1.login, DOCKERHUB_USERNAME)
 
-    # @unittest.skip('')
     def test_gcr(self):
-        Image.check_images_availability([
-            'gcr.io/google_containers/etcd:2.0.9',
-            'gcr.io/google_containers/kube2sky:1.11',
-            'gcr.io/google_containers/skydns:2015-03-11-001',
+        Image.check_containers([
+            self._container('gcr.io/google_containers/etcd:2.0.9'),
+            self._container('gcr.io/google_containers/kube2sky:1.11'),
+            self._container('gcr.io/google_containers/skydns:2015-03-11-001'),
         ])
 
-    # @unittest.skip('')
     def test_quay(self):
-        Image.check_images_availability(['quay.io/quay/redis'])
-        Image.check_images_availability(
-            ['quay.io/quay/redis', QUAY_PRIVATE_REPO],
-            [(QUAY_ROBOT_NAME, QUAY_ROBOT_PASSWORD, 'quay.io')]
-        )
+        Image.check_containers([self._container('quay.io/quay/redis')])
 
-        with self.assertRaises(APIError):
-            Image.check_images_availability(
-                ['quay.io/quay/redis', QUAY_PRIVATE_REPO],
+        containers = [self._container('quay.io/quay/redis'),
+                      self._container(QUAY_PRIVATE_REPO)]
+        Image.check_containers(
+            containers, [(QUAY_ROBOT_NAME, QUAY_ROBOT_PASSWORD, 'quay.io')])
+
+        with self.assertRaises(ImageNotAvailable):
+            Image.check_containers(
+                containers,
                 [(QUAY_ROBOT_NAME, QUAY_ROBOT_PASSWORD, 'wrong_regitry.io')]
             )
 
-        with self.assertRaises(APIError):
-            Image.check_images_availability(
-                ['quay.io/quay/redis', QUAY_PRIVATE_REPO],
-                [(QUAY_ROBOT_NAME, 'wrong_password', 'quay.io')]
-            )
-        with self.assertRaises(APIError):
-            Image.check_images_availability(['quay.io/quay/redis', QUAY_PRIVATE_REPO])
+        with self.assertRaises(ImageNotAvailable):
+            Image.check_containers(
+                containers, [(QUAY_ROBOT_NAME, 'wrong_password', 'quay.io')])
+        with self.assertRaises(ImageNotAvailable):
+            Image.check_containers(containers)
+
+    def test_no_command(self):
+        Image.check_containers([self._container('nginx', command=[], args=[])])
+        # alpine image has no CMD nor ENTRYPOINT
+        container = self._container('alpine:3.3', command=[], args=[])
+        Image.check_containers([dict(container, command=['aa'], args=[])])
+        Image.check_containers([dict(container, command=[], args=['aa'])])
+        with self.assertRaises(CommandIsMissing):
+            Image.check_containers([dict(container, command=[], args=[])])
 
 
 if __name__ == '__main__':

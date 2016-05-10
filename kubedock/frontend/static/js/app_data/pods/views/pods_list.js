@@ -24,10 +24,6 @@ define(['app_data/app',
             var that = this;
             this.listenTo(this.list, 'show', function(view){
                 that.listenTo(view, 'pager:clear', that.clearPager);
-
-            });
-            this.listenTo(this.header, 'show', function(view){
-                that.listenTo(view, 'collection:filter', that.collectionFilter);
             });
         },
 
@@ -38,10 +34,6 @@ define(['app_data/app',
         clearPager: function(){
             this.trigger('pager:clear');
         },
-
-        collectionFilter: function(data){
-            this.trigger('collection:filter', data);
-        }
     });
 
     podList.PodListEmpty = Backbone.Marionette.ItemView.extend({

@@ -47,7 +47,9 @@ class PodsAPI(KubeUtils, MethodView):
 
         billing_type = SystemSettings.get_by_name('billing_type').lower()
         if billing_type != 'no billing' and user.fix_price and not privileged:
-            if params.get('command') == 'set':
+            command = params.get('command')
+            commandOptions = params.get('commandOptions')
+            if command == 'set' and commandOptions.get('status') != db_pod.status:
                 # fix-price user is not allowed to change paid/unpaid status
                 # and start pod directly, only through billing system
                 raise PermissionDenied(
@@ -56,8 +58,7 @@ class PodsAPI(KubeUtils, MethodView):
             for container in data.get('containers', []):
                 if container.get('kubes') is not None:
                     kubes[container['name']] = container['kubes']
-            if (params.get('command') == 'redeploy' and
-                    db_pod.kubes != sum(kubes.values())):
+            if command == 'redeploy' and db_pod.kubes != sum(kubes.values()):
                 # fix-price user is not allowed to upgrade pod
                 # directly, only through billing system
                 raise PermissionDenied(

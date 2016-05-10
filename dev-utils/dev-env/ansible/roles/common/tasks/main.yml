@@ -1,3 +1,6 @@
+- name: RPM proxy configure
+  include: rpm_proxy.yml
+
 - name: upgrade all packages
   yum: name=* state=latest
 
@@ -6,6 +9,10 @@
   when: hostvars[item].ansible_default_ipv4.address is defined
   with_items: "{{ groups.all }}"
 
-- include: dotfiles.yml
+- name: User dotfiles
+  include: dotfiles.yml
+  when: dotfiles is defined and dotfiles
 
-- include: hook.yml
+- name: User hooks
+  include: hook.yml
+  when: hook is defined and hook

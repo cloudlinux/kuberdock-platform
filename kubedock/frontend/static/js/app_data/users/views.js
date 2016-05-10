@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
+define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils',
         'tpl!app_data/users/templates/user_item.tpl',
         'tpl!app_data/users/templates/online_user_item.tpl',
         'tpl!app_data/users/templates/activity_item.tpl',
@@ -10,8 +10,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/users/templates/user_profile_log_history.tpl',
         'tpl!app_data/users/templates/user_profile.tpl',
         'tpl!app_data/users/templates/users_layout.tpl',
-        'bootstrap', 'jquery-ui', 'jqplot', 'jqplot-axis-renderer', 'selectpicker', 'bootstrap3-typeahead'],
-       function(App, Controller, Marionette, utils,
+        'bootstrap', 'jquery-ui', 'selectpicker', 'bootstrap3-typeahead'],
+       function(App, Model, Controller, utils,
                 userItemTpl,
                 onlineUserItemTpl,
                 activityItemTpl,
@@ -259,9 +259,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'change @ui.dateFrom'        : 'getUsersActivities',
             'change @ui.dateTo'          : 'getUsersActivities',
             'click @ui.users_page'       : 'back',
-            'click @ui.calendarIco'      : 'foncusInput',
-            'click @ui.searchIco'        : 'foncusInput',
+            'click @ui.calendarIco'      : 'focusInput',
+            'click @ui.searchIco'        : 'focusInput',
+            'focus @ui.dateTo'           : 'removeError',
             'focus @ui.dateFrom'         : 'removeError',
+            'focus @ui.username'         : 'removeError',
             'keypress @ui.username'      : 'selectUserByEnterKey'
         },
 
@@ -269,33 +271,35 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var that = this;
             if (e.which === 13) {  // 'Enter' key
                 e.stopPropagation();
-                that.getUsersActivities();
                 that.ui.username.blur();
+                that.getUsersActivities();
             }
         },
 
-        foncusInput: function(e){
-            var target = $(e.target);
-            target.parent().find('input').focus();
-        },
+        focusInput: function(e){ $(e.target).parent().find('input').focus(); },
 
-        removeError: function(evt){
-            var target = $(evt.target);
-            if (target.hasClass('error')) target.removeClass('error');
-        },
+        removeError: function(evt){ utils.removeError($(evt.target)); },
 
         _getActivities: function(username, dateFrom, dateTo){
-            var that = this;
-
-            if (dateFrom > dateTo){
-                this.ui.dateFrom.addClass('error');
-                utils.notifyWindow('Start date may not exceed the end date')
-            } else {
-                this.ui.dateTo.removeClass('error');
-                this.ui.dateFrom.removeClass('error');
+            var that = this,
+                usernameOk = true,
+                dateOk = true,
+                invalidUsernameFormat = Model.UserModel.checkUsernameFormat(username);
+            if (username && invalidUsernameFormat){
+                utils.scrollTo(this.ui.username);
+                utils.notifyInline(invalidUsernameFormat, this.ui.username);
+                usernameOk = false;
             }
 
-            if (username && dateFrom && dateTo){
+            if (dateFrom > dateTo){
+                utils.scrollTo(this.ui.dateFrom);
+                utils.notifyInline('Start date may not exceed the end date',
+                                   this.ui.dateFrom);
+                this.ui.dateTo.addClass('error');
+                dateOk = false;
+            }
+
+            if (username && dateFrom && dateTo && dateOk && usernameOk){
                 utils.preloader.show();
                 $.ajax({  // TODO: use Backbone.Model
                     authWrap: true,
@@ -367,10 +371,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         getUsersActivities: function(){
-            var that = this;
+            var that = this,
+                username = that.ui.username.val().trim();
+            that.ui.username.val(username);
             that.ui.tbody.empty();
             that._getActivities(
-                that.ui.username.val(),
+                username,
                 that.ui.dateFrom.val(),
                 that.ui.dateTo.val()
             );
@@ -467,7 +473,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         .indexOf(that.ui.username.val().toLowerCase()) !== -1,
                     existsEmail = users.chain().without(that.model).pluck('attributes')
                         .pluck('email').filter().invoke('toLowerCase')
-                        .indexOf(that.ui.email.val().toLowerCase()).value() !== -1;
+                        .indexOf(that.ui.email.val().toLowerCase()).value() !== -1,
+                    invalidUsernameFormat = isNew && Model.UserModel.checkUsernameFormat(
+                        that.ui.username.val());
 
                 that.ui.input.removeClass('error');
 
@@ -476,19 +484,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 case isNew && !that.ui.username.val():
                     that.addError(that.ui.username, 'Username is required.');
                     break;
-                case isNew && that.ui.username.val().length > 25:
-                    that.addError(that.ui.username, 'Maximum length is 25 symbols.');
-                    break;
-                case isNew && !/^[A-Z\d_-]+$/i.test(that.ui.username.val()):
-                    that.addError(that.ui.username,
-                                  'Only "-", "_" and alphanumeric symbols are allowed.');
-                    break;
-                case isNew && !/^[A-Z\d](?:.*[A-Z\d])?$/i.test(that.ui.username.val()):
-                    that.addError(that.ui.username,
-                                  'Username should start and end with a letter or digit.');
-                    break;
-                case isNew && !/\D/g.test(that.ui.username.val()):
-                    that.addError(that.ui.username, 'Username cannot consist of digits only.');
+                case isNew && !!invalidUsernameFormat:
+                    that.addError(that.ui.username, invalidUsernameFormat);
                     break;
                 case isNew && existsUsername:
                     that.addError(that.ui.username, 'Username should be unique.');
@@ -543,12 +540,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             utils.notifyInline(message,el);
         },
 
-        removeError: function(evt){
-            var target = $(evt.target);
-            if (target.hasClass('error')){
-                target.parent().find('.notifyjs-metro-error').click();
-            }
-        },
+        removeError: function(evt){ utils.removeError($(evt.target)); },
 
         toUserList: function(){ App.navigate('users', {trigger: true}); },
     });

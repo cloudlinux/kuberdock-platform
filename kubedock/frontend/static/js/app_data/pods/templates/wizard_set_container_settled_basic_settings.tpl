@@ -1,16 +1,3 @@
-<div class="breadcrumbs-wrapper">
-    <div class="container breadcrumbs" id="breadcrumbs">
-        <ul class="breadcrumb">
-            <li>
-                <a href="/#pods">Pods</a>
-            </li>
-            <li>
-                <a href="/#pods/<%- parentID %>"><%- podName %></a>
-            </li>
-            <li class="active"><%- image %> (<%- name %>)</li>
-        </ul>
-    </div>
-</div>
 <div class="container">
     <div class="row">
         <div class="col-sm-12 col-md-2 sidebar">

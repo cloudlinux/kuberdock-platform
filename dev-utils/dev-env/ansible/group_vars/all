@@ -1,1 +1,1 @@
-add_testing_repo: "{{ '-t' if lookup('env','KD_TESTING_REPO') else '' }}"
+add_testing_repo: "{{ '-t' if (testing_repo is defined and testing_repo) else '' }}"

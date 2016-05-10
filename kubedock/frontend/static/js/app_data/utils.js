@@ -159,8 +159,8 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
     });
 
     utils.preloader = {
-        show: function(){ $('#page-preloader').show(); },
-        hide: function(){ $('#page-preloader').hide(); }
+        show: function(){ $('#page-preloader').addClass('show'); },
+        hide: function(){ $('#page-preloader').removeClass('show'); }
     };
 
     utils.hasScroll = function() {

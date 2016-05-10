@@ -1250,6 +1250,8 @@ body{
 
     /* edit inputs */
 
+    @import "preloader.less";
+
     .editGroup{
         position: relative;
         .editable-unsaved{
@@ -1730,54 +1732,9 @@ body{
 .dropup .dropdown-menu {
     .transform-origin(bottom);
 }
-/* end dropdown animation */
-#page-preloader{
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1000;
-    display: none;
-    position: fixed;
 
-    .loader{
-        .border-radius(50%);
-        .animation(spin, 2s, linear infinite);
-        left: 50%;
-        top: 50%;
-        width: 100px;
-        height: 100px;
-        display: block;
-        margin: -75px 0 0 -75px;
-        position: relative;
-        border: 2px solid transparent;
-        border-top-color: #0074BF;
-        &:before{
-            .border-radius(50%);
-            .animation(spin, 3s, linear infinite);
-            top: 5px;
-            left: 5px;
-            right: 5px;
-            bottom: 5px;
-            content: '';
-            position: absolute;
-            border: 2px solid transparent;
-            border-top-color: #f5544d;
-        }
-        &:after{
-            .border-radius(50%);
-            .animation(spin, 1.5s, linear infinite);
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            bottom: 12px;
-            content: '';
-            position: absolute;
-            border: 2px solid transparent;
-            border-top-color: #ffb704;
-        }
-    }
-}
+/* end dropdown animation */
+
 /* spin */
 @-webkit-keyframes spin{
     0%{ .rotate(0deg); }

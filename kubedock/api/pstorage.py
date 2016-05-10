@@ -10,6 +10,7 @@ from ..nodes.models import Node
 from ..pods.models import PersistentDisk
 from ..rbac import check_permission
 from ..utils import KubeUtils, register_api
+from ..validation import V, pd_schema
 
 pstorage = Blueprint('pstorage', __name__, url_prefix='/pstorage')
 
@@ -47,11 +48,13 @@ class PersistentStorageAPI(KubeUtils, MethodView):
 
     def post(self):
         user = self._get_current_user()
-        params = self._get_params()
-        name, size = self._validated_post_params(params)
+        params = V()._api_validation(self._get_params(), pd_schema)
+        name, size = params['name'], params['size']
+
         pd = PersistentDisk.query.filter_by(name=name).first()
         if pd is not None:
-            raise APIError('{0} already exists'.format(name), 406)
+            raise APIError('{0} already exists'.format(name), 406,
+                           type='DuplicateName')
         pd = PersistentDisk(size=size, owner=user, name=name)
         Storage = self._resolve_storage()
         data = Storage().create(pd)
@@ -83,24 +86,6 @@ class PersistentStorageAPI(KubeUtils, MethodView):
                 'Volume can not be deleted. Reason: {}'.format(description)
             )
         ps.delete_drive_by_id(device_id)
-
-    @classmethod
-    def _validated_post_params(cls, params):
-        mandatory_fields = ('name', 'size')
-        if any(f not in params for f in mandatory_fields):
-            raise APIError(
-                '[%s] are mandatory fields'
-                % ', '.join('"%s"' % f for f in mandatory_fields))
-        name, size = params.get('name'), params.get('size')
-        if not isinstance(name, basestring):
-            raise APIError('"name" must be a string')
-        if not name:
-            raise APIError('"name" must be not empty')
-        if not isinstance(size, int):
-            raise APIError('"size" must be an integer')
-        if size <= 0:
-            raise APIError('"size" must be > 0')
-        return name, size
 
 
 def add_kube_types(disks):

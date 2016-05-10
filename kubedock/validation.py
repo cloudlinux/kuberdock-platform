@@ -241,7 +241,7 @@ protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
 kubes_qty_schema = {'type': 'integer', 'min': 1,
                     'max_kubes_per_container': True}
 container_name_schema = {'type': 'string', 'empty': False, 'maxlength': 255}
-pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0,
+pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 1,
                  'pd_size_max': True}
 pdname_schema = {'type': 'string', 'required': True, 'empty': False,
                  'maxlength': 36, 'regex': pdname_regex}
@@ -519,6 +519,12 @@ change_pod_schema['containers']['schema']['schema']['volumeMounts']['schema']['s
     'type': 'string',
     'maxlength': PATH_LENGTH,
     'required': False
+}
+
+
+pd_schema = {
+    'name': pdname_schema,
+    'size': dict(pdsize_schema, required=True),
 }
 
 

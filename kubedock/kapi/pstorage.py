@@ -1110,8 +1110,7 @@ class AmazonStorage(PersistentStorage):
         Gets and returns EBS volumes objects as list
         :return: list
         """
-        if not hasattr(self, '_conn'):
-            self._get_connection()
+        self._get_connection()
         return self._conn.get_all_volumes()
 
     def _get_raw_drive_by_name(self, name):

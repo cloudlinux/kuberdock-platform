@@ -33,7 +33,6 @@ def index():
 
 
 def return_pods():
-    post_desc = all_request_params().get('postDescription', '')
     coll = PodCollection(current_user).get(as_json=False)
     package = current_user.package.to_dict(with_kubes=True)
     if current_user.username == KUBERDOCK_INTERNAL_USER:
@@ -43,7 +42,7 @@ def return_pods():
     return {
         'podCollection': coll,
         'packages': [package],
-        'postDescription': post_desc}
+    }
 
 
 def return_nodes():

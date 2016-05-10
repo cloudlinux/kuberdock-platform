@@ -168,7 +168,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     @atomic()
     def _set_entry(self, pod, data):
-        """Immediately set fields "status" and "name" in DB."""
+        """Immediately set fields "status", "name", "postDescription" in DB."""
         db_pod = DBPod.query.get(pod.id)
         commandOptions = data['commandOptions']
         if commandOptions.get('status'):
@@ -179,6 +179,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             pod.name = commandOptions['name']
             pod.check_name()
             db_pod.name = pod.name
+        if 'postDescription' in commandOptions:
+            pod.postDescription = commandOptions['postDescription']
+            config = dict(db_pod.get_dbconfig(),
+                          postDescription=pod.postDescription)
+            db_pod.set_dbconfig(config, save=False)
         return pod.as_dict()
 
     @staticmethod

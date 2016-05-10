@@ -125,7 +125,7 @@ define(['app_data/app',
             message: '.message-wrapper'
         },
         onShow: function(){
-            if (this.model.postDescription)
+            if (this.model.get('postDescription'))
                 this.ui.close.parents('.message-wrapper').slideDown();
         },
 
@@ -145,19 +145,6 @@ define(['app_data/app',
         initialize: function(options){
             this.graphs = !!options.graphs;
             this.upgrade = !!options.upgrade;
-
-            // if got postDescription, save it
-            if (backendData.postDescription){
-                var r = /(%PUBLIC_ADDRESS%)/gi,
-                    publicIP = this.model.get('public_ip') || "...";
-                App.storage['postDescription.' + this.model.id] =
-                    backendData.postDescription.replace(r, publicIP);
-                delete backendData.postDescription;
-            }
-            // if have saved postDescription, put it in model
-            var postDescription = App.storage['postDescription.' + this.model.id];
-            if (postDescription)
-                this.model.postDescription = postDescription;
         },
 
         templateHelpers: function(){
@@ -170,13 +157,14 @@ define(['app_data/app',
                 kubeType = App.kubeTypeCollection.get(kubeId),
                 hasPorts = this.model.get('containers').any(function(c) {
                     return c.get('ports') && c.get('ports').length;
-                });
+                }),
+                postDesc = this.model.get('postDescription');
 
             this.model.recalcInfo(pkg);
 
             return {
                 hasPorts        : hasPorts,
-                postDescription : this.encodeBBCode(this.model.postDescription),
+                postDescription : postDesc ? this.encodeBBCode(postDesc) : null,
                 publicIP        : this.model.get('public_ip'),
                 publicName      : publicName,
                 graphs          : this.graphs,
@@ -192,14 +180,16 @@ define(['app_data/app',
         },
 
         onDomRefresh: function(){
-            if (this.model.postDescription)
+            if (this.model.get('postDescription'))
                 this.ui.close.parents('.message-wrapper').show();
         },
 
         closeMessage: function(){
-            this.ui.close.parents('.message-wrapper').slideUp();
-            delete this.model.postDescription;
-            delete App.storage['postDescription.' + this.model.id];
+            var model = this.model;
+            this.ui.close.parents('.message-wrapper').slideUp({complete: function(){
+                model.unset('postDescription');
+                model.command('set', {postDescription: null});
+            }});
         },
 
         startItem: function(){ this.model.cmdStart(); },

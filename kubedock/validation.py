@@ -291,6 +291,10 @@ new_pod_schema = {
         'nullable': True,
         'template_exists': True,
     },
+    'postDescription': {
+        'type': 'string',
+        'nullable': True,
+    },
     'kuberdock_resolve': {'type': 'list', 'schema': {'type': 'string'}},
     'node': {
         'type': 'string',

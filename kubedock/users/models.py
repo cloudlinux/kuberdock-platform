@@ -43,11 +43,11 @@ def clean_session(sid):
     db.session.commit()
 
 @login_manager.session_adder
-def add_session(sid, rid):
+def add_session(sid, uid, rid):
     if sid is None:
         return
     try:
-        db.session.add(SessionData(id=sid, role_id=rid))
+        db.session.add(SessionData(id=sid, user_id=uid, role_id=rid))
         db.session.commit()
     except (ResourceClosedError, IntegrityError):
         db.session.rollback()
@@ -391,17 +391,19 @@ class UserActivity(BaseModelMixin, db.Model):
 class SessionData(db.Model):
     __tablename__ = 'session_data'
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
-    time_stamp = db.Column(db.DateTime, nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)
     role_id = db.Column(db.Integer, nullable=False)
+    time_stamp = db.Column(db.DateTime, nullable=False)
 
-    def __init__(self, id, role_id=None):
+    def __init__(self, id, user_id, role_id):
         self.id = id
+        self.user_id = user_id
         self.role_id = role_id
         self.time_stamp = datetime.datetime.utcnow()
 
     def __repr__(self):
-        return "<SessionData(id='%s', role_id='%s', time_stamp='%s')>" % (
-            self.id, self.role_id, self.time_stamp)
+        return "<SessionData(id='%s', user_id='%s', role_id='%s', time_stamp='%s')>" % (
+            self.id, self.user_id, self.role_id, self.time_stamp)
 
 
 #####################

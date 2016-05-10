@@ -115,6 +115,7 @@ def process_pod(pod, rc, service):
         'restartPolicy': spec_body.get('restartPolicy', "Always"),
         'replicas': replicas,
         'kube_type': kdSection.get('kube_type', Kube.get_default_kube_type()),
+        'postDescription': kdSection.get('postDescription'),
         'kuberdock_template_id': kdSection.get('kuberdock_template_id'),
         'kuberdock_resolve': kdSection.get('resolve') or spec_body.get(
             'resolve', []),

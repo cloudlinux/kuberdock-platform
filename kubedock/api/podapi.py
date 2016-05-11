@@ -50,7 +50,8 @@ class PodsAPI(KubeUtils, MethodView):
         if billing_type != 'no billing' and user.fix_price and not privileged:
             command = params.get('command')
             commandOptions = params.get('commandOptions')
-            if command == 'set' and commandOptions.get('status') != db_pod.status:
+            if (command == 'set' and 'status' in commandOptions and
+                    commandOptions['status'] != db_pod.status):
                 # fix-price user is not allowed to change paid/unpaid status
                 # and start pod directly, only through billing system
                 raise PermissionDenied(

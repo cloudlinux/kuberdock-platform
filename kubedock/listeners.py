@@ -18,8 +18,8 @@ from .settings import (
     KUBERDOCK_INTERNAL_USER
 )
 from .utils import (get_api_url,
-                    unregistered_pod_warning, send_event,
-                    pod_without_id_warning, k8s_json_object_hook)
+                    unregistered_pod_warning, send_event, send_event_to_role,
+                    send_event_to_user, pod_without_id_warning, k8s_json_object_hook)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
 from .kapi.podcollection import PodCollection
@@ -85,9 +85,8 @@ def send_pod_status_update(pod, db_pod, event_type, app):
             event = ('pod:delete'
                      if db_pod.status in ('deleting', 'deleted') else
                      'pod:change')
-            send_event(event, {'id': db_pod.id})   # common for admins
-            send_event(event, {'id': db_pod.id},
-                       channel='user_{0}'.format(owner))
+            send_event_to_role(event, {'id': db_pod.id}, 1)   # common for admins
+            send_event_to_user(event, {'id': db_pod.id}, owner)
 
 
 def process_pods_event(data, app, event_time=None, live=True):
@@ -319,8 +318,7 @@ def process_events_event(data, app):
             message = 'Failed to run pod "{0}", reason: {1}'.format(
                 pod_name, reason
             )
-            send_event('notify:error', {'message': message},
-                       channel='user_{0}'.format(user.id))
+            send_event('notify:error', {'message': message})
 
             # message for admins
             message = 'Failed to run pod "{0}", user "{1}", reason: {2}'

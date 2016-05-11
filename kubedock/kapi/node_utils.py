@@ -7,8 +7,8 @@ from ..nodes.models import Node, NodeFlag
 from ..system_settings.models import SystemSettings
 from ..utils import from_binunit, from_siunit, get_api_url
 from ..billing.models import Kube
-from ..api import APIError
 from ..core import db
+from ..exceptions import APIError
 from ..settings import NODE_INSTALL_LOG_FILE
 
 def get_nodes_collection():

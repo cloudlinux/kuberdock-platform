@@ -5,7 +5,8 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from hashlib import md5
 from copy import deepcopy
 from ..core import db
-from ..utils import APIError, atomic
+from ..exceptions import APIError
+from ..utils import atomic
 from ..validation import UserValidator
 from ..billing.models import Package
 from ..pods.models import Pod

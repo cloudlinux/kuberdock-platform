@@ -16,7 +16,8 @@ from kubedock.testutils import create_app
 from ..pod import Pod
 from ..images import Image
 from .. import podcollection, helpers
-from ...utils import POD_STATUSES, APIError
+from ...exceptions import APIError
+from ...utils import POD_STATUSES
 from ...users.models import User
 from ...rbac.models import Role
 

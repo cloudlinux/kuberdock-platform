@@ -4,8 +4,8 @@ from flask import jsonify
 
 from .. import factory
 from .. import sessions
+from ..exceptions import APIError, PermissionDenied
 from ..rbac import acl, get_user_role
-from ..utils import APIError, PermissionDenied
 from kubedock.settings import SESSION_LIFETIME
 
 

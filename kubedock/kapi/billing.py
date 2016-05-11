@@ -4,8 +4,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError, ConnectionError, MissingSchema
 
+from kubedock.exceptions import APIError
 from kubedock.system_settings.models import SystemSettings
-from kubedock.utils import APIError
 
 
 class BillingCommon(object):

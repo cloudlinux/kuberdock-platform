@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify
+
+from ..billing import Kube
+from ..exceptions import APIError
 from ..rbac import check_permission
 from ..login import auth_required
 from ..decorators import maintenance_protected
 from ..validation import check_int_id, check_node_data, check_hostname
-from ..billing import Kube
-from . import APIError
 from ..kapi import nodes as kapi_nodes
 from ..kapi import node_utils
 

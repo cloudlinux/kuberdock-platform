@@ -1,5 +1,10 @@
+from collections import defaultdict
+from datetime import datetime
+import dateutil.parser
 from flask import Blueprint, request
+import time
 
+from ..exceptions import APIError
 from ..rbac import check_permission
 from ..login import auth_required
 from ..utils import KubeUtils
@@ -7,11 +12,7 @@ from ..users import User
 from ..kapi.users import UserNotFound
 from ..usage.models import ContainerState, IpState, PersistentDiskState
 from ..core import db
-from collections import defaultdict
-from . import APIError
-import time
-import dateutil.parser
-from datetime import datetime
+
 
 usage = Blueprint('usage', __name__, url_prefix='/usage')
 

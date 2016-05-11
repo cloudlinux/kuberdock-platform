@@ -1,12 +1,12 @@
 from pytz import common_timezones, timezone
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from flask.ext.login import current_user
 from flask.views import MethodView
 
+from ..exceptions import PermissionDenied
 from ..rbac import check_permission
 from ..login import auth_required
-from ..utils import KubeUtils, register_api, PermissionDenied
+from ..utils import KubeUtils, register_api
 from ..users.utils import append_offset_to_timezone
 from ..kapi.notifications import read_role_events
 from ..static_pages.models import MenuItem

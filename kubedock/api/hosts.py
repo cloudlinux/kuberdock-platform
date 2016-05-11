@@ -3,13 +3,12 @@ from datetime import datetime
 import requests
 
 from kubedock.decorators import maintenance_protected
+from kubedock.exceptions import APIError
 from kubedock.login import auth_required
 from kubedock.core import db
 from kubedock.nodes.models import RegisteredHost
-from kubedock.utils import KubeUtils, atomic
-from . import APIError
-from ..settings import ETCD_REGISTERED_HOSTS
-from ..utils import update_nginx_proxy_restriction
+from kubedock.utils import KubeUtils, atomic, update_nginx_proxy_restriction
+from kubedock.settings import ETCD_REGISTERED_HOSTS
 
 hosts = Blueprint('hosts', __name__, url_prefix='/hosts')
 

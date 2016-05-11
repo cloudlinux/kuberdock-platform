@@ -1,7 +1,7 @@
-from flask import Blueprint, current_app, request, jsonify, abort, session
+from flask import Blueprint, current_app, request, jsonify, session
 from uuid import uuid4
 
-from . import APIError
+from ..exceptions import APIError, PermissionDenied, NotAuthorized
 from ..users import User
 #from ..users.signals import user_logged_in
 from ..login import auth_required, login_user, current_user
@@ -31,14 +31,14 @@ def token2():
     username = request.json.get('username')
     password = request.json.get('password')
     if username is None or password is None:
-        abort(401)
+        raise NotAuthorized
     user = User.query.filter_by(username=username).first()
     if user is None or user.deleted:
-        abort(401)
+        raise NotAuthorized
     if not user.active:
-        abort(403)
+        raise PermissionDenied
     if not user.verify_password(password):
-        abort(401)
+        raise NotAuthorized
     if session.sid is None:
         session.sid = str(uuid4())
     login_user(user)

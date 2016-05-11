@@ -11,11 +11,11 @@ import responses
 
 from kubedock.core import db
 from kubedock.billing.models import Kube
+from kubedock.exceptions import APIError
 from kubedock.kapi import node_utils
 from kubedock.testutils.testcases import DBTestCase
 from kubedock import settings
 from kubedock.nodes.models import Node
-from kubedock.api import APIError
 
 
 class TestNodeUtils(DBTestCase):

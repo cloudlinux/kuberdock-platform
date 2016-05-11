@@ -1,7 +1,7 @@
 from flask import Blueprint, request, current_app, session
 from flask.views import MethodView
 
-from . import APIError
+from ..exceptions import APIError
 from ..rbac import check_permission
 from ..rbac.models import Role
 from ..login import auth_required, login_user, current_user, logout_user

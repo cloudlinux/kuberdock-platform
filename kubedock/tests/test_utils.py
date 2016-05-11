@@ -6,8 +6,9 @@ import nginx
 import mock
 
 from ..testutils.testcases import DBTestCase
+from ..exceptions import APIError
+from ..login import get_user_role
 from ..utils import (
-    APIError,
     atomic,
     get_api_url,
     compose_dnat,
@@ -16,7 +17,6 @@ from ..utils import (
     update_dict,
     run_ssh_command,
     all_request_params,
-    get_user_role,
     get_available_port,
     get_current_dnat,
     get_timezone,
@@ -369,11 +369,10 @@ class TestUtilsAllRequestParams(unittest.TestCase):
         self.assertEqual(all_request_params(), expected)
 
 
-class TestUtilsGetUserRole(unittest.TestCase):
-
-    @mock.patch('kubedock.utils.logout_user')
-    @mock.patch('kubedock.utils.g')
-    @mock.patch('kubedock.utils.current_user')
+class TestLoginGetUserRole(unittest.TestCase):
+    @mock.patch('kubedock.login.logout_user')
+    @mock.patch('kubedock.login.g')
+    @mock.patch('kubedock.login.current_user')
     def test_get_user_role(self, current_user_mock, g_mock, logout_user_mock):
         role1 = 'Admin'
         role2 = 'User'

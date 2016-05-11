@@ -5,7 +5,7 @@ from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer,
                           BadSignature, SignatureExpired)
 from hashlib import md5
 from werkzeug.local import LocalProxy
-
+from .exceptions import APIError, PermissionDenied, NotAuthorized
 
 current_user = LocalProxy(lambda: _get_user())
 ID_ATTRIBUTE = 'get_id'
@@ -148,6 +148,20 @@ def _get_user():
     return getattr(_request_ctx_stack.top, 'user', None)
 
 
+def get_user_role():
+    rolename = 'AnonymousUser'
+    try:
+        rolename = current_user.role.rolename
+    except AttributeError:
+        try:
+            rolename = g.user.role.rolename
+        except AttributeError:
+            pass
+    if rolename == 'AnonymousUser':
+        logout_user()
+    return rolename
+
+
 def auth_required(func):
     @wraps(func)
     def wrapper(*args, **kw):
@@ -155,9 +169,9 @@ def auth_required(func):
             token = request.args.get('token')
             user = current_app.login_manager.token_callback(token)
             if user is None or user.deleted:
-                abort(401)
+                raise NotAuthorized
             if not user.active:
-                abort(403)
+                raise PermissionDenied
             g.user = user
         return func(*args, **kw)
     return wrapper

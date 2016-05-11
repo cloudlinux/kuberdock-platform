@@ -15,12 +15,13 @@ from .helpers import KubeQuery, ModelQuery, Utilities
 from .licensing import is_valid as license_valid
 from ..core import db
 from ..billing import repr_limits
+from ..exceptions import APIError
 from ..kd_celery import celery
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
 from ..system_settings.models import SystemSettings
-from ..utils import APIError, POD_STATUSES, atomic, update_dict
+from ..utils import POD_STATUSES, atomic, update_dict
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'

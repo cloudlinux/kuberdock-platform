@@ -1,3 +1,5 @@
+import unittest
+
 from kubedock.testutils.testcases import APITestCase
 from kubedock.testutils import fixtures
 
@@ -16,6 +18,7 @@ class AuthTestCase(APITestCase):
         self.blocked_user_credentials = (blocked_user.username, blocked_passwd)
         self.deleted_user_credentials = (deleted_user.username, deleted_passwd)
 
+    @unittest.skip('ac_2805')
     def test_auth_with_valid_credentials(self):
         response = self.open(url=self.url, auth=self.valid_credentials)
         self.assert200(response)

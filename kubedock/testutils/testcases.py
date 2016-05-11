@@ -3,7 +3,6 @@ import base64
 import os
 import logging
 import sqlalchemy
-from datetime import timedelta
 from json import dumps as json_dumps
 
 from nose.plugins.attrib import attr
@@ -45,6 +44,7 @@ class DBTestCase(FlaskTestCase):
     DB_PASSWORD = 'kuberdock2go'
     DB_NAME = 'testkuberdock'
     SECRET_KEY = 'testsecretkey'
+    SESSION_LIFETIME = 3600
     SQLALCHEMY_DATABASE_URI = ('postgresql+psycopg2://{0}:{1}@127.0.0.1:5432/'
                                '{2}'.format(DB_USER, DB_PASSWORD, DB_NAME))
     fixtures = fixtures
@@ -101,8 +101,10 @@ class APITestCase(DBTestCase):
         from kubedock import sessions
         from kubedock.rbac import acl
 
+        #self.app.session_interface = sessions.ManagedSessionInterface(
+        #    sessions.DataBaseSessionManager(self.SECRET_KEY), 3600)
         self.app.session_interface = sessions.ManagedSessionInterface(
-            sessions.DataBaseSessionManager(self.SECRET_KEY), timedelta(days=1))
+            sessions.DataBaseSessionManager(), self.SESSION_LIFETIME)
         acl.init_permissions()
 
         self.user, user_password = fixtures.user_fixtures()

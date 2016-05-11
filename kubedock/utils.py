@@ -12,19 +12,22 @@ import nginx
 
 import subprocess
 from collections import namedtuple
-from flask import current_app, request, jsonify, g, has_app_context, Response, session
+from flask import (current_app, request, jsonify, g, has_app_context, Response,
+                   session, has_request_context)
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
 from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
 from traceback import format_exception
 
-from .login import current_user, logout_user
+from .login import current_user
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .pods import Pod
 from .core import ssh_connect, db, ConnectionPool
 from .settings import NODE_TOBIND_EXTERNAL_IPS, PODS_VERBOSE_LOG
 from .users.models import SessionData
+from .rbac.models import Role
+from .exceptions import APIError, PermissionDenied
 
 
 class UPDATE_STATUSES:
@@ -73,40 +76,58 @@ def get_channel_key(conn, key, size=100):
 
 def send_event_to_user(event_name, data, user_id, to_file=None, prefix='SSEEVT'):
     """
-    Selects all given user sessions and calls 'send_event' for all of them
+    Selects all given user sessions and sends list to send_event
     """
-    sessions = SessionData.query.filter_by(user_id=user_id)
-    for sess in sessions:
-        send_event(event_name, data, to_file, sess.id, prefix)
+    sessions = [i.id for i in SessionData.query.filter_by(user_id=user_id)]
+    send_event(event_name, data, to_file, sessions, prefix)
 
 
 def send_event_to_role(event_name, data, role_id, to_file=None, prefix='SSEEVT'):
     """
-    Selects all given role user sessions and calls 'send_event' for all of them
+    Selects all given role user sessions and sends list to send_event
     """
-    sessions = SessionData.query.filter_by(role_id=role_id)
-    for sess in sessions:
-        send_event(event_name, data, to_file, sess.id, prefix)
+    sessions = [i.id for i in SessionData.query.filter_by(role_id=role_id)]
+    send_event(event_name, data, to_file, sessions, prefix)
 
 
-def send_event(event_name, data, to_file=None, channel=None, prefix='SSEEVT'):
+def resolve_channels(channels, role='Admin'):
+    """
+    Tries to produce a valid channels list
+    @param channels: string, list, tuple or None
+    @param role: string -> role to map channels to when channels are missing
+    @return: list
+    """
+    if channels is None:
+        if has_request_context():
+            channels = getattr(session, 'sid', None)
+        if channels is None:
+            rid = Role.query.filter_by(rolename=role).first()
+            if rid is None:
+                return []
+            return [i.id for i in SessionData.query.filter_by(role_id=rid.id)]
+    if not isinstance(channels, (tuple, list)):
+        return [channels]
+    return channels
+
+
+def send_event(event_name, data, to_file=None, channels=None, prefix='SSEEVT'):
     """
     Sends event via pubsub to all subscribers and cache it to be rolled back
     if missed
     @param event_name: string -> event name
     @param data: dict -> data to be sent
     @param to_file: file handle object -> file object to output logs
-    @param channel: string -> target identifier for event to be sent to
+    @param channels: list -> target identifiers for event to be sent to
     @param prefix: string -> redis key prefix to store channel cache
     """
-    if channel is None:
-        channel = session.sid if session.sid is not None else 'common'
+    channels = resolve_channels(channels)
     conn = ConnectionPool.get_connection()
-    key = ':'.join([prefix, channel])
-    channel_key = get_channel_key(conn, key)
-    message = json.dumps([channel_key, event_name, data])
-    conn.hset(key, channel_key, message)
-    conn.publish(channel, message)
+    for channel in channels:
+        key = ':'.join([prefix, channel])
+        channel_key = get_channel_key(conn, key)
+        message = json.dumps([channel_key, event_name, data])
+        conn.hset(key, channel_key, message)
+        conn.publish(channel, message)
     if to_file is not None:
         try:
             to_file.write(data)
@@ -116,12 +137,12 @@ def send_event(event_name, data, to_file=None, channel=None, prefix='SSEEVT'):
             print 'Error writing to log file', e.__repr__()
 
 
-def send_logs(node, data, to_file=None, channel=None):
-    if channel is None:
-        channel = session.sid if session.sid is not None else 'common'
+def send_logs(node, data, to_file=None, channels=None):
+    channels = resolve_channels(channels)
     conn = ConnectionPool.get_connection()
-    conn.publish(channel, json.dumps(
-        [None, 'node:installLog', {'id': node, 'data': data}]))
+    msg = json.dumps([None, 'node:installLog', {'id': node, 'data': data}])
+    for channel in channels:
+        conn.publish(channel, msg)
     if to_file is not None:
         try:
             to_file.write(data)
@@ -176,57 +197,6 @@ def k8s_json_object_hook(obj):
             if dt is not None:
                 obj[key] = dt
     return obj
-
-
-# separate function because set_roles_loader decorator don't return function.
-# Lib bug.
-def get_user_role():
-    rolename = 'AnonymousUser'
-    try:
-        rolename = current_user.role.rolename
-    except AttributeError:
-        try:
-            rolename = g.user.role.rolename
-        except AttributeError:
-            pass
-    if rolename == 'AnonymousUser':
-        logout_user()
-    return rolename
-
-
-class APIError(Exception):
-    message = 'Unknown error'
-    status_code = 400
-
-    def __init__(self, message=None, status_code=None, type=None):
-        if message is not None:
-            self.message = message
-        if status_code is not None:
-            self.status_code = status_code
-        if type is not None:
-            self.type = type
-
-    def __str__(self):
-        # Only message because this class may wrap other exception classes
-        return self.message
-
-    def __repr__(self):
-        return '<{0}: "{1}" ({2})>'.format(
-            self.__class__.__name__, self.message, self.status_code)
-
-
-class PermissionDenied(APIError):
-    status_code = 403
-
-    def __init__(self, message=None, status_code=None, type=None):
-        if message is None:
-            message = 'Denied to {0}'.format(get_user_role())
-        super(PermissionDenied, self).__init__(message, status_code, type)
-
-
-class NotAuthorized(APIError):
-    message = 'Not Authorized'
-    status_code = 401
 
 
 class atomic(object):

@@ -1,7 +1,7 @@
 from collections import namedtuple
 from ..core import db
 from ..users.models import User
-from ..utils import send_event
+from ..utils import send_event_to_user, send_event_to_role
 from ..models_mixin import BaseModelMixin
 
 # Package and Kube with id=0 are default
@@ -162,8 +162,8 @@ class Kube(BaseModelMixin, db.Model):
         event_name, data = 'kube:{0}'.format(name), self.to_dict()
         for (user_id,) in db.session.query(User.id).filter(
                 User.package_id.in_([p.package_id for p in self.packages])).all():
-            send_event(event_name, data, channel='user_{0}'.format(user_id))
-        send_event(event_name, data, channel='common')
+            send_event_to_user(event_name, data, user_id)
+        send_event_to_role(event_name, data, 1)
 
 
 class ExtraTax(BaseModelMixin, db.Model):

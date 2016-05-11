@@ -3,7 +3,7 @@ from numbers import Number
 
 from flask import Blueprint
 from flask.views import MethodView
-from . import APIError
+from ..exceptions import APIError
 from ..login import auth_required
 from ..kapi import pstorage as ps
 from ..nodes.models import Node

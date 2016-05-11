@@ -7,7 +7,7 @@ from kubedock.kapi.notifications import attach_admin, detach_admin
 
 import pytz
 
-from ..utils import APIError
+from ..exceptions import APIError
 from ..validation import V
 
 

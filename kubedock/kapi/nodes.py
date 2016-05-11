@@ -8,10 +8,10 @@ from . import pstorage
 from .node_utils import add_node_to_db, delete_node_from_db
 from .podcollection import PodCollection
 from .. import tasks
-from ..api import APIError
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
 from ..core import db
+from ..exceptions import APIError
 from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
 from ..settings import (

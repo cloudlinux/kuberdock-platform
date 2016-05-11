@@ -4,7 +4,7 @@ import requests
 import string
 from ..core import db
 from ..pods.models import Pod
-from ..api import APIError
+from ..exceptions import APIError
 from ..utils import get_api_url
 from flask import current_app
 

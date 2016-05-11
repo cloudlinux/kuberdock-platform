@@ -7,7 +7,7 @@ from distutils.util import strtobool
 from sqlalchemy import func
 import pytz
 
-from .api import APIError
+from .exceptions import APIError
 from .predefined_apps.models import PredefinedApp
 from .billing.models import Kube, Package
 from .users.models import User

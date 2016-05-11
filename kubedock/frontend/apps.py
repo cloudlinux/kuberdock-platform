@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from flask import Blueprint, request, render_template, current_app
 from flask.ext.login import current_user
-from ..utils import APIError
+from ..exceptions import APIError
 from ..kapi.predefined_apps import PredefinedApps
 from ..billing.models import Package, Kube
 from ..users.models import User

@@ -1,8 +1,9 @@
 from flask import Blueprint, Response, jsonify, request
 from flask.views import MethodView
 from ..decorators import maintenance_protected
+from ..exceptions import APIError
 from ..login import auth_required
-from ..utils import KubeUtils, register_api, APIError, all_request_params
+from ..utils import KubeUtils, register_api, all_request_params
 from ..kapi import predefined_apps as kapi_apps
 from ..rbac import check_permission
 

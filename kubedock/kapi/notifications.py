@@ -3,7 +3,7 @@ from datetime import datetime
 from kubedock.core import db
 from kubedock.notifications.models import Notification, RoleForNotification
 from kubedock.rbac.models import Role
-from kubedock.utils import send_event
+from kubedock.utils import send_event_to_role
 
 
 def attach_admin(message, target=None):
@@ -21,11 +21,11 @@ def attach_admin(message, target=None):
     evt_entry.role = admin_role
     message_entry.roles.append(evt_entry)
     db.session.commit()
-    send_event('advise:show', {
+    send_event_to_role('advise:show', {
         'id': evt_entry.id,
         'description': message_entry.description,
         'target': target,
-        'type': message_entry.type})
+        'type': message_entry.type}, 1)
 
 
 def detach_admin(message):
@@ -44,7 +44,7 @@ def detach_admin(message):
         db.session.delete(message)
     db.session.commit()
     try:
-        send_event('advise:hide', {'id': ids[0]})
+        send_event_to_role('advise:hide', {'id': ids[0]}, 1)
     except IndexError:
         pass
 

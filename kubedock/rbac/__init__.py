@@ -5,7 +5,8 @@ from rbac.context import IdentityContext
 
 from .models import Resource, Role
 from ..core import cache
-from ..utils import PermissionDenied, get_user_role
+from ..exceptions import PermissionDenied
+from ..login import get_user_role
 
 
 class Registry(RegistryOrigin):

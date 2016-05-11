@@ -3,8 +3,8 @@ from functools import wraps
 from flask import jsonify
 
 from .updates.helpers import get_maintenance
-from .utils import APIError, get_user_role
-
+from .exceptions import APIError
+from .login import get_user_role
 
 
 def maintenance_protected(func):

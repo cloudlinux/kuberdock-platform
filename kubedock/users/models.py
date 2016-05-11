@@ -282,21 +282,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return sum([pod.kubes for pod in self.pods if not pod.is_deleted])
 
     def logout(self, commit=True):
-        for session in SessionData.query.all():
-            randval, hmac_digest, data = session.expand_data()
-            if not data:
-                continue
-            try:
-                user_id = int(data.get('user_id'))
-            except (TypeError, ValueError):
-                continue
-            if user_id == self.id:
-                new_data = data.copy()
-                new_data.pop('user_id')
-                new_data.pop('_fresh', None)
-                # TODO: Uncomment after "Remember me" will be implemented
-                # new_data['remember'] = 'clear'
-                session.data = randval, hmac_digest, new_data
+        for session in SessionData.query.filter_by(user_id=self.id):
+            db.session.delete(session)
 
         user_logged_out.send(self.id, commit=False)
         if commit:
@@ -391,9 +378,9 @@ class UserActivity(BaseModelMixin, db.Model):
 class SessionData(db.Model):
     __tablename__ = 'session_data'
     id = db.Column(postgresql.UUID, primary_key=True, nullable=False)
+    time_stamp = db.Column(db.DateTime, nullable=False)
     user_id = db.Column(db.Integer, nullable=False)
     role_id = db.Column(db.Integer, nullable=False)
-    time_stamp = db.Column(db.DateTime, nullable=False)
 
     def __init__(self, id, user_id, role_id):
         self.id = id
@@ -402,8 +389,8 @@ class SessionData(db.Model):
         self.time_stamp = datetime.datetime.utcnow()
 
     def __repr__(self):
-        return "<SessionData(id='%s', user_id='%s', role_id='%s', time_stamp='%s')>" % (
-            self.id, self.user_id, self.role_id, self.time_stamp)
+        return "<SessionData(id='%s', role_id='%s', time_stamp='%s')>" % (
+            self.id, self.role_id, self.time_stamp)
 
 
 #####################

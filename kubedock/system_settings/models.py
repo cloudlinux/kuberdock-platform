@@ -1,6 +1,6 @@
 import json
 from ..core import db
-from ..utils import APIError
+from ..exceptions import APIError
 
 
 class SystemSettings(db.Model):

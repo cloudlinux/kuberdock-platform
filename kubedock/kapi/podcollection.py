@@ -52,9 +52,26 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         self._get_pods(namespaces)
         self._merge()
 
-    def add(self, params, skip_check=False):  # TODO: celery
+    def _preprocess_new_pod(self, params, original_pod=None, skip_check=False):
+        """
+        Do some trivial checks and changes in new pod data.
+
+        :param params: pod config
+        :param original_pod: kapi-Pod object. Provide this if you need to check
+            edit, not creation.
+        :param skip_check: use it if you trust the source or need to break some
+            rules (usually for kuberdock-internal)
+        :returns: prepared pod config and list of secrets
+        """
         if not skip_check and not license_valid():
             raise APIError("Action forbidden. Please contact support.")
+
+        secrets = extract_secrets(params['containers'])
+        if original_pod is not None:
+            # use old secrets too, so user won't need to re-enter credentials
+            secrets.update(self._get_secrets(original_pod).values())
+        secrets = sorted(secrets)
+        fix_relative_mount_paths(params['containers'])
 
         # TODO: with cerberus 0.10 use "default" normalization rule
         for container in params['containers']:
@@ -63,8 +80,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             container.setdefault('kubes', 1)
         params.setdefault('volumes', [])
 
-        secrets = sorted(extract_secrets(params['containers']))
-        fix_relative_mount_paths(params['containers'])
+        params['owner'] = self.owner
 
         storage_cls = get_storage_class()
         if storage_cls:
@@ -78,9 +94,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             self._check_trial(params)
             Image.check_containers(params['containers'], secrets)
 
+        return params, secrets
+
+    def add(self, params, skip_check=False):  # TODO: celery
+        params, secrets = self._preprocess_new_pod(
+            params, skip_check=skip_check)
+
         params['namespace'] = params['id'] = str(uuid4())
         params['sid'] = str(uuid4())  # TODO: do we really need this field?
-        params['owner'] = self.owner
 
         billing_type = SystemSettings.get_by_name('billing_type').lower()
         if (not skip_check and billing_type != 'no billing' and
@@ -108,6 +129,46 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.public_aws = db_pod.public_aws
         pod._forge_dockers()
         return pod.as_dict()
+
+    @atomic(nested=False)
+    def edit(self, original_pod, data, skip_check=False):
+        """
+        Preprocess and add new pod config in db.
+        New config will be applied on the next manual restart.
+
+        :param original_pod: kubedock.kapi.pod.Pod
+        :param data: see command_pod_schema and edited_pod_config_schema
+            in kubedock.validation
+        """
+        new_pod_data = data.get('edited_config')
+        original_db_pod = DBPod.query.get(original_pod.id)
+        original_db_pod_config = original_db_pod.get_dbconfig()
+
+        data, secrets = self._preprocess_new_pod(
+            new_pod_data, original_pod=original_pod, skip_check=skip_check)
+
+        pod = Pod(dict(new_pod_data, **{
+            key: original_db_pod_config[key]
+            for key in ('namespace', 'id', 'sid')
+            if key in original_db_pod_config}))
+        # create PD models in db and change volumes schema in config
+        pod.compose_persistent()
+        # get old secrets, like mapping {secret: id-of-the-secret-in-k8s}
+        exist = {v: k for k, v in self._get_secrets(original_pod).iteritems()}
+        # create missing secrets in k8s and add IDs in config
+        pod.secrets = [
+            exist.get(secret) or self._make_secret(pod.namespace, *secret)
+            for secret in secrets]
+
+        # add in kapi-Pod
+        original_pod.edited_config = vars(pod).copy()
+        original_pod.edited_config.pop('owner', None)
+        # add in db-Pod config
+        original_config = original_db_pod.get_dbconfig()
+        original_config['edited_config'] = original_pod.edited_config
+        original_db_pod.set_dbconfig(original_config, save=False)
+
+        return original_pod.as_dict()
 
     def get(self, pod_id=None, as_json=True):
         if pod_id is None:
@@ -249,25 +310,33 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         cls._set_public_ip(pod)
 
     @atomic()
-    def _save_pod(self, obj, set_public_ip=False):
+    def _save_pod(self, obj, set_public_ip=False, db_pod=None):
         """
         Save pod data to db.
 
         :param obj: kapi-Pod
         :param set_public_ip: Assign some free IP address to the pod.
+        :param db_pod: update existing db-Pod
         """
         template_id = getattr(obj, 'kuberdock_template_id', None)
         status = getattr(obj, 'status', POD_STATUSES.stopped)
         excluded = ('kuberdock_template_id',  # duplicates of model's fields
                     'owner', 'kube_type', 'status', 'id', 'name')
         data = {k: v for k, v in vars(obj).iteritems() if k not in excluded}
-        pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
-                    status=status, template_id=template_id,
-                    kube_id=obj.kube_type, owner=self.owner)
-        db.session.add(pod)
+        if db_pod is None:
+            db_pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
+                           status=status, template_id=template_id,
+                           kube_id=obj.kube_type, owner=self.owner)
+            db.session.add(db_pod)
+        else:
+            db_pod.config = json.dumps(data)
+            db_pod.status = status
+            db_pod.kube_id = obj.kube_type
+            db_pod.owner = self.owner
+
         if set_public_ip:
-            self._set_public_ip(pod)
-        return pod
+            self._set_public_ip(db_pod)
+        return db_pod
 
     def update(self, pod_id, data):
         pod = self._get_by_id(pod_id)
@@ -279,8 +348,21 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             'stop': self._stop_pod,
             'redeploy': self._redeploy,
             'resize': self._resize_replicas,
+
+            # NOTE: the next three commands may look similar, but they do
+            #   completely defferent things. Maybe we need to rename some of
+            #   them, or change outer logic to reduce differences to merge a few
+            #   commands into one.
+
+            # immediately update pod confing in db and k8s.ReplicationController
+            # currently, it's used only for binding pod with LS to current node
             'change_config': self._change_pod_config,
-            'set': self._set_entry,  # sets DB data, not pod config one
+            # immediately set DB data
+            # currently, it's used for changing status, name, postDescription
+            'set': self._set_entry,
+            # add new pod config that will be applied after next manual restart
+            'edit': self.edit,
+
             # 'container_start': self._container_start,
             # 'container_stop': self._container_stop,
             # 'container_delete': self._container_delete,
@@ -554,6 +636,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.node = db_pod_config.get('node')
                 pod.podIP = db_pod_config.get('podIP')
                 pod.service = db_pod_config.get('service')
+                pod.edited_config = db_pod_config.get('edited_config')
 
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
@@ -659,6 +742,33 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             self._raise_if_failure(rv, "Could not resize a replica")
         return len(replicas)
 
+    @atomic()
+    def _apply_edit(self, pod, db_pod, db_config):
+        if db_config.get('edited_config') is None:
+            return pod, db_config
+
+        old_pod = pod
+        db_config = db_config['edited_config']
+        db_config['podIP'] = getattr(old_pod, 'podIP', None)
+        db_config['service'] = getattr(old_pod, 'service', None)
+
+        # re-check images, PDs, etc.
+        db_config['volumes'] = db_config['volumes_public']
+        db_config, _ = self._preprocess_new_pod(db_config, original_pod=old_pod)
+
+        pod = Pod(db_config)
+        # TODO: add/remove public IP
+        # needs_public_ip = self.needs_public_ip(db_config)
+        # had_public_ip = (old_db_config.get('public_ip') or
+        #                  old_db_config.get('public_aws'))
+        self._save_pod(pod, db_pod=db_pod)
+        pod.id = db_pod.id
+        pod.name = db_pod.name
+        pod.owner = db_pod.owner
+        pod.kube_type = db_pod.kube_id
+        pod._forge_dockers()
+        return pod, db_pod.get_dbconfig()
+
     def _start_pod(self, pod, data=None):
         if pod.status == POD_STATUSES.unpaid:
             raise APIError("Pod is unpaid, we can't run it")
@@ -668,7 +778,13 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
            pod.status == POD_STATUSES.failed:
             self._stop_pod(pod, block=True)
         self._make_namespace(pod.namespace)
-        db_config = pod.get_config()
+
+        command_options = (data or {}).get('commandOptions') or {}
+        db_pod = DBPod.query.get(pod.id)
+        db_config = db_pod.get_dbconfig()
+
+        if command_options.get('applyEdit'):
+            pod, db_config = self._apply_edit(pod, db_pod, db_config)
 
         self._process_persistent_volumes(pod, db_config.get('volumes', []))
 

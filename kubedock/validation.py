@@ -249,35 +249,7 @@ kube_type_schema = {'type': 'integer', 'coerce': int, 'kube_type_in_db': True}
 volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False,
                       'maxlength': 255}
 
-update_pod_schema = {
-    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy',
-                                              'set']},
-    'commandOptions': {
-        'type': 'dict',
-        'schema': {
-            'wipeOut': {'type': 'boolean', 'nullable': True},
-            'status': {'type': 'string', 'required': False,
-                       'allowed': ['unpaid', 'stopped']},
-            'name': pod_name_schema,
-            'postDescription': {'type': 'string', 'nullable': True},
-        }
-    },
-
-    # things that user allowed to change during pod's redeploy
-    'containers': {
-        'type': 'list',
-        'schema': {
-            'type': 'dict',
-            'schema': {
-                'kubes': kubes_qty_schema,
-                'name': dict(container_name_schema, required=True),
-            }
-        }
-    }
-}
-
-new_pod_schema = {
-    'name': dict(pod_name_schema, required=True),
+edited_pod_config_schema = {
     'podIP': {
         'type': 'ipv4',
         'nullable': True,
@@ -286,16 +258,6 @@ new_pod_schema = {
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
     'kube_type': dict(kube_type_schema, kube_type_in_user_package=True,
                       kube_type_exists=True, required=True),
-    'kuberdock_template_id': {
-        'type': 'integer',
-        'min': 0,
-        'nullable': True,
-        'template_exists': True,
-    },
-    'postDescription': {
-        'type': 'string',
-        'nullable': True,
-    },
     'kuberdock_resolve': {'type': 'list', 'schema': {'type': 'string'}},
     'node': {
         'type': 'string',
@@ -305,10 +267,6 @@ new_pod_schema = {
     'restartPolicy': {
         'type': 'string', 'required': True,
         'allowed': ['Always', 'OnFailure', 'Never']
-    },
-    'status': {
-        'type': 'string', 'required': False,
-        'allowed': ['stopped', 'unpaid']
     },
     'volumes': {
         'type': 'list',
@@ -430,7 +388,6 @@ new_pod_schema = {
                             },
                             'name': {
                                 'type': 'string',
-                                'has_volume': True,
                             },
                         },
                     }
@@ -449,6 +406,60 @@ new_pod_schema = {
                         'password': {'type': 'string', 'nullable': True},
                     }
                 }
+            }
+        }
+    }
+}
+
+
+new_pod_schema = deepcopy(edited_pod_config_schema)
+new_pod_schema.update({
+    'name': dict(pod_name_schema, required=True),
+    'postDescription': {
+        'type': 'string',
+        'nullable': True,
+    },
+    'kuberdock_template_id': {
+        'type': 'integer',
+        'min': 0,
+        'nullable': True,
+        'template_exists': True,
+    },
+    'status': {
+        'type': 'string', 'required': False,
+        'allowed': ['stopped', 'unpaid']
+    },
+})
+
+
+command_pod_schema = {
+    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy',
+                                              'set', 'edit']},
+    'commandOptions': {
+        'type': 'dict',
+        'schema': {
+            'wipeOut': {'type': 'boolean', 'nullable': True},
+            'status': {'type': 'string', 'required': False,
+                       'allowed': ['unpaid', 'stopped']},
+            'name': pod_name_schema,
+            'postDescription': {'type': 'string', 'nullable': True},
+        }
+    },
+
+    'edited_config': {
+        'type': 'dict',
+        'match_volumes': True,
+        'schema': edited_pod_config_schema,
+    },
+
+    # things that user allowed to change during pod's redeploy
+    'containers': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'kubes': kubes_qty_schema,
+                'name': dict(container_name_schema, required=True),
             }
         }
     }
@@ -806,19 +817,12 @@ class V(cerberus.Validator):
                             "Can't be resolved. "
                             "Check /etc/hosts file for correct Node records")
 
-    def _validate_has_volume(self, has_volume, field, value):
-        # Used in volumeMounts
-        if has_volume:
-            if not self.document.get('volumes'):
-                self._error(field,
-                            'Volume is needed, but no volumes are described')
-                return
-            vol_names = [v.get('name', '') for v in self.document['volumes']]
-            if value not in vol_names:
-                self._error(
-                    field,
-                    'Volume "{0}" is not defined in volumes list'.format(
-                        value))
+    def _validate_match_volumes(self, match_volumes, field, value):
+        """Used in pod spec root to check volumeMounts and volumes"""
+        if match_volumes:
+            volumes_mismatch = check_volumes_match(value)
+            if volumes_mismatch:
+                self._error(field, volumes_mismatch)
 
     def _validate_volume_type_required(self, vtr, field, value):
         # Used in volumes list
@@ -904,9 +908,10 @@ def check_hostname(hostname):
 
 
 def check_change_pod_data(data):
-    data = V(allow_unknown=True)._api_validation(data, update_pod_schema)
+    data = V(allow_unknown=True)._api_validation(data, command_pod_schema)
     # TODO: with cerberus 0.10, just use "purge_unknown" option
     return {'command': data.get('command'),
+            'edited_config': data.get('edited_config') or {},
             'commandOptions': data.get('commandOptions') or {},
             'containers': [{'name': c.get('name'), 'kubes': c.get('kubes')}
                            for c in data.get('containers') or []]}
@@ -916,6 +921,9 @@ def check_new_pod_data(data, user=None):
     validator = V(user=None if user is None else user.username)
     if not validator.validate(data, new_pod_schema):
         raise APIError(validator.errors)
+    volumes_mismatch = check_volumes_match(data)
+    if volumes_mismatch:
+        raise APIError(volumes_mismatch)
 
 
 def check_internal_pod_data(data, user=None):
@@ -1023,3 +1031,13 @@ def check_pricing_api(data, schema, *args, **kwargs):
     data = {field: value for field, value in validated.iteritems()
             if field in schema}
     return data
+
+
+def check_volumes_match(pod_config):
+    vol_names = {v.get('name', '') for v in pod_config.get('volumes') or []}
+
+    for container in pod_config.get('containers') or []:
+        for volume_mount in container.get('volumeMounts') or []:
+            if volume_mount.get('name') not in vol_names:
+                return ('Volume "{0}" is not defined in volumes list'
+                        .format(volume_mount.get('name')))

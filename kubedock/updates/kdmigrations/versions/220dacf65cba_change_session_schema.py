@@ -18,10 +18,11 @@ def upgrade():
     conn = op.get_bind()
     conn.execute("DELETE FROM session_data")
     op.drop_column('session_data', 'data')
-    op.add_column('session_data', sa.Column(
-        'role_id', sa.Integer(), nullable=False))
+    op.add_column('session_data', sa.Column('user_id', sa.Integer(), nullable=False))
+    op.add_column('session_data', sa.Column('role_id', sa.Integer(), nullable=False))
 
 
 def downgrade():
+    op.drop_column('session_data', 'user_id')
     op.drop_column('session_data', 'role_id')
     op.add_column('session_data', sa.Column('data', sa.PickleType, nullable=True))

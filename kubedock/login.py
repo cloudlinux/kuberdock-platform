@@ -131,7 +131,7 @@ def login_user(user, DB=True):
     session['_id'] = _create_identifier()
     _request_ctx_stack.top.user = user
     if DB and current_app.login_manager.adder_callback:
-        current_app.login_manager.adder_callback(session.sid, user.role_id)
+        current_app.login_manager.adder_callback(session.sid, user_id, user.role_id)
     return True
 
 

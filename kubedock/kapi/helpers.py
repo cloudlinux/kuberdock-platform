@@ -3,8 +3,8 @@ import random
 import requests
 import string
 from ..core import db
+from ..exceptions import APIError
 from ..pods.models import Pod
-from ..api import APIError
 from ..utils import get_api_url
 from flask import current_app
 

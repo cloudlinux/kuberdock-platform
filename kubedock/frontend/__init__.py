@@ -4,8 +4,8 @@ from flask import jsonify
 
 from .. import factory
 from .. import sessions
+from ..exceptions import APIError, PermissionDenied
 from ..rbac import acl, get_user_role
-from ..utils import APIError, PermissionDenied
 
 
 def create_app(settings_override=None, fake_sessions=False):

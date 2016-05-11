@@ -2,7 +2,8 @@ from flask import Blueprint
 from flask.views import MethodView
 from ..decorators import login_required_or_basic_or_token
 from ..decorators import maintenance_protected
-from ..utils import KubeUtils, register_api, PermissionDenied
+from ..exceptions import PermissionDenied
+from ..utils import KubeUtils, register_api
 from ..kapi.podcollection import PodCollection, PodNotFound
 from ..pods.models import Pod
 from ..system_settings.models import SystemSettings

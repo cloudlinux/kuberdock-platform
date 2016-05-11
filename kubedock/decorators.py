@@ -3,10 +3,10 @@ from functools import wraps
 from flask import current_app, g, jsonify, request
 from flask.ext.login import current_user
 
+from .exceptions import APIError, PermissionDenied, NotAuthorized
 from .updates.helpers import get_maintenance
 from .users import User
-from kubedock.nodes.models import RegisteredHost
-from .utils import APIError, PermissionDenied, NotAuthorized, get_user_role
+from .utils import get_user_role
 
 
 def login_required_or_basic_or_token(func):

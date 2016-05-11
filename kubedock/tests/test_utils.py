@@ -6,8 +6,8 @@ import nginx
 import mock
 
 from ..testutils.testcases import DBTestCase
+from ..exceptions import APIError
 from ..utils import (
-    APIError,
     atomic,
     get_api_url,
     compose_dnat,

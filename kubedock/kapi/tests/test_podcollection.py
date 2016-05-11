@@ -13,10 +13,11 @@ from collections import namedtuple
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 from kubedock.testutils import create_app
 
+from ...exceptions import APIError
 from ..pod import Pod
 from ..images import Image
 from .. import podcollection, helpers
-from ...utils import POD_STATUSES, APIError
+from ...utils import POD_STATUSES
 from ...users.models import User
 from ...rbac.models import Role
 

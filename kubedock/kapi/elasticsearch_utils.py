@@ -1,7 +1,7 @@
 import elasticsearch as elastic
 from requests import RequestException
 
-from ..api import APIError
+from ..exceptions import APIError
 from ..nodes.models import Node
 from ..settings import ELASTICSEARCH_REST_PORT
 

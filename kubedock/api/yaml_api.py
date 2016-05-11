@@ -4,7 +4,8 @@ from flask import Blueprint
 from flask.views import MethodView
 from kubedock.decorators import (login_required_or_basic_or_token,
                                  maintenance_protected)
-from kubedock.utils import KubeUtils, register_api, APIError, send_event
+from kubedock.exceptions import APIError
+from kubedock.utils import KubeUtils, register_api, send_event
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
 from kubedock.settings import KUBE_API_VERSION

@@ -3,8 +3,8 @@ from numbers import Number
 
 from flask import Blueprint
 from flask.views import MethodView
-from . import APIError
 from ..decorators import login_required_or_basic_or_token
+from ..exceptions import APIError
 from ..kapi import pstorage as ps
 from ..nodes.models import Node
 from ..pods.models import PersistentDisk

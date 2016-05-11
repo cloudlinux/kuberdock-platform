@@ -2,7 +2,7 @@ import hashlib
 import urlparse
 
 from flask import request
-from kubedock.utils import APIError
+from kubedock.exceptions import APIError
 from kubedock.kapi.billing import BillingCommon
 
 

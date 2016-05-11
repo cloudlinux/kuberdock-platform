@@ -11,9 +11,10 @@ import json
 import subprocess
 
 from kubedock.api import create_app
+from kubedock.exceptions import APIError
 from kubedock.kapi.nodes import create_node
 from kubedock.validation import check_node_data
-from kubedock.utils import APIError, UPDATE_STATUSES
+from kubedock.utils import UPDATE_STATUSES
 from kubedock.core import db
 from kubedock.models import User, Pod
 from kubedock.billing.models import Package, Kube, PackageKube

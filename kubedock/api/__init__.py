@@ -5,7 +5,7 @@ from fabric.api import env, run, put, output
 
 from .. import factory
 from .. import sessions
-from ..utils import APIError
+from ..exceptions import APIError
 from kubedock.settings import SSH_KEY_FILENAME
 
 

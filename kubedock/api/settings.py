@@ -6,7 +6,8 @@ from flask.views import MethodView
 
 from ..rbac import check_permission
 from ..decorators import login_required_or_basic_or_token
-from ..utils import KubeUtils, register_api, PermissionDenied
+from ..exceptions import PermissionDenied
+from ..utils import KubeUtils, register_api
 from ..users.utils import append_offset_to_timezone
 from ..kapi.notifications import read_role_events
 from ..static_pages.models import MenuItem

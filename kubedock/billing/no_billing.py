@@ -1,4 +1,4 @@
-from kubedock.utils import APIError
+from kubedock.exceptions import APIError
 from kubedock.kapi.billing import BillingCommon
 from kubedock.kapi.users import UserCollection
 from kubedock.billing.models import Package, Kube

@@ -251,7 +251,7 @@ yum_wrapper()
 
 chk_ver()
 {
-    python -c "from distutils.version import LooseVersion; print(LooseVersion('$1') < LooseVersion('$2'))"
+    python -c "import rpmUtils.miscutils as misc; print misc.compareEVR(misc.stringToVersion('$1'), misc.stringToVersion('$2')) < 0"
 }
 
 

@@ -111,7 +111,9 @@
                         margin-bottom: 0 !important;
                     }
                 }
-                a{
+                a,
+                .poditem-page-btn,
+                .container-page-btn{
                     color: #3197ee;
                     &:hover{
                         color: #3197ee;
@@ -612,19 +614,6 @@
                             background: url('../img/tooltip-arrow-up.png') 0 0 no-repeat
                         }
                     }
-                }
-            }
-            // FIXME: "a" is messing up with bootstrap-select
-            // a, .poditem-page-btn, .container-page-btn{
-            .poditem-page-btn,
-            .container-page-btn{
-                padding: 0;
-                color: #3197ee;
-                font-size: 13px;
-                font-family: @regular;
-                text-decoration: none;
-                &:hover{
-                    cursor: pointer;
                 }
             }
             .image-tag{

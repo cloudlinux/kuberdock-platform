@@ -409,16 +409,17 @@ def get_kuberdocks_toinstall(testing=False):
     try:
         installed_kuberdock = list(
             yb.doPackageLists('installed', patterns=['kuberdock']))[0]
-    except IndexError:
-        print >> sys.stderr, 'Kuberdock package is not installed'
-        sys.exit(1)
 
-    try:
         all_kuberdocks = yb.doPackageLists(pkgnarrow='available',
                                            showdups=True,
                                            patterns=['kuberdock'])
-    except yum.Errors.YumBaseError:
-        all_kuberdocks = []
+    except IndexError:
+        print >> sys.stderr, 'Kuberdock package is not installed'
+        sys.exit(1)
+    except yum.Errors.YumBaseError as e:
+        print >> sys.stderr, 'Error while retrieving package list:'
+        print >> sys.stderr, e
+        sys.exit(1)
 
     # Don't use i.envra right here because sorting will be incorrect
     sorted_available = sorted([i for i in all_kuberdocks if i > installed_kuberdock])

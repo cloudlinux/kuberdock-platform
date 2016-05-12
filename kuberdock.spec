@@ -67,6 +67,7 @@ Requires: python-flask-script
 Requires: python-bitmath
 Requires: python-websocket-client >= 0.32.0
 Requires: python-elasticsearch >= 1.0
+Requires: pytz >= 2012d
 Requires: PyYAML
 
 # AutoReq: 0

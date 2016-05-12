@@ -1,0 +1,8 @@
+---
+
+- name: Is Nebula?
+  stat: path=/tmp/one_env
+  register: one_env
+
+- set_fact:
+    is_nebula: one_env.stat.exists

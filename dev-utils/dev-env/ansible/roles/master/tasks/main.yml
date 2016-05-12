@@ -1,3 +1,5 @@
+- include: detect_vm.yml
+
 - name: Install additional dev packages
   yum: name={{ item }} state=latest
   with_items:
@@ -115,8 +117,7 @@
   command: bash /vagrant/dev-utils/prepare_test_env.sh
   when: is_dev_install
 
-- name: Create IP pool
-  shell: python /vagrant/manage.py create-ip-pool -s "{{ (ansible_all_ipv4_addresses | last).split('.')[:3]|join('.')}}.0/24" -e 1-30
+- include: ip_pool.yml
 
 - name: Create users
   shell: python /vagrant/manage.py create-user -u {{ item }} -p {{ item }} -r User

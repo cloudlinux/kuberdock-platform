@@ -34,12 +34,13 @@ from .system_settings.models import SystemSettings
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
-    NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+    KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
     check_namespace_exists)
 from .kapi.usage import update_states
+from .kapi.node import Node as K8SNode
 
 from .kd_celery import celery, exclusive_task
 
@@ -123,6 +124,9 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
                 'kuberdock-node-hostname': host,
                 'kuberdock-kube-type':
                     'type_' + str(kube_type)
+            },
+            'annotations': {
+                K8SNode.FREE_PUBLIC_IP_COUNTER_FIELD: '0'
             }
         },
         'spec': {
@@ -147,6 +151,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
     kube_type = db_node.kube_id
     cpu_multiplier = SystemSettings.get_by_name('cpu_multiplier')
     memory_multiplier = SystemSettings.get_by_name('memory_multiplier')
+    ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
+    token = ku.get_token() if ku else ''
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
         try:
             current_master_kubernetes = subprocess.check_output(
@@ -225,9 +231,10 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             )
 
         sftp.close()
-        deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} ' \
-                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} ' \
+        deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
+                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
                      'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} ' \
+                     'NONFLOATING_PUBLIC_IPS={8} TOKEN="{9}" '\
                      'bash /node_install.sh'
         if CEPH:
             deploy_cmd = 'CEPH_CONF={} '.format(
@@ -247,7 +254,9 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
                               node_interface, timezone, host,
                               cpu_multiplier, memory_multiplier,
-                              timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT),
+                              current_app.config['NONFLOATING_PUBLIC_IPS'],
+                              token),
+            timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
             get_pty=True)
         s_time = time.time()
         while not o.channel.exit_status_ready():
@@ -408,14 +417,11 @@ def fix_pods_timeline():
 def add_k8s_node_labels(nodename, labels):
     """Add given labels to the node in kubernetes
     :param nodename: node hostname
-    :param labels: dict of labels to add
+    :param labels: dict of labels to be patched.
+    Look https://tools.ietf.org/html/rfc7386 for dict format
     """
-    headers = {'Content-Type': 'application/strategic-merge-patch+json'}
-    res = requests.patch(
-        get_api_url('nodes', nodename, namespace=False),
-        json={'metadata': {'labels': labels}},
-        headers=headers
-    )
+    node = K8SNode(hostname=nodename)
+    node.patch_labels(labels)
 
 
 def _check_ceph_via_ssh(ssh):

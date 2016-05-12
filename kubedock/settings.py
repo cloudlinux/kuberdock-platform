@@ -1,8 +1,6 @@
 import os
 import ConfigParser
 from datetime import timedelta
-import subprocess
-
 from celery.schedules import crontab
 
 DEFAULT_TIMEZONE = 'UTC'
@@ -205,6 +203,7 @@ NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
 ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/' \
                         'v2/keys/kuberdock/network/plugin/registered_hosts'
+NONFLOATING_PUBLIC_IPS = False
 
 # Import hoster settings in update case
 

@@ -86,7 +86,8 @@ def _check_notifications(data):
 
 def update_installation_id(installation_id):
     V()._api_validation({'installation_id': installation_id},
-                        {'installation_id': {'type': 'string', 'empty': False}})
+                        {'installation_id':
+                             {'type': 'string', 'empty': False}})
     data = _load_license()
     if data is None:
         return

@@ -626,6 +626,13 @@ ippool_schema = {
                        'or 6-134 or both comma-separated',
         },
     },
+    'node': {
+        'type': 'string',
+        'nullable': True,
+        # Optional because schema should be the same both when
+        # NONFLOATING_PUBLIC_IPS is either True and False.
+        'required': False,
+    },
 }
 
 

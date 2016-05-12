@@ -275,7 +275,7 @@ def process_events_event(data, app):
 
             message = event['message']
             not_enough_resources_keywords = [
-                'CPU', 'Memory', 'PodCount'
+                'PodCount', 'CPU', 'Memory', 'PublicIP'
             ]
 
             node = pod.get_dbconfig('node')

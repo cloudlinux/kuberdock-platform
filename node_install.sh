@@ -475,6 +475,13 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
+cat > "$PLUGIN_DIR/kuberdock.ini" << EOF
+NONFLOATING_PUBLIC_IPS=$([ "$NONFLOATING_PUBLIC_IPS" = True ] && echo "yes" || echo "no")
+MASTER=$MASTER_IP
+NODE=$NODENAME
+TOKEN=$TOKEN
+EOF
+
 systemctl daemon-reload
 systemctl reenable kuberdock-watcher
 check_status

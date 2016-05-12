@@ -1,6 +1,11 @@
+import json
+
 import ipaddress
-from kubedock.testutils.testcases import APITestCase
+import responses
+
 from kubedock.kapi.ippool import IpAddrPool, PodIP, IPPool
+from kubedock.testutils.fixtures import K8SAPIStubs
+from kubedock.testutils.testcases import APITestCase
 
 
 class TestIPPool(APITestCase):
@@ -9,7 +14,9 @@ class TestIPPool(APITestCase):
 
     def setUp(self):
         network = u'192.168.1.0/30'
-        IpAddrPool().create({'network': network, 'autoblock': '1'})
+        self.node = self.fixtures.node()
+        IpAddrPool().create({'network': network, 'autoblock': '1', 'node':
+            self.node.id})
         self.ippool = IPPool.query.get(network)
         self.pod = self.fixtures.pod(owner_id=self.user.id)
         self.pod_ip = PodIP(
@@ -18,7 +25,12 @@ class TestIPPool(APITestCase):
             ip_address=int(ipaddress.ip_address(u'192.168.1.2')),
         )
         self.db.session.add(self.pod_ip)
+        self.db.session.add(self.node)
         self.db.session.commit()
+
+        self.stubs = K8SAPIStubs()
+        self.stubs.node_info_in_k8s_api(self.node.hostname)
+        self.stubs.node_info_update_in_k8s_api(self.node.hostname)
 
     def test_get_user_ips(self):
         response = self.user_open(self.item_url('userstat'))
@@ -26,15 +38,16 @@ class TestIPPool(APITestCase):
         self.assertEqual(response.json['data'], [{'id': '192.168.1.2',
                                                   'pod_id': self.pod.id,
                                                   'pod': self.pod.name}])
-
     def test_get(self):
         response = self.admin_open()
         self.assert200(response)  # TODO: check response format
         response = self.admin_open(self.item_url(self.ippool.network))
         self.assert200(response)  # TODO: check response format
 
+    @responses.activate
     def test_create(self):
-        new_network = {'network': '192.168.2.0/30', 'autoblock': ''}
+        new_network = {'network': '192.168.2.0/30', 'autoblock': '', 'node':
+            self.node.hostname}
         response = self.admin_open(method='POST', json=new_network)
         self.assert200(response)  # TODO: check response format
 

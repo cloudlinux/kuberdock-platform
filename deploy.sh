@@ -99,6 +99,9 @@ while [[ $# > 0 ]];do
         -g|--hostgw-backend)
         CONF_FLANNEL_BACKEND='host-gw'
         ;;
+        --nonfloating-ip)
+        NONFLOATING_PUBLIC_IPS=true
+        ;;
         --vni)
         VNI="$2";   # vxlan network id. Defaults to 1
         shift
@@ -877,6 +880,12 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
+
+if [ "$NONFLOATING_PUBLIC_IPS" = true ]; then
+    sed -i 's/^KUBE_SCHEDULER_ARGS.*/KUBE_SCHEDULER_ARGS="--enable-non-floating-ip=true"/' $KUBERNETES_CONF_DIR/scheduler
+    sed -i 's/NONFLOATING_PUBLIC_IPS = False/NONFLOATING_PUBLIC_IPS = True/' \
+     $KUBERDOCK_DIR/kubedock/settings.py
+fi
 
 log_it echo "Starting kubernetes..."
 for i in kube-apiserver kube-controller-manager kube-scheduler heapster;

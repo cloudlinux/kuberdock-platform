@@ -37,3 +37,8 @@ class PermissionDenied(APIError):
 class NotAuthorized(APIError):
     message = 'Not Authorized'
     status_code = 401
+
+
+class NoFreeIPs(APIError):
+    message = 'There are no free public IP-addresses, contact KuberDock ' \
+              'administrator'

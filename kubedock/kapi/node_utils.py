@@ -16,14 +16,14 @@ def get_nodes_collection():
     """Returns information for all known nodes.
 
     Side effect: If some node exists in kubernetes, but is missed in DB, then
-    it will be created in DB (see documentation for _fix_missed_nodes function).
+    it will be created in DB (see documentation for _fix_missed_nodes function)
 
     Nodes description will be enriched with some additional fields:
         'status' will be retrieved from kubernetes
         'reason' is extended description for status, it is also based on info
             from kubernetes
         'install_log' will be readed from node installation log
-        'resources' info about node resources, will be retrieved from kubernetes
+        'resources' info about node resources, will be retrieved from k8s
     :return: list of dicts
     """
     nodes = Node.get_all()

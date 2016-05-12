@@ -3,7 +3,7 @@
 
 nodesCount = Integer(ENV['KD_NODES_COUNT'] || '1')
 
-masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '1024')
+masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '2048')
 masterCpus = Integer(ENV['KD_MASTER_CPUS'] || '1')
 
 nodeMemory = Integer(ENV['KD_NODE_MEMORY'] || '2048')

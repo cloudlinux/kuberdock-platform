@@ -294,7 +294,8 @@ def pull_hourly_stats():
     try:
         data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
     except Exception:
-        data = []
+        current_app.logger.exception('Skip pulling statistics because of error.')
+        return
     time_windows = set(map(operator.itemgetter('time_window'), data))
     rv = db.session.query(StatWrap5Min).filter(
         StatWrap5Min.time_window.in_(time_windows))

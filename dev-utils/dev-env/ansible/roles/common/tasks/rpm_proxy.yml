@@ -11,7 +11,7 @@
   changed_when: False
 
 - set_fact: proxy="{{ rpm_proxies[zn.stdout] | default(None) }}"
-  when: zn is defined
+  when: st.stat.exists and zn is defined
 
 - name: Setting rpm proxy
   lineinfile:

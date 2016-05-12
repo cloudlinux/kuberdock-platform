@@ -15,7 +15,7 @@ def token():
         username = request.authorization.get('username', None)
         passwd = request.authorization.get('password', None)
         if username is not None and passwd is not None:
-            user = User.query.filter_by(username=username).first()
+            user = User.query.filter(User.username_iequal(username)).first()
             if user is None or user.deleted:
                 pass
             elif not user.active:
@@ -32,7 +32,7 @@ def token2():
     password = request.json.get('password')
     if username is None or password is None:
         raise NotAuthorized
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter(User.username_iequal(username)).first()
     if user is None or user.deleted:
         raise NotAuthorized
     if not user.active:

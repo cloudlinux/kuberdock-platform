@@ -1,3 +1,5 @@
+import json
+import base64
 import unittest
 
 from kubedock.testutils.testcases import APITestCase
@@ -18,21 +20,44 @@ class AuthTestCase(APITestCase):
         self.blocked_user_credentials = (blocked_user.username, blocked_passwd)
         self.deleted_user_credentials = (deleted_user.username, deleted_passwd)
 
-    @unittest.skip('ac_2805')
+    def _get_token(self, url, auth):
+        return self.client.open(url, headers={
+            'Authorization': 'Basic ' + base64.b64encode(':'.join(auth))})
+
     def test_auth_with_valid_credentials(self):
-        response = self.open(url=self.url, auth=self.valid_credentials)
+        response = self._get_token(self.url, self.valid_credentials)
+        self.assert200(response)
+        self.assertEqual(response.json.get('status'), 'OK')
+        self.assertNotEqual(response.json.get('token'), None)
+
+    def test_auth_case_insensitive_login(self):
+        auth = (self.valid_credentials[0].swapcase(), self.valid_credentials[1])
+        response = self._get_token(self.url, auth)
         self.assert200(response)
         self.assertEqual(response.json.get('status'), 'OK')
         self.assertNotEqual(response.json.get('token'), None)
 
     def test_auth_with_invalid_credentials(self):
-        response = self.open(url=self.url, auth=self.invalid_credentials)
+        response = self._get_token(self.url, self.invalid_credentials)
         self.assert401(response)
 
     def test_auth_as_deleted_user(self):
-        response = self.open(url=self.url, auth=self.deleted_user_credentials)
+        response = self._get_token(self.url, self.deleted_user_credentials)
         self.assert401(response)
 
     def test_auth_as_blocked_user(self):
-        response = self.open(url=self.url, auth=self.blocked_user_credentials)
+        response = self._get_token(self.url, self.blocked_user_credentials)
         self.assert403(response)
+
+
+class JWTTestCase(AuthTestCase):
+    """Check Authorization by JWT"""
+
+    url = '/auth/token2'
+
+    def _get_token(self, url, auth):
+        return self.client.open(
+            url, data=json.dumps({'username': auth[0], 'password': auth[1]}),
+            method='POST', content_type='application/json')
+
+    # TODO: check token content for both /auth/token and /auth/token2

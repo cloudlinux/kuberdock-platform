@@ -64,7 +64,7 @@ class TestLicenseValidation(unittest.TestCase):
         self.assertFalse(licensing.is_timestamp_ok(self.license))
 
     def _move_license_expiration(self, days_delta):
-        new_exp = datetime.datetime.now() + datetime.timedelta(days=days_delta)
+        new_exp = datetime.datetime.utcnow() + datetime.timedelta(days=days_delta)
         self.license[u'data'][u'license'][u'expiration'] = new_exp.replace(
             tzinfo=pytz.UTC).isoformat()
 

@@ -22,7 +22,8 @@ fi
 # Parse args
 
 
-CONF_FLANNEL_BACKEND='host-gw'
+CONF_FLANNEL_BACKEND="vxlan"
+VNI="1"
 while [[ $# > 0 ]];do
     key="$1"
     case $key in
@@ -58,9 +59,11 @@ while [[ $# > 0 ]];do
         -u|--udp-backend)
         CONF_FLANNEL_BACKEND='udp'
         ;;
-        -x|--vxlan-backend)
-        CONF_FLANNEL_BACKEND='vxlan'
-        VNI="${2-1}";   # vxlan network id. Defaults to 1
+        -g|--hostgw-backend)
+        CONF_FLANNEL_BACKEND='host-gw'
+        ;;
+        --vni)
+        VNI="$2";   # vxlan network id. Defaults to 1
         shift
         ;;
         *)
@@ -244,14 +247,6 @@ do_deploy()
 #    echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
 #    exit 1
 #fi
-if [ "$ISAMAZON" = true ];then
-    log_it echo "Flannel backend will be set to \"aws-vpc\""
-else
-    log_it echo "Flannel backend has been set to $CONF_FLANNEL_BACKEND"
-    if [ ! -z "$VNI" ];then
-        log_it echo "Vxlan network id has been set to $VNI"
-    fi
-fi
 
 # Get number of interfaces up
 IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)

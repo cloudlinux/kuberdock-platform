@@ -453,7 +453,7 @@ do_and_log chown kube:kube /var/run/kubernetes
 
 
 #4.2 SELinux rules
-# After kuberdock, we need installed semanage
+# After kuberdock, because we need installed semanage package to do check
 SESTATUS=$(sestatus|awk '/SELinux\sstatus/ {print $3}')
 if [ "$SESTATUS" != disabled ];then
     log_it echo 'Adding SELinux rule for http on port 9200'

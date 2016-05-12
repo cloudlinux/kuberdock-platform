@@ -2,7 +2,6 @@ import json
 import os
 import shlex
 from copy import deepcopy
-from uuid import uuid4
 
 from .helpers import KubeQuery, ModelQuery, Utilities, APIError
 from .images import Image
@@ -12,7 +11,6 @@ from ..billing.models import Kube
 from ..pods.models import db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
     NODE_LOCAL_STORAGE_PREFIX
-from ..users.models import User
 from ..utils import POD_STATUSES
 
 ORIGIN_ROOT = 'originroot'
@@ -20,6 +18,27 @@ OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
+    """
+    Represents related k8s resources: RC, Service and all replicas (Pods).
+
+    TODO: document other attributes
+
+    id - uuid4, id in db
+    namespace - uuid4, for now it's the same as `id`
+    name - kubedock.pods.models.Pod.name (name in UI)
+    owner - kubedock.users.models.User
+    podIP - k8s.Service.spec.clusterIP (appears after first start)
+    service - k8s.Service.metadata.name (appears after first start)
+    sid - uuid4, k8s.ReplicationController.metadata.name
+    secrets - list of k8s.Secret.name
+    kube_type - Kube Type id
+    volumes_public - public volumes data
+    volumes -
+        before self.compose_persistent() -- see volumes_public
+        after -- volumes spec prepared for k8s
+    ...
+
+    """
     def __init__(self, data=None):
         if data is not None:
             for c in data['containers']:
@@ -314,7 +333,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             p['protocol'] = p.get('protocol', 'TCP').upper()
             p.pop('isPublic', None)  # Non-kubernetes param
 
-        if self.owner != KUBERDOCK_INTERNAL_USER:
+        if self.owner.username != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 

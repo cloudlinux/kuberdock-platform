@@ -259,6 +259,7 @@ update_pod_schema = {
             'status': {'type': 'string', 'required': False,
                        'allowed': ['unpaid', 'stopped']},
             'name': pod_name_schema,
+            'postDescription': {'type': 'string', 'nullable': True},
         }
     },
 
@@ -391,15 +392,8 @@ new_pod_schema = {
             'type': 'dict',
             'schema': {
                 'sourceUrl': {'type': 'string', 'required': False},
+                # TODO: capabilities? limits? Why do we need this?
                 'capabilities': {'type': 'dict', 'required': False},
-                # 1) right choices are 'Always', 'IfNotPresent', 'Never'
-                # 2) anyway we will overwrite it to "imagePullPolicy: Always"
-                # 'imagePullPolicy': {
-                #     'type': 'string',
-                #     'allowed': ['PullAlways', 'PullIfNotPresent',
-                # 'IfNotPresent'],
-                #     'required': False
-                # },
                 'limits': {
                     'type': 'dict',
                     'required': False
@@ -416,10 +410,6 @@ new_pod_schema = {
                 'args': args_list_schema,
                 'kubes': kubes_qty_schema,
                 'image': container_image_name_schema,
-                'parentID': {
-                    'type': 'string',
-                    'required': False
-                },
                 'name': container_name_schema,
                 'env': env_schema,
                 'ports': {

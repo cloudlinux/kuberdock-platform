@@ -110,21 +110,17 @@ def pod(**kwargs):
         kwargs['kube'] = Kube.get_default_kube()
     if 'config' in kwargs and not isinstance(kwargs['config'], basestring):
         kwargs['config'] = json.dumps(kwargs['config'])
-    kube_id = (kwargs['kube'].id if kwargs.get('kube_id') is None else
-               kwargs['kube_id'])
     namespace = str(uuid4())
     kwargs.setdefault('id', namespace)
     kwargs.setdefault('name', 'pod-' + randstr())
     kwargs.setdefault('config', json.dumps({
         'node': None,
-        'name': 'pod-' + randstr(),
         'replicas': 1,
         'secrets': [],
         'namespace': namespace,
         'restartPolicy': 'Never',
         'volumes': [],
         'sid': str(uuid4()),
-        'kube_type': kube_id,
         'containers': [{
             'kubes': 1,
             'terminationMessagePath': None,

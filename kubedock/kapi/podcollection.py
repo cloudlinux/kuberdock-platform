@@ -247,28 +247,26 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod.set_dbconfig(pod_config, save=False)
         cls._set_public_ip(pod)
 
-    def _save_pod(self, obj, set_public_ip):
+    @atomic()
+    def _save_pod(self, obj, set_public_ip=False):
+        """
+        Save pod data to db.
+
+        :param obj: kapi-Pod
+        :param set_public_ip: Assign some free IP address to the pod.
+        """
         template_id = getattr(obj, 'kuberdock_template_id', None)
+        status = getattr(obj, 'status', POD_STATUSES.stopped)
         excluded = ('kuberdock_template_id',  # duplicates of model's fields
                     'owner', 'kube_type', 'status', 'id', 'name')
         data = {k: v for k, v in vars(obj).iteritems() if k not in excluded}
         pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
-                    status=getattr(obj, 'status', POD_STATUSES.stopped),
-                    template_id=template_id)
-        pod.kube_id = obj.kube_type
-        pod.owner = self.owner
-        try:
-            db.session.add(pod)
-            if set_public_ip:
-                self._set_public_ip(pod)
-            db.session.commit()
-            return pod
-        except Exception as e:
-            current_app.logger.debug(e.__repr__())
-            db.session.rollback()
-            # Raise APIError because else response will be 200
-            # and backbone creates new model even in error case
-            raise APIError(str(e))
+                    status=status, template_id=template_id,
+                    kube_id=obj.kube_type, owner=self.owner)
+        db.session.add(pod)
+        if set_public_ip:
+            self._set_public_ip(pod)
+        return pod
 
     def update(self, pod_id, data):
         pod = self._get_by_id(pod_id)
@@ -639,9 +637,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
                 if block:
-                    scale_replicationcontroller.apply((pod.id,))
+                    scale_replicationcontroller(pod.id)
                 else:
-                    scale_replicationcontroller.apply_async((pod.id,))
+                    scale_replicationcontroller_task.apply_async((pod.id,))
                 for container in pod.containers:
                     # TODO: create CONTAINER_STATUSES
                     container['state'] = POD_STATUSES.stopped
@@ -809,7 +807,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                             'Kubes available for you: {0}'.format(kubes_left))
 
 
-@celery.task(ignore_results=True)
 def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
     pc = PodCollection()
     pod = pc._get_by_id(pod_id)
@@ -827,13 +824,20 @@ def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
         current_app.logger.error("Can't scale rc: max retries exceeded")
 
 
+@celery.task(ignore_results=True)
+def scale_replicationcontroller_task(*args, **kwargs):
+    scale_replicationcontroller(*args, **kwargs)
+
+
 @celery.task(bind=True, ignore_results=True)
 def finish_redeploy(self, pod_id, data, start=True):
-    pod_collection = PodCollection()
+    db_pod = DBPod.query.get(pod_id)
+    pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
     pod_collection._stop_pod(pod, block=True)
 
-    if (data.get('commandOptions') or {}).get('wipeOut'):
+    command_options = data.get('commandOptions') or {}
+    if command_options.get('wipeOut'):
         for volume in pod.volumes_public:
             pd = volume.get('persistentDisk')
             if pd:
@@ -843,7 +847,8 @@ def finish_redeploy(self, pod_id, data, start=True):
                 delete_drive_by_id(pd.id)
 
     if start:  # start updated pod
-        PodCollection().update(pod_id, {'command': 'start'})
+        PodCollection(db_pod.owner).update(
+            pod_id, {'command': 'start', 'commandOptions': command_options})
 
 
 def restore_containers_host_ports_config(pod_containers, db_containers):

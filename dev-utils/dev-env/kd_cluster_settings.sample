@@ -17,8 +17,8 @@
 
 # Resources allocation for master
 # Memory
-# default: 1024
-#export KD_MASTER_MEMORY=2048
+# default: 2048
+#export KD_MASTER_MEMORY=4096
 # CPU count
 # default: 1
 #export KD_MASTER_CPUS=2

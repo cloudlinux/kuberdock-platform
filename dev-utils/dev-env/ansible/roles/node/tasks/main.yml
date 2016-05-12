@@ -1,3 +1,10 @@
+---
+
+- name: Override src path
+  set_fact:
+      src_prefix: /vagrant
+  when: is_dev_install
+
 - name: Assign key
   authorized_key: user=root key="{{ lookup('file', '/tmp/kd_rsa.pub') }}"
 
@@ -11,7 +18,7 @@
   command: setenforce 1
 
 - name: Add node to master
-  shell: python /vagrant/manage.py add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy {{ add_testing_repo }}
+  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy {{ add_testing_repo }}
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   tags:
@@ -25,7 +32,8 @@
 
 - name: Wait for nodes
   run_once: true
-  shell: python /vagrant/manage.py wait-for-nodes --nodes "{{ hostnames }}" --timeout 2400
+  shell: python "{{ src_prefix }}/manage.py" wait-for-nodes --nodes "{{ hostnames }}" --timeout 2400
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   changed_when: False
+

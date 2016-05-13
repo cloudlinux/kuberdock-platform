@@ -235,6 +235,12 @@ table{
     }
     .check-for-update{
         .mdi('find_replace',21px, #B5BBC1, #3197EE);
+        &.start-atimation{
+            &:before{
+                .animation(rotating, 1s, linear infinite);
+                content: 'cached';
+            }
+        }
     }
     .restart-btn{
         .mdi('cached',21px, #B5BBC1, #3197EE);
@@ -334,6 +340,7 @@ table{
         .mdi('cached',21px, #B5BBC1, #3197EE);
     }
 }
+
 /* TODO REFACTORING */
 .control-icons{
     margin-top: 37px;

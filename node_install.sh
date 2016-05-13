@@ -23,6 +23,10 @@ CEPH_REPO='/etc/yum.repos.d/ceph.repo'
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
+echo "Using MASTER_IP=${MASTER_IP}"
+echo "Set time zone to $TZ"
+timedatectl set-timezone "$TZ"
+echo "Deploy started: $(date)"
 
 # SOME HELPERS
 
@@ -133,7 +137,7 @@ clean_node(){
     iptables -w -F -t nat
     iptables -w -X -t nat
 
-    echo "=== Node clean up finished ==="
+    echo "=== Node clean up finished === $(date)"
 }
 clean_node
 
@@ -235,10 +239,6 @@ EOF
   echo "CEPH-client has been installed"
 
 }
-
-echo "Set time zone to $TZ"
-timedatectl set-timezone "$TZ"
-echo "Using MASTER_IP=${MASTER_IP}"
 
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
@@ -642,5 +642,6 @@ else
 fi
 
 # 16. Reboot will be executed in python function
+echo "Node deploy script finished: $(date)"
 
 exit 0

@@ -2,6 +2,7 @@ import json
 import os
 import shlex
 from copy import deepcopy
+from flask import current_app
 
 from .helpers import KubeQuery, ModelQuery, Utilities, APIError
 from .images import Image
@@ -333,7 +334,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             p['protocol'] = p.get('protocol', 'TCP').upper()
             p.pop('isPublic', None)  # Non-kubernetes param
 
-        if self.owner.username != KUBERDOCK_INTERNAL_USER:
+        if isinstance(self.owner, basestring):
+            current_app.logger.warning('Pod owner field is a string type - '
+                                       'possibly refactoring problem')
+            owner_name = self.owner
+        else:
+            owner_name = self.owner.username
+        if owner_name != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 

@@ -392,12 +392,6 @@ new_pod_schema = {
             'type': 'dict',
             'schema': {
                 'sourceUrl': {'type': 'string', 'required': False},
-                # TODO: capabilities? limits? Why do we need this?
-                'capabilities': {'type': 'dict', 'required': False},
-                'limits': {
-                    'type': 'dict',
-                    'required': False
-                },
                 'lifecycle': {
                     'type': 'dict',
                     'required': False

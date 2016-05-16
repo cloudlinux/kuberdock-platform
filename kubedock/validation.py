@@ -454,57 +454,6 @@ new_pod_schema = {
     }
 }
 
-change_pod_schema = deepcopy(new_pod_schema)
-change_pod_schema.update({
-    'owner': {                                      # ignore, read-only
-        'type': 'string',
-        'maxlength': 255,
-        'empty': False,
-    },
-    'status': {                                     # ignore, read-only
-        'type': 'string',
-        'empty': False,
-    },
-    'command': {
-        'type': 'string',
-        'allowed': ['start', 'stop', 'resize'],
-    },
-    'id': {
-        'type': 'string',
-        'maxlength': 36,
-    },
-    'sid': {
-        'type': 'string',
-        'maxlength': 1024
-    },
-    'containerPort': {
-        'type': 'integer',
-        'required': False
-    },
-    'checked': {'type': 'boolean', 'required': False},
-    'servicename': {
-        'type': 'string',
-        'required': False,
-        'empty': False,
-        # 'regex': pod_name
-    },
-    'labels': {                                     # TODO when implement
-        'type': 'dict',
-        'required': False
-    },
-    'annotations': {
-        'type': 'dict',
-        'required': False
-    },
-    'kubes': {'type': 'strnum', 'empty': True, 'required': False},
-})
-
-change_pod_schema['containers']['schema']['schema']['volumeMounts']['schema']['schema']['path'] = {  # NOQA
-    'type': 'string',
-    'maxlength': PATH_LENGTH,
-    'required': False
-}
-
 
 pd_schema = {
     'name': pdname_schema,

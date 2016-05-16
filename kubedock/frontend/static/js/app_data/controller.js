@@ -14,10 +14,15 @@ define([
                 return this.pageNotFound();
             var that = this;
             require(['app_data/pods/views/pods_list'], function(Views){
+                var suspendedTitle;
+                if (App.currentUser.get('suspended')) {
+                    suspendedTitle = 'Suspended users can\'t create new containers';
+                }
                 var listLayout = new Views.PodListLayout(),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods']}),
                     button = App.currentUser.roleIs('User', 'TrialUser')
-                        && {id: 'add_pod', href: '#newpod', title: 'Add new container'},
+                        && {id: 'add_pod', href: '#newpod', title: 'Add new container',
+                            suspendedTitle: suspendedTitle},
                     breadcrumbsControls = new Breadcrumbs.Controls(
                         {search: true, button: button}),
                     navbar = new Menu.NavList({collection: App.menuCollection});

@@ -333,7 +333,10 @@ body{
                     &:focus{
                         text-decoration: none;
                     }
-                    &#add_pod, &#add_node, &#create_user, &#create_network{
+                    &#add_pod,
+                    &#add_node,
+                    &#create_user,
+                    &#create_network{
                         .transition(0.3s ease-in-out);
                         margin-right: 0;
                         padding: 0 0 0 72px;
@@ -361,11 +364,18 @@ body{
                             position: absolute;
                             background-color: #fff;
                         }
+
                         &:hover{
-                            color: #f2f2f2;
-                            text-decoration: none;
-                            &:after{
-                                .transform(scale(1.07));
+                            &:not(disabled){
+                                color: #f2f2f2;
+                                cursor: pointer;
+                                text-decoration: none;
+                                &:after{
+                                    .transform(scale(1.07));
+                                }
+                            }
+                            &.disabled{
+                                cursor: not-allowed;
                             }
                         }
                     }

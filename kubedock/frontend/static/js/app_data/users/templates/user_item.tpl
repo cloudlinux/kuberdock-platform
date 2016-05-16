@@ -1,6 +1,4 @@
-<td class="col-sm-2">
-    <span class="profileUser" title="Show <%- username %> profile"><%- username %></span>
-</td>
+<td class="col-sm-2"><a href="/#users/profile/<%- id %>/general" title="Show <%- username %> profile"><%- username %></a></td>
 <td class="col-sm-1"><%- podsCount %></td>
 <td class="col-sm-1"><%- containersCount %></td>
 <td class="col-sm-2"><%- email ? email : 'No email' %></td>

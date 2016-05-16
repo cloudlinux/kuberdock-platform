@@ -137,6 +137,7 @@ def check_master():
 
 def check_nodes():
     msg = []
+    states = {}
     try:
         states = get_nodes_state()
         for node, state in states.items():
@@ -149,14 +150,15 @@ def check_nodes():
                 msg.extend(node_msg)
     except (SystemExit, Exception) as e:
         msg.append("Can't get nodes list because of {}".format(e.message))
-    try:
-        pod_states = get_internal_pods_state()
-        stopped = [pod for pod, status in pod_states.items() if not status]
-        if stopped:
-            msg.append(MESSAGES['pods'].format(', '.join(stopped)))
-    except (SystemExit, Exception) as e:
-        msg.append(
-            "Can't get internal pods states because of {}".format(e.message))
+    if states:
+        try:
+            pod_states = get_internal_pods_state()
+            stopped = [pod for pod, status in pod_states.items() if not status]
+            if stopped:
+                msg.append(MESSAGES['pods'].format(', '.join(stopped)))
+        except (SystemExit, Exception) as e:
+            msg.append("Can't get internal pods states because of {}".format(
+                e.message))
     return os.linesep.join(msg)
 
 

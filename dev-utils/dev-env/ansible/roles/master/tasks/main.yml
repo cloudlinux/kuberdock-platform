@@ -1,8 +1,15 @@
+- include: detect_vm.yml
+
 - name: Install additional dev packages
   yum: name={{ item }} state=latest
   with_items:
       - epel-release
   when: is_dev_install
+
+- name: Install additional packages
+  yum: name={{ item }} state=latest
+  with_items:
+      - git
 
 - name: Install additional dev packages
   yum: name={{ item }} state=latest
@@ -18,10 +25,12 @@
   command: bash /vagrant/dev-utils/build-rpm.sh
   when: is_dev_install
   environment:
-    KD_GIT_REF: "{{ lookup('env','KD_GIT_REF') }}"
+    KD_GIT_REF: "{{ git_ref | default('') }}"
 
 - find: paths=/vagrant/ patterns="kuberdock*.rpm" 
   register: rpm_exist
+  tags:
+      - deploy
 
 - fail: msg="There is not any kuberdock*.rpm files found."
   when: rpm_exist.matched <= 0
@@ -34,8 +43,13 @@
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
 
 - name: Deploy 
-  shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash /vagrant/deploy.sh
-  when: rpm_exist.matched > 0
+  shell: echo "{{ ansible_all_ipv4_addresses | last }}" | bash deploy.sh {{ add_testing_repo }} chdir=/vagrant
+  when: rpm_exist.matched > 0 and not use_ceph
+  tags:
+      - deploy
+
+- include: ceph.yml
+  when: use_ceph
 
 - name: Reset password
   shell: python /vagrant/manage.py reset-password --set admin
@@ -44,9 +58,8 @@
   yum: name={{ item }} state=latest
   with_items:
       - tmux
-
-- set_fact:
-      src_prefix: /var/opt/kuberdock
+  tags:
+      - tmux
 
 - name: UI for dev
   set_fact:
@@ -54,11 +67,26 @@
   when: is_dev_install
 
 - include: license.yml
+  when: license_path is defined and license_path
 
 - include: billing.yml
 
 - name: Disable stuff
   service: name=emperor.uwsgi state=stopped
+  when: is_dev_install
+
+- seboolean: name=httpd_can_network_connect state=yes persistent=yes
+  notify:
+    - restart nginx
+
+- name: Proxy pass for nginx
+  replace: 
+    dest: /etc/nginx/conf.d/kuberdock-ssl.conf
+    regexp: "include uwsgi_params;\n[ ]*uwsgi_pass 127.0.0.1:8009;" 
+    replace: "proxy_pass http://127.0.0.1:5000;"
+    backup: yes
+  notify:
+    - restart nginx
   when: is_dev_install
 
 - name: Create tmux session
@@ -89,12 +117,13 @@
   command: bash /vagrant/dev-utils/prepare_test_env.sh
   when: is_dev_install
 
-- name: Create IP pool
-  shell: python /vagrant/manage.py create-ip-pool -s "192.168.77.0/24" -e 1-30
+- include: ip_pool.yml
 
 - name: Create users
   shell: python /vagrant/manage.py create-user -u {{ item }} -p {{ item }} -r User
   with_items:
       - test_user
       - alt_test_user
+
+- include: predefined_apps.yml
 

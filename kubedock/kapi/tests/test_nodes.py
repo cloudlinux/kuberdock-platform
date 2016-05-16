@@ -8,7 +8,7 @@ import unittest
 import mock
 
 from kubedock import settings
-from kubedock.api import APIError
+from kubedock.exceptions import APIError
 from kubedock.billing.models import Kube
 from kubedock.core import db
 from kubedock.kapi import nodes

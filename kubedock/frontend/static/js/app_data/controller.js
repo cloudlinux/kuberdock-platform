@@ -1,4 +1,7 @@
-define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils, Model){
+define([
+    'app_data/app', 'app_data/utils', 'app_data/model',
+    'app_data/menu/views', 'app_data/paginator/views', 'app_data/breadcrumbs/views',
+], function(App, utils, Model, Menu, Pager, Breadcrumbs){
     //"use strict";
 
     var controller = Marionette.Object.extend({
@@ -10,23 +13,22 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/pods/views/pods_list',
-                     'app_data/pods/views/breadcrumbs',
-                     'app_data/paginator/views',
-                     'app_data/menu/views'], function(Views, Misc, Pager, Menu){
+            require(['app_data/pods/views/pods_list'], function(Views){
                 var listLayout = new Views.PodListLayout(),
-                    breadcrumbsData = {breadcrumbs: [{name: 'Pods'}],
-                                       buttonID: 'add_pod',
-                                       buttonLink: '/#newpod',
-                                       buttonTitle: 'Add new container'},
-                    breadcrumbsModel = new Backbone.Model(breadcrumbsData),
-                    breadcrumbs = new Misc.Breadcrumbs({model: breadcrumbsModel}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods']}),
+                    button = App.currentUser.roleIs('User', 'TrialUser')
+                        && {id: 'add_pod', href: '#newpod', title: 'Add new container'},
+                    breadcrumbsControls = new Breadcrumbs.Controls(
+                        {search: true, button: button}),
                     navbar = new Menu.NavList({collection: App.menuCollection});
 
                 that.listenTo(listLayout, 'show', function(){
                     App.getPodCollection().done(function(collection){
                         listLayout.nav.show(navbar);
-                        listLayout.header.show(breadcrumbs);
+                        listLayout.header.show(breadcrumbsLayout);
+                        breadcrumbsLayout.pods.show(new Breadcrumbs.Text({text: 'Pods'}));
+                        breadcrumbsLayout.controls.show(breadcrumbsControls);
+
                         var view = new Views.PodCollection({collection: collection});
                         listLayout.list.show(view);
                         listLayout.pager.show(new Pager.PaginatorView({view: view}));
@@ -37,7 +39,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                     listLayout.pager.empty();
                 });
 
-                that.listenTo(listLayout, 'collection:filter', function(data){
+                that.listenTo(breadcrumbsControls, 'search', function(data){
                     App.getPodCollection().done(function(collection){
                         var order = collection.order;
                         if (data.length > 2) {
@@ -61,9 +63,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
         showPodBase: function(id){
             var that = this,
                 deferred = $.Deferred();
-            require(['app_data/pods/views/pod_item',
-                     'app_data/paginator/views',
-                     'app_data/menu/views'], function(Views, Pager, Menu){
+            require([
+                'app_data/pods/views/pod_item',
+                'app_data/pods/views/breadcrumbs'
+            ], function(Views, PodBreadcrumbs){
                 if (that.podPageData && that.podPageData.model.id === id) {
                     deferred.resolveWith(that, [that.podPageData]);
                     return;
@@ -80,12 +83,13 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
                     var itemLayout = new Views.PodItemLayout(),
                         navbar = new Menu.NavList({collection: App.menuCollection}),
-                        masthead = new Views.PageHeader(
-                            {model: new Backbone.Model({name: model.get('name')})});
+                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'podName']});
 
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.nav.show(navbar);
-                        itemLayout.masthead.show(masthead);
+                        itemLayout.header.show(breadcrumbsLayout);
+                        breadcrumbsLayout.pods.show(new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
+                        breadcrumbsLayout.podName.show(new PodBreadcrumbs.EditableName({model: model}));
                     });
                     that.listenTo(itemLayout, 'before:destroy', function(){
                         delete this.podPageData;
@@ -93,8 +97,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
                     App.contents.show(itemLayout);
 
-                    that.podPageData = {model: model, itemLayout: itemLayout,
-                                        navbar: navbar, masthead: masthead};
+                    that.podPageData = {model: model, itemLayout: itemLayout, navbar: navbar};
                     deferred.resolveWith(that, [that.podPageData]);
                 });
             });
@@ -183,18 +186,14 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/pods/views/pod_create',
-                     'app_data/paginator/views',
-                     'app_data/menu/views'], function(Views, Pager, Menu){
+            require(['app_data/pods/views/pod_create'], function(Views){
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
                         pod = podCollection.fullCollection.get(id),
                         model = pod.get('containers').get(name),
-                        navbar = new Menu.NavList({ collection: App.menuCollection });
-
-                    var show = function(View){
-                        return wizardLayout.steps.show(new View({model: model}));
-                    };
+                        navbar = new Menu.NavList({ collection: App.menuCollection }),
+                        breadcrumbsLayout = new Breadcrumbs.Layout(
+                            {points: ['pods', 'pod', 'container']});
 
                     that.listenTo(pod, 'remove destroy', function(){
                         App.navigate('pods', {trigger: true});
@@ -202,8 +201,20 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.nav.show(navbar);
+                        wizardLayout.header.show(breadcrumbsLayout);
+                        breadcrumbsLayout.pods.show(new Breadcrumbs.Link(
+                            {text: 'Pods', href: '#pods'}));
+                        breadcrumbsLayout.pod.show(new Breadcrumbs.Link(
+                            {text: pod.get('name'), href: '#pods/' + pod.get('id')}));
+                        breadcrumbsLayout.container.show(new Breadcrumbs.Text(
+                            {text: model.get('image') + ' (' + model.get('name') + ')'}));
+
                         wizardLayout.steps.show(new Views.WizardLogsSubView({model: model}));
                     });
+
+                    var show = function(View){
+                        return wizardLayout.steps.show(new View({model: model}));
+                    };
 
                     that.listenTo(wizardLayout, 'step:portconf',
                         _.partial(show, Views.WizardGeneralSubView));
@@ -243,10 +254,10 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('User', 'TrialUser'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/utils',
-                     'app_data/pods/views/pod_create',
-                     'app_data/paginator/views',
-                     'app_data/menu/views'], function(utils, Views, Pager, Menu){
+            require([
+                'app_data/pods/views/pod_create',
+                'app_data/pods/views/breadcrumbs',
+            ], function(Views, PodBreadcrumbs){
                 App.getPodCollection().done(function(podCollection){
                     var registryURL = 'registry.hub.docker.com',
                         imageTempCollection = new Model.ImagePageableCollection(),
@@ -254,14 +265,15 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         podModels = podCollection.fullCollection.models,
                         imageView,
                         podName;
-                        if (podModels.length === 0) {
-                            podName = 'Unnamed-1';
-                        } else {
-                            podName = 'Unnamed-' + (_.max(podModels.map(function(m){
-                                var match = /^Unnamed-(\d+)$/.exec(m.attributes.name);
-                                return match !== null ? +match[1] : 0;
-                            }))+1);
-                        }
+
+                    if (podModels.length === 0) {
+                        podName = 'Unnamed-1';
+                    } else {
+                        podName = 'Unnamed-' + (_.max(podModels.map(function(m){
+                            var match = /^Unnamed-(\d+)$/.exec(m.attributes.name);
+                            return match !== null ? +match[1] : 0;
+                        }))+1);
+                    }
                     var model = new Model.Pod({ name: podName });
                     model.detached = true;
                     model.lastEditedContainer = {id: null, isNew: true};
@@ -275,9 +287,8 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                         wizardLayout.steps.show(imageView);
                     };
 
-                    var navbar = new Menu.NavList({
-                        collection: App.menuCollection
-                    });
+                    var navbar = new Menu.NavList({collection: App.menuCollection}),
+                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'pod']});
 
                     var processCollectionLoadError = function(collection, response){
                         utils.notifyWindow(response);
@@ -301,7 +312,11 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.nav.show(navbar);
-                        wizardLayout.header.show(new Views.PodHeaderView({model: model}));
+                        wizardLayout.header.show(breadcrumbsLayout);
+                        breadcrumbsLayout.pods.show(
+                            new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
+                        breadcrumbsLayout.pod.show(
+                            new PodBreadcrumbs.EditableName({model: model}));
                         newImageView({
                             collection: new Model.ImageCollection()
                         });
@@ -319,7 +334,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
                                     query: query
                                 });
                                 if (collection.length == 0) {
-                                    utils.notifyWindow('We couldn\'t find any results for this search');
+                                    utils.notifyWindow('We couldn\'t find any results for this search', 'success');
                                 }
                             },
                             error: processCollectionLoadError,
@@ -503,7 +518,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/nodes/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/nodes/views'], function(Views){
                 var layoutView = new Views.NodesLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -550,7 +565,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/nodes/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/nodes/views'], function(Views){
                 var layoutView = new Views.NodeAddWizardLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -567,7 +582,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/nodes/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/nodes/views'], function(Views){
                 App.getNodeCollection().done(function(nodeCollection){
                     var node = nodeCollection.get(nodeId);
                         //breadcrumbsModel = new Backbone.Model({hostname: node.get('hostname')});
@@ -693,10 +708,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/users/views',
-                     'app_data/paginator/views',
-                     'app_data/menu/views',
-            ], function(Views, Pager, Menu){
+            require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -715,7 +727,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/users/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -730,7 +742,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/users/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -752,7 +764,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/users/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -777,7 +789,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/users/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -797,7 +809,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/users/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -816,10 +828,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/papps/views',
-                     'app_data/paginator/views',
-                     'app_data/menu/views',
-            ], function(Views, Pager, Menu){
+            require(['app_data/papps/views'], function(Views){
                 var appCollection = new Model.AppCollection(),
                     mainLayout = new Views.MainLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
@@ -966,7 +975,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
         editProfileSettings: function(){
             var that = this;
-            require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/settings/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
                     userModel = App.currentUser;
@@ -995,7 +1004,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/settings/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -1012,7 +1021,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/settings/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/settings/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -1031,7 +1040,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/ippool/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.NetworksLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -1071,7 +1080,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('Admin'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/ippool/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.NetworksLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -1086,7 +1095,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/pstorage/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/pstorage/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -1110,7 +1119,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
             if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/public_ips/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/public_ips/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
@@ -1170,7 +1179,7 @@ define(['app_data/app', 'app_data/utils', 'app_data/model'], function(App, utils
 
         pageNotFound: function(){
             var that = this;
-            require(['app_data/misc/views', 'app_data/menu/views'], function(Views, Menu){
+            require(['app_data/misc/views'], function(Views){
                 var layoutView = new Views.PageLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){

@@ -287,9 +287,8 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 this.trigger('app:edit:item', this.model.get('id'));
             },
 
-            copyLink: function(evt){
-                var target = $(evt.target),
-                    link = target.children('span').text();
+            copyLink: function(){
+                var link = this.urlPath + this.model.get('qualifier');
 
                 this.copyToClipboard(link);
             },

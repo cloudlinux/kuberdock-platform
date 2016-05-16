@@ -8,10 +8,10 @@ from .elasticsearch_utils import execute_es_query
 from .nodes import get_kuberdock_logs_pod_name
 from .podcollection import PodCollection, POD_STATUSES
 from ..core import ConnectionPool
+from ..exceptions import APIError
 from ..nodes.models import Node
 from ..usage.models import ContainerState as CS
 from ..users.models import User
-from ..utils import APIError
 
 
 class LogsError(APIError):

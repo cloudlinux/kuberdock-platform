@@ -23,6 +23,10 @@ CEPH_REPO='/etc/yum.repos.d/ceph.repo'
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
+echo "Using MASTER_IP=${MASTER_IP}"
+echo "Set time zone to $TZ"
+timedatectl set-timezone "$TZ"
+echo "Deploy started: $(date)"
 
 # SOME HELPERS
 
@@ -133,7 +137,7 @@ clean_node(){
     iptables -w -F -t nat
     iptables -w -X -t nat
 
-    echo "=== Node clean up finished ==="
+    echo "=== Node clean up finished === $(date)"
 }
 clean_node
 
@@ -149,9 +153,10 @@ check_status()
 echo "Node OS: $(cat /etc/redhat-release)"
 
 if [[ $(getenforce) != 'Enforcing' ]];then
-    echo "Seems like SELinux is disabled on this node."\
-    "You should enable it (may require to reboot node) and restart node "\
-    "installation again."
+    echo -e "Seems like SELinux is either disabled or is in a permissive" \
+    "mode on this node."\
+    "\nYou should set it to \"enforcing\" mode in /etc/selinux/config," \
+    "reboot the node and restart node installation."
     exit 3
 fi
 
@@ -235,10 +240,6 @@ EOF
 
 }
 
-echo "Set time zone to $TZ"
-timedatectl set-timezone "$TZ"
-echo "Using MASTER_IP=${MASTER_IP}"
-
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
 SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
@@ -316,7 +317,7 @@ yum_wrapper -y install docker
 check_status
 yum_wrapper -y install flannel-0.5.3
 check_status
-yum_wrapper -y install kuberdock-cadvisor
+yum_wrapper -y install kuberdock-cadvisor-0.19.5
 check_status
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests
@@ -403,9 +404,12 @@ echo "Configuring kubernetes..."
 sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
-sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet
+if [ "$AWS" = True ];then
+    sed -i '/^KUBELET_ARGS/ {s|""|"--cloud-provider=aws --kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet
+else
+    sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet
+fi
 sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile"|}' $KUBERNETES_CONF_DIR/proxy
-sed -i '/^KUBE_ALLOW_PRIV/ {s/--allow_privileged=false/--allow_privileged=true/}' $KUBERNETES_CONF_DIR/config
 check_status
 
 
@@ -638,5 +642,6 @@ else
 fi
 
 # 16. Reboot will be executed in python function
+echo "Node deploy script finished: $(date)"
 
 exit 0

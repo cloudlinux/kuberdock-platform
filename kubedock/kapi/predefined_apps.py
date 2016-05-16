@@ -7,8 +7,8 @@ from copy import deepcopy
 
 import yaml
 
-from ..utils import APIError
 from ..billing.models import Kube
+from ..exceptions import APIError
 from ..predefined_apps.models import PredefinedApp as PredefinedAppModel
 from ..validation import ValidationError, V, predefined_app_schema
 

@@ -9,7 +9,8 @@ import time
 import datetime
 from collections import defaultdict, namedtuple
 from ..decorators import login_required_or_basic_or_token
-from ..utils import all_request_params, APIError, PermissionDenied, KubeUtils
+from ..exceptions import APIError, PermissionDenied
+from ..utils import all_request_params, KubeUtils
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 

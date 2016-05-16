@@ -7,7 +7,9 @@ from kubedock.users.models import User, db
 
 def upgrade(upd, with_testing, *args, **kwargs):
     upd.print_log('Removing HostingPanel role and user...')
-    User.query.filter(User.username == 'hostingPanel').delete()
+    user_role = Role.query.filter(Role.rolename == 'User').first()
+    User.query.filter(User.username == 'hostingPanel').update(
+        {User.role_id: user_role.id, User.deleted: True})
     Permission.query.delete()
     Resource.query.delete()
     Role.query.filter(Role.rolename == 'HostingPanel').delete()
@@ -23,6 +25,9 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
     if not user:
         db.session.add(User(username='hostingPanel', role=role,
                             password='hostingPanel', active=True))
+    else:
+        user.deleted = False
+        user.role_id = role.id
     perms = dict(permissions_base, **{
         ('images', 'get'): True,
         ('images', 'isalive'): True,

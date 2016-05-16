@@ -1,7 +1,7 @@
 - name: Assign key
   authorized_key: user=root key="{{ lookup('file', '/tmp/kd_rsa.pub') }}"
 
-- name: ensure python-selinux is installed on all nodes.
+- name: Ensure python-selinux is installed on all nodes.
   yum: name=libselinux-python state=installed
 
 - name: Enable SELinux
@@ -11,6 +11,21 @@
   command: setenforce 1
 
 - name: Add node to master
-  shell: python /vagrant/manage.py add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy
+  shell: python /vagrant/manage.py add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy {{ add_testing_repo }}
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
+  tags:
+    - deploy
+
+- set_fact: _hostname={{ hostvars[item].ansible_hostname }}
+  with_items: "{{ groups['node'] }}"
+  register: _hostnames
+
+- set_fact: hostnames="{{ _hostnames.results|map(attribute='ansible_facts._hostname')|list|join(',')}}"
+
+- name: Wait for nodes
+  run_once: true
+  shell: python /vagrant/manage.py wait-for-nodes --nodes "{{ hostnames }}" --timeout 2400
+  delegate_facts: True
+  delegate_to: "{{ groups['master'][0] }}"
+  changed_when: False

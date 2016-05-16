@@ -40,16 +40,3 @@
         </div>
     </div>
 </div>
-
-<!--
-<div id="nav"></div>
-<div id="breadcrumbs"></div>
-<div class="container">
-    <div class="row">
-        <div id="sidebar"></div>
-        <div id="details_content" class="col-sm-10">
-            <div id="tab-content"></div>
-        </div>
-    </div>
-</div>
--->

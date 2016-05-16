@@ -13,11 +13,12 @@ from fabric.exceptions import CommandTimeout, NetworkError
 from flask import current_app
 
 from ..core import db, ExclusiveLock, ConnectionPool
+from ..exceptions import APIError
 from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..utils import APIError, send_event, atomic
+from ..utils import send_event, atomic
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH)
@@ -1109,8 +1110,7 @@ class AmazonStorage(PersistentStorage):
         Gets and returns EBS volumes objects as list
         :return: list
         """
-        if not hasattr(self, '_conn'):
-            self._get_connection()
+        self._get_connection()
         return self._conn.get_all_volumes()
 
     def _get_raw_drive_by_name(self, name):

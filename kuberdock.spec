@@ -1,7 +1,7 @@
-Version: 1.1
+Version: 1.2
 Name: kuberdock
 Summary: KuberDock
-Release: 2%{?dist}.cloudlinux
+Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -13,7 +13,7 @@ BuildRequires: nodejs-less
 BuildRequires: nodejs-clean-css
 
 Requires: nginx
-Requires: influxdb
+Requires: influxdb == 0.8.8-1
 Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
@@ -67,6 +67,7 @@ Requires: python-flask-script
 Requires: python-bitmath
 Requires: python-websocket-client >= 0.32.0
 Requires: python-elasticsearch >= 1.0
+Requires: pytz >= 2012d
 Requires: PyYAML
 
 # AutoReq: 0
@@ -187,7 +188,7 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
-* Wed Apr 13 2016 Igor Savenko <bliss@cloudlinux.com> 1.1-2
+* Wed Apr 13 2016 Igor Savenko <bliss@cloudlinux.com> 1.2-1
 - Raised tag to comply with bugfix release
 
 * Thu Apr 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 1.1-1

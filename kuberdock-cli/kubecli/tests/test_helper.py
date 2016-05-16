@@ -1,6 +1,7 @@
 """Tests for helper.py classes"""
 import os
 import unittest
+from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 
 import mock
@@ -105,46 +106,38 @@ class TestHelperKubeQuery(unittest.TestCase):
 class TestParseConfig(unittest.TestCase):
     """Tests for configuration file parser"""
 
-    VALID_CONFIG = {'name': './valid_config.conf',
-                    'settings':
-                        '''
-                        [global]
-                        url = https://127.0.0.1
-                        [defaults]
-                        registry = registry.hub.docker.com
-                        user = TrialUser
-                        password = TrialUser
-                        '''
-                    }
+    VALID_CONFIG = "[global]" \
+                   "url = https://127.0.0.1" \
+                   "[defaults]" \
+                   "registry = registry.hub.docker.com" \
+                   "user = TrialUser" \
+                   "password = TrialUser"
 
-    INVALID_CONFIG = {'name': './invalid_config',
-                      'settings':
-                          '''
-                          url = https://127.0.0.1
-                          [defaults]
-                          registry = registry.hub.docker.com
-                          user = TrialUser
-                          password = TrialUser
-                          '''
-                      }
+    INVALID_CONFIG = "url = https://127.0.0.1" \
+                     "[defaults]" \
+                     "registry = registry.hub.docker.com" \
+                     "user = TrialUser" \
+                     "password = TrialUser"
 
     def setUp(self):
-        with open(self.VALID_CONFIG['name'], 'w') as f:
-            f.write(self.VALID_CONFIG['settings'])
-        with open(self.INVALID_CONFIG['name'], 'w') as f:
-            f.write(self.INVALID_CONFIG['settings'])
+        with NamedTemporaryFile('w', delete=False) as valid,  \
+                NamedTemporaryFile('w', delete=False) as invalid:
+
+            valid.write(self.VALID_CONFIG)
+            invalid.write(self.INVALID_CONFIG)
+            self.invalid_path, self.valid_path = invalid.name, valid.name
 
     def tearDown(self):
-        os.unlink(self.VALID_CONFIG['name'])
-        os.unlink(self.INVALID_CONFIG['name'])
+        os.unlink(self.invalid_path)
+        os.unlink(self.valid_path)
+
+    def test_parse_valid_config(self):
+        data = helper.parse_config(self.valid_path)
+        self.assertIsInstance(data, dict)
 
     def test_parse_invalid_config(self):
         with self.assertRaises(SystemExit):
-            helper.parse_config(self.INVALID_CONFIG['name'])
-
-    def test_parse_valid_config(self):
-        data = helper.parse_config(self.VALID_CONFIG['name'])
-        self.assertEquals(type(data), type(dict()))
+            helper.parse_config(self.invalid_path)
 
 
 @mock.patch.object(helper, 'PrintOut')

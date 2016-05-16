@@ -1,56 +1,115 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-#
-#
-#
-#
+
 nodesCount = Integer(ENV['KD_NODES_COUNT'] || '1')
 
-masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '1024')
+masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '2048')
 masterCpus = Integer(ENV['KD_MASTER_CPUS'] || '1')
 
 nodeMemory = Integer(ENV['KD_NODE_MEMORY'] || '2048')
 nodeCpus = Integer(ENV['KD_NODE_CPUS'] || '2')
 
+osUsername = ENV['KD_OS_USERNAME'] || ''
+osPassword = ENV['KD_OS_PASSWORD'] || ''
+
+oneUsername = ENV['KD_ONE_USERNAME'] || ''
+onePassword = ENV['KD_ONE_PASSWORD'] || ''
+privateKey = ENV['KD_ONE_PRIVATE_KEY'] || '~/.ssh/id_rsa'
+
 Vagrant.configure(2) do |config|
   config.vm.box = "bento/centos-7.2"
-  config.vm.synced_folder "../../", "/vagrant"
+
   config.ssh.username = 'root'
-  config.ssh.password = 'vagrant'
   config.ssh.insert_key = 'true'
+
+  config.vm.provider "virtualbox" do |vb, override|
+    override.ssh.password = 'vagrant'
+  end
+
+  config.vm.provider :opennebula do |one, override|
+    one.endpoint = 'https://some.nebula.host.com:2633/RPC2'
+    one.username = oneUsername
+    one.password = onePassword
+    one.template_id = 4
+    override.ssh.private_key_path = privateKey
+    override.ssh.pty = true
+    config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".venv/"]
+  end
+
+  config.vm.provider :openstack do |os, override|
+    os.openstack_auth_url = 'http://openstack.cloudlinux.com:35357/v2.0/tokens' 
+    os.username           = osUsername
+    os.password           = osPassword
+    os.tenant_name        = 'kubedock'
+    os.flavor             = 'm1.small'
+    os.image              = 'centos7'
+    os.floating_ip_pool   = 'ext-net'
+    override.ssh.username = 'centos'
+  end
 
   (1..nodesCount).each do |i|
       config.vm.define "kd_node#{i}" do |node|
           node.vm.hostname = "node#{i}"
           node.vm.network "private_network", ip: "192.168.77.#{10+i}"
-          node.vm.provider "virtualbox" do |vb|
+          node.vm.provider "virtualbox" do |vb, override|
             vb.memory = nodeMemory
             vb.cpus = nodeCpus
           end
+          config.vm.provider :opennebula do |one, override|
+            one.cpu = nodeCpus
+            one.vcpu = nodeCpus
+            one.memory = nodeMemory
+            one.title = 'node'
+          end
+          node.vm.synced_folder "../../", "/vagrant", disabled: true
       end
   end
 
   config.vm.define "kd_master" do |master|
       master.vm.hostname = "master"
       master.vm.network "private_network", ip: "192.168.77.10"
-      master.vm.provider "virtualbox" do |vb|
+      master.vm.network "forwarded_port", guest: 5000, host: 5000
+      master.vm.provider "virtualbox" do |vb, override|
         vb.memory = masterMemory
         vb.cpus = masterCpus
       end
+      config.vm.provider :opennebula do |one, override|
+        one.cpu = masterCpus
+        one.vcpu = masterCpus
+        one.memory = masterMemory
+        one.title = 'master'
+      end
       master.vm.provision "ansible" do |ansible|
         ansible.playbook = "ansible/main.yml"
-        ansible.limit = 'all'
+        if ENV['KD_RETRY_FROM_LAST_FAIL']
+          ansible.limit = '@ansible/main.retry'
+        else
+          ansible.limit = 'all'
+        end
         ansible.groups = {
             "master" => ["kd_master"],
             "node" => ["kd_node[1:#{nodesCount}]"],
         }
+
+        extra_vars = {
+            "is_dev_install" => ENV['KD_DEV_INSTALL'],
+            "dotfiles" => ENV['KD_DOT_FILES'],
+            "hook" => ENV['KD_MASTER_HOOK'],
+            "license_path" => ENV['KD_LICENSE'],
+            "no_wsgi" => ENV['KD_NO_WSGI'],
+            "git_ref" => ENV['KD_GIT_REF'],
+            "testing_repo" => ENV['KD_TESTING_REPO'],
+            "public_ips" => ENV['KD_ONE_PUB_IPS'],
+        }
+
+        # Clean undefined vars
+        extra_vars.each do |key, value|
+            if value == nil
+                extra_vars.delete(key)
+            end
+        end
+
+        ansible.extra_vars = extra_vars
       end
   end
-
-  # config.vbguest.auto_update = false
-  # config.vm.box_check_update = false
-  # config.vm.network "private_network", ip: "192.168.33.10"
-  # config.vm.network "public_network"
-  #
-  #
 end

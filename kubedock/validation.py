@@ -241,7 +241,7 @@ protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
 kubes_qty_schema = {'type': 'integer', 'min': 1,
                     'max_kubes_per_container': True}
 container_name_schema = {'type': 'string', 'empty': False, 'maxlength': 255}
-pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 0,
+pdsize_schema = {'type': 'integer', 'coerce': int, 'min': 1,
                  'pd_size_max': True}
 pdname_schema = {'type': 'string', 'required': True, 'empty': False,
                  'maxlength': 36, 'regex': pdname_regex}
@@ -257,7 +257,9 @@ update_pod_schema = {
         'schema': {
             'wipeOut': {'type': 'boolean', 'nullable': True},
             'status': {'type': 'string', 'required': False,
-                       'allowed': ['unpaid', 'stopped']}
+                       'allowed': ['unpaid', 'stopped']},
+            'name': pod_name_schema,
+            'postDescription': {'type': 'string', 'nullable': True},
         }
     },
 
@@ -289,6 +291,10 @@ new_pod_schema = {
         'min': 0,
         'nullable': True,
         'template_exists': True,
+    },
+    'postDescription': {
+        'type': 'string',
+        'nullable': True,
     },
     'kuberdock_resolve': {'type': 'list', 'schema': {'type': 'string'}},
     'node': {
@@ -386,19 +392,6 @@ new_pod_schema = {
             'type': 'dict',
             'schema': {
                 'sourceUrl': {'type': 'string', 'required': False},
-                'capabilities': {'type': 'dict', 'required': False},
-                # 1) right choices are 'Always', 'IfNotPresent', 'Never'
-                # 2) anyway we will overwrite it to "imagePullPolicy: Always"
-                # 'imagePullPolicy': {
-                #     'type': 'string',
-                #     'allowed': ['PullAlways', 'PullIfNotPresent',
-                # 'IfNotPresent'],
-                #     'required': False
-                # },
-                'limits': {
-                    'type': 'dict',
-                    'required': False
-                },
                 'lifecycle': {
                     'type': 'dict',
                     'required': False
@@ -411,10 +404,6 @@ new_pod_schema = {
                 'args': args_list_schema,
                 'kubes': kubes_qty_schema,
                 'image': container_image_name_schema,
-                'parentID': {
-                    'type': 'string',
-                    'required': False
-                },
                 'name': container_name_schema,
                 'env': env_schema,
                 'ports': {
@@ -465,55 +454,10 @@ new_pod_schema = {
     }
 }
 
-change_pod_schema = deepcopy(new_pod_schema)
-change_pod_schema.update({
-    'owner': {                                      # ignore, read-only
-        'type': 'string',
-        'maxlength': 255,
-        'empty': False,
-    },
-    'status': {                                     # ignore, read-only
-        'type': 'string',
-        'empty': False,
-    },
-    'command': {
-        'type': 'string',
-        'allowed': ['start', 'stop', 'resize'],
-    },
-    'id': {
-        'type': 'string',
-        'maxlength': 36,
-    },
-    'sid': {
-        'type': 'string',
-        'maxlength': 1024
-    },
-    'containerPort': {
-        'type': 'integer',
-        'required': False
-    },
-    'checked': {'type': 'boolean', 'required': False},
-    'servicename': {
-        'type': 'string',
-        'required': False,
-        'empty': False,
-        # 'regex': pod_name
-    },
-    'labels': {                                     # TODO when implement
-        'type': 'dict',
-        'required': False
-    },
-    'annotations': {
-        'type': 'dict',
-        'required': False
-    },
-    'kubes': {'type': 'strnum', 'empty': True, 'required': False},
-})
 
-change_pod_schema['containers']['schema']['schema']['volumeMounts']['schema']['schema']['path'] = {  # NOQA
-    'type': 'string',
-    'maxlength': PATH_LENGTH,
-    'required': False
+pd_schema = {
+    'name': pdname_schema,
+    'size': dict(pdsize_schema, required=True),
 }
 
 

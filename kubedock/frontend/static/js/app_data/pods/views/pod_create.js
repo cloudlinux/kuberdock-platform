@@ -113,61 +113,6 @@ define(['app_data/app', 'app_data/model',
         }
     });
 
-    newItem.PodHeaderView = Backbone.Marionette.ItemView.extend({
-        template: breadcrumbHeaderTpl,
-        tagName: 'div',
-
-        initialize: function(options){
-            this.model = options.model;
-        },
-
-        ui: {
-            podsList     : '.podsList',
-            peditable    : '.peditable',
-        },
-
-        events: {
-            'click @ui.podsList' : 'showPodsList',
-        },
-
-        onRender: function(){
-            var that = this;
-            App.getPodCollection().done(function(podCollection){
-                that.ui.peditable.editable({
-                    type: 'text',
-                    mode: 'inline',
-                    success: function(response, newValue) {
-                        that.model.set({name: newValue});
-                        utils.notifyWindow('New pod name "' + newValue + '" is saved',
-                                           'success');
-                    },
-                    validate: function(newValue) {
-                        newValue = newValue.trim();
-
-                        var msg;
-                        if (!newValue)
-                            msg = 'Please, enter pod name.';
-                        else if (newValue.length > 63)
-                            msg = 'The maximum length of the Pod name must be less than 63 characters.';
-                        else if (podCollection.findWhere({name: newValue}))
-                            msg = 'Pod with name "' + newValue + '" already exists. Try another name.';
-
-                        if (msg){
-                            // TODO: style for ieditable error messages
-                            // (use it instead of notifyWindow)
-                            utils.notifyWindow(msg);
-                            return ' ';
-                        }
-                    }
-                });
-            });
-        },
-
-        showPodsList: function(){
-            App.navigate('pods', {trigger: true});
-        }
-    });
-
     newItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
         template: wizardImageCollectionItemTpl,
         tagName: 'div',
@@ -193,7 +138,8 @@ define(['app_data/app', 'app_data/model',
         templateHelpers: function(){
             var showPaginator = this.collection.length ? true : false;
             return {
-                showPaginator: showPaginator
+                showPaginator: showPaginator,
+                query : this.query,
             };
         },
 
@@ -287,7 +233,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         appendLoader: function(control){
-            var loader = $('<div id="load-control" class="btn-more animation">Loading ...</div>');
+            var loader = $('<div id="load-control" class="btn-more animation"><span>Loading ...</span></div>');
             if (control === undefined) {
                 this.ui.searchControl.empty().append(loader);
             } else {
@@ -472,15 +418,19 @@ define(['app_data/app', 'app_data/model',
 
         changeCommand: function(evt){
             evt.stopPropagation();
-            var cmd = $(evt.target).val();
-            if (cmd != '') {
-                this.model.set('args', _.map(
-                    cmd.match(/(?:[^\s"']+|(?:"|')[^"']*(?:"|'))/g),
-                    function(i){
-                        return i.replace(/^["']|["']$/g, '');
-                    })
-                );
+            var tgt = $(evt.target),
+                cmd = tgt.val().trim();
+            if (!cmd){
+                // Explicitly replace empty command with CMD from image
+                // (in case of empty command in container spec, docker will use
+                // CMD from image)
+                tgt.val(this.filterCommand(this.model.get('args')));
+                return;
             }
+            this.model.set('args', _.map(
+                cmd.match(/(?:[^\s"']+|("|').*?\1)/g),
+                function(i){ return i.replace(/^["']|["']$/g, ''); })
+            );
         },
 
         goNext: function(evt){
@@ -511,10 +461,19 @@ define(['app_data/app', 'app_data/model',
                         utils.notifyWindow('Persistent options must be set!');
                         return;
                     } else if (pd.pdSize > that.pod.pdSizeLimit){
-                        utils.notifyWindow('A persistent disk size isn\'t expected to exceed ' + that.pod.pdSizeLimit + ' GB');
-                        return
+                        utils.notifyWindow('A persistent disk size isn\'t expected '
+                                           + 'to exceed ' + that.pod.pdSizeLimit + ' GB');
+                        return;
                     }
                 }
+            }
+
+            /* check CMD and ENTRYPOINT */
+            if (!this.model.get('command').length && !this.model.get('args').length
+                    && !this.model.originalCommand.length && !this.model.originalArgs.length){
+                utils.notifyWindow('Please, specify value of the Command field.');
+                utils.scrollTo(this.ui.input_command);
+                return;
             }
 
             /* check ports */
@@ -1003,12 +962,7 @@ define(['app_data/app', 'app_data/model',
             this.model.checkForUpdate().done(this.render);
         },
 
-        removeError: function(evt){
-            var target = $(evt.target);
-            if (target.hasClass('error')){
-                target.parent().find('.notifyjs-metro-error').click();
-            }
-        },
+        removeError: function(evt){ utils.removeError($(evt.target)); },
 
         finalStep: function(){
             var that = this,
@@ -1058,7 +1012,7 @@ define(['app_data/app', 'app_data/model',
                             $(field).addClass('error');
                             utils.notifyInline('Duplicate variable names are not allowed',field);
                         }
-                    })
+                    });
                 });
                 difference.length = 0;
                 valid = false;

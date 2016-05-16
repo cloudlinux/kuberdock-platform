@@ -3,10 +3,8 @@ import random
 import requests
 import string
 from ..core import db
+from ..exceptions import APIError
 from ..pods.models import Pod
-#from ..users.models import User
-#from ..users.signals import user_get_setting, user_set_setting
-from ..api import APIError
 from ..utils import get_api_url
 from flask import current_app
 
@@ -107,18 +105,6 @@ class ModelQuery(object):
         if live_only:
             return db.session.query(Pod).filter(Pod.status != 'deleted')
         return db.session.query(Pod)
-
-    def _check_pod_name(self, owner=None):
-        if not hasattr(self, 'name'):
-            return
-        if owner is None:
-            pod = Pod.query.filter_by(name=self.name).first()
-        else:
-            pod = Pod.query.filter_by(name=self.name, owner=owner).first()
-        if pod:
-            raise APIError("Conflict. Pod with name = '{0}' already exists. "
-                           "Try another name.".format(self.name),
-                           status_code=409)
 
     def _mark_pod_as_deleted(self, pod_id):
         p = db.session.query(Pod).get(pod_id)

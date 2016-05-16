@@ -3,21 +3,35 @@
   stat: path="{{ license_path }}"
   delegate_to: localhost
   register: license
+  tags:
+      - license
+      - patch
 
 - name: Copy linence file
   copy: src={{ license_path }} dest={{ copy_license_to }}
   when: license.stat.exists
+  tags:
+      - license
+      - patch
 
 - name: Patching a licensing
   lineinfile:
       dest: "{{ src_prefix }}/kubedock/kapi/licensing.py"
       line: "def is_valid(): return True" 
       state: present
-  when: license_path !='' and not license.stat.exists
+  when: license_path == 'patch'
+  notify:
+      - restart emperor
+  tags:
+      - license
+      - patch
 
 - name: Hide modified license file from git
   become: False
   command: git update-index --assume-unchanged ../../kubedock/kapi/licensing.py
   delegate_to: localhost
-  when: license_path !='' and not license.stat.exists
+  when: license_path == 'patch'
+  tags:
+      - license
+      - patch
 

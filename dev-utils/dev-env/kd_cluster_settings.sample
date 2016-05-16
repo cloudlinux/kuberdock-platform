@@ -1,31 +1,87 @@
-# Allow running vagrant cmd from repo root 
+# ====== VM Group ======
+#
+# Allow running vagrant cmd from repo root. By default you need to move inside 
+# `dev-utils/dev-inv` before working with vagrant
+# default: nothing
 #export VAGRANT_CWD=~/repos/AppCloud/dev-utils/dev-env/
+#
+# OpenStack credentials. Username and passoword for OpenStack cloud
+# default: nothing
+#export KD_OS_USERNAME=your_os_username
+#export KD_OS_PASSWORD=your_os_password
+
+# OpenNebula credentials. Username and passoword for OpenNebula cloud
+# default: nothing
+#export KD_ONE_USERNAME=your_one_username
+#export KD_ONE_PASSWORD=yout_one_password
+
+# Resources allocation for master
+# Memory
+# default: 2048
+#export KD_MASTER_MEMORY=4096
+# CPU count
+# default: 1
+#export KD_MASTER_CPUS=2
+
+# Nodes count
+# default: 1
+#export KD_NODES_COUNT=2
+
+# Resources allocation for node
+# Memory
+# default: 2048
+#export KD_NODE_MEMORY=4096
+# CPU count
+# default: 2
+#export KD_NODE_CPUS=3
+ 
+# Path to private key for vagrant autentication in the OpenNebula
+# default: "~/.ssh/id_rsa"
+#export KD_ONE_PRIVATE_KEY=~/.ssh/your_other_private_key
+
+# Comma-separated list of IPs reserved to you in OpenNebula Public Network. These IPs will
+# be unblocked in KD IP pool and used as Pods public IPs.
+# Default value are team shared IPs. If you use them, you may intersect with others, thus
+# it's recommended to set this variable. Reserve your IPs in the doc below before changing:
+# ***REMOVED***
+# default: "200,201,202"
+#export KD_ONE_PUB_IPS="200,201,202"
+
+# ====== Env group ======
 
 # Build specific ref instead of current state of the repo
-#export KD_GIT_REF=kuberdock@1.1-1 
+# default: nothing
+#export KD_GIT_REF=kuberdock@1.1-1
 
 # Do additional tricks like build rpm from source, stop wsgi on master, 
 # run tmux on master and so on
-#export KD_DEV_INSTALL=true
-
-# Resources allocation
-#export KD_MASTER_MEMORY=4096
-#export KD_MASTER_CPUS=4
-
-#export KD_NODES_COUNT=1
-#export KD_NODE_MEMORY=2048
-#export KD_NODE_CPUS=1
+# default: 0
+#export KD_DEV_INSTALL=1
 
 # All dotfiles will be copied from this folder before deploy
-#export KD_DOT_FILES=/path/to/dir
+# default: nothing
+#export KD_DOT_FILES=/path/to/dotfiles/folder
 
 # Some script which should be executed after master is ready
-#export KD_MASTER_HOOK=my_hook.sh
+# default: nothing
+#export KD_MASTER_HOOK=/path/to/your/hook.sh
 
 # if set to path - copied to master
-# if set to empty line - not copied not patched
-# if not set - code is patched to not check the license
-# export KD_LICENSE=/path/to/license
+# if set to “patch" - patched
+# if not set - not copied not patched
+# default: nothing
+# export KD_LICENSE=/path/to/your/license
 
 # if set no wsgi will be started
+# default: 0
 #export KD_NO_WSGI=1
+
+# Uncomment to enable testing repo for deploy.sh and node_install.sh
+# default: nothing
+#export KD_TESTING_REPO=true
+
+# running KuberDock deploy script with CEPH support
+#export KD_CEPH=1
+#export KD_CEPH_USER=your_ceph_user 
+#export KD_CEPH_CONFIG=/path/to/ceph.conf 
+#export KD_CEPH_USER_KEYRING=/path/to/client.your_ceph_user.keyring

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask.ext.login import login_user
 
-from . import APIError
+from ..exceptions import APIError
 from ..users import User
 from ..users.signals import user_logged_in
 

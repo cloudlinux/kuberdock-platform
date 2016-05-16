@@ -1,11 +1,18 @@
-#- name: upgrade all packages
-  #yum: name=* state=latest
+- name: RPM proxy configure
+  include: rpm_proxy.yml
+
+- name: upgrade all packages
+  yum: name=* state=latest
 
 - name: "Build hosts file"
   lineinfile: dest=/etc/hosts line="{{ hostvars[item].ansible_all_ipv4_addresses | last }} {{ hostvars[item].ansible_hostname }}" state=present
   when: hostvars[item].ansible_default_ipv4.address is defined
   with_items: "{{ groups.all }}"
 
-- include: dotfiles.yml
+- name: User dotfiles
+  include: dotfiles.yml
+  when: dotfiles is defined and dotfiles
 
-- include: hook.yml
+- name: User hooks
+  include: hook.yml
+  when: hook is defined and hook

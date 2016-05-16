@@ -2,17 +2,16 @@ import json
 import os
 import shlex
 from copy import deepcopy
-from uuid import uuid4
+from flask import current_app
 
-from .helpers import KubeQuery, ModelQuery, Utilities
+from .helpers import KubeQuery, ModelQuery, Utilities, APIError
 from .images import Image
 from .pstorage import get_storage_class
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
-from ..pods.models import db, PersistentDisk
+from ..pods.models import db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
     NODE_LOCAL_STORAGE_PREFIX
-from ..users.models import User
 from ..utils import POD_STATUSES
 
 ORIGIN_ROOT = 'originroot'
@@ -20,35 +19,36 @@ OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
 
 
 class Pod(KubeQuery, ModelQuery, Utilities):
+    """
+    Represents related k8s resources: RC, Service and all replicas (Pods).
+
+    TODO: document other attributes
+
+    id - uuid4, id in db
+    namespace - uuid4, for now it's the same as `id`
+    name - kubedock.pods.models.Pod.name (name in UI)
+    owner - kubedock.users.models.User
+    podIP - k8s.Service.spec.clusterIP (appears after first start)
+    service - k8s.Service.metadata.name (appears after first start)
+    sid - uuid4, k8s.ReplicationController.metadata.name
+    secrets - list of k8s.Secret.name
+    kube_type - Kube Type id
+    volumes_public - public volumes data
+    volumes -
+        before self.compose_persistent() -- see volumes_public
+        after -- volumes spec prepared for k8s
+    ...
+
+    """
     def __init__(self, data=None):
         if data is not None:
             for c in data['containers']:
-
-                # At least one kube per container expected so we can make it
-                # defaults to 1 if not set
-                if 'kubes' not in c:
-                    c['kubes'] = 1
-
                 if len(c.get('args', [])) == 1:
                     # it seems the args has been changed
                     # or may be its length is only 1 item
                     c['args'] = self._parse_cmd_string(c['args'][0])
             for k, v in data.items():
                 setattr(self, k, v)
-
-    @staticmethod
-    def create(data):
-        data = data.copy()
-        owner = data.pop('owner', None)
-        # TODO delete this because 'owner' will appear in api response
-        data['owner'] = None if owner is None else owner.username
-        data.setdefault('status', POD_STATUSES.stopped)
-        data.setdefault('volumes', [])
-        pod = Pod(data)
-        pod._check_pod_name(owner)
-        pod._make_uuid_if_missing()
-        pod.sid = str(uuid4())
-        return pod
 
     @staticmethod
     def populate(data):
@@ -114,10 +114,8 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     def as_dict(self):
         # unneeded fields in API output
-        hide_fields = ['node', 'labels']
+        hide_fields = ['node', 'labels', 'namespace', 'secrets', 'owner']
         data = vars(self).copy()
-        for field in ('namespace', 'secrets'):
-            data.pop(field, None)
         data['volumes'] = data.pop('volumes_public', [])
         for container in data.get('containers', ()):
             new_volumes = []
@@ -140,12 +138,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     def as_json(self):
         return json.dumps(self.as_dict())
 
-    def _make_uuid_if_missing(self):
-        if hasattr(self, 'id'):
-            return
-        self.id = str(uuid4())
-
-    def compose_persistent(self, owner):
+    def compose_persistent(self):
         if not getattr(self, 'volumes', False):
             self.volumes_public = []
             return
@@ -154,7 +147,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         clean_vols = set()
         for volume, volume_public in zip(self.volumes, self.volumes_public):
             if 'persistentDisk' in volume:
-                self._handle_persistent_storage(volume, volume_public, owner)
+                self._handle_persistent_storage(volume, volume_public)
             elif 'localStorage' in volume:
                 self._handle_local_storage(volume)
             else:
@@ -164,8 +157,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             self.volumes = [item for item in self.volumes
                             if item['name'] not in clean_vols]
 
-    @staticmethod
-    def _handle_persistent_storage(volume, volume_public, owner):
+    def _handle_persistent_storage(self, volume, volume_public):
         """Prepare volume with persistent storage
 
         :params volume: volume for k8s api
@@ -176,12 +168,16 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pd = volume.pop('persistentDisk')
         name = pd.get('pdName')
 
-        persistent_disk = PersistentDisk.filter_by(owner_id=owner.id,
+        persistent_disk = PersistentDisk.filter_by(owner_id=self.owner.id,
                                                    name=name).first()
         if persistent_disk is None:
-            persistent_disk = PersistentDisk(name=name, owner_id=owner.id,
+            persistent_disk = PersistentDisk(name=name, owner_id=self.owner.id,
                                              size=pd.get('pdSize', 1))
             db.session.add(persistent_disk)
+        else:
+            if persistent_disk.state == PersistentDiskStatuses.DELETED:
+                persistent_disk.size = pd.get('pdSize', 1)
+            persistent_disk.state = PersistentDiskStatuses.PENDING
         if volume_public['persistentDisk'].get('pdSize') is None:
             volume_public['persistentDisk']['pdSize'] = persistent_disk.size
         pd_cls = get_storage_class()
@@ -221,8 +217,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
-        # TODO why self.owner is unicode string here? why not db obj?
-        owner = User.filter_by(username=self.owner).one()
         kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
         volume_annotations = self.extract_volume_annotations(volumes)
 
@@ -235,8 +229,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             container = deepcopy(container)
             container['volumeMounts'] = [
                 item for item in container.get('volumeMounts', [])
-                if item['name'] in existing_vols
-                ]
+                if item['name'] in existing_vols]
             containers.append(
                 self._prepare_container(container, kube_type, volumes)
             )
@@ -260,7 +253,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                     "metadata": {
                         "labels": {
                             "kuberdock-pod-uid": self.id,
-                            "kuberdock-user-uid": str(owner.id),
+                            "kuberdock-user-uid": str(self.owner.id),
                         },
                         "annotations": {
                             "kuberdock_resolve": kuberdock_resolve,
@@ -341,7 +334,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             p['protocol'] = p.get('protocol', 'TCP').upper()
             p.pop('isPublic', None)  # Non-kubernetes param
 
-        if self.owner != KUBERDOCK_INTERNAL_USER:
+        if isinstance(self.owner, basestring):
+            current_app.logger.warning('Pod owner field is a string type - '
+                                       'possibly refactoring problem')
+            owner_name = self.owner
+        else:
+            owner_name = self.owner.username
+        if owner_name != KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 
@@ -402,6 +401,15 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 'state': status,
                 'startedAt': None,
             })
+
+    def check_name(self):
+        pod = DBPod.query.filter(DBPod.name == self.name,
+                                 DBPod.owner_id == self.owner.id,
+                                 DBPod.id != self.id).first()
+        if pod:
+            raise APIError('Pod with name "{0}" already exists. '
+                           'Try another name.'.format(self.name),
+                           status_code=409, type='PodNameConflict')
 
     def __repr__(self):
         name = getattr(self, 'name', '').encode('ascii', 'replace')

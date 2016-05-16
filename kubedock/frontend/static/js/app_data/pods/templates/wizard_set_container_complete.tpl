@@ -81,9 +81,9 @@
                                 </td>
                                 <td><%- c.kubes %></td>
                                 <td><%- containerPrices[i] %> / <%- period %></td>
-                                <td>
-                                    <button class="delete-item pull-right">&nbsp;</button>
-                                    <button class="edit-item">&nbsp;</button>
+                                <td class="actions text-right">
+                                    <span class="edit-item"></span>
+                                    <span class="delete-item"></span>
                                 </td>
                             </tr>
                         <% }) %>

@@ -187,7 +187,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             });
             _data.volumeMounts = _.map(_data.volumeMounts || [],
                                        function(vm){ return {mountPath: vm}; });
-            return new this(_data);
+            var container = new this(_data);
+            container.originalCommand = container.get('command').slice(0);
+            container.originalArgs = container.get('args').slice(0);
+            return container;
         },
         validateMountPath: function(mountPath){
             if (mountPath && mountPath.length < 2)
@@ -522,7 +525,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         searchIn: function(val){
             return this.fullCollection.models.filter(function(i){
-                return i.get('name').indexOf(val) === 0;
+                return i.get('name').indexOf(val) !== -1;
             });
         },
         allChecked: function(){
@@ -741,6 +744,17 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 error: utils.notifyWindow,
             }, options));
         },
+    }, {
+        checkUsernameFormat: function(username){
+            if (username.length > 25)
+                return 'Maximum length is 25 symbols.';
+            if (!/^[A-Z\d_-]+$/i.test(username))
+                return 'Only "-", "_" and alphanumeric symbols are allowed.';
+            if (!/^[A-Z\d](?:.*[A-Z\d])?$/i.test(username))
+                return 'Username should start and end with a letter or digit.';
+            if (!/\D/g.test(username))
+                return 'Username cannot consist of digits only.';
+        },
     });
 
     data.UsersCollection = Backbone.Collection.extend({
@@ -760,7 +774,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
         mode: 'client',
         state: {
-            pageSize: 20
+            pageSize: 10
         }
     });
     App.getUserCollection = App.resourcePromiser('userCollection', data.UsersPageableCollection);
@@ -887,6 +901,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         url: '/api/ippool/userstat',
         model: data.UserAddressModel,
         parse: unwrapper
+    });
+
+    data.BreadcrumbsControls = Backbone.Model.extend({
+        defaults: {button: false, search: false},
     });
 
     data.MenuModel = Backbone.Model.extend({

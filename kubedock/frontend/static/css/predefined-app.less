@@ -93,6 +93,7 @@
             background: url('../img/arrow-info.png') 0 0 no-repeat;
         }
         div {
+            .mdi('info_outline',28px, #989898, #989898);
             font-size: 12px;
             line-height: 21px;
             position: relative;
@@ -103,13 +104,17 @@
                 top: 0;
                 bottom: 0;
                 left: 18px;
-                content: '';
                 width: 28px;
                 height: 28px;
                 margin: auto;
-                color: #000000;
                 position: absolute;
-                background: url('../img/small-i.png') 0 0 no-repeat;
+            }
+            &:hover{
+                color: #1d1d1d;
+                cursor: default;
+                &:before{
+                    color: #989898;
+                }
             }
             a{
                 color: #3197ee;

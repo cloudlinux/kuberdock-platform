@@ -15,7 +15,7 @@ from kubedock.kapi import node_utils
 from kubedock.testutils.testcases import DBTestCase
 from kubedock import settings
 from kubedock.nodes.models import Node
-from kubedock.api import APIError
+from kubedock.exceptions import APIError
 
 
 class TestNodeUtils(DBTestCase):

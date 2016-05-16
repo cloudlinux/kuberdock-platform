@@ -4,7 +4,8 @@ from flask import Blueprint
 from flask.views import MethodView
 from kubedock.decorators import (login_required_or_basic_or_token,
                                  maintenance_protected)
-from kubedock.utils import KubeUtils, register_api, APIError, send_event
+from kubedock.exceptions import APIError
+from kubedock.utils import KubeUtils, register_api, send_event
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
 from kubedock.settings import KUBE_API_VERSION
@@ -115,6 +116,7 @@ def process_pod(pod, rc, service):
         'restartPolicy': spec_body.get('restartPolicy', "Always"),
         'replicas': replicas,
         'kube_type': kdSection.get('kube_type', Kube.get_default_kube_type()),
+        'postDescription': kdSection.get('postDescription'),
         'kuberdock_template_id': kdSection.get('kuberdock_template_id'),
         'kuberdock_resolve': kdSection.get('resolve') or spec_body.get(
             'resolve', []),

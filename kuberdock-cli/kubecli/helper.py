@@ -224,7 +224,7 @@ class PrintOut(object):
 
 def make_config(args):
     create_user_config(args)
-    excludes = ['call', 'config']
+    excludes = ['call']
     config = parse_config(GLOBAL_CONFIG)
     config.update(parse_config(os.path.expanduser(args.config)))
     for k, v in vars(args).items():
@@ -263,7 +263,7 @@ def parse_config(path):
 
 
 def create_user_config(args):
-    default_path = os.path.expanduser('~/.kubecli.conf')
+    default_path = os.path.expanduser(args.config)
 
     if not os.path.exists(default_path):
         with open(default_path, 'wb') as config:

@@ -227,7 +227,7 @@ function protect_cluster_reject {
 }
 
 
-# Drop version. Simpier and more robust (clean mangle table only)
+# Drop version. Simpler and more robust (clean mangle table only)
 function protect_cluster_drop {
     # MARKS:
     # 1 - traffic to reject/drop

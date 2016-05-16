@@ -5,7 +5,7 @@ from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError, ConnectionError, MissingSchema
 
 from kubedock.system_settings.models import SystemSettings
-from kubedock.utils import APIError
+from kubedock.exceptions import APIError
 
 
 class BillingCommon(object):
@@ -23,7 +23,7 @@ class BillingCommon(object):
         return
 
     @abstractmethod
-    def order_product(self, data):
+    def order_product(self, data, user=None):
         return
 
     @abstractmethod

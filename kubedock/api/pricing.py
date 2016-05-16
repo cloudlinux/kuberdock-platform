@@ -7,14 +7,13 @@ from collections import Counter
 from ..core import db, ConnectionPool
 from ..rbac import check_permission
 from ..decorators import login_required_or_basic_or_token
-from ..utils import (KubeUtils, register_api, atomic, all_request_params,
-                     PermissionDenied)
+from ..exceptions import APIError, PermissionDenied
+from ..utils import KubeUtils, register_api, atomic, all_request_params
 from ..users import User
 from ..validation import check_pricing_api, package_schema, kube_schema, \
     packagekube_schema
 from ..billing.models import Package, Kube, PackageKube
 from ..pods.models import Pod
-from . import APIError
 from ..kapi import licensing
 from ..kapi import collect
 

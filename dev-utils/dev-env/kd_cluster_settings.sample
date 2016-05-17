@@ -3,7 +3,7 @@
 # Allow running vagrant cmd from repo root. By default you need to move inside 
 # `dev-utils/dev-inv` before working with vagrant
 # default: nothing
-#export VAGRANT_CWD=~/repos/AppCloud/dev-utils/dev-env/
+export VAGRANT_CWD=dev-utils/dev-env/
 #
 # OpenStack credentials. Username and passoword for OpenStack cloud
 # default: nothing

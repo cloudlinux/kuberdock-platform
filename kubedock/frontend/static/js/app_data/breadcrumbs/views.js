@@ -2,6 +2,7 @@ define([
     'app_data/model',
     'tpl!app_data/breadcrumbs/templates/breadcrumb_layout.tpl',
     'tpl!app_data/breadcrumbs/templates/breadcrumb_controls.tpl',
+    'tooltip'
 ], function(Model, breadcrumbLayoutTpl, breadcrumbControlsTpl){
 
     var views = {};
@@ -70,8 +71,9 @@ define([
         tagName: 'div',
 
         ui: {
-            'search'      : 'input#nav-search-input',
-            'searchButton': '.nav-search'
+            'searchButton' : '.nav-search',
+            'search'       : 'input#nav-search-input',
+            'tooltip'      : '[data-toggle="tooltip"]'
         },
 
         events: {
@@ -82,6 +84,10 @@ define([
 
         initialize: function(options){
             this.model = options.model || new Model.BreadcrumbsControls(options);
+        },
+
+        onRender: function() {
+            this.ui.tooltip.tooltip();
         },
 
         search: function(evt){

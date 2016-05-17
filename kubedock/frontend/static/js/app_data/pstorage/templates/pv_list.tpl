@@ -5,10 +5,10 @@
                 <table class="table" id="persistent-volumes-table">
                     <thead>
                         <tr>
-                            <th class="col-md-4">Volume Name</th>
-                            <th class="col-md-3">Size</th>
-                            <th class="col-md-3">Status</th>
-                            <th class="col-md-2">Actions</th>
+                            <th class="name">Volume Name<b class="caret <%= sortingType.name == -1 ? 'rotate' : '' %>"></b></th>
+                            <th class="size">Size<b class="caret <%= sortingType.size == -1 ? 'rotate' : '' %>"></b></th>
+                            <th class="in_use">Status<b class="caret <%= sortingType.in_use == -1 ? 'rotate' : '' %>"></b></th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

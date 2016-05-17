@@ -62,10 +62,13 @@
     background-clip:         padding-box;
 }
 .opacity (@opacity) {
+    @proc : percentage(@opacity);
+
     -webkit-opacity:    @opacity;
     -khtml-opacity:     @opacity;
     -moz-opacity:       @opacity;
     opacity:            @opacity;
+    filter: alpha(opacity=@proc);
     zoom: 1;
 }
 .animation (@name, @duration: 300ms, @ease: ease) {
@@ -73,29 +76,34 @@
     -moz-animation:    @name @duration @ease;
     -ms-animation:     @name @duration @ease;
 }
+.animationBig(@params) {
+    -webkit-animation: @params;
+    -moz-animation:    @params;
+    -ms-animation:     @params;
+}
 .transition (@transition) {
     -webkit-transition: @transition;
     -moz-transition:    @transition;
     -ms-transition:     @transition;
     -o-transition:      @transition;
+    transition:         @transition;
 }
 .transform(@string){
     -webkit-transform:   @string;
     -moz-transform:      @string;
     -ms-transform:       @string;
     -o-transform:        @string;
+    transform:           @string;
 }
 .transform-origin(@string){
     -webkit-transform-origin: @string;
-    -ms-transform-origin: @string;
-    transform-origin: @string;
+    -moz-transform-origin:    @string;
+    -ms-transform-origin:     @string;
+    -o-transform-origin:      @string;
+    transform-origin:         @string;
 }
 .rotate (@deg) {
-    -webkit-transform:   rotate(@deg);
-    -moz-transform:      rotate(@deg);
-    -ms-transform:       rotate(@deg);
-    -o-transform:        rotate(@deg);
-    transform:           rotate(@deg);
+    .transform(rotate(@deg));
 }
 .background-size (@size) {
     -webkit-background-size: @size;
@@ -124,12 +132,6 @@
     -moz-user-select:      @user-select;
     -ms-user-select:       @user-select;
     user-select:           @user-select;
-}
-.background-size(@size) {
-    -webkit-background-size: @size;
-    -moz-background-size:    @size;
-    -o-background-size:      @size;
-    background-size:         @size;
 }
 .align-right{
     text-align: right;
@@ -224,4 +226,16 @@
     0%  { .opacity(0); .transform(scale3d(1, 1, 1)); }
     20% { .transform(scale3d(.1, .1, .1)); }
     100% { .transform(scale3d(1, 1, 1)); }
+}
+
+@-webkit-keyframes bounceInDellay {
+    0%  { .opacity(0); .transform(scale3d(0, 0, 0)); }
+    90%  { .opacity(0); .transform(scale3d(0, 0, 0)); }
+    100% { .opacity(1); .transform(scale3d(1, 1, 1)); }
+
+}
+@keyframes bounceInDellay {
+    0%  { .opacity(0); .transform(scale3d(0, 0, 0)); }
+    90%  { .opacity(0); .transform(scale3d(0, 0, 0)); }
+    100% { .opacity(1); .transform(scale3d(1, 1, 1)); }
 }

@@ -1,0 +1,26 @@
+appcloud:
+  build: .
+  dockerfile: Dockerfile.test
+  command: tox
+  working_dir: /appcloud
+  volumes:
+    - ./../..:/appcloud
+  links:
+    - redis
+    - postgres
+  environment:
+    REDIS_HOST: redis
+    DB_HOST: postgres
+    RABBIT_HOST: rabbit
+    TOXENV: py27
+    TEST_DB_HOST: postgres
+    HOME: /tmp
+    PYTHONUSERBASE: /tmp
+redis:
+  image: redis:2
+postgres:
+  environment:
+    POSTGRES_DB: testkuberdock
+    POSTGRES_USER: kuberdock
+    POSTGRES_PASSWORD: kuberdock2go
+  image: postgres:9.2

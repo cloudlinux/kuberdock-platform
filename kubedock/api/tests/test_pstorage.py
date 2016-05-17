@@ -128,6 +128,7 @@ class TestPStorageApiPost(APITestCase):
         'name': 'device2',
         'size': 2
     }]
+
     @unittest.skip('bliss')
     def test_good_path(self):
         resp = self.user_open(url, 'POST', self.devices[0])
@@ -152,7 +153,8 @@ class TestPStorageApiPost(APITestCase):
         self.assertEqual(resp.json['data'], {'size': 'min value is 1'})
 
     def test_size_is_not_number(self):
-        resp = self.user_open(url, 'POST', {'name': 'some_name', 'size': 'zxc'})
+        resp = self.user_open(
+            url, 'POST', {'name': 'some_name', 'size': 'zxc'})
         self.assertAPIError(resp, 400, 'ValidationError')
         self.assertEqual(resp.json['data'],
                          {'size': ["field 'size' could not be coerced",
@@ -171,11 +173,10 @@ class TestPStorageApiPost(APITestCase):
     def test_name_is_empty(self):
         resp = self.user_open(url, 'POST', {'name': '', 'size': 1})
         self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(resp.json['data'], {'name': [
-            ('Latin letters, digits, undescores and dashes are expected only. '
-             'Must start with a letter'),
-            'empty values not allowed',
-        ]})
+        self.assertEqual(set(resp.json['data']['name']), set([
+            u'Latin letters, digits, undescores and dashes are '
+            'expected only. Must start with a letter',
+            u'empty values not allowed']))
 
     def test_name_is_not_a_string(self):
         resp = self.user_open(url, 'POST', {'name': 1, 'size': 1})

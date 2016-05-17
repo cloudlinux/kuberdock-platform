@@ -43,11 +43,13 @@ TRIAL_KUBES = 10
 EXTERNAL_UTILS_LANG = 'en_US.UTF-8'
 
 # redis configs
-REDIS_HOST = 'localhost'
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
 REDIS_PORT = '6379'
 
-CELERY_BROKER_URL = 'redis://localhost:6379',
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+SSE_REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+
+CELERY_BROKER_URL = 'redis://{0}:6379'.format(REDIS_HOST)
+CELERY_RESULT_BACKEND = 'redis://{0}:6379'.format(REDIS_HOST)
 
 # Also used in yaml api version check
 KUBE_API_VERSION = 'v1'
@@ -59,7 +61,7 @@ SSH_KEY_FILENAME = '/var/lib/nginx/.ssh/id_rsa'
 SERVICES_VERBOSE_LOG = 1
 PODS_VERBOSE_LOG = 1
 
-INFLUXDB_HOST = '127.0.0.1'
+INFLUXDB_HOST = os.environ.get('INFLUXDB_HOST', '127.0.0.1')
 INFLUXDB_PORT = 8086
 INFLUXDB_TABLE = 'stats'
 INFLUXDB_USER = 'root'
@@ -138,7 +140,7 @@ MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'
 NODE_TOBIND_EXTERNAL_IPS = 'enp0s5'
 NODE_TOBIND_FLANNEL = 'enp0s5'
-NODE_INSTALL_TIMEOUT_SEC = 30*60    # 30 min
+NODE_INSTALL_TIMEOUT_SEC = 30 * 60    # 30 min
 PD_NAMESPACE = ''
 
 NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
@@ -173,19 +175,20 @@ if cp.read(KUBERDOCK_SETTINGS_FILE):
 
 # Import local settings
 try:
-    from local_settings import *
+    from local_settings import *  # noqa
 except ImportError:
     pass
 
 # Only after local settings
-DB_CONNECT_STRING = "{0}:{1}@127.0.0.1/{2}".format(DB_USER, DB_PASSWORD,
-                                                   DB_NAME)
+DB_HOST = os.environ.get('DB_HOST', '127.0.0.1')
+DB_CONNECT_STRING = "{0}:{1}@{2}/{3}".format(DB_USER, DB_PASSWORD,
+                                             DB_HOST, DB_NAME)
 SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
 
 AWS = False
 try:
-    from .amazon_settings import *
+    from .amazon_settings import *  # noqa
 except ImportError:
     pass
 
@@ -194,7 +197,7 @@ CEPH_POOL_NAME = 'rbd'
 CEPH_KEYRING_PATH = '/etc/ceph/ceph.client.admin.keyring'
 CEPH_CLIENT_USER = 'admin'
 try:
-    from .ceph_settings import *
+    from .ceph_settings import *  # noqa
     if CEPH and PD_NAMESPACE:
         CEPH_POOL_NAME = PD_NAMESPACE
 except ImportError:

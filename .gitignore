@@ -17,3 +17,5 @@ celerybeat-schedule
 *.retry
 *.rpm
 celerybeat.pid
+
+.tox/

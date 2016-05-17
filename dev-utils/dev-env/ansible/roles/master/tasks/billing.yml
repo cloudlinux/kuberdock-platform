@@ -8,8 +8,23 @@
       - "^(.*)remove next line to uncomment (end of block)$"
       - "^([ ]+)#}$"
 
+- name: Patching a UI on host
+  become: False
+  lineinfile:
+      dest: "../../kubedock/frontend/templates/apps/index.html"
+      regexp: "{{ item }}"
+      state: absent
+  with_items:
+      - "^(.*)remove this line to uncomment$"
+      - "^(.*)remove next line to uncomment (end of block)$"
+      - "^([ ]+)#}$"
+  delegate_to: localhost
+
 - name: Hide modified UI file from git
   become: False
   command: git update-index --assume-unchanged ../../kubedock/frontend/templates/apps/index.html
   delegate_to: localhost
+
+
+
 

@@ -26,6 +26,18 @@
       - license
       - patch
 
+- name: Patching a licensing on host
+  become: false
+  lineinfile:
+      dest: "../../kubedock/kapi/licensing.py"
+      line: "def is_valid(): return True" 
+      state: present
+  when: license_path == 'patch'
+  delegate_to: localhost
+  tags:
+      - license
+      - patch
+
 - name: Hide modified license file from git
   become: False
   command: git update-index --assume-unchanged ../../kubedock/kapi/licensing.py

@@ -164,7 +164,7 @@ define(['app_data/app',
 
             return {
                 hasPorts        : hasPorts,
-                postDescription : postDesc ? this.encodeBBCode(postDesc) : null,
+                postDescription : this.preparePostDescription(postDesc),
                 publicIP        : this.model.get('public_ip'),
                 publicName      : publicName,
                 graphs          : this.graphs,
@@ -198,11 +198,13 @@ define(['app_data/app',
         stopItem: function(){ this.model.cmdStop(); },
         terminateItem: function(){ this.model.cmdDelete(); },
 
-        encodeBBCode: function(val) {
-            if (val !== undefined) {
-                var parser = new BBCodeParser(BBCodeParser.defaultTags());
-                return parser.parseString(val);
-            }
+        preparePostDescription: function(val){
+            if (val == null)
+                return;
+            val = val.replace(/(%PUBLIC_ADDRESS%)/gi,
+                              this.model.get('public_ip') || '...');
+            var parser = new BBCodeParser(BBCodeParser.defaultTags());
+            return parser.parseString(val);
         }
     });
 

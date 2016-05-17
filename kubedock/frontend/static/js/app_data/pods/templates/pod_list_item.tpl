@@ -12,7 +12,7 @@
     <% } %>
 </td>
 <td>
-    <span class="<%= status !== 'deleting' ? 'poditem-page-btn' : '' %>" title="Edit <%- name %> pod" ><%- name %></span>
+    <span class="<%= status !== 'deleting' ? 'poditem-page-btn' : '' %>" title='"<%- name %>" pod page'><%- name %></span>
 </td>
 <!-- <td>
     <span><%- replicas || 1 %></span>

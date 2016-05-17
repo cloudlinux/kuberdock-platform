@@ -6,7 +6,7 @@ def add_system_settings():
     db.session.add_all([
         SystemSettings(
             name='billing_type', label='Select your billing system',
-            value='No billing', options=json.dumps(['No billing', 'WHMCS'])),
+            value='No billing'),
         SystemSettings(
             name='billing_url', label='Link to WHMCS',
             placeholder='http://domain.name',

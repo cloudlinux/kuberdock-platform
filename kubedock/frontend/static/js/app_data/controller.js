@@ -408,9 +408,9 @@ define([
                     });
                     that.listenTo(wizardLayout, 'pod:pay_and_run', function(data){
                         if (checkKubeTypes()) return;
-                        App.getSystemSettingsCollection().done(function(collection){
-                            var billingUrl = utils.getBillingUrl(collection);
-                            if (billingUrl) {
+                        App.getSystemSettingsCollection().done(function(settingCollection){
+                            var billingType = settingCollection.findWhere({name: 'billing_type'}).get('value');
+                            if (billingType.toLowerCase() !== 'no billing') {
                                 utils.preloader.show();
                                 podCollection.fullCollection.create(data, {
                                     wait: true,

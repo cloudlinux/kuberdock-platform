@@ -1,0 +1,21 @@
+- name: Install additional dev packages
+  yum: name={{ item }} state=latest
+  with_items:
+      - rpm-build
+      - nodejs
+      - nodejs-less
+      - nodejs-clean-css
+
+- name: Building RPM from source
+  command: bash /vagrant/dev-utils/build-rpm.sh
+  environment:
+    KD_GIT_REF: "{{ git_ref | default('') }}"
+
+- name: Notice not to unpack deploy.sh
+  set_fact: 
+      deploy_extracted: true
+
+- name: Override src path
+  set_fact:
+      src_prefix: /vagrant
+

@@ -1,31 +1,14 @@
 - include: detect_vm.yml
 
-- name: Install additional dev packages
-  yum: name={{ item }} state=latest
-  with_items:
-      - epel-release
-  when: is_dev_install
-
 - name: Install additional packages
   yum: name={{ item }} state=latest
   with_items:
+      - epel-release
       - git
+      - tmux
 
-- name: Install additional dev packages
-  yum: name={{ item }} state=latest
-  with_items:
-      - rpm-build
-      - git
-      - nodejs
-      - nodejs-less
-      - nodejs-clean-css
+- include: dev_predeploy.yml
   when: is_dev_install
-
-- name: Building RPM from source
-  command: bash /vagrant/dev-utils/build-rpm.sh
-  when: is_dev_install
-  environment:
-    KD_GIT_REF: "{{ git_ref | default('') }}"
 
 - find: paths=/vagrant/ patterns="kuberdock*.rpm" 
   register: rpm_exist
@@ -37,7 +20,7 @@
 
 - name: Unpack deploy.sh
   command: bash /vagrant/dev-utils/unpack-rpm.sh
-  when: (not is_dev_install and rpm_exist.matched > 0)
+  when: deploy_extracted is not defined
 
 - name: Cleanup
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
@@ -52,18 +35,9 @@
   when: use_ceph
 
 - name: Reset password
-  shell: python /vagrant/manage.py reset-password --set admin
+  shell: python "{{ src_prefix }}/manage.py" reset-password --set admin
 
-- name: Install additional packages
-  yum: name={{ item }} state=latest
-  with_items:
-      - tmux
-  tags:
-      - tmux
-
-- name: UI for dev
-  set_fact:
-      src_prefix: /vagrant
+- include: dev_postdeploy.yml
   when: is_dev_install
 
 - include: license.yml
@@ -71,59 +45,21 @@
 
 - include: billing.yml
 
-- name: Disable stuff
-  service: name=emperor.uwsgi state=stopped
-  when: is_dev_install
-
 - seboolean: name=httpd_can_network_connect state=yes persistent=yes
   notify:
     - restart nginx
 
-- name: Proxy pass for nginx
-  replace: 
-    dest: /etc/nginx/conf.d/kuberdock-ssl.conf
-    regexp: "include uwsgi_params;\n[ ]*uwsgi_pass 127.0.0.1:8009;" 
-    replace: "proxy_pass http://127.0.0.1:5000;"
-    backup: yes
-  notify:
-    - restart nginx
-  when: is_dev_install
-
-- name: Create tmux session
-  shell: tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}' 
-  when: is_dev_install
-  tags:
-      - tmux
-
-- name: Up wsgi
-  command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "sudo python wsgi.py" C-m chdir=/vagrant
-  when: is_dev_install and not no_wsgi
-  tags:
-      - tmux
-
-- name: Up celery
-  command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "{{ item }}" C-m chdir=/vagrant
-  with_items:
-    - "sudo -u nginx /usr/bin/celery -A kubedock.tasks --autoscale=16,4 worker -Ofair"
-    - "sudo /usr/bin/celery -A kubedock.tasks beat -s /tmp/celerybeat-schedule"
-  when: is_dev_install
-  tags:
-      - tmux
-
 - name: Fetching key
   fetch: src={{ pub_key }} dest=/tmp/kd_rsa.pub fail_on_missing=yes flat=yes
-
-- name: Prepare test env
-  command: bash /vagrant/dev-utils/prepare_test_env.sh
-  when: is_dev_install
 
 - include: ip_pool.yml
 
 - name: Create users
-  shell: python /vagrant/manage.py create-user -u {{ item }} -p {{ item }} -r User
+  shell: python "{{ src_prefix }}/manage.py" create-user -u {{ item }} -p {{ item }} -r User
   with_items:
       - test_user
       - alt_test_user
 
 - include: predefined_apps.yml
+- include: kcli.yml
 

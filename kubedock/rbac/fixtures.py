@@ -13,7 +13,7 @@ ROLES = (
 resources = {
     'users': ('create', 'get', 'edit', 'delete', 'auth_by_another'),
     'nodes': ('create', 'get', 'edit', 'delete', 'redeploy'),
-    'pods': ('create', 'get', 'edit', 'delete'),
+    'pods': ('create', 'get', 'edit', 'delete', 'restore_for_another'),
     'yaml_pods': ('create',),
     'ippool': ('create', 'get', 'edit', 'delete', 'view'),
     'notifications': ('create', 'get', 'edit', 'delete'),
@@ -55,6 +55,7 @@ permissions = {
         ('system_settings', 'delete'): True,
         ('images', 'get'): True,
         ('images', 'isalive'): True,
+        ('pods', 'restore_for_another'): True,
         ('predefined_apps', 'create'): True,
         ('predefined_apps', 'get'): True,
         ('predefined_apps', 'edit'): True,

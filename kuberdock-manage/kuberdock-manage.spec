@@ -1,3 +1,7 @@
+%{!?python_sitelib: %define python_sitelib %(%{__python} -c
+"from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+
+
 Name:       kuberdock-manage
 Version:    1.0
 Release:    2%{?dist}
@@ -14,10 +18,12 @@ BuildRequires: python
 Requires: python
 Requires: python-requests
 Requires: python-argparse
+Requires: python-click
+Requires: PyYAML
 
 
 %description
-Kuberdock command-line interface
+Kuberdock admin utilities
 
 
 %prep
@@ -28,16 +34,23 @@ Kuberdock command-line interface
 
 
 %install
+rm -rf %{buildroot}
 install -d %{buildroot}%{_sysconfdir}/%{name}
-install -m 0644 -D kuberdock-manage.conf %{buildroot}%{_sysconfdir}/%{name}
 install -d %{buildroot}%{_bindir}
-install -m 0755 -D kuberdock-manage %{buildroot}%{_bindir}
+install -m 0755 -D kdctl %{buildroot}%{_bindir}
+install -D -d -m 755 %{buildroot}%{python_sitelib}/kdctllib
+cp -r kdctllib/* %{buildroot}%{python_sitelib}/kdctllib
+
+
+%clean
+rm -rf %{buildroot}
 
 
 %files
 %defattr(-,root,root,-)
 %{_sysconfdir}/*
 %{_bindir}/*
+%{python_sitelib}/kdctllib/
 
 
 %changelog

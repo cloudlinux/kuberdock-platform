@@ -448,8 +448,8 @@ class KuberDock(KubeCtl):
         self._data_path = None
         # Need to set resource type from KubeCtl
         args['resource'] = 'pod'
-        super(KuberDock, self).__init__(**args)
         self._initialized = self._load(args)
+        super(KuberDock, self).__init__(**args)
 
     def create(self):
         self.set()

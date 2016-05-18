@@ -29,7 +29,7 @@ def get_kuberdock_logs_pod_name(node):
 
 
 def create_node(ip, hostname, kube_id,
-                do_deploy=True, with_testing=False):
+                do_deploy=True, with_testing=False, options=None):
     """Creates new node in database, kubernetes. Deploys all needed packages
     and settings on the new node, if do_deploy is specified.
     :param ip: optional IP address for the node. If it's not specified, then
@@ -64,7 +64,7 @@ def create_node(ip, hostname, kube_id,
         pass
 
     node = add_node_to_db(node)
-    _deploy_node(node, do_deploy, with_testing)
+    _deploy_node(node, do_deploy, with_testing, options)
 
     ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
     logs_podname = get_kuberdock_logs_pod_name(hostname)
@@ -236,9 +236,9 @@ def _check_node_hostname(ip, hostname):
             hostname, uname_hostname))
 
 
-def _deploy_node(dbnode, do_deploy, with_testing):
+def _deploy_node(dbnode, do_deploy, with_testing, options=None):
     if do_deploy:
-        tasks.add_new_node.delay(dbnode.id, with_testing)
+        tasks.add_new_node.delay(dbnode.id, with_testing, options=options)
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
         if is_ceph_installed:

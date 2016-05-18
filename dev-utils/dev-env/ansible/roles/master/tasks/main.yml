@@ -1,4 +1,4 @@
-- include: detect_vm.yml
+- include: ../../../facts.yml
 
 - name: Install additional packages
   yum: name={{ item }} state=latest

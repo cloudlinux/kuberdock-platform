@@ -1,5 +1,8 @@
+- include: ../../../facts.yml
+
 - name: RPM proxy configure
   include: rpm_proxy.yml
+  when: is_nebula
 
 - name: upgrade all packages
   yum: name=* state=latest

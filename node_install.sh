@@ -510,6 +510,9 @@ sed -i '/^DOCKER_STORAGE_OPTIONS=/c\DOCKER_STORAGE_OPTIONS=--storage-driver=over
 # enable registries with self-sighned certs
 sed -i "s|^# \(INSECURE_REGISTRY='--insecure-registry\)'|\1=0.0.0.0/0'|" /etc/sysconfig/docker
 
+# AC-3191 additional docker params
+sed -i "s|^OPTIONS='\(.*\)'|OPTIONS='\1 ${DOCKER_PARAMS}'|" /etc/sysconfig/docker
+
 cat > /etc/systemd/system/docker.service << 'EOF'
 [Unit]
 Description=Docker Application Container Engine

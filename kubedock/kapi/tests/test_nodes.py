@@ -68,7 +68,7 @@ class TestNodes(DBTestCase):
         self.assertEqual(res.hostname, hostname)
 
         deploy_node_mock.assert_called_once_with(
-            res, True, False
+            res, True, False, None
         )
         gethostbyname_mock.assert_called_once_with(hostname)
         node = Node.get_by_name(hostname)
@@ -166,7 +166,7 @@ class TestNodes(DBTestCase):
         do_deploy = True
         nodes._deploy_node(node1, do_deploy, with_testing)
         add_node_mock.delay.assert_called_once_with(
-            node1.id, with_testing)
+            node1.id, with_testing, options=None)
 
         self.assertFalse(is_ceph_mock.called)
         self.assertFalse(add_node_to_k8s_mock.called)

@@ -6,11 +6,11 @@ import time
 
 from ..core import db
 from ..exceptions import APIError, PermissionDenied
+from ..login import auth_required
 from ..stats import StatWrap5Min
 from ..pods.models import Pod
 from ..kubedata.kubestat import KubeStat
 from ..rbac import check_permission
-from ..login import auth_required
 from ..utils import all_request_params, KubeUtils
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')

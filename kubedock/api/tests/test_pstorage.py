@@ -116,12 +116,7 @@ class TestPStorageApiGet(APITestCase):
     def test_device_not_exists(self, m1):
         m1.return_value = []
         res = self.user_open(self.item_url('not_existed'))
-        self.assert404(res)
-        self.assertEqual(res.json, {
-            "data": "Persistent disk not found.",
-            "status": "error",
-            "type": "PDNotFound"
-        })
+        self.assertAPIError(res, 404, 'PDNotFound')
 
 
 class TestPStorageApiPost(APITestCase):
@@ -148,86 +143,52 @@ class TestPStorageApiPost(APITestCase):
 
     def test_size_less_zero(self):
         resp = self.user_open(url, 'POST', {'name': 'some_name', 'size': -1})
-        expected = {
-            'data': '"size" must be > 0',
-            'status': 'error',
-            'type': 'APIError'
-        }
-        self.assert400(resp)
-        self.assertEqual(expected, resp.json)
+        self.assertAPIError(resp, 400, 'ValidationError')
+        self.assertEqual(resp.json['data'], {'size': 'min value is 1'})
 
     def test_size_equal_zero(self):
         resp = self.user_open(url, 'POST', {'name': 'some_name', 'size': 0})
-        expected = {
-            'data': '"size" must be > 0',
-            'status': 'error',
-            'type': 'APIError'
-        }
-        self.assert400(resp)
-        self.assertEqual(expected, resp.json)
+        self.assertAPIError(resp, 400, 'ValidationError')
+        self.assertEqual(resp.json['data'], {'size': 'min value is 1'})
 
     def test_size_is_not_number(self):
         resp = self.user_open(url, 'POST', {'name': 'some_name', 'size': 'zxc'})
-        expected = {
-            'data': '"size" must be an integer',
-            'status': 'error',
-            'type': 'APIError'
-        }
-        self.assert400(resp)
-        self.assertEqual(expected, resp.json)
+        self.assertAPIError(resp, 400, 'ValidationError')
+        self.assertEqual(resp.json['data'],
+                         {'size': ["field 'size' could not be coerced",
+                                   'must be of integer type']})
 
     def test_size_is_not_specified(self):
         resp = self.user_open(url, 'POST', {'name': 'some_name'})
-        expected = {
-            'data': '["name", "size"] are mandatory fields',
-            'status': 'error',
-            'type': 'APIError'
-        }
-        self.assert400(resp)
-        self.assertEqual(expected, resp.json)
+        self.assertAPIError(resp, 400, 'ValidationError')
+        self.assertEqual(resp.json['data'], {'size': 'required field'})
 
     def test_name_is_not_specified(self):
         resp = self.user_open(url, 'POST', {'size': 1})
-        expected = {
-            'data': '["name", "size"] are mandatory fields',
-            'status': 'error',
-            'type': 'APIError'
-        }
-        self.assert400(resp)
-        self.assertEqual(expected, resp.json)
+        self.assertAPIError(resp, 400, 'ValidationError')
+        self.assertEqual(resp.json['data'], {'name': 'required field'})
 
     def test_name_is_empty(self):
         resp = self.user_open(url, 'POST', {'name': '', 'size': 1})
-        expected = {
-            'data': '"name" must be not empty',
-            'status': 'error',
-            'type': 'APIError'
-        }
-        self.assert400(resp)
-        self.assertEqual(expected, resp.json)
+        self.assertAPIError(resp, 400, 'ValidationError')
+        self.assertEqual(resp.json['data'], {'name': [
+            ('Latin letters, digits, undescores and dashes are expected only. '
+             'Must start with a letter'),
+            'empty values not allowed',
+        ]})
 
     def test_name_is_not_a_string(self):
         resp = self.user_open(url, 'POST', {'name': 1, 'size': 1})
-        expected = {
-            'data': '"name" must be a string',
-            'status': 'error',
-            'type': 'APIError'
-        }
-        self.assert400(resp)
-        self.assertEqual(expected, resp.json)
+        self.assertAPIError(resp, 400, 'ValidationError')
+        self.assertEqual(resp.json['data'], {'name': 'must be of string type'})
 
     def test_already_exists(self):
         existed = PersistentDisk.create(owner=self.user,
                                         name=self.devices[0]['name'], size=1)
         existed.save()
         res = self.user_open(url, 'POST', self.devices[0])
-        self.assertStatus(res, 406)
-        self.assertEqual(res.json, {
-            "data": "device1 already exists",
-            "status": "error",
-            "type": "APIError"
-        })
-    @unittest.skip('bliss')
+        self.assertAPIError(res, 406, 'DuplicateName')
+
     @mock.patch('kubedock.pods.models.PersistentDisk.save')
     def test_creation_fallen(self, save_mock):
         save_mock.side_effect = Exception('test exception')
@@ -279,12 +240,7 @@ class TestPStorageApiDelete(APITestCase):
     def test_delete_non_free_pd_raise_exception(self):
         res = self.user_open(self.item_url(self.non_free_pd.id),
                              method='DELETE')
-        self.assert400(res)
-        self.assertEqual(res.json, {
-            "data": "Persistent disk is used.",
-            "status": "error",
-            "type": "PDIsUsed"
-        })
+        self.assertAPIError(res, 400, 'PDIsUsed')
 
     @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
     def test_used_disk_is_not_deleted(self, m1):

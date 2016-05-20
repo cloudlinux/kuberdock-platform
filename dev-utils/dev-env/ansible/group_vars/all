@@ -1,1 +1,3 @@
 add_testing_repo: "{{ '-t' if (testing_repo is defined and testing_repo) else '' }}"
+src_prefix: /var/opt/kuberdock
+is_dev_install: false

@@ -1,5 +1,4 @@
-from collections import Counter
-from flask import Blueprint, current_app
+from flask import Blueprint
 from flask.views import MethodView
 import json
 import re
@@ -67,7 +66,6 @@ def get_user_kube_types():
     user = User.query.filter_by(username=user.username).first()
     if user is None:
         raise APIError('No such user', 404, 'UserNotFound')
-    # current_app.logger.debug(user.package.kubes)
     return {k.kube.name: k.kube.id for k in user.package.kubes}
 
 

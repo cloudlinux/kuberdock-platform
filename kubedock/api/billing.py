@@ -1,13 +1,25 @@
-from flask import Blueprint
+from flask import Blueprint, current_app
+
 from kubedock.decorators import maintenance_protected
+from kubedock.exceptions import APIError
 from kubedock.login import auth_required
 from kubedock.utils import KubeUtils
+from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
-from kubedock.billing.whmcs import BillingWHMCS
-from kubedock.billing.no_billing import NoBilling
 
 
 billing = Blueprint('billing', __name__, url_prefix='/billing')
+
+
+def no_billing_data():
+    return {
+        'billing': 'No billing',
+        'packages': [p.to_dict(with_kubes=True) for p in Package.query.all()],
+        'default': {
+            'kubeType': Kube.get_default_kube().to_dict(),
+            'packageId': Package.get_default().to_dict(),
+        }
+    }
 
 
 @billing.route('/info', methods=['GET'], strict_slashes=False)
@@ -16,8 +28,11 @@ billing = Blueprint('billing', __name__, url_prefix='/billing')
 @KubeUtils.jsonwrap
 def get_billing_info():
     data = KubeUtils._get_params()
-    billing_system = _get_billing()
-    return billing_system.get_info(data)
+    current_billing = SystemSettings.get_by_name('billing_type')
+    if current_billing == 'No billing':
+        return no_billing_data()
+    billing = current_app.billing_factory.get_billing(current_billing)
+    return billing.getkuberdockinfo(**data)
 
 
 @billing.route('/paymentmethods', methods=['GET'], strict_slashes=False)
@@ -25,8 +40,11 @@ def get_billing_info():
 @maintenance_protected
 @KubeUtils.jsonwrap
 def payment_methods():
-    billing_system = _get_billing()
-    return billing_system.get_payment_methods()
+    current_billing = SystemSettings.get_by_name('billing_type')
+    if current_billing == 'No billing':
+        raise APIError('Without billing', 404)
+    billing = current_app.billing_factory.get_billing(current_billing)
+    return billing.getpaymentmethods()
 
 
 @billing.route('/order', methods=['POST'], strict_slashes=False)
@@ -35,12 +53,13 @@ def payment_methods():
 @KubeUtils.jsonwrap
 def order_product():
     data = KubeUtils._get_params()
-    user = KubeUtils._get_current_user()
-    billing_system = _get_billing()
-
+    current_billing = SystemSettings.get_by_name('billing_type')
+    if current_billing == 'No billing':
+        raise APIError('Without billing', 404)
+    billing = current_app.billing_factory.get_billing(current_billing)
     if data.get('pod'):
-        return billing_system.order_pod(data, user=user)
-    return billing_system.order_product(data, user=user)
+        return billing.orderpod(**data)
+    return billing.orderproduct(**data)
 
 
 @billing.route('/orderKubes', methods=['POST'], strict_slashes=False)
@@ -49,16 +68,8 @@ def order_product():
 @KubeUtils.jsonwrap
 def order_kubes():
     data = KubeUtils._get_params()
-    user = KubeUtils._get_current_user()
-    billing_system = _get_billing()
-
-    return billing_system.order_kubes(data, user=user)
-
-
-def _get_billing():
-    billings = {
-        'no billing': NoBilling,
-        'WHMCS': BillingWHMCS,
-    }
-    billing_type = SystemSettings.get_by_name('billing_type')
-    return billings.get(billing_type, NoBilling)()
+    current_billing = SystemSettings.get_by_name('billing_type')
+    if current_billing == 'No billing':
+        raise APIError('Without billing', 404)
+    billing = current_app.billing_factory.get_billing(current_billing)
+    return billing.orderkubes(**data)

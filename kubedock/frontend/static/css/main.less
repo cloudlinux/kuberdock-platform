@@ -337,7 +337,10 @@ body{
                     &:focus{
                         text-decoration: none;
                     }
-                    &#add_pod, &#add_node, &#create_user, &#create_network{
+                    &#add_pod,
+                    &#add_node,
+                    &#create_user,
+                    &#create_network{
                         .transition(0.3s ease-in-out);
                         margin-right: 0;
                         padding: 0 0 0 72px;
@@ -365,11 +368,18 @@ body{
                             position: absolute;
                             background-color: #fff;
                         }
+
                         &:hover{
-                            color: #f2f2f2;
-                            text-decoration: none;
-                            &:after{
-                                .transform(scale(1.07));
+                            &:not(disabled){
+                                color: #f2f2f2;
+                                cursor: pointer;
+                                text-decoration: none;
+                                &:after{
+                                    .transform(scale(1.07));
+                                }
+                            }
+                            &.disabled{
+                                cursor: not-allowed;
                             }
                         }
                     }
@@ -392,7 +402,6 @@ body{
                     &#rename_node,
                     &#delete_node,
                     &#delete_user,
-                    &#redeploy_node,
                     &#create_network,
                     &#login_this_user{
                         outline: 0;
@@ -408,7 +417,6 @@ body{
                         }
                     }
                     &#edit_user,
-                    &#redeploy_node,
                     &#login_this_user{
                         margin-right: 25px;
                         padding: 0 0 0 38px;
@@ -462,12 +470,6 @@ body{
                             content: '';
                             height: 21px;
                             background: url('../img/delete-node.png') 0 0 no-repeat;
-                        }
-                    }
-                    &#redeploy_node{
-                        padding: 0 0 0 33px;
-                        &:before{
-                            background: url('../img/redeploy.png') 0 0 no-repeat;
                         }
                     }
                 }
@@ -761,7 +763,7 @@ body{
                         display: block;
                         color: #646f82;
                         font-weight: 400;
-                        padding: 5px 20px;
+                        padding: 5px 22px;
                         line-height: 20px;
                         white-space: nowrap;
                         &:hover{
@@ -1017,25 +1019,16 @@ body{
                 .box-shadow(none);
                 border: none;
                 .modal-header{
-                    height: 64px;
-                    padding: 0 30px;
+                    padding: 19px 30px;
+                    position: relative;
                     .border-radius(none);
                     .close{
+                        .opacity(1);
                         outline: 0;
-                        width: 14px;
-                        height: 16px;
-                        margin-right: 0;
-                        margin-top: 24px;
-                        background: url('../img/modal-cross.png') 0 0 no-repeat;
-                        &:hover{
-                            .opacity(1);
-                            background-position: 0 -16px;
-                        }
                     }
                     .modal-title{
                         color: #1e1e1e;
                         font-size: 17px;
-                        line-height: 63px;
                         font-family: @regular;
                     }
                 }
@@ -1260,6 +1253,8 @@ body{
     @import "tooltip.less";
 
     /* edit inputs */
+
+    @import "preloader.less";
 
     .editGroup{
         position: relative;
@@ -1729,6 +1724,7 @@ body{
 /* dropdown animation */
 .open > .dropdown-menu {
     .transform(scale(1, 1));
+    .opacity(1);
 }
 .dropdown-menu {
     .transform-origin(top);
@@ -1736,59 +1732,15 @@ body{
     animation-fill-mode: forwards;
     .transform(scale(1, 0));
     display: block;
-    .transition(all 0.3s ease-out)
+    .opacity(0);
+    .transition(all 300ms ease-in-out);
 }
 .dropup .dropdown-menu {
     .transform-origin(bottom);
 }
-/* end dropdown animation */
-#page-preloader{
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1000;
-    display: none;
-    position: fixed;
 
-    .loader{
-        .border-radius(50%);
-        .animation(spin, 2s, linear infinite);
-        left: 50%;
-        top: 50%;
-        width: 100px;
-        height: 100px;
-        display: block;
-        margin: -75px 0 0 -75px;
-        position: relative;
-        border: 2px solid transparent;
-        border-top-color: #0074BF;
-        &:before{
-            .border-radius(50%);
-            .animation(spin, 3s, linear infinite);
-            top: 5px;
-            left: 5px;
-            right: 5px;
-            bottom: 5px;
-            content: '';
-            position: absolute;
-            border: 2px solid transparent;
-            border-top-color: #f5544d;
-        }
-        &:after{
-            .border-radius(50%);
-            .animation(spin, 1.5s, linear infinite);
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            bottom: 12px;
-            content: '';
-            position: absolute;
-            border: 2px solid transparent;
-            border-top-color: #ffb704;
-        }
-    }
-}
+/* end dropdown animation */
+
 /* spin */
 @-webkit-keyframes spin{
     0%{ .rotate(0deg); }

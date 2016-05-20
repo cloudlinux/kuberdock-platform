@@ -2,6 +2,7 @@ import yaml
 from copy import deepcopy
 from flask import Blueprint
 from flask.views import MethodView
+
 from kubedock.decorators import maintenance_protected
 from kubedock.exceptions import APIError
 from kubedock.login import auth_required

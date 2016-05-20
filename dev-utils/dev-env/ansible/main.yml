@@ -6,20 +6,24 @@
   roles:
       - common
 
-- hosts: master
+- name: Setup master
+  hosts: master
   become: yes
   roles:
       - master
 
-- hosts: node
+- name: Setup nodes
+  hosts: node
   become: yes
   roles:
       - node
 
-  post_tasks:
-      - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_all_ipv4_addresses | last }}"
-      - debug: msg="http://{{ kd_url }}:5000 [user:admin, password:admin]"
-        when: is_dev_install
-      - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
-        when: not is_dev_install
-
+- hosts: master
+  tasks:
+    - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_all_ipv4_addresses | last }}"
+    - debug: msg="http://{{ kd_url }}:5000 [user:admin, password:admin]"
+      run_once: true
+      when: is_dev_install
+    - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
+      run_once: true
+      when: not is_dev_install

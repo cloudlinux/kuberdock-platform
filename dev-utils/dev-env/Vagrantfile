@@ -3,7 +3,7 @@
 
 nodesCount = Integer(ENV['KD_NODES_COUNT'] || '1')
 
-masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '1024')
+masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '2048')
 masterCpus = Integer(ENV['KD_MASTER_CPUS'] || '1')
 
 nodeMemory = Integer(ENV['KD_NODE_MEMORY'] || '2048')
@@ -21,6 +21,8 @@ Vagrant.configure(2) do |config|
 
   config.ssh.username = 'root'
   config.ssh.insert_key = 'true'
+
+  config.gatling.rsync_on_startup = false
 
   config.vm.provider "virtualbox" do |vb, override|
     override.ssh.password = 'vagrant'
@@ -90,15 +92,26 @@ Vagrant.configure(2) do |config|
             "master" => ["kd_master"],
             "node" => ["kd_node[1:#{nodesCount}]"],
         }
-        ansible.extra_vars = {
+
+        extra_vars = {
             "is_dev_install" => ENV['KD_DEV_INSTALL'],
             "dotfiles" => ENV['KD_DOT_FILES'],
             "hook" => ENV['KD_MASTER_HOOK'],
             "license_path" => ENV['KD_LICENSE'],
             "no_wsgi" => ENV['KD_NO_WSGI'],
             "git_ref" => ENV['KD_GIT_REF'],
-            "testing_repo" => ENV['KD_TESTING_REPO'],
+            "testing_repo" => true, #ENV['KD_TESTING_REPO'],
+            "public_ips" => ENV['KD_ONE_PUB_IPS'],
         }
+
+        # Clean undefined vars
+        extra_vars.each do |key, value|
+            if value == nil
+                extra_vars.delete(key)
+            end
+        end
+
+        ansible.extra_vars = extra_vars
       end
   end
 end

@@ -11,6 +11,7 @@ from ..core import db
 from ..exceptions import APIError
 from ..settings import NODE_INSTALL_LOG_FILE
 
+
 def get_nodes_collection():
     """Returns information for all known nodes.
 

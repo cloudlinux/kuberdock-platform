@@ -30,10 +30,15 @@ define([
                 return this.pageNotFound();
             var that = this;
             require(['app_data/pods/views/pods_list'], function(Views){
+                var suspendedTitle;
+                if (App.currentUser.get('suspended')) {
+                    suspendedTitle = 'Suspended users can\'t create new containers';
+                }
                 var listLayout = new Views.PodListLayout(),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods']}),
                     button = App.currentUser.roleIs('User', 'TrialUser')
-                        && {id: 'add_pod', href: '#newpod', title: 'Add new container'},
+                        && {id: 'add_pod', href: '#newpod', title: 'Add new container',
+                            suspendedTitle: suspendedTitle},
                     breadcrumbsControls = new Breadcrumbs.Controls(
                         {search: true, button: button}),
                     navbar = new Menu.NavList({collection: App.menuCollection});
@@ -420,9 +425,9 @@ define([
                     });
                     that.listenTo(wizardLayout, 'pod:pay_and_run', function(data){
                         if (checkKubeTypes()) return;
-                        App.getSystemSettingsCollection().done(function(collection){
-                            var billingUrl = utils.getBillingUrl(collection);
-                            if (billingUrl) {
+                        App.getSystemSettingsCollection().done(function(settingCollection){
+                            var billingType = settingCollection.findWhere({name: 'billing_type'}).get('value');
+                            if (billingType.toLowerCase() !== 'no billing') {
                                 utils.preloader.show();
                                 podCollection.fullCollection.create(data, {
                                     wait: true,

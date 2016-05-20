@@ -404,12 +404,13 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         cmdPayAndStart: function(){
             var deferred = new $.Deferred(),
                 model = this;
-            App.getSystemSettingsCollection().done(function(collection){
-                var billingUrl = utils.getBillingUrl(collection);
-                if (billingUrl === null) { // no billing
+            App.getSystemSettingsCollection().done(function(settingCollection){
+                var billingType = settingCollection.findWhere({
+                    name: 'billing_type'}).get('value');
+                if (billingType.toLowerCase() === 'no billing') {
                     model.cmdStart().then(deferred.resolve, deferred.reject);
                 }
-                else if (billingUrl !== undefined) { // we got url, undefined means no URL for some reason
+                else {
                     utils.preloader.show();
                     $.ajax({  // TODO: use Backbone.Model
                         authWrap: true,
@@ -424,7 +425,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     ).fail(
                         utils.notifyWindow
                     ).done(function(response){
-                        if(response.data.status == 'Paid') {
+                        if(response.data.status === 'Paid') {
                             deferred.resolveWith(model, arguments);
                         } else {
                             utils.modalDialog({
@@ -689,10 +690,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     // TODO: Fixed code duplication by moving models from settings_app to a common file
-    data.PersistentStorageCollection = Backbone.Collection.extend({
+    data.PersistentStorageCollection = data.SortableCollection.extend({
         url: '/api/pstorage',
         model: data.PersistentStorageModel,
-        parse: unwrapper
+        parse: unwrapper,
+        mode: 'client',
+        state: {
+            pageSize: 2147483647
+        }
     });
 
     data.UserModel = Backbone.Model.extend({
@@ -808,7 +813,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
         mode: 'client',
         state: {
-            pageSize: 20
+            pageSize: 10
         }
     });
     App.getUserCollection = App.resourcePromiser('userCollection', data.UsersPageableCollection);

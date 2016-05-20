@@ -11,9 +11,10 @@ import json
 import subprocess
 
 from kubedock.api import create_app
+from kubedock.exceptions import APIError
 from kubedock.kapi.nodes import create_node
 from kubedock.validation import check_node_data
-from kubedock.utils import APIError, UPDATE_STATUSES
+from kubedock.utils import UPDATE_STATUSES
 from kubedock.core import db
 from kubedock.models import User, Pod
 from kubedock.billing.models import Package, Kube, PackageKube
@@ -44,6 +45,7 @@ from sqlalchemy.orm.exc import NoResultFound
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 WAIT_TIMEOUT = 1200  # seconds
+WAIT_TROUBLE_TIMEOUT = 300  # seconds
 WAIT_RETRY_DELAY = 5
 
 
@@ -171,6 +173,7 @@ class WaitTroubleException(Exception):
 def wait_for_nodes(nodes_list, timeout):
     _timeout = time.time() + (timeout or WAIT_TIMEOUT)
     host_list = set(nodes_list)
+    nodes_in_trouble = {}
 
     while host_list:
         if time.time() > _timeout:
@@ -178,13 +181,17 @@ def wait_for_nodes(nodes_list, timeout):
 
         time.sleep(WAIT_RETRY_DELAY)
 
-        for node_host in nodes_list:
-            node = Node.get_by_name(node_host)
+        for nhost in nodes_list:
+            node = Node.get_by_name(nhost)
             status = get_one_node(node.id)['status']
-            if status == 'troubles':
-                raise WaitTroubleException()
-            elif status == 'running':
-                host_list.remove(node_host)
+            if status == 'troubles' and nhost not in nodes_in_trouble:
+                nodes_in_trouble[nhost] = time.time() + WAIT_TROUBLE_TIMEOUT
+            elif status == 'troubles' and time.time() > nodes_in_trouble[nhost]:
+                raise WaitTroubleException("Node `%s` went into trouble and "
+                                           "still in troubles state after %d seconds." % (
+                                             nhost, WAIT_TROUBLE_TIMEOUT))
+            elif status == 'running' and nhost in host_list:
+                host_list.remove(nhost)
 
 
 class NodeManager(Command):

@@ -35,35 +35,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
     var views = {};
 
-    //views.SideBar = Backbone.Marionette.ItemView.extend({
-    //    tagName: 'div',
-    //    className: 'col-sm-3 col-md-2 sidebar',
-    //    template: sideBarTpl,
-    //
-    //    initialize: function(options){
-    //        this.nodeId = options.nodeId;
-    //    },
-    //
-    //    ui: {
-    //        'tabItem'    : 'ul.nav li'
-    //    },
-    //
-    //    events: {
-    //        'click @ui.tabItem'    : 'changeTab',
-    //    },
-    //
-    //    changeTab: function (evt) {
-    //        evt.preventDefault();
-    //        var tgt = $(evt.target);
-    //        if (tgt.hasClass('nodeGeneralTab')) App.navigate('nodes/' + this.nodeId + '/general', {trigger: true});
-    //        else if (tgt.hasClass('nodeStatsTab')) App.navigate('nodes/' + this.nodeId + '/stats', {trigger: true});
-    //        else if (tgt.hasClass('nodeLogsTab')) App.navigate('nodes/' + this.nodeId + '/logs', {trigger: true});
-    //        else if (tgt.hasClass('nodeMonitoringTab')) App.navigate('nodes/' + this.nodeId + '/monitoring', {trigger: true});
-    //        else if (tgt.hasClass('nodeTimelinesTab')) App.navigate('nodes/' + this.nodeId + '/timelines', {trigger: true});
-    //        else if (tgt.hasClass('nodeConfigurationTab')) App.navigate('nodes/' + this.nodeId + '/configuration', {trigger: true});
-    //    },
-    //});
-
     views.PaginatorView = Backbone.Marionette.ItemView.extend({
         template: nodePaginatorTpl,
 
@@ -102,16 +73,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         tagName: 'tr',
 
         ui: {
-            'deleteNode'       : '.deleteNode',
-            'detailedNode'     : 'button.detailedNode',
-            'upgradeNode'      : 'button#upgradeNode',
+            'deleteNode' : '.deleteNode'
         },
 
         events: {
-            'click'                      : 'checkItem',
-            'click @ui.deleteNode'       : 'deleteNode',
-            'click @ui.detailedNode'     : 'detailedNode',
-            'click @ui.upgradeNode'      : 'detailedNode',
+            'click @ui.deleteNode' : 'deleteNode',
             //'click @ui.configurationTab' : 'detailedConfigurationTab',
         },
 
@@ -148,17 +114,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             });
         },
 
-        detailedNode: function(){
-            App.navigate('nodes/' + this.model.id + '/general', {trigger: true});
-        },
-
         //detailedConfigurationTab: function(){
         //    App.navigate('/detailed/' + this.model.id + '/configuration/', {trigger: true});
-        //},
-
-        checkItem: function(){
-            this.$el.toggleClass('checked').siblings().removeClass('checked');
-        }
+        //}
     });
 
     views.NodesListView = Backbone.Marionette.CompositeView.extend({

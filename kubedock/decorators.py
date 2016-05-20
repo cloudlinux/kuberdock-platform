@@ -2,9 +2,9 @@ from functools import wraps
 
 from flask import jsonify
 
-from .updates.helpers import get_maintenance
 from .exceptions import APIError
 from .login import get_user_role
+from .updates.helpers import get_maintenance
 
 
 def maintenance_protected(func):

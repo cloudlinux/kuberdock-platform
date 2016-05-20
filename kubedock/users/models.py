@@ -195,8 +195,10 @@ class User(BaseModelMixin, UserMixin, db.Model):
             raise RuntimeWarning('Serialize user for profile or full, not both')
 
         if for_profile:
-            valid = self.profile_fields + ['id', 'username', 'package_id', 'clientid']
-            data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
+            valid = self.profile_fields + [
+                'id', 'username', 'package_id', 'clientid', 'suspended']
+            data = super(User, self).to_dict().items()
+            data = {k: v for k, v in data if k in valid}
             data['rolename'] = self.role.rolename if self.role else None
             return data
 

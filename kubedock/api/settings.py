@@ -1,11 +1,11 @@
 from pytz import common_timezones, timezone
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask.views import MethodView
 
 from ..exceptions import PermissionDenied
-from ..rbac import check_permission
 from ..login import auth_required
+from ..rbac import check_permission
 from ..utils import KubeUtils, register_api
 from ..users.utils import append_offset_to_timezone
 from ..kapi.notifications import read_role_events
@@ -52,6 +52,19 @@ settings = Blueprint('settings', __name__, url_prefix='/settings')
 #         perm.set_deny()
 #     acl.init_permissions()
 #     return jsonify({'status': 'OK'})
+
+
+def enrich_with_plugin_list(data):
+    plugins = ['No billing'] + \
+        current_app.billing_factory.list_billing_plugins()
+    if isinstance(data, list):
+        rv = [i for i in data if i.get('name') == 'billing_type']
+        if rv:
+            rv[0]['options'] = plugins
+    elif isinstance(data, dict):
+        if data.get('name') == 'billing_type':
+            data['options'] = plugins
+    return data
 
 
 @settings.route('/notifications', methods=['GET'])
@@ -102,8 +115,10 @@ class SystemSettingsAPI(KubeUtils, MethodView):
                        'persitent_disk_max_size', 'max_kubes_per_container')
 
     def get(self, sid):
-        data = SystemSettings.get_all() if sid is None \
-            else SystemSettings.get(sid)
+        if sid is None:
+            data = enrich_with_plugin_list(SystemSettings.get_all())
+        else:
+            data = enrich_with_plugin_list(SystemSettings.get(sid))
         if check_permission('read_private', 'system_settings'):
             return data
         if check_permission('read', 'system_settings'):

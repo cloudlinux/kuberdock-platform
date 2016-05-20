@@ -8,15 +8,14 @@ import ipaddress
 from random import randrange, choice
 
 from uuid import uuid4
-from collections import namedtuple
 
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 from kubedock.testutils import create_app
 
+from ...exceptions import APIError
 from ..pod import Pod
 from ..images import Image
 from .. import podcollection, helpers
-from ...exceptions import APIError
 from ...utils import POD_STATUSES
 from ...users.models import User
 from ...rbac.models import Role
@@ -671,7 +670,7 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         self.pod_collection = podcollection.PodCollection(U())
 
     @mock.patch.object(podcollection.PersistentDisk, 'free')
-    @mock.patch.object(podcollection.scale_replicationcontroller,
+    @mock.patch.object(podcollection.scale_replicationcontroller_task,
                        'apply_async')
     def test_pod_normal_stop(self, mk_scale_rc, free_pd_mock):
         """

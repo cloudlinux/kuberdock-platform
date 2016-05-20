@@ -82,11 +82,41 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         emptyView          : views.PersistentVolumesEmptyView,
         childViewContainer : 'tbody',
 
+        ui: {
+            'th' : 'table th'
+        },
+
+        events: {
+            'click @ui.th' : 'toggleSort'
+        },
+
+        initialize: function(options){
+            this.collection.order = options.order || [
+                {key: 'name', order: 1},
+                {key: 'size', order: 1},
+                {key: 'in_use', order: 1},
+            ];
+            this.collection.fullCollection.sort();
+            this.collection.on('change', function(){ this.fullCollection.sort(); });
+        },
+
+        templateHelpers: function(){
+            return {
+                sortingType : this.collection.orderAsDict()
+            }
+        },
+
         onShow: function(){
             utils.preloader.hide();
         },
-    });
 
+        toggleSort: function(e) {
+            var targetClass = e.target.className;
+            if (!targetClass) return;
+            this.collection.toggleSort(targetClass);
+            this.render();
+        }
+    });
 
     views.SettingsLayout = Marionette.LayoutView.extend({
         template: pvLayoutTpl,

@@ -24,7 +24,7 @@ from .login import current_user
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .pods import Pod
 from .core import ssh_connect, db, ConnectionPool
-from .settings import NODE_TOBIND_EXTERNAL_IPS, PODS_VERBOSE_LOG
+from .settings import NODE_TOBIND_EXTERNAL_IPS
 from .users.models import SessionData
 from .rbac.models import Role
 from .exceptions import APIError, PermissionDenied
@@ -561,7 +561,7 @@ def unregistered_pod_warning(pod_id):
 
 def pod_without_id_warning(name, namespace):
     current_app.logger.warn(
-        'Pod with metadata.name {0} and metadata.namesapce {1} have no '
+        'Pod with metadata.name {0} and metadata.namespace {1} have no '
         'kuberdock-pod-uid. Maybe someone created it using kubernetes, '
         'bypass kuberdock.'.format(name, namespace))
 

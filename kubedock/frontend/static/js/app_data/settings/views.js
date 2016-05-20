@@ -420,8 +420,6 @@ define(['app_data/app', 'marionette',
             if (tgt.hasClass('general')) App.navigate('settings/general', {trigger: true});
             if (tgt.hasClass('license')) App.navigate('settings/license', {trigger: true});
             else if (tgt.hasClass('profile')) App.navigate('settings/profile', {trigger: true});
-            else if (tgt.hasClass('permissions')) App.navigate('settings/permissions', {trigger: true});
-            else if (tgt.hasClass('notifications')) App.navigate('settings/notifications', {trigger: true});
         },
 
         onRender: function(){

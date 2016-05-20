@@ -23,6 +23,10 @@ CEPH_REPO='/etc/yum.repos.d/ceph.repo'
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
+echo "Using MASTER_IP=${MASTER_IP}"
+echo "Set time zone to $TZ"
+timedatectl set-timezone "$TZ"
+echo "Deploy started: $(date)"
 
 # SOME HELPERS
 
@@ -133,7 +137,7 @@ clean_node(){
     iptables -w -F -t nat
     iptables -w -X -t nat
 
-    echo "=== Node clean up finished ==="
+    echo "=== Node clean up finished === $(date)"
 }
 clean_node
 
@@ -236,10 +240,6 @@ EOF
 
 }
 
-echo "Set time zone to $TZ"
-timedatectl set-timezone "$TZ"
-echo "Using MASTER_IP=${MASTER_IP}"
-
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
 SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
@@ -291,6 +291,9 @@ yum --enablerepo=kube,kube-testing clean metadata
 
 
 # 1.2 Install ntp, we need correct time for node logs
+# AC-3199 Remove chrony which prevents ntpd service to start 
+# after boot
+yum erase -y chrony
 # We use setup like this
 # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
 yum_wrapper install -y ntp
@@ -642,5 +645,6 @@ else
 fi
 
 # 16. Reboot will be executed in python function
+echo "Node deploy script finished: $(date)"
 
 exit 0

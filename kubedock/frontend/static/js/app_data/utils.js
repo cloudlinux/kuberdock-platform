@@ -157,8 +157,8 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
     });
 
     utils.preloader = {
-        show: function(){ $('#page-preloader').show(); },
-        hide: function(){ $('#page-preloader').hide(); }
+        show: function(){ $('#page-preloader').addClass('show'); },
+        hide: function(){ $('#page-preloader').removeClass('show'); }
     };
 
     utils.hasScroll = function() {
@@ -234,29 +234,6 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             console.log(e);  // eslint-disable-line no-console
         }
         return moment(dt).format(formatString);
-    };
-
-    utils.getBillingUrl = function(billingcollection){
-
-        var billingEndpoints = {
-            WHMCS: {
-                billing: '/kdorder.php?a=orderPod'
-            }
-        };
-
-        var billingType = billingcollection.findWhere({name: 'billing_type'}).get('value');
-        if (billingType === 'No billing') return null;  // no billing
-
-        if (!_.has(billingEndpoints, billingType)) { // unknown billing
-            utils.notifyWindow('Unknown billing type');
-            return;
-        }
-        var billingUrl = billingcollection.findWhere({name: 'billing_url'}).get('value');
-        if (billingUrl === undefined) { // no configured URL
-            utils.notifyWindow('Billing URL not configured!');
-            return;
-        }
-        return billingUrl.replace(/\/$/, '') + billingEndpoints[billingType].billing;
     };
 
     return utils;

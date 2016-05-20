@@ -34,7 +34,7 @@ PUBLIC_IP_MANGLE_RULE = \
 # 2 - traffic for public ip (will be added and used later)
 
 # Possibly to stderr if in daemon mode or to our log-file
-LOG_TO = sys.stdout
+LOG_TO = sys.stderr
 
 
 def glog(*args):
@@ -97,7 +97,15 @@ class ETCD(object):
         return pods
 
     def users(self):
-        users = map(int, self._get(self.users_path))
+        users = []
+        for user in self._get(self.users_path):
+            try:
+                users.append(int(user))
+            except ValueError as e:
+                glog('Error while try to convert user_id to int: {}'.format(e))
+        return users
+
+
         return users
 
     def delete_user(self, user, pod):
@@ -261,7 +269,8 @@ def watch(callback, args=None, path=None):
             etcd.wait()
         except KeyboardInterrupt:
             break
-        except requests.RequestException:
+        except requests.RequestException as e:
+            glog("Error while request etcd: {}".format(e))
             time.sleep(5)
 
 

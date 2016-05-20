@@ -8,6 +8,7 @@ import mock
 from ..testutils.testcases import DBTestCase
 from ..exceptions import APIError
 from ..login import get_user_role
+
 from ..utils import (
     atomic,
     get_api_url,

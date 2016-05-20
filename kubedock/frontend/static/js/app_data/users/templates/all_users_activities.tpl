@@ -28,7 +28,7 @@
                         <i class="calendar"></i>
                     </div>
                 </div>
-                <div class="col-sm-4 no-padding form-group input-wrap">
+                <div class="col-sm-4 no-padding form-group input-wrap open">
                     <input type="text" name="username" placeholder="Search username" id="username" autocomplete="off">
                     <i class="search"></i>
                 </div>

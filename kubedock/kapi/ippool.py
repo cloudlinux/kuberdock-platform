@@ -2,6 +2,7 @@ from itertools import imap
 
 import ipaddress
 
+from ..exceptions import APIError
 from .podcollection import PodCollection
 from ..exceptions import APIError
 from ..pods.models import IPPool, PodIP, ip_network
@@ -91,7 +92,8 @@ class IpAddrPool(object):
                 for pod in user.pods if pod.status != 'deleted'}
         return [{
             'id': str(ipaddress.ip_address(i.ip_address)),
-            'pod': pods[i.pod_id]
+            'pod': pods[i.pod_id],
+            'pod_id': i.pod_id
         } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
     @atomic(nested=False)

@@ -24,6 +24,7 @@ class TestIPPool(APITestCase):
         response = self.user_open(self.item_url('userstat'))
         self.assert200(response)
         self.assertEqual(response.json['data'], [{'id': '192.168.1.2',
+                                                  'pod_id': self.pod.id,
                                                   'pod': self.pod.name}])
 
     def test_get(self):

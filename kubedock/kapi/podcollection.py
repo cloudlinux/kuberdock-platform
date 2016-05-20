@@ -21,10 +21,11 @@ from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
 from ..system_settings.models import SystemSettings
-from ..utils import POD_STATUSES, atomic, update_dict
+from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
+UNKNOWN_ADDRESS = 'Unknown'
 
 
 def get_user_namespaces(user):
@@ -151,7 +152,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         """Assign some free IP address to the pod."""
         conf = pod.get_dbconfig()
         if AWS:
-            conf['public_aws'] = pod.public_aws = True
+            conf.setdefault('public_aws', UNKNOWN_ADDRESS)
         else:
             ip_address = IPPool.get_free_host(as_int=True)
             if ip_address is None:
@@ -247,28 +248,26 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         pod.set_dbconfig(pod_config, save=False)
         cls._set_public_ip(pod)
 
-    def _save_pod(self, obj, set_public_ip):
+    @atomic()
+    def _save_pod(self, obj, set_public_ip=False):
+        """
+        Save pod data to db.
+
+        :param obj: kapi-Pod
+        :param set_public_ip: Assign some free IP address to the pod.
+        """
         template_id = getattr(obj, 'kuberdock_template_id', None)
+        status = getattr(obj, 'status', POD_STATUSES.stopped)
         excluded = ('kuberdock_template_id',  # duplicates of model's fields
                     'owner', 'kube_type', 'status', 'id', 'name')
         data = {k: v for k, v in vars(obj).iteritems() if k not in excluded}
         pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
-                    status=getattr(obj, 'status', POD_STATUSES.stopped),
-                    template_id=template_id)
-        pod.kube_id = obj.kube_type
-        pod.owner = self.owner
-        try:
-            db.session.add(pod)
-            if set_public_ip:
-                self._set_public_ip(pod)
-            db.session.commit()
-            return pod
-        except Exception as e:
-            current_app.logger.debug(e.__repr__())
-            db.session.rollback()
-            # Raise APIError because else response will be 200
-            # and backbone creates new model even in error case
-            raise APIError(str(e))
+                    status=status, template_id=template_id,
+                    kube_id=obj.kube_type, owner=self.owner)
+        db.session.add(pod)
+        if set_public_ip:
+            self._set_public_ip(pod)
+        return pod
 
     def update(self, pod_id, data):
         pod = self._get_by_id(pod_id)
@@ -419,7 +418,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
     def _get_namespaces(self):
         data = self._get(['namespaces'], ns=False)
-        namespaces = [i['metadata']['name'] for i in data['items']]
+        namespaces = [i['metadata']['name'] for i in data.get('items', {})]
         if self.owner is None:
             return namespaces
         user_namespaces = get_user_namespaces(self.owner)
@@ -465,15 +464,17 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if namespaces:
             for namespace in namespaces:
                 data.extend(self._get(['pods'], ns=namespace)['items'])
-                replicas_data.extend(self._get(
-                    ['replicationcontrollers'], ns=namespace)['items'])
+                replicas = self._get(['replicationcontrollers'], ns=namespace)
+                replicas_data.extend(replicas['items'])
         else:
-            data.extend(self._get(['pods'])['items'])
-            replicas_data.extend(
-                self._get(['replicationcontrollers'])['items'])
+            pods = self._get(['pods'])
+            data.extend(pods.get('items', {}))
+            replicas = self._get(['replicationcontrollers'])
+            replicas_data.extend(replicas.get('items', {}))
 
         for item in data:
             pod = Pod.populate(item)
+            self.check_public_address(pod)
 
             for r in replicas_data:
                 if self._is_related(item['metadata']['labels'],
@@ -490,6 +491,47 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if pod.sid not in pod_index:
                 self._collection[pod.id, pod.namespace] = pod
                 pod_index.add(pod.sid)
+
+    @staticmethod
+    def format_lbservice_name(pod_id):
+        """Format name of service for LoadBalancer from pod id"""
+        return "{}-lbservice".format(pod_id[:54])
+
+    def check_public_address(self, pod):
+        """Check if public address not set and try to get it from
+        services. Update public address if found one.
+        """
+        if AWS:
+            if getattr(pod, 'public_aws', UNKNOWN_ADDRESS) == UNKNOWN_ADDRESS:
+                label_selector = 'name={}'.format(
+                    self.format_lbservice_name(pod.id))
+                services_list = self._get(['services'],
+                                          {'labelSelector': label_selector},
+                                          ns=pod.namespace)
+                services = services_list['items']
+                for service in services:
+                    # For now, we just pick first service in list
+                    # (it must be only one for AWS)
+                    hostname = self.update_public_address(service, pod.id)
+                    if hostname:
+                        break
+
+    @staticmethod
+    def update_public_address(service, pod_id, send=False):
+        """Try to get public address from service and if found update in DB
+        and send event
+        """
+        if service['spec']['type'] == 'LoadBalancer':
+            ingress = service['status']['loadBalancer'].get('ingress', [])
+            if ingress and 'hostname' in ingress[0]:
+                hostname = ingress[0]['hostname']
+                pod = DBPod.query.get(pod_id)
+                conf = pod.get_dbconfig()
+                conf['public_aws'] = hostname
+                pod.set_dbconfig(conf)
+                if send:
+                    send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
+                return hostname
 
     def _merge(self):
         """ Merge pods retrieved from kubernates api with data from DB """
@@ -545,8 +587,31 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 container['limits'] = repr_limits(container['kubes'],
                                                   pod.kube_type)
 
+    def ingress_public_ports(self, pod_id, namespace, ports):
+        """Ingress public ports with cloudprovider specific methods
+        """
+        if AWS and ports:
+            conf = {
+                'kind': 'Service',
+                'apiVersion': KUBE_API_VERSION,
+                'metadata': {
+                    'generateName': 'lbservice-',
+                    'labels': {'name': self.format_lbservice_name(pod_id)},
+                },
+                'spec': {
+                    'selector': {'kuberdock-pod-uid': pod_id},
+                    'ports': ports,
+                    'type': 'LoadBalancer',
+                    'sessionAffinity': 'None'
+                }
+            }
+            data = json.dumps(conf)
+            rv = self._post(['services'], data, rest=True, ns=namespace)
+            self._raise_if_failure(rv, "Could not ingress public ports")
+
     def _run_service(self, pod):
         ports = []
+        public_ports = []
         for ci, c in enumerate(getattr(pod, 'containers', [])):
             for pi, p in enumerate(c.get('ports', [])):
                 host_port = p.get('hostPort', None) or p.get('containerPort')
@@ -556,7 +621,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                     "port": host_port,
                     "protocol": p.get('protocol', 'TCP').upper(),
                     "targetPort": p.get('containerPort')})
-
+                if p.get('isPublic', False):
+                    public_ports.append({
+                        "name": port_name,
+                        "port": host_port,
+                        "protocol": p.get('protocol', 'TCP').upper(),
+                        "targetPort": p.get('containerPort')})
         conf = {
             'kind': 'Service',
             'apiVersion': KUBE_API_VERSION,
@@ -573,8 +643,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         }
         if hasattr(pod, 'podIP') and pod.podIP:
             conf['spec']['clusterIP'] = pod.podIP
-        return self._post(['services'], json.dumps(conf), rest=True,
-                          ns=pod.namespace)
+        self.ingress_public_ports(pod.id, pod.namespace, public_ports)
+        data = json.dumps(conf)
+        return self._post(['services'], data, rest=True, ns=pod.namespace)
 
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now
@@ -639,9 +710,9 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
                 if block:
-                    scale_replicationcontroller.apply((pod.id,))
+                    scale_replicationcontroller(pod.id)
                 else:
-                    scale_replicationcontroller.apply_async((pod.id,))
+                    scale_replicationcontroller_task.apply_async((pod.id,))
                 for container in pod.containers:
                     # TODO: create CONTAINER_STATUSES
                     container['state'] = POD_STATUSES.stopped
@@ -809,7 +880,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                             'Kubes available for you: {0}'.format(kubes_left))
 
 
-@celery.task(ignore_results=True)
 def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
     pc = PodCollection()
     pod = pc._get_by_id(pod_id)
@@ -827,13 +897,20 @@ def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
         current_app.logger.error("Can't scale rc: max retries exceeded")
 
 
+@celery.task(ignore_results=True)
+def scale_replicationcontroller_task(*args, **kwargs):
+    scale_replicationcontroller(*args, **kwargs)
+
+
 @celery.task(bind=True, ignore_results=True)
 def finish_redeploy(self, pod_id, data, start=True):
-    pod_collection = PodCollection()
+    db_pod = DBPod.query.get(pod_id)
+    pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
     pod_collection._stop_pod(pod, block=True)
 
-    if (data.get('commandOptions') or {}).get('wipeOut'):
+    command_options = data.get('commandOptions') or {}
+    if command_options.get('wipeOut'):
         for volume in pod.volumes_public:
             pd = volume.get('persistentDisk')
             if pd:
@@ -843,7 +920,8 @@ def finish_redeploy(self, pod_id, data, start=True):
                 delete_drive_by_id(pd.id)
 
     if start:  # start updated pod
-        PodCollection().update(pod_id, {'command': 'start'})
+        PodCollection(db_pod.owner).update(
+            pod_id, {'command': 'start', 'commandOptions': command_options})
 
 
 def restore_containers_host_ports_config(pod_containers, db_containers):

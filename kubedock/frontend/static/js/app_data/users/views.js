@@ -33,16 +33,13 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
         ui: {
             'remove_user'    : '.deleteUser',
             'block_user'     : '.blockUser',
-            'activated_user' : '.activeteUser',
-            'profileUser'    : '.profileUser'
+            'activated_user' : '.activeteUser'
         },
 
         events: {
-            'click @ui.profileUser'    : 'profileUser_btn',
-            'click @ui.remove_user'    : 'removeUserConfirm',
             'click @ui.block_user'     : 'blockUser',
             'click @ui.activated_user' : 'activatedUser',
-            'click'                    : 'checkUser'
+            'click @ui.remove_user'    : 'removeUserConfirm',
         },
 
         templateHelpers: function(){
@@ -85,14 +82,6 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
                 .always(utils.preloader.hide)
                 .fail(utils.notifyWindow)
                 .done(this.render);
-        },
-
-        profileUser_btn: function(){
-            App.navigate('users/profile/' + this.model.id + '/general', {trigger: true});
-        },
-
-        checkUser: function(){
-            this.$el.toggleClass('checked').siblings().removeClass('checked');
         }
     });
 

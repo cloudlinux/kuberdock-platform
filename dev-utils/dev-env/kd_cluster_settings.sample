@@ -3,7 +3,7 @@
 # Allow running vagrant cmd from repo root. By default you need to move inside 
 # `dev-utils/dev-inv` before working with vagrant
 # default: nothing
-#export VAGRANT_CWD=~/repos/AppCloud/dev-utils/dev-env/
+export VAGRANT_CWD=dev-utils/dev-env/
 #
 # OpenStack credentials. Username and passoword for OpenStack cloud
 # default: nothing
@@ -17,12 +17,11 @@
 
 # Resources allocation for master
 # Memory
-# default: 1024
-#export KD_MASTER_MEMORY=2048
+# default: 2048
+#export KD_MASTER_MEMORY=4096
 # CPU count
 # default: 1
 #export KD_MASTER_CPUS=2
-
 
 # Nodes count
 # default: 1
@@ -39,6 +38,14 @@
 # Path to private key for vagrant autentication in the OpenNebula
 # default: "~/.ssh/id_rsa"
 #export KD_ONE_PRIVATE_KEY=~/.ssh/your_other_private_key
+
+# Comma-separated list of IPs reserved to you in OpenNebula Public Network. These IPs will
+# be unblocked in KD IP pool and used as Pods public IPs.
+# Default value are team shared IPs. If you use them, you may intersect with others, thus
+# it's recommended to set this variable. Reserve your IPs in the doc below before changing:
+# ***REMOVED***
+# default: "200,201,202"
+#export KD_ONE_PUB_IPS="200,201,202"
 
 # ====== Env group ======
 

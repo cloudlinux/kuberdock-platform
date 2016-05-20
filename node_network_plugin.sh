@@ -227,7 +227,7 @@ function protect_cluster_reject {
 }
 
 
-# Drop version. Simpier and more robust (clean mangle table only)
+# Drop version. Simpler and more robust (clean mangle table only)
 function protect_cluster_drop {
     # MARKS:
     # 1 - traffic to reject/drop
@@ -309,6 +309,11 @@ case "$ACTION" in
     if_failed "Error while get SERVICE_IP"
     USER_ID=$(echo "$POD_SPEC" | grep kuberdock-user-uid | awk '{gsub(/,$/,""); print $2}' | tr -d \")
     if_failed "Error while get USER_ID"
+    if [ -z "$USER_ID" ]
+      then
+      log "Error while get USER_ID"
+      exit
+    fi
     POD_PUBLIC_IP=$(echo "$POD_SPEC" | grep kuberdock-public-ip | awk '{gsub(/,$/,""); print $2}' | tr -d \")
     if_failed "Error while get POD_PUBLIC_IP"
     RESOLVE=$(echo "$POD_SPEC" | grep kuberdock_resolve | awk '{gsub(/,$/,""); for(i=2; i<=NF; ++i) print $i}' | tr -d \" | xargs echo)

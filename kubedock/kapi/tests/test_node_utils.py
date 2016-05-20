@@ -58,7 +58,6 @@ class TestNodeUtils(DBTestCase):
         shutil.rmtree(self.tempdir)
         settings.NODE_INSTALL_LOG_FILE = self.original_install_log_dir
 
-
     @mock.patch.object(node_utils, 'SystemSettings')
     @mock.patch.object(node_utils, '_fix_missed_nodes')
     @mock.patch.object(node_utils, 'get_all_nodes')
@@ -76,11 +75,11 @@ class TestNodeUtils(DBTestCase):
         get_all_nodes_mock.return_value = [
             {
                 'metadata': {'name': node1.hostname},
-                'status': {'conditions':[{'type': 'Ready', 'status': 'True'}]}
+                'status': {'conditions': [{'type': 'Ready', 'status': 'True'}]}
             },
             {
                 'metadata': {'name': node2.hostname},
-                'status': {'conditions':[{
+                'status': {'conditions': [{
                     'type': 'Unknown', 'status': 'True',
                     'reason': 'qwerty', 'lastTransitionTime': 'asdfg'
                 }]}
@@ -196,8 +195,7 @@ class TestNodeUtils(DBTestCase):
 
         url = node_utils.get_api_url('nodes', host2, namespace=False)
         valid_answer = {"status": {"key": "value"}}
-        responses.add(responses.GET, url,
-            body=json.dumps(valid_answer))
+        responses.add(responses.GET, url, body=json.dumps(valid_answer))
         res = node_utils._get_k8s_node_by_host(host2)
         self.assertEqual(res, valid_answer)
 

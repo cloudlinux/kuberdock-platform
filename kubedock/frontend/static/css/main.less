@@ -190,6 +190,116 @@ body{
             }
         }
     }
+    @media (max-width: 767px) {
+        .collapsing{
+            .transition(height 0.01s);
+        }
+        .navbar{
+            .container-fluid{
+                margin: 0 -15px;
+                padding: 10px 0;
+                .navbar-header{
+                    .navbar-brand{
+                        padding-left: 30px;
+                    }
+                    .navbar-toggle{
+                        .mdi('close',30px, #b5bbc1, #3197EE);
+                        padding: 0;
+                        z-index: 2;
+                        margin-right: 30px;
+                        position: relative;
+                        &:after{
+                            top: -19px;
+                            z-index: -1;
+                            content: '';
+                            width: 70px;
+                            height: 70px;
+                            right: -16px;
+                            position: absolute;
+                            background-color: #fff;
+                            border-left: 1px solid #e4e4e4
+                        }
+                        &.collapsed{
+                            &:before{
+                                content: 'view_headline';
+                            }
+                            &:after{
+                                content: none;
+                            }
+                        }
+                    }
+                }
+                .navbar-collapse{
+                    margin: 10px 0 0 0;
+                    #menu-items{
+                        > li{
+                            &:first-child{
+                                a{
+                                    border-top: 1px solid #e4e4e4;
+                                }
+                            }
+                        }
+                    }
+                    .nav{
+                        &.navbar-nav{
+                            padding: 0;
+                            margin: 0 -15px;
+                            > li {
+                                a{
+                                    margin-right: 0;
+                                    line-height: 19px;
+                                    position: relative;
+                                    background-color: #fff;
+                                    padding: 15px 15px 15px 30px;
+                                    border-bottom: 1px solid #e4e4e4;
+                                    border-left: 3px solid transparent;
+                                    &:hover{
+                                        color: #3197ee;
+                                        background-color: #f5fafe;
+                                        border-left-color: #3197ee;
+                                    }
+                                    .caret{
+                                        .rotate(-90deg);
+                                        top: 3px;
+                                        bottom: 0;
+                                        left: 15px;
+                                        margin: auto;
+                                        position: absolute;
+                                    }
+                                }
+                            }
+                            &.navbar-right{
+                                li{
+                                    &.profile-menu{
+                                        padding-left: 0;
+                                        &:before{
+                                            content: none;
+                                        }
+                                        &.open{
+                                            > a{
+                                                .caret{
+                                                    .rotate(0deg);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .dropdown-menu{
+                                .transition(none);
+                                padding: 0;
+                                > li {
+                                    a{
+                                        padding-left: 45px;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     /* end header */
 
     /* bredkrumb */

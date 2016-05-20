@@ -43,7 +43,7 @@ Requires: python-billiard >= 3.3.0.18
 Requires: python-blinker >= 1.3
 Requires: python-celery == 1:3.1.19
 Requires: python-ecdsa >= 0.11
-Requires: python-gevent >= 1:1.0.2
+Requires: python-gevent >= 1:1.1.1
 Requires: python-greenlet >= 0.4.2
 Requires: python-influxdb >= 0.1.13
 Requires: python-itsdangerous >= 0.24

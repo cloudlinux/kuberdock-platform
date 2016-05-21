@@ -3,6 +3,34 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
        function(Backbone, numeral, App, utils){
     'use strict';
 
+    Backbone.syncOrig = Backbone.sync;
+    Backbone.sync = function(method, model, options){
+        var args = _.toArray(arguments);
+        if (model.noauth)
+            return Backbone.syncOrig.apply(Backbone, args);
+
+        var deferred = new $.Deferred();
+        App.getAuth().done(function(auth){
+            options.headers = _.extend(options.headers || {},
+                                       {'X-Auth-Token': auth.token});
+            Backbone.syncOrig.apply(Backbone, args)
+                .fail(function(xhr, status, error){
+                    if (xhr && (xhr.status === 401 || xhr.status === 403))
+                        App.cleanUp();
+                    deferred.rejectWith(this, [xhr, status, error]);
+                })
+                .done(function(resp, status, xhr){
+                    var token = xhr.getResponseHeader('X-Auth-Token');
+                    if (token) {
+                        auth.token = token;
+                        App.updateAuth(auth);
+                    }
+                    deferred.resolveWith(this, [resp, status, xhr]);
+                });
+        }).fail(function(){ deferred.rejectWith(options.context, []); });
+        return deferred.promise();
+    };
+
     var data = {},
         unwrapper = function(response) {
             var data = response.hasOwnProperty('data') ? response['data'] : response;
@@ -110,15 +138,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         getPod: function(){ return ((this.collection || {}).parents || [])[0]; },
         checkForUpdate: function(){
+            var container = this;
             utils.preloader.show();
-            return $.ajax({
-                url: this.getPod().url() + '/' + this.id + '/update',
-                context: this,
-            }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(rs){
-                this.updateIsAvailable = rs.data;
-                if (!rs.data)
-                    utils.notifyWindow('No updates found', 'success');
-            });
+            return new data.ContainerUpdate({}, {container: container}).fetch()
+                .always(utils.preloader.hide).fail(utils.notifyWindow)
+                .done(function(rs){
+                    container.updateIsAvailable = rs.data;
+                    if (!rs.data)
+                        utils.notifyWindow('No updates found', 'success');
+                });
         },
         update: function(){
             var model = this;
@@ -130,11 +158,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 footer: {
                     buttonOk: function(){
                         utils.preloader.show();
-                        $.ajax({
-                            url: model.getPod().url() + '/' + model.id + '/update',
-                            type: 'POST',
-                            context: model,
-                        }).always(utils.preloader.hide).fail(utils.notifyWindow)
+                        new data.ContainerUpdate({}, {container: model}).save()
+                            .always(utils.preloader.hide).fail(utils.notifyWindow)
                             .done(function(){ model.updateIsAvailable = undefined; });
                     },
                     buttonCancel: true,
@@ -145,35 +170,34 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             size = size || 100;
             var pod_id = this.getPod().id,
                 name = this.get('name');
-            return $.ajax({
+            return $.ajax({  // TODO: use Backbone.Model
+                authWrap: true,
                 url: '/api/logs/container/' + pod_id + '/' + name + '?size=' + size,
                 context: this,
-                success: function(data){
-                    var seriesByTime = _.indexBy(this.logs, 'start');
-                    _.each(data.data.reverse(), function(serie) {
-                        var lines = serie.hits.reverse(),
-                            oldSerie = seriesByTime[serie.start];
-                        _.each(lines, function(line){
-                            line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
-                        });
-                        serie.start = App.currentUser.localizeDatetime(serie.start);
-                        if (serie.end)
-                            serie.end = App.currentUser.localizeDatetime(serie.end);
-                        if (lines.length && oldSerie && oldSerie.hits.length) {
-                            // if we have some logs, append only new lines
-                            var first = lines[0],
-                                index = _.sortedIndex(oldSerie.hits, first, 'time_nano');
-                            lines.unshift.apply(lines, _.first(oldSerie.hits, index));
-                        }
+            }).done(function(data){
+                var seriesByTime = _.indexBy(this.logs, 'start');
+                _.each(data.data.reverse(), function(serie) {
+                    var lines = serie.hits.reverse(),
+                        oldSerie = seriesByTime[serie.start];
+                    _.each(lines, function(line){
+                        line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
                     });
-                    this.logs = data.data;
-                    this.logsError = data.data.length ? null : 'Logs not found';
-                },
-                error: function(xhr) {
-                    var data = xhr.responseJSON;
-                    if (data && data.data !== undefined)
-                        this.logsError = data.data;
-                },
+                    serie.start = App.currentUser.localizeDatetime(serie.start);
+                    if (serie.end)
+                        serie.end = App.currentUser.localizeDatetime(serie.end);
+                    if (lines.length && oldSerie && oldSerie.hits.length) {
+                        // if we have some logs, append only new lines
+                        var first = lines[0],
+                            index = _.sortedIndex(oldSerie.hits, first, 'time_nano');
+                        lines.unshift.apply(lines, _.first(oldSerie.hits, index));
+                    }
+                });
+                this.logs = data.data;
+                this.logsError = data.data.length ? null : 'Logs not found';
+            }).fail(function(xhr) {
+                var data = xhr.responseJSON;
+                if (data && data.data !== undefined)
+                    this.logsError = data.data;
             });
         },
     }, {  // Class Methods
@@ -199,6 +223,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 return 'Mount path maximum length is 30 symbols';
             else if (!/^[\w/.-]*$/.test(mountPath))
                 return 'Mount path should contain letters of Latin alphabet or "/", "_", "-" symbols';
+        },
+    });
+
+    data.ContainerUpdate = Backbone.Model.extend({
+        url: function(){
+            return this.container.getPod().url() + '/' + this.container.id + '/update';
+        },
+        initialize: function(attributes, options){
+            this.container = options.container;
         },
     });
 
@@ -379,7 +412,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 }
                 else {
                     utils.preloader.show();
-                    $.ajax({
+                    $.ajax({  // TODO: use Backbone.Model
+                        authWrap: true,
                         type: 'POST',
                         contentType: 'application/json; charset=utf-8',
                         url: '/api/billing/order',
@@ -497,12 +531,17 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     data.Image = Backbone.Model.extend({
-
+        url: '/api/images/new',
         defaults: {
             image: 'Imageless'
         },
-
-        parse: unwrapper
+        parse: unwrapper,
+        fetch: function(options){
+            return Backbone.Model.prototype.fetch.call(this, _.extend({
+                contentType: 'application/json; charset=utf-8',
+                type: 'POST',
+            }, options));
+        },
     });
 
     data.Stat = Backbone.Model.extend({
@@ -567,33 +606,31 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         getLogs: function(size){
             size = size || 100;
-            return $.ajax({
+            return $.ajax({  // TODO: use Backbone.Model
+                authWrap: true,
                 url: '/api/logs/node/' + this.get('hostname') + '?size=' + size,
                 context: this,
-                success: function(data) {
-                    var oldLines = this.get('logs'),
-                        lines = data.data.hits.reverse();
+            }).done(function(data) {
+                var oldLines = this.get('logs'),
+                    lines = data.data.hits.reverse();
 
-                    _.each(lines, function(line){
-                        line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
-                    });
-                    if (lines.length && oldLines.length) {
-                        // if we have some logs, append only new lines
-                        var first = lines[0],
-                            index_to = _.sortedIndex(oldLines, first, 'time_nano'),
-                            index_from = Math.max(0, index_to + lines.length - this.logsLimit);
-                        lines.unshift.apply(lines, oldLines.slice(index_from, index_to));
-                    }
+                _.each(lines, function(line){
+                    line['@timestamp'] = App.currentUser.localizeDatetime(line['@timestamp']);
+                });
+                if (lines.length && oldLines.length) {
+                    // if we have some logs, append only new lines
+                    var first = lines[0],
+                        index_to = _.sortedIndex(oldLines, first, 'time_nano'),
+                        index_from = Math.max(0, index_to + lines.length - this.logsLimit);
+                    lines.unshift.apply(lines, oldLines.slice(index_from, index_to));
+                }
 
-                    this.set('logs', lines);
-                    this.set('logsError', null);
-                },
-                error: function(xhr) {
-                    var data = xhr.responseJSON;
-                    if (data && data.data !== undefined)
-                        this.set('logsError', data.data);
-                },
-                statusCode: null,
+                this.set('logs', lines);
+                this.set('logsError', null);
+            }).fail(function(xhr) {
+                var data = xhr.responseJSON;
+                if (data && data.data !== undefined)
+                    this.set('logsError', data.data);
             });
         },
         appendLogs: function(data){
@@ -740,14 +777,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         login: function(options){
             utils.preloader.show();
-            return $.ajax(_.extend({
-                url: '/api/users/loginA',
-                type: 'POST',
-                data: {user_id: this.id},
-                success: function(){ window.location.href = '/'; },
-                complete: utils.preloader.hide,
-                error: utils.notifyWindow,
-            }, options));
+            return new Backbone.Model()
+                .save({user_id: this.id}, _.extend({url: '/api/users/loginA'}, options))
+                .done(function(){ App.navigate('').cleanUp(/*keepToken*/true); })
+                .always(utils.preloader.hide)
+                .fail(utils.notifyWindow);
         },
     }, {
         checkUsernameFormat: function(username){
@@ -851,12 +885,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.CurrentUserModel = Backbone.Model.extend({
         url: function(){ return '/api/users/editself'; },
         parse: unwrapper,
+        defaults: {
+            impersonated: false
+        },
         localizeDatetime: function(dt, formatString){
             return utils.localizeDatetime({dt: dt, tz: this.get('timezone'),
                                            formatString: formatString});
         },
         isImpersonated: function(){  // TODO-JWT: get this data from token
-            return backendData.impersonated;
+            return this.get('impersonated');
         },
         roleIs: function(/* ...roles */){
             for (var i = 0; i < arguments.length; i++){
@@ -1000,7 +1037,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         model: data.Package,
         parse: unwrapper,
     });
-    App.getPackages = App.resourcePromiser('packages', data.PackageCollection),
+    App.getPackages = App.resourcePromiser('packages', data.PackageCollection);
 
     data.KubeType = Backbone.AssociatedModel.extend({
         defaults: function(){
@@ -1059,6 +1096,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
     data.PackageKubeCollection = Backbone.Collection.extend({
         model: data.PackageKube,
+    });
+
+    data.AuthModel = Backbone.Model.extend({
+        noauth: true,
+        urlRoot: '/api/auth/token2',
+        defaults: {
+            username: 'Nameless'
+        },
+        parse: function(data){return data['status'] === 'OK' ? _.omit(data, 'status') : {}}
     });
 
     return data;

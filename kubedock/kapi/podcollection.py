@@ -21,7 +21,7 @@ from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
 from ..system_settings.models import SystemSettings
-from ..utils import POD_STATUSES, atomic, update_dict, send_event
+from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
@@ -530,8 +530,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 conf['public_aws'] = hostname
                 pod.set_dbconfig(conf)
                 if send:
-                    channel = 'user_{}'.format(pod.owner_id)
-                    send_event('pod:change', {'id': pod_id}, channel=channel)
+                    send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
                 return hostname
 
     def _merge(self):

@@ -186,10 +186,12 @@ define(['app_data/app',
 
         closeMessage: function(){
             var model = this.model;
-            this.ui.close.parents('.message-wrapper').slideUp({complete: function(){
-                model.unset('postDescription');
-                model.command('set', {postDescription: null});
-            }});
+            this.ui.close.parents('.message-wrapper').slideUp({
+                complete: function(){
+                    model.unset('postDescription');
+                    model.command('set', {postDescription: null});
+                }
+            });
         },
 
         startItem: function(){ this.model.cmdStart(); },
@@ -398,7 +400,8 @@ define(['app_data/app',
                 col.add(that.model, {merge: true});
                 if (that.fixedPrice){
                     utils.preloader.show();
-                    $.ajax({
+                    $.ajax({  // TODO: use Backbone.model
+                        authWrap: true,
                         type: 'POST',
                         contentType: 'application/json; charset=utf-8',
                         url: '/api/billing/orderKubes',

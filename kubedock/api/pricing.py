@@ -1,13 +1,12 @@
-from flask import Blueprint, current_app
+from flask import Blueprint
 from flask.views import MethodView
 import json
 import re
-from collections import Counter
 
 from ..core import db, ConnectionPool
-from ..rbac import check_permission
-from ..decorators import login_required_or_basic_or_token
 from ..exceptions import APIError, PermissionDenied
+from ..rbac import check_permission
+from ..login import auth_required
 from ..utils import KubeUtils, register_api, atomic, all_request_params
 from ..users import User
 from ..validation import check_pricing_api, package_schema, kube_schema, \
@@ -59,20 +58,19 @@ class PackageInUse(APIError):
 
 
 @pricing.route('/userpackage', methods=['GET'], strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('get_own', 'pricing')
 def get_user_kube_types():
     user = KubeUtils._get_current_user()
     user = User.query.filter_by(username=user.username).first()
     if user is None:
         raise APIError('No such user', 404, 'UserNotFound')
-    # current_app.logger.debug(user.package.kubes)
     return {k.kube.name: k.kube.id for k in user.package.kubes}
 
 
 class PackagesAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+    decorators = [KubeUtils.jsonwrap, auth_required]
 
     def get(self, package_id=None):
         with_kubes = all_request_params().get('with_kubes')
@@ -158,8 +156,8 @@ register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id',
 
 
 @pricing.route('/packages/default', methods=['GET'], strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('get', 'pricing')
 def get_default_package():
     package = Package.get_default()
@@ -171,7 +169,7 @@ def get_default_package():
 
 
 class KubesAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+    decorators = [KubeUtils.jsonwrap, auth_required]
 
     @check_permission('get', 'pricing')
     def get(self, kube_id=None):
@@ -241,8 +239,8 @@ register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id',
 
 
 @pricing.route('/kubes/default', methods=['GET'], strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('get', 'pricing')
 def get_default_kube():
     kube = Kube.get_default_kube()
@@ -273,8 +271,8 @@ def add_kube(data):
 
 @pricing.route('/packages/<int:package_id>/kubes-by-id', methods=['GET'],
                strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('get', 'pricing')
 def get_package_kube_ids(package_id):
     package = Package.query.get(package_id)
@@ -285,8 +283,8 @@ def get_package_kube_ids(package_id):
 
 @pricing.route('/packages/<int:package_id>/kubes-by-name', methods=['GET'],
                strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('get', 'pricing')
 def get_package_kube_names(package_id):
     package = Package.query.get(package_id)
@@ -296,7 +294,7 @@ def get_package_kube_names(package_id):
 
 
 class PackageKubesAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+    decorators = [KubeUtils.jsonwrap, auth_required]
 
     @check_permission('get', 'pricing')
     def get(self, package_id, kube_id=None):
@@ -493,8 +491,8 @@ def process_collection(data):
 
 
 @pricing.route('/license', methods=['GET'], strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('read_private', 'system_settings')
 def get_license():
     force = all_request_params().get('force', False)
@@ -504,8 +502,8 @@ def get_license():
 
 @pricing.route('/license/installation_id', methods=['POST'],
                strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('write', 'system_settings')
 def set_installation_id():
     params = all_request_params()

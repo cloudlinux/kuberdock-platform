@@ -108,9 +108,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         }
         type = type || 'error';
 
-        if (data && data.status == 401){
-            window.location = '/login';
-        } else if (type === 'error') {
+        if (type === 'error') {
             // do not hide error messages automatically
             // also, group identical messages
             var notifyElement = utils.notifyList[msg];

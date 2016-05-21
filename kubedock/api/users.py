@@ -1,15 +1,16 @@
 from flask import Blueprint, request, current_app, session
-from flask.ext.login import login_user
 from flask.views import MethodView
 
-from . import APIError
+from ..exceptions import APIError
 from ..rbac import check_permission
 from ..rbac.models import Role
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required, login_user, current_user, logout_user
 from ..utils import KubeUtils, register_api
 from ..validation import extbool
 from ..users.models import User, UserActivity
-from ..users.signals import user_logged_in_by_another
+from ..users.signals import (user_logged_in_by_another,
+                             user_logged_out_by_another,
+                             user_logged_out)
 from ..kapi.users import UserCollection, UserNotFound
 
 
@@ -17,7 +18,7 @@ users = Blueprint('users', __name__, url_prefix='/users')
 
 
 @users.route('/loginA', methods=['POST'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('auth_by_another', 'users')
 @KubeUtils.jsonwrap
 def auth_another(uid=None):
@@ -36,11 +37,40 @@ def auth_another(uid=None):
     session['auth_by_another'] = session.get('auth_by_another',
                                              original_user.id)
     user_logged_in_by_another.send((original_user.id, user.id))
-    login_user(user)
+    login_user(user, DB=False)
+
+
+@users.route('/logoutA', methods=['GET'])
+@auth_required
+# @check_permission('auth_by_another', 'users')
+@KubeUtils.jsonwrap
+def logout_another():
+    admin_user_id = session.pop('auth_by_another', None)
+    if admin_user_id is None:
+        current_app.logger.warning('Could not find impersonated user info')
+        return
+    user_id = current_user.id
+    logout_user(DB=False)
+    user = User.query.get(admin_user_id)
+    if user is None:
+        current_app.logger.warning(
+            'User with Id {0} does not exist'.format(admin_user_id))
+        raise APIError("Could not deimpersonate the user: no such id: {0}".admin_user_id, 401)
+    login_user(user, DB=False)
+    user_logged_out_by_another.send((user_id, admin_user_id))
+
+
+@users.route('/logout', methods=['GET'])
+@auth_required
+@KubeUtils.jsonwrap
+def logout():
+    user_logged_out.send(current_user.id)
+    session.pop('auth_by_another', None)    # Just to be on the safe side :)
+    logout_user()
 
 
 @users.route('/q', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_usernames():
@@ -49,7 +79,7 @@ def get_usernames():
 
 
 @users.route('/roles', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_roles():
@@ -57,7 +87,7 @@ def get_roles():
 
 
 @users.route('/a/<user>', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_user_activities(user):
@@ -69,7 +99,7 @@ def get_user_activities(user):
 
 
 @users.route('/logHistory', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_user_log_history():
@@ -83,7 +113,7 @@ def get_user_log_history():
 
 
 @users.route('/online', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_online_users():
@@ -91,7 +121,7 @@ def get_online_users():
 
 
 class UsersAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, login_required_or_basic_or_token]
+    decorators = [KubeUtils.jsonwrap, auth_required]
 
     @check_permission('get', 'users')
     def get(self, uid=None):
@@ -119,14 +149,16 @@ register_api(users, UsersAPI, 'podapi', '/all/', 'uid', strict_slashes=False)
 
 
 @users.route('/editself', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @KubeUtils.jsonwrap
 def get_self():
-    return KubeUtils._get_current_user().to_dict(for_profile=True)
-
+    user = KubeUtils._get_current_user().to_dict(for_profile=True)
+    if session.get('auth_by_another') is not None:
+        user['impersonated'] = True
+    return user
 
 @users.route('/editself', methods=['PUT', 'PATCH'])
-@login_required_or_basic_or_token
+@auth_required
 @KubeUtils.jsonwrap
 def edit_self():
     uid = KubeUtils._get_current_user().id
@@ -136,7 +168,7 @@ def edit_self():
 
 
 @users.route('/undelete/<uid>', methods=['POST'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('create', 'users')
 @KubeUtils.jsonwrap
 def undelete_item(uid):

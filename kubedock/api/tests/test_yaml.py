@@ -130,7 +130,7 @@ class TestYamlAPI(APITestCase):
             })
             self.assertAPIError(response, 400, 'APIError')
 
-    @mock.patch.object(yaml_api, 'send_event')
+    @mock.patch.object(yaml_api, 'send_event_to_user')
     @mock.patch('kubedock.validation.V._validate_kube_type_exists')
     @mock.patch('kubedock.api.yaml_api.PodCollection')
     def test_correct_yaml(self, PodCollection, *_):

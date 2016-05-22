@@ -7,6 +7,7 @@ from ..core import db, ConnectionPool
 from ..exceptions import APIError, PermissionDenied
 from ..rbac import check_permission
 from ..login import auth_required
+from ..settings import KUBERDOCK_INTERNAL_USER
 from ..utils import KubeUtils, register_api, atomic, all_request_params
 from ..users import User
 from ..validation import check_pricing_api, package_schema, kube_schema, \
@@ -74,21 +75,26 @@ class PackagesAPI(KubeUtils, MethodView):
 
     def get(self, package_id=None):
         with_kubes = all_request_params().get('with_kubes')
+        with_internal = all_request_params().get('with_internal')
         if check_permission('get', 'pricing'):
             if package_id is None:
-                return [p.to_dict(with_kubes=with_kubes)
+                return [p.to_dict(with_kubes=with_kubes,
+                                  with_internal=with_internal)
                         for p in Package.query.all()]
             data = Package.query.get(package_id)
             if data is None:
                 raise PackageNotFound()
-            return data.to_dict(with_kubes=with_kubes)
+            return data.to_dict(with_kubes=with_kubes,
+                                with_internal=with_internal)
         elif check_permission('get_own', 'pricing'):
-            user_package = KubeUtils._get_current_user().package
-            if package_id is None:
-                return [user_package.to_dict(with_kubes=with_kubes)]
-            if package_id != user_package.id:  # can get only own package
-                raise PackageNotFound()
-            return user_package.to_dict(with_kubes=with_kubes)
+            user = KubeUtils._get_current_user()
+            if with_internal:
+                with_internal = user.username == KUBERDOCK_INTERNAL_USER
+            if package_id is not None and package_id != user.package.id:
+                raise PackageNotFound()  # user can get only own package
+            package = user.package.to_dict(with_kubes=with_kubes,
+                                           with_internal=with_internal)
+            return [package] if package_id is None else package
         raise PermissionDenied()
 
     @atomic(APIError('Could not create package', 500), nested=False)

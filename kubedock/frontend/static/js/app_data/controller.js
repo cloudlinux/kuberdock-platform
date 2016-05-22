@@ -2,7 +2,7 @@ define([
     'app_data/app', 'app_data/utils', 'app_data/model',
     'app_data/menu/views', 'app_data/paginator/views', 'app_data/breadcrumbs/views',
 ], function(App, utils, Model, Menu, Pager, Breadcrumbs){
-    //"use strict";
+    "use strict";
 
     var controller = {
         index: function(){
@@ -37,7 +37,7 @@ define([
                 var listLayout = new Views.PodListLayout(),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods']}),
                     button = App.currentUser.roleIs('User', 'TrialUser')
-                        && {id: 'add_pod', href: '#newpod', title: 'Add new container',
+                        && {id: 'add_pod', href: '#pods/new', title: 'Add new container',
                             suspendedTitle: suspendedTitle},
                     breadcrumbsControls = new Breadcrumbs.Controls(
                         {search: true, button: button}),
@@ -79,8 +79,9 @@ define([
 
         /**
          * Show basic pod page layout, menu, breadcrumbs.
-         * @param {string} id - pod id
-         * @returns jquery promise
+         *
+         * @param {string} id - Pod id.
+         * @returns {Promise} Promise of the pod page data (model, layout, views).
          */
         showPodBase: function(id){
             var that = this,
@@ -208,7 +209,7 @@ define([
             if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
                 return this.pageNotFound();
             var that = this;
-            require(['app_data/pods/views/pod_create'], function(Views){
+            require(['app_data/pods/views/pod_container'], function(Views){
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
                         pod = podCollection.fullCollection.get(id),
@@ -217,9 +218,16 @@ define([
                         breadcrumbsLayout = new Breadcrumbs.Layout(
                             {points: ['pods', 'pod', 'container']});
 
+                    if (!model)
+                        return this.pageNotFound();
+
                     that.listenTo(pod, 'remove destroy', function(){
                         App.navigate('pods', {trigger: true});
                     });
+
+                    var show = function(View){
+                        return wizardLayout.steps.show(new View({model: model}));
+                    };
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.nav.show(navbar);
@@ -231,23 +239,13 @@ define([
                         breadcrumbsLayout.container.show(new Breadcrumbs.Text(
                             {text: model.get('image') + ' (' + model.get('name') + ')'}));
 
-                        wizardLayout.steps.show(new Views.WizardLogsSubView({model: model}));
+                        show(Views.WizardLogsSubView);
                     });
-
-                    var show = function(View){
-                        return wizardLayout.steps.show(new View({model: model}));
-                    };
 
                     that.listenTo(wizardLayout, 'step:portconf',
                         _.partial(show, Views.WizardGeneralSubView));
-                    that.listenTo(wizardLayout, 'step:volconf',
-                        _.partial(show, Views.WizardVolumesSubView));
                     that.listenTo(wizardLayout, 'step:envconf',
                         _.partial(show, Views.WizardEnvSubView));
-                    that.listenTo(wizardLayout, 'step:resconf',
-                        _.partial(show, Views.WizardResSubView));
-                    that.listenTo(wizardLayout, 'step:otherconf',
-                        _.partial(show, Views.WizardOtherSubView));
                     that.listenTo(wizardLayout, 'step:statsconf', function(){
                         var statCollection = new Model.StatsCollection();
                         statCollection.fetch({
@@ -271,263 +269,302 @@ define([
             });
         },
 
-        createPod: function(){
-            "use strict";
-            if (!App.currentUser.roleIs('User', 'TrialUser'))
-                return this.pageNotFound();
-            var that = this;
+        /**
+         * Prepare basic data and layout for edit pod wizard.
+         *
+         * @param {Object} [options={}] - Cached data from other wizard step or
+         *      existing pod.
+         * @param {Model.Pod} [options.podModel] - Pod model.
+         * @param {Object} [options.podModel.origEnv] -
+         *      Cached original env vars from images.
+         * @param [options.layout] - Pod wizard layout.
+         *
+         * @returns {Promise} - Promise of filled `options`.
+         */
+        podWizardBase: function(options){
+            this.podWizardData = options = options || this.podWizardData || {};
+            var that = this,
+                deferred = $.Deferred();
             require([
                 'app_data/pods/views/pod_create',
                 'app_data/pods/views/breadcrumbs',
             ], function(Views, PodBreadcrumbs){
                 App.getPodCollection().done(function(podCollection){
-                    var registryURL = 'registry.hub.docker.com',
-                        imageTempCollection = new Model.ImagePageableCollection(),
-                        wizardLayout = new Views.PodWizardLayout(),
-                        podModels = podCollection.fullCollection.models,
-                        imageView,
-                        podName;
+                    if (!options.podModel){
+                        options.podModel = new Model.Pod();
 
-                    if (podModels.length === 0) {
-                        podName = 'Unnamed-1';
-                    } else {
-                        podName = 'Unnamed-' + (_.max(podModels.map(function(m){
-                            var match = /^Unnamed-(\d+)$/.exec(m.attributes.name);
-                            return match !== null ? +match[1] : 0;
-                        }))+1);
+                        if (podCollection.length === 0) {
+                            options.podModel.set('name', 'Unnamed-1');
+                        } else {
+                            var maxName = _.max(podCollection.map(function(m){
+                                var match = /^Unnamed-(\d+)$/.exec(m.get('name'));
+                                return match !== null ? +match[1] : 0;
+                            }));
+                            options.podModel.set('name', 'Unnamed-' + (maxName + 1));
+                        }
                     }
-                    var model = new Model.Pod({ name: podName });
-                    model.detached = true;
-                    model.lastEditedContainer = {id: null, isNew: true};
-                    that.listenTo(model, 'remove:containers', function(container){
-                        model.deleteVolumes(container.get('volumeMounts').pluck('name'));
+                    var model = options.podModel;
+                    model.lastEditedContainer = model.lastEditedContainer || {id: null, isNew: true};
+                    model.origEnv = model.origEnv || {};
+
+                    if (!options.layout){
+                        options.layout = new Views.PodWizardLayout();
+
+                        var navbar = new Menu.NavList({collection: App.menuCollection}),
+                            breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'pod']});
+
+                        that.listenTo(options.layout, 'show', function(){
+                            options.layout.nav.show(navbar);
+                            options.layout.header.show(breadcrumbsLayout);
+                            breadcrumbsLayout.pods.show(
+                                new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
+                            breadcrumbsLayout.pod.show(
+                                new PodBreadcrumbs.EditableName({model: model}));
+                        });
+                        that.listenTo(options.layout, 'before:destroy', function(){
+                            if (that.podWizardData === options)
+                                delete that.podWizardData;
+                        });
+                    }
+
+                    App.contents.show(options.layout);
+                    deferred.resolveWith(that, [options, Views]);
+                });
+            });
+            return deferred;
+        },
+
+        podWizardStepImage: function(options){
+            if (!App.currentUser.roleIs('User', 'TrialUser'))
+                return this.pageNotFound();
+            this.podWizardBase(options).done(function(options, Views){
+                options.registryURL = options.registryURL || 'registry.hub.docker.com';
+                options.imageCollection = options.imageCollection
+                    || new Model.ImagePageableCollection();
+                options.selectImageViewModel = options.selectImageViewModel
+                    || new Backbone.Model({query: ''});
+
+                var view = new Views.GetImageView({
+                    pod: options.podModel, model: options.selectImageViewModel,
+                    collection: new Model.ImageCollection(
+                        options.imageCollection.fullCollection.models),
+                });
+
+                this.listenTo(view, 'image:searchsubmit', function(){
+                    options.imageCollection.fullCollection.reset();
+                    options.imageCollection.getFirstPage({
+                        wait: true,
+                        data: {searchkey: options.selectImageViewModel.get('query'),
+                               url: options.registryURL},
+                        success: function(collection, response, opts){
+                            view.collection.reset(collection.models);
+                            if (collection.length === 0) {
+                                utils.notifyWindow(
+                                    'We couldn\'t find any results for this search',
+                                    'success');
+                                view.loadMoreButtonHide();
+                            } else {
+                                view.loadMoreButtonWait();
+                            }
+                        },
+                        error: function(collection, response){
+                            utils.notifyWindow(response);
+                            view.loadMoreButtonWait();
+                        },
                     });
-                    var newImageView = function(options){
-                        imageView = new Views.GetImageView(
-                            _.extend({pod:model, registryURL: registryURL}, options)
-                        );
-                        wizardLayout.steps.show(imageView);
-                    };
-
-                    var navbar = new Menu.NavList({collection: App.menuCollection}),
-                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'pod']});
-
-                    var processCollectionLoadError = function(collection, response){
-                        utils.notifyWindow(response);
-                        imageView.removeLoader();
-                    };
-
-                    var checkKubeTypes = function(){
-                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
-                            if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
-                                Model.KubeType.noAvailableKubeTypes.notifyConflict();
+                });
+                this.listenTo(view, 'image:getnextpage', function(){
+                    options.imageCollection.getNextPage({
+                        wait: true,
+                        data: {searchkey: options.selectImageViewModel.get('query'),
+                               url: options.registryURL},
+                        success: function(collection, response, opts){
+                            view.collection.add(collection.models);
+                            if (!collection.length)
+                                view.loadMoreButtonHide();
                             else
-                                Model.KubeType.noAvailableKubeTypes.notify();
-                            return true;
-                        } else if (model.get('kube_type') === undefined){
-                            utils.notifyWindow('Please, select kube type.');
-                            return true;
-                        }
-                    };
+                                view.loadMoreButtonWait();
+                        },
+                        error: function(collection, response){
+                            utils.notifyWindow(response);
+                            view.loadMoreButtonWait();
+                        },
+                    });
+                });
+                this.listenTo(view, 'image:selected', function(image, auth){
+                    utils.preloader.show();
+                    new Model.Image().fetch({
+                        data: JSON.stringify({image: image, auth: auth}),
+                        success: function(image){
+                            var containerModel = Model.Container.fromImage(image);
+                            options.podModel.get('containers')
+                                .remove(options.podModel.lastEditedContainer.id);
+                            options.podModel.lastEditedContainer.id = containerModel.id;
+                            options.podModel.get('containers').add(containerModel);
+                            App.controller.podWizardStepGeneral(options);
+                        },
+                    }).always(utils.preloader.hide).fail(utils.notifyWindow);
+                });
 
-                    model.origEnv = {};
+                this.listenTo(view, 'step:complete', this.podWizardStepFinal);
+                options.layout.steps.show(view);
+            });
+        },
 
-                    that.listenTo(wizardLayout, 'show', function(){
-                        wizardLayout.nav.show(navbar);
-                        wizardLayout.header.show(breadcrumbsLayout);
-                        breadcrumbsLayout.pods.show(
-                            new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
-                        breadcrumbsLayout.pod.show(
-                            new PodBreadcrumbs.EditableName({model: model}));
-                        newImageView({
-                            collection: new Model.ImageCollection()
+        podWizardStepGeneral: function(options){
+            if (!App.currentUser.roleIs('User', 'TrialUser'))
+                return this.pageNotFound();
+            this.podWizardBase(options).done(function(options, Views){
+                var containerID = options.podModel.lastEditedContainer.id;
+                if (containerID == null)
+                    return this.podWizardStepImage(options);
+
+                var view = new Views.WizardPortsSubView({
+                        model: options.podModel.get('containers').get(containerID),
+                    });
+
+                this.listenTo(view, 'step:envconf', this.podWizardStepEnv);
+                this.listenTo(view, 'step:getimage', this.podWizardStepImage);
+                options.layout.steps.show(view);
+            });
+        },
+
+        podWizardStepEnv: function(options){
+            if (!App.currentUser.roleIs('User', 'TrialUser'))
+                return this.pageNotFound();
+            this.podWizardBase(options).done(function(options, Views){
+                var containerID = options.podModel.lastEditedContainer.id,
+                    containerModel = options.podModel.get('containers').get(containerID),
+                    image = containerModel.get('image'),
+                    view = new Views.WizardEnvSubView({model: containerModel});
+
+                if (!(containerModel.get('image') in options.podModel.origEnv))
+                    options.podModel.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
+                containerModel.origEnv = _.map(options.podModel.origEnv[image], _.clone);
+
+                this.listenTo(view, 'step:portconf', this.podWizardStepGeneral);
+                this.listenTo(view, 'step:complete', this.podWizardStepFinal);
+                options.layout.steps.show(view);
+            });
+        },
+
+        podWizardStepFinal: function(options){
+            if (!App.currentUser.roleIs('User', 'TrialUser'))
+                return this.pageNotFound();
+            var that = this;
+            $.when(
+                this.podWizardBase(options),
+                App.getPodCollection(),
+                App.getSystemSettingsCollection()
+            ).done(function(base, podCollection, settingsCollection){
+                var options = base[0], Views = base[1];
+
+                var model = options.podModel;
+
+                var checkKubeTypes = function(ensureSelected){
+                    if (model.get('kube_type') === Model.KubeType.noAvailableKubeTypes.id){
+                        if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
+                            Model.KubeType.noAvailableKubeTypes.notifyConflict();
+                        else
+                            Model.KubeType.noAvailableKubeTypes.notify();
+                        return true;
+                    } else if (model.get('kube_type') === undefined){
+                        utils.notifyWindow('Please, select kube type.');
+                        return true;
+                    }
+                };
+
+                model.solveKubeTypeConflicts();
+                checkKubeTypes(/*ensureSelected*/false);
+
+                var billingType = settingsCollection.byName('billing_type').get('value'),
+                    kubesLimit = settingsCollection.byName('max_kubes_per_container').get('value'),
+                    view = new Views.WizardCompleteSubView({
+                        model: model,
+                        kubesLimit: kubesLimit,
+                        hasBilling: billingType !== 'No billing',
+                        payg: App.userPackage.get('count_type') === 'payg',
+                    });
+                that.listenTo(view, 'pod:save', function(){
+                    if (checkKubeTypes(/*ensureSelected*/true)) return;
+                    utils.preloader.show();
+                    model.save()
+                        .always(utils.preloader.hide)
+                        .fail(utils.notifyWindow)
+                        .done(function(){
+                            podCollection.fullCollection.add(model);
+                            App.navigate('pods').controller.showPods();
                         });
-                    });
-                    that.listenTo(wizardLayout, 'image:searchsubmit', function(query){
-                        var imageCollection = new Model.ImageCollection();
-                        imageTempCollection.fullCollection.reset();
-                        imageTempCollection.getFirstPage({
-                            wait: true,
-                            data: {searchkey: query, url: registryURL},
-                            success: function(collection, response, opts){
-                                collection.each(function(m){ imageCollection.add(m); });
-                                newImageView({
-                                    collection: imageCollection,
-                                    query: query
-                                });
-                                if (collection.length == 0) {
-                                    utils.notifyWindow('We couldn\'t find any results for this search', 'success');
-                                }
-                            },
-                            error: processCollectionLoadError,
-                        });
-                    });
-                    that.listenTo(wizardLayout, 'image:getnextpage', function(currentCollection, query){
-                        var windowTopPosition = window.pageYOffset;
-                        imageTempCollection.getNextPage({
-                            wait: true,
-                            data: {searchkey: query, url: registryURL},
-                            success: function(collection, response, opts){
-                                collection.each(function(m){ currentCollection.add(m); });
-                                newImageView({
-                                    collection: currentCollection,
-                                    query: query
-                                });
-                                $('html, body').scrollTop(windowTopPosition);
-                                if (collection.length == 0) $('#load-control').hide();
-                            },
-                            error: processCollectionLoadError
-                        });
-                    });
-                    that.listenTo(wizardLayout, 'step:getimage', function(){
-                        newImageView({
-                            collection: new Model.ImageCollection(imageTempCollection.fullCollection.models)
-                        });
-                    });
-                    that.listenTo(wizardLayout, 'clear:pager', function(){
-                        wizardLayout.footer.empty();
-                    });
-                    that.listenTo(wizardLayout, 'step:portconf', function(){
-                        var container = model.lastEditedContainer.id;
-                        wizardLayout.steps.show(
-                            new Views.WizardPortsSubView({
-                                model: model.get('containers').get(container),
-                            })
-                        );
-                    });
-                    that.listenTo(wizardLayout, 'step:envconf', function(data){
-                        var container = model.lastEditedContainer.id,
-                            containerModel = model.get('containers').get(container),
-                            image = containerModel.get('image');
-                        if (!(containerModel.get('image') in model.origEnv)) {
-                            model.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
-                        }
-                        containerModel.origEnv = _.map(model.origEnv[image], _.clone);
-                        wizardLayout.steps.show(new Views.WizardEnvSubView({
-                            model: containerModel
-                        }));
-                    });
-                    that.listenTo(wizardLayout, 'pod:save', function(data){
-                        if (checkKubeTypes()) return;
+                });
+                that.listenTo(view, 'pod:pay_and_run', function(){
+                    if (checkKubeTypes(/*ensureSelected*/true)) return;
+                    var billingUrl = utils.getBillingUrl(settingsCollection);
+                    if (billingUrl) {
                         utils.preloader.show();
-                        podCollection.fullCollection.create(data, {
+                        podCollection.fullCollection.create(model, {
                             wait: true,
-                            complete: utils.preloader.hide,
-                            success: function(model){
-                                model.detached = false;
-                                App.navigate('pods');
-                                that.showPods();
-                            },
-                            error: function(model, response){
-                                utils.notifyWindow(response);
-                            },
-                        });
-                    });
-                    that.listenTo(wizardLayout, 'pod:pay_and_run', function(data){
-                        if (checkKubeTypes()) return;
-                        App.getSystemSettingsCollection().done(function(settingCollection){
-                            var billingType = settingCollection.findWhere({name: 'billing_type'}).get('value');
-                            if (billingType.toLowerCase() !== 'no billing') {
-                                utils.preloader.show();
-                                podCollection.fullCollection.create(data, {
-                                    wait: true,
-                                    success: function(model){
-                                        $.ajax({  // TODO: use Backbone.Model
-                                            authWrap: true,
-                                            type: 'POST',
-                                            contentType: 'application/json; charset=utf-8',
-                                            url: '/api/billing/order',
-                                            data: JSON.stringify({
-                                                pod: JSON.stringify(data.attributes)
-                                            })
-                                        }).always(
-                                            utils.preloader.hide
-                                        ).fail(
-                                            utils.notifyWindow
-                                        ).done(function(response){
-                                            if(response.data.status === 'Paid') {
-                                                if (model && model.id) {
-                                                    if (model.get('status') !== 'running') {
-                                                        model.set('status', 'pending');
-                                                    }
-                                                    model.get('containers').each(function(c){
-                                                        if (c.get('state') !== 'running') {
-                                                            c.set('state', 'pending');
-                                                        }
-                                                    });
-                                                    App.navigate('pods/'+model.id);
-                                                    that.showPodContainers(model.id);
+                            success: function(){
+                                new Backbone.Model().save({
+                                    pod: JSON.stringify(model),
+                                }, {
+                                    url: '/api/billing/order',
+                                }).always(
+                                    utils.preloader.hide
+                                ).fail(
+                                    utils.notifyWindow
+                                ).done(function(response){
+                                    if(response.data.status === 'Paid') {
+                                        if (model && model.id) {
+                                            if (model.get('status') !== 'running') {
+                                                model.set('status', 'pending');
+                                            }
+                                            model.get('containers').each(function(c){
+                                                if (c.get('state') !== 'running') {
+                                                    c.set('state', 'pending');
                                                 }
-                                                else {
-                                                    App.navigate('pods');
-                                                    that.showPods();
-                                                }
-                                            } else {
-                                                utils.modalDialog({
-                                                    title: 'Insufficient funds',
-                                                    body: 'Your account funds seem to be'
-                                                            +' insufficient for the action.'
-                                                            +' Would you like to go to billing'
-                                                            +' system to make the payment?',
-                                                    small: true,
-                                                    show: true,
-                                                    footer: {
-                                                        buttonOk: function(){
-                                                            window.location = response.data.redirect;
-                                                        },
-                                                        buttonCancel: function(){
-                                                            App.navigate('pods');
-                                                            that.showPods();
-                                                        },
-                                                        buttonOkText: 'Go to billing',
-                                                        buttonCancelText: 'No, thanks'
-                                                    }
-                                                });
+                                            });
+                                            App.navigate('pods/' + model.id)
+                                                .controller.showPodContainers(model.id);
+                                        }
+                                        else {
+                                            App.navigate('pods')
+                                                .controller.showPods();
+                                        }
+                                    } else {
+                                        utils.modalDialog({
+                                            title: 'Insufficient funds',
+                                            body: 'Your account funds seem to be'
+                                                + ' insufficient for the action.'
+                                                + ' Would you like to go to billing'
+                                                + ' system to make the payment?',
+                                            small: true,
+                                            show: true,
+                                            footer: {
+                                                buttonOk: function(){
+                                                    window.location = response.data.redirect;
+                                                },
+                                                buttonCancel: function(){
+                                                    App.navigate('pods')
+                                                        .controller.showPods();
+                                                },
+                                                buttonOkText: 'Go to billing',
+                                                buttonCancelText: 'No, thanks'
                                             }
                                         });
-                                    },
-                                    error: function(model, response){
-                                        utils.preloader.hide;
-                                        utils.notifyWindow(response);
                                     }
                                 });
+                            },
+                            error: function(model, response){
+                                utils.preloader.hide();
+                                utils.notifyWindow(response);
                             }
                         });
-                    });
-                    that.listenTo(wizardLayout, 'step:complete', function(){
-                        model.solveKubeTypeConflicts();
-                        if (model.get('kube_type') == Model.KubeType.noAvailableKubeTypes.id){
-                            if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
-                                Model.KubeType.noAvailableKubeTypes.notifyConflict();
-                            else
-                                Model.KubeType.noAvailableKubeTypes.notify();
-                        }
-                        App.getSystemSettingsCollection().done(function(collection){
-                            var billingType = collection.byName('billing_type').get('value'),
-                                kubesLimit = collection.byName('max_kubes_per_container').get('value');
-                            wizardLayout.steps.show(new Views.WizardCompleteSubView({
-                                model: model,
-                                kubesLimit: kubesLimit,
-                                hasBilling: billingType !== 'No billing',
-                                payg: App.userPackage.get('count_type') === 'payg',
-                            }));
-                        });
-                    });
-                    that.listenTo(wizardLayout, 'image:selected', function(image, auth){
-                        utils.preloader.show();
-                        new Model.Image().fetch({
-                            data: JSON.stringify({image: image, auth: auth}),
-                            success: function(image){
-                                var newContainer = Model.Container.fromImage(image);
-                                model.get('containers').remove(model.lastEditedContainer.id);
-                                model.get('containers').add(newContainer);
-                                model.lastEditedContainer.id = newContainer.id;
-                                wizardLayout.trigger('step:portconf');
-                            },
-                        }).always(utils.preloader.hide).fail(utils.notifyWindow);
-                    });
-                    App.contents.show(wizardLayout);
+                    }
                 });
+                that.listenTo(view, 'step:envconf', that.podWizardStepEnv);
+                that.listenTo(view, 'step:getimage', that.podWizardStepImage);
+                that.listenTo(view, 'step:portconf', that.podWizardStepGeneral);
+                options.layout.steps.show(view);
             });
         },
 
@@ -1179,7 +1216,6 @@ define([
             if (!App.message.hasView()) { return; }
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
-                    'use strict';
                     notificationCollection.remove(data.id);
                     if (notificationCollection.length) {
                         var notificationView = new Views.MessageList({collection: notificationCollection});

@@ -1,6 +1,5 @@
 define(['app_data/app', 'app_data/model',
         'tpl!app_data/pods/templates/layout_wizard.tpl',
-        'tpl!app_data/pods/templates/breadcrumb_header.tpl',
         'tpl!app_data/pods/templates/wizard_image_collection_item.tpl',
         'tpl!app_data/pods/templates/wizard_get_image.tpl',
 
@@ -12,18 +11,12 @@ define(['app_data/app', 'app_data/model',
         'tpl!app_data/pods/templates/editable_volume_mounts/item.tpl',
         'tpl!app_data/pods/templates/editable_volume_mounts/empty.tpl',
 
-        'tpl!app_data/pods/templates/wizard_set_container_settled_basic_settings.tpl',
         'tpl!app_data/pods/templates/wizard_set_container_env.tpl',
-        'tpl!app_data/pods/templates/wizard_set_container_logs.tpl',
-        'tpl!app_data/pods/templates/wizard_set_container_stats.tpl',
-        'tpl!app_data/pods/templates/pod_item_graph.tpl',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
         'app_data/utils',
-        'bootstrap', 'bootstrap-editable', 'jqplot',
-        'jqplot-axis-renderer', 'nicescroll', 'numeral', 'selectpicker', 'tooltip'],
+        'bootstrap-editable', 'selectpicker', 'tooltip'],
        function(App, Model,
                 layoutWizardTpl,
-                breadcrumbHeaderTpl,
                 wizardImageCollectionItemTpl,
                 wizardGetImageTpl,
 
@@ -35,85 +28,26 @@ define(['app_data/app', 'app_data/model',
                 volumeMountListItemTpl,
                 volumeMountListEmptyTpl,
 
-                wizardSetContainerSettledBasicSettingsTpl,
                 wizardSetContainerEnvTpl,
-                wizardSetContainerLogsTpl,
-                wizardSetContainerStatsTpl,
-                podItemGraphTpl,
                 wizardSetContainerCompleteTpl,
                 utils){
 
-    var newItem = {};
+    var views = {};
 
-    newItem.PodWizardLayout = Backbone.Marionette.LayoutView.extend({
+    views.PodWizardLayout = Backbone.Marionette.LayoutView.extend({
         template: layoutWizardTpl,
-        initialize: function(){
-            var that = this;
-            this.listenTo(this.steps, 'show', function(view){
-                that.listenTo(view, 'image:selected', that.imageSelected);
-                that.listenTo(view, 'image:fetched', that.imageFetched);
-                that.listenTo(view, 'pager:clear', that.clearPager);
-                that.listenTo(view, 'pod:save', that.podSave);
-                that.listenTo(view, 'pod:pay_and_run', that.podPayAndRun);
-                that.listenTo(view, 'image:searchsubmit', that.imageSearchSubmit);
-                that.listenTo(view, 'image:getnextpage', that.imageGetNextPage);
-
-                // NOTE: Container to operate with will be choosen in this way:
-                // in create pod workflow, will be used podModel.lastEditedContainer
-                // in show pod container workflow, will be used container model from controller
-                // TODO: can we remove it?
-                _([
-                    'step:getimage',
-                    'step:portconf',
-                    'step:volconf',
-                    'step:envconf',
-                    'step:resconf',
-                    'step:otherconf',
-                    'step:statsconf',
-                    'step:logsconf',
-                    'step:complete',
-                ]).each(function(name){
-                    that.listenTo(view, name, _.bind(that.trigger, that, name));
-                });
-            });
-        },
         regions: {
+            // TODO: 1) move menu and breadcrumbs regions into App;
+            //       2) pull common parts out of "steps" into separate regions;
             nav    : '#navbar-steps',
             header : '#header-steps',
             steps  : '#steps',
-            sidebar: '#sidebar',
-            footer : '#footer-steps'
         },
-        onBeforeShow: function(){
-            utils.preloader.show();
-        },
-        onShow: function(){
-            utils.preloader.hide();
-        },
-        imageSelected: function(image, auth){
-            this.trigger('image:selected', image, auth);
-        },
-        imageFetched: function(data){
-            this.trigger('image:fetched', data);
-        },
-        clearPager: function(){
-            this.trigger('clear:pager');
-        },
-        podSave: function(data){
-            this.trigger('pod:save', data.model);
-        },
-        podPayAndRun: function(data){
-            this.trigger('pod:pay_and_run', data.model);
-        },
-        imageSearchSubmit: function(data){
-            this.trigger('image:searchsubmit', data);
-        },
-        imageGetNextPage: function(collection, query){
-            this.trigger('image:getnextpage', collection, query);
-        }
+        onBeforeShow: utils.preloader.show,
+        onShow: utils.preloader.hide,
     });
 
-    newItem.ImageListItemView = Backbone.Marionette.ItemView.extend({
+    views.ImageListItemView = Backbone.Marionette.ItemView.extend({
         template: wizardImageCollectionItemTpl,
         tagName: 'div',
         className: 'item',
@@ -123,23 +57,19 @@ define(['app_data/app', 'app_data/model',
         },
     });
 
-    newItem.GetImageView = Backbone.Marionette.CompositeView.extend({
+    views.GetImageView = Backbone.Marionette.CompositeView.extend({
         template: wizardGetImageTpl,
-        childView: newItem.ImageListItemView,
+        childView: views.ImageListItemView,
         childViewContainer: '#data-collection',
         tagName: 'div',
 
         initialize: function(options){
-            this.registryURL = options.registryURL;
-            this.query = options.query;
             this.pod = options.pod;
         },
 
         templateHelpers: function(){
-            var showPaginator = this.collection.length ? true : false;
             return {
-                showPaginator: showPaginator,
-                query : this.query,
+                showPaginator: !!this.collection.length,
             };
         },
 
@@ -207,13 +137,13 @@ define(['app_data/app', 'app_data/model',
 
         imageSourceOnChange: function(){
             var val = this.ui.imageSource.val();
-            if (val == "Docker Hub"){
+            if (val === 'DOCKERHUB_SEARCH'){
                 this.ui.input.parent().show();
                 this.ui.privateWrapper.hide();
                 this.ui.loginPrivateUres.slideUp();
                 this.ui.searchImageButton.parent().show();
                 this.ui.label.text('Search images in DockerHub');
-            } else if (val == "Other registries"){
+            } else if (val === 'OTHER_REGISTRIES'){
                 this.ui.input.parent().hide();
                 this.ui.privateWrapper.show();
                 this.ui.loginPrivateUres.slideDown();
@@ -221,7 +151,7 @@ define(['app_data/app', 'app_data/model',
                 this.ui.privateField.attr('placeholder','registry/namespace/image');
                 this.ui.privateField.addClass('private-registry');
                 this.ui.label.text('Select image from any registry');
-            } else {
+            } else if (val === 'PRIVATE_REPOS') {
                 this.ui.input.parent().hide();
                 this.ui.privateWrapper.show();
                 this.ui.loginPrivateUres.slideDown();
@@ -232,37 +162,34 @@ define(['app_data/app', 'app_data/model',
             }
         },
 
-        appendLoader: function(control){
-            var loader = $('<div id="load-control" class="btn-more animation"><span>Loading ...</span></div>');
-            if (control === undefined) {
-                this.ui.searchControl.empty().append(loader);
-            } else {
-                control.empty().append(loader);
-            }
+        loadMoreButtonSpin: function(){
+            this.fetching = true;
+            this.ui.moreImage.show().addClass('animation').children().text('Loading...');
         },
-
-        removeLoader: function(){
-            this.ui.searchControl.empty();
+        loadMoreButtonWait: function(){
+            this.fetching = false;
+            this.ui.moreImage.show().removeClass('animation').children().text('Load more');
+        },
+        loadMoreButtonHide: function(){
+            this.fetching = false;
+            this.ui.moreImage.hide();
         },
 
         onInputKeypress: function(evt){
             evt.stopPropagation();
-            if (evt.which === 13) { // 'Enter' key
-                if (this.ui.input.val().length !== 0){
-                    this.appendLoader();
-                    this.trigger('image:searchsubmit', this.ui.input.val().trim());
-                } else {
-                    this.ui.input.focus();
-                    utils.notifyWindow('First enter image name or part of image name to search');
-                }
-            }
+            if (evt.which === 13) // 'Enter' key
+                this.search();
         },
-
         onSearchClick: function(evt){
             evt.stopPropagation();
-            if (this.ui.input.val().length !== 0){
-                this.appendLoader();
-                this.trigger('image:searchsubmit', this.ui.input.val().trim());
+            this.search();
+        },
+        search: function(){
+            var query = this.ui.input.val().trim();
+            if (query.length !== 0){
+                this.loadMoreButtonSpin();
+                this.model.set('query', query);
+                this.trigger('image:searchsubmit');
             } else {
                 this.ui.input.focus();
                 utils.notifyWindow('First enter image name or part of image name to search');
@@ -286,82 +213,19 @@ define(['app_data/app', 'app_data/model',
             this.trigger('step:complete');
         },
 
-        childViewOptions: function(){
-            var registryURL = this.registryURL;
-            return {
-                registryURL: registryURL
-            };
-        },
-
         // image was selected from search results
         childImageSelected: function(data){
             this.trigger('image:selected', data.model.get('name'));
         },
 
         loadNextPage: function(){
-            this.ui.loader.text('Loading ...').addClass('animation');
-            this.trigger('image:getnextpage', this.collection, this.query);
+            if (this.fetching) return;
+            this.loadMoreButtonSpin();
+            this.trigger('image:getnextpage');
         }
     });
 
-    newItem.WizardGeneralSubView = Backbone.Marionette.ItemView.extend({
-        tagName: 'div',
-        template: wizardSetContainerSettledBasicSettingsTpl,
-        id: 'container-page',
-
-        ui: {
-            stopContainer  : '#stopContainer',
-            startContainer : '#startContainer',
-            updateContainer: '.container-update',
-            checkForUpdate : '.check-for-update',
-        },
-
-        events: {
-            'click @ui.stopContainer'  : 'stopContainer',
-            'click @ui.startContainer' : 'startContainer',
-            'click @ui.updateContainer': 'updateContainer',
-            'click @ui.checkForUpdate' : 'checkContainerForUpdate',
-        },
-
-        modelEvents: {
-            'change': 'render'
-        },
-
-        initialize: function(options) {
-            this.pod = this.model.getPod();
-        },
-
-        triggers: {
-            'click .go-to-volumes'   : 'step:volconf',
-            'click .go-to-envs'      : 'step:envconf',
-            'click .go-to-resources' : 'step:resconf',
-            'click .go-to-other'     : 'step:otherconf',
-            'click .go-to-stats'     : 'step:statsconf',
-            'click .go-to-logs'      : 'step:logsconf',
-        },
-
-        templateHelpers: function(){
-            this.pod.recalcInfo();
-            return {
-                parentID: this.pod.id,
-                volumes: this.pod.get('volumes'),
-                updateIsAvailable: this.model.updateIsAvailable,
-                kube_type: this.pod.getKubeType(),
-                restart_policy: this.pod.get('restartPolicy'),
-                podName: this.pod.get('name'),
-                limits: this.model.limits,
-            };
-        },
-
-        startContainer: function(){ this.pod.cmdStart(); },
-        stopContainer: function(){ this.pod.cmdStop(); },
-        updateContainer: function(){ this.model.update(); },
-        checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
-        },
-    });
-
-    newItem.WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
+    views.WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
         tagName: 'div',
         regions: {
             ports: '#editable-ports-list',
@@ -401,11 +265,11 @@ define(['app_data/app', 'app_data/model',
         },
 
         onBeforeShow: function(){
-            this.ports.show(new newItem.PortCollection({
+            this.ports.show(new views.PortCollection({
                 model: this.model,
                 collection: this.model.get('ports')
             }), {replaceElement: true});
-            this.volumeMounts.show(new newItem.VolumeMountCollection({
+            this.volumeMounts.show(new views.VolumeMountCollection({
                 model: this.model,
                 collection: this.model.get('volumeMounts')
             }), {replaceElement: true});
@@ -490,7 +354,7 @@ define(['app_data/app', 'app_data/model',
                 this.model.get('ports').each(function(port, i){
                     that.pod.get('containers').each(function(container2){
                         container2.get('ports').each(function(port2, j){
-                            if (container2 == that.model && i === j) return;
+                            if (container2 === that.model && i === j) return;
                             if (port.get('containerPort') === port2.get('containerPort'))
                                 throw {container: container2, port: port.get('containerPort')};
                             var hostPort = port.get('hostPort') || port.get('containerPort'),
@@ -504,7 +368,7 @@ define(['app_data/app', 'app_data/model',
                 showDublicatePortError(e);
                 return;
             }
-            this.trigger('step:envconf', this);
+            this.trigger('step:envconf');
         },
 
         goBack: function(evt){
@@ -524,7 +388,7 @@ define(['app_data/app', 'app_data/model',
         }
     });
 
-    newItem.PortListItem = Backbone.Marionette.ItemView.extend({
+    views.PortListItem = Backbone.Marionette.ItemView.extend({
         template : portListItemTpl,
         tagName : 'tr',
 
@@ -595,12 +459,12 @@ define(['app_data/app', 'app_data/model',
         },
     });
 
-    newItem.PortCollection = Backbone.Marionette.CompositeView.extend({
+    views.PortCollection = Backbone.Marionette.CompositeView.extend({
         template: portListTpl,
         tagName: 'div',
         className: 'row',
         childViewContainer: 'tbody',
-        childView: newItem.PortListItem,
+        childView: views.PortListItem,
         emptyView: Backbone.Marionette.ItemView.extend({
             template : portListEmptyTpl,
             tagName  : 'tr',
@@ -619,7 +483,7 @@ define(['app_data/app', 'app_data/model',
         addItem: function(evt){ this.collection.add(new Model.Port()); },
     });
 
-    newItem.VolumeMountListItem = Backbone.Marionette.ItemView.extend({
+    views.VolumeMountListItem = Backbone.Marionette.ItemView.extend({
         template : volumeMountListItemTpl,
         tagName : 'tr',
 
@@ -743,15 +607,16 @@ define(['app_data/app', 'app_data/model',
             var size = evt.target.value;
             if (_.some( [_.isUndefined(size), _.isNaN(size), _.isEmpty(size)] )){
                 this.ui.pdSize.addClass('error');
-                return;
             } else if (size < 1 || this.pdSizeLimit !== undefined && size > this.pdSizeLimit) {
                 this.ui.pdSize.addClass('error');
                 utils.notifyWindow('Max size of persistent volume should be '
                                    + 'more than zero and less than '
                                    + this.pdSizeLimit + ' GB');
+            } else {
+                this.ui.pdSize.removeClass('error');
+                this.getPDModel().set('size', size);
+                this.volume.persistentDisk.pdSize = size;
             }
-            this.getPDModel().set('size', size);
-            this.volume.persistentDisk.pdSize = size;
         },
 
         togglePersistent: function(evt){
@@ -851,12 +716,12 @@ define(['app_data/app', 'app_data/model',
 
     });
 
-    newItem.VolumeMountCollection = Backbone.Marionette.CompositeView.extend({
+    views.VolumeMountCollection = Backbone.Marionette.CompositeView.extend({
         template: volumeMountListTpl,
         tagName: 'div',
         className: 'row',
         childViewContainer: 'tbody',
-        childView: newItem.VolumeMountListItem,
+        childView: views.VolumeMountListItem,
         emptyView: Backbone.Marionette.ItemView.extend({
             template : volumeMountListEmptyTpl,
             tagName  : 'tr',
@@ -874,13 +739,12 @@ define(['app_data/app', 'app_data/model',
     });
 
 
-    newItem.WizardEnvSubView = Backbone.Marionette.ItemView.extend({
+    views.WizardEnvSubView = Backbone.Marionette.ItemView.extend({
         template: wizardSetContainerEnvTpl,
         tagName: 'div',
 
         ui: {
             ieditable  : '.ieditable',
-            table      : '#data-table',
             reset      : '.reset-button',
             input      : '.change-input',
             addItem    : '.add-env',
@@ -888,12 +752,8 @@ define(['app_data/app', 'app_data/model',
             nameField  : 'input.name',
             valueField : 'input.value',
             next       : '.next-step',
+            prev       : '.go-to-ports',
             navButtons : '.nav-buttons',
-
-            stopContainer  : '#stopContainer',
-            startContainer : '#startContainer',
-            updateContainer: '.container-update',
-            checkForUpdate : '.check-for-update',
         },
 
         events: {
@@ -902,22 +762,8 @@ define(['app_data/app', 'app_data/model',
             'click @ui.reset'      : 'resetFielsdsValue',
             'change @ui.input'     : 'onChangeInput',
             'click @ui.next'       : 'finalStep',
+            'click @ui.prev'       : 'prevStep',
             'focus @ui.input'      : 'removeError',
-
-            'click @ui.stopContainer'  : 'stopContainer',
-            'click @ui.startContainer' : 'startContainer',
-            'click @ui.updateContainer': 'updateContainer',
-            'click @ui.checkForUpdate' : 'checkContainerForUpdate',
-        },
-
-        triggers: {
-            'click .prev-step'       : 'step:volconf',
-            'click .go-to-ports'     : 'step:portconf',
-            'click .go-to-volumes'   : 'step:volconf',
-            'click .go-to-resources' : 'step:resconf',
-            'click .go-to-other'     : 'step:otherconf',
-            'click .go-to-stats'     : 'step:statsconf',
-            'click .go-to-logs'      : 'step:logsconf',
         },
 
         modelEvents: {
@@ -937,29 +783,6 @@ define(['app_data/app', 'app_data/model',
             } else {
                 this.ui.navButtons.removeClass('fixed');
             }
-        },
-
-        templateHelpers: function(){
-            var pod = this.model.getPod();
-            pod.recalcInfo();
-            return {
-                parentID: pod.id,
-                updateIsAvailable: this.model.updateIsAvailable,
-                sourceUrl: this.model.get('sourceUrl'),
-                detached: pod.detached,
-                ip: this.model.get('ip'),
-                kube_type: pod.getKubeType(),
-                limits: this.model.limits,
-                restart_policy: pod.get('restartPolicy'),
-                podName: pod.get('name'),
-            };
-        },
-
-        startContainer: function(){ this.model.getPod().cmdStart(); },
-        stopContainer: function(){ this.model.getPod().cmdStop(); },
-        updateContainer: function(){ this.model.update(); },
-        checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
         },
 
         removeError: function(evt){ utils.removeError($(evt.target)); },
@@ -1005,10 +828,10 @@ define(['app_data/app', 'app_data/model',
             var uniqEnvs = _.uniq(env, function(item){ return item.name; }),
                 difference = _.difference(env, uniqEnvs);
 
-            if (difference.length != 0){
+            if (difference.length !== 0){
                 _.each(difference, function(item){
                     _.each(that.ui.nameField, function(field){
-                        if (field.value == item.name){
+                        if (field.value === item.name){
                             $(field).addClass('error');
                             utils.notifyInline('Duplicate variable names are not allowed',field);
                         }
@@ -1027,6 +850,7 @@ define(['app_data/app', 'app_data/model',
                 this.trigger('step:complete');
             }
         },
+        prevStep: function(){ this.trigger('step:portconf'); },
 
         addItem: function(evt){
             evt.stopPropagation();
@@ -1065,276 +889,7 @@ define(['app_data/app', 'app_data/model',
         },
     });
 
-    newItem.WizardStatsSubItemView = Backbone.Marionette.ItemView.extend({
-        template: podItemGraphTpl,
-
-        initialize: function(options){ this.container = options.container; },
-
-        ui: {
-            chart: '.graph-item'
-        },
-
-        onShow: function(){
-            var lines = this.model.get('lines'),
-                running = this.container.get('state') === 'running',
-                series = this.model.get('series'),
-                options = {
-                title: this.model.get('title'),
-                axes: {
-                    xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
-                    yaxis: {label: this.model.get('ylabel'), min: 0}
-                },
-                seriesDefaults: {
-                    showMarker: false,
-                    rendererOptions: {
-                        smooth: true
-                    }
-                },
-                series: series,
-                grid: {
-                    background: '#ffffff',
-                    drawBorder: false,
-                    shadow: false
-                },
-                legend: {
-                    show: true,
-                    placement: 'insideGrid'
-                },
-                noDataIndicator: {
-                    show: true,
-                    indicator: !running ? 'Container is not running...' :
-                        'Collecting data... plot will be dispayed in a few minutes.',
-                    axes: {
-                        xaxis: {
-                            min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
-                            max: App.currentUser.localizeDatetime(),
-                            tickOptions: {formatString:'%H:%M'},
-                            tickInterval: '5 minutes',
-                        },
-                        yaxis: {min: 0, max: 150, tickInterval: 50}
-                    }
-                },
-            };
-
-            var points = [];
-            for (var i=0; i<lines;i++)
-                points.push([]);
-
-            // If there is only one point, jqplot will display ugly plot with
-            // weird grid and no line.
-            // Remove this point to force jqplot to show noDataIndicator.
-            if (this.model.get('points').length == 1)
-                this.model.get('points').splice(0);
-
-            this.model.get('points').forEach(function(record){
-                var time = App.currentUser.localizeDatetime(record[0]);
-                for (var i=0; i<lines; i++)
-                    points[i].push([time, record[i+1]]);
-            });
-            this.ui.chart.jqplot(points, options);
-        }
-    });
-
-    newItem.WizardStatsSubView = Backbone.Marionette.CompositeView.extend({
-        childView: newItem.WizardStatsSubItemView,
-        childViewContainer: "div.container-stats #monitoring-page",
-        template: wizardSetContainerStatsTpl,
-        tagName: 'div',
-
-        childViewOptions: function() {
-            return {container: this.model};
-        },
-
-        events: {
-            'click #stopContainer'    : 'stopContainer',
-            'click #startContainer'   : 'startContainer',
-            'click .container-update' : 'updateContainer',
-            'click .check-for-update' : 'checkContainerForUpdate',
-        },
-
-        triggers: {
-            'click .go-to-ports'     : 'step:portconf',
-            'click .go-to-volumes'   : 'step:volconf',
-            'click .go-to-envs'      : 'step:envconf',
-            'click .go-to-resources' : 'step:resconf',
-            'click .go-to-other'     : 'step:otherconf',
-            'click .go-to-stats'     : 'step:statsconf',
-            'click .go-to-logs'      : 'step:logsconf'
-        },
-
-        modelEvents: {
-            'change': 'render'
-        },
-
-        templateHelpers: function(){
-            var pod = this.model.getPod();
-            pod.recalcInfo();
-            return {
-                updateIsAvailable: this.model.updateIsAvailable,
-                parentID: pod.id,
-                detached: pod.detached,
-                image: this.model.get('image'),
-                name: this.model.get('name'),
-                state: this.model.get('state'),
-                kube_type: pod.getKubeType(),
-                limits: this.model.limits,
-                restart_policy: pod.get('restartPolicy'),
-                kubes: this.model.get('kubes'),
-                podName: pod.get('name'),
-            };
-
-        },
-
-        startContainer: function(){ this.model.getPod().cmdStart(); },
-        stopContainer: function(){ this.model.getPod().cmdStop(); },
-        updateContainer: function(){ this.model.update(); },
-        checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
-        },
-    });
-
-    newItem.WizardLogsSubView = Backbone.Marionette.ItemView.extend({
-        template: wizardSetContainerLogsTpl,
-        tagName: 'div',
-
-        ui: {
-            ieditable          : '.ieditable',
-            textarea           : '.container-logs',
-            stopItem           : '#stopContainer',
-            startItem          : '#startContainer',
-            updateContainer    : '.container-update',
-            checkForUpdate     : '.check-for-update',
-            editContainerKubes : '.editContainerKubes',
-            changeKubeQty      : 'button.send',
-            cancelChange       : 'button.cancel',
-            kubeVal            : '.editForm input',
-        },
-
-        events: {
-            'click @ui.stopItem'           : 'stopItem',
-            'click @ui.startItem'          : 'startItem',
-            'click @ui.updateContainer'    : 'updateContainer',
-            'click @ui.checkForUpdate'     : 'checkContainerForUpdate',
-            'click @ui.changeKubeQty'      : 'changeKubeQty',
-            'click @ui.editContainerKubes' : 'editContainerKubes',
-            'click @ui.cancelChange'       : 'closeChange',
-            'keyup @ui.kubeVal'            : 'kubeVal'
-        },
-
-        triggers: {
-            'click .go-to-ports'     : 'step:portconf',
-            'click .go-to-volumes'   : 'step:volconf',
-            'click .go-to-envs'      : 'step:envconf',
-            'click .go-to-resources' : 'step:resconf',
-            'click .go-to-other'     : 'step:otherconf',
-            'click .go-to-stats'     : 'step:statsconf'
-        },
-
-        modelEvents: {
-            'change': 'render'
-        },
-
-        initialize: function() {
-            _.bindAll(this, 'getLogs');
-            this.getLogs();
-        },
-
-        templateHelpers: function(){
-            var pod = this.model.getPod();
-            pod.recalcInfo();
-            return {
-                parentID: pod.id,
-                updateIsAvailable: this.model.updateIsAvailable,
-                sourceUrl: this.model.get('sourceUrl'),
-                podName: pod.get('name'),
-                kube_type: pod.getKubeType(),
-                limits: this.model.limits,
-                restart_policy: pod.get('restartPolicy'),
-                logs: this.model.logs,
-                logsError: this.model.logsError,
-                editKubesQty : this.model.editKubesQty,
-                kubeVal : this.model.kubeVal
-            };
-        },
-
-        onBeforeRender: function () {
-            var el = this.ui.textarea;
-            if (typeof el !== 'object' || (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
-                this.logScroll = null;  // stick to bottom
-            else
-                this.logScroll = el.scrollTop();  // stay at this position
-        },
-
-        onRender: function () {
-            if (this.logScroll === null)  // stick to bottom
-                this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
-            else  // stay at the same position
-                this.ui.textarea.scrollTop(this.logScroll);
-
-            if (this.niceScroll !== undefined)
-                this.niceScroll.remove();
-            this.niceScroll = this.ui.textarea.niceScroll({
-                cursorcolor: "#69AEDF",
-                cursorwidth: "12px",
-                cursorborder: "none",
-                cursorborderradius: "none",
-                background: "#E7F4FF",
-                autohidemode: false,
-                railoffset: 'bottom'
-            });
-        },
-
-        onBeforeDestroy: function () {
-            delete this.model.kubeVal;
-            delete this.model.editKubesQty;
-            this.destroyed = true;
-            clearTimeout(this.model.get('timeout'));
-            if (this.niceScroll !== undefined)
-                this.niceScroll.remove();
-        },
-
-        getLogs: function() {
-            var that = this;
-            this.model.getLogs(/*size=*/100).always(function(){
-                // callbacks are called with model as a context
-                if (!that.destroyed) {
-                    this.set('timeout', setTimeout(that.getLogs, 10000));
-                    that.render();
-                }
-            });
-        },
-
-        editContainerKubes: function(){
-            this.model.editKubesQty = true;
-            this.model.kubeVal = this.model.get('kubes');
-            this.render();
-        },
-
-        kubeVal: function(){
-            this.model.kubeVal = this.ui.kubeVal.val();
-        },
-
-        changeKubeQty: function(){
-            //TODO add change Request
-            this.closeChange();
-        },
-
-        closeChange: function(){
-            delete this.model.kubeVal;
-            delete this.model.editKubesQty;
-            this.render();
-        },
-
-        startItem: function(){ this.model.getPod().cmdStart(); },
-        stopItem: function(){ this.model.getPod().cmdStop(); },
-
-        updateContainer: function(){ this.model.update(); },
-        checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
-        }
-    });
-
-    newItem.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({
+    views.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({
         template: wizardSetContainerCompleteTpl,
         tagName: 'div',
 
@@ -1418,7 +973,7 @@ define(['app_data/app', 'app_data/model',
             var name = $(evt.target).closest('tr').children('td:first').attr('id');
             if (this.model.get('containers').length >= 2) {
                 this.model.get('containers').remove(name);
-                if (name == this.model.lastEditedContainer.id) {
+                if (name === this.model.lastEditedContainer.id) {
                     this.model.lastEditedContainer.isNew = false;
                     this.model.lastEditedContainer.id = this.model
                         .get('containers').last().id;
@@ -1448,7 +1003,7 @@ define(['app_data/app', 'app_data/model',
             var tgt = evt.target,
                 name = $(tgt).closest('tr').children('td:first').attr('id');
             this.model.lastEditedContainer = {id: name};
-            this.trigger('step:portconf', name);
+            this.trigger('step:portconf');
         },
 
         addItem: function(evt){
@@ -1545,5 +1100,5 @@ define(['app_data/app', 'app_data/model',
         },
     });
 
-    return newItem;
+    return views;
 });

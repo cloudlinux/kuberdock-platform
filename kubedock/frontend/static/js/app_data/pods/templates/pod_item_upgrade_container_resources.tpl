@@ -1,5 +1,5 @@
 <td class="col-md-2">
-    <a class="container-page-btn" href="#pods/poditem/<%- pod.id %>/<%- name %>"><%- imagename %></a>
+    <a class="container-page-btn" href="#pods/<%- pod.id %>/container/<%- name %>"><%- imagename %></a>
     <% if (imagetag) { %>
         <span title="image tag" class="image-tag"><%- imagetag %></span>
     <% } %>

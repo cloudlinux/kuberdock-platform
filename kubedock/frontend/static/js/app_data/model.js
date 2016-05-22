@@ -136,7 +136,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 sourceUrl: null,
             };
         },
-        getPod: function(){ return ((this.collection || {}).parents || [])[0]; },
+        getPod: function(){
+            return _.find((this.collection || {}).parents || [],
+                          function(parent){ return parent instanceof data.Pod; });
+        },
         checkForUpdate: function(){
             var container = this;
             utils.preloader.show();
@@ -261,6 +264,12 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
 
         parse: unwrapper,
+
+        initialize: function(){
+            this.on('remove:containers', function(container){
+                this.deleteVolumes(container.get('volumeMounts').pluck('name'));
+            });
+        },
 
         command: function(cmd, commandOptions){
             var data = _.extend(this.changedAttributes() || {},  // patch should include previous `set`
@@ -671,8 +680,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
         /**
          * Find all PDs from parent collection in pod, that conflict with this one.
-         * @param pod {data.Pod} - pod model
-         * @param ignored {data.PersistentStorageModel} - ignore conflicts with this PD
+         *
+         * @param {data.Pod} pod - pod model
+         * @param {data.PersistentStorageModel} ignored - ignore conflicts with this PD
          */
         conflictsWith: function(pod, ignored){
             if (this.get('node_id') == null)
@@ -979,7 +989,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     // Billing & resources
 
     data.Package = Backbone.AssociatedModel.extend({
-        url: function(){ return '/api/pricing/packages/' + this.id + '?with_kubes=1'; },
+        url: function(){ return '/api/pricing/packages/' + this.id + '?with_kubes=1&with_internal=1'; },
         parse: unwrapper,
         defaults: function(){
             return {
@@ -1022,7 +1032,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         priceFor: function(kubeID) {
             var packageKube = _.find(this.parents, function(model){
                 return model instanceof data.PackageKube &&
-                    model.get('kubeType').id == kubeID;
+                    model.get('kubeType').id === kubeID;
             });
             return packageKube ? packageKube.get('kube_price') : undefined;
         },
@@ -1033,7 +1043,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     });
     data.PackageCollection = Backbone.Collection.extend({
-        url: '/api/pricing/packages/?with_kubes=1',
+        url: '/api/pricing/packages/?with_kubes=1&with_internal=1',
         model: data.Package,
         parse: unwrapper,
     });
@@ -1104,7 +1114,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         defaults: {
             username: 'Nameless'
         },
-        parse: function(data){return data['status'] === 'OK' ? _.omit(data, 'status') : {}}
+        parse: function(data){
+            return data['status'] === 'OK' ? _.omit(data, 'status') : {};
+        }
     });
 
     return data;

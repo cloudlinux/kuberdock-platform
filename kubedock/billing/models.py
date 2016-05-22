@@ -55,11 +55,15 @@ class Package(BaseModelMixin, db.Model):
 
     def to_dict(self, *args, **kwargs):
         with_kubes = kwargs.pop('with_kubes', False)
+        with_internal = kwargs.pop('with_internal', False)
         data = super(Package, self).to_dict(*args, **kwargs)
         if with_kubes:
             data['kubes'] = [dict(package_kube.kube.to_dict(),
                                   price=package_kube.kube_price)
                              for package_kube in self.kubes]
+            if with_internal:
+                internal = Kube.query.get(INTERNAL_SERVICE_KUBE_TYPE)
+                data['kubes'].append(dict(internal.to_dict(), price=0))
         return data
 
     @classmethod

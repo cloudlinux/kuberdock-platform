@@ -57,12 +57,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
          * try to fetch from server and put in App._cache.
          * TODO: maybe it better to use Models everywhere, get rid of urls and plain data.
          *
-         * @param {String} name - unique name of the resource.
+         * @param {string} name - unique name of the resource.
          *      Used as id in _cache (and backendData)
-         * @param {(Backbone.Model|Backbone.Collection)} ResourceClass -
+         * @param {Backbone.Model|Backbone.Collection|string} ResourceClass -
          *      Used to fetch data from server or convert backendData.
-         * @param {String} url - may be used instead of ResourceClass to
-         *      get raw data.
+         *      Url as a string may be used to get raw data.
          * @returns {Function} - function that returns a Promise
          */
         resourcePromiser: function(name, ResourceClass){
@@ -123,11 +122,18 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
      */
     App.getAuth = function(){
         console.log('getAuth called...');
-        var cachedAuthData = this.storage.authData;
-        if (cachedAuthData != null)
-            return $.Deferred().resolveWith(this, [JSON.parse(cachedAuthData)]).promise();
-        else
+        var authData = this.storage.authData;
+        if (authData == null)
             return App.controller.showLogin();
+        authData = JSON.parse(authData);
+        var token = _.chain(authData.token.split('.')).first(2)
+            .map(atob).object(['header', 'payload']).invert()
+            .mapObject(JSON.parse).value();
+        if (token.header.exp < +new Date() / 1000){
+            delete this.storage.authData;
+            return App.controller.showLogin();
+        }
+        return $.Deferred().resolveWith(this, [authData]).promise();
     };
 
     /**

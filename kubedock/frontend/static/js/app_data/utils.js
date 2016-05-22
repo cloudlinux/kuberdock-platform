@@ -27,8 +27,9 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             } else {
                 buttonText = 'Ok';
             }
+            var btn;
             if(options.footer.buttonOk){
-                var btn = $('<button type="button" class="btn blue" ' +
+                btn = $('<button type="button" class="btn blue" ' +
                             'data-dismiss="modal">').unbind('click')
                         .bind('click', options.footer.buttonOk)
                         .addClass(options.footer.buttonOkClass || '')
@@ -36,8 +37,8 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
                 modal.find('.modal-footer').append(btn);
             }
             if(options.footer.buttonCancel){
-                var btn = $('<button type="button" class="btn"' +
-                                'data-dismiss="modal">Cancel</button>')
+                btn = $('<button type="button" class="btn"' +
+                            'data-dismiss="modal">Cancel</button>')
                         .addClass(options.footer.buttonCancelClass || '')
                         .text(options.footer.buttonCancelText || 'Cancel');
                 if (_.isFunction(options.footer.buttonCancel))
@@ -79,22 +80,25 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
 
     /**
      * Notify. Can be safely used as $.ajax handler.
-     * @param data - Message as a string, or jsXHR object.
-     * @param type - Optional message type in case if data is a string, or
-        if you want to change default behaviour for jsXHR object.
+     *
+     * @param {jqXHR|string} data - Message as a string, or jqXHR object.
+     * @param {string} type - Optional message type in case if data is a string,
+     * or if you want to change default behaviour for jqXHR object.
      */
     utils.notifyWindow = function(data, type){
         var msg;
         if (typeof data == "string") {
             msg = data;
+        } else if (data.statusText === 'abort') {
+            return;
         } else if (!data.responseJSON || !data.responseJSON.data) {
             msg = data.responseText;
             if (data.status >= 500 && data.getResponseHeader &&  // nginx error page
-                    data.getResponseHeader('content-type') == 'text/html'){
+                    data.getResponseHeader('content-type') === 'text/html'){
                 var error;
-                if (data.status == 504) error = 'Timeout error';
-                else if (data.status == 502) error = 'Server is unavailable';
-                else if (data.status == 500) error = 'Internal server error';
+                if (data.status === 504) error = 'Timeout error';
+                else if (data.status === 502) error = 'Server is unavailable';
+                else if (data.status === 500) error = 'Internal server error';
                 else error = data.statusText;
                 msg = 'It seems like something goes wrong (' + error + '). '
                     + 'Reload page, try again later, or contact support if '
@@ -104,7 +108,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             msg = typeof data.responseJSON.data == 'string' ? data.responseJSON.data :
                 JSON.stringify(data.responseJSON.data);
             if (!type)
-                type = data.responseJSON.status == 'ok' ? 'success' : 'error';
+                type = data.responseJSON.status === 'ok' ? 'success' : 'error';
         }
         type = type || 'error';
 
@@ -219,7 +223,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
      * @returns {String} formatted localized datetime
      */
     utils.localizeDatetime = function(options) {
-        if (arguments.length != 1 || !options ||
+        if (arguments.length !== 1 || !options ||
                 (!options.dt && !options.tz && !options.formatString)){
             // called as localizeDatetime(dt, tz, formatString)
             options = _.object(['dt', 'tz', 'formatString'], arguments);

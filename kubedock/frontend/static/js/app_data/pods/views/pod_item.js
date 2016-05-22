@@ -72,24 +72,20 @@ define(['app_data/app',
                 kubes: kubes ? kubes : 0,
                 startedAt: startedAt ? App.currentUser.localizeDatetime(startedAt) : 'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
+                podID: this.model.getPod().id,
                 imagename: imagename,
                 imagetag: imagetag
             };
         },
 
         ui: {
-            'start'            : '.start-btn',
-            'stop'             : '.stop-btn',
-            'delete'           : '.terminate-btn',
             'updateContainer'  : '.container-update',
             'checkForUpdate'   : '.check-for-update',
-            'containerPageBtn' : '.container-page-btn',
         },
 
         events: {
             'click @ui.updateContainer'    : 'updateItem',
             'click @ui.checkForUpdate'     : 'checkForUpdate',
-            'click @ui.containerPageBtn'   : 'containerPage',
         },
 
         modelEvents: {
@@ -99,13 +95,6 @@ define(['app_data/app',
         updateItem: function(){ this.model.update(); },
         checkForUpdate: function(){
             this.model.checkForUpdate().done(this.render);
-        },
-
-        containerPage: function(evt){
-            evt.stopPropagation();
-            this.checked = false;
-                App.navigate('pods/poditem/' + this.model.getPod().id + '/' +
-                             this.model.get('name') , {trigger: true});
         },
     });
 

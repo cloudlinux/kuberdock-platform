@@ -1,6 +1,8 @@
 <!-- <td class="checkboxes"><label class="custom"><input type="checkbox"><span></span></label></td> -->
 <td>
-    <span class="container-page-btn"><%- imagename %></span>
+    <a href="#pods/<%- podID %>/container/<%- name %>" class="container-page-btn">
+        <%- imagename %>
+    </a>
     <% if (imagetag) { %>
     <span title="image tag" class="image-tag"><%- imagetag %></span>
     <% } %>
@@ -16,7 +18,4 @@
             <span class="container-update" title="Update <%- image %> container">Update</span>
         <% } %>
     <% }%>
-    <!--   <span class="stop-btn" title="Stop <%- image %> container">Stop</span>
-           <span class="start-btn" title="Start <%- image %> container">Start</span>
-           <span class="terminate-btn pull-right" title="Delete <%- image %> container">Delete</span> -->
 </td>

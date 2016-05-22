@@ -13,9 +13,9 @@
         <div class="clearfix">
             <div class="col-md-4 no-padding">
                 <select class="selectpicker image-source">
-                    <option>Docker Hub</option>
-                    <option>Docker Hub/private repo</option>
-                    <option>Other registries</option>
+                    <option value="DOCKERHUB_SEARCH">Docker Hub</option>
+                    <option value="PRIVATE_REPOS">Docker Hub/private repo</option>
+                    <option value="OTHER_REGISTRIES">Other registries</option>
                 </select>
             </div>
             <div class="col-md-7 no-padding">
@@ -44,9 +44,10 @@
         <div id="search-results-scroll" class="clearfix">
             <div id="data-collection" class="clearfix"></div>
             <div class="search-control">
-                <% if (showPaginator){ %>
-                    <div id="load-control" class="btn-more"><span>Load more</span></div>
-                <% } %>
+                <div id="load-control" class="btn-more"
+                    <%= showPaginator ? '' : 'style="display: none;"' %>>
+                    <span>Load more</span>
+                </div>
             </div>
         </div>
         <div class="buttons pull-right">

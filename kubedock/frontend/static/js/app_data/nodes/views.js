@@ -261,7 +261,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         templateHelpers: function(){
             return {
-                kubeTypes: App.kubeTypeCollection,
+                kubeTypes: App.kubeTypeCollection.filter(function(kube){
+                    return kube.id !== -1;  // "Internal service" kube-type
+                }),
             };
         },
 

@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/model',
+define(['app_data/app', 'app_data/model', 'app_data/utils',
         'tpl!app_data/pods/templates/layout_wizard.tpl',
         'tpl!app_data/pods/templates/wizard_image_collection_item.tpl',
         'tpl!app_data/pods/templates/wizard_get_image.tpl',
@@ -15,7 +15,7 @@ define(['app_data/app', 'app_data/model',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
         'app_data/utils',
         'bootstrap-editable', 'selectpicker', 'tooltip'],
-       function(App, Model,
+       function(App, Model, utils,
                 layoutWizardTpl,
                 wizardImageCollectionItemTpl,
                 wizardGetImageTpl,
@@ -29,8 +29,7 @@ define(['app_data/app', 'app_data/model',
                 volumeMountListEmptyTpl,
 
                 wizardSetContainerEnvTpl,
-                wizardSetContainerCompleteTpl,
-                utils){
+                wizardSetContainerCompleteTpl){
 
     var views = {};
 
@@ -197,7 +196,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         onShow: function(){
-            this.ui.input.focus();
+            this.ui.input.focus();  // FIXME: AC-3020
         },
 
         cancel: function(){
@@ -896,6 +895,8 @@ define(['app_data/app', 'app_data/model',
         initialize: function(options){
             this.pkg = App.userPackage;
             this.model.recalcInfo(this.pkg);
+            if (this.model.editOf())
+                this.model.editOf().recalcInfo(this.pkg);
             this.hasBilling = options.hasBilling;
             this.payg = options.payg;
             this.kubesLimit = options.kubesLimit;
@@ -915,13 +916,18 @@ define(['app_data/app', 'app_data/model',
                 kt.disabled = kt.get('available') && !kt.conflicts.length;
             });
 
+            var edited = this.model.editOf();
+
             return {
+                formatPrice      : _.bind(this.pkg.getFormattedPrice, this.pkg),
+                edited           : edited,
+                diffTotalPrice   : edited && this.model.rawTotalPrice - edited.rawTotalPrice,
                 last_edited      : this.model.lastEditedContainer.id,
                 isPublic         : this.model.isPublic,
                 isPerSorage      : this.model.isPerSorage,
                 limits           : this.model.limits,
                 containerPrices  : _.pluck(this.model.get('containers').models, 'price'),
-                totalPrice       : this.model.totalPrice,
+                totalPrice       : this.model.rawTotalPrice,
                 kubeTypes        : kubeTypes,
                 kubesLimit       : this.kubesLimit,
                 restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
@@ -964,8 +970,10 @@ define(['app_data/app', 'app_data/model',
         },
 
         triggers: {
-            'click .save-container'     : 'pod:save',
+            'click .save-container'        : 'pod:save',
             'click .pay-and-run-container' : 'pod:pay_and_run',
+            'click .pay-and-apply-changes' : 'pod:pay_and_apply',
+            'click .save-changes'          : 'pod:save_changes',
         },
 
         deleteItem: function(evt){

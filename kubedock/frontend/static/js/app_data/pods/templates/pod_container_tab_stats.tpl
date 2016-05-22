@@ -20,7 +20,7 @@
                             <% } else { %>
                                 <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                             <% } %>
-                            <a class="upgrade-btn" href="#pods/<%- parentID %>/container/<%- name %>/upgrade"
+                            <a class="upgrade-btn" href="#pods/<%- podID %>/container/<%- id %>/upgrade"
                                     title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                         <% } else  if (state == "stopped"){ %>
                             <span id="startContainer"><span>Start</span></span>

@@ -11,6 +11,7 @@ define(['marionette'], function(Marionette){
             'pods/:id/upgrade'                : 'showPodUpgrade',
             'pods/:id/container/:name/upgrade': 'showPodUpgrade',
             'pods/:id/container/:name'        : 'showPodContainer',
+            'pods/:id/edit'                   : 'editEntirePod',
 
             'nodes'                           : 'showNodes',
             'nodes/add'                       : 'showAddNode',

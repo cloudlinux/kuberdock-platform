@@ -39,6 +39,41 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return data;
         };
 
+    data.DiffCollection = Backbone.Collection.extend({
+        initialize: function(models, options){
+            this.before = options.before || new Backbone.Collection();
+            this.after = options.after || new Backbone.Collection();
+            this.modelType = options.modelType || Backbone.Model;
+            this.model = Backbone.AssociatedModel.extend({
+                relations: [
+                    {type: Backbone.One, key: 'before', relatedModel: this.modelType},
+                    {type: Backbone.One, key: 'after', relatedModel: this.modelType}
+                ],
+                addNestedChangeListener: function(obj, callback){
+                    if (this.get('before'))
+                        obj.listenTo(this.get('before'), 'change', callback);
+                    if (this.get('after'))
+                        obj.listenTo(this.get('after'), 'change', callback);
+                },
+            });
+
+            this.recalc();
+            models.push.apply(models, this.models);
+        },
+        recalc: function(){
+            this.reset(this.after.map(function(modelA){
+                var modelB = this.before.get(modelA.id);
+                return {id: modelA.id, before: modelB, after: modelA};
+            }, this));
+            this.add(this.before.map(function(modelB){
+                var modelA = this.after.get(modelB.id);
+                return {id: modelB.id, before: modelB, after: modelA};
+            }, this));
+            this.listenToOnce(this.before, 'add remove reset', this.recalc);
+            this.listenToOnce(this.after, 'add remove reset', this.recalc);
+        },
+    });
+
     /**
      * Smart sorting for Backbone.PageableCollection
      */
@@ -136,9 +171,20 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 sourceUrl: null,
             };
         },
+        editableAttributes: [  // difference in other attributes won't be interpreted as "change"
+            'args', 'command', 'env', 'image', 'kubes', 'ports', 'sourceUrl',
+            'volumeMounts', 'terminationMessagePath', 'workingDir'
+        ],
         getPod: function(){
             return _.find((this.collection || {}).parents || [],
                           function(parent){ return parent instanceof data.Pod; });
+        },
+        isChanged: function(compareTo){
+            if (!compareTo)
+                return false;
+            var before = _.partial(_.pick, this.toJSON()).apply(_, this.editableAttributes),
+                after = _.partial(_.pick, compareTo.toJSON()).apply(_, this.editableAttributes);
+            return !_.isEqual(before, after);
         },
         checkForUpdate: function(){
             var container = this;
@@ -244,6 +290,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             type: Backbone.Many,
             key: 'containers',
             relatedModel: data.Container,
+        }, {
+            type: Backbone.One,
+            key: 'edited_config',
+            relatedModel: Backbone.Self,
         }],
 
         defaults: function(){
@@ -269,6 +319,23 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             this.on('remove:containers', function(container){
                 this.deleteVolumes(container.get('volumeMounts').pluck('name'));
             });
+        },
+
+        // if it's "edited_config" of some other pod, get that pod:
+        // pod.editOf() === undefined || pod.editOf().get('edited_config') === pod
+        editOf: function(){ return (this.parents || [])[0]; },
+        getContainersDiffCollection: function(){
+            var before = this,
+                diffCollection = new data.DiffCollection(
+                    [], {modelType: data.Container, before: before.get('containers')}),
+                resetDiff = function(){
+                    var after = before.get('edited_config');
+                    diffCollection.after = (after || before).get('containers');
+                    diffCollection.recalc();
+                };
+            diffCollection.listenTo(this, 'change:edited_config', resetDiff);
+            resetDiff();
+            return diffCollection;
         },
 
         command: function(cmd, commandOptions){
@@ -459,6 +526,56 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                         }
                     });
                 }
+            });
+            return deferred.promise();
+        },
+        cmdApplyChanges: function(){
+            var deferred = new $.Deferred(),
+                model = this;
+            App.getSystemSettingsCollection().done(function(settings){
+                var fixedPrice = App.currentUser.get('count_type') === 'fixed'
+                    && settings.byName('billing_type')
+                        .get('value').toLowerCase() !== 'no billing';
+                if (!fixedPrice){
+                    var cmd = model.ableTo('start') ? 'start': 'redeploy';
+                    return model.command(cmd, {applyEdit: true})
+                        .fail(utils.notifyWindow)
+                        .then(deferred.resolve, deferred.reject);
+                }
+                new Backbone.Model().save({pod: model}, {url: '/api/billing/orderPodEdit'})
+                    .fail(utils.notifyWindow, _.bind(deferred.reject, deferred))
+                    .done(function(response){
+                        if(response.data.status === 'Paid') {
+                            if (model.get('status') !== 'running')
+                                model.set('status', 'pending');
+                            model.get('containers').each(function(c){
+                                if (c.get('state') !== 'running')
+                                    c.set('state', 'pending');
+                            });
+                            deferred.resolve();
+                            App.navigate('pods/' + model.id, {trigger: true});
+                            return;
+                        }
+                        utils.modalDialog({
+                            title: 'Insufficient funds',
+                            body: 'Your account funds seem to be'
+                                + ' insufficient for the action.'
+                                + ' Would you like to go to billing'
+                                + ' system to make the payment?',
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    window.location = response.data.redirect;
+                                },
+                                buttonCancel: function(){
+                                    deferred.reject();
+                                },
+                                buttonOkText: 'Go to billing',
+                                buttonCancelText: 'No, thanks'
+                            }
+                    });
+                });
             });
             return deferred.promise();
         },

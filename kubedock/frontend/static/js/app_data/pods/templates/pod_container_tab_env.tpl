@@ -3,8 +3,10 @@
         <div class="row">
             <div class="col-sm-12 col-md-2 sidebar">
                 <ul class="nav nav-sidebar">
-                    <li role="presentation" class="stats go-to-logs">Logs</li>
-                    <li role="presentation" class="go-to-stats monitoring">Monitoring</li>
+                    <% if (before){ %>
+                        <li role="presentation" class="stats go-to-logs">Logs</li>
+                        <li role="presentation" class="go-to-stats monitoring">Monitoring</li>
+                    <% } %>
                     <li role="presentation" class="configuration go-to-ports">General</li>
                     <li role="presentation" class="variables active">Variables</li>
                 </ul>
@@ -20,8 +22,10 @@
                             <% } else { %>
                                 <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                             <% } %>
-                            <a class="upgrade-btn" href="#pods/<%- parentID %>/container/<%- name %>/upgrade"
-                                    title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
+                            <a class="upgrade-btn" href="#pods/<%- podID %>/container/<%- id %>/upgrade"
+                                    title="Change the amount of resources for <%- image %>">
+                                <span>Upgrade resources</span>
+                            </a>
                         <% } else  if (state == "stopped"){ %>
                             <span id="startContainer"><span>Start</span></span>
                         <% } %>

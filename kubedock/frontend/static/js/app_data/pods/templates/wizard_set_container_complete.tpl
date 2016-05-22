@@ -105,9 +105,27 @@
                             </tr>
                         <% } %>
                         <tr>
-                            <td class="total" colspan="3">
-                                Total price: <span id="total_price"><%- totalPrice %> / <%- period %></span>
-                            </td>
+                            <% if (edited && diffTotalPrice > 0){ %>
+                                <td class="new-total" colspan="1">
+                                    New total price:
+                                    <span id="total_price">
+                                        <%- formatPrice(totalPrice) %> / <%- period %>
+                                    </span>
+                                </td>
+                                <td class="diff-total" colspan="2">
+                                    Additional costs:
+                                    <span id="total_price">
+                                        <%- formatPrice(diffTotalPrice) %> / <%- period %>
+                                    </span>
+                                </td>
+                            <% } else { %>
+                                <td class="total" colspan="3">
+                                    Total price:
+                                    <span id="total_price">
+                                        <%- formatPrice(totalPrice) %> / <%- period %>
+                                    </span>
+                                </td>
+                            <% } %>
                         </tr>
                     </tbody>
                 </table>
@@ -120,9 +138,21 @@
             <div class="buttons col-md-9 col-sm-12 no-padding">
                 <button class="prev-step gray pull-left">Back</button>
                 <button class="add-more blue pull-left">Add more containers</button>
-                <button class="save-container blue pull-left">Save</button>
-                <% if (hasBilling && !payg){ %>
-                <button class="pay-and-run-container blue pull-right">Pay and Run</button>
+                <% if (!edited){ %>
+                    <button class="save-container blue pull-left">Save</button>
+                    <% if (hasBilling && !payg){ %>
+                        <button class="pay-and-run-container blue pull-right">Pay and Run</button>
+                    <% } %>
+                <% } else { %>
+                    <% if (hasBilling && !payg && diffTotalPrice > 0){ %>
+                        <button class="pay-and-apply-changes blue pull-right">Pay and Apply changes *</button>
+                        <button class="save-changes blue pull-right">Save for later</button>
+                        <span class="edit-pod-note pull-right" style="clear: both; font-size: 12px">
+                            * Pod will be restarted
+                        </span>
+                    <% } else { %>
+                        <button class="save-changes blue pull-left">Save</button>
+                    <% } %>
                 <% } %>
             </div>
         </div>

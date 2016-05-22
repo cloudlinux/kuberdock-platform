@@ -1,17 +1,26 @@
 <div class="message-wrapper">
-    <div class="message">
-        <h3>Congratulations!</h3>
-        <p>
-            <% if (postDescription) { %>
-                <%= postDescription %>
-            <% } else {%>
-                We just want to inform you that your application "<%- podName %>" now deploying and will be started in a few minutes. <br>
-                The application will be available via
-                that you have on top of the page. You can find app credential on application page in tab "General". You need to wait until application will obtain status "running" that will mean that you application is ready to use. You can find more information about how to use KuberDock in our documentation.
+    <% if (postDescription) { %>
+        <div class="message">
+            <h3>Congratulations!</h3>
+            <p><%= postDescription %></p>
+            <span class="close"></span>
+        </div>
+    <% } %>
+    <% if (edited_config) { %>
+        <div class="message-edited">
+            <h3>You have some changes that haven't been applied yet!</h3>
+            <p>
+                <% if (changesRequirePayment && fixedPrice){ %>
+                    You need to pay <%- changesRequirePayment %> to re-deploy
+                    pod with new containers and configuration.
+                    <button class="blue pay-and-apply">Pay & apply changes</button> (pod will be restarted).
+                <% } else { %>
+                    You need to re-deploy pod with new containers and configuration.
+                    <button class="blue apply">Restart & apply changes</button>
             <% } %>
-        </p>
-        <span class="close"></span>
-    </div>
+            </p>
+        </div>
+    <% } %>
 </div>
 <div class="status-line">
     <span class="icon <%- status %>">Status: <%- status %></span>
@@ -25,6 +34,7 @@
     <% } else { %>
         <a class="upgrade-btn" href="#pods/<%- id %>/upgrade"><span>Upgrade</span></a>
     <% } %>
+    <a class="edit-btn" href="#pods/<%- id %>/edit"><span>Edit</span></a>
     <div class="btn-group controls pull-right">
         <span type="button" class="dropdown-toggle" data-toggle="dropdown">
             <span class="ic_reorder">

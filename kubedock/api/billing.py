@@ -62,6 +62,24 @@ def order_product():
     return billing.orderproduct(**data)
 
 
+@billing.route('/orderPodEdit', methods=['POST'], strict_slashes=False)
+@auth_required
+@maintenance_protected
+@KubeUtils.jsonwrap
+def order_edit():
+    # TODO: actual billing method
+    # return {'status': 'Unpaid', 'redirect': 'http://i.am.the.billing.com'}
+    user = KubeUtils._get_current_user()
+    data = KubeUtils._get_params()
+    from kubedock.kapi.podcollection import PodCollection, POD_STATUSES
+    pc = PodCollection(user)
+    status = pc._get_by_id(data['pod']['id']).status
+    cmd = 'start' if status == POD_STATUSES.stopped else 'redeploy'
+    pc.update(data['pod']['id'], {'command': cmd,
+                                  'commandOptions': {'applyEdit': True}})
+    return {'status': 'Paid'}
+
+
 @billing.route('/orderKubes', methods=['POST'], strict_slashes=False)
 @auth_required
 @maintenance_protected

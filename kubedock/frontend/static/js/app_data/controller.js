@@ -100,7 +100,10 @@ define([
                     deferred.resolveWith(that, [that.podPageData]);
                     return;
                 }
-                App.getPodCollection().done(function(podCollection){
+                $.when(
+                    App.getPodCollection(),
+                    App.getSystemSettingsCollection()
+                ).done(function(podCollection, settings){
                     var model = podCollection.fullCollection.get(id);
                     if (model === undefined || model.get('status') === 'deleting'){
                         deferred.rejectWith(that, []);
@@ -112,7 +115,10 @@ define([
 
                     var itemLayout = new Views.PodItemLayout(),
                         navbar = new Menu.NavList({collection: App.menuCollection}),
-                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'podName']});
+                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'podName']}),
+                        fixedPrice = App.currentUser.get('count_type') === 'fixed'
+                            && settings.byName('billing_type')
+                                .get('value').toLowerCase() !== 'no billing';
 
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.nav.show(navbar);
@@ -126,7 +132,8 @@ define([
 
                     App.contents.show(itemLayout);
 
-                    that.podPageData = {model: model, itemLayout: itemLayout, navbar: navbar};
+                    that.podPageData = {model: model, fixedPrice: fixedPrice,
+                                        itemLayout: itemLayout, navbar: navbar};
                     deferred.resolveWith(that, [that.podPageData]);
                 });
             });
@@ -148,7 +155,8 @@ define([
                         success: function(){
                             pageData.itemLayout.controls.show(new Views.ControlsPanel({
                                 graphs: true,
-                                model: pageData.model
+                                model: pageData.model,
+                                fixedPrice: pageData.fixedPrice,
                             }));
                             pageData.itemLayout.info.show(new Views.PodGraph({
                                 model: pageData.model,
@@ -172,11 +180,12 @@ define([
                     App.navigate('pods', {trigger: true});
                 }).done(function(pageData){
                     pageData.itemLayout.controls.show(new Views.ControlsPanel({
+                        fixedPrice: pageData.fixedPrice,
                         model: pageData.model
                     }));
-                    pageData.itemLayout.info.show(new Views.InfoPanel({
-                        collection: pageData.model.get('containers'),
-                    }));
+                    var diffCollection = pageData.model.getContainersDiffCollection();
+                    pageData.itemLayout.info.show(
+                        new Views.ContainersPanel({collection: diffCollection}));
                 });
             });
         },
@@ -192,6 +201,7 @@ define([
                     pageData.itemLayout.controls.show(new Views.ControlsPanel({
                         upgrade: true,
                         model: pageData.model,
+                        fixedPrice: pageData.fixedPrice,
                     }));
                     var newModel = new Model.Pod(pageData.model.toJSON());
                     App.getSystemSettingsCollection().done(function(settings){
@@ -219,7 +229,7 @@ define([
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
                         pod = podCollection.fullCollection.get(id),
-                        model = pod.get('containers').get(name),
+                        model = pod.getContainersDiffCollection().get(name),
                         navbar = new Menu.NavList({ collection: App.menuCollection }),
                         breadcrumbsLayout = new Breadcrumbs.Layout(
                             {points: ['pods', 'pod', 'container']});
@@ -243,9 +253,13 @@ define([
                         breadcrumbsLayout.pod.show(new Breadcrumbs.Link(
                             {text: pod.get('name'), href: '#pods/' + pod.get('id')}));
                         breadcrumbsLayout.container.show(new Breadcrumbs.Text(
-                            {text: model.get('image') + ' (' + model.get('name') + ')'}));
+                            {text: (model.get('before') || model.get('after')).get('image')
+                                + ' (' + model.id + ')'}));
 
-                        show(Views.WizardLogsSubView);
+                        // if container is new, show tab with ports and volumes
+                        show(model.get('after') && !model.get('before')
+                            ? Views.WizardGeneralSubView
+                            : Views.WizardLogsSubView);
                     });
 
                     that.listenTo(wizardLayout, 'step:portconf',
@@ -275,12 +289,45 @@ define([
             });
         },
 
+
+        /**
+         * Go to the last step of edit pod wizard.
+         *
+         * @param {string} id - The ID of the pod.
+         */
+        editEntirePod: function(id){
+            var persistentDrives = new Model.PersistentStorageCollection();
+            $.when(
+                App.getPodCollection(),
+                persistentDrives.fetch()
+            ).done(function(podCollection){
+                var originalModel = podCollection.fullCollection.get(id);
+                if (!originalModel)
+                    return this.pageNotFound();
+
+                // create copy of original model, so it won't be affected by SSE and stuff
+                var originalModelCopy = new Model.Pod(originalModel.toJSON());
+                if (!originalModelCopy.get('edited_config')){
+                    // copy original config to edited_config (if latter is empty)
+                    originalModelCopy.set('edited_config', _.pick(
+                        originalModelCopy.toJSON(), 'kube_type', 'restartPolicy',
+                        'volumes', 'containers', 'kuberdock_resolve'));
+                }
+                var model = originalModelCopy.get('edited_config');
+                model.persistentDrives = persistentDrives;
+                App.controller.podWizardStepFinal({
+                    podModel: model,
+                });
+            });
+        },
+
         /**
          * Prepare basic data and layout for edit pod wizard.
          *
          * @param {Object} [options={}] - Cached data from other wizard step or
          *      existing pod.
-         * @param {Model.Pod} [options.podModel] - Pod model.
+         * @param {Model.Pod} [options.podModel] - Pod model. In case of editing
+         *      existent pod, create temporal model in "edited_config" field and use it.
          * @param {Object} [options.podModel.origEnv] -
          *      Cached original env vars from images.
          * @param [options.layout] - Pod wizard layout.
@@ -292,7 +339,7 @@ define([
             var that = this,
                 deferred = $.Deferred();
             require([
-                'app_data/pods/views/pod_create',
+                'app_data/pods/views/pod_edit',
                 'app_data/pods/views/breadcrumbs',
             ], function(Views, PodBreadcrumbs){
                 App.getPodCollection().done(function(podCollection){
@@ -310,7 +357,10 @@ define([
                         }
                     }
                     var model = options.podModel;
-                    model.lastEditedContainer = model.lastEditedContainer || {id: null, isNew: true};
+                    model.lastEditedContainer = model.lastEditedContainer
+                        || (model.editOf()
+                            ? {id: model.get('containers').last().id}
+                            : {id: null, isNew: true});
                     model.origEnv = model.origEnv || {};
 
                     if (!options.layout){
@@ -324,8 +374,9 @@ define([
                             options.layout.header.show(breadcrumbsLayout);
                             breadcrumbsLayout.pods.show(
                                 new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
+                            // we use original model, so changes name will be applied immediately
                             breadcrumbsLayout.pod.show(
-                                new PodBreadcrumbs.EditableName({model: model}));
+                                new PodBreadcrumbs.EditableName({model: model.editOf() || model}));
                         });
                         that.listenTo(options.layout, 'before:destroy', function(){
                             if (that.podWizardData === options)
@@ -500,6 +551,38 @@ define([
                         .done(function(){
                             podCollection.fullCollection.add(model);
                             App.navigate('pods').controller.showPods();
+                        });
+                });
+                that.listenTo(view, 'pod:save_changes', function(){
+                    if (checkKubeTypes(/*ensureSelected*/true)) return;
+                    utils.preloader.show();
+                    var originalModel = podCollection.fullCollection.get(model.editOf());
+                    originalModel.set('edited_config', model.toJSON()).command('edit')
+                        .always(utils.preloader.hide)
+                        .fail(utils.notifyWindow)
+                        .done(function(){
+                            model.editOf().cleanup();  // backbone-associations, prevent leak
+                            App.navigate('pods/' + originalModel.id, {trigger: true});
+                        });
+                });
+                that.listenTo(view, 'pod:pay_and_apply', function(){
+                    if (checkKubeTypes(/*ensureSelected*/true)) return;
+                    utils.preloader.show();
+                    var originalModel = podCollection.fullCollection.get(model.editOf());
+                    originalModel.set('edited_config', model.toJSON()).command('edit')
+                        .fail(utils.preloader.hide, utils.notifyWindow)
+                        .done(function(){
+                            model.editOf().cleanup();  // backbone-associations, prevent leak
+                            originalModel.cmdApplyChanges().always(function(){
+                                utils.preloader.hide();
+                                App.navigate('pods/' + originalModel.id, {trigger: true});
+                            }).done(function(){
+                                utils.notifyWindow('Pod will be restarted with the new '
+                                                   + 'configuration soon', 'success');
+                            }).fail(function(){
+                                utils.notifyWindow('New configuration saved successfully, '
+                                                   + 'but it\'s not applied yet', 'success');
+                            });
                         });
                 });
                 that.listenTo(view, 'pod:pay_and_run', function(){

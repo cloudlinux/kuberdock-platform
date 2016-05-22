@@ -2,8 +2,10 @@
     <div class="row">
         <div class="col-sm-12 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
-                <li role="presentation" class="stats go-to-logs">Logs</li>
-                <li role="presentation" class="monitoring go-to-stats">Monitoring</li>
+                <% if (before){ %>
+                    <li role="presentation" class="stats go-to-logs">Logs</li>
+                    <li role="presentation" class="monitoring go-to-stats">Monitoring</li>
+                <% } %>
                 <li role="presentation" class="configuration active">General</li>
                 <li role="presentation" class="variables go-to-envs">Variables</li>
             </ul>
@@ -19,7 +21,7 @@
                         <% } else { %>
                             <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                         <% } %>
-                        <a class="upgrade-btn" href="#pods/<%- parentID %>/container/<%- name %>/upgrade"
+                        <a class="upgrade-btn" href="#pods/<%- podID %>/container/<%- id %>/upgrade"
                                 title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                     <% } else  if (state == "stopped"){ %>
                         <span id="startContainer"><span>Start</span></span>
@@ -53,6 +55,7 @@
                             </tr>
                         </thead>
                         <tbody>
+                        <% var ports = (before || after).ports; %>
                         <% if (ports && ports.length != 0) { %>
                             <% _.each(ports, function(p){ %>
                                 <tr>
@@ -83,6 +86,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
+                                    <% var volumeMounts = (before || after).volumeMounts; %>
                                     <% if (volumeMounts && volumeMounts.length != 0) { %>
                                         <% _.each(volumeMounts, function(vm){ %>
                                             <tr>

@@ -69,7 +69,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         initialize: function(options) {
-            this.pod = this.model.getPod();
+            var before = this.model.get('before');
+            this.podBefore = before ? before.getPod() : this.model.get('after').getPod().editOf();
+            this.podAfter = this.podBefore.get('edited_config') || this.podBefore;
+            this.model.addNestedChangeListener(this, this.render);
         },
 
         triggers: {
@@ -79,23 +82,31 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         templateHelpers: function(){
-            this.pod.recalcInfo();
+            var before = this.model.get('before'),
+                after = this.model.get('after');
+            this.podBefore.recalcInfo();
+            this.podAfter.recalcInfo();
             return {
-                parentID: this.pod.id,
-                volumes: this.pod.get('volumes'),
-                updateIsAvailable: this.model.updateIsAvailable,
-                kube_type: this.pod.getKubeType(),
-                restart_policy: this.pod.get('restartPolicy'),
-                podName: this.pod.get('name'),
-                limits: this.model.limits,
+                volumes: (before || after).getPod().get('volumes'),
+
+                // TODO: move common parts out of those views
+                podID: this.podBefore.id,
+                state: before ? before.get('state') : 'new',
+                image: (before || after).get('image'),
+                sourceUrl: (before || after).get('sourceUrl'),
+                kubes: (before || after).get('kubes'),
+                limits: (before || after).limits,
+                updateIsAvailable: before && before.updateIsAvailable,
+                kube_type: this.podBefore.getKubeType(),
+                restart_policy: this.podBefore.get('restartPolicy'),
             };
         },
 
-        startContainer: function(){ this.pod.cmdStart(); },
-        stopContainer: function(){ this.pod.cmdStop(); },
-        updateContainer: function(){ this.model.update(); },
+        startContainer: function(){ this.podBefore.cmdStart(); },
+        stopContainer: function(){ this.podBefore.cmdStop(); },
+        updateContainer: function(){ this.model.get('before').update(); },
         checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
+            this.model.get('before').checkForUpdate().done(this.render);
         },
     });
 
@@ -127,24 +138,39 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'change': 'render'
         },
 
+        initialize: function(options) {
+            var before = this.model.get('before');
+            this.podBefore = before ? before.getPod() : this.model.get('after').getPod().editOf();
+            this.podAfter = this.podBefore.get('edited_config') || this.podBefore;
+            this.model.addNestedChangeListener(this, this.render);
+        },
+
         templateHelpers: function(){
-            var pod = this.model.getPod();
-            pod.recalcInfo();
+            var before = this.model.get('before'),
+                after = this.model.get('after');
+            this.podBefore.recalcInfo();
+            this.podAfter.recalcInfo();
             return {
-                parentID: pod.id,
-                updateIsAvailable: this.model.updateIsAvailable,
-                sourceUrl: this.model.get('sourceUrl'),
-                kube_type: pod.getKubeType(),
-                limits: this.model.limits,
-                restart_policy: pod.get('restartPolicy'),
+                env: (before || after).get('env'),
+
+                // TODO: move common parts out of those views
+                podID: this.podBefore.id,
+                state: before ? before.get('state') : 'new',
+                image: (before || after).get('image'),
+                sourceUrl: (before || after).get('sourceUrl'),
+                kubes: (before || after).get('kubes'),
+                limits: (before || after).limits,
+                updateIsAvailable: before && before.updateIsAvailable,
+                kube_type: this.podBefore.getKubeType(),
+                restart_policy: this.podBefore.get('restartPolicy'),
             };
         },
 
-        startContainer: function(){ this.model.getPod().cmdStart(); },
-        stopContainer: function(){ this.model.getPod().cmdStop(); },
-        updateContainer: function(){ this.model.update(); },
+        startContainer: function(){ this.podBefore.cmdStart(); },
+        stopContainer: function(){ this.podBefore.cmdStop(); },
+        updateContainer: function(){ this.model.get('before').update(); },
         checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
+            this.model.get('before').checkForUpdate().done(this.render);
         },
     });
 
@@ -225,7 +251,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         tagName: 'div',
 
         childViewOptions: function() {
-            return {container: this.model};
+            return {container: this.model.get('before')};
         },
 
         events: {
@@ -245,29 +271,34 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'change': 'render'
         },
 
+        initialize: function() {
+            this.pod = this.model.get('before').getPod();
+            this.model.addNestedChangeListener(this, this.render);
+        },
+
         templateHelpers: function(){
-            var pod = this.model.getPod();
-            pod.recalcInfo();
+            var before = this.model.get('before');
+            this.pod.recalcInfo();
             return {
-                updateIsAvailable: this.model.updateIsAvailable,
-                parentID: pod.id,
-                image: this.model.get('image'),
-                name: this.model.get('name'),
-                state: this.model.get('state'),
-                kube_type: pod.getKubeType(),
-                limits: this.model.limits,
-                restart_policy: pod.get('restartPolicy'),
-                kubes: this.model.get('kubes'),
-                podName: pod.get('name'),
+                // TODO: move common parts out of those views
+                updateIsAvailable: before.updateIsAvailable,
+                podID: this.pod.id,
+                kube_type: this.pod.getKubeType(),
+                limits: before.limits,
+                restart_policy: this.pod.get('restartPolicy'),
+                state: before.get('state'),
+                image: before.get('image'),
+                sourceUrl: before.get('sourceUrl'),
+                kubes: before.get('kubes'),
             };
 
         },
 
-        startContainer: function(){ this.model.getPod().cmdStart(); },
-        stopContainer: function(){ this.model.getPod().cmdStop(); },
-        updateContainer: function(){ this.model.update(); },
+        startContainer: function(){ this.pod.cmdStart(); },
+        stopContainer: function(){ this.pod.cmdStop(); },
+        updateContainer: function(){ this.model.get('before').update(); },
         checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
+            this.model.get('before').checkForUpdate().done(this.render);
         },
     });
 
@@ -310,25 +341,31 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         initialize: function() {
+            this.pod = this.model.get('before').getPod();
+            this.model.addNestedChangeListener(this, this.render);
             _.bindAll(this, 'getLogs');
             this.getLogs();
         },
 
         templateHelpers: function(){
-            var pod = this.model.getPod();
-            pod.recalcInfo();
+            var before = this.model.get('before');
+            this.pod.recalcInfo();
             return {
-                parentID: pod.id,
-                updateIsAvailable: this.model.updateIsAvailable,
-                sourceUrl: this.model.get('sourceUrl'),
-                podName: pod.get('name'),
-                kube_type: pod.getKubeType(),
-                limits: this.model.limits,
-                restart_policy: pod.get('restartPolicy'),
-                logs: this.model.logs,
-                logsError: this.model.logsError,
-                editKubesQty : this.model.editKubesQty,
-                kubeVal : this.model.kubeVal
+                logs: before.logs,
+                logsError: before.logsError,
+                editKubesQty : before.editKubesQty,
+                kubeVal : before.kubeVal,
+
+                // TODO: move common parts out of those views
+                updateIsAvailable: before.updateIsAvailable,
+                parentID: this.pod.id,
+                kube_type: this.pod.getKubeType(),
+                limits: before.limits,
+                restart_policy: this.pod.get('restartPolicy'),
+                state: before.get('state'),
+                image: before.get('image'),
+                sourceUrl: before.get('sourceUrl'),
+                kubes: before.get('kubes'),
             };
         },
 
@@ -360,17 +397,17 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         onBeforeDestroy: function () {
-            delete this.model.kubeVal;
-            delete this.model.editKubesQty;
+            delete this.model.get('before').kubeVal;
+            delete this.model.get('before').editKubesQty;
             this.destroyed = true;
-            clearTimeout(this.model.get('timeout'));
+            clearTimeout(this.model.get('before').get('timeout'));
             if (this.niceScroll !== undefined)
                 this.niceScroll.remove();
         },
 
         getLogs: function() {
             var that = this;
-            this.model.getLogs(/*size=*/100).always(function(){
+            this.model.get('before').getLogs(/*size=*/100).always(function(){
                 // callbacks are called with model as a context
                 if (!that.destroyed) {
                     this.set('timeout', setTimeout(that.getLogs, 10000));
@@ -380,13 +417,13 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         editContainerKubes: function(){
-            this.model.editKubesQty = true;
-            this.model.kubeVal = this.model.get('kubes');
+            this.model.get('before').editKubesQty = true;
+            this.model.get('before').kubeVal = this.model.get('before').get('kubes');
             this.render();
         },
 
         kubeVal: function(){
-            this.model.kubeVal = this.ui.kubeVal.val();
+            this.model.get('before').kubeVal = this.ui.kubeVal.val();
         },
 
         changeKubeQty: function(){
@@ -395,17 +432,17 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         closeChange: function(){
-            delete this.model.kubeVal;
-            delete this.model.editKubesQty;
+            delete this.model.get('before').kubeVal;
+            delete this.model.get('before').editKubesQty;
             this.render();
         },
 
-        startItem: function(){ this.model.getPod().cmdStart(); },
-        stopItem: function(){ this.model.getPod().cmdStop(); },
+        startItem: function(){ this.pod.cmdStart(); },
+        stopItem: function(){ this.pod.cmdStop(); },
 
-        updateContainer: function(){ this.model.update(); },
+        updateContainer: function(){ this.model.get('before').update(); },
         checkContainerForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
+            this.model.get('before').checkForUpdate().done(this.render);
         }
     });
 

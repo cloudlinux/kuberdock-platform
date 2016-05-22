@@ -1,16 +1,21 @@
 define(['app_data/app',
         'tpl!app_data/pods/templates/layout_pod_item.tpl',
         'tpl!app_data/pods/templates/page_info_panel.tpl',
+        'tpl!app_data/pods/templates/page_containers_changed.tpl',
+        'tpl!app_data/pods/templates/page_containers_unchanged.tpl',
         'tpl!app_data/pods/templates/page_container_item.tpl',
         'tpl!app_data/pods/templates/pod_item_controls.tpl',
         'tpl!app_data/pods/templates/pod_item_upgrade_resources.tpl',
         'tpl!app_data/pods/templates/pod_item_upgrade_container_resources.tpl',
         'tpl!app_data/pods/templates/pod_item_graph.tpl',
         'moment-timezone', 'app_data/utils',
-        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'numeral', 'bbcode'],
+        'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer',
+        'numeral', 'bbcode', 'tooltip'],
        function(App,
                 layoutPodItemTpl,
                 pageInfoPanelTpl,
+                pageContainersChangedTpl,
+                pageContainersUnchangedTpl,
                 pageContainerItemTpl,
                 podItemControlsTpl,
                 upgradeResourcesTpl,
@@ -48,7 +53,7 @@ define(['app_data/app',
     });
 
     // View for showing a single container item as a container in containers list
-    podItem.InfoPanelItem = Backbone.Marionette.ItemView.extend({
+    podItem.ContainersListItem = Backbone.Marionette.ItemView.extend({
         template    : pageContainerItemTpl,
         tagName     : 'tr',
         className   : 'container-item',
@@ -56,10 +61,15 @@ define(['app_data/app',
             return this.model.is_checked ? 'container-item checked' : 'container-item';
         },*/
 
+        initialize: function(){
+            this.model.addNestedChangeListener(this, this.render);
+        },
+
         templateHelpers: function(){
-            var kubes = this.model.get('kubes'),
-                startedAt = this.model.get('startedAt'),
-                imagename = this.model.get('image'),
+            var before = this.model.get('before'),
+                after = this.model.get('after'),
+                startedAt = before && before.get('startedAt'),
+                imagename = (before || after).get('image'),
                 imagetag = null;
 
             if (/[^/:]+:[^/:]+$/.test(imagename)) {
@@ -69,10 +79,10 @@ define(['app_data/app',
             }
 
             return {
-                kubes: kubes ? kubes : 0,
+                changed: !before || before.isChanged(after),
                 startedAt: startedAt ? App.currentUser.localizeDatetime(startedAt) : 'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
-                podID: this.model.getPod().id,
+                pod: before ? before.getPod() : after.getPod().editOf(),
                 imagename: imagename,
                 imagetag: imagetag
             };
@@ -81,6 +91,7 @@ define(['app_data/app',
         ui: {
             'updateContainer'  : '.container-update',
             'checkForUpdate'   : '.check-for-update',
+            'tooltip'          : '[data-toggle="tooltip"]',
         },
 
         events: {
@@ -92,16 +103,65 @@ define(['app_data/app',
             'change': 'render'
         },
 
-        updateItem: function(){ this.model.update(); },
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
+        updateItem: function(){ this.model.get('before').update(); },
         checkForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
+            this.model.get('before').checkForUpdate().done(this.render);
         },
     });
 
-    podItem.InfoPanel = Backbone.Marionette.CompositeView.extend({
-        template  : pageInfoPanelTpl,
-        childView: podItem.InfoPanelItem,
+    var ContainersTableBaseView = Backbone.Marionette.CompositeView.extend({
+        childView: podItem.ContainersListItem,
         childViewContainer: "tbody",
+        collectionEvents: {  // TODO: do not re-render whole layout
+            'add remove change reset': 'render',
+        },
+        className: function(){
+            return this.collection.some(this.filter) ? '' : 'hidden';
+        },
+        onRender: function(){
+            if (this.collection.some(this.filter))
+                this.$el.removeClass('hidden');
+            else
+                this.$el.addClass('hidden');
+        },
+    });
+
+    podItem.ChangedContainersView = ContainersTableBaseView.extend({
+        template: pageContainersChangedTpl,
+        filter: function(model){
+            return !model.get('before') || !model.get('after')
+                || model.get('before').isChanged(model.get('after'));
+        },
+    });
+
+    podItem.UnchangedContainersView = ContainersTableBaseView.extend({
+        template: pageContainersUnchangedTpl,
+        filter: function(model){
+            return model.get('before') && model.get('after')
+                && !model.get('before').isChanged(model.get('after'));
+        },
+        templateHelpers: function(){
+            return {
+                partial: this.collection.some(_.negate(this.filter)),
+            };
+        },
+    });
+
+    podItem.ContainersPanel = Backbone.Marionette.LayoutView.extend({
+        template  : pageInfoPanelTpl,
+
+        regions: {
+            changed  : '#containers-list-changed',
+            unchanged: '#containers-list',
+        },
+
+        initialize: function(){
+            this.on('show', function(){
+                this.changed.show(new podItem.ChangedContainersView({collection: this.collection}));
+                this.unchanged.show(new podItem.UnchangedContainersView({collection: this.collection}));
+            });
+        },
     });
 
     podItem.ControlsPanel = Backbone.Marionette.ItemView.extend({
@@ -120,6 +180,8 @@ define(['app_data/app',
 
         events: {
             'click .start-btn'        : 'startItem',
+            'click .pay-and-apply'    : 'applyChanges',
+            'click .apply'            : 'applyChanges',
             'click .pay-and-start-btn': 'payStartItem',
             'click .restart-btn'      : 'restartItem',
             'click .stop-btn'         : 'stopItem',
@@ -134,6 +196,7 @@ define(['app_data/app',
         initialize: function(options){
             this.graphs = !!options.graphs;
             this.upgrade = !!options.upgrade;
+            this.fixedPrice = !!options.fixedPrice;
         },
 
         templateHelpers: function(){
@@ -147,11 +210,21 @@ define(['app_data/app',
                 hasPorts = this.model.get('containers').any(function(c) {
                     return c.get('ports') && c.get('ports').length;
                 }),
-                postDesc = this.model.get('postDescription');
+                postDesc = this.model.get('postDescription'),
+                changesRequirePayment;
 
             this.model.recalcInfo(pkg);
 
+            if (this.model.get('edited_config')){
+                this.model.get('edited_config').recalcInfo(pkg);
+                var diff = this.model.get('edited_config').rawTotalPrice - this.model.rawTotalPrice;
+                if (diff > 0)
+                    changesRequirePayment = pkg.getFormattedPrice(diff);
+            }
+
             return {
+                changesRequirePayment: changesRequirePayment,
+                fixedPrice           : this.fixedPrice,
                 hasPorts        : hasPorts,
                 postDescription : this.preparePostDescription(postDesc),
                 publicIP        : this.model.get('public_ip'),
@@ -169,8 +242,8 @@ define(['app_data/app',
         },
 
         onDomRefresh: function(){
-            if (this.model.get('postDescription'))
-                this.ui.close.parents('.message-wrapper').show();
+            if (this.model.get('postDescription') || this.model.get('edited_config'))
+                this.ui.message.show();
         },
 
         closeMessage: function(){
@@ -188,6 +261,15 @@ define(['app_data/app',
         restartItem: function(){ this.model.cmdRestart(); },
         stopItem: function(){ this.model.cmdStop(); },
         terminateItem: function(){ this.model.cmdDelete(); },
+        applyChanges: function(){
+            utils.preloader.show();
+            this.model.cmdApplyChanges()
+                .always(utils.preloader.hide)
+                .done(function(){
+                    utils.notifyWindow('Pod will be restarted with the new '
+                                       + 'configuration soon', 'success');
+                });
+        },
 
         preparePostDescription: function(val){
             if (val == null)

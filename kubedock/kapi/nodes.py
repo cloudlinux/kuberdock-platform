@@ -18,7 +18,7 @@ from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE)
 from ..users.models import User
-from ..utils import send_event, run_ssh_command
+from ..utils import send_event_to_role, run_ssh_command
 from ..validation import check_internal_pod_data
 
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
@@ -166,9 +166,10 @@ def delete_node(node_id=None, node=None):
         os.remove(NODE_INSTALL_LOG_FILE.format(hostname))
     except OSError:
         pass
-    send_event('node:deleted', {
+    send_event_to_role('node:deleted', {
         'id': node_id,
-        'message': 'Node successfully deleted'})
+        'message': 'Node successfully deleted'
+    }, 'Admin')
 
 
 def _check_node_can_be_deleted(node_id):

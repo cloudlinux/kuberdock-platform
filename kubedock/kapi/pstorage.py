@@ -18,7 +18,7 @@ from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..utils import send_event, atomic
+from ..utils import send_event_to_role, atomic
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH)
@@ -394,8 +394,9 @@ class PersistentStorage(object):
                 rv_code = self._create_drive(pd.drive_name, pd.size)
         except (NoNodesError, DriveIsLockedError) as e:
             current_app.logger.exception(UNABLE_CREATE_PD_MSG.format(pd.name))
-            send_event('notify:error', {'message': '{}, reason: {}'.format(
-                UNABLE_CREATE_PD_MSG.format(pd.drive_name), e.message)})
+            msg = '{}, reason: {}'.format(
+                UNABLE_CREATE_PD_MSG.format(pd.drive_name), e.message)
+            send_event_to_role('notify:error', {'message': msg}, 'Admin')
             raise APIError(UNABLE_CREATE_PD_MSG.format(pd.name))
 
         if rv_code != 0:
@@ -421,7 +422,7 @@ class PersistentStorage(object):
         except (DriveIsLockedError, NodeCommandError, NoNodesError) as e:
             current_app.logger.exception(admin_msg)
             notify_msg = "{}, reason: {}".format(admin_msg, e.message)
-            send_event('notify:error', {'message': notify_msg})
+            send_event_to_role('notify:error', {'message': notify_msg}, 'Admin')
             raise APIError(user_msg)
 
     def _makefs(self, drive_name, fs):

@@ -203,6 +203,7 @@ define(['app_data/app', 'marionette',
                 mode: 'inline',
                 pk: 1,
                 name: 'installationID',
+                ajaxOptions: {authWrap: true},
                 url: '/api/pricing/license/installation_id',
                 validate: function(newValue) {
                     if (!newValue.trim()) {

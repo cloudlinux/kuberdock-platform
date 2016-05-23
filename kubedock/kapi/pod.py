@@ -334,7 +334,7 @@ class Pod(object):
         if hasattr(self, 'node') and self.node:
             pod_config['spec']['nodeSelector']['kuberdock-node-hostname'] = \
                 self.node
-        if hasattr(self, 'public_ip'):
+        if hasattr(self, 'public_ip') and self.public_ip:
             pod_config['metadata']['labels']['kuberdock-public-ip'] = \
                 self.public_ip
         return config

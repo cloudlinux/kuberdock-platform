@@ -171,6 +171,7 @@ class Services(object):
             pods = (pods, )
         ls_pods = LABEL_SELECTOR_PODS.format(', '.join(pods))
         svc = self.get_by_type(ls_pods)
+        #TODO: pod can have several services, we need list as value
         return {s['metadata']['labels'][KUBERDOCK_POD_UID]: s for s in svc}
 
     def get_by_user(self, user_id):

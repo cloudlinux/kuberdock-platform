@@ -203,8 +203,13 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
                           '_get_pods', '_merge')
         self.pod_collection = podcollection.PodCollection(U())
 
+    @mock.patch.object(podcollection.podutils, 'raise_if_failure')
+    @mock.patch.object(podcollection, 'DBPod')
+    #  @mock.patch.object(podcollection, 'ingress_local_ports')
+    @mock.patch.object(podcollection, 'ingress_public_ports')
     @mock.patch.object(podcollection.KubeQuery, 'post')
-    def test_pod_run_service(self, post_):
+    def test_pod_run_service(
+        self, post_, mock_ingress, dbpod_mock, raise_if_failure_mock):
         """
         Test that _run_service generates expected service config
         :type post_: mock.Mock
@@ -220,6 +225,9 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
                        'isPublic': True},
                       {'containerPort': 80, 'isPublic': False}],
         }]
+        dbpod = mock.Mock()
+        dbpod_mock.query.get.return_value = dbpod
+        dbpod.get_dbconfig.return_value = {'volumes': []}
 
         # Making actual call
         podcollection.run_service(pod)
@@ -463,6 +471,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         dbpod = mock.Mock()
         dbpod_mock.query.get.return_value = dbpod
         dbpod.get_dbconfig.return_value = {'volumes': []}
+        run_service_mock.return_value = (None, None)
 
         # Actual call
         res = podcollection.prepare_and_run_pod_task(self.test_pod)
@@ -533,12 +542,12 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         dbpod.get_dbconfig.return_value = {
             'volumes': [], 'service': self.test_service_name
         }
+        run_service_mock.return_value = (None, None)
 
         # Actual call
         res = podcollection.prepare_and_run_pod_task(self.test_pod)
 
         dbpod.get_dbconfig.assert_called_once_with()
-        self.assertFalse(run_service_mock.called)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
@@ -768,7 +777,6 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
     def test_pod_as_dict_called(self):
         self.pod_collection.add(self.params)
         pod_ = podcollection.Pod.return_value
-        print(pod_)
         self.assertTrue(pod_.as_dict.called)
 
 
@@ -1431,8 +1439,10 @@ class TestRemoveAndReturnIP(DBTestCase):
                                                       ip=int(self.ip))
         self.ippool.block_ip(self.ippool.hosts(as_int=True))
 
-        with self.assertRaises(Exception):
-            podcollection.PodCollection._return_public_ip(pod_id=self.pod.id)
+        if not podcollection.AWS:
+            with self.assertRaises(Exception):
+                podcollection.PodCollection._return_public_ip(
+                    pod_id=self.pod.id)
         self.ippool.unblock_ip(self.ippool.hosts(as_int=True))
         self.db.session.flush()
         self._check_removed_and_retrun_back()

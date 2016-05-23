@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Nginx Error</title>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="shortcut icon" href="static/img/favicon.ico" type="image/x-icon" />
+</head>
+<body>
+<style type="text/css">
+/* Eric Meyer's CSS Reset */
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,
+pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,img,ins,kbd,q,s,samp,
+small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,
+form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,
+canvas,details,embed,figure,figcaption,footer,header,hgroup,menu,nav,output,
+ruby,section,summary,time,mark,audio,video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section { display: block; }
+body { line-height: 1; }
+ol,ul {list-style: none; }
+blockquote, q { quotes: none; }
+blockquote:before,blockquote:after,q:before,q:after {
+  content: '';
+  content: none;
+}
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+html {
+  height: 100%;
+}
+article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,summary { display: block; }
+a { display: inline-block; }
+.anti {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  height: 100%;
+  width: 100%;
+  background-color: #43384e;
+  font-family: 'Helvetica, Arial, sans-serif';
+}
+body * {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+body .wrapper {
+  height: 100%;
+  width: 100%;
+  display: -webkit-box;
+  display: -moz-box;
+  display: box;
+  -webkit-box-orient: vertical;
+  -moz-box-orient: vertical;
+  box-orient: vertical;
+  -webkit-box-pack: center;
+  -moz-box-pack: center;
+  box-pack: center;
+  -webkit-box-direction: normal;
+  -moz-box-direction: normal;
+  box-direction: normal;
+  -webkit-box-align: center;
+  -moz-box-align: center;
+  box-align: center;
+}
+body .wrapper:before,
+body .wrapper:after {
+  z-index: 1;
+  content: '';
+  position: absolute;
+}
+body .wrapper:before {
+  top: 8%;
+  left: 7%;
+  width: 127px;
+  height: 138px;
+  background: url('static/img//moon.png') 0 0 no-repeat;
+}
+body .wrapper:after {
+  top: 16%;
+  right: 17%;
+  width: 64px;
+  height: 25px;
+  background: url('static/img/cloud.png') 0 0 no-repeat;
+}
+body .wrapper h1 {
+  font-weight: bold;
+  text-transform: uppercase;
+}
+body .wrapper p {
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 21px;
+  margin-bottom: 10px;
+}
+body .wrapper .tooltip,
+body .wrapper .message {
+  z-index: 2;
+  padding: 20px;
+  text-align: center;
+  position: relative;
+}
+body .wrapper .tooltip {
+  -webkit-box-ordinal-group: 1;
+  -moz-box-ordinal-group: 1;
+  box-ordinal-group: 1;
+  -webkit-box-flex: 0;
+  -moz-box-flex: 0;
+  box-flex: 0;
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  border-radius: 10px;
+  -moz-background-clip: padding;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  color: #ffffff;
+  max-width: 100%;
+  margin-bottom: 65px;
+  padding: 30px 30px 27px 25px;
+  background-color: #df585a;
+}
+body .wrapper .tooltip h1 {
+  font-size: 34px;
+  margin-bottom: 20px;
+}
+body .wrapper .tooltip:after {
+  top: 100%;
+  left: 50%;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+  margin-left: -14.5px;
+  border: solid transparent;
+  border-top-color: #df585a;
+  border-width: 26px 16px 0px 16px;
+}
+body .wrapper .message {
+  -webkit-box-ordinal-group: 1;
+  -moz-box-ordinal-group: 1;
+  box-ordinal-group: 1;
+  -webkit-box-flex: 0;
+  -moz-box-flex: 0;
+  box-flex: 0;
+  width: 100%;
+  padding: 30px 40px 35px 40px;
+  background-color: rgba(51, 50, 53, 0.64);
+}
+body .wrapper .message h1 {
+  color: #df585a;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+</style>
+    <section class="wrapper">
+        <hgroup class="tooltip">
+            <h1>NGINX ERROR!</h1>
+            <p>The page you are looking for is temporarily unavailable.<br>Please try again later</p>
+         </hgroup>
+        <hgroup class="message">
+            <h1>WEBSITE ADMINISTRATOR</h1>
+            <p>Something has triggered an error on your website. This is the default error page for nginx that is distributed with Fedora. It is located /usr/share/nginx/html/50x.html<br>You should customize this error page for your own site or edit the error_page directive in the nginx configuration file /etc/nginx/nginx.conf.</p>
+         </hgroup>
+    </section>
+</body>
+</html>
+

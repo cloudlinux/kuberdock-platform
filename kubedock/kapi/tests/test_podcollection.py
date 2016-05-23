@@ -513,13 +513,14 @@ class TestPodCollection(DBTestCase, TestCaseMixin):
             self.pod_collection.get(3)
 
 
+# TODO: use DBTestCase and move common mocks in setUp
 class TestPodCollectionStartPod(TestCase, TestCaseMixin):
-
     def setUp(self):
         U = type('User', (), {'username': 'user'})
 
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
-                          '_get_pods', '_merge', 'replace_config')
+                          '_get_pods', '_merge', 'replace_config',
+                          '_apply_edit')
 
         self.pod_collection = podcollection.PodCollection(U())
 
@@ -550,12 +551,13 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         self.assertEqual(self.test_pod.containers[0]['state'], status)
         self.assertEqual(response, self.test_pod.as_dict.return_value)
 
+    @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.PodCollection,
                        '_get_replicationcontroller')
     @mock.patch.object(podcollection.PodCollection, '_raise_if_failure')
     @mock.patch.object(podcollection.PodCollection, '_post')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_normal_first_start(self, mk_ns, post_, rif, mk_get_rc):
+    def test_pod_normal_first_start(self, mk_ns, post_, rif, mk_get_rc, DBPod):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
@@ -564,7 +566,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         """
 
         mk_get_rc.side_effect = APIError('no rc')
-        self.test_pod.get_config = mock.Mock(return_value={'volumes': []})
+        DBPod.query.get().get_dbconfig.return_value = {'volumes': []}
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
         self.pod_collection._run_service.reset_mock()
@@ -573,7 +575,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         res = self.pod_collection._start_pod(self.test_pod)
 
         mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with()
+        DBPod.query.get().get_dbconfig.assert_called_once_with()
         self.pod_collection._run_service.assert_called_once_with(self.test_pod)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
@@ -582,11 +584,12 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         self.assertEqual(rif.called, True)
         self._check_status(res, POD_STATUSES.pending)
 
+    @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.PodCollection,
                        '_get_replicationcontroller')
     @mock.patch.object(podcollection.PodCollection, '_post')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_first_start_without_ports(self, mk_ns, post_, mk_get_rc):
+    def test_pod_first_start_without_ports(self, mk_ns, post_, mk_get_rc, DBPod):
         """
         Test first _start_pod for pod without ports
         :type post_: mock.Mock
@@ -595,7 +598,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         saved_ports = self.test_pod.containers[0]['ports']
         self.test_pod.containers[0]['ports'] = []
 
-        self.test_pod.get_config = mock.Mock(return_value={'volumes': []})
+        DBPod.query.get().get_dbconfig.return_value = {'volumes': []}
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
         self.pod_collection._run_service.reset_mock()
@@ -604,7 +607,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         res = self.pod_collection._start_pod(self.test_pod)
 
         mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with()
+        DBPod.query.get().get_dbconfig.assert_called_once_with()
         self.assertEquals(self.pod_collection._run_service.called, False)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
@@ -614,18 +617,19 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
 
         self.test_pod.containers[0]['ports'] = saved_ports
 
+    @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.PodCollection, '_get_replicationcontroller')
     @mock.patch.object(podcollection.PodCollection, '_post')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_normal_second_start(self, mk_ns, post_, mk_get_rc):
+    def test_pod_normal_second_start(self, mk_ns, post_, mk_get_rc, DBPod):
         """
         Test second _start_pod in usual case
         :type post_: mock.Mock
         """
 
         mk_get_rc.side_effect = APIError('no rc')
-        self.test_pod.get_config = mock.Mock(
-            return_value={'volumes': [], 'service': self.test_service_name})
+        DBPod.query.get().get_dbconfig.return_value = {
+            'volumes': [], 'service': self.test_service_name}
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
         self.pod_collection._run_service.reset_mock()
@@ -634,7 +638,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         res = self.pod_collection._start_pod(self.test_pod)
 
         mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with()
+        DBPod.query.get().get_dbconfig.assert_called_once_with()
         self.assertEquals(self.pod_collection._run_service.called, False)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
@@ -659,6 +663,21 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         }
         self.assertTrue(self.pod_collection.needs_public_ip(test_conf))
         self.assertFalse(self.pod_collection.needs_public_ip(test_conf2))
+
+    @mock.patch.object(podcollection, 'DBPod')
+    @mock.patch.object(podcollection.PodCollection, '_get_replicationcontroller')
+    @mock.patch.object(podcollection.PodCollection, '_put')
+    @mock.patch.object(podcollection.PodCollection, '_make_namespace')
+    def test_apply_edit_called(self, mk_ns, post_, mk_get_rc, DBPod):
+        config = {'volumes': [], 'service': self.test_service_name}
+        DBPod.query.get().get_dbconfig.return_value = config
+        self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
+        self.pod_collection._apply_edit.return_value = (self.test_pod, config)
+
+        self.pod_collection._start_pod(
+            self.test_pod, {'commandOptions': {'applyEdit': True}})
+        self.pod_collection._apply_edit.assert_called_once_with(
+            self.test_pod, DBPod.query.get(), config)
 
 
 class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
@@ -703,67 +722,108 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
     # TODO: "Pod is already stopped" test
 
 
-class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
+class TestPodCollectionPreprocessNewPod(DBTestCase, TestCaseMixin):
     def setUp(self):
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
-                          '_get_pods', '_merge', '_save_pod', '_check_trial',
-                          '_make_namespace', '_make_secret')
-        self.mock_methods(podcollection, 'Pod', 'extract_secrets',
-                          'fix_relative_mount_paths')
+                          '_get_pods', '_merge', '_get_secrets', '_check_trial')
+        self.mock_methods(podcollection,
+                          'extract_secrets', 'fix_relative_mount_paths')
         podcollection.extract_secrets.return_value = set()
 
-        self.user, _ = self.fixtures.user_fixtures(
-            role_id=Role.by_rolename('TrialUser').id)
-        pod_id = str(uuid4())
-        self.pod = fake_pod(
-            use_parents=(mock.Mock,),
-            namespace=pod_id,
-            owner=self.user,
-            id=pod_id,
-        )
-        podcollection.Pod.side_effect = lambda *a, **kw: self.pod()
-
-        self.name = 'nginx'
-        self.params = {'name': self.name, 'containers': ()}
-        self.namespace = pod_id
-
+        self.user, _ = self.fixtures.user_fixtures()
+        self.params = {'name': 'nginx', 'containers': []}
         self.pod_collection = podcollection.PodCollection(self.user)
 
     @mock.patch.object(podcollection.PodCollection, '_make_secret',
                        mock.Mock())
     @mock.patch.object(podcollection.Image, 'check_containers')
     def test_check_containers_called(self, check_):
-        secrets = [('test_user', 'test_password', mock.ANY),
-                   ('test_user2', 'test_password2', 'https://quay.io')]
+        old_secret = ('username-1', 'password-1', 'regist.ry')
+        same_secret = ('username-2', 'password-2', 'regist.ry')
+        new_secret = ('username-3', 'password-3', 'regist.ry')
         containers = [
             {'image': 'wncm/test_image:4', 'name': 'a', 'args': ['nginx'],
-             'secret': {'username': secrets[0][0], 'password': secrets[0][1]}},
+             'secret': dict(zip(['username', 'password'], same_secret))},
             {'image': 'quay.io/wncm/test_image', 'name': 'b', 'args': ['nginx'],
-             'secret': {'username': secrets[1][0], 'password': secrets[1][1]}},
+             'secret': dict(zip(['username', 'password'], new_secret))},
         ]
         params = dict(self.params, containers=containers)
-        podcollection.extract_secrets.return_value = set(secrets)
-        self.pod_collection.add(params)
+        podcollection.extract_secrets.return_value = set([new_secret,
+                                                          same_secret])
+        _, secrets = self.pod_collection._preprocess_new_pod(params)
+        podcollection.extract_secrets.assert_called_once_with(
+            params['containers'])
+        self.assertItemsEqual(secrets, [new_secret, same_secret])
         check_.assert_called_once_with(containers, secrets)
+
+        # edit pod
+        check_.reset_mock()
+        self.pod_collection._get_secrets.return_value = {
+            'secret-name-1': old_secret,
+            'secret-name-2': same_secret,
+        }
+        original_pod = 'original-pod'
+        _, secrets = self.pod_collection._preprocess_new_pod(
+            params, original_pod=original_pod)
+        self.pod_collection._get_secrets.assert_called_once_with(original_pod)
+        self.assertItemsEqual(secrets, [old_secret, same_secret, new_secret])
+        check_.assert_called_once_with(containers, secrets)
+
+    def test_check_trial_called(self):
+        self.pod_collection._preprocess_new_pod(self.params)
+        self.pod_collection._check_trial.assert_called_once_with(self.params)
+
+        self.pod_collection._check_trial.reset_mock()
+        self.pod_collection._preprocess_new_pod(self.params, skip_check=True)
+        self.assertFalse(self.pod_collection._check_trial.called)
+
+    def test_fix_relative_mount_paths(self):
+        self.pod_collection._preprocess_new_pod(self.params)
+        podcollection.fix_relative_mount_paths.assert_called_once_with(
+            self.params['containers'])
+
+
+class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
+    def setUp(self):
+        self.mock_methods(podcollection.PodCollection, '_get_namespaces',
+                          '_get_pods', '_merge', '_save_pod', '_check_trial',
+                          '_make_namespace', '_preprocess_new_pod')
+        self.mock_methods(podcollection, 'Pod')
+
+        self.user, _ = self.fixtures.user_fixtures(
+            role_id=Role.by_rolename('TrialUser').id)
+        pod_id = str(uuid4())
+        podcollection.Pod.return_value.namespace = pod_id
+        podcollection.Pod.return_value.owner = self.user
+        podcollection.Pod.return_value.id = pod_id
+
+        self.name = 'nginx'
+        self.params = {'name': self.name, 'containers': ()}
+        self.namespace = pod_id
+
+        podcollection.PodCollection._preprocess_new_pod.return_value = (
+            self.params, ())
+
+        self.pod_collection = podcollection.PodCollection(self.user)
 
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
     def test_make_namespace_called(self, make_namespace_):
         self.pod_collection.add(self.params)
         make_namespace_.assert_called_once_with(self.namespace)
 
+    @mock.patch.object(podcollection, 'extract_secrets')
     @mock.patch.object(podcollection.PodCollection, '_make_secret')
-    def test_make_secret_called(self, make_secret_):
+    def test_make_secret_called(self, make_secret_, extract_secrets_):
         secrets = [('test_user', 'test_password', mock.ANY),
                    ('test_user2', 'test_password2', mock.ANY)]
-        podcollection.extract_secrets.return_value = set(secrets)
+        podcollection.PodCollection._preprocess_new_pod.return_value = (
+            self.params, secrets)
+        extract_secrets_.return_value = set(secrets)
+
         self.pod_collection.add(self.params, skip_check=True)
         make_secret_.assert_has_calls([mock.call(self.namespace, *secrets[0]),
                                        mock.call(self.namespace, *secrets[1])],
                                       any_order=True)
-
-    def test_check_trial_called(self):
-        self.pod_collection.add(self.params)
-        self.pod_collection._check_trial.assert_called_once_with(self.params)
 
     @mock.patch('kubedock.kapi.podcollection.uuid4')
     def test_pod_create_called(self, uuid4_):
@@ -775,23 +835,28 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
             'namespace': self.namespace,
             'sid': mock.ANY,
             'status': 'stopped',
-            'volumes': [],
             'containers': (),
-            'owner': self.user
         })
 
     def test_pod_compose_persistent_called(self):
-        podcollection.Pod.return_value = pod_ = self.pod()
         self.pod_collection.add(self.params)
+        pod_ = podcollection.Pod.return_value
         pod_.compose_persistent.assert_called_once_with()
 
     def test_save_pod_called(self):
         self.pod_collection.add(self.params)
         self.assertTrue(self.pod_collection._save_pod.called)
 
-    def test_pod_forge_dockers_called(self):
-        podcollection.Pod.return_value = pod_ = self.pod()
+    @mock.patch('kubedock.kapi.podcollection.uuid4')
+    def test_preprocess_new_pod_called(self, uuid4_):
+        uuid4_.return_value = self.namespace
         self.pod_collection.add(self.params)
+        self.pod_collection._preprocess_new_pod.assert_called_once_with(
+            self.params, skip_check=False)
+
+    def test_pod_forge_dockers_called(self):
+        self.pod_collection.add(self.params)
+        pod_ = podcollection.Pod.return_value
         self.assertTrue(pod_._forge_dockers.called)
 
     @mock.patch.object(podcollection.PodCollection, 'needs_public_ip')
@@ -800,8 +865,9 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
         self.assertTrue(_npip.called)
 
     def test_pod_as_dict_called(self):
-        podcollection.Pod.return_value = pod_ = self.pod()
         self.pod_collection.add(self.params)
+        pod_ = podcollection.Pod.return_value
+        print(pod_)
         self.assertTrue(pod_.as_dict.called)
 
 
@@ -1586,6 +1652,86 @@ class TestFixRelativeMountPaths(unittest.TestCase):
         podcollection.fix_relative_mount_paths(containers)
         self.assertEqual(containers, fixed_containers)
 
+
+class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
+    def setUp(self):
+        self.secret_name = 'a2e43147-5bfe-4b50-9d0b-891a3acb95b2'
+        self.old_secret = ('username-1', 'password-1',
+                           Image('wncm/my-img').full_registry)
+        self.new_secret = ('username-2', 'password-2',
+                           Image('45.55.52.203:5000/my-img').full_registry)
+        self.all_secrets = [self.old_secret, self.new_secret]
+
+        self.mock_methods(
+            podcollection.PodCollection, '_get_namespaces', '_get_pods',
+            '_merge', '_get_secrets', '_preprocess_new_pod', '_make_secret')
+
+        self.user, _ = self.fixtures.user_fixtures()
+        self.db_pod = self.fixtures.pod(owner=self.user, kube_id=0, config={
+            'containers': [{'name': 'wj5cw1y4', 'image': 'wncm/my-img',
+                            'kubes': 1}],
+            'namespace': 'a99e70fe-f2e9-42dd-8e2b-94d277553250',
+            'restartPolicy': 'Always',
+            'secrets': [self.secret_name],
+            'sid': 'fdcb7959-9a0d-4969-bd55-a3f5fdcb3fa8',
+            'volumes': [],
+            'volumes_public': [],
+        })
+        self.edited = {
+            'name': self.db_pod.name + 'qwerty',
+            'restartPolicy': 'Never',
+            'kube_type': 1,
+            'containers': [{  # edited container
+                'name': 'wj5cw1y4',
+                'image': 'wncm/my-img',
+                'secret': {'username': self.old_secret[0],
+                           'password': self.old_secret[1]},
+            }, {  # added container
+                'name': 'woeufh29',
+                'image': '45.55.52.203:5000/my-img',
+                'secret': {'username': self.new_secret[0],
+                           'password': self.new_secret[1]},
+            }]
+        }
+
+        pc = podcollection.PodCollection
+        pc._make_secret.side_effect = lambda *a, **kw: str(uuid4())
+        pc._get_secrets.return_value = {self.secret_name: self.old_secret}
+        pc._preprocess_new_pod.return_value = (self.edited, self.all_secrets)
+
+        self.podcollection = podcollection.PodCollection(self.user)
+        self.orig_pod = podcollection.Pod(dict(
+            self.db_pod.get_dbconfig(), id=self.db_pod.id, name=self.db_pod.name,
+            owner=self.db_pod.owner, kube_type=self.db_pod.kube_id))
+
+    def test_edited_config_saved(self):
+        self.podcollection.edit(self.orig_pod, {'edited_config': self.edited})
+        self.assertIsNotNone(self.db_pod.get_dbconfig().get('edited_config'))
+
+    def test_preprocess_new_pod_called(self):
+        self.podcollection.edit(self.orig_pod, {'edited_config': self.edited})
+        self.podcollection._preprocess_new_pod.assert_called_once_with(
+            self.edited, original_pod=self.orig_pod, skip_check=False)
+
+        self.podcollection._preprocess_new_pod.reset_mock()
+        self.podcollection.edit(self.orig_pod,
+                                {'edited_config': self.edited}, skip_check=True)
+        self.podcollection._preprocess_new_pod.assert_called_once_with(
+            self.edited, original_pod=self.orig_pod, skip_check=True)
+
+    def test_create_only_new_secrets(self):
+        """PodCollection.edit shouldn't duplicate secrets."""
+        prepared_config = copy.deepcopy(self.edited)
+        for container in prepared_config['containers']:
+            container.pop('secrets', None)
+            container.setdefault('kubes', 1)
+        podcollection.PodCollection._preprocess_new_pod.return_value = (
+            prepared_config, self.all_secrets
+        )
+
+        self.podcollection.edit(self.orig_pod, {'edited_config': self.edited})
+        self.podcollection._make_secret.assert_called_once_with(
+            self.orig_pod.namespace, *self.new_secret)
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

@@ -29,7 +29,12 @@
         .mdi('stop',21px, #B5BBC1, #3197EE);
     }
     .terminate-btn{
-        .mdi('delete_sweep',21px, #B5BBC1, #3197EE);
+        .mdi('delete',21px, #B5BBC1, #3197EE);
+        &:hover{
+            &:before{
+                content: 'delete_forever'
+            }
+        }
     }
     .stats-btn{
         .mdi('equalizer',21px, #B5BBC1, #3197EE);
@@ -75,7 +80,7 @@
         }
     }
     .ic_reorder{
-        .mdi('reorder',19px, #646f82, #3197EE);
+        .mdi('reorder',21px, #646f82, #3197EE);
     }
 
     .icon{
@@ -203,7 +208,12 @@ table{
     .remove-volume,
     .terminate-btn,
     #deleteNetwork{
-        .mdi('delete_sweep',21px, #B5BBC1, #3197EE);
+        .mdi('delete',21px, #B5BBC1, #3197EE);
+        &:hover{
+            &:before{
+                content: 'delete_forever'
+            }
+        }
         &.disabled {
             &:before{
                 .opacity(0.7);
@@ -287,10 +297,8 @@ table{
     }
 }
 .container-image{
-    .border-radius();
-    .mdi('art_track',100px, #E5E5E5, #E5E5E5);
+    .mdi('wallpaper',100px, #E5E5E5, #E5E5E5);
     text-align: center;
-    border: 5px solid #e5e5e5;
     &:hover{
         cursor: default;
     }
@@ -324,14 +332,15 @@ table{
 
 .podsControl{
     .removePods{
-        .mdi('delete_sweep',21px, #B5BBC1, #3197EE);
+        .mdi('delete',21px, #B5BBC1, #3197EE);
+        &:hover{
+            &:before{
+                content: 'delete_forever'
+            }
+        }
     }
     .stopPods{
-        .mdi('stop',17px, #B5BBC1, #3197EE);
-        &:before{
-            .border-radius(50%);
-            border: 1px solid;
-        }
+        .mdi('stop',21px, #B5BBC1, #3197EE);
     }
     .runPods{
         .mdi('play_arrow',21px, #B5BBC1, #3197EE);

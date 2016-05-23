@@ -1,17 +1,17 @@
-from flask import Blueprint, request
 from collections import defaultdict
-import dateutil.parser
 from datetime import datetime
+import dateutil.parser
+from flask import Blueprint, request
 import time
 
+from ..exceptions import APIError
 from ..rbac import check_permission
-from ..decorators import login_required_or_basic_or_token
+from ..login import auth_required
 from ..utils import KubeUtils
 from ..users import User
 from ..kapi.users import UserNotFound
 from ..usage.models import ContainerState, IpState, PersistentDiskState
 from ..core import db
-from ..exceptions import APIError
 
 
 usage = Blueprint('usage', __name__, url_prefix='/usage')
@@ -21,7 +21,7 @@ DATE_TO = 'date_to'
 
 
 @usage.route('/', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_total_usage():
@@ -35,7 +35,7 @@ def get_total_usage():
 
 
 @usage.route('/<uid>', methods=['GET'])
-@login_required_or_basic_or_token
+@auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
 def get_usage(uid):

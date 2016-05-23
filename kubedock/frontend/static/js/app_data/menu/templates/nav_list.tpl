@@ -2,7 +2,10 @@
 <div class="login-view-mode-wrapper">
     <span class="glass pull-left">User View Mode</span>
     <span>Logged in as user: <b><%= user.get('username') %></b></span>
+    <!--
     <a href="/logoutA">Exit Mode</a>
+    -->
+    <span id="logout-a" class="pull-right" style="cursor:pointer;">Exit Mode</span>
 </div>
 <% } %>
 <div class="container">
@@ -29,7 +32,10 @@
                                 <li><a class="routable" href="#settings">Settings</a></li>
                             <% } %>
                             <% if (!user.isImpersonated()){ %>
+                                <!--
                                 <li><a href="/logout">Logout </a></li>
+                                -->
+                                <li><span id="logout">Logout</span></li>
                             <% } %>
                         </ul>
                     </li>

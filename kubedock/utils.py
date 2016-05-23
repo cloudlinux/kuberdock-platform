@@ -12,19 +12,22 @@ import nginx
 
 import subprocess
 from collections import namedtuple
-from flask import current_app, request, jsonify, g, has_app_context
-from flask.ext.login import current_user, logout_user
+from flask import (current_app, request, jsonify, g, has_app_context, Response,
+                   session, has_request_context)
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
 from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
 from traceback import format_exception
 
-from .exceptions import APIError, PermissionDenied
+from .login import current_user
 from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .pods import Pod
 from .core import ssh_connect, db, ConnectionPool
-from .settings import NODE_TOBIND_EXTERNAL_IPS, PODS_VERBOSE_LOG
+from .settings import NODE_TOBIND_EXTERNAL_IPS
+from .users.models import SessionData
+from .rbac.models import Role
+from .exceptions import APIError, PermissionDenied
 
 
 class UPDATE_STATUSES:
@@ -71,23 +74,60 @@ def get_channel_key(conn, key, size=100):
     return int(keys[-1])+1
 
 
-def send_event(event_name, data, to_file=None, channel='common',
-               prefix='SSEEVT'):
+def send_event_to_user(event_name, data, user_id, to_file=None, prefix='SSEEVT'):
+    """
+    Selects all given user sessions and sends list to send_event
+    """
+    sessions = [i.id for i in SessionData.query.filter_by(user_id=user_id)]
+    send_event(event_name, data, to_file, sessions, prefix)
+
+
+def send_event_to_role(event_name, data, role_id, to_file=None, prefix='SSEEVT'):
+    """
+    Selects all given role user sessions and sends list to send_event
+    """
+    sessions = [i.id for i in SessionData.query.filter_by(role_id=role_id)]
+    send_event(event_name, data, to_file, sessions, prefix)
+
+
+def resolve_channels(channels, role='Admin'):
+    """
+    Tries to produce a valid channels list
+    @param channels: string, list, tuple or None
+    @param role: string -> role to map channels to when channels are missing
+    @return: list
+    """
+    if channels is None:
+        if has_request_context():
+            channels = getattr(session, 'sid', None)
+        if channels is None:
+            rid = Role.query.filter_by(rolename=role).first()
+            if rid is None:
+                return []
+            return [i.id for i in SessionData.query.filter_by(role_id=rid.id)]
+    if not isinstance(channels, (tuple, list)):
+        return [channels]
+    return channels
+
+
+def send_event(event_name, data, to_file=None, channels=None, prefix='SSEEVT'):
     """
     Sends event via pubsub to all subscribers and cache it to be rolled back
     if missed
     @param event_name: string -> event name
     @param data: dict -> data to be sent
     @param to_file: file handle object -> file object to output logs
-    @param channel: string -> target identifier for event to be sent to
+    @param channels: list -> target identifiers for event to be sent to
     @param prefix: string -> redis key prefix to store channel cache
     """
+    channels = resolve_channels(channels)
     conn = ConnectionPool.get_connection()
-    key = ':'.join([prefix, channel])
-    channel_key = get_channel_key(conn, key)
-    message = json.dumps([channel_key, event_name, data])
-    conn.hset(key, channel_key, message)
-    conn.publish(channel, message)
+    for channel in channels:
+        key = ':'.join([prefix, channel])
+        channel_key = get_channel_key(conn, key)
+        message = json.dumps([channel_key, event_name, data])
+        conn.hset(key, channel_key, message)
+        conn.publish(channel, message)
     if to_file is not None:
         try:
             to_file.write(data)
@@ -97,10 +137,12 @@ def send_event(event_name, data, to_file=None, channel='common',
             print 'Error writing to log file', e.__repr__()
 
 
-def send_logs(node, data, to_file=None, channel='common'):
+def send_logs(node, data, to_file=None, channels=None):
+    channels = resolve_channels(channels)
     conn = ConnectionPool.get_connection()
-    conn.publish(channel, json.dumps(
-        [None, 'node:installLog', {'id': node, 'data': data}]))
+    msg = json.dumps([None, 'node:installLog', {'id': node, 'data': data}])
+    for channel in channels:
+        conn.publish(channel, msg)
     if to_file is not None:
         try:
             to_file.write(data)
@@ -155,22 +197,6 @@ def k8s_json_object_hook(obj):
             if dt is not None:
                 obj[key] = dt
     return obj
-
-
-# separate function because set_roles_loader decorator don't return function.
-# Lib bug.
-def get_user_role():
-    rolename = 'AnonymousUser'
-    try:
-        rolename = current_user.role.rolename
-    except AttributeError:
-        try:
-            rolename = g.user.role.rolename
-        except AttributeError:
-            pass
-    if rolename == 'AnonymousUser':
-        logout_user()
-    return rolename
 
 
 class atomic(object):
@@ -589,7 +615,10 @@ class KubeUtils(object):
     def jsonwrap(cls, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            return jsonify({'status': 'OK', 'data': func(*args, **kwargs)})
+            rv = func(*args, **kwargs)
+            if isinstance(rv, Response):
+                return rv
+            return jsonify({'status': 'OK', 'data': rv})
         return wrapper
 
     @classmethod

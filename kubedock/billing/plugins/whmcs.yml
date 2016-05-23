@@ -1,0 +1,69 @@
+---
+name: WHMCS
+# auth: params|headers
+auth: params
+password-digest: md5
+common-params:
+    responsetype: json
+pod-url: /kdorder.php?a=orderPod
+app-url: /kdorder.php?a=orderApp
+common-headers:
+    User-Agent: Mozilla/5.0
+methods:
+    getkuberdockinfo:
+        args:
+            - user
+            - domains
+        method: post
+        params:
+            action: getkuberdockinfo
+            kdServer: null          # filled in automatically
+            user: user
+            userDomains: domains
+        endpoint: /includes/api.php
+        return:
+            - results
+    getpaymentmethods:
+        method: post
+        params:
+            action: getpaymentmethods
+        endpoint: /includes/api.php
+        return:
+            - paymentmethods
+            - paymentmethod
+    orderpod:
+        method: post
+        args:
+            - pod
+        params:
+            action: orderkuberdockpod
+            client_id: null          # filled in automatically
+            pod: pod
+        endpoint: /includes/api.php
+        return:
+            - results
+    orderproduct:
+        method: post
+        args:
+            - user
+            - domains
+            - package_id
+        params:
+            action: orderkuberdockproduct
+            user: user
+            userDomains: domains
+            package_id: package_id
+        endpoint: /includes/api.php
+        return:
+            - results
+    orderkubes:
+        method: post
+        args:
+            - pod
+        params:
+            action: addkuberdockkubes
+            client_id: null          # filled in automatically
+            pod: pod
+        endpoint: /includes/api.php
+        return:
+            - results

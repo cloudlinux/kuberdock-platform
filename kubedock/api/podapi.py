@@ -1,8 +1,9 @@
 from flask import Blueprint
 from flask.views import MethodView
-from ..decorators import login_required_or_basic_or_token
+
 from ..decorators import maintenance_protected
 from ..exceptions import PermissionDenied
+from ..login import auth_required
 from ..utils import KubeUtils, register_api
 from ..kapi.podcollection import PodCollection, PodNotFound
 from ..pods.models import Pod
@@ -16,7 +17,7 @@ podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
 class PodsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, KubeUtils.pod_start_permissions,
-                  login_required_or_basic_or_token]
+                  auth_required]
 
     @check_permission('get', 'pods')
     def get(self, pod_id):
@@ -56,12 +57,21 @@ class PodsAPI(KubeUtils, MethodView):
                 # and start pod directly, only through billing system
                 raise PermissionDenied(
                     'Direct requests are forbidden for fixed-price users.')
+
             kubes = db_pod.kubes_detailed
             for container in data.get('containers', []):
                 if container.get('kubes') is not None:
                     kubes[container['name']] = container['kubes']
             if command == 'redeploy' and db_pod.kubes != sum(kubes.values()):
                 # fix-price user is not allowed to upgrade pod
+                # directly, only through billing system
+                raise PermissionDenied(
+                    'Direct requests are forbidden for fixed-price users.')
+
+            edited = db_pod.get_dbconfig().get('edited_config') is not None
+            apply_edit = params['commandOptions']['applyEdit']
+            if command in ('start', 'redeploy') and edited and apply_edit:
+                # fix-price user is not allowed to apply changes in pod
                 # directly, only through billing system
                 raise PermissionDenied(
                     'Direct requests are forbidden for fixed-price users.')
@@ -81,8 +91,8 @@ register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)
 
 @podapi.route('/<pod_id>/<container_name>/update', methods=['GET'],
               strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('get', 'pods')
 def check_updates(pod_id, container_name):
     user = KubeUtils._get_current_user()
@@ -91,8 +101,8 @@ def check_updates(pod_id, container_name):
 
 @podapi.route('/<pod_id>/<container_name>/update', methods=['POST'],
               strict_slashes=False)
+@auth_required
 @KubeUtils.jsonwrap
-@login_required_or_basic_or_token
 @check_permission('get', 'pods')
 def update_container(pod_id, container_name):
     user = KubeUtils._get_current_user()

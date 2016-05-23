@@ -3,6 +3,7 @@ define(['marionette'], function(Marionette){
     var router = Marionette.AppRouter.extend({
         appRoutes: {
             ''                                : 'index',
+            'index'                           : 'index',
             'pods'                            : 'showPods',
             'pods/:id'                        : 'showPodContainers',
             'pods/:id/stats'                  : 'showPodStats',

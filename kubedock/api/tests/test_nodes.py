@@ -138,9 +138,10 @@ class TestNodeCRUD(APITestCase):
 
         self.assertAPIError(response, 400, 'APIError')
 
-    @mock.patch('kubedock.kapi.nodes.redeploy_node')
-    def test_redeploy(self, *_):
-        response = self.admin_open(
-            NodesUrl.redeploy(123), 'GET')
-
-        self.assert200(response)
+    # The functionality is commented out
+    #@mock.patch('kubedock.kapi.nodes.redeploy_node')
+    #def test_redeploy(self, *_):
+    #    response = self.admin_open(
+    #        NodesUrl.redeploy(123), 'GET')
+    #
+    #    self.assert200(response)

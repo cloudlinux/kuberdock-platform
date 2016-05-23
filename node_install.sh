@@ -291,6 +291,9 @@ yum --enablerepo=kube,kube-testing clean metadata
 
 
 # 1.2 Install ntp, we need correct time for node logs
+# AC-3199 Remove chrony which prevents ntpd service to start 
+# after boot
+yum erase -y chrony
 # We use setup like this
 # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
 yum_wrapper install -y ntp

@@ -7,10 +7,10 @@ import redis
 from paramiko.ssh_exception import AuthenticationException, SSHException
 from flask_sqlalchemy_fix import SQLAlchemy
 from flask.ext.influxdb import InfluxDB
-from flask.ext.login import LoginManager
 from flask import current_app
 from werkzeug.contrib.cache import RedisCache
 
+from .login import LoginManager
 from .settings import (REDIS_HOST, REDIS_PORT,
                        SSH_KEY_FILENAME,
                        SSE_KEEPALIVE_INTERVAL,
@@ -18,8 +18,6 @@ from .settings import (REDIS_HOST, REDIS_PORT,
 
 
 login_manager = LoginManager()
-login_manager.session_protection = 'strong'
-login_manager.login_view = 'auth.login'
 
 db = SQLAlchemy()
 influx_db = InfluxDB()

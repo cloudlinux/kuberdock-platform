@@ -408,21 +408,21 @@ class TestPricingSSE(ExtendedAPITestCase):
         self.user_2, _ = self.fixtures.user_fixtures()
         self.user_1.package_id = self.package.id
         self.db.session.commit()
-
-        patcher = mock.patch('kubedock.billing.models.send_event')
-        self.addCleanup(patcher.stop)
-        self.send_event_mock = patcher.start()
+        
+        user_patcher = mock.patch('kubedock.billing.models.send_event_to_user')
+        role_patcher = mock.patch('kubedock.billing.models.send_event_to_role')
+        self.addCleanup(user_patcher.stop)
+        self.addCleanup(role_patcher.stop)
+        self.send_user_event_mock = user_patcher.start()
+        self.send_role_event_mock = role_patcher.start()
 
     def test_kube_change(self):
         self.admin_open(Url.kube(self.kube.id), 'PUT', valid_kube())
         updated = self.kube.to_dict()
-        self.send_event_mock.assert_has_calls([
-            mock.call('kube:change', updated, channel='user_{0}'.format(
-                self.user_1.id)),
-            mock.call('kube:change', updated, channel='common'),
-        ])
-        # other users shouldn't receive event
-        self.assertEqual(self.send_event_mock.call_count, 2)
+        self.send_user_event_mock.assert_called_once_with(
+            'kube:change', updated, self.user_1.id)
+        self.send_role_event_mock.assert_called_once_with(
+            'kube:change', updated, 1)
 
 
 class TestLicense(APITestCase):

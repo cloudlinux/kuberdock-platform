@@ -130,6 +130,9 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 new_volumes.append(volume_mount)
             container['volumeMounts'] = new_volumes
 
+        if data.get('edited_config') is not None:
+            data['edited_config'] = Pod(data['edited_config']).as_dict()
+
         for field in hide_fields:
             if field in data:
                 del data[field]

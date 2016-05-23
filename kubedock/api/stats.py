@@ -1,22 +1,23 @@
-import pytz
+from collections import defaultdict, namedtuple
+import datetime
 from flask import Blueprint, jsonify
+import pytz
+import time
+
 from ..core import db
+from ..exceptions import APIError, PermissionDenied
+from ..login import auth_required
 from ..stats import StatWrap5Min
 from ..pods.models import Pod
 from ..kubedata.kubestat import KubeStat
 from ..rbac import check_permission
-import time
-import datetime
-from collections import defaultdict, namedtuple
-from ..decorators import login_required_or_basic_or_token
-from ..exceptions import APIError, PermissionDenied
 from ..utils import all_request_params, KubeUtils
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 
 
 @stats.route('/', methods=['GET'], strict_slashes=False)
-@login_required_or_basic_or_token
+@auth_required
 def unit_stat():
     user = KubeUtils._get_current_user()
     params = all_request_params()

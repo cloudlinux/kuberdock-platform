@@ -6,10 +6,10 @@ import mock
 import ipaddress
 
 from kubedock.core import db
+from kubedock.exceptions import APIError
 from kubedock.kapi import ippool
 from kubedock.pods.models import IPPool
 from kubedock.testutils.testcases import DBTestCase
-from kubedock.exceptions import APIError
 from kubedock.testutils.testcases import attr
 
 

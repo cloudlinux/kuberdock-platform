@@ -35,6 +35,7 @@ SQLALCHEMY_MAX_OVERFLOW = 20
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 # SQLALCHEMY_ECHO=True
 SECRET_KEY = os.environ.get('SECRET_KEY', '0987654321')
+SESSION_LIFETIME = 3600
 
 KUBERDOCK_INTERNAL_USER = 'kuberdock-internal'
 TRIAL_KUBES = 10
@@ -111,6 +112,8 @@ CELERYBEAT_SCHEDULE = {
         'task': 'kubedock.tasks.send_stat',
         'schedule': timedelta(hours=24)
     },
+    # This task should be executed only for CEPH installations, so it will
+    # be removed from dict at the end of this file if no CEPH found
     'unmap-temp-mapped-drives': {
         'task': 'kubedock.kapi.pstorage.'
                 'unmap_temporary_mapped_ceph_drives_task',
@@ -196,3 +199,6 @@ try:
         CEPH_POOL_NAME = PD_NAMESPACE
 except ImportError:
     pass
+
+if not CEPH:
+    CELERYBEAT_SCHEDULE.pop('unmap-temp-mapped-drives', None)

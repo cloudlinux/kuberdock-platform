@@ -290,11 +290,13 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
 
             if (username && dateFrom && dateTo && dateOk && usernameOk){
                 utils.preloader.show();
-                $.ajax({
+                $.ajax({  // TODO: use Backbone.Model
+                    authWrap: true,
                     url: '/api/users/a/' + username,
                     data: {date_from: dateFrom, date_to: dateTo},
                     dataType: 'JSON',
-                    success: function(rs){
+                }).always(utils.preloader.hide).fail(utils.notifyWindow)
+                    .done(function(rs){
                         if(rs.data){
                             that.ui.tbody.empty();
                             if(rs.data.length == 0){
@@ -314,18 +316,7 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
                                 });
                             }
                         }
-                    },
-                    complete: utils.preloader.hide,
-                    error: function(xhr){
-                        if (xhr && xhr.responseJSON && xhr.responseJSON.type === 'UserNotFound'){
-                            utils.scrollTo(that.ui.username);
-                            utils.notifyInline('User "' + username + '" does not exists',
-                                               that.ui.username);
-                        } else {
-                            utils.notifyWindow(xhr);
-                        }
-                    },
-                });
+                    });
             }
         },
 
@@ -349,13 +340,12 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
                 autoSelect: false,
                 source: function(query, process){
                     that.ui.username.data('ready', false);
-                    $.ajax({
+                    $.ajax({  // TODO: use Backbone.Model
+                        authWrap: true,
                         url: '/api/users/q',
                         data: {'s': that.ui.username.val()},
                         cache: false,
-                        success: function(rs){ process(rs.data); },
-                        error: utils.notifyWindow,
-                    });
+                    }).fail(utils.notifyWindow).done(function(rs){ process(rs.data); });
                 },
                 updater: function(v){
                     that.ui.username.data('ready', true);
@@ -594,10 +584,12 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
             var that = this;
 
             utils.preloader.show();
-            $.ajax({
+            $.ajax({  // TODO: use Backbone.Model
+                authWrap: true,
                 url: '/api/users/logHistory',
                 data: {'uid': this.model.get('id')},
-                success: function(rs){
+            }).always(utils.preloader.hide).fail(utils.notifyWindow)
+                .done(function(rs){
                     if (rs.data.length != 0){
                         _.each(rs.data, function(itm){
                             that.ui.tb.append($('<tr>').append(
@@ -605,15 +597,12 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
                                 '<td>' + utils.toHHMMSS(itm[1]) + '</td>' +
                                 '<td>' + App.currentUser.localizeDatetime(itm[2]) + '</td>' +
                                 '<td>' + itm[3] + '</td>'
-                            ))
+                            ));
                         });
                     } else {
                         that.ui.tb.append($('<tr>').append('<td colspan="4" class="text-center">There is no login history for this user</td>'));
                     }
-                },
-                complete: utils.preloader.hide,
-                error: utils.notifyWindow,
-            });
+                });
         },
 
         login_this_user: function(){

@@ -331,7 +331,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         ui: {
             'nodes_page' : 'div#nodes-page',
-            'redeploy'   : 'button#redeploy_node',
+            // 'redeploy'   : 'button#redeploy_node',
             'delete'     : 'button#delete_node',
             'tabItem'    : 'ul.nav-sidebar li'
         },
@@ -339,7 +339,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         events: {
             'click @ui.tabItem'    : 'changeTab',
             'click @ui.nodes_page' : 'breadcrumbClick',
-            'click @ui.redeploy'   : 'redeployNode',
+            // 'click @ui.redeploy'   : 'redeployNode',
             'click @ui.delete'     : 'deleteNode'
         },
 
@@ -371,25 +371,25 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             else if (tgt.hasClass('nodeConfigurationTab')) App.navigate('nodes/' + this.nodeId + '/configuration', {trigger: true});
         },
 
-        redeployNode: function() {
-            var that = this,
-                name = that.model.get('hostname');
-
-            utils.modalDialog({
-                title: "Re-install " + name + "?",
-                body: "Are you sure you want to re-install node '" + name + "'?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        $.ajax({
-                            url: '/api/nodes/redeploy/' + that.model.id,
-                        });
-                    },
-                    buttonCancel: true
-                }
-            });
-        },
+        // redeployNode: function() {
+        //     var that = this,
+        //         name = that.model.get('hostname');
+        //
+        //     utils.modalDialog({
+        //         title: "Re-install " + name + "?",
+        //         body: "Are you sure you want to re-install node '" + name + "'?",
+        //         small: true,
+        //         show: true,
+        //         footer: {
+        //             buttonOk: function(){
+        //                 $.ajax({
+        //                     url: '/api/nodes/redeploy/' + that.model.id,
+        //                 });
+        //             },
+        //             buttonCancel: true
+        //         }
+        //     });
+        // },
 
         deleteNode: function() {
             var that = this;

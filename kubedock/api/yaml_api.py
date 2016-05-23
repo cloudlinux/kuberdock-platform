@@ -2,10 +2,11 @@ import yaml
 from copy import deepcopy
 from flask import Blueprint
 from flask.views import MethodView
-from kubedock.decorators import (login_required_or_basic_or_token,
-                                 maintenance_protected)
+
+from kubedock.decorators import maintenance_protected
 from kubedock.exceptions import APIError
-from kubedock.utils import KubeUtils, register_api, send_event
+from kubedock.login import auth_required
+from kubedock.utils import KubeUtils, register_api, send_event_to_user
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
 from kubedock.settings import KUBE_API_VERSION
@@ -22,7 +23,7 @@ class YamlAPI(KubeUtils, MethodView):
         KubeUtils.jsonwrap,
         check_permission('create', 'yaml_pods'),
         KubeUtils.pod_start_permissions,
-        login_required_or_basic_or_token
+        auth_required
     )
 
     @maintenance_protected
@@ -51,7 +52,7 @@ class YamlAPI(KubeUtils, MethodView):
             raise e
         except Exception as e:
             raise APIError('Unknown error during creating pod: {0}'.format(e))
-        send_event('pod:change', res, channel='user_{0}'.format(user.id))
+        send_event_to_user('pod:change', res, user.id)
         return res
 
 register_api(yamlapi, YamlAPI, 'yamlapi', '/', 'pod_id', strict_slashes=False)

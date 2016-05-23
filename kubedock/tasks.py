@@ -127,7 +127,7 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
 
 
 @celery.task()
-def add_new_node(node_id, with_testing=False, redeploy=False):
+def add_new_node(node_id, with_testing=False, redeploy=False, options=None):
 
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
@@ -222,6 +222,14 @@ def add_new_node(node_id, with_testing=False, redeploy=False):
         # we pass ports and hosts to let the node know which hosts are allowed
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
+
+        # Via AC-3191 we need the way to pass some additional
+        # parameters to node deploying.
+        if options is not None:
+            for key, value in options.items():
+                new_param = "{0}_PARAMS='{1}' ".format(key, value)
+                deploy_cmd = new_param + deploy_cmd
+
         i, o, e = ssh.exec_command(
             deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
                               node_interface, timezone, host,

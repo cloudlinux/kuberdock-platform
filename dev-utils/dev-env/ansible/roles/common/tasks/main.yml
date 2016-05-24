@@ -7,8 +7,12 @@
 - name: upgrade all packages
   yum: name=* state=latest
 
+- name: Fix default interface
+  shell: route add -net 8.8.8.8 netmask 255.255.255.255 {{ ansible_interfaces | last }}
+  when : ansible_default_ipv4.address=="10.0.2.15"
+
 - name: "Build hosts file"
-  lineinfile: dest=/etc/hosts line="{{ hostvars[item].ansible_all_ipv4_addresses | last }} {{ hostvars[item].ansible_hostname }}" state=present
+  lineinfile: dest=/etc/hosts line="{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_hostname }}" state=present
   when: hostvars[item].ansible_default_ipv4.address is defined
   with_items: "{{ groups.all }}"
 

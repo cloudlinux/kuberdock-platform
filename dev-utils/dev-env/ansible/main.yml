@@ -20,7 +20,7 @@
 
 - hosts: master
   tasks:
-    - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_all_ipv4_addresses | last }}"
+    - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
     - debug: msg="http://{{ kd_url }}:5000 [user:admin, password:admin]"
       run_once: true
       when: is_dev_install

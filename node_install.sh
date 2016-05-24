@@ -139,7 +139,94 @@ clean_node(){
 
     echo "=== Node clean up finished === $(date)"
 }
+
+RELEASE="CentOS Linux release 7.2"
+ARCH="x86_64"
+MIN_RAM_KB=1880344
+MIN_DISK_SIZE=10
+WARN_DISK_SIZE=50
+
+ERRORS=""
+WARNS=""
+
+check_release()
+{
+    cat /etc/redhat-release | grep "$RELEASE" > /dev/null
+    if [ $? -ne 0 ] || [ `uname -m` != $ARCH ];then
+        ERRORS="$ERRORS Inappropriate OS version\n"
+    fi
+}
+
+check_selinux(){
+    if [[ $(getenforce) != 'Enforcing' ]];then
+        ERRORS="$ERRORS Seems like SELinux is either disabled or is in a permissive mode on this node.\n\
+You should set it to \"enforcing\" mode in /etc/selinux/config, reboot the node and restart node installation.\n"
+    fi
+}
+
+check_mem(){
+    MEM=$(vmstat -s | head -n 1 | awk '{print $1}')
+    if [[ $MEM -lt $MIN_RAM_KB ]]; then
+        ERRORS="$ERRORS Node RAM space is insufficient\n"
+    fi
+}
+
+check_disk(){
+    DISK_SIZE=$(df --output=avail -BG / | tail -n +2)
+    if [ ${DISK_SIZE%?} -lt $MIN_DISK_SIZE ]; then
+        ERRORS="$ERRORS Node free disk space is insufficient\n"
+    fi
+}
+
+check_disk_for_production(){
+    if [ ${DISK_SIZE%?} -lt $WARN_DISK_SIZE ]; then
+        WARNS="$WARNS It is strongly recommended to free more disk space to avoid performance problems\n"
+    fi
+}
+
+check_xfs()
+{
+  if [ ! -d "$1" ]; then
+    mkdir -p "$1"
+  fi
+  FS=$(df --print-type "$1" | tail -1)
+  FS_TYPE=$(awk '{print $2}' <<< "$FS")
+  if [ "$FS_TYPE" != "xfs" ]; then
+    ERRORS="$ERRORS Only XFS supported as backing filesystem for disk space limits ($1)\n"
+  fi
+}
+
+check_release
+check_mem
+check_selinux
+check_xfs "/var/lib/docker/overlay"
+check_xfs "/var/lib/kuberdock/storage"
+
+if [[ $ERRORS ]]; then
+    printf "Following noncompliances of KD cluster requirements have been detected:\n"
+    printf "$ERRORS"
+    printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
+    exit 3
+fi
+
 clean_node
+
+check_disk
+
+if [[ $ERRORS ]]; then
+    printf "Following noncompliances of KD cluster requirements have been detected:\n"
+    printf "$ERRORS"
+    printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
+    exit 3
+fi
+
+check_disk_for_production
+
+if [[ $WARNS ]]; then
+    printf "Warning:\n"
+    printf "$WARNS"
+    printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
+fi
 
 check_status()
 {
@@ -151,15 +238,6 @@ check_status()
 }
 
 echo "Node OS: $(cat /etc/redhat-release)"
-
-if [[ $(getenforce) != 'Enforcing' ]];then
-    echo -e "Seems like SELinux is either disabled or is in a permissive" \
-    "mode on this node."\
-    "\nYou should set it to \"enforcing\" mode in /etc/selinux/config," \
-    "reboot the node and restart node installation."
-    exit 3
-fi
-
 
 yum_wrapper()
 {

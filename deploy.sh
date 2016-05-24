@@ -14,6 +14,43 @@ if [ $USER != "root" ]; then
     exit 1
 fi
 
+RELEASE="CentOS Linux release 7.2"
+ARCH="x86_64"
+MIN_RAM_KB=1880344
+MIN_DISK_SIZE=10
+
+check_release()
+{
+    cat /etc/redhat-release | grep "$RELEASE" > /dev/null
+    if [ $? -ne 0 ] || [ `uname -m` != $ARCH ];then
+        ERRORS="$ERRORS Inappropriate OS version\n"
+    fi
+}
+
+check_mem(){
+    MEM=$(vmstat -s | head -n 1 | awk '{print $1}')
+    if [[ $MEM -lt $MIN_RAM_KB ]]; then
+        ERRORS="$ERRORS Master RAM space is insufficient\n"
+    fi
+}
+
+check_disk(){
+    DISK_SIZE=$(df --output=avail -BG / | tail -n +2)
+    if [ ${DISK_SIZE%?} -lt $MIN_DISK_SIZE ]; then
+        ERRORS="$ERRORS Master free disk space is insufficient\n"
+    fi
+}
+
+check_release
+check_mem
+check_disk
+
+if [[ $ERRORS ]]; then
+    printf "Following noncompliances of KD cluster requirements have been detected:\n"
+    printf "$ERRORS"
+    printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
+    exit 3
+fi
 
 # IMPORTANT: each package must be installed with separate command because of
 # yum incorrect error handling!

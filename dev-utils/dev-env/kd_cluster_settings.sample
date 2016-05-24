@@ -32,8 +32,8 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: 2048
 #export KD_NODE_MEMORY=4096
 # CPU count
-# default: 2
-#export KD_NODE_CPUS=3
+# default: 1
+#export KD_NODE_CPUS=2
  
 # Path to private key for vagrant autentication in the OpenNebula
 # default: "~/.ssh/id_rsa"

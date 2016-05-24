@@ -19,7 +19,7 @@ from .settings import (
     KUBERDOCK_INTERNAL_USER
 )
 from .utils import (get_api_url,
-                    unregistered_pod_warning, send_event, send_event_to_role,
+                    unregistered_pod_warning, send_event_to_role,
                     send_event_to_user, pod_without_id_warning, k8s_json_object_hook)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
@@ -87,7 +87,7 @@ def send_pod_status_update(pod, db_pod, event_type, app):
             event = ('pod:delete'
                      if db_pod.status in ('deleting', 'deleted') else
                      'pod:change')
-            send_event_to_role(event, {'id': db_pod.id}, 1)   # common for admins
+            send_event_to_role(event, {'id': db_pod.id}, 'Admin')
             send_event_to_user(event, {'id': db_pod.id}, owner)
 
 
@@ -242,7 +242,7 @@ def process_nodes_event(data, app):
                 if node is not None:
                     current_app.logger.debug('Node %s - %s: fire change event',
                                              hostname, node.id)
-                    send_event('node:change', {'id': node.id})
+                    send_event_to_role('node:change', {'id': node.id}, 'Admin')
             tasks.process_node_actions.delay(node_host=hostname)
 
 
@@ -317,7 +317,7 @@ def process_events_event(data, app):
             message = 'Failed to run pod "{0}", reason: {1}'.format(
                 pod_name, reason
             )
-            send_event('notify:error', {'message': message})
+            send_event_to_user('notify:error', {'message': message}, user.id)
 
             # message for admins
             message = 'Failed to run pod "{0}", user "{1}", reason: {2}'
@@ -326,7 +326,7 @@ def process_events_event(data, app):
             if node is not None:
                 message += ' (pinned to node "{0}")'.format(node)
 
-            send_event('notify:error', {'message': message})
+            send_event_to_role('notify:error', {'message': message}, 'Admin')
             try:
                 pods = PodCollection(user)
                 params = {'command': 'stop'}
@@ -487,8 +487,9 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                                 been encountered. Please contact KuberDock\
                                 Support (see Settings, the License page)"
                             with app.app_context():
-                                send_event('notify:error',
-                                           {'message': message})
+                                send_event_to_role('notify:error',
+                                                   {'message': message},
+                                                   'Admin')
                                 current_app.logger.error(
                                     'skip event {}'.format(data))
 
@@ -551,7 +552,8 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
                         message = "Problems in the listeners module have been\
                             encountered. Please contact KuberDock Support\
                             (see Settings, the License page)"
-                        send_event('notify:error', {'message': message})
+                        send_event_to_role(
+                            'notify:error', {'message': message}, 'Admin')
                         current_app.logger.error('skip event {}'.format(data))
                     index = int(data['node']['modifiedIndex']) + 1
                     retry = 0

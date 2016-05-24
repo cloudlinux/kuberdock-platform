@@ -71,6 +71,7 @@ def make_celery(app=None):
 
     class ContextTask(TaskBase):
         abstract = True
+        flask_app = app
 
         def __call__(self, *args, **kwargs):
             with app.app_context():

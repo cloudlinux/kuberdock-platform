@@ -207,7 +207,12 @@ class NodeManager(Command):
 
     def run(self, hostname, kube_type, do_deploy, wait, timeout, testing,
             docker_options):
-        options = {'DOCKER': docker_options}
+
+        options = None
+
+        if docker_options is not None:
+            options = {'DOCKER': docker_options}
+
         if get_maintenance():
             raise InvalidCommand(
                 'Kuberdock is in maintenance mode. Operation canceled'

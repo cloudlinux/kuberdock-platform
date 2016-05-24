@@ -1,0 +1,140 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://gcr.io/v1/repositories/google_containers/etcd/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      alt-svc: ['quic=":443"; ma=2592000; v="34,33,32,31,30,29,28,27,26,25"']
+      alternate-protocol: ['443:quic']
+      content-length: ['2']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:19 GMT']
+      server: [Docker Registry]
+      x-docker-endpoints: [gcr.io]
+      x-docker-token: [AFy55sKoNSd526u8fdLrbTQgRUBjDvFxxU2sQPl5m4/5k4W0p/KjEdDtYHSoBxyAVomnzZsiZsDHr+/B1ky6T80WgGDOgZzcgfWsFbQcRJywpBMrYx6Y7que9EowP9YdC4Q7KoIRVUsHfEbNNQQEfpKguvDd44ISzmLwDaNrmLOM5f9HKk7bSxTJKVaMw3Dp45t6l0+Xeu2zUL8mFU3+GFN0qmmCTJRtEfwQjkfwCpr1d9W8KwvnDWdX/7R1ek7MZjzR3wqf6aaHghfYUIiKx7k9Aadf23kfebZ0YQgixCdurpAWFRAPEppLpXBgAF8Ja2iUhkV0kQoehvt0N1XLtApYKWqA+yUKNPApfH0iJcCjt/2bdnzbmBYTU1qb0EyYBZVxBAph9UfPRXI+LqTOtvr4fY6sYbD5Hg==]
+      x-frame-options: [SAMEORIGIN]
+      x-xss-protection: [1; mode=block]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      authorization: [Token AFy55sKoNSd526u8fdLrbTQgRUBjDvFxxU2sQPl5m4/5k4W0p/KjEdDtYHSoBxyAVomnzZsiZsDHr+/B1ky6T80WgGDOgZzcgfWsFbQcRJywpBMrYx6Y7que9EowP9YdC4Q7KoIRVUsHfEbNNQQEfpKguvDd44ISzmLwDaNrmLOM5f9HKk7bSxTJKVaMw3Dp45t6l0+Xeu2zUL8mFU3+GFN0qmmCTJRtEfwQjkfwCpr1d9W8KwvnDWdX/7R1ek7MZjzR3wqf6aaHghfYUIiKx7k9Aadf23kfebZ0YQgixCdurpAWFRAPEppLpXBgAF8Ja2iUhkV0kQoehvt0N1XLtApYKWqA+yUKNPApfH0iJcCjt/2bdnzbmBYTU1qb0EyYBZVxBAph9UfPRXI+LqTOtvr4fY6sYbD5Hg==]
+    method: GET
+    uri: https://gcr.io/v1/repositories/google_containers/etcd/tags/2.0.9
+  response:
+    body: {string: !!python/unicode '"b6b9a86dc06aa1361357ca1b105feba961f6a4145adca6c54e142c0be0fe87b0"'}
+    headers:
+      alt-svc: ['quic=":443"; ma=2592000; v="34,33,32,31,30,29,28,27,26,25"']
+      alternate-protocol: ['443:quic']
+      content-length: ['66']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:19 GMT']
+      server: [Docker Registry]
+      x-frame-options: [SAMEORIGIN]
+      x-xss-protection: [1; mode=block]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://gcr.io/v1/repositories/google_containers/kube2sky/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      alt-svc: ['quic=":443"; ma=2592000; v="34,33,32,31,30,29,28,27,26,25"']
+      alternate-protocol: ['443:quic']
+      content-length: ['2']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:20 GMT']
+      server: [Docker Registry]
+      x-docker-endpoints: [gcr.io]
+      x-docker-token: [AFy55sKt1zuk+49eU//b+OmWMFO7BGljWCNXSIt7qkAyouTnJYfEWR854dGWv3MUk6tHZHx+DJDbUSXlQqXzaDiXI00cMrPSuFvWbDVN9yz4NvYhZAPRopbOYPVGbMEmECimhArc/0uOOqStGT0aw5V5HMk9iUewmprEAfUclo0lWSMe5YzCW5odfSUY7AJ1kdi7zRN/DziLBosuk5AgZ1SjynAMOP7PuUIRiy+8WoHjKH1Ih003FNK+RM8HuSkPssUTa+pKfefbPIDPqa93Qdc/GDWMRBPPAlnrlvLtiwa9mI3+rBVP6/JmDCbXIWZhVvlFFg0PKDCBAqxr5zblwhjnFpj2Wd43WUyB0uZ7cZuFoPWkB/424xrNT5JGNd7dkxo7+80u4U7asDGnPRy9DC2DW1IC/PCYUsiy2gd7qqsW]
+      x-frame-options: [SAMEORIGIN]
+      x-xss-protection: [1; mode=block]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      authorization: [Token AFy55sKt1zuk+49eU//b+OmWMFO7BGljWCNXSIt7qkAyouTnJYfEWR854dGWv3MUk6tHZHx+DJDbUSXlQqXzaDiXI00cMrPSuFvWbDVN9yz4NvYhZAPRopbOYPVGbMEmECimhArc/0uOOqStGT0aw5V5HMk9iUewmprEAfUclo0lWSMe5YzCW5odfSUY7AJ1kdi7zRN/DziLBosuk5AgZ1SjynAMOP7PuUIRiy+8WoHjKH1Ih003FNK+RM8HuSkPssUTa+pKfefbPIDPqa93Qdc/GDWMRBPPAlnrlvLtiwa9mI3+rBVP6/JmDCbXIWZhVvlFFg0PKDCBAqxr5zblwhjnFpj2Wd43WUyB0uZ7cZuFoPWkB/424xrNT5JGNd7dkxo7+80u4U7asDGnPRy9DC2DW1IC/PCYUsiy2gd7qqsW]
+    method: GET
+    uri: https://gcr.io/v1/repositories/google_containers/kube2sky/tags/1.11
+  response:
+    body: {string: !!python/unicode '"e52a547dca17cd83e8b6022e8ae1c1883d0855bce2d1c30071ffa0dcb8a8caf6"'}
+    headers:
+      alt-svc: ['quic=":443"; ma=2592000; v="34,33,32,31,30,29,28,27,26,25"']
+      alternate-protocol: ['443:quic']
+      content-length: ['66']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:20 GMT']
+      server: [Docker Registry]
+      x-frame-options: [SAMEORIGIN]
+      x-xss-protection: [1; mode=block]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://gcr.io/v1/repositories/google_containers/skydns/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      alt-svc: ['quic=":443"; ma=2592000; v="34,33,32,31,30,29,28,27,26,25"']
+      alternate-protocol: ['443:quic']
+      content-length: ['2']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:20 GMT']
+      server: [Docker Registry]
+      x-docker-endpoints: [gcr.io]
+      x-docker-token: [AFy55sLSVeoyrpt9qy67WOiMibB/FSErcpN2Bm0hKF0HMpOJFmhzw13ytoTFrAOS1a9Rp0kSRvtUEhLVhpMr5W3AG2KYnMBZLp7WdVqEYlr3W68UwYXWFGdRl5rUp66rbQWLUyZRrupGgkiYxCmic9VUU088ju924rM35bPpNERkKHcP/W+INOEtAwdV2fLTKifzCaDQh6xVytnOYjEDwSSH/lR8DfxjIRQV6Kq4MFwbKOAV19+Vuek852+0X7dafOtoqzIbXVsXhWAVj6MEINFNM7Nhb6jFoLZmmBWN0JtKLiGdSbKNqjHbbnsMpJ2T7yY5WT8VsGZLJzia5u2xcraiC9Af2qqMf5466SW3AwC3rjbEqBo1ICERbbOO777znbjpRwRPNzKG0ZJGW34KrKg8nxV8XTJ2jwK6UTQ=]
+      x-frame-options: [SAMEORIGIN]
+      x-xss-protection: [1; mode=block]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      authorization: [Token AFy55sLSVeoyrpt9qy67WOiMibB/FSErcpN2Bm0hKF0HMpOJFmhzw13ytoTFrAOS1a9Rp0kSRvtUEhLVhpMr5W3AG2KYnMBZLp7WdVqEYlr3W68UwYXWFGdRl5rUp66rbQWLUyZRrupGgkiYxCmic9VUU088ju924rM35bPpNERkKHcP/W+INOEtAwdV2fLTKifzCaDQh6xVytnOYjEDwSSH/lR8DfxjIRQV6Kq4MFwbKOAV19+Vuek852+0X7dafOtoqzIbXVsXhWAVj6MEINFNM7Nhb6jFoLZmmBWN0JtKLiGdSbKNqjHbbnsMpJ2T7yY5WT8VsGZLJzia5u2xcraiC9Af2qqMf5466SW3AwC3rjbEqBo1ICERbbOO777znbjpRwRPNzKG0ZJGW34KrKg8nxV8XTJ2jwK6UTQ=]
+    method: GET
+    uri: https://gcr.io/v1/repositories/google_containers/skydns/tags/2015-03-11-001
+  response:
+    body: {string: !!python/unicode '"791ddf327076e0fd35a1125568a56c05ee1f1dfd7a165c74f4d489d8a5e65ac5"'}
+    headers:
+      alt-svc: ['quic=":443"; ma=2592000; v="34,33,32,31,30,29,28,27,26,25"']
+      alternate-protocol: ['443:quic']
+      content-length: ['66']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:20 GMT']
+      server: [Docker Registry]
+      x-frame-options: [SAMEORIGIN]
+      x-xss-protection: [1; mode=block]
+    status: {code: 200, message: OK}
+version: 1

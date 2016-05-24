@@ -1,0 +1,304 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/library/nginx/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors":[{"code":"UNAUTHORIZED","message":"authentication
+        required","detail":[{"Type":"repository","Name":"library/nginx","Action":"pull"}]}]}
+
+'}
+    headers:
+      content-length: ['145']
+      content-type: [application/json; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:25:52 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      strict-transport-security: [max-age=31536000]
+      www-authenticate: ['Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/nginx:pull"']
+    status: {code: 401, message: Unauthorized}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://auth.docker.io/token?scope=repository%3Alibrary%2Fnginx%3Apull&service=registry.docker.io
+  response:
+    body: {string: !!python/unicode '{"token":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImxpYnJhcnkvbmdpbngiLCJhY3Rpb25zIjpbInB1bGwiXX1dLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuaW8iLCJleHAiOjE0NjQxMDAyNTIsImlhdCI6MTQ2NDA5OTk1MiwiaXNzIjoiYXV0aC5kb2NrZXIuaW8iLCJqdGkiOiJUUDhVeHBicy10VkluRzRJcUZneiIsIm5iZiI6MTQ2NDA5OTk1Miwic3ViIjoiIn0.FQhvtX0Ey5NtQu4zBc1ckIABMe-YLO6T_f6jqGqtHBKElg14UcAd8c7dTjOtnKzts3f6nIXZemZTIF9qFLjQnA"}
+
+'}
+    headers:
+      content-length: ['1442']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:25:52 GMT']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImxpYnJhcnkvbmdpbngiLCJhY3Rpb25zIjpbInB1bGwiXX1dLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuaW8iLCJleHAiOjE0NjQxMDAyNTIsImlhdCI6MTQ2NDA5OTk1MiwiaXNzIjoiYXV0aC5kb2NrZXIuaW8iLCJqdGkiOiJUUDhVeHBicy10VkluRzRJcUZneiIsIm5iZiI6MTQ2NDA5OTk1Miwic3ViIjoiIn0.FQhvtX0Ey5NtQu4zBc1ckIABMe-YLO6T_f6jqGqtHBKElg14UcAd8c7dTjOtnKzts3f6nIXZemZTIF9qFLjQnA]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/library/nginx/manifests/latest
+  response:
+    body: {string: !!python/unicode "{\n   \"schemaVersion\": 1,\n   \"name\": \"library/nginx\",\n
+        \  \"tag\": \"latest\",\n   \"architecture\": \"amd64\",\n   \"fsLayers\":
+        [\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:4ef177b369db36e463a9bd44b64669f2da2c80436d9d52178840c37783edcf0b\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:31c7abf879e0ca73db0d8cf61f06343aa653efd1be8cf1dec67f839a9beb71fa\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:8b87079b7a06f9b72e3cca2c984c60e118229c60f0bff855d822f758c112b485\"\n
+        \     }\n   ],\n   \"history\": [\n      {\n         \"v1Compatibility\":
+        \"{\\\"id\\\":\\\"44d8b6f34ba13fdbf1da947d4bc6467eadae1cc84c2090011803f7b0862ea124\\\",\\\"parent\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"created\\\":\\\"2016-05-04T02:38:24.65110644Z\\\",\\\"container\\\":\\\"7c2e630466fb4156ec9300a1143b076b0a50b2b26bab353fcb20246c568ec56d\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        CMD [\\\\\\\"nginx\\\\\\\" \\\\\\\"-g\\\\\\\" \\\\\\\"daemon off;\\\\\\\"]\\\"],\\\"Image\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"nginx\\\",\\\"-g\\\",\\\"daemon
+        off;\\\"],\\\"Image\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"parent\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"created\\\":\\\"2016-05-04T02:38:23.971796177Z\\\",\\\"container\\\":\\\"4a43a5012d8f761e69750d405a1c2f2f33b3749c44819f6a2d38b867f3c7594d\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        EXPOSE 443/tcp 80/tcp\\\"],\\\"Image\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"parent\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"created\\\":\\\"2016-05-04T02:38:23.281254525Z\\\",\\\"container\\\":\\\"e6a3c6b795241004cb16ad405c50d612102dcb4088dad65f728b54743d3aac7f\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"ln
+        -sf /dev/stdout /var/log/nginx/access.log \\\\t\\\\u0026\\\\u0026 ln -sf /dev/stderr
+        /var/log/nginx/error.log\\\"],\\\"Image\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\",\\\"Size\\\":22}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"parent\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"created\\\":\\\"2016-05-04T02:38:20.521249378Z\\\",\\\"container\\\":\\\"9c70272b265182644d9244d29d23b434ddbbbcdea0c38f14d2e431803e9d1a39\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"apt-key
+        adv --keyserver hkp://pgp.mit.edu:80 --recv-keys 573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
+        \\\\t\\\\u0026\\\\u0026 echo \\\\\\\"deb http://nginx.org/packages/mainline/debian/
+        jessie nginx\\\\\\\" \\\\u003e\\\\u003e /etc/apt/sources.list \\\\t\\\\u0026\\\\u0026
+        apt-get update \\\\t\\\\u0026\\\\u0026 apt-get install --no-install-recommends
+        --no-install-suggests -y \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tca-certificates \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx=${NGINX_VERSION}
+        \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-xslt \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-geoip
+        \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-image-filter \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-perl
+        \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-njs \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tgettext-base
+        \\\\t\\\\u0026\\\\u0026 rm -rf /var/lib/apt/lists/*\\\"],\\\"Image\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\",\\\"Size\\\":57679849}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"parent\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"created\\\":\\\"2016-05-04T02:37:20.114806976Z\\\",\\\"container\\\":\\\"6db2de21a9760307b24893278b33a6083a39b75df4a43368de9435ee24d1a801\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        ENV NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Image\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"parent\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"created\\\":\\\"2016-05-04T02:37:19.451029312Z\\\",\\\"container\\\":\\\"19f380f6eac86e499aedd73ccba85345a87f23d5cca132235587c25f3c66d130\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        MAINTAINER NGINX Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\"],\\\"Image\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"parent\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"created\\\":\\\"2016-05-03T20:57:42.27113855Z\\\",\\\"container\\\":\\\"f8bceb20fea95b09b0afc57e452dcb5d47f82c3b485e143dec8a81db3ea56223\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        CMD [\\\\\\\"/bin/bash\\\\\\\"]\\\"],\\\"Image\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"created\\\":\\\"2016-05-03T20:57:39.257486754Z\\\",\\\"container\\\":\\\"f416997e8b711f363b642ba6f360fd2312829c3e15fca5244d5d877d5251be06\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        ADD file:dc2eddd5d35b9d66e4db747f5939b2be7f863dcee64c934b0da690f55a23aee8
+        in /\\\"],\\\"Image\\\":\\\"\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":null},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":null,\\\"Image\\\":\\\"\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":null},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\",\\\"Size\\\":125093399}\"\n
+        \     }\n   ],\n   \"signatures\": [\n      {\n         \"header\": {\n            \"jwk\":
+        {\n               \"crv\": \"P-256\",\n               \"kid\": \"LUQI:WBTB:JRDU:TTD2:FUVY:EMCB:64HP:MZF6:SGFS:XAB6:JPUK:6PK4\",\n
+        \              \"kty\": \"EC\",\n               \"x\": \"zjkAuFGpCuWOBl-iMMzZqgl_1cid-04S04-k-A1qEeU\",\n
+        \              \"y\": \"9HWcOMfVFUMXJGeNajIAlPicL4UOsCJSpqRcIxpUl0Q\"\n            },\n
+        \           \"alg\": \"ES256\"\n         },\n         \"signature\": \"RYJXRvHdq__o-QDN4kd50O6M88_q_IBtSXEcqszLURBThArhRApvkPEJpf1_A9tUyXQCbZlKj8G_Og5tsSaB2Q\",\n
+        \        \"protected\": \"eyJmb3JtYXRMZW5ndGgiOjEzNTkxLCJmb3JtYXRUYWlsIjoiQ24wIiwidGltZSI6IjIwMTYtMDUtMjRUMTQ6MjU6NTNaIn0\"\n
+        \     }\n   ]\n}"}
+    headers:
+      content-length: ['14239']
+      content-type: [application/vnd.docker.distribution.manifest.v1+prettyjws]
+      date: ['Tue, 24 May 2016 14:25:53 GMT']
+      docker-content-digest: ['sha256:46a1b05e9ded54272e11b06e13727371a65e2ef8a87f9fb447c64e0607b90340']
+      docker-distribution-api-version: [registry/2.0]
+      etag: ['"sha256:46a1b05e9ded54272e11b06e13727371a65e2ef8a87f9fb447c64e0607b90340"']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/library/nginx/manifests/1.9
+  response:
+    body: {string: !!python/unicode '{"errors":[{"code":"UNAUTHORIZED","message":"authentication
+        required","detail":[{"Type":"repository","Name":"library/nginx","Action":"pull"}]}]}
+
+'}
+    headers:
+      content-length: ['145']
+      content-type: [application/json; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:25:53 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      strict-transport-security: [max-age=31536000]
+      www-authenticate: ['Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/nginx:pull"']
+    status: {code: 401, message: Unauthorized}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://auth.docker.io/token?scope=repository%3Alibrary%2Fnginx%3Apull&service=registry.docker.io
+  response:
+    body: {string: !!python/unicode '{"token":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImxpYnJhcnkvbmdpbngiLCJhY3Rpb25zIjpbInB1bGwiXX1dLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuaW8iLCJleHAiOjE0NjQxMDAyNTQsImlhdCI6MTQ2NDA5OTk1NCwiaXNzIjoiYXV0aC5kb2NrZXIuaW8iLCJqdGkiOiI5eXdNRXZwZ3Iyb1FwTzhWbExJMyIsIm5iZiI6MTQ2NDA5OTk1NCwic3ViIjoiIn0.EYhIaEKphIEB3zhSy9r7g0-U8bEs9l6LjbbEaug4TaoxKucbp0TMnYfgxiiMfeplBRcqhKcZElo-rEYLIrJh6w"}
+
+'}
+    headers:
+      content-length: ['1442']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:25:54 GMT']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImxpYnJhcnkvbmdpbngiLCJhY3Rpb25zIjpbInB1bGwiXX1dLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuaW8iLCJleHAiOjE0NjQxMDAyNTQsImlhdCI6MTQ2NDA5OTk1NCwiaXNzIjoiYXV0aC5kb2NrZXIuaW8iLCJqdGkiOiI5eXdNRXZwZ3Iyb1FwTzhWbExJMyIsIm5iZiI6MTQ2NDA5OTk1NCwic3ViIjoiIn0.EYhIaEKphIEB3zhSy9r7g0-U8bEs9l6LjbbEaug4TaoxKucbp0TMnYfgxiiMfeplBRcqhKcZElo-rEYLIrJh6w]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/library/nginx/manifests/1.9
+  response:
+    body: {string: !!python/unicode "{\n   \"schemaVersion\": 1,\n   \"name\": \"library/nginx\",\n
+        \  \"tag\": \"1.9\",\n   \"architecture\": \"amd64\",\n   \"fsLayers\": [\n
+        \     {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:4ef177b369db36e463a9bd44b64669f2da2c80436d9d52178840c37783edcf0b\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:31c7abf879e0ca73db0d8cf61f06343aa653efd1be8cf1dec67f839a9beb71fa\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:8b87079b7a06f9b72e3cca2c984c60e118229c60f0bff855d822f758c112b485\"\n
+        \     }\n   ],\n   \"history\": [\n      {\n         \"v1Compatibility\":
+        \"{\\\"id\\\":\\\"44d8b6f34ba13fdbf1da947d4bc6467eadae1cc84c2090011803f7b0862ea124\\\",\\\"parent\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"created\\\":\\\"2016-05-04T02:38:24.65110644Z\\\",\\\"container\\\":\\\"7c2e630466fb4156ec9300a1143b076b0a50b2b26bab353fcb20246c568ec56d\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        CMD [\\\\\\\"nginx\\\\\\\" \\\\\\\"-g\\\\\\\" \\\\\\\"daemon off;\\\\\\\"]\\\"],\\\"Image\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"nginx\\\",\\\"-g\\\",\\\"daemon
+        off;\\\"],\\\"Image\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"317a0530f60c747e425f5a011a943939db69d53beaad8f89c81ace4b487442df\\\",\\\"parent\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"created\\\":\\\"2016-05-04T02:38:23.971796177Z\\\",\\\"container\\\":\\\"4a43a5012d8f761e69750d405a1c2f2f33b3749c44819f6a2d38b867f3c7594d\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        EXPOSE 443/tcp 80/tcp\\\"],\\\"Image\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"ExposedPorts\\\":{\\\"443/tcp\\\":{},\\\"80/tcp\\\":{}},\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"d678ea5a2d0ec59f8f4ea30521497acf406abb1a4f6b0604a2e8ef377cd6c194\\\",\\\"parent\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"created\\\":\\\"2016-05-04T02:38:23.281254525Z\\\",\\\"container\\\":\\\"e6a3c6b795241004cb16ad405c50d612102dcb4088dad65f728b54743d3aac7f\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"ln
+        -sf /dev/stdout /var/log/nginx/access.log \\\\t\\\\u0026\\\\u0026 ln -sf /dev/stderr
+        /var/log/nginx/error.log\\\"],\\\"Image\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\",\\\"Size\\\":22}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"87e1e2763a003dee7e37eb17f8f8d3f7f2b16c9f1c7c38f0c6f9602e2f2814de\\\",\\\"parent\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"created\\\":\\\"2016-05-04T02:38:20.521249378Z\\\",\\\"container\\\":\\\"9c70272b265182644d9244d29d23b434ddbbbcdea0c38f14d2e431803e9d1a39\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"apt-key
+        adv --keyserver hkp://pgp.mit.edu:80 --recv-keys 573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
+        \\\\t\\\\u0026\\\\u0026 echo \\\\\\\"deb http://nginx.org/packages/mainline/debian/
+        jessie nginx\\\\\\\" \\\\u003e\\\\u003e /etc/apt/sources.list \\\\t\\\\u0026\\\\u0026
+        apt-get update \\\\t\\\\u0026\\\\u0026 apt-get install --no-install-recommends
+        --no-install-suggests -y \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tca-certificates \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx=${NGINX_VERSION}
+        \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-xslt \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-geoip
+        \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-image-filter \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-perl
+        \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tnginx-module-njs \\\\t\\\\t\\\\t\\\\t\\\\t\\\\tgettext-base
+        \\\\t\\\\u0026\\\\u0026 rm -rf /var/lib/apt/lists/*\\\"],\\\"Image\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\",\\\"Size\\\":57679849}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"6120d528fa8526aaf8ab363f38dfa2bf0b58f8c6bf8a00b6b62e10eb070dc0c9\\\",\\\"parent\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"created\\\":\\\"2016-05-04T02:37:20.114806976Z\\\",\\\"container\\\":\\\"6db2de21a9760307b24893278b33a6083a39b75df4a43368de9435ee24d1a801\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        ENV NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Image\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\",\\\"NGINX_VERSION=1.9.15-1~jessie\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"69e54556b9dc43068d3f234ba8b972cab135d19d95f03f4b27a715d81134c497\\\",\\\"parent\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"created\\\":\\\"2016-05-04T02:37:19.451029312Z\\\",\\\"container\\\":\\\"19f380f6eac86e499aedd73ccba85345a87f23d5cca132235587c25f3c66d130\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        MAINTAINER NGINX Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\"],\\\"Image\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"author\\\":\\\"NGINX
+        Docker Maintainers \\\\\\\"docker-maint@nginx.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"ebdf1cd8a5745e8a97e9806392cdd69469620bff2e3ee5a7bd51a5a1f4300904\\\",\\\"parent\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"created\\\":\\\"2016-05-03T20:57:42.27113855Z\\\",\\\"container\\\":\\\"f8bceb20fea95b09b0afc57e452dcb5d47f82c3b485e143dec8a81db3ea56223\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        CMD [\\\\\\\"/bin/bash\\\\\\\"]\\\"],\\\"Image\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"e9fa146e2b2b375fd4c6b096b63eff61065f6cbe15b8606932f838bfb708b8cb\\\",\\\"created\\\":\\\"2016-05-03T20:57:39.257486754Z\\\",\\\"container\\\":\\\"f416997e8b711f363b642ba6f360fd2312829c3e15fca5244d5d877d5251be06\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        ADD file:dc2eddd5d35b9d66e4db747f5939b2be7f863dcee64c934b0da690f55a23aee8
+        in /\\\"],\\\"Image\\\":\\\"\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":null},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"f416997e8b71\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":null,\\\"Image\\\":\\\"\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":null},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\",\\\"Size\\\":125093399}\"\n
+        \     }\n   ],\n   \"signatures\": [\n      {\n         \"header\": {\n            \"jwk\":
+        {\n               \"crv\": \"P-256\",\n               \"kid\": \"LUQI:WBTB:JRDU:TTD2:FUVY:EMCB:64HP:MZF6:SGFS:XAB6:JPUK:6PK4\",\n
+        \              \"kty\": \"EC\",\n               \"x\": \"zjkAuFGpCuWOBl-iMMzZqgl_1cid-04S04-k-A1qEeU\",\n
+        \              \"y\": \"9HWcOMfVFUMXJGeNajIAlPicL4UOsCJSpqRcIxpUl0Q\"\n            },\n
+        \           \"alg\": \"ES256\"\n         },\n         \"signature\": \"Al_YtCmVm1ekFxDSKJF54P2aGfjIOepQ2zJBSmBnc7A1PLTntH8sQkqSzEOECNHrjxk7yunpzauex2txKOtZkg\",\n
+        \        \"protected\": \"eyJmb3JtYXRMZW5ndGgiOjEzNTg4LCJmb3JtYXRUYWlsIjoiQ24wIiwidGltZSI6IjIwMTYtMDUtMjRUMTQ6MjU6NTRaIn0\"\n
+        \     }\n   ]\n}"}
+    headers:
+      content-length: ['14236']
+      content-type: [application/vnd.docker.distribution.manifest.v1+prettyjws]
+      date: ['Tue, 24 May 2016 14:25:54 GMT']
+      docker-content-digest: ['sha256:ad3e32e8884920e233b976a422a7dda9f2538f7735369b6f950a32e94ab7d9a8']
+      docker-distribution-api-version: [registry/2.0]
+      etag: ['"sha256:ad3e32e8884920e233b976a422a7dda9f2538f7735369b6f950a32e94ab7d9a8"']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/library/debian/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors":[{"code":"UNAUTHORIZED","message":"authentication
+        required","detail":[{"Type":"repository","Name":"library/debian","Action":"pull"}]}]}
+
+'}
+    headers:
+      content-length: ['146']
+      content-type: [application/json; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:25:55 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      strict-transport-security: [max-age=31536000]
+      www-authenticate: ['Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/debian:pull"']
+    status: {code: 401, message: Unauthorized}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://auth.docker.io/token?scope=repository%3Alibrary%2Fdebian%3Apull&service=registry.docker.io
+  response:
+    body: {string: !!python/unicode '{"token":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImxpYnJhcnkvZGViaWFuIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDY0MTAwMjU1LCJpYXQiOjE0NjQwOTk5NTUsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoiRGNlWDgwSjY1aTVCWGVYYTlud00iLCJuYmYiOjE0NjQwOTk5NTUsInN1YiI6IiJ9.D9WwulOyi5tPs0GX6nwgRecXsjhKvFA7srCKA9qeM5OoNYv6J7uEf90XXGjhOQ8Q4G2lX-qq866sMHZu_7DSkA"}
+
+'}
+    headers:
+      content-length: ['1443']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:25:55 GMT']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImxpYnJhcnkvZGViaWFuIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDY0MTAwMjU1LCJpYXQiOjE0NjQwOTk5NTUsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoiRGNlWDgwSjY1aTVCWGVYYTlud00iLCJuYmYiOjE0NjQwOTk5NTUsInN1YiI6IiJ9.D9WwulOyi5tPs0GX6nwgRecXsjhKvFA7srCKA9qeM5OoNYv6J7uEf90XXGjhOQ8Q4G2lX-qq866sMHZu_7DSkA]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/library/debian/manifests/latest
+  response:
+    body: {string: !!python/unicode "{\n   \"schemaVersion\": 1,\n   \"name\": \"library/debian\",\n
+        \  \"tag\": \"latest\",\n   \"architecture\": \"amd64\",\n   \"fsLayers\":
+        [\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b\"\n
+        \     }\n   ],\n   \"history\": [\n      {\n         \"v1Compatibility\":
+        \"{\\\"id\\\":\\\"c7fb0a077d24adf502a849eb20caebf5e5485bbceff66ecfe6d20221a57d8cd0\\\",\\\"parent\\\":\\\"ab998debe217fc9749dba7168a9e4910c1e23f839fb902358cee96c3b7f4585c\\\",\\\"created\\\":\\\"2016-05-23T22:57:23.255025884Z\\\",\\\"container\\\":\\\"6ba76e17ac4de971080430eec169486bf9c481f4cb460356294421e324ffca3a\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"b0cf605c7757\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        CMD [\\\\\\\"/bin/bash\\\\\\\"]\\\"],\\\"Image\\\":\\\"ab998debe217fc9749dba7168a9e4910c1e23f839fb902358cee96c3b7f4585c\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":{}},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"b0cf605c7757\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/bash\\\"],\\\"Image\\\":\\\"ab998debe217fc9749dba7168a9e4910c1e23f839fb902358cee96c3b7f4585c\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":{}},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\"}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"ab998debe217fc9749dba7168a9e4910c1e23f839fb902358cee96c3b7f4585c\\\",\\\"created\\\":\\\"2016-05-23T22:57:20.19311015Z\\\",\\\"container\\\":\\\"b0cf605c7757e01fee8f1acffe662a035487983586d3383b3c7a272d520c985f\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"b0cf605c7757\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        ADD file:5d8521419ad6cfb6956ed26ab70a44422d512f82462046ba8e68b7dcb8283f7e
+        in /\\\"],\\\"Image\\\":\\\"\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":null},\\\"docker_version\\\":\\\"1.9.1\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"b0cf605c7757\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":null,\\\"Cmd\\\":null,\\\"Image\\\":\\\"\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":null,\\\"OnBuild\\\":null,\\\"Labels\\\":null},\\\"architecture\\\":\\\"amd64\\\",\\\"os\\\":\\\"linux\\\",\\\"Size\\\":125093399}\"\n
+        \     }\n   ],\n   \"signatures\": [\n      {\n         \"header\": {\n            \"jwk\":
+        {\n               \"crv\": \"P-256\",\n               \"kid\": \"HK7L:MA6S:LVTE:Y5Y6:CJHG:HAVJ:GIIO:EU3R:B5HU:4EJL:QMHF:L6KD\",\n
+        \              \"kty\": \"EC\",\n               \"x\": \"raigj2DSdcDlQTZiOQn9lsliWDhGCqkA47jbaQO1CZY\",\n
+        \              \"y\": \"3tZmDB-sg2oFzwarKT6P_4ygxxJ4BcMrB7grI_Gc-Qc\"\n            },\n
+        \           \"alg\": \"ES256\"\n         },\n         \"signature\": \"XCZB4wUxJvd5Q3rKVVU_zfESMF5z4gclDQYu0VZ_XE6y7wBb917azI8_9He1q7w0XJ5woqhlHeVtI-oBt4odVQ\",\n
+        \        \"protected\": \"eyJmb3JtYXRMZW5ndGgiOjI3NTEsImZvcm1hdFRhaWwiOiJDbjAiLCJ0aW1lIjoiMjAxNi0wNS0yNFQxNDoyNTo1NVoifQ\"\n
+        \     }\n   ]\n}"}
+    headers:
+      content-length: ['3398']
+      content-type: [application/vnd.docker.distribution.manifest.v1+prettyjws]
+      date: ['Tue, 24 May 2016 14:25:55 GMT']
+      docker-content-digest: ['sha256:978927d00fdd51a21dab7148aa8bbc704a69b518fa6a12aa8f45be3f03495860']
+      docker-distribution-api-version: [registry/2.0]
+      etag: ['"sha256:978927d00fdd51a21dab7148aa8bbc704a69b518fa6a12aa8f45be3f03495860"']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+version: 1

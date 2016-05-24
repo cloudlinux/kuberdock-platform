@@ -1,0 +1,932 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['2']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:27 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2Ew.gIP_1Dz1v_pN6JP5ARP5gWoAyUA;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-endpoints: [quay.io]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      Cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2Ew.gIP_1Dz1v_pN6JP5ARP5gWoAyUA]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/tags/latest
+  response:
+    body: {string: !!python/unicode '"c89063721e4185eb570e2ec6e0e517ef1cab2ad3d0e34f124895524533a18b26"'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['66']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:28 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJfZnJlc2giOmZhbHNlLCJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2FA.qMwOLoPJD1RtA7JRXDetyANk65U;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['2']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:29 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2FQ.wwoW1ixTcoAwqVq2Sg1XdBstNSU;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-endpoints: [quay.io]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      Cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2FQ.wwoW1ixTcoAwqVq2Sg1XdBstNSU]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/tags/latest
+  response:
+    body: {string: !!python/unicode '"c89063721e4185eb570e2ec6e0e517ef1cab2ad3d0e34f124895524533a18b26"'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['66']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:29 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJfZnJlc2giOmZhbHNlLCJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2FQ.o4C2FkuhjNaU3x6W7aKuAfIPIbg;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/images
+  response:
+    body: {string: !!python/unicode '{"error": "Permission Denied"}'}
+    headers:
+      access-control-allow-headers: [Authorization, Content-Type]
+      access-control-allow-methods: ['HEAD, GET, PUT, OPTIONS, DELETE']
+      access-control-allow-origin: ['*']
+      access-control-max-age: ['21600']
+      connection: [keep-alive]
+      content-length: ['30']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:30 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/tags/latest
+  response:
+    body: {string: !!python/unicode '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+        <title>403 Forbidden</title>
+
+        <h1>Forbidden</h1>
+
+        <p>You don''t have the permission to access the requested resource. It is
+        either read-protected or not readable by the server.</p>
+
+'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['234']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:30 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:31 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/auth?scope=repository%3Asergey_gruntovsky%2Ftest_private%3Apull&service=quay.io
+  response:
+    body: {string: !!python/unicode '{"token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNTkxLCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MDk5OTkxLCJuYmYiOjE0NjQwOTk5OTEsInN1YiI6Iihhbm9ueW1vdXMpIn0.KwZlYa7Pp9pLjxf6-mxJM3RZhcGHsdDOzNxwhJmGjAmrodDH80YQfRc4fjxNuxv5Ow-ymEzo04Ue-mfW0x3xq-QC7jfGWDIaqBz6V6ZkXeN4gLt_ZEOTxdnYprOiYnc4K7QdSB4J1eAc-18FleNFlpiDlJWEBQfZ0jL7vtlxrbNQwn9wgSO8VzATVDcv-nrtSqPXXypOlvrqpXmzUiRIbeUNMLxI_Gw6gQ9AneJ5W_9olPP0VegeK-r9eGbOgJKQem0O9hXbNycbblVopouh94bpluYard5nOBr8Je5dUOzcpU5vfPbPaKJr3l76gfJH3dmRP1qlkzJXr9xx_6DZfM8GojyQ4fc5QU4QStHCCmJ6_SagJ2PDQt9updE_1a-Q5G3XqjGV6ECQWz38CUfii6fxl60589nIRzxW_eY0b8m9j1gtJU0D4qkhsu6-2W1JqD4nJWm4-osCXLjYJqWhS4xjVQkNWSKF5z48IARnxzZgnApWLhz2-FwBrXISJIvOnvvbRTw5ZBQLUixLz2tqelLrQVqfPnr0gRygXU9JJOFSf_2swGYnrjqv1hmY5Nna6WO2-YnsGSo-4bjrVCCjX90QIQLgQoLSsOlySqGrBRFB05lx32ZNm3dh4yK0LcmPyOZTjvXOx4m-j6C-D0CtrBiTbzhgmo_8oybPKJuWlrA"}'}
+    headers:
+      cache-control: ['no-cache, no-store, must-revalidate']
+      connection: [keep-alive]
+      content-length: ['3547']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:31 GMT']
+      server: [nginx/1.9.5]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNTkxLCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MDk5OTkxLCJuYmYiOjE0NjQwOTk5OTEsInN1YiI6Iihhbm9ueW1vdXMpIn0.KwZlYa7Pp9pLjxf6-mxJM3RZhcGHsdDOzNxwhJmGjAmrodDH80YQfRc4fjxNuxv5Ow-ymEzo04Ue-mfW0x3xq-QC7jfGWDIaqBz6V6ZkXeN4gLt_ZEOTxdnYprOiYnc4K7QdSB4J1eAc-18FleNFlpiDlJWEBQfZ0jL7vtlxrbNQwn9wgSO8VzATVDcv-nrtSqPXXypOlvrqpXmzUiRIbeUNMLxI_Gw6gQ9AneJ5W_9olPP0VegeK-r9eGbOgJKQem0O9hXbNycbblVopouh94bpluYard5nOBr8Je5dUOzcpU5vfPbPaKJr3l76gfJH3dmRP1qlkzJXr9xx_6DZfM8GojyQ4fc5QU4QStHCCmJ6_SagJ2PDQt9updE_1a-Q5G3XqjGV6ECQWz38CUfii6fxl60589nIRzxW_eY0b8m9j1gtJU0D4qkhsu6-2W1JqD4nJWm4-osCXLjYJqWhS4xjVQkNWSKF5z48IARnxzZgnApWLhz2-FwBrXISJIvOnvvbRTw5ZBQLUixLz2tqelLrQVqfPnr0gRygXU9JJOFSf_2swGYnrjqv1hmY5Nna6WO2-YnsGSo-4bjrVCCjX90QIQLgQoLSsOlySqGrBRFB05lx32ZNm3dh4yK0LcmPyOZTjvXOx4m-j6C-D0CtrBiTbzhgmo_8oybPKJuWlrA]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:32 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic c2VyZ2V5X2dydW50b3Zza3kra2RfdGVzdF9wcml2YXRlOklLVE5UWERaUFJHNFlDVlo0TjlSTVJESFZLODFTR1JDNTZaNEowVDVDNklHWFU1RlRNVktEWVRZQU0wWTFHR1k=]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['2']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:32 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJuYW1lc3BhY2UiOiJzZXJnZXlfZ3J1bnRvdnNreSIsInJlcG9zaXRvcnkiOiJ0ZXN0X3ByaXZhdGUifQ.CiX2GA.cKZxfeww-lS0aRt46T3F_DP2LsE;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      www-authenticate: [sigv2=.eJyrVkovSswrKVayiq5WUiiBUElKVkrJuWHlScZ-BSnulpWpgba2SrU6SsWpRemplfHpRaV5JfllxdmVSjpKJanFJfEFRZlliSWpSjoIzRlRjiBNsbWxOkqlQI3xyfl5JakVQBswjdHOTolHMacWADClNXY.CiX2GA.LDbqCb1EpjnI5a96twir-eGa1vA]
+      x-docker-endpoints: [quay.io]
+      x-docker-token: [sigv2=.eJyrVkovSswrKVayiq5WUiiBUElKVkrJuWHlScZ-BSnulpWpgba2SrU6SsWpRemplfHpRaV5JfllxdmVSjpKJanFJfEFRZlliSWpSjoIzRlRjiBNsbWxOkqlQI3xyfl5JakVQBswjdHOTolHMacWADClNXY.CiX2GA.LDbqCb1EpjnI5a96twir-eGa1vA]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      Cookie: [session=eyJuYW1lc3BhY2UiOiJzZXJnZXlfZ3J1bnRvdnNreSIsInJlcG9zaXRvcnkiOiJ0ZXN0X3ByaXZhdGUifQ.CiX2GA.cKZxfeww-lS0aRt46T3F_DP2LsE]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      authorization: [Token sigv2=.eJyrVkovSswrKVayiq5WUiiBUElKVkrJuWHlScZ-BSnulpWpgba2SrU6SsWpRemplfHpRaV5JfllxdmVSjpKJanFJfEFRZlliSWpSjoIzRlRjiBNsbWxOkqlQI3xyfl5JakVQBswjdHOTolHMacWADClNXY.CiX2GA.LDbqCb1EpjnI5a96twir-eGa1vA]
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/tags/latest
+  response:
+    body: {string: !!python/unicode '"b8acfda67a35eaaac79a844df7bde9f265d9c185280aabab9ee1cbe112d8ba5f"'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['66']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:32 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJfZnJlc2giOmZhbHNlLCJuYW1lc3BhY2UiOiJzZXJnZXlfZ3J1bnRvdnNreSIsInJlcG9zaXRvcnkiOiJ0ZXN0X3ByaXZhdGUifQ.CiX2GA.6-Od3fGHxPvtUq4jG_iEfxAexv4;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['2']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:33 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2GQ.ekrhCJAnHp1stsrjXzPqgo721tw;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-endpoints: [quay.io]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      Cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2GQ.ekrhCJAnHp1stsrjXzPqgo721tw]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/tags/latest
+  response:
+    body: {string: !!python/unicode '"c89063721e4185eb570e2ec6e0e517ef1cab2ad3d0e34f124895524533a18b26"'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['66']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:33 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJfZnJlc2giOmZhbHNlLCJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2GQ.wMpIGybtawSe3zki3ivpkZBXyJ8;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/images
+  response:
+    body: {string: !!python/unicode '{"error": "Permission Denied"}'}
+    headers:
+      access-control-allow-headers: [Authorization, Content-Type]
+      access-control-allow-methods: ['HEAD, GET, PUT, OPTIONS, DELETE']
+      access-control-allow-origin: ['*']
+      access-control-max-age: ['21600']
+      connection: [keep-alive]
+      content-length: ['30']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:34 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/tags/latest
+  response:
+    body: {string: !!python/unicode '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+        <title>403 Forbidden</title>
+
+        <h1>Forbidden</h1>
+
+        <p>You don''t have the permission to access the requested resource. It is
+        either read-protected or not readable by the server.</p>
+
+'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['234']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:34 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:36 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/auth?scope=repository%3Asergey_gruntovsky%2Ftest_private%3Apull&service=quay.io
+  response:
+    body: {string: !!python/unicode '{"token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNTk2LCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MDk5OTk2LCJuYmYiOjE0NjQwOTk5OTYsInN1YiI6Iihhbm9ueW1vdXMpIn0.ZOKzejqVAMe7hiW23gInJr3WdwayDossbKdBVOKSnP3yzZ7P7NsaBzxC35dItD49WMgsyngMUa20lbLDP9UocKuF7hHM_FSdHUiXfTPHJNEwgyGcmO3kUsUtEGPayDQE_l7AlwJWuwIQ5w2NLHlHp-2b-i8B_3toE4Wp7HgcATwF-ktcjQjjOEJcuSQc8zzae2huI57bDXa04IxLXpj6wbs5qH3GzaiL0410S40k-AKXq8kYRu_AtVLukSyMIwZ7eReuq7NAwQfDMs9aCWVL2i_Btugjnvdd33HLoFlH58QDWPex62e99hLrJnRAAzDa3eNUapNX9gTnOmqDsp3AFpIje2kxvE6g-sINfA6tpCABtSt15mk1lDXD_WSraRqtxJOuO2-hJpDX5_AcphMI_7iYQp3pnoV8osx04w_6lu5XydCMFtC4JXJF62ez5z-SgDsOjDmvbbiqGxyGTIZlC2Eke-SALYOSgWVhsTbif9egeej5sqNTbx3f01LxS8bsSXdWs61Ba2WJMWirAW7lb2sjkwoF19xDnZblrQj3fcCo912ENd7cjiyuHj6MmLMqCQZUFLq-gbuByIAT05YPDvcjIYfOj7kzWaCJhiQb_H3rI6IO3HPwc21i3EQ0M_QHVRptcR7w6RxNYJPGIDnYAOpdMCpO_CTYTlVj9r8dkcc"}'}
+    headers:
+      cache-control: ['no-cache, no-store, must-revalidate']
+      connection: [keep-alive]
+      content-length: ['3547']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:36 GMT']
+      server: [nginx/1.9.5]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNTk2LCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MDk5OTk2LCJuYmYiOjE0NjQwOTk5OTYsInN1YiI6Iihhbm9ueW1vdXMpIn0.ZOKzejqVAMe7hiW23gInJr3WdwayDossbKdBVOKSnP3yzZ7P7NsaBzxC35dItD49WMgsyngMUa20lbLDP9UocKuF7hHM_FSdHUiXfTPHJNEwgyGcmO3kUsUtEGPayDQE_l7AlwJWuwIQ5w2NLHlHp-2b-i8B_3toE4Wp7HgcATwF-ktcjQjjOEJcuSQc8zzae2huI57bDXa04IxLXpj6wbs5qH3GzaiL0410S40k-AKXq8kYRu_AtVLukSyMIwZ7eReuq7NAwQfDMs9aCWVL2i_Btugjnvdd33HLoFlH58QDWPex62e99hLrJnRAAzDa3eNUapNX9gTnOmqDsp3AFpIje2kxvE6g-sINfA6tpCABtSt15mk1lDXD_WSraRqtxJOuO2-hJpDX5_AcphMI_7iYQp3pnoV8osx04w_6lu5XydCMFtC4JXJF62ez5z-SgDsOjDmvbbiqGxyGTIZlC2Eke-SALYOSgWVhsTbif9egeej5sqNTbx3f01LxS8bsSXdWs61Ba2WJMWirAW7lb2sjkwoF19xDnZblrQj3fcCo912ENd7cjiyuHj6MmLMqCQZUFLq-gbuByIAT05YPDvcjIYfOj7kzWaCJhiQb_H3rI6IO3HPwc21i3EQ0M_QHVRptcR7w6RxNYJPGIDnYAOpdMCpO_CTYTlVj9r8dkcc]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:37 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/_ping
+  response:
+    body: {string: !!python/unicode true}
+    headers:
+      connection: [keep-alive]
+      content-length: ['4']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:38 GMT']
+      server: [nginx/1.9.5]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-registry-standalone: ['0']
+      x-docker-registry-version: [0.6.0]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['2']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:38 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2Hg.hgrgRZeZJlLwsFfv1StefKMue68;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-endpoints: [quay.io]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      Cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2Hg.hgrgRZeZJlLwsFfv1StefKMue68]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/tags/latest
+  response:
+    body: {string: !!python/unicode '"c89063721e4185eb570e2ec6e0e517ef1cab2ad3d0e34f124895524533a18b26"'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['66']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:39 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJfZnJlc2giOmZhbHNlLCJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2Hw.W3grdLgqKNhJn3DHX83QKhA7NlE;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/images
+  response:
+    body: {string: !!python/unicode '{"error": "Permission Denied"}'}
+    headers:
+      access-control-allow-headers: [Authorization, Content-Type]
+      access-control-allow-methods: ['HEAD, GET, PUT, OPTIONS, DELETE']
+      access-control-allow-origin: ['*']
+      access-control-max-age: ['21600']
+      connection: [keep-alive]
+      content-length: ['30']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:39 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/tags/latest
+  response:
+    body: {string: !!python/unicode '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+        <title>403 Forbidden</title>
+
+        <h1>Forbidden</h1>
+
+        <p>You don''t have the permission to access the requested resource. It is
+        either read-protected or not readable by the server.</p>
+
+'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['234']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:40 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:40 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/auth?scope=repository%3Asergey_gruntovsky%2Ftest_private%3Apull&service=quay.io
+  response:
+    body: {string: !!python/unicode '{"token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNjAxLCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MTAwMDAxLCJuYmYiOjE0NjQxMDAwMDEsInN1YiI6Iihhbm9ueW1vdXMpIn0.BCUO1fA8vHY5_2IAgLU2xDAoIkPxiy0279ckMsLOC9K0nImfDQrKeSWtKUtX5QOCDMa9HDhPVpnYCWYnIMg3uMULtWIpS9AtWoJzj1h_1lCIhOImictZix4xblrdxXr6MzDawQ_fnAt-JWR--VXu5agyiMKAT_5F1geEjCWtELpUbZsioI6dZtf1SPC0OTJeyjPs4_M20E0L-j0H3eGwj57RgZzYAbT_4iIG81CtQu8tyRWk8T9tU6oTZOeRlXcb6kYcCpqgpFwB4Krzu2GOC-Kxli7CbyI9QtnI0q9IZH4Rb9lQSTeiDGc7E8LKTXD-uNuJH7AFiAugDKtCV9bC5woyuViEklwoxFzMFsvptmq72ld5WdFkAPd115tb48DiizRol9cEOFWKY63CuOzgtcuLgL7_jPibxv3jZyhknmgFWvOs-V9sM8_6rNjiyFb7aDiMTAPh4JaNfodgGA1JALZEw8bhwlpvSRaeXuboLJr5cu1BvuR4W29SXy_SdqOj39sWaqKBzGJUmNuPLwNv-Bcstho89Udmi0cZ8wo7QdnQtnfN0zfeYvnSFOUFbMLZ5NUXTjCvbpr0xYsdypL9XHSeS6PHpaufn5v9FJ4DsCFZH4omhPBwwk2HTJbdJ9KzITGIufmiRQqZEjCxvau-3zF8BOQCqUfJB0bUjW2CYN0"}'}
+    headers:
+      cache-control: ['no-cache, no-store, must-revalidate']
+      connection: [keep-alive]
+      content-length: ['3547']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:41 GMT']
+      server: [nginx/1.9.5]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNjAxLCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MTAwMDAxLCJuYmYiOjE0NjQxMDAwMDEsInN1YiI6Iihhbm9ueW1vdXMpIn0.BCUO1fA8vHY5_2IAgLU2xDAoIkPxiy0279ckMsLOC9K0nImfDQrKeSWtKUtX5QOCDMa9HDhPVpnYCWYnIMg3uMULtWIpS9AtWoJzj1h_1lCIhOImictZix4xblrdxXr6MzDawQ_fnAt-JWR--VXu5agyiMKAT_5F1geEjCWtELpUbZsioI6dZtf1SPC0OTJeyjPs4_M20E0L-j0H3eGwj57RgZzYAbT_4iIG81CtQu8tyRWk8T9tU6oTZOeRlXcb6kYcCpqgpFwB4Krzu2GOC-Kxli7CbyI9QtnI0q9IZH4Rb9lQSTeiDGc7E8LKTXD-uNuJH7AFiAugDKtCV9bC5woyuViEklwoxFzMFsvptmq72ld5WdFkAPd115tb48DiizRol9cEOFWKY63CuOzgtcuLgL7_jPibxv3jZyhknmgFWvOs-V9sM8_6rNjiyFb7aDiMTAPh4JaNfodgGA1JALZEw8bhwlpvSRaeXuboLJr5cu1BvuR4W29SXy_SdqOj39sWaqKBzGJUmNuPLwNv-Bcstho89Udmi0cZ8wo7QdnQtnfN0zfeYvnSFOUFbMLZ5NUXTjCvbpr0xYsdypL9XHSeS6PHpaufn5v9FJ4DsCFZH4omhPBwwk2HTJbdJ9KzITGIufmiRQqZEjCxvau-3zF8BOQCqUfJB0bUjW2CYN0]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:41 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic c2VyZ2V5X2dydW50b3Zza3kra2RfdGVzdF9wcml2YXRlOndyb25nX3Bhc3N3b3Jk]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/images
+  response:
+    body: {string: !!python/unicode '{"error": "Permission Denied"}'}
+    headers:
+      access-control-allow-headers: [Authorization, Content-Type]
+      access-control-allow-methods: ['HEAD, GET, PUT, OPTIONS, DELETE']
+      access-control-allow-origin: ['*']
+      access-control-max-age: ['21600']
+      connection: [keep-alive]
+      content-length: ['30']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:42 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/tags/latest
+  response:
+    body: {string: !!python/unicode '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+        <title>403 Forbidden</title>
+
+        <h1>Forbidden</h1>
+
+        <p>You don''t have the permission to access the requested resource. It is
+        either read-protected or not readable by the server.</p>
+
+'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['234']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:42 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:43 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic c2VyZ2V5X2dydW50b3Zza3kra2RfdGVzdF9wcml2YXRlOndyb25nX3Bhc3N3b3Jk]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/auth?scope=repository%3Asergey_gruntovsky%2Ftest_private%3Apull&service=quay.io
+  response:
+    body: {string: !!python/unicode '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+        <title>401 Unauthorized</title>
+
+        <h1>Unauthorized</h1>
+
+        <p>The server could not verify that you are authorized to access the URL requested.  You
+        either supplied the wrong credentials (e.g. a bad password), or your browser
+        doesn''t understand how to supply the credentials required.</p>
+
+'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['339']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:44 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:44 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/_ping
+  response:
+    body: {string: !!python/unicode true}
+    headers:
+      connection: [keep-alive]
+      content-length: ['4']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:45 GMT']
+      server: [nginx/1.9.5]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-registry-standalone: ['0']
+      x-docker-registry-version: [0.6.0]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/images
+  response:
+    body: {string: !!python/unicode '[]'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['2']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:45 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2JQ.GRg7kWD923Tg1amQcB4ODYKW9-M;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-endpoints: [quay.io]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      Cookie: [session=eyJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2JQ.GRg7kWD923Tg1amQcB4ODYKW9-M]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/quay/redis/tags/latest
+  response:
+    body: {string: !!python/unicode '"c89063721e4185eb570e2ec6e0e517ef1cab2ad3d0e34f124895524533a18b26"'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['66']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:46 GMT']
+      server: [nginx/1.9.5]
+      set-cookie: [session=eyJfZnJlc2giOmZhbHNlLCJuYW1lc3BhY2UiOiJxdWF5IiwicmVwb3NpdG9yeSI6InJlZGlzIn0.CiX2Jg.AH63vA2JbxC0WvSvpUonOnHxDLM;
+          Secure; HttpOnly; Path=/]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+      x-docker-token: ['true']
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/images
+  response:
+    body: {string: !!python/unicode '{"error": "Permission Denied"}'}
+    headers:
+      access-control-allow-headers: [Authorization, Content-Type]
+      access-control-allow-methods: ['HEAD, GET, PUT, OPTIONS, DELETE']
+      access-control-allow-origin: ['*']
+      access-control-max-age: ['21600']
+      connection: [keep-alive]
+      content-length: ['30']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:46 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/repositories/sergey_gruntovsky/test_private/tags/latest
+  response:
+    body: {string: !!python/unicode '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+        <title>403 Forbidden</title>
+
+        <h1>Forbidden</h1>
+
+        <p>You don''t have the permission to access the requested resource. It is
+        either read-protected or not readable by the server.</p>
+
+'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['234']
+      content-type: [text/html]
+      date: ['Tue, 24 May 2016 14:26:47 GMT']
+      server: [nginx/1.9.5]
+    status: {code: 403, message: FORBIDDEN}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:48 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/auth?scope=repository%3Asergey_gruntovsky%2Ftest_private%3Apull&service=quay.io
+  response:
+    body: {string: !!python/unicode '{"token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNjA4LCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MTAwMDA4LCJuYmYiOjE0NjQxMDAwMDgsInN1YiI6Iihhbm9ueW1vdXMpIn0.Cfli5SvtZnjYwCTBmcid9X9tayDBiGZYdEJw69FRt7Q_69q3uhVwuxSMKmLx_Xw6zL487Z8eQaWaEyvduQU5JCgxntqx2_2DNzgfA-je_CL854X6MgOFOqmzhh8ri7uBO1xoZfOhBuaKNWA1oooXZB7nHUskevPIIx0ppdg1_pf2ywbZqDuEJ1fGohEm_wvv91weMw8hwoobd-2xnLnvR6A21rbegyI61NrEcJooWt2ltNoOMzGQhoYF22Sn7gfgUqzxKvw9x1hWY1WclzWNpJq6tfaHqGbgKAPs4rZLErcQJ0CC1-L7-3-xlX_nz2CvGXWSNDGq1-neMJV5Ltf82Pt5q9-1q6njUbl648MIDnPhdQLG8r743rfd76ENe4zaHl6p_tIhV5x9vt4YuDs_Qyq185e3e05Lza_1vpVqU6fNiwZ7dNNMy4f6wkucrFHA76_BzAF3kqWT-Hoa9U9tFXOUSTZNXdco6bbSY1z1wAS-pifCgVgNjJ1NFbPlbaU7jLcSrOf0tjuZq7yyY2RuhyzPGm0FbZDObH-lkvymo_5fw0CtJf_IuMBh3lTXvqZ0d_6j5c8Va5vRTWsytF_WmG9rV1lFH2sCPdtIwk30RUrbPavq5Ak_o3_lQMtTxCBzLv00MxRxLvhVTiHTSKR1JyH5a1LSGrnAxDEpHeDApts"}'}
+    headers:
+      cache-control: ['no-cache, no-store, must-revalidate']
+      connection: [keep-alive]
+      content-length: ['3547']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:48 GMT']
+      server: [nginx/1.9.5]
+      strict-transport-security: [max-age=63072000; preload]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlGVkRDQ0F6d0NDUUNCMzlyUDQxNWNRakFOQmdrcWhraUc5dzBCQVFVRkFEQnNNUXN3Q1FZRFZRUUdFd0pWXG5VekVSTUE4R0ExVUVDQk1JVG1WM0lGbHZjbXN4RVRBUEJnTlZCQWNUQ0U1bGR5QlpiM0pyTVJRd0VnWURWUVFLXG5Fd3REYjNKbFQxTXNJRWx1WXpFTk1Bc0dBMVVFQ3hNRVVYVmhlVEVTTUJBR0ExVUVBeE1KTVRJM0xqQXVNQzR4XG5NQjRYRFRFMk1EVXlNekUxTXpBMU0xb1hEVEkyTURVeU1URTFNekExTTFvd2JERUxNQWtHQTFVRUJoTUNWVk14XG5FVEFQQmdOVkJBZ1RDRTVsZHlCWmIzSnJNUkV3RHdZRFZRUUhFd2hPWlhjZ1dXOXlhekVVTUJJR0ExVUVDaE1MXG5RMjl5WlU5VExDQkpibU14RFRBTEJnTlZCQXNUQkZGMVlYa3hFakFRQmdOVkJBTVRDVEV5Tnk0d0xqQXVNVENDXG5BaUl3RFFZSktvWklodmNOQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU15QmFjOGd6N0VzN3Y3Q3V6bVZpRldxXG5wL3JWUUpXRk9EaWRnTndnRTIvOUdhMDcvZ2NJSmZSNHZiSFBqbFJ5REVzQW11dUJTVGdoYzBaVWYyR2tiL2huXG5pRCtlYmJlcFpTazZnV2hTQkUrRVhBZ2NyUWl3UGxxQ01tQU1SZnV1OCtGSUJNNkN0SUl1VjdxbTZwdVJWUXhlXG56aDRTVlhkZzU3VEdqME9WSjY0Tkp0K2ppbTRGaEpGa0FyL3VmMVAwMVQzWkZpU2JESjFKRmdOZmxZNEVudFZlXG5PS3BYdHMzR1ljaVBTWFV6U08wZHBaaldhOWN1MWRTWU5EZjNrZjhCckEwVTJGSHNyTGErcVFOVHZzRVloSzlCXG5ONFVOUkJUNXBZWlQxbndxdzBjalNHbFIwbHFMY0dZY3JONE44ZmlXdFpLdXk5UnhtczYzeWZPaFMvWUNzaWpqXG5rbkZSUFNEaC9QcFNMVHFOeUJBUFkya3gvYjNQanRyYmxNN0l2MVFJclExUWYxR3M3a0N6NzFMVjlWa3Q0QjhTXG5jT1krMmhhODRiUGVGQjJIY0ErTXlDQ204WDB5VUlnL25vbXVPNkNFbDA5RWJKb2RmSU9peVlDL3VnWkJxVXM1XG5qT1JmWk5keVpjbmJZZnQ4ZjRXSjVIbFV2SWdXbWp0RHVxZkxNK0FxSkJZRHFnWDl5NmJTZGZqTyt4cHNLVm1TXG41WmJsZmFrWU9DSG5hS0Q4NGtNL1FWbFB2K2ZFOFo3dU5WT1V6WUVmTjZBMW5rTkQ0ZmxGNDY0Z1JLWStyOHNWXG4wK2cwZlVEVVJWdUpIUzlMdnRNQVl5RUYvTTZkRURFZGFwK2JLWlJ3dFRQcmdtN2xmWk5sVGNnUFM2dVIvdUF4XG5HYmFiNEZ2bHp2WGorRkdSckQ1QkFnTUJBQUV3RFFZSktvWklodmNOQVFFRkJRQURnZ0lCQUN4N0hQdDRGQllqXG5YaEFCVUVTQmtaNy9tV0JUQytkd1JZQnZWbkF6Q1paTnI4eFpwb1JMOWc5NWpkbkN3TVM0TFBsYU5rdDI4OEgwXG50c2EwVVdCRVBUWlZDbW5FejlxSWtmN3UwRGxKYTczaTU1Y2xXVzIybUF3UW5Rb3J5VGhTbWYwSG1Lc3F0WktrXG54TWw5Q3B0Y2wwcU1qTUx2UVBhR1Z5U2FsMFRYTjVpRlhEdEJLMXovUTdDejQraHdwekg5Q2xwWGVEdTZWTk1jXG45Y0FIamd3V0x6Z2xmVkFFLzl2d2tFeWJ2SUlIaHFwSnRBNjF6TEdhUmJEL1VrRXh3d1M4SnRXOWpHOWNkVGZqXG5nc1l2dFNlOUdUQzRWazQ2TmRTMlBjVHV0eTBCVnJGcFpFSnFHc1NOSlpyNnh3M1QxdDZhcUVXTVFqTzRYOWJTXG5NTVpPOUZSSGluS0M5QkxKUEUzUHpCbkFLRjR0eThPSVVyemxPdkhHWXMyVmpzVTBFQnVtaE5RRm9aUXN3NWs3XG41bFN5THdxNXRUTWJMYUo2OExDVjluU3pIUlNOcE5KWlZoUGhlcGx5VGUzNEtYMENIYTVyekJqN1gvZFU1M2NuXG54MFg4RjdYeDY0YXBhYW1oUHV3blk4M09mZ2N2Z2NleE5SMGxWRXVRNkVYTG81YWdKaElYT3JmazYwdXBHcTZRXG5OdG1PQkRpdm95bzhDd3puQVZYWkh0dXI3dFA5Y0c3U2FEY201S2RVRWF0RWZUVytmUzVQODllRUVNeUZxbDJ1XG5QbTdtTFlZSXpLV0NpdkppWktoV2JUL1l5NDVHSFk1ZnppdXArcDZGcTlzVjlLSFdYMDU1U3ZPbVVOVWtuZ3pnXG5YNnB3b1ZTTmFoOVoyODNsenVxTzZydVB5VHBnZjdGeSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNlcmdleV9ncnVudG92c2t5L3Rlc3RfcHJpdmF0ZSIsImFjdGlvbnMiOltdfV0sImNvbnRleHQiOnsia2luZCI6ImFub255bW91cyJ9LCJhdWQiOiJxdWF5LmlvIiwiZXhwIjoxNDY0MTAzNjA4LCJpc3MiOiJxdWF5IiwiaWF0IjoxNDY0MTAwMDA4LCJuYmYiOjE0NjQxMDAwMDgsInN1YiI6Iihhbm9ueW1vdXMpIn0.Cfli5SvtZnjYwCTBmcid9X9tayDBiGZYdEJw69FRt7Q_69q3uhVwuxSMKmLx_Xw6zL487Z8eQaWaEyvduQU5JCgxntqx2_2DNzgfA-je_CL854X6MgOFOqmzhh8ri7uBO1xoZfOhBuaKNWA1oooXZB7nHUskevPIIx0ppdg1_pf2ywbZqDuEJ1fGohEm_wvv91weMw8hwoobd-2xnLnvR6A21rbegyI61NrEcJooWt2ltNoOMzGQhoYF22Sn7gfgUqzxKvw9x1hWY1WclzWNpJq6tfaHqGbgKAPs4rZLErcQJ0CC1-L7-3-xlX_nz2CvGXWSNDGq1-neMJV5Ltf82Pt5q9-1q6njUbl648MIDnPhdQLG8r743rfd76ENe4zaHl6p_tIhV5x9vt4YuDs_Qyq185e3e05Lza_1vpVqU6fNiwZ7dNNMy4f6wkucrFHA76_BzAF3kqWT-Hoa9U9tFXOUSTZNXdco6bbSY1z1wAS-pifCgVgNjJ1NFbPlbaU7jLcSrOf0tjuZq7yyY2RuhyzPGm0FbZDObH-lkvymo_5fw0CtJf_IuMBh3lTXvqZ0d_6j5c8Va5vRTWsytF_WmG9rV1lFH2sCPdtIwk30RUrbPavq5Ak_o3_lQMtTxCBzLv00MxRxLvhVTiHTSKR1JyH5a1LSGrnAxDEpHeDApts]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v2/sergey_gruntovsky/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors": [{"code": "UNAUTHORIZED", "detail":
+        {}, "message": "access to the requested resource is not authorized"}]}'}
+    headers:
+      connection: [keep-alive]
+      content-length: ['117']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:26:48 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      server: [nginx/1.9.5]
+      www-authenticate: ['Bearer realm="https://quay.io/v2/auth",service="quay.io",scope=repository:sergey_gruntovsky/test_private:pull']
+    status: {code: 401, message: UNAUTHORIZED}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://quay.io/v1/_ping
+  response:
+    body: {string: !!python/unicode true}
+    headers:
+      connection: [keep-alive]
+      content-length: ['4']
+      content-type: [text/html; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:26:49 GMT']
+      server: [nginx/1.9.5]
+      strict-transport-security: [max-age=63072000; preload]
+      x-docker-registry-standalone: ['0']
+      x-docker-registry-version: [0.6.0]
+      x-frame-options: [DENY]
+    status: {code: 200, message: OK}
+version: 1

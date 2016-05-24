@@ -119,7 +119,7 @@ def mark_node_as_being_deleted(node_id):
     node = Node.query.filter(Node.id == node_id).first()
     if node is None:
         raise APIError('Node not found, id = {}'.format(node_id))
-    _check_node_can_be_deleted(node_id)
+    _check_node_can_be_deleted(node)
     node.state = 'deletion'
     db.session.commit()
     return node
@@ -142,7 +142,7 @@ def delete_node(node_id=None, node=None):
     if node_id is None:
         node_id = node.id
 
-    _check_node_can_be_deleted(node_id)
+    _check_node_can_be_deleted(node)
 
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
 
@@ -172,20 +172,22 @@ def delete_node(node_id=None, node=None):
     }, 'Admin')
 
 
-def _check_node_can_be_deleted(node_id):
+def _check_node_can_be_deleted(node):
     """Check if the node could be deleted.
-    If it can not, then raises APIError.
+    If it can not, then raise APIError.
+    Also tries to cleanup node from PD's that were marked to delete, but not
+    yet physically deleted.
     """
-    is_locked, reason = pstorage.check_node_is_locked(node_id)
-    if is_locked:
-        raise APIError(
-            "Node can't be deleted. Reason: {}".format(reason)
-        )
-    if Node.query.get(node_id).state == 'pending':
+    if Node.query.get(node.id).state == 'pending':
         raise APIError(
             "Node can't be deleted. "
             "Reason: Node is in pending state. Please wait"
         )
+    is_locked, reason = pstorage.check_node_is_locked(node.id, cleanup=True)
+    if is_locked:
+        raise APIError("Node '{}' can't be deleted. Reason: {}".format(
+            node.hostname, reason
+        ))
 
 
 def edit_node_hostname(node_id, ip, hostname):

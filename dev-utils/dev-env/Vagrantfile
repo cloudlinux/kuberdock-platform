@@ -7,7 +7,7 @@ masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '2048')
 masterCpus = Integer(ENV['KD_MASTER_CPUS'] || '1')
 
 nodeMemory = Integer(ENV['KD_NODE_MEMORY'] || '2048')
-nodeCpus = Integer(ENV['KD_NODE_CPUS'] || '2')
+nodeCpus = Integer(ENV['KD_NODE_CPUS'] || '1')
 
 osUsername = ENV['KD_OS_USERNAME'] || ''
 osPassword = ENV['KD_OS_PASSWORD'] || ''

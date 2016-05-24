@@ -110,7 +110,7 @@ function run_flake8 {
 
 function run_integration {
   tox -eint || ret=1 && ret=0
-  return ret
+  return $ret
 }
 
 function run_test {

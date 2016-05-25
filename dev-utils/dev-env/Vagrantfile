@@ -32,7 +32,7 @@ Vagrant.configure(2) do |config|
     one.template_id = 53
     override.ssh.private_key_path = privateKey
     override.ssh.pty = true
-    config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".venv/"]
+    config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".venv/", ".tox/"]
   end
 
   (1..nodesCount).each do |i|

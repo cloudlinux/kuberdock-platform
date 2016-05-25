@@ -5,10 +5,6 @@
 # default: nothing
 export VAGRANT_CWD=dev-utils/dev-env/
 #
-# OpenStack credentials. Username and passoword for OpenStack cloud
-# default: nothing
-#export KD_OS_USERNAME=your_os_username
-#export KD_OS_PASSWORD=your_os_password
 
 # OpenNebula credentials. Username and passoword for OpenNebula cloud
 # default: nothing

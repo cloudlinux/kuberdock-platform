@@ -18,6 +18,5 @@
                 </div>
             </div>
         </div>
-        <div class="buttons clearfix"></div>
     </div>
 </div>

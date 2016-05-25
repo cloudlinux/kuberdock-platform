@@ -1154,15 +1154,18 @@ define([
                 return;
             var that = this;
             require(['app_data/pstorage/views'], function(Views){
-                var layoutView = new Views.SettingsLayout(),
+                var layoutView = new Views.PersistentVolumesLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
+
                 that.listenTo(layoutView, 'show', function(){
                     var pvCollection = new Model.PersistentStorageCollection();
                     layoutView.nav.show(navbar);
                     pvCollection.fetch({
                         wait: true,
                         success: function(collection, resp, opts){
-                            layoutView.main.show(new Views.PersistentVolumesView({collection: collection}));
+                            var view = new Views.PersistentVolumesView({collection: collection});
+                            layoutView.main.show(view);
+                            layoutView.pager.show(new Pager.PaginatorView({view: view}));
                         },
                         error: function(model, response){
                             utils.notifyWindow(response);

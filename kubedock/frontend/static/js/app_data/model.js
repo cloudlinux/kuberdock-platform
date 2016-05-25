@@ -706,7 +706,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
         mode: 'client',
         state: {
-            pageSize: 2147483647
+            pageSize: 10
         }
     });
 

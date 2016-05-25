@@ -5,6 +5,13 @@ define([
     "use strict";
 
     var controller = {
+        checkPermissions: function(roles){
+            if (App.currentUser && App.currentUser.roleIs.apply(App.currentUser, roles))
+                return true;
+            if (App.currentUser)  // do not show pageNotFound if user is on "login" view
+                this.pageNotFound();
+            return false;
+        },
         index: function(){
             var admin = App.currentUser.get('rolename') === 'Admin';
             App.navigate(admin ? 'nodes' : 'pods', {trigger: true});
@@ -20,14 +27,13 @@ define([
                     App.storage.authData = JSON.stringify(authModel);
                     deferred.resolveWith(App, [authModel.toJSON()]);
                 });
-                console.log('About to show login view');
                 App.contents.show(loginView);
             });
             return deferred;
         },
         showPods: function(){
-            if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
             var that = this;
             require(['app_data/pods/views/pods_list'], function(Views){
                 var suspendedTitle;
@@ -128,8 +134,8 @@ define([
         },
 
         showPodStats: function(id){
-            if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
             var that = this;
             require(['app_data/pods/views/pod_item'], function(Views){
                 that.showPodBase(id).fail(function(){
@@ -158,8 +164,8 @@ define([
         },
 
         showPodContainers: function(id){
-            if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
             var that = this;
             require(['app_data/pods/views/pod_item'], function(Views){
                 that.showPodBase(id).fail(function(){
@@ -176,8 +182,8 @@ define([
         },
 
         showPodUpgrade: function(id, containerName){
-            if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
             var that = this;
             require(['app_data/pods/views/pod_item'], function(Views){
                 that.showPodBase(id).fail(function(){
@@ -206,8 +212,8 @@ define([
         },
 
         showPodContainer: function(id, name){
-            if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
             var that = this;
             require(['app_data/pods/views/pod_container'], function(Views){
                 App.getPodCollection().done(function(podCollection){
@@ -335,8 +341,8 @@ define([
         },
 
         podWizardStepImage: function(options){
-            if (!App.currentUser.roleIs('User', 'TrialUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser']))
+                return;
             this.podWizardBase(options).done(function(options, Views){
                 options.registryURL = options.registryURL || 'registry.hub.docker.com';
                 options.imageCollection = options.imageCollection
@@ -412,8 +418,8 @@ define([
         },
 
         podWizardStepGeneral: function(options){
-            if (!App.currentUser.roleIs('User', 'TrialUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser']))
+                return;
             this.podWizardBase(options).done(function(options, Views){
                 var containerID = options.podModel.lastEditedContainer.id;
                 if (containerID == null)
@@ -430,8 +436,8 @@ define([
         },
 
         podWizardStepEnv: function(options){
-            if (!App.currentUser.roleIs('User', 'TrialUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser']))
+                return;
             this.podWizardBase(options).done(function(options, Views){
                 var containerID = options.podModel.lastEditedContainer.id,
                     containerModel = options.podModel.get('containers').get(containerID),
@@ -449,8 +455,8 @@ define([
         },
 
         podWizardStepFinal: function(options){
-            if (!App.currentUser.roleIs('User', 'TrialUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser']))
+                return;
             var that = this;
             $.when(
                 this.podWizardBase(options),
@@ -569,8 +575,8 @@ define([
         },
 
         showNodes: function(options){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/nodes/views'], function(Views){
                 var layoutView = new Views.NodesLayout(),
@@ -616,8 +622,8 @@ define([
         },
 
         showAddNode: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/nodes/views'], function(Views){
                 var layoutView = new Views.NodeAddWizardLayout(),
@@ -633,8 +639,8 @@ define([
         },
 
         showDetailedNode: function(nodeId, tab){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/nodes/views'], function(Views){
                 App.getNodeCollection().done(function(nodeCollection){
@@ -757,8 +763,8 @@ define([
         // },
 
         showUsers: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
@@ -776,8 +782,8 @@ define([
         },
 
         showAllUsersActivity: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
@@ -791,8 +797,8 @@ define([
         },
 
         showCreateUser: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
@@ -813,8 +819,8 @@ define([
         },
 
         showEditUser: function(userId){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
@@ -838,8 +844,8 @@ define([
         },
 
         showProfileUser: function(userId){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
@@ -858,8 +864,8 @@ define([
         },
 
         showProfileUserLogHistory: function(userId){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/users/views'], function(Views){
                 var layoutView = new Views.UsersLayout(),
@@ -877,8 +883,8 @@ define([
         },
 
         listPredefinedApps: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/papps/views'], function(Views){
                 var appCollection = new Model.AppCollection(),
@@ -1053,8 +1059,8 @@ define([
         },
 
         showGeneralSettings: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/settings/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
@@ -1070,8 +1076,8 @@ define([
         },
 
         showLicense: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/settings/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
@@ -1089,8 +1095,8 @@ define([
         },
 
         showNetworks: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.NetworksLayout(),
@@ -1129,8 +1135,8 @@ define([
         },
 
         showCreateNetwork: function(){
-            if (!App.currentUser.roleIs('Admin'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['Admin']))
+                return;
             var that = this;
             require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.NetworksLayout(),
@@ -1144,8 +1150,8 @@ define([
         },
 
         showPersistentVolumes: function(){
-            if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
             var that = this;
             require(['app_data/pstorage/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
@@ -1168,8 +1174,8 @@ define([
         },
 
         showIPs: function(){
-            if (!App.currentUser.roleIs('User', 'TrialUser', 'LimitedUser'))
-                return this.pageNotFound();
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
             var that = this;
             require(['app_data/public_ips/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),

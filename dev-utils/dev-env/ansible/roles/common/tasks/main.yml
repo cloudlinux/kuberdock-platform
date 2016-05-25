@@ -7,8 +7,7 @@
 - name: upgrade all packages
   yum: name=* state=latest
 
-- name: Fix default interface
-  shell: route add -net 8.8.8.8 netmask 255.255.255.255 {{ ansible_interfaces | last }}
+- include: vbox_patch.yml
   when : ansible_default_ipv4.address=="10.0.2.15"
 
 - name: "Build hosts file"

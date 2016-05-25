@@ -183,6 +183,8 @@ def wait_for_nodes(nodes_list, timeout):
 
         for nhost in nodes_list:
             node = Node.get_by_name(nhost)
+            if node is None:
+                raise WaitTimeoutException("Node `%s` was not found." % nhost)
             status = get_one_node(node.id)['status']
             if status == 'troubles' and nhost not in nodes_in_trouble:
                 nodes_in_trouble[nhost] = time.time() + WAIT_TROUBLE_TIMEOUT

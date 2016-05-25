@@ -1,0 +1,7 @@
+---
+
+- name: Fix default interface
+  shell: route add -net 8.8.8.8 netmask 255.255.255.255 {{ ansible_interfaces | last }}
+
+- name: Update default ip
+  setup: filter=ansible_default_ipv4

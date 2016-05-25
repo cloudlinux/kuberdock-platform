@@ -6,4 +6,4 @@
   when: is_nebula
 
 - name: Create IP pool
-  shell: python "{{ src_prefix }}/manage.py" create-ip-pool -s "{{ (ansible_all_ipv4_addresses | last).split('.')[:3]|join('.')}}.0/24" -e {{ excludes | default('1-30')}}
+  shell: python "{{ src_prefix }}/manage.py" create-ip-pool -s "{{ (ansible_default_ipv4.address).split('.')[:3]|join('.')}}.0/24" -e {{ excludes | default('1-30')}}

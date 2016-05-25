@@ -129,10 +129,8 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         var token = _.chain(authData.token.split('.')).first(2)
             .map(atob).object(['header', 'payload']).invert()
             .mapObject(JSON.parse).value();
-        if (token.header.exp < +new Date() / 1000){
-            delete this.storage.authData;
-            return App.controller.showLogin();
-        }
+        if (token.header.exp < +new Date() / 1000)
+            return App.cleanUp();
         return $.Deferred().resolveWith(this, [authData]).promise();
     };
 
@@ -261,11 +259,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
     /**
      * Prepare initial data, connect to SSE, render the first view.
      *
-     * @returns {Promise}
+     * @returns {Promise} - Promise of auth data, SSE, and initial data in App.
      */
     App.initApp = function(){
         var deferred = new $.Deferred();
-        App.getAuth().done(function(){
+        App.getAuth().done(function(authData){
             $.when(App.getCurrentUser(),
                    App.getMenuCollection(),
                    App.getPackages()).done(function(user, menu, packages){
@@ -280,7 +278,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 // trigger Routers for the current url
                 Backbone.history.loadUrl(App.getCurrentRoute());
                 App.controller.showNotifications();
-                deferred.resolveWith(App);
+                deferred.resolveWith(App, [authData]);
             }).fail(function(){ deferred.rejectWith(App, arguments); });
         });
         return deferred;
@@ -337,7 +335,6 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 abort: function() {
                     if (wrappedXHR)
                         wrappedXHR.abort();
-                    xhr.abort();
                 },
             };
         }

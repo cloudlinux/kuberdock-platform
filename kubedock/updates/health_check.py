@@ -16,6 +16,7 @@ from kubedock.api import create_app
 from kubedock.users.models import User
 from kubedock.kapi.node_utils import get_nodes_collection
 from kubedock.kapi.podcollection import PodCollection
+from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
 from kubedock.updates.helpers import setup_fabric
 from kubedock.settings import KUBERDOCK_INTERNAL_USER
 from kubedock.utils import POD_STATUSES
@@ -29,7 +30,8 @@ MESSAGES = {
     'ntp': "\tTime not synced",
     'running': "\tNode not running in kubernetes",
     'ssh': "\tCan't access node from master through ssh",
-    'pods': "\tSome internal pods in wrong state: {}"
+    'pods': "Some internal pods in wrong state: {}",
+    'pending': "\tThe node is under installation. Please wait for its completion to upgrade"
 }
 
 master_services = ['etcd', 'influxdb', 'kube-apiserver',
@@ -66,6 +68,9 @@ def get_services_state(services, local=True):
 
 def get_node_state(node):
     status = {}
+    if node.get('status') == 'pending':
+        status['pending'] = False
+        return status
     hostname = node['hostname']
     status['running'] = node.get('status') == 'running'
     env.host_string = hostname
@@ -150,10 +155,13 @@ def check_nodes():
                 msg.extend(node_msg)
     except (SystemExit, Exception) as e:
         msg.append("Can't get nodes list because of {}".format(e.message))
-    if states:
+    pendings = [get_kuberdock_logs_pod_name(node)
+                for node, state in states.items() if 'pending' in state]
+    if states and len(pendings) != len(states):
         try:
             pod_states = get_internal_pods_state()
-            stopped = [pod for pod, status in pod_states.items() if not status]
+            stopped = [pod for pod, status in pod_states.items()
+                       if pod not in pendings and not status]
             if stopped:
                 msg.append(MESSAGES['pods'].format(', '.join(stopped)))
         except (SystemExit, Exception) as e:

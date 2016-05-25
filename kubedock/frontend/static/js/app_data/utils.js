@@ -231,7 +231,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
 
         var dt = options.dt || new Date(),
             tz = typeof options.tz == 'string' ? options.tz.split(' (', 1)[0] : 'UTC',
-            formatString = options.formatString || 'YYYY-MM-DD HH:mm:ss';
+            formatString = options.formatString || 'YYYY-MM-DD HH:mm:ss (Z)';
         try {
             return moment(dt).tz(tz).format(formatString);
         } catch (e) {

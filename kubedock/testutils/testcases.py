@@ -43,10 +43,12 @@ class DBTestCase(FlaskTestCase):
     DB_USER = 'kuberdock'
     DB_PASSWORD = 'kuberdock2go'
     DB_NAME = 'testkuberdock'
+    DB_HOST = os.environ.get('TEST_DB_HOST', '127.0.0.1')
     SECRET_KEY = 'testsecretkey'
     SESSION_LIFETIME = 3600
-    SQLALCHEMY_DATABASE_URI = ('postgresql+psycopg2://{0}:{1}@127.0.0.1:5432/'
-                               '{2}'.format(DB_USER, DB_PASSWORD, DB_NAME))
+    SQLALCHEMY_DATABASE_URI = ('postgresql+psycopg2://{0}:{1}@{2}:5432/'
+                               '{3}'.format(DB_USER, DB_PASSWORD,
+                                            DB_HOST, DB_NAME))
     fixtures = fixtures
 
     def create_app(self):

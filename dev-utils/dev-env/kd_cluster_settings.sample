@@ -5,10 +5,6 @@
 # default: nothing
 export VAGRANT_CWD=dev-utils/dev-env/
 #
-# OpenStack credentials. Username and passoword for OpenStack cloud
-# default: nothing
-#export KD_OS_USERNAME=your_os_username
-#export KD_OS_PASSWORD=your_os_password
 
 # OpenNebula credentials. Username and passoword for OpenNebula cloud
 # default: nothing
@@ -32,8 +28,8 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: 2048
 #export KD_NODE_MEMORY=4096
 # CPU count
-# default: 2
-#export KD_NODE_CPUS=3
+# default: 1
+#export KD_NODE_CPUS=2
  
 # Path to private key for vagrant autentication in the OpenNebula
 # default: "~/.ssh/id_rsa"

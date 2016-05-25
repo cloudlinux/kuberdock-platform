@@ -82,11 +82,13 @@ def send_event_to_user(event_name, data, user_id, to_file=None, prefix='SSEEVT')
     send_event(event_name, data, to_file, sessions, prefix)
 
 
-def send_event_to_role(event_name, data, role_id, to_file=None, prefix='SSEEVT'):
+def send_event_to_role(event_name, data, role, to_file=None, prefix='SSEEVT'):
     """
     Selects all given role user sessions and sends list to send_event
     """
-    sessions = [i.id for i in SessionData.query.filter_by(role_id=role_id)]
+    if isinstance(role, basestring):
+        role = db.session.query(Role.id).filter(Role.rolename == role).scalar()
+    sessions = [i.id for i in SessionData.query.filter_by(role_id=role)]
     send_event(event_name, data, to_file, sessions, prefix)
 
 

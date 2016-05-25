@@ -351,8 +351,14 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
             '"apiVersion": "v1", "metadata": '
             '{"generateName": "service-", "labels": {"name": '
             '"%(id)s-service"}}}') % {'id': pod_id}
-        post_.assert_called_once_with(['services'], expected_service_conf,
-                                      ns='n', rest=True)
+        self.assertEqual(post_.call_count, 1)
+        call = post_.call_args
+        call_args, call_kwargs = call
+        self.assertEqual(call_args[0], ['services'])
+        self.assertEqual(json.loads(call_args[1]),
+                         json.loads(expected_service_conf))
+        self.assertEqual(call_kwargs['ns'], 'n')
+        self.assertEqual(call_kwargs['rest'], True)
 
 
 class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
@@ -397,8 +403,14 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
                   '"%s"}}' % self.test_ns
         self.pod_collection._get_namespace.assert_called_once_with(
             self.test_ns)
-        post_.assert_called_once_with(['namespaces'], ns_conf, rest=True,
-                                      ns=False)
+        self.assertEqual(post_.call_count, 1)
+        call = post_.call_args
+        call_args, call_kwargs = call
+        self.assertEqual(call_args[0], ['namespaces'])
+        self.assertEqual(json.loads(call_args[1]),
+                         json.loads(ns_conf))
+        self.assertEqual(call_kwargs['ns'], False)
+        self.assertEqual(call_kwargs['rest'], True)
 
 
 class TestPodCollectionGetNamespaces(TestCase, TestCaseMixin):

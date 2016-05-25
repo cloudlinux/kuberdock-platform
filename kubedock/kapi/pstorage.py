@@ -18,7 +18,7 @@ from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..utils import send_event, atomic
+from ..utils import send_event_to_role, atomic
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH)
@@ -394,8 +394,9 @@ class PersistentStorage(object):
                 rv_code = self._create_drive(pd.drive_name, pd.size)
         except (NoNodesError, DriveIsLockedError) as e:
             current_app.logger.exception(UNABLE_CREATE_PD_MSG.format(pd.name))
-            send_event('notify:error', {'message': '{}, reason: {}'.format(
-                UNABLE_CREATE_PD_MSG.format(pd.drive_name), e.message)})
+            msg = '{}, reason: {}'.format(
+                UNABLE_CREATE_PD_MSG.format(pd.drive_name), e.message)
+            send_event_to_role('notify:error', {'message': msg}, 'Admin')
             raise APIError(UNABLE_CREATE_PD_MSG.format(pd.name))
 
         if rv_code != 0:
@@ -421,7 +422,7 @@ class PersistentStorage(object):
         except (DriveIsLockedError, NodeCommandError, NoNodesError) as e:
             current_app.logger.exception(admin_msg)
             notify_msg = "{}, reason: {}".format(admin_msg, e.message)
-            send_event('notify:error', {'message': notify_msg})
+            send_event_to_role('notify:error', {'message': notify_msg}, 'Admin')
             raise APIError(user_msg)
 
     def _makefs(self, drive_name, fs):
@@ -1415,9 +1416,14 @@ class LocalStorage(PersistentStorage):
 
     @classmethod
     def check_node_is_locked(cls, node_id):
-        """For local storage node is used if there is any PD on this node.
+        """For local storage we assume that node is used if there is any PD on
+        this node.
         """
-        pd_list = PersistentDisk.get_by_node_id(node_id).all()
+        pd_list = PersistentDisk.get_by_node_id(node_id).filter(
+            ~PersistentDisk.state.in_([
+                PersistentDiskStatuses.TODELETE, PersistentDiskStatuses.DELETED
+            ])
+        ).all()
         if not pd_list:
             return (False, None)
         users = User.query.filter(
@@ -1515,7 +1521,11 @@ def get_storage_class_by_volume_info(volume):
     return None
 
 
-def check_node_is_locked(node_id):
+def check_node_is_locked(node_id, cleanup=False):
+    """Checks if node can't be deleted because of persistent storages on it.
+    Optionally can delete from DB deleted PD's if they are binded to the node
+    (cleanup flag).
+    """
     storage_cls = get_storage_class()
     if not storage_cls:
         return (False, None)
@@ -1525,7 +1535,23 @@ def check_node_is_locked(node_id):
                             for name, disks in reason.iteritems())
         reason = ('users Persistent volumes located on the node \n'
                   'owner name: list of persistent disks\n' + pd_list)
+    elif cleanup:
+        clean_deleted_pd_binded_to_node(node_id)
     return (is_locked, reason)
+
+
+def clean_deleted_pd_binded_to_node(node_id):
+    """Removes (from DB) deleted and marked for deletion PDs binded to given
+    node.
+    It is needed when node is being deleted. We don't want to block node
+    deletion if there are no active PD on it, but we have to delete
+    all bindings to that node.
+    """
+    PersistentDisk.get_by_node_id(node_id).filter(
+        PersistentDisk.state.in_(
+            [PersistentDiskStatuses.TODELETE, PersistentDiskStatuses.DELETED]
+        )
+    ).delete(synchronize_session=False)
 
 
 def drive_can_be_deleted(pd_id):

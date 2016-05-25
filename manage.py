@@ -202,16 +202,25 @@ class NodeManager(Command):
         Option('--wait', dest='wait', action='store_true'),
         Option('--timeout', dest='timeout', required=False, type=int),
         Option('-t', '--testing', dest='testing', action='store_true'),
+        Option('--docker-options', dest='docker_options'),
     )
 
-    def run(self, hostname, kube_type, do_deploy, wait, timeout, testing):
+    def run(self, hostname, kube_type, do_deploy, wait, timeout, testing,
+            docker_options):
+
+        options = None
+
+        if docker_options is not None:
+            options = {'DOCKER': docker_options}
+
         if get_maintenance():
             raise InvalidCommand(
                 'Kuberdock is in maintenance mode. Operation canceled'
             )
         try:
             check_node_data({'hostname': hostname, 'kube_type': kube_type})
-            res = create_node(None, hostname, kube_type, do_deploy, testing)
+            res = create_node(None, hostname, kube_type, do_deploy, testing,
+                              options=options)
         except APIError as e:
             print e.message
         except Exception as e:

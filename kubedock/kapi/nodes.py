@@ -18,7 +18,7 @@ from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE)
 from ..users.models import User
-from ..utils import send_event, run_ssh_command
+from ..utils import send_event_to_role, run_ssh_command
 from ..validation import check_internal_pod_data
 
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
@@ -29,7 +29,7 @@ def get_kuberdock_logs_pod_name(node):
 
 
 def create_node(ip, hostname, kube_id,
-                do_deploy=True, with_testing=False):
+                do_deploy=True, with_testing=False, options=None):
     """Creates new node in database, kubernetes. Deploys all needed packages
     and settings on the new node, if do_deploy is specified.
     :param ip: optional IP address for the node. If it's not specified, then
@@ -64,7 +64,7 @@ def create_node(ip, hostname, kube_id,
         pass
 
     node = add_node_to_db(node)
-    _deploy_node(node, do_deploy, with_testing)
+    _deploy_node(node, do_deploy, with_testing, options)
 
     ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
     logs_podname = get_kuberdock_logs_pod_name(hostname)
@@ -119,7 +119,7 @@ def mark_node_as_being_deleted(node_id):
     node = Node.query.filter(Node.id == node_id).first()
     if node is None:
         raise APIError('Node not found, id = {}'.format(node_id))
-    _check_node_can_be_deleted(node_id)
+    _check_node_can_be_deleted(node)
     node.state = 'deletion'
     db.session.commit()
     return node
@@ -142,7 +142,7 @@ def delete_node(node_id=None, node=None):
     if node_id is None:
         node_id = node.id
 
-    _check_node_can_be_deleted(node_id)
+    _check_node_can_be_deleted(node)
 
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
 
@@ -166,25 +166,28 @@ def delete_node(node_id=None, node=None):
         os.remove(NODE_INSTALL_LOG_FILE.format(hostname))
     except OSError:
         pass
-    send_event('node:deleted', {
+    send_event_to_role('node:deleted', {
         'id': node_id,
-        'message': 'Node successfully deleted'})
+        'message': 'Node successfully deleted'
+    }, 'Admin')
 
 
-def _check_node_can_be_deleted(node_id):
+def _check_node_can_be_deleted(node):
     """Check if the node could be deleted.
-    If it can not, then raises APIError.
+    If it can not, then raise APIError.
+    Also tries to cleanup node from PD's that were marked to delete, but not
+    yet physically deleted.
     """
-    is_locked, reason = pstorage.check_node_is_locked(node_id)
-    if is_locked:
-        raise APIError(
-            "Node can't be deleted. Reason: {}".format(reason)
-        )
-    if Node.query.get(node_id).state == 'pending':
+    if Node.query.get(node.id).state == 'pending':
         raise APIError(
             "Node can't be deleted. "
             "Reason: Node is in pending state. Please wait"
         )
+    is_locked, reason = pstorage.check_node_is_locked(node.id, cleanup=True)
+    if is_locked:
+        raise APIError("Node '{}' can't be deleted. Reason: {}".format(
+            node.hostname, reason
+        ))
 
 
 def edit_node_hostname(node_id, ip, hostname):
@@ -236,9 +239,9 @@ def _check_node_hostname(ip, hostname):
             hostname, uname_hostname))
 
 
-def _deploy_node(dbnode, do_deploy, with_testing):
+def _deploy_node(dbnode, do_deploy, with_testing, options=None):
     if do_deploy:
-        tasks.add_new_node.delay(dbnode.id, with_testing)
+        tasks.add_new_node.delay(dbnode.id, with_testing, options=options)
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
         if is_ceph_installed:

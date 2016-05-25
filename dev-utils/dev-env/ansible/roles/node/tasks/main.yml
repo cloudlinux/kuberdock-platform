@@ -1,9 +1,14 @@
----
+- include: ../../../facts.yml
 
 - name: Override src path
   set_fact:
       src_prefix: /vagrant
   when: is_dev_install
+
+- name: Docker options
+  set_fact: 
+      docker_options: --insecure-registry dockerhub-proxy.cloudlinux.com:5000 --registry-mirror=https://dockerhub-proxy.cloudlinux.com:5000
+  when: is_nebula
 
 - name: Assign key
   authorized_key: user=root key="{{ lookup('file', '/tmp/kd_rsa.pub') }}"
@@ -17,8 +22,9 @@
 - name: Set enforce for SELinux
   command: setenforce 1
 
+
 - name: Add node to master
-  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy {{ add_testing_repo }}
+  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   tags:

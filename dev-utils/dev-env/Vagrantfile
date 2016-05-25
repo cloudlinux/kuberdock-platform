@@ -7,10 +7,7 @@ masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '2048')
 masterCpus = Integer(ENV['KD_MASTER_CPUS'] || '1')
 
 nodeMemory = Integer(ENV['KD_NODE_MEMORY'] || '2048')
-nodeCpus = Integer(ENV['KD_NODE_CPUS'] || '2')
-
-osUsername = ENV['KD_OS_USERNAME'] || ''
-osPassword = ENV['KD_OS_PASSWORD'] || ''
+nodeCpus = Integer(ENV['KD_NODE_CPUS'] || '1')
 
 oneUsername = ENV['KD_ONE_USERNAME'] || ''
 onePassword = ENV['KD_ONE_PASSWORD'] || ''
@@ -32,21 +29,10 @@ Vagrant.configure(2) do |config|
     one.endpoint = 'https://some.nebula.host.com:2633/RPC2'
     one.username = oneUsername
     one.password = onePassword
-    one.template_id = 4
+    one.template_id = 53
     override.ssh.private_key_path = privateKey
     override.ssh.pty = true
     config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".venv/"]
-  end
-
-  config.vm.provider :openstack do |os, override|
-    os.openstack_auth_url = 'http://openstack.cloudlinux.com:35357/v2.0/tokens' 
-    os.username           = osUsername
-    os.password           = osPassword
-    os.tenant_name        = 'kubedock'
-    os.flavor             = 'm1.small'
-    os.image              = 'centos7'
-    os.floating_ip_pool   = 'ext-net'
-    override.ssh.username = 'centos'
   end
 
   (1..nodesCount).each do |i|

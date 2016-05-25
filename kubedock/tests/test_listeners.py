@@ -1,4 +1,5 @@
 from copy import deepcopy
+from collections import OrderedDict
 import flask
 import json
 import unittest
@@ -143,7 +144,7 @@ class TestSetLimit(unittest.TestCase):
     def test_set_limit(self, ssh_connect_mock, kube_mock, pod_mock):
         host = 'node'
         pod_id = 'abcd'
-        containers = {'first': 'lorem', 'second': 'ipsum'}
+        containers = OrderedDict([('second', 'ipsum'), ('first', 'lorem')])
         app = flask.Flask(__name__)
 
         kube_mock.query.values.return_value = (1, 1, 'GB'),

@@ -1,0 +1,10 @@
+FROM centos:7
+
+RUN yum -y install epel-release && \
+    yum -y update && \
+    yum -y install python-devel python-pip postgresql-contrib postgresql-devel gcc
+RUN pip install --upgrade pip && \
+    pip install -U --no-cache-dir tox psycopg2 setuptools funcsigs python-dateutil
+
+CMD ["/bin/bash"]
+

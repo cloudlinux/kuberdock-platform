@@ -1,17 +1,11 @@
 ---
 
-- name: Find ONE env
-  stat: path=/tmp/one_env
-  register: st
-
 - name: Get network zone
   shell: cat /tmp/one_env | grep ETH0_NETWORK
   register: zn
-  when: st.stat.exists
   changed_when: False
 
 - set_fact: proxy="{{ rpm_proxies[zn.stdout] | default(None) }}"
-  when: st.stat.exists and zn is defined
 
 - name: Setting rpm proxy
   lineinfile:

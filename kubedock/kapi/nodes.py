@@ -241,7 +241,8 @@ def _check_node_hostname(ip, hostname):
 
 def _deploy_node(dbnode, do_deploy, with_testing, options=None):
     if do_deploy:
-        tasks.add_new_node.delay(dbnode.id, with_testing, options=options)
+        tasks.add_new_node.delay(dbnode.id, with_testing,
+                                 deploy_options=options)
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
         if is_ceph_installed:

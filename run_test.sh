@@ -93,7 +93,7 @@ function run_flake8 {
   ret=1
   local treshold_errors=${1:-0}
   tox -epep8 | tee flake8.log
-  local errors_count=$(egrep ': (E\d\d\d|W\d\d\d|F\d\d\d|C\d\d\d) ' flake8.log | wc -l)
+  local errors_count=$(egrep ': (E|W|F|C)[0-9]{3,3} ' flake8.log | wc -l)
 
   if [[ $errors_count -le $treshold_errors ]]; then
     echo "#############################################"

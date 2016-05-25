@@ -1,0 +1,16 @@
+FROM centos:7
+
+RUN yum -y install epel-release && \
+    yum -y update && \
+    yum -y install python-devel python-pip postgresql-contrib postgresql-devel gcc
+RUN pip install --upgrade pip && \
+    pip install -U --no-cache-dir tox psycopg2 setuptools funcsigs python-dateutil
+
+RUN mkdir /tmp/pip-cache-warm-up
+COPY requirements.txt requirements-dev.txt /tmp/pip-cache-warm-up/
+RUN cd /tmp/pip-cache-warm-up && pip download -r requirements.txt -r requirements-dev.txt
+RUN rm -rf /tmp/pip-cache-warm-up/
+
+# Rebuild & push with:
+# docker build -t lobur/centos7-test-base -f Dockerfile.centos7-test-base --rm=true --no-cache=true .
+# docker push lobur/centos7-test-base

@@ -300,13 +300,13 @@ define([
                         options.podModel = new Model.Pod();
 
                         if (podCollection.length === 0) {
-                            options.podModel.set('name', 'Unnamed-1');
+                            options.podModel.set('name', 'New Pod #1');
                         } else {
                             var maxName = _.max(podCollection.map(function(m){
-                                var match = /^Unnamed-(\d+)$/.exec(m.get('name'));
+                                var match = /^New Pod #(\d+)$/.exec(m.get('name'));
                                 return match !== null ? +match[1] : 0;
                             }));
-                            options.podModel.set('name', 'Unnamed-' + (maxName + 1));
+                            options.podModel.set('name', 'New Pod #' + (maxName + 1));
                         }
                     }
                     var model = options.podModel;

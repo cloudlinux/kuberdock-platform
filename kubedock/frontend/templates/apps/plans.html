@@ -559,6 +559,9 @@
                     <form class="buttons" method="GET">
                         <input type="hidden" name="pkgid" value="{{ package.id }}">
                         <input type="hidden" name="plan" value="{{ loop.index0 }}">
+                        {% if token2 %}
+                        <input type="hidden" name="token2" value="{{ token2 }}">
+                        {% endif %}
                         <button class="submit-button">Choose package</button>
                     </form>
                 </div>

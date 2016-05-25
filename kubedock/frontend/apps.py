@@ -25,9 +25,10 @@ def index(app_hash):
             plan_id = int(plan_id)
 
         app = PredefinedApps().get_by_qualifier(app_hash)
-        billing_url = SystemSettings.get_by_name('billing_url')
-        if billing_url:
-            billing_url += '/kdorder.php?a=orderApp'
+        billing_type, billing_url = map(SystemSettings.get_by_name,
+                                        ['billing_type', 'billing_url'])
+        if billing_type.lower() != 'no billing' and billing_url:
+            billing_url += current_app.billing_factory.get_app_url()
         max_pd_size = SystemSettings.get_by_name('persitent_disk_max_size') or 10
         name = app.get('name', 'app')
         template = app.get('template', '')
@@ -67,6 +68,7 @@ def index(app_hash):
             data.update(
                 appPackageID=kuberdock['appPackages'].index(plan),
                 billing_url=billing_url,
+                billing_type=billing_type,
                 template_id=app['id'],
                 max_pd_size=max_pd_size,
                 fields=sorted(fields.itervalues(), key=sort_key),
@@ -74,6 +76,7 @@ def index(app_hash):
                 has_simple=bool(set(field.name for field in fields.itervalues()
                                     if not field.hidden) - set(plan_fields)),
             )
+        data['token2'] = request.args.get('token2')
 
         return render_template(page, **data)
 

@@ -1,5 +1,4 @@
 from flask import Blueprint, current_app, request, jsonify, session
-from uuid import uuid4
 
 from ..exceptions import APIError, PermissionDenied, NotAuthorized
 from ..users import User
@@ -39,8 +38,6 @@ def token2():
         raise PermissionDenied
     if not user.verify_password(password):
         raise NotAuthorized
-    if session.sid is None:
-        session.sid = str(uuid4())
     login_user(user)
     token = create_token(session)
 

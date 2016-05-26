@@ -345,13 +345,13 @@ define([
                         options.podModel = new Model.Pod();
 
                         if (podCollection.length === 0) {
-                            options.podModel.set('name', 'Unnamed-1');
+                            options.podModel.set('name', 'New Pod #1');
                         } else {
                             var maxName = _.max(podCollection.map(function(m){
-                                var match = /^Unnamed-(\d+)$/.exec(m.get('name'));
+                                var match = /^New Pod #(\d+)$/.exec(m.get('name'));
                                 return match !== null ? +match[1] : 0;
                             }));
-                            options.podModel.set('name', 'Unnamed-' + (maxName + 1));
+                            options.podModel.set('name', 'New Pod #' + (maxName + 1));
                         }
                     }
                     var model = options.podModel;
@@ -1261,15 +1261,18 @@ define([
                 return;
             var that = this;
             require(['app_data/pstorage/views'], function(Views){
-                var layoutView = new Views.SettingsLayout(),
+                var layoutView = new Views.PersistentVolumesLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection});
+
                 that.listenTo(layoutView, 'show', function(){
                     var pvCollection = new Model.PersistentStorageCollection();
                     layoutView.nav.show(navbar);
                     pvCollection.fetch({
                         wait: true,
                         success: function(collection, resp, opts){
-                            layoutView.main.show(new Views.PersistentVolumesView({collection: collection}));
+                            var view = new Views.PersistentVolumesView({collection: collection});
+                            layoutView.main.show(view);
+                            layoutView.pager.show(new Pager.PaginatorView({view: view}));
                         },
                         error: function(model, response){
                             utils.notifyWindow(response);

@@ -75,18 +75,18 @@
                     <div class="col-xs-12 no-padding container-logs-wrapper">
                         <div class="container-logs">
                             <% _.each(logs, function(serie){ %>
-                                <p class="container-logs-started"><%- serie.start %>: Started</p>
+                                <p class="container-logs-started"><time><%- serie.start %>:</time> Started</p>
                                 <% _.each(serie.hits, function(line){ %>
-                                    <p><%- line['@timestamp'] %>: <%- line.log %></p>
+                                    <p><time><%- line['@timestamp'] %>:</time> <%- line.log %></p>
                                 <% }) %>
                                 <% if (serie.end) { %>
                                     <% if (serie.exit_code === -2) { %>
-                                        <p class="container-logs-stopped"><%- serie.end %>: Pod was stopped</p>
+                                        <p class="container-logs-stopped"><time><%- serie.end %>:</time> Pod was stopped</p>
                                     <% } else if (serie.exit_code === 0) { %>
-                                        <p class="container-logs-succeeded"><%- serie.end %>: Exited successfully</p>
+                                        <p class="container-logs-succeeded"><time><%- serie.end %>:</time> Exited successfully</p>
                                         <p class="container-logs-succeeded-reason"><%- serie.reason %></p>
                                     <% } else { %>
-                                        <p class="container-logs-failed"><%- serie.end %>: Falied</p>
+                                        <p class="container-logs-failed"><time><%- serie.end %>:</time> Falied</p>
                                         <p class="container-logs-failed-reason"><%- serie.reason %></p>
                                     <% } %>
                                 <% } %>

@@ -1,14 +1,16 @@
 """Tests for interconnection with remote registries.
 Strongly depends on availability of hub.docker.com, quay.io, gcr.io.
 """
-import mock
+import os
 import unittest
+import urlparse
 
 import requests
+from vcr_unittest import VCRTestCase
 
 from ..images import Image, APIError, ImageNotAvailable, CommandIsMissing
 from .. import images
-from ...settings import DEFAULT_REGISTRY
+from ...settings import DEFAULT_REGISTRY, APP_ROOT
 from ...validation import (V, args_list_schema, env_schema, path_schema,
                            port_schema, protocol_schema)
 from ...testutils.testcases import DBTestCase, attr
@@ -56,8 +58,33 @@ CUSTOM_AUTH = CUSTOM_USERNAME, CUSTOM_PASSWORD
 CUSTOM_PRIVATE_REPO = '{0}/mynginx'.format(CUSTOM_URL)
 
 
+class RemoteRegistriesTestCase(VCRTestCase, DBTestCase):
+    def _get_vcr(self, **kwargs):
+        my_vcr = super(RemoteRegistriesTestCase, self)._get_vcr(**kwargs)
+        my_vcr.register_matcher('uri_without_qs_order',
+                                self.match_uri_regardless_of_qs_order)
+        my_vcr.match_on = ['uri_without_qs_order', 'host']
+        return my_vcr
+
+    def _get_cassette_library_dir(self):
+        return os.path.join(APP_ROOT, "vcrpy_test_cassettes")
+
+    def _get_cassette_name(self):
+        return '{0}.{1}.{2}.yaml'.format(self.__module__,
+                                       self.__class__.__name__,
+                                     self._testMethodName)
+
+    @staticmethod
+    def match_uri_regardless_of_qs_order(r1, r2):
+        def parse(url):
+            r = urlparse.urlsplit(url)
+            return r[0], r[1], r[2], urlparse.parse_qs(r[3]), r[4]
+
+        return parse(r1.uri) == parse(r2.uri)
+
+
 @attr('docker_registry')
-class TestGetContainerConfig(DBTestCase):
+class TestGetContainerConfig(RemoteRegistriesTestCase):
     def validate(self, data):
         validator = V()
         if not validator.validate(data, schema):
@@ -101,7 +128,7 @@ class TestGetContainerConfig(DBTestCase):
 
 
 @attr('docker_registry')
-class TestCheckContainers(DBTestCase):
+class TestCheckContainers(RemoteRegistriesTestCase):
     def _container(self, image='i', name='n', command='c', args='a'):
         return dict({'image': image, 'name': name,
                      'command': command, 'args': args})

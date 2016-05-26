@@ -1,0 +1,190 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/wncm/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors":[{"code":"UNAUTHORIZED","message":"authentication
+        required","detail":[{"Type":"repository","Name":"wncm/test_private","Action":"pull"}]}]}
+
+'}
+    headers:
+      content-length: ['149']
+      content-type: [application/json; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:25:45 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      strict-transport-security: [max-age=31536000]
+      www-authenticate: ['Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:wncm/test_private:pull"']
+    status: {code: 401, message: Unauthorized}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic d25jbTptZmhoaDk0a3cwMno=]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://auth.docker.io/token?scope=repository%3Awncm%2Ftest_private%3Apull&service=registry.docker.io
+  response:
+    body: {string: !!python/unicode '{"token":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InduY20vdGVzdF9wcml2YXRlIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDY0MTAwMjQ2LCJpYXQiOjE0NjQwOTk5NDYsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoiNEVwQW9KTnZwWTJhNGJPSTRzdW0iLCJuYmYiOjE0NjQwOTk5NDYsInN1YiI6Ijc3NzFkOTY2LTgzYWQtNDkxOC1iNDhhLTkzYWQzYmIyNzI2YiJ9.MKHPhzqhhDTPg-OgbI4uoTBVzaibwcrGjXAzytXZuQ5KWY6WDfnmxnRSmKvZsy2J0H_wSMOG0ZbxGzAMjAFlXw"}
+
+'}
+    headers:
+      content-length: ['1495']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:25:46 GMT']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InduY20vdGVzdF9wcml2YXRlIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDY0MTAwMjQ2LCJpYXQiOjE0NjQwOTk5NDYsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoiNEVwQW9KTnZwWTJhNGJPSTRzdW0iLCJuYmYiOjE0NjQwOTk5NDYsInN1YiI6Ijc3NzFkOTY2LTgzYWQtNDkxOC1iNDhhLTkzYWQzYmIyNzI2YiJ9.MKHPhzqhhDTPg-OgbI4uoTBVzaibwcrGjXAzytXZuQ5KWY6WDfnmxnRSmKvZsy2J0H_wSMOG0ZbxGzAMjAFlXw]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/wncm/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode "{\n   \"schemaVersion\": 1,\n   \"name\": \"wncm/test_private\",\n
+        \  \"tag\": \"latest\",\n   \"architecture\": \"amd64\",\n   \"fsLayers\":
+        [\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:59081aea924eaeae2424a8499fbbd53ca60d78dfaf20ff037e3d29af90e0ea7b\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:d001bbba5b96e047d9824c36f6c556f7bae3cdceed1b476e51aeba1edfd9ea23\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:4d06f2521e4f3ae47d0339ba887d234e11edfb8b3d9703ed856de95f4cc2d96d\"\n
+        \     }\n   ],\n   \"history\": [\n      {\n         \"v1Compatibility\":
+        \"{\\\"architecture\\\":\\\"amd64\\\",\\\"author\\\":\\\"wncm \\\\\\\"sergey.gruntovsky@gmail.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"eb5360903655\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"curl\\\",\\\"https://httpbin.org/get\\\"],\\\"Image\\\":\\\"sha256:0f82a9d69625486fef097eb4a8268a7caeaf08b930d9624404ed6b9c43de438a\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":[\\\"/entrypoint.sh\\\"],\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"container\\\":\\\"9c2aadc19b73830dea619177f087fd5017cb84e2867a0a0a7b865eea01c06e78\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"eb5360903655\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        CMD [\\\\\\\"curl\\\\\\\" \\\\\\\"https://httpbin.org/get\\\\\\\"]\\\"],\\\"Image\\\":\\\"sha256:0f82a9d69625486fef097eb4a8268a7caeaf08b930d9624404ed6b9c43de438a\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":[\\\"/entrypoint.sh\\\"],\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"created\\\":\\\"2016-03-17T13:48:13.563780108Z\\\",\\\"docker_version\\\":\\\"1.10.2\\\",\\\"id\\\":\\\"115671c6adaf3cb31c7e71bae68fe9d29b28fa29ddccabe4e50a4cf37d74de5c\\\",\\\"os\\\":\\\"linux\\\",\\\"parent\\\":\\\"f065f9fb111dfc9c92495a97364a794f5595c009c79999c274ab61e09ed3d572\\\",\\\"throwaway\\\":true}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"f065f9fb111dfc9c92495a97364a794f5595c009c79999c274ab61e09ed3d572\\\",\\\"parent\\\":\\\"c1376ac7e19307ff2fff100db9308cf8e1ccbd4a79b2fc99d73cb61832779739\\\",\\\"created\\\":\\\"2016-03-17T13:48:13.407484193Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) MAINTAINER wncm \\\\\\\"sergey.gruntovsky@gmail.com\\\\\\\"\\\"]},\\\"throwaway\\\":true}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"c1376ac7e19307ff2fff100db9308cf8e1ccbd4a79b2fc99d73cb61832779739\\\",\\\"parent\\\":\\\"a8306a54b9ad1c9e006e9b0138b578875763c2eef8c991f6864f1d56b13742b2\\\",\\\"created\\\":\\\"2016-03-02T17:56:48.239594532Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) CMD [\\\\\\\"curl\\\\\\\"]\\\"]}}\"\n      },\n      {\n         \"v1Compatibility\":
+        \"{\\\"id\\\":\\\"a8306a54b9ad1c9e006e9b0138b578875763c2eef8c991f6864f1d56b13742b2\\\",\\\"parent\\\":\\\"0c773331bf569b76d86aa6cbfc2c01685cc5733bb11994f5ac02fe12e6eaced7\\\",\\\"created\\\":\\\"2016-03-02T17:56:48.176449616Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) ENTRYPOINT \\\\u0026{[\\\\\\\"/entrypoint.sh\\\\\\\"]}\\\"]}}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"0c773331bf569b76d86aa6cbfc2c01685cc5733bb11994f5ac02fe12e6eaced7\\\",\\\"parent\\\":\\\"091c06d56e4c7d534a2e987d1ae21e49c842729982cf6afdb5440ef10f2bb0f6\\\",\\\"created\\\":\\\"2016-03-02T17:56:48.117813738Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) COPY file:17498c75b30ae6f79738df3a0812794671b484a95deb23739b18038491fe24bd
+        in /\\\"]}}\"\n      },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"091c06d56e4c7d534a2e987d1ae21e49c842729982cf6afdb5440ef10f2bb0f6\\\",\\\"parent\\\":\\\"a2e9c1527ca52f54fd9bdf3f7bdb5947a4f1cf5d41e52da036a9502dcd00f748\\\",\\\"created\\\":\\\"2016-03-02T17:56:47.752353395Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c apk add --update curl \\\\u0026\\\\u0026 rm -rf /var/cache/apk/*\\\"]}}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"a2e9c1527ca52f54fd9bdf3f7bdb5947a4f1cf5d41e52da036a9502dcd00f748\\\",\\\"created\\\":\\\"2016-03-02T17:16:00.167415955Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) ADD file:81ba6f20bdb99e6c13c434a577069860b6656908031162083b1ac9c02c71dd9f
+        in /\\\"]}}\"\n      }\n   ],\n   \"signatures\": [\n      {\n         \"header\":
+        {\n            \"jwk\": {\n               \"crv\": \"P-256\",\n               \"kid\":
+        \"MQJG:KK7Y:FHPV:J5PO:6MFL:UNZ4:7X4Z:OBJJ:IVAR:QUHX:EAE2:OVDP\",\n               \"kty\":
+        \"EC\",\n               \"x\": \"AA2nPz-eKuEpDp5ZCegu45oen9GzYiPcjPCBnwRP6KU\",\n
+        \              \"y\": \"e9ZOYYhH63HqLpJpV3xcLoTKIDt-zJkY5m-o25FVQbA\"\n            },\n
+        \           \"alg\": \"ES256\"\n         },\n         \"signature\": \"SGpwrSe6BS8EfCNa9HVPWoAjZqrSeAImpI0bPrcPjocbaM5Wtem-PGy6htlFlIvgIU1sqntLRnFenqJrJV7Pog\",\n
+        \        \"protected\": \"eyJmb3JtYXRMZW5ndGgiOjQ1OTksImZvcm1hdFRhaWwiOiJDbjAiLCJ0aW1lIjoiMjAxNi0wNS0yNFQxNDoyNTo0NloifQ\"\n
+        \     }\n   ]\n}"}
+    headers:
+      content-length: ['5246']
+      content-type: [application/vnd.docker.distribution.manifest.v1+prettyjws]
+      date: ['Tue, 24 May 2016 14:25:46 GMT']
+      docker-content-digest: ['sha256:e3fc84249cfbb139341ff08b7b75d813e87b08ed52f33cc19919d2a6ba1d315c']
+      docker-distribution-api-version: [registry/2.0]
+      etag: ['"sha256:e3fc84249cfbb139341ff08b7b75d813e87b08ed52f33cc19919d2a6ba1d315c"']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/wncm/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode '{"errors":[{"code":"UNAUTHORIZED","message":"authentication
+        required","detail":[{"Type":"repository","Name":"wncm/test_private","Action":"pull"}]}]}
+
+'}
+    headers:
+      content-length: ['149']
+      content-type: [application/json; charset=utf-8]
+      date: ['Tue, 24 May 2016 14:25:47 GMT']
+      docker-distribution-api-version: [registry/2.0]
+      strict-transport-security: [max-age=31536000]
+      www-authenticate: ['Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:wncm/test_private:pull"']
+    status: {code: 401, message: Unauthorized}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic d25jbTptZmhoaDk0a3cwMno=]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://auth.docker.io/token?scope=repository%3Awncm%2Ftest_private%3Apull&service=registry.docker.io
+  response:
+    body: {string: !!python/unicode '{"token":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InduY20vdGVzdF9wcml2YXRlIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDY0MTAwMjQ4LCJpYXQiOjE0NjQwOTk5NDgsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoicVBaaU44T0tZeVJ1NHlEYzBPTGoiLCJuYmYiOjE0NjQwOTk5NDgsInN1YiI6Ijc3NzFkOTY2LTgzYWQtNDkxOC1iNDhhLTkzYWQzYmIyNzI2YiJ9.gYmbI6LQZvQ9pZi8N4_Xo3vDegwV9MIsO7bAE0iO1wb7f1wVLWUuylX-9TIwXpjV0wk_XpTEkihT6m_-uZyRUw"}
+
+'}
+    headers:
+      content-length: ['1495']
+      content-type: [application/json]
+      date: ['Tue, 24 May 2016 14:25:48 GMT']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InduY20vdGVzdF9wcml2YXRlIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDY0MTAwMjQ4LCJpYXQiOjE0NjQwOTk5NDgsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoicVBaaU44T0tZeVJ1NHlEYzBPTGoiLCJuYmYiOjE0NjQwOTk5NDgsInN1YiI6Ijc3NzFkOTY2LTgzYWQtNDkxOC1iNDhhLTkzYWQzYmIyNzI2YiJ9.gYmbI6LQZvQ9pZi8N4_Xo3vDegwV9MIsO7bAE0iO1wb7f1wVLWUuylX-9TIwXpjV0wk_XpTEkihT6m_-uZyRUw]
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.6.0 CPython/2.7.5 Linux/3.10.0-327.13.1.el7.x86_64]
+    method: GET
+    uri: https://registry-1.docker.io/v2/wncm/test_private/manifests/latest
+  response:
+    body: {string: !!python/unicode "{\n   \"schemaVersion\": 1,\n   \"name\": \"wncm/test_private\",\n
+        \  \"tag\": \"latest\",\n   \"architecture\": \"amd64\",\n   \"fsLayers\":
+        [\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:59081aea924eaeae2424a8499fbbd53ca60d78dfaf20ff037e3d29af90e0ea7b\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:d001bbba5b96e047d9824c36f6c556f7bae3cdceed1b476e51aeba1edfd9ea23\"\n
+        \     },\n      {\n         \"blobSum\": \"sha256:4d06f2521e4f3ae47d0339ba887d234e11edfb8b3d9703ed856de95f4cc2d96d\"\n
+        \     }\n   ],\n   \"history\": [\n      {\n         \"v1Compatibility\":
+        \"{\\\"architecture\\\":\\\"amd64\\\",\\\"author\\\":\\\"wncm \\\\\\\"sergey.gruntovsky@gmail.com\\\\\\\"\\\",\\\"config\\\":{\\\"Hostname\\\":\\\"eb5360903655\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"curl\\\",\\\"https://httpbin.org/get\\\"],\\\"Image\\\":\\\"sha256:0f82a9d69625486fef097eb4a8268a7caeaf08b930d9624404ed6b9c43de438a\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":[\\\"/entrypoint.sh\\\"],\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"container\\\":\\\"9c2aadc19b73830dea619177f087fd5017cb84e2867a0a0a7b865eea01c06e78\\\",\\\"container_config\\\":{\\\"Hostname\\\":\\\"eb5360903655\\\",\\\"Domainname\\\":\\\"\\\",\\\"User\\\":\\\"\\\",\\\"AttachStdin\\\":false,\\\"AttachStdout\\\":false,\\\"AttachStderr\\\":false,\\\"Tty\\\":false,\\\"OpenStdin\\\":false,\\\"StdinOnce\\\":false,\\\"Env\\\":[\\\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\\\"],\\\"Cmd\\\":[\\\"/bin/sh\\\",\\\"-c\\\",\\\"#(nop)
+        CMD [\\\\\\\"curl\\\\\\\" \\\\\\\"https://httpbin.org/get\\\\\\\"]\\\"],\\\"Image\\\":\\\"sha256:0f82a9d69625486fef097eb4a8268a7caeaf08b930d9624404ed6b9c43de438a\\\",\\\"Volumes\\\":null,\\\"WorkingDir\\\":\\\"\\\",\\\"Entrypoint\\\":[\\\"/entrypoint.sh\\\"],\\\"OnBuild\\\":[],\\\"Labels\\\":{}},\\\"created\\\":\\\"2016-03-17T13:48:13.563780108Z\\\",\\\"docker_version\\\":\\\"1.10.2\\\",\\\"id\\\":\\\"115671c6adaf3cb31c7e71bae68fe9d29b28fa29ddccabe4e50a4cf37d74de5c\\\",\\\"os\\\":\\\"linux\\\",\\\"parent\\\":\\\"f065f9fb111dfc9c92495a97364a794f5595c009c79999c274ab61e09ed3d572\\\",\\\"throwaway\\\":true}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"f065f9fb111dfc9c92495a97364a794f5595c009c79999c274ab61e09ed3d572\\\",\\\"parent\\\":\\\"c1376ac7e19307ff2fff100db9308cf8e1ccbd4a79b2fc99d73cb61832779739\\\",\\\"created\\\":\\\"2016-03-17T13:48:13.407484193Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) MAINTAINER wncm \\\\\\\"sergey.gruntovsky@gmail.com\\\\\\\"\\\"]},\\\"throwaway\\\":true}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"c1376ac7e19307ff2fff100db9308cf8e1ccbd4a79b2fc99d73cb61832779739\\\",\\\"parent\\\":\\\"a8306a54b9ad1c9e006e9b0138b578875763c2eef8c991f6864f1d56b13742b2\\\",\\\"created\\\":\\\"2016-03-02T17:56:48.239594532Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) CMD [\\\\\\\"curl\\\\\\\"]\\\"]}}\"\n      },\n      {\n         \"v1Compatibility\":
+        \"{\\\"id\\\":\\\"a8306a54b9ad1c9e006e9b0138b578875763c2eef8c991f6864f1d56b13742b2\\\",\\\"parent\\\":\\\"0c773331bf569b76d86aa6cbfc2c01685cc5733bb11994f5ac02fe12e6eaced7\\\",\\\"created\\\":\\\"2016-03-02T17:56:48.176449616Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) ENTRYPOINT \\\\u0026{[\\\\\\\"/entrypoint.sh\\\\\\\"]}\\\"]}}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"0c773331bf569b76d86aa6cbfc2c01685cc5733bb11994f5ac02fe12e6eaced7\\\",\\\"parent\\\":\\\"091c06d56e4c7d534a2e987d1ae21e49c842729982cf6afdb5440ef10f2bb0f6\\\",\\\"created\\\":\\\"2016-03-02T17:56:48.117813738Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) COPY file:17498c75b30ae6f79738df3a0812794671b484a95deb23739b18038491fe24bd
+        in /\\\"]}}\"\n      },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"091c06d56e4c7d534a2e987d1ae21e49c842729982cf6afdb5440ef10f2bb0f6\\\",\\\"parent\\\":\\\"a2e9c1527ca52f54fd9bdf3f7bdb5947a4f1cf5d41e52da036a9502dcd00f748\\\",\\\"created\\\":\\\"2016-03-02T17:56:47.752353395Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c apk add --update curl \\\\u0026\\\\u0026 rm -rf /var/cache/apk/*\\\"]}}\"\n
+        \     },\n      {\n         \"v1Compatibility\": \"{\\\"id\\\":\\\"a2e9c1527ca52f54fd9bdf3f7bdb5947a4f1cf5d41e52da036a9502dcd00f748\\\",\\\"created\\\":\\\"2016-03-02T17:16:00.167415955Z\\\",\\\"container_config\\\":{\\\"Cmd\\\":[\\\"/bin/sh
+        -c #(nop) ADD file:81ba6f20bdb99e6c13c434a577069860b6656908031162083b1ac9c02c71dd9f
+        in /\\\"]}}\"\n      }\n   ],\n   \"signatures\": [\n      {\n         \"header\":
+        {\n            \"jwk\": {\n               \"crv\": \"P-256\",\n               \"kid\":
+        \"2JBD:JNEU:JSM7:DHTO:DVKI:QLFQ:FMIW:K25Z:UKHW:QTAQ:JOBB:4QOF\",\n               \"kty\":
+        \"EC\",\n               \"x\": \"sfHyFHWTaixv2HEfjBqhCHEYa4wg0bv7l5qFQ5MjR2o\",\n
+        \              \"y\": \"n-xD6qCAjJrrT4d8jGk1ZWsda_TEONMMVDyajypN6vQ\"\n            },\n
+        \           \"alg\": \"ES256\"\n         },\n         \"signature\": \"nXvkYisbFCB9Q1j-FYpfZ1qWVXsOSwnok4GhUXlRdgcvX2pd_r1sosnCQAY_4JJBFw6ULaHo0bOx4j1F89ijTg\",\n
+        \        \"protected\": \"eyJmb3JtYXRMZW5ndGgiOjQ1OTksImZvcm1hdFRhaWwiOiJDbjAiLCJ0aW1lIjoiMjAxNi0wNS0yNFQxNDoyNTo0OFoifQ\"\n
+        \     }\n   ]\n}"}
+    headers:
+      content-length: ['5246']
+      content-type: [application/vnd.docker.distribution.manifest.v1+prettyjws]
+      date: ['Tue, 24 May 2016 14:25:48 GMT']
+      docker-content-digest: ['sha256:e3fc84249cfbb139341ff08b7b75d813e87b08ed52f33cc19919d2a6ba1d315c']
+      docker-distribution-api-version: [registry/2.0]
+      etag: ['"sha256:e3fc84249cfbb139341ff08b7b75d813e87b08ed52f33cc19919d2a6ba1d315c"']
+      strict-transport-security: [max-age=31536000]
+    status: {code: 200, message: OK}
+version: 1

@@ -19,7 +19,34 @@ DEBUG = True
 # PRESERVE_CONTEXT_ON_EXCEPTION configuration variable.
 PRESERVE_CONTEXT_ON_EXCEPTION = False
 TEST = False
+
+# This hook is only for development and debug purposes
+# When it set to true Kuberdock will execute hook on each restart
 PRE_START_HOOK_ENABLED = False
+
+
+CLOUDLINUX_SIG_KEY = '8c55a6628608cb71'
+
+
+def is_production_pkg():
+    """
+    Checks that current Kuberdock package is one of stable KD releases based
+    on package signature (Any public release signed with key above)
+    :return: Bool
+    """
+    try:
+        import rpm
+        from rpmUtils.miscutils import getSigInfo
+        ts = rpm.ts()
+        hdr = list(ts.dbMatch('name', 'kuberdock'))[0]
+        err, res = getSigInfo(hdr)
+        if err:
+            return False
+        return CLOUDLINUX_SIG_KEY in res[2]
+    except Exception:
+        return False
+
+IS_PRODUCTION_VERSION = is_production_pkg()
 
 # more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects
 DB_ENGINE = 'postgresql+psycopg2'

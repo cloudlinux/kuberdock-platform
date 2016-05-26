@@ -166,7 +166,7 @@ class TestNodes(DBTestCase):
         do_deploy = True
         nodes._deploy_node(node1, do_deploy, with_testing)
         add_node_mock.delay.assert_called_once_with(
-            node1.id, with_testing, options=None)
+            node1.id, with_testing, deploy_options=None)
 
         self.assertFalse(is_ceph_mock.called)
         self.assertFalse(add_node_to_k8s_mock.called)

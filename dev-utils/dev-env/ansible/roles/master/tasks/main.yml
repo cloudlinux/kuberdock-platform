@@ -12,11 +12,11 @@
 
 - find: paths=/vagrant/ patterns="kuberdock*.rpm" 
   register: rpm_exist
-  tags:
-      - deploy
 
 - fail: msg="There is not any kuberdock*.rpm files found."
   when: rpm_exist.matched <= 0
+  tags:
+      - deploy
 
 - name: Unpack deploy.sh
   command: bash /vagrant/dev-utils/unpack-rpm.sh

@@ -131,7 +131,7 @@ EOF
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 
 
-yum_wrapper -y install kuberdock-cli
+yum_wrapper -y install kuberdock-cli kuberdock-plugin
 
 sed -i -e "/^url/ {s|[ \t]*\$||}" -e "/^url/ {s|[^/]\+$|$KD_HOST|}" $GLOBAL_KCLI_CONFIG
 
@@ -142,6 +142,9 @@ if [ $? -eq 0 ];then
     TOKEN=$(echo $TOKEN|sed "s/.*\"token\":\"\(.*\)\".*/\1/I")
     KCLI_CONFIG_PATH="$HOME/$KCLI_CONFIG"
     cat > $KCLI_CONFIG_PATH << EOF
+[global]
+url = $KD_URL
+
 [defaults]
 # token to talk to kuberdock
 token = $TOKEN

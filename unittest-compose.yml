@@ -1,0 +1,23 @@
+version: '2'
+services:
+  appcloud:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    links:
+      - redis
+      - postgres
+    environment:
+      REDIS_HOST: redis
+      DB_HOST: postgres
+      TEST_DB_HOST: postgres
+
+  redis:
+    image: redis:2
+
+  postgres:
+    environment:
+      POSTGRES_DB: testkuberdock
+      POSTGRES_USER: kuberdock
+      POSTGRES_PASSWORD: kuberdock2go
+    image: postgres:9.2

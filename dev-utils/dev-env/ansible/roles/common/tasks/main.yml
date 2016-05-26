@@ -1,3 +1,16 @@
+---
+
+- find: paths=/vagrant/ patterns="kuberdock*.rpm" 
+  register: rpm_exist
+
+- name: Check existing packages
+  fail: msg="Too many kuberdock*.rpm packages found in a repo. Please remove everything except what you want to deploy and restart from scratch."
+  when: rpm_exist.matched > 1
+
+- name: Check existing dev packages
+  fail: msg="You have extra KuberDock RPM package in a repo, for Dev install is is only allowed to have 'kuberdock.rpm'. Please remove an extra RPM and restart from scratch."
+  when: is_dev_install and rpm_exist.matched == 1 and rpm_exist.files[0].path != "/vagrant/kuberdock.rpm"
+
 - include: ../../../facts.yml
 
 - name: RPM proxy configure
@@ -7,8 +20,7 @@
 - name: upgrade all packages
   yum: name=* state=latest
 
-- name: Fix default interface
-  shell: route add -net 8.8.8.8 netmask 255.255.255.255 {{ ansible_interfaces | last }}
+- include: vbox_patch.yml
   when : ansible_default_ipv4.address=="10.0.2.15"
 
 - name: "Build hosts file"

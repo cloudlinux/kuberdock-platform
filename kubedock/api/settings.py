@@ -16,44 +16,6 @@ from ..validation import check_system_settings
 settings = Blueprint('settings', __name__, url_prefix='/settings')
 
 
-# @check_permission("get_permissions", "settings")
-# def get_permissions():
-#     data = []
-#     roles = {r.id: r.to_dict() for r in Role.all()}
-#     for res in Resource.all():
-#         perms = set()
-#         _roles = {}
-#         for p in res.permissions:
-#             perms.add(p.name)
-#             role = roles[p.role_id]
-#             rolename = role['rolename']
-#             if rolename in _roles:
-#                 _roles[rolename].append(p.to_dict())
-#             else:
-#                 _roles[rolename] = [p.to_dict()]
-#         data.append({'id': res.id, 'name': res.name,
-#                       'permissions': list(perms),
-#                      'roles': _roles, 'all_roles': roles})
-#     return roles, data
-#
-#
-# @settings.route('/permissions/<pid>', methods=['PUT'])
-# @auth_required
-# @check_permission("set_permissions", "settings")
-# def permissions(pid):
-#     data = request.json or request.form.to_dict()
-#     allow = data.get('allow')
-#     if allow not in ('true', 'false', True, False):
-#         raise APIError("Value error: {0}".format(allow))
-#     perm = Permission.query.get(int(pid))
-#     if allow in ('true', True):
-#         perm.set_allow()
-#     else:
-#         perm.set_deny()
-#     acl.init_permissions()
-#     return jsonify({'status': 'OK'})
-
-
 def enrich_with_plugin_list(data):
     plugins = ['No billing'] + \
         current_app.billing_factory.list_billing_plugins()
@@ -104,8 +66,7 @@ def get_timezone():
 @auth_required
 @check_permission('get', 'timezone')
 def get_all_timezones():
-    data = ['{0} ({1})'.format(tz, datetime.now(timezone(tz)).strftime('%z'))
-            for tz in common_timezones]
+    data = [append_offset_to_timezone(tz) for tz in common_timezones]
     return jsonify({'status': 'OK', 'data': data})
 
 

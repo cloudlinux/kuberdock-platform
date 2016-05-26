@@ -118,16 +118,29 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         }
     });
 
-    views.SettingsLayout = Marionette.LayoutView.extend({
+
+    views.PersistentVolumesLayout = Marionette.LayoutView.extend({
         template: pvLayoutTpl,
         regions: {
             nav : 'div#nav',
-            main: 'div#details_content'
+            main: 'div#details_content',
+            pager: 'div#pager'
+        },
+
+        initialize: function(){
+            var that = this;
+            this.listenTo(this.main, 'show', function(view){
+                that.listenTo(view, 'pager:clear', that.clearPager);
+            });
         },
 
         onBeforeShow: function(){
             utils.preloader.show();
         },
+
+        clearPager: function(){
+            this.trigger('pager:clear');
+        }
     });
 
     return views;

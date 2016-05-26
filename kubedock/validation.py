@@ -77,6 +77,7 @@ image_request_schema = {
             'password': dict(ascii_string, empty=False, required=True)
         },
     },
+    'podID': {'type': 'string', 'empty': False, 'nullable': True},
     'refresh_cache': {'coerce': bool},
 }
 

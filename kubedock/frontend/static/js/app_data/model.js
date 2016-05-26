@@ -251,19 +251,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     }, {  // Class Methods
         fromImage: function(image){
-            var _data = _.clone(image instanceof data.Image ? image.attributes : image);
-            _data.ports = _.map(_data.ports || [], function(port){
+            var _data = JSON.parse(JSON.stringify(image));
+            _data.ports = _.map(_data.ports, function(port){
                 return {
                     containerPort: port.number,
                     protocol: port.protocol,
                 };
             });
-            _data.volumeMounts = _.map(_data.volumeMounts || [],
+            _data.volumeMounts = _.map(_data.volumeMounts,
                                        function(vm){ return {mountPath: vm}; });
-            var container = new this(_data);
-            container.originalCommand = container.get('command').slice(0);
-            container.originalArgs = container.get('args').slice(0);
-            return container;
+            _data.env = _.map(_data.env, _.clone);
+            _data.command = _data.command.slice(0);
+            _data.args = _data.args.slice(0);
+            return new this(_data);
         },
         validateMountPath: function(mountPath){
             if (mountPath && mountPath.length < 2)
@@ -658,8 +658,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     data.Image = Backbone.Model.extend({
         url: '/api/images/new',
-        defaults: {
-            image: 'Imageless'
+        idAttribute: 'image',
+        defaults: function(){
+            return {
+                image: 'Imageless',
+                args: [],
+                command: [],
+                ports: [],
+                volumeMounts: [],
+            };
         },
         parse: unwrapper,
         fetch: function(options){
@@ -703,15 +710,21 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
     App.getPodCollection = App.resourcePromiser('podCollection', data.PodCollection);
 
-    data.ImageCollection = Backbone.Collection.extend({
+
+    data.ImageSearchItem = Backbone.Model.extend({
+        idAttribute: 'name',
+        parse: unwrapper,
+    });
+
+    data.ImageSearchCollection = Backbone.Collection.extend({
         url: '/api/images/',
-        model: data.Image,
+        model: data.ImageSearchItem,
         parse: unwrapper
     });
 
-    data.ImagePageableCollection = Backbone.PageableCollection.extend({
+    data.ImageSearchPageableCollection = Backbone.PageableCollection.extend({
         url: '/api/images/',
-        model: data.Image,
+        model: data.ImageSearchItem,
         parse: unwrapper,
         mode: 'infinite',
         state: {

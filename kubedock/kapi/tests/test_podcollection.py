@@ -1350,7 +1350,7 @@ class TestPodCollectionGetSecrets(unittest.TestCase, TestCaseMixin):
         get_mock.assert_has_calls([
             mock.call(['secrets', 'secret-1'], ns=pod.namespace),
             mock.call(['secrets', 'secret-2'], ns=pod.namespace),
-        ])
+        ], any_order=True)
         self.assertEqual(secrets, {'secret-1': (username, password, registry),
                                    'secret-2': (username, password, registry)})
 

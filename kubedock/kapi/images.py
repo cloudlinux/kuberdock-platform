@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+from itertools import chain
 from collections import Mapping, defaultdict, namedtuple
 from contextlib import contextmanager
 from datetime import datetime
@@ -458,30 +459,43 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             config['secret'] = {'username': auth[0], 'password': auth[1]}
         return config
 
-    def get_container_config(self, auth=None, refresh_cache=False):
+    def get_container_config(
+            self, auth=None, refresh_cache=False, secrets=None):
         """
         Get container config from cache or registry
 
-        :param auth: authentication data. Accepts None, [<username>, <password>] or
-            {'username': <username>, <password>: <password>}
+        :param auth: authentication data. Accepts None, [<username>, <password>]
+            or {'username': <username>, <password>: <password>}
         :param refresh_cache: if True, then refresh cache no matter what
             timestamp does it have
+        :param secrets: additional list of secrets to use with (or instead of)
+            auth; each item must be a (username, password, registry) tuple.
         :return: dict which represents image configuration
         """
         if isinstance(auth, Mapping):
             auth = (auth.get('username'), auth.get('password'))
+        additional_auth_set = set()
+        if secrets is not None:
+            additional_auth_set.update(
+                (username, password) for username, password, registry in secrets
+                if registry == self.full_registry)
 
-        cache_enabled = auth is None
+        cache_enabled = auth is None and secrets is None
         if cache_enabled:
             cached_config = DockerfileCache.query.get(str(self))
             if not (refresh_cache or cached_config is None or cached_config.outdated):
                 return cached_config.data
 
-        image_info = self._request_image_info(auth)
-        if image_info is None or 'config' not in image_info:
+        # try to get image data using provided auth data (or without auth) first
+        # then using provided secrets
+        for auth in chain([auth], additional_auth_set):
+            image_info = self._request_image_info(auth)
+            if image_info is not None and 'config' in image_info:
+                data = self._prepare_response(image_info, auth)
+                break
+        else:
             check_registry_status(self.full_registry)
             raise APIError('Couldn\'t get the image')
-        data = self._prepare_response(image_info, auth)
 
         if cache_enabled:
             if cached_config is None:

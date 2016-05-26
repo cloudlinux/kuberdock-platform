@@ -328,8 +328,6 @@ define([
          *      existing pod.
          * @param {Model.Pod} [options.podModel] - Pod model. In case of editing
          *      existent pod, create temporal model in "edited_config" field and use it.
-         * @param {Object} [options.podModel.origEnv] -
-         *      Cached original env vars from images.
          * @param [options.layout] - Pod wizard layout.
          *
          * @returns {Promise} - Promise of filled `options`.
@@ -361,7 +359,8 @@ define([
                         || (model.editOf()
                             ? {id: model.get('containers').last().id}
                             : {id: null, isNew: true});
-                    model.origEnv = model.origEnv || {};
+                    model.originalImages = model.originalImages
+                        || new Backbone.Collection([], {model: Model.Image});
 
                     if (!options.layout){
                         options.layout = new Views.PodWizardLayout();
@@ -397,17 +396,18 @@ define([
             this.podWizardBase(options).done(function(options, Views){
                 options.registryURL = options.registryURL || 'registry.hub.docker.com';
                 options.imageCollection = options.imageCollection
-                    || new Model.ImagePageableCollection();
+                    || new Model.ImageSearchPageableCollection();
                 options.selectImageViewModel = options.selectImageViewModel
                     || new Backbone.Model({query: ''});
 
                 var view = new Views.GetImageView({
                     pod: options.podModel, model: options.selectImageViewModel,
-                    collection: new Model.ImageCollection(
+                    collection: new Model.ImageSearchCollection(
                         options.imageCollection.fullCollection.models),
                 });
 
                 this.listenTo(view, 'image:searchsubmit', function(){
+                    view.collection.reset();
                     options.imageCollection.fullCollection.reset();
                     options.imageCollection.getFirstPage({
                         wait: true,
@@ -454,6 +454,7 @@ define([
                         data: JSON.stringify({image: image, auth: auth}),
                         success: function(image){
                             var containerModel = Model.Container.fromImage(image);
+                            options.podModel.originalImages.add(image);
                             options.podModel.get('containers')
                                 .remove(options.podModel.lastEditedContainer.id);
                             options.podModel.lastEditedContainer.id = containerModel.id;
@@ -468,6 +469,28 @@ define([
             });
         },
 
+        addOriginalImage: function(container){
+            utils.preloader.show();
+            var deferred = $.Deferred().always(utils.preloader.hide);
+            if (container.originalImage)
+                return deferred.resolve().promise();
+
+            var pod = container.getPod(),
+                image = container.get('image');
+            container.originalImage = pod.originalImages.get(image);
+            if (container.originalImage)
+                return deferred.resolve().promise();
+
+            var podID = pod.editOf() ? pod.editOf().id : pod.id;
+            container.originalImage = new Model.Image({image: image});
+            container.originalImage.fetch({data: JSON.stringify({image: image, podID: podID})})
+                .always(function(){
+                    pod.originalImages.add(container.originalImage);
+                    deferred.resolve();
+                });
+            return deferred.promise();
+        },
+
         podWizardStepGeneral: function(options){
             if (!this.checkPermissions(['User', 'TrialUser']))
                 return;
@@ -476,13 +499,16 @@ define([
                 if (containerID == null)
                     return this.podWizardStepImage(options);
 
-                var view = new Views.WizardPortsSubView({
-                        model: options.podModel.get('containers').get(containerID),
-                    });
+                var containerModel = options.podModel.get('containers').get(containerID),
+                    view = new Views.WizardPortsSubView({model: containerModel});
 
                 this.listenTo(view, 'step:envconf', this.podWizardStepEnv);
                 this.listenTo(view, 'step:getimage', this.podWizardStepImage);
-                options.layout.steps.show(view);
+                this.listenTo(view, 'step:complete', this.podWizardStepFinal);
+
+                this.addOriginalImage(containerModel).done(function(){
+                    options.layout.steps.show(view);
+                });
             });
         },
 
@@ -492,16 +518,14 @@ define([
             this.podWizardBase(options).done(function(options, Views){
                 var containerID = options.podModel.lastEditedContainer.id,
                     containerModel = options.podModel.get('containers').get(containerID),
-                    image = containerModel.get('image'),
                     view = new Views.WizardEnvSubView({model: containerModel});
-
-                if (!(containerModel.get('image') in options.podModel.origEnv))
-                    options.podModel.origEnv[image] = _.map(containerModel.attributes.env, _.clone);
-                containerModel.origEnv = _.map(options.podModel.origEnv[image], _.clone);
 
                 this.listenTo(view, 'step:portconf', this.podWizardStepGeneral);
                 this.listenTo(view, 'step:complete', this.podWizardStepFinal);
-                options.layout.steps.show(view);
+
+                this.addOriginalImage(containerModel).done(function(){
+                    options.layout.steps.show(view);
+                });
             });
         },
 

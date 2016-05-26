@@ -333,7 +333,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             /* check CMD and ENTRYPOINT */
             if (!this.model.get('command').length && !this.model.get('args').length
-                    && !this.model.originalCommand.length && !this.model.originalArgs.length){
+                    && !this.model.originalImage.get('command').length
+                    && !this.model.originalImage.get('args').length){
                 utils.notifyWindow('Please, specify value of the Command field.');
                 utils.scrollTo(this.ui.input_command);
                 return;
@@ -371,8 +372,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         goBack: function(evt){
-            this.pod.deleteVolumes(this.model.get('volumeMounts').pluck('name'));
-            this.trigger('step:getimage');
+            if (this.pod.lastEditedContainer.isNew)
+                this.trigger('step:getimage');
+            else
+                this.trigger('step:complete');
         },
 
         onRender: function(){
@@ -870,8 +873,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         resetFielsdsValue: function(){
-            this.model.set('env', _.map(this.model.origEnv, _.clone));
-            this.render();
+            this.model.set('env', _.map(this.model.originalImage.get('env'), _.clone));
         },
 
         onChangeInput: function(evt){

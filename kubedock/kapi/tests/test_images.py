@@ -109,6 +109,7 @@ class TestImagesAuth(DBTestCase):
 
         v1_image_config_url = registry.rstrip('/') + '/v1/images/' + image +\
             '/json'
+
         def v1_image_conf_callback(request):
             self.assertEqual(
                 request.headers['authorization'],
@@ -434,6 +435,24 @@ class TestImages(unittest.TestCase):
         self.assertEqual(result, NGINX_IMAGE_INFO['id'])
         request_image_info_mock.assert_called_once_with(
             Image('nginx'), ('username2', 'password2'))
+
+    @mock.patch.object(images, 'check_registry_status', autospec=True)
+    @mock.patch.object(Image, '_request_image_info', autospec=True)
+    def test_get_container_config_using_secrets(
+            self, request_config_mock, check_registry_status):
+        """Test for kapi.images.Image.get_container_config function."""
+        request_config_mock.return_value = None
+        image = Image('nginx')
+        with self.assertRaises(APIError):
+            image.get_container_config(secrets=[
+                ('username-1', 'password-1', DEFAULT_REGISTRY),
+                ('username-2', 'password-2', 'https://other.registry'),
+            ])
+        request_config_mock.assert_has_calls([
+            mock.call(image, None),
+            mock.call(image, ('username-1', 'password-1')),
+        ])
+        check_registry_status.assert_called_once_with(image.full_registry)
 
 
 class TestCheckRegistryStatus(unittest.TestCase):

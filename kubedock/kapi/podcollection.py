@@ -470,7 +470,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         :returns: mapping of secrets name to (username, password, registry)
         """
         secrets = {}
-        for secret in pod.secrets:
+        secrets_ids = set(pod.secrets)
+        if getattr(pod, 'edited_config', None):
+            secrets_ids.update(pod.edited_config.get('secrets'))
+        for secret in secrets_ids:
             rv = self._get(['secrets', secret], ns=pod.namespace)
             if rv['kind'] == 'Status':
                 raise APIError(rv['message'])

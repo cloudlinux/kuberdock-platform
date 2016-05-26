@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify
 from functools import wraps
 
 from ..core import db
@@ -10,8 +10,8 @@ from ..settings import DEFAULT_IMAGES_URL
 from ..login import auth_required
 from ..utils import KubeUtils
 from ..kapi import images as kapi_images
+from ..kapi.podcollection import PodCollection
 from ..rbac import check_permission
-
 
 images = Blueprint('images', __name__, url_prefix='/images')
 
@@ -92,9 +92,23 @@ def search_image():
 def get_dockerfile_data():
     params = KubeUtils._get_params()
     check_image_request(params)
-    return kapi_images.Image(
-        params.pop('image')
-    ).get_container_config(**params)
+
+    image = kapi_images.Image(params.get('image'))
+    refresh_cache = params.get('refresh_cache')
+    auth = params.get('auth')
+    pod_id = params.get('podID')
+
+    secrets = None
+    if pod_id:
+        pod_collection = PodCollection(KubeUtils._get_current_user())
+        pod = pod_collection._get_by_id(pod_id)
+        containers = pod.containers
+        containers += (pod.edited_config or {}).get('containers') or []
+        if any(c for c in containers if kapi_images.Image(c['image']) == image):
+            secrets = pod_collection._get_secrets(pod).values()
+
+    return image.get_container_config(
+        auth=auth, refresh_cache=refresh_cache, secrets=secrets)
 
 
 @images.route('/isalive', methods=['GET'])

@@ -280,12 +280,15 @@ class CreateIPPool(Command):
                help='Network with mask'),
         Option('-e', '--exclude', dest='exclude', required=False,
                help='Excluded ips'),
+        Option('--node', dest='node', required=False,
+               help='Node name'),
     )
 
-    def run(self, subnet, exclude):
+    def run(self, subnet, exclude, node=None):
         ippool.IpAddrPool().create({
             'network': subnet.decode(),
-            'autoblock': exclude
+            'autoblock': exclude,
+            'node': node,
         })
 
 

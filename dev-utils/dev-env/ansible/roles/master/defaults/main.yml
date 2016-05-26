@@ -3,3 +3,4 @@
 no_wsgi: false
 git_ref: ""
 public_ips: "200,201,202"
+non_floating_ips: False

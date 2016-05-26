@@ -88,6 +88,7 @@ Vagrant.configure(2) do |config|
             "git_ref" => ENV['KD_GIT_REF'],
             "testing_repo" => true, #ENV['KD_TESTING_REPO'],
             "public_ips" => ENV['KD_ONE_PUB_IPS'],
+	    "non_floating_ips" => ENV['KD_NONFLOATING_PUBLIC_IPS'],
         }
 
         # Clean undefined vars

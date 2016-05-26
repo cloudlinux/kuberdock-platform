@@ -10,7 +10,7 @@
 - include: dev_predeploy.yml
   when: is_dev_install
 
-- find: paths=/vagrant/ patterns="kuberdock*.rpm" 
+- find: paths=/vagrant/ patterns="kuberdock*.rpm"
   register: rpm_exist
 
 - fail: msg="There is not any kuberdock*.rpm files found."
@@ -25,8 +25,8 @@
 - name: Cleanup
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
 
-- name: Deploy 
-  shell: echo "{{ ansible_default_ipv4.address }}" | bash deploy.sh {{ add_testing_repo }} chdir=/vagrant
+- name: Deploy
+  shell: echo "{{ ansible_default_ipv4.address }}" | bash deploy.sh {{ add_testing_repo }} {{ non_floating_ips_mode }} chdir=/vagrant
   when: rpm_exist.matched > 0 and not use_ceph
   tags:
       - deploy

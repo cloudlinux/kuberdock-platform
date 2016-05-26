@@ -116,7 +116,7 @@ define([
                     var itemLayout = new Views.PodItemLayout(),
                         navbar = new Menu.NavList({collection: App.menuCollection}),
                         breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'podName']}),
-                        fixedPrice = App.currentUser.get('count_type') === 'fixed'
+                        fixedPrice = App.userPackage.get('count_type') === 'fixed'
                             && settings.byName('billing_type')
                                 .get('value').toLowerCase() !== 'no billing';
 

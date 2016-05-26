@@ -533,7 +533,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             var deferred = new $.Deferred(),
                 model = this;
             App.getSystemSettingsCollection().done(function(settings){
-                var fixedPrice = App.currentUser.get('count_type') === 'fixed'
+                var fixedPrice = App.userPackage.get('count_type') === 'fixed'
                     && settings.byName('billing_type')
                         .get('value').toLowerCase() !== 'no billing';
                 if (!fixedPrice){

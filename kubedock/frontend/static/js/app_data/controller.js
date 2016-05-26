@@ -504,8 +504,9 @@ define([
                 });
                 that.listenTo(view, 'pod:pay_and_run', function(){
                     if (checkKubeTypes(/*ensureSelected*/true)) return;
-                    var billingUrl = utils.getBillingUrl(settingsCollection);
-                    if (billingUrl) {
+                    var billingType = settingsCollection.byName('billing_type').get('value'),
+                        fix_price = App.userPackage.get('count_type') === 'fixed';
+                    if (billingType.toLowerCase() !== 'no billing' && fix_price) {
                         utils.preloader.show();
                         podCollection.fullCollection.create(model, {
                             wait: true,

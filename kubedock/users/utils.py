@@ -46,7 +46,7 @@ def append_offset_to_timezone(tz):
     if tz not in common_timezones:
         return tz
     offset = datetime.now(timezone(tz)).strftime('%z')
-    return '{0} ({1})'.format(tz, offset)
+    return '{0} ({1}:{2})'.format(tz, offset[:3], offset[3:])
 
 
 def strip_offset_from_timezone(tz):
@@ -77,4 +77,3 @@ def enrich_tz_with_offset(timezone_keys):
             return res
         return wrapper
     return decorator
-

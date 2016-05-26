@@ -173,7 +173,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         editableAttributes: [  // difference in other attributes won't be interpreted as "change"
             'args', 'command', 'env', 'image', 'kubes', 'ports', 'sourceUrl',
-            'volumeMounts', 'terminationMessagePath', 'workingDir'
+            'volumeMounts', 'workingDir'
         ],
         getPod: function(){
             return _.find((this.collection || {}).parents || [],

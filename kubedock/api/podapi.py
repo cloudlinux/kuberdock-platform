@@ -69,7 +69,7 @@ class PodsAPI(KubeUtils, MethodView):
                     'Direct requests are forbidden for fixed-price users.')
 
             edited = db_pod.get_dbconfig().get('edited_config') is not None
-            apply_edit = params['commandOptions']['applyEdit']
+            apply_edit = params['commandOptions'].get('applyEdit')
             if command in ('start', 'redeploy') and edited and apply_edit:
                 # fix-price user is not allowed to apply changes in pod
                 # directly, only through billing system

@@ -1,6 +1,7 @@
 import os
-from datetime import timedelta
 import ConfigParser
+from datetime import timedelta
+import subprocess
 
 from celery.schedules import crontab
 
@@ -8,25 +9,7 @@ DEFAULT_TIMEZONE = 'UTC'
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-DEBUG = True
-# With the following option turned on (by default) and in case of debug mode
-# we will get a couple of 'idle in transaction' states
-# in postgres if there will be unhandled exceptions in request processing.
-# From docs:
-# In debug mode Flask will not tear down a request on an exception immediately.
-# Instead if will keep it alive so that the interactive debugger can still
-# access it. This behavior can be controlled by the
-# PRESERVE_CONTEXT_ON_EXCEPTION configuration variable.
-PRESERVE_CONTEXT_ON_EXCEPTION = False
-TEST = False
-
-# This hook is only for development and debug purposes
-# When it set to true Kuberdock will execute hook on each restart
-PRE_START_HOOK_ENABLED = False
-
-
 CLOUDLINUX_SIG_KEY = '8c55a6628608cb71'
-
 
 def is_production_pkg():
     """
@@ -47,6 +30,48 @@ def is_production_pkg():
         return False
 
 IS_PRODUCTION_VERSION = is_production_pkg()
+
+# Check environment variable 'SENTRY_ENABLE'(assume True if not exist), local
+# variable 'SENTRY_ENABLE' and then check remote variable 'sentry.enable'.
+# Also check if current package is production and turn on sentry only if true
+SENTRY_ENABLE = True and IS_PRODUCTION_VERSION
+REMOTE_SETTINGS = os.environ.get('REMOTE_SETTINGS',  '')
+if SENTRY_ENABLE and os.environ.get("SENTRY_ENABLE", True):
+    try:
+        import requests
+        import json
+        from urllib2 import urlparse
+        url = urlparse.urlparse(REMOTE_SETTINGS)
+        data = ''
+        if url.scheme == 'http':
+            res = requests.get(REMOTE_SETTINGS)
+            data = res.content
+        else:
+            with open(url.path) as f:
+                data = f.read()
+        remote_settings = json.loads(data)
+        sentry = remote_settings.get('sentry', {})
+        SENTRY_DSN = sentry.get('dsn', False)
+        SENTRY_ENABLE = SENTRY_DSN and sentry.get('enable', True)
+    except Exception as e:
+        print "Error while configure Sentry:{}".format(e)
+        SENTRY_ENABLE = False
+
+DEBUG = True
+# With the following option turned on (by default) and in case of debug mode
+# we will get a couple of 'idle in transaction' states
+# in postgres if there will be unhandled exceptions in request processing.
+# From docs:
+# In debug mode Flask will not tear down a request on an exception immediately.
+# Instead if will keep it alive so that the interactive debugger can still
+# access it. This behavior can be controlled by the
+# PRESERVE_CONTEXT_ON_EXCEPTION configuration variable.
+PRESERVE_CONTEXT_ON_EXCEPTION = False
+TEST = False
+
+# This hook is only for development and debug purposes
+# When it set to true Kuberdock will execute hook on each restart
+PRE_START_HOOK_ENABLED = False
 
 # more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects
 DB_ENGINE = 'postgresql+psycopg2'

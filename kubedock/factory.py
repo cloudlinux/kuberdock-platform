@@ -2,13 +2,12 @@ import os
 import datetime
 
 import pytz
-from celery import Celery
 from flask import Flask
 from flask.json import JSONEncoder
 from fabric.api import env
 
 from .core import db, login_manager, influx_db
-from kubedock.settings import SSH_KEY_FILENAME
+from kubedock.settings import SSH_KEY_FILENAME, SENTRY_ENABLE
 from kubedock.billing.resolver import BillingFactory
 
 
@@ -45,6 +44,27 @@ def create_app(package_name, package_path, settings_override=None):
 def make_celery(app=None):
     if app is None:
         app = create_app('kubedock', os.path.dirname(__file__))
+    if SENTRY_ENABLE:
+        import celery
+        import raven
+        from raven.contrib.celery import register_signal
+        from raven.contrib.celery import register_logger_signal
+        from kubedock.settings import SENTRY_DSN
+        from kubedock.utils import get_version
+
+        class Celery(celery.Celery):
+
+            def on_configure(self):
+                client = raven.Client(
+                    SENTRY_DSN, release=get_version('kuberdock'))
+
+                # register a custom filter to filter out duplicate logs
+                register_logger_signal(client)
+
+                # hook into the Celery error handler
+                register_signal(client)
+    else:
+        from celery import Celery
     celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
     celery.conf.update(app.config)
     TaskBase = celery.Task

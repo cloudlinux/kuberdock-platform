@@ -3,6 +3,7 @@ import gevent.monkey
 gevent.monkey.patch_all()
 from psycogreen.gevent import patch_psycopg; patch_psycopg()
 
+import logging
 from werkzeug.wsgi import DispatcherMiddleware
 from werkzeug.serving import run_with_reloader
 from werkzeug.debug import DebuggedApplication
@@ -36,7 +37,7 @@ except (TypeError, AttributeError):
 
 
 from kubedock import frontend, api, listeners
-from kubedock.settings import PRE_START_HOOK_ENABLED
+from kubedock.settings import PRE_START_HOOK_ENABLED, SENTRY_ENABLE
 from kubedock.core import ExclusiveLock
 
 front_app = frontend.create_app()
@@ -45,7 +46,12 @@ application = DispatcherMiddleware(
     front_app,
     {'/api': back_app}
 )
-
+if SENTRY_ENABLE:
+    from kubedock.settings import SENTRY_DSN
+    from raven.contrib.flask import Sentry
+    from kubedock.utils import get_version
+    back_app.config['SENTRY_RELEASE'] = get_version('kuberdock')
+    sentry = Sentry(back_app, logging=True, level=logging.ERROR, dsn=SENTRY_DSN)
 # Remove all locks remained after previous server run.
 try:
     with back_app.app_context():

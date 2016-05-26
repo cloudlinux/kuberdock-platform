@@ -134,8 +134,11 @@ class TestNodes(DBTestCase):
         db.session.commit()
 
         nodes.redeploy_node(node1.id)
-        add_new_node_mock.delay.assert_called_once_with(node1.id,
-                                                        redeploy=True)
+        add_new_node_mock.apply_async.assert_called_once_with(
+            node1.id, redeploy=True,
+            task_id=settings.NODE_INSTALL_TASK_ID.format(
+                node1.hostname, node1.id
+            ))
 
     @mock.patch.object(nodes, 'run_ssh_command')
     def test__check_node_hostname(self, run_cmd_mock):
@@ -165,13 +168,16 @@ class TestNodes(DBTestCase):
         with_testing = True
         do_deploy = True
         nodes._deploy_node(node1, do_deploy, with_testing)
-        add_node_mock.delay.assert_called_once_with(
-            node1.id, with_testing, deploy_options=None)
+        add_node_mock.apply_async.assert_called_once_with(
+            (node1.id, with_testing), deploy_options=None,
+            task_id=settings.NODE_INSTALL_TASK_ID.format(
+                node1.hostname, node1.id
+            ))
 
         self.assertFalse(is_ceph_mock.called)
         self.assertFalse(add_node_to_k8s_mock.called)
 
-        add_node_mock.delay.reset_mock()
+        add_node_mock.apply_async.reset_mock()
 
         with_testing = True
         do_deploy = False
@@ -182,7 +188,7 @@ class TestNodes(DBTestCase):
         add_node_to_k8s_mock.assert_called_once_with(
             node1.hostname, node1.kube_id, False)
         self.assertEqual(node1.state, 'completed')
-        self.assertFalse(add_node_mock.delay.called)
+        self.assertFalse(add_node_mock.apply_async.called)
 
 
 if __name__ == '__main__':

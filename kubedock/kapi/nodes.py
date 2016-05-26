@@ -16,10 +16,11 @@ from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
 from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
-    ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE)
+    ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID)
 from ..users.models import User
 from ..utils import send_event_to_role, run_ssh_command
 from ..validation import check_internal_pod_data
+from ..kd_celery import celery
 
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
 
@@ -146,6 +147,14 @@ def delete_node(node_id=None, node=None):
 
     _check_node_can_be_deleted(node)
 
+    try:
+        celery.control.revoke(task_id=NODE_INSTALL_TASK_ID.format(
+                                  node.hostname, node.id
+                              ),
+                              terminate=True)
+    except Exception as e:
+        raise APIError('Couldn\'t cancel node deployment. Error: {}'.format(e))
+
     ku = User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
 
     logs_pod_name = get_kuberdock_logs_pod_name(node.hostname)
@@ -180,11 +189,6 @@ def _check_node_can_be_deleted(node):
     Also tries to cleanup node from PD's that were marked to delete, but not
     yet physically deleted.
     """
-    if Node.query.get(node.id).state == 'pending':
-        raise APIError(
-            "Node can't be deleted. "
-            "Reason: Node is in pending state. Please wait"
-        )
     is_locked, reason = pstorage.check_node_is_locked(node.id, cleanup=True)
     if is_locked:
         raise APIError("Node '{}' can't be deleted. Reason: {}".format(
@@ -220,7 +224,10 @@ def redeploy_node(node_id):
     node = Node.get_by_id(node_id)
     if not node:
         raise APIError('Node not found', 404)
-    tasks.add_new_node.delay(node.id, redeploy=True)
+    tasks.add_new_node.apply_async(node.id, redeploy=True,
+                                   task_id=NODE_INSTALL_TASK_ID.format(
+                                       node.hostname, node.id
+                                   ))
 
 
 def _check_node_hostname(ip, hostname):
@@ -246,8 +253,11 @@ def _check_node_hostname(ip, hostname):
 
 def _deploy_node(dbnode, do_deploy, with_testing, options=None):
     if do_deploy:
-        tasks.add_new_node.delay(dbnode.id, with_testing,
-                                 deploy_options=options)
+        tasks.add_new_node.apply_async((dbnode.id, with_testing),
+                                       deploy_options=options,
+                                       task_id=NODE_INSTALL_TASK_ID.format(
+                                            dbnode.hostname, dbnode.id
+                                       ))
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
         if is_ceph_installed:

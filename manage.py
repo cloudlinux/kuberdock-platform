@@ -6,7 +6,6 @@ import string
 import time
 from random import choice
 from datetime import datetime
-import uuid
 import json
 import subprocess
 
@@ -17,14 +16,15 @@ from kubedock.validation import check_node_data
 from kubedock.utils import UPDATE_STATUSES
 from kubedock.core import db
 from kubedock.models import User, Pod
-from kubedock.billing.models import Package, Kube, PackageKube
+from kubedock.billing.models import Package, Kube
+from kubedock.billing.fixtures import add_kubes_and_packages
 from kubedock.rbac.fixtures import add_permissions
+from kubedock.users.fixtures import add_users_and_roles
 from kubedock.rbac.models import Role
 from kubedock.system_settings.fixtures import add_system_settings
-from kubedock.notifications.models import Notification
+from kubedock.notifications.fixtures import add_notifications
 from kubedock.static_pages.fixtures import generate_menu
-from kubedock.settings import (
-    KUBERDOCK_INTERNAL_USER, NODE_CEPH_AWARE_KUBERDOCK_LABEL)
+from kubedock.settings import NODE_CEPH_AWARE_KUBERDOCK_LABEL
 from kubedock.updates.models import Updates
 from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
 from kubedock.updates.kuberdock_upgrade import get_available_updates
@@ -72,81 +72,15 @@ class Creator(Command):
             db.session.add(last_upd)
         db.session.commit()
 
-        # Create default packages and kubes
-        # Package and Kube with id=0 are default
-        # and must be undeletable (always present with id=0) for fallback
-        k_internal = Kube(id=Kube.get_internal_service_kube_type(),
-                          name='Internal service', cpu=.02, cpu_units='Cores',
-                          memory=64, memory_units='MB', disk_space=1,
-                          disk_space_units='GB', included_traffic=0)
-        k1 = Kube(id=Kube.get_default_kube_type(),
-                  name='Small', cpu=.05, cpu_units='Cores',
-                  memory=16, memory_units='MB', disk_space=1,
-                  disk_space_units='GB', included_traffic=0,
-                  is_default=True)
-        k2 = Kube(name='Standard', cpu=.25, cpu_units='Cores',
-                  memory=64, memory_units='MB', disk_space=1,
-                  disk_space_units='GB', included_traffic=0)
-        k3 = Kube(name='High memory', cpu=.5, cpu_units='Cores',
-                  memory=256, memory_units='MB', disk_space=2,
-                  disk_space_units='GB', included_traffic=0)
-
-        p1 = Package(id=0, name='Standard package', first_deposit=0,
-                     currency='USD', period='month', prefix='$',
-                     suffix=' USD', is_default=True)
-        db.session.add(k_internal)
-        PackageKube(package=p1, kube=k1, kube_price=0)
-        PackageKube(package=p1, kube=k2, kube_price=0)
-        PackageKube(package=p1, kube=k3, kube_price=0)
+        add_kubes_and_packages()
 
         add_system_settings()
 
-        m1 = Notification(type='warning',
-                          message='LICENSE_EXPIRED',
-                          description='Your license has been expired.')
-        m2 = Notification(type='warning',
-                          message='NO_LICENSE',
-                          description='License not found.')
-        m3 = Notification(type='info',
-                          message='CLN_NOTIFICATION',
-                          description='')
-        db.session.add_all([m1, m2, m3])
-
-        db.session.commit()
+        add_notifications()
 
         add_permissions()
 
-        # Create all roles with users that has same name and password as role_name.
-        # Useful to test permissions.
-        # Delete all users from setup KuberDock. Only admin must be after install.
-        # AC-228
-        # for role in Role.all():
-        #     u = User.filter_by(username=role.rolename).first()
-        #     if u is None:
-        #         u = User.create(username=role.rolename, password=role.rolename,
-        #                         role=role, package=p, active=True)
-        #         db.session.add(u)
-        # db.session.commit()
-
-        # Special user for convenience to type and login
-        r = Role.filter_by(rolename='Admin').first()
-        u = User.filter_by(username='admin').first()
-        if u is None:
-            u = User.create(username='admin', password=password, role=r, package=p1,
-                            active=True)
-            db.session.add(u)
-        kr = Role.filter_by(rolename='User').first()
-        ku = User.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
-        ku_passwd = uuid.uuid4().hex
-        if ku is None:
-            ku = User.create(username=KUBERDOCK_INTERNAL_USER,
-                             password=ku_passwd, role=kr,
-                             package=p1, first_name='KuberDock Internal',
-                             active=True)
-            # generate token immediately, to use it in node creation
-            ku.get_token()
-            db.session.add(ku)
-        db.session.commit()
+        add_users_and_roles(password)
 
         generate_menu()
 
@@ -381,7 +315,7 @@ class CreateUser(Command):
 
         if not password:
             password = generate_new_pass()
-            print "New password: {}".format(new_pass)
+            print "New password: {}".format(password)
 
         u = User.create(username=username, password=password, role=role,
                         active=True, package_id=0)

@@ -1,5 +1,6 @@
 from kubedock.updates import helpers
 from kubedock.system_settings.models import SystemSettings
+from kubedock.billing.models import Kube
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
@@ -10,6 +11,23 @@ def upgrade(upd, with_testing, *args, **kwargs):
     old_value = SystemSettings.get_by_name(max_kubes)
     if old_value == '10':
         SystemSettings.set_by_name(max_kubes, 64)
+    upd.print_log('Update kubes')
+    small = Kube.get_by_name('Small')
+    standard = Kube.get_by_name('Standard')
+    if small:
+        small.cpu = 0.12
+        if small.is_default and standard:
+            small.is_default = False
+            standard.is_default = True
+        small.save()
+    if standard:
+        standard.cpu = 0.25
+        standard.save()
+    high = Kube.get_by_name('High memory')
+    if high:
+        high.cpu = 0.32
+        high.disk_space = 3
+        high.save()
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):

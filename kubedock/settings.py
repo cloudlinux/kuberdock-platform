@@ -18,6 +18,8 @@ def is_production_pkg():
     :return: Bool
     """
     try:
+        if os.path.exists('/var/opt/kuberdock/dev-utils'):
+            return False
         import rpm
         from rpmUtils.miscutils import getSigInfo
         ts = rpm.ts()
@@ -25,9 +27,11 @@ def is_production_pkg():
         err, res = getSigInfo(hdr)
         if err:
             return False
-        return CLOUDLINUX_SIG_KEY in res[2]
+        if CLOUDLINUX_SIG_KEY not in res[2]:
+            return False
     except Exception:
         return False
+    return True
 
 IS_PRODUCTION_VERSION = is_production_pkg()
 

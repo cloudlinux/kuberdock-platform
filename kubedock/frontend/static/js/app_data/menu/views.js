@@ -30,7 +30,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             utils.preloader.show();
             var nextURL = 'users/profile/' + App.currentUser.id + '/general';
             return new Backbone.Model().fetch({url: '/api/users/logoutA'})
-                .done(function(){ App.navigate(nextURL).cleanUp(/*keepToken*/true); })
+                .done(function(){ App.navigate(nextURL).cleanUp(/*keepToken*/true).initApp(); })
                 .always(utils.preloader.hide)
                 .fail(utils.notifyWindow);
         },
@@ -38,7 +38,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
             evt.stopPropagation();
             utils.preloader.show();
             return new Backbone.Model().fetch({url: '/api/users/logout'})
-                .done(function(){ App.navigate('').cleanUp(); })
+                .done(function(){ App.navigate('').cleanUp().initApp(); })
                 .always(utils.preloader.hide)
                 .fail(utils.notifyWindow);
         }

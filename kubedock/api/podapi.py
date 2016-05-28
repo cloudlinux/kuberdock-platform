@@ -35,8 +35,7 @@ class PodsAPI(KubeUtils, MethodView):
     @maintenance_protected
     def put(self, pod_id):
         user = self._get_current_user()
-        params = self._get_params()
-        data = check_change_pod_data(params)
+        data = check_change_pod_data(self._get_params())
 
         db_pod = Pod.query.get(pod_id)
         if db_pod is None:
@@ -49,8 +48,8 @@ class PodsAPI(KubeUtils, MethodView):
 
         billing_type = SystemSettings.get_by_name('billing_type').lower()
         if billing_type != 'no billing' and user.fix_price and not privileged:
-            command = params.get('command')
-            commandOptions = params.get('commandOptions')
+            command = data.get('command')
+            commandOptions = data.get('commandOptions')
             if (command == 'set' and 'status' in commandOptions and
                     commandOptions['status'] != db_pod.status):
                 # fix-price user is not allowed to change paid/unpaid status

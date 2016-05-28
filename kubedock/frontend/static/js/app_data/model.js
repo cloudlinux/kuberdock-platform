@@ -5,30 +5,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     Backbone.syncOrig = Backbone.sync;
     Backbone.sync = function(method, model, options){
-        var args = _.toArray(arguments);
-        if (model.noauth)
-            return Backbone.syncOrig.apply(Backbone, args);
-
-        var deferred = new $.Deferred();
-        App.getAuth().done(function(auth){
-            options.headers = _.extend(options.headers || {},
-                                       {'X-Auth-Token': auth.token});
-            Backbone.syncOrig.apply(Backbone, args)
-                .fail(function(xhr, status, error){
-                    if (xhr && (xhr.status === 401 || xhr.status === 403))
-                        App.cleanUp();
-                    deferred.rejectWith(this, [xhr, status, error]);
-                })
-                .done(function(resp, status, xhr){
-                    var token = xhr.getResponseHeader('X-Auth-Token');
-                    if (token) {
-                        auth.token = token;
-                        App.updateAuth(auth);
-                    }
-                    deferred.resolveWith(this, [resp, status, xhr]);
-                });
-        }).fail(function(){ deferred.rejectWith(options.context, []); });
-        return deferred.promise();
+        if (!model.noauth)  // by default all models require auth
+            options.authWrap = true;
+        return Backbone.syncOrig.apply(Backbone, arguments);
     };
 
     var data = {},
@@ -789,7 +768,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             utils.preloader.show();
             return new Backbone.Model()
                 .save({user_id: this.id}, _.extend({url: '/api/users/loginA'}, options))
-                .done(function(){ App.navigate('').cleanUp(/*keepToken*/true); })
+                .done(function(){ App.navigate('').cleanUp(/*keepToken*/true).initApp(); })
                 .always(utils.preloader.hide)
                 .fail(utils.notifyWindow);
         },

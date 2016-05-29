@@ -404,7 +404,11 @@
                 <div class="plan-price"></div>
             </div>
             <div id="controls" class="clearfix">
+                {% if billing_type|lower != 'no billing' %}
                 <button id="submit-button">Order now</button>
+                {% else %}
+                <button id="submit-button">Start App</button>
+                {% endif %}
                 <button id="back-button">Choose different package</button>
             </div>
         </div>
@@ -451,6 +455,8 @@
 
                 var appPackageID = {{ appPackageID|int }},
                     billingUrl = {{ billing_url|tojson|safe }},
+                    billingType = {{ billing_type|tojson|safe }},
+                    token2 = {{ token2|tojson|safe }},
                     customFields = document.getElementsByClassName('custom-field'),
                     submitButton = document.getElementById('submit-button'),
                     backButton = document.getElementById('back-button'),
@@ -491,50 +497,50 @@
                 });
 
                 submitButton.onclick = function(evt){
-                    {#  // remove this line to uncomment
-                    // if you need to test PA without whmcs, just uncomment this
-                    // block. It will work only if you are logged in Kuberdock.
-                    // Also, you can see compiled yaml in console.
-                    var yml = app.templateToApp(appPackageID, getValues(), templateID),
-                        desc = yml.kuberdock.postDescription,
-                        r = new XMLHttpRequest();
-                    console.log(jsyaml.safeDump(yml));
-                    console.log(yml);
-                    r.onreadystatechange = function(){
-                        if (r.readyState == 4) {
-                            console.log(r);
-                            if(r.status != 200) {
-                                alert(r.responseText);
-                                return;
-                            }
-                            var id = JSON.parse(r.response).data.id;
-                            window.location = window.location.origin + '/#pods/' + id;
-                        }
-                    };
-                    r.open('POST', '/api/yamlapi/', true);
-                    r.setRequestHeader('Content-type', 'application/json');
-                    var auth = window.localStorage.authData;
-                    if (!auth){
-                        alert('Login in Kuberdock, please');
-                        return;
+                    if (billingType.toLowerCase() !== 'no billing' && billingUrl) {
+                        var yml = app.templateToApp(appPackageID, getValues(), templateID),
+                            url = billingUrl
+                                + (billingUrl.indexOf('?') === -1 ? '?' : '&')
+                                + 'yaml=' + encodeURIComponent(jsyaml.safeDump(yml))
+                                + '&pkgid=' + app.userPackage.id
+                                + '&referer=' + window.location.href;
+                        window.location = url;
                     }
-                    r.setRequestHeader('X-Auth-Token', JSON.parse(auth).token);
-                    r.send(window.JSON.stringify({data: jsyaml.safeDump(yml)}));
-                    return;
-                    // remove next line to uncomment (end of block)
-                    #}
-                    if (!billingUrl) {
-                        alert('Billing URL not set!');
-                        return;
-                    }
+                    else if (token2) {
+                        var yml = app.templateToApp(appPackageID, getValues(), templateID),
+                            desc = yml.kuberdock.postDescription,
+                            r = new XMLHttpRequest();
+                        console.log(jsyaml.safeDump(yml));
+                        console.log(yml);
+                        r.onreadystatechange = function(){
+                            if (r.readyState == 4) {
+                                console.log(r);
+                                if(r.status != 200) {
+                                    alert(r.responseText);
+                                    return;
+                                }
 
-                    var yml = app.templateToApp(appPackageID, getValues(), templateID),
-                        url = billingUrl
-                            + (billingUrl.indexOf('?') === -1 ? '?' : '&')
-                            + 'yaml=' + encodeURIComponent(jsyaml.safeDump(yml))
-                            + '&pkgid=' + app.userPackage.id
-                            + '&referer=' + window.location.href;
-                    window.location = url;
+                                var id = JSON.parse(r.response).data.id,
+                                    response_token = r.getResponseHeader('X-Auth-Token'),
+                                    url = window.location.origin
+                                        + '/#pods/'
+                                        + id
+                                        + '?token2='
+                                        + response_token
+                                        + '&postDescription='
+                                        + desc || '';
+                                window.location = url;
+                                
+                            }
+                        };
+                        r.open('POST', '/api/yamlapi/', true);
+                        r.setRequestHeader("Content-type", "application/json");
+                        r.setRequestHeader("X-Auth-Token", token2)
+                        r.send(window.JSON.stringify({data: jsyaml.safeDump(yml)}));
+                    }
+                    else {
+                        alert('Missing authentication information');
+                    }
                 };
 
                 backButton.onclick = function(evt){

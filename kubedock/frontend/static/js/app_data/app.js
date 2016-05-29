@@ -124,7 +124,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         console.log('getAuth called...');
         var authData = this.storage.authData;
         if (authData == null)
-            return App.controller.showLogin();
+            return App.controller.doLogin();
         authData = JSON.parse(authData);
         var token = _.chain(authData.token.split('.')).first(2)
             .map(atob).object(['header', 'payload']).invert()

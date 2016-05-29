@@ -5,18 +5,22 @@ from itsdangerous import (JSONWebSignatureSerializer as FallbackSerializer,
 from functools import wraps
 from werkzeug.datastructures import CallbackDict
 from flask.sessions import SessionInterface, SessionMixin
+from flask import current_app, abort, request, _request_ctx_stack
+from uuid import uuid4
 
-from flask import current_app, abort, request
 from .users.models import SessionData
+from .billing.models import Package
+from .kapi.users import UserCollection, User
 from .system_settings.models import SystemSettings
 from .core import db
+from .login import create_identifier
 
 
 def session_required(func):
     @wraps(func)
     def wrapper(*args, **kw):
         sessid = request.args.get('id')
-        if sessid is None:
+        if not sessid:
             abort(500)
         sess = SessionData.query.get(sessid)
         if sess is None:
@@ -33,6 +37,31 @@ def create_token(session):
     s = Serializer(secret, lifetime)
     token = s.dumps(dict(dict(session), sid=session.sid))
     return token.decode('ascii')
+
+
+def add_and_auth_user(data):
+    username = data.get('username')
+    if username is not None:
+        user = User.query.filter(User.username_iequal(username)).first()
+        if user is None:
+            if 'package' not in data:
+                pkgid = data.pop('pkgid', None)
+                if pkgid is None:
+                    data['package'] = Package.get_default().name
+                else:
+                    package = Package.query.get(int(pkgid))
+                    if package is None:
+                        package = Package.get_default()
+                    data['package'] = package.name
+            user = UserCollection().create(data, return_object=True)
+    sid = str(uuid4())
+    session_data = {
+        'user_id': user.id,
+        '_fresh': True,
+        '_id': create_identifier()}
+    current_app.login_manager.adder_callback(sid, user.id, user.role_id)
+    _request_ctx_stack.top.user = user
+    return ManagedSession(sid=sid, initial=session_data)
 
 
 class FakeSessionInterface(SessionInterface):
@@ -133,9 +162,10 @@ class DataBaseSessionManager(SessionManager):
     def get(self, data):
         sid = data.pop('sid', None)
         if sid is None:
+            if data.pop('auth', None):
+                return add_and_auth_user(data)
             return self.new_session()
         saved = SessionData.query.get(sid)
         if saved is None:
             return self.new_session()
         return ManagedSession(sid=sid, initial=data)
-

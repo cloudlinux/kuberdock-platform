@@ -5,7 +5,6 @@ from ..utils import send_event_to_user, send_event_to_role
 from ..models_mixin import BaseModelMixin
 
 # Package and Kube with id=0 are default
-# and must be undeletable (always present with id=0) for fallback
 DEFAULT_KUBE_TYPE = 0
 
 #: Special kube type for internal services

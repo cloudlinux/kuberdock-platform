@@ -1,4 +1,3 @@
-import json
 from .models import db, SystemSettings
 
 
@@ -44,3 +43,4 @@ def add_system_settings():
             description='Cluster Memory multiplier',
             placeholder='Enter value for Memory multiplier'),
     ])
+    db.session.commit()

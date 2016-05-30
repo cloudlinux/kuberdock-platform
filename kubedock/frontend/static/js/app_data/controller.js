@@ -967,9 +967,10 @@ define([
                 };
 
                 var errorModelSaving = function(context, response) {
-                    if (!(response.responseJSON &&
-                          response.responseJSON.data &&
-                          response.responseJSON.data.validationError)){
+                    if ( response && !(response.responseJSON &&
+                        response.responseJSON.data &&
+                        response.responseJSON.data.validationError)){
+                        utils.notifyWindow(response);
                         return;
                     }
                     var errorText = getValidationError(
@@ -1009,6 +1010,7 @@ define([
                     // have confirm, then the model will be saved without
                     // validation flag.
                     var url = model.url() + '?' + $.param({validate: true});
+
                     model.save(null, {wait: true, url: url})
                         .done(function(){ successModelSaving(context); })
                         .fail(function(xhr){ errorModelSaving(context, xhr); });

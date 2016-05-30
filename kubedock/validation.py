@@ -450,6 +450,7 @@ command_pod_schema = {
     'edited_config': {
         'type': 'dict',
         'match_volumes': True,
+        'nullable': True,
         'schema': edited_pod_config_schema,
     },
 
@@ -912,7 +913,7 @@ def check_change_pod_data(data):
     data = V(allow_unknown=True)._api_validation(data, command_pod_schema)
     # TODO: with cerberus 0.10, just use "purge_unknown" option
     return {'command': data.get('command'),
-            'edited_config': data.get('edited_config') or {},
+            'edited_config': data.get('edited_config'),
             'commandOptions': data.get('commandOptions') or {},
             'containers': [{'name': c.get('name'), 'kubes': c.get('kubes')}
                            for c in data.get('containers') or []]}

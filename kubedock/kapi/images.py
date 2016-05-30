@@ -568,7 +568,6 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             Each secret must be iterable (username, password, registry)
         :raises APIError: if some image is not available
         """
-        print(cls, containers, secrets)
         registries = defaultdict(lambda: {'v2_available': True, 'auth': [None]})
         for username, password, registry in secrets:
             registry = complement_registry(registry)

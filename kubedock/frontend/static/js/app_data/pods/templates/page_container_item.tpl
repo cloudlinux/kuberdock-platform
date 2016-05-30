@@ -1,6 +1,7 @@
 <!-- <td class="checkboxes"><label class="custom"><input type="checkbox"><span></span></label></td> -->
 <td>
-    <a href="#pods/<%- pod.id %>/container/<%- id %>" class="container-page-btn">
+    <a href="#pods/<%- pod.id %>/container/<%- id %><%- !before && after ? '/general' : '' %>"
+        class="container-page-btn">
         <%- imagename %>
     </a>
     <% if (imagetag) { %>

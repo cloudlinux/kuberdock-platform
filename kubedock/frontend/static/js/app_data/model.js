@@ -291,6 +291,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 status: 'stopped',
             };
         },
+        editableAttributes: [  // difference in other attributes won't be interpreted as "change"
+            'kube_type', 'restartPolicy', 'volumes', 'containers', 'kuberdock_resolve',
+        ],
+        isChanged: function(compareTo){
+            if (!compareTo)
+                return false;
+            var attrs = _.without(this.editableAttributes, 'containers'),
+                before = _.partial(_.pick, this.toJSON()).apply(_, attrs),
+                after = _.partial(_.pick, compareTo.toJSON()).apply(_, attrs);
+            return !_.isEqual(before, after) || this.get('containers').any(function(orig){
+                    return orig.isChanged(compareTo.get('containers').get(orig.id));
+                });
+        },
 
         parse: unwrapper,
 

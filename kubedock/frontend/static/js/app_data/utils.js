@@ -240,5 +240,14 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         return moment(dt).format(formatString);
     };
 
+    utils.deepClone = function(obj) {
+        return (!obj || (typeof obj !== 'object')) ? obj :
+            _.isString(obj) ? String.prototype.slice.call(obj) :
+            _.isDate(obj) ? new Date(obj.valueOf()) :
+            _.isFunction(obj.clone) ? obj.clone() :
+            _.isArray(obj) ? _.map(obj, function(t){ return utils.deepClone(t); }) :
+            _.mapObject(obj, function(val) { return utils.deepClone(val); });
+    };
+
     return utils;
 });

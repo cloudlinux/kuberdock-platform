@@ -58,7 +58,13 @@
 </div>
 <div class="container nav-buttons">
     <div class="buttons pull-right ">
-        <button class="go-to-ports gray">Back</button>
-        <button class="next-step">Next</button>
+        <% if (flow === 'EDIT_CONTAINER_ENV'){ %>
+            <button class="cancel-edit gray">Cancel</button>
+            <button class="edit-entire-pod gray">Edit entire pod</button>
+            <button class="save-changes blue">Save</button>
+        <% } else { %>
+            <button class="go-to-ports gray">Back</button>
+            <button class="next-step">Next</button>
+        <% } %>
     </div>
 </div>

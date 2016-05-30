@@ -182,6 +182,7 @@ define(['app_data/app',
             'click .start-btn'        : 'startItem',
             'click .pay-and-apply'    : 'applyChanges',
             'click .apply'            : 'applyChanges',
+            'click .reset-changes'    : 'resetChanges',
             'click .pay-and-start-btn': 'payStartItem',
             'click .restart-btn'      : 'restartItem',
             'click .stop-btn'         : 'stopItem',
@@ -211,6 +212,7 @@ define(['app_data/app',
                     return c.get('ports') && c.get('ports').length;
                 }),
                 postDesc = this.model.get('postDescription'),
+                changed = this.model.isChanged(this.model.get('edited_config')),
                 changesRequirePayment;
 
             this.model.recalcInfo(pkg);
@@ -225,6 +227,7 @@ define(['app_data/app',
             return {
                 changesRequirePayment: changesRequirePayment,
                 fixedPrice           : this.fixedPrice,
+                changed         : changed,
                 hasPorts        : hasPorts,
                 postDescription : this.preparePostDescription(postDesc),
                 publicIP        : this.model.get('public_ip'),
@@ -269,6 +272,27 @@ define(['app_data/app',
                     utils.notifyWindow('Pod will be restarted with the new '
                                        + 'configuration soon', 'success');
                 });
+        },
+        resetChanges: function(){
+            var model = this.model,
+                oldEdited = model.get('edited_config');
+            utils.modalDialog({
+                title: 'Are you sure?',
+                body: 'Reset all unapplied changes?',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        utils.preloader.show();
+                        model.set('edited_config', null).command('edit')
+                            .always(utils.preloader.hide)
+                            .fail(utils.notifyWindow,
+                                  function(){ model.set('edited_config', oldEdited); });
+                    },
+                    buttonCancel: true,
+                    buttonOkText: 'Reset',
+                }
+            });
         },
 
         preparePostDescription: function(val){

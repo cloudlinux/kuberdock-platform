@@ -46,14 +46,6 @@
                     <% if (containers.length > 1){ %>
                     <div class="col-xs-1 no-padding edit-kube-type"></div>
                     <% } %>
-                    <label>Number of Kubes:</label>
-                    <div class="col-xs-4 no-padding">
-                        <select class="kube-quantity selectpicker">
-                            <% for (var i = 1; i <= kubesLimit; i++) { %>
-                                <option value="<%= i %>"><%= i %></option>
-                            <% } %>
-                        </select>
-                    </div>
                     <div class="col-xs-12 edit-kube-type-description">Type will apply for each container</div>
                 </div>
             </div>
@@ -72,21 +64,8 @@
                            <th class="col-xs-1 no-padding"></th>
                        </tr>
                     </thead>
+                    <tbody class="wizard-containers-list"></tbody>
                     <tbody>
-                        <% _.each(containers, function(c, i){ %>
-                            <tr class="added-containers">
-                                <td id="<%- c.name %>">
-                                    <b><%- c.image %></b>
-                                    <!-- <%- (c.name === last_edited) ? '*' : '' %> -->
-                                </td>
-                                <td><%- c.kubes %></td>
-                                <td><%- containerPrices[i] %> / <%- period %></td>
-                                <td class="actions text-right">
-                                    <span class="edit-item"></span>
-                                    <span class="delete-item"></span>
-                                </td>
-                            </tr>
-                        <% }) %>
                         <% if (isPublic) { %>
                             <tr>
                                 <td><b>IP Address:</b></td>
@@ -136,7 +115,12 @@
         <div class="col-xs-12">
             <div class="col-md-3 hidden-sm"></div>
             <div class="buttons col-md-9 col-sm-12 no-padding">
-                <button class="prev-step gray pull-left">Back</button>
+                <% if (edited){ %>
+                    <button class="cancel-edit gray pull-left">Cancel</button>
+                <% } %>
+                <% if (wizardState.container){ %>
+                    <button class="prev-step gray pull-left">Back</button>
+                <% } %>
                 <button class="add-more blue pull-left">Add more containers</button>
                 <% if (!edited){ %>
                     <button class="save-container blue pull-left">Save</button>

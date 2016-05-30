@@ -12,6 +12,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         'tpl!app_data/pods/templates/editable_volume_mounts/empty.tpl',
 
         'tpl!app_data/pods/templates/wizard_set_container_env.tpl',
+
+        'tpl!app_data/pods/templates/wizard_container_collection_item.tpl',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
         'app_data/utils',
         'bootstrap-editable', 'selectpicker', 'tooltip'],
@@ -29,6 +31,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 volumeMountListEmptyTpl,
 
                 wizardSetContainerEnvTpl,
+
+                wizardContainerCollectionItemTpl,
                 wizardSetContainerCompleteTpl){
 
     var views = {};
@@ -44,6 +48,13 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
         onBeforeShow: utils.preloader.show,
         onShow: utils.preloader.hide,
+        initialize: function(){
+            this.listenTo(this.steps, 'show', function(view){
+                _(['pod:save_changes', 'pod:pay_and_apply']).each(function(event){
+                    this.listenTo(view, event, _.bind(this.trigger, this, event));
+                }, this);
+            });
+        },
     });
 
     views.ImageListItemView = Backbone.Marionette.ItemView.extend({
@@ -201,13 +212,13 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         cancel: function(){
             var containers = this.pod.get('containers');
-            if (this.pod.lastEditedContainer.isNew) {
-                containers.remove(this.pod.lastEditedContainer.id);
+            if (this.pod.wizardState.addContainerFlow) {
+                containers.remove(this.pod.wizardState.container);
                 if (!containers.length) {
                     App.navigate('pods', {trigger: true});
                     return;
                 }
-                this.pod.lastEditedContainer = {id: containers.last().id, isNew: false};
+                this.pod.wizardState.addContainerFlow = false;
             }
             this.trigger('step:complete');
         },
@@ -372,10 +383,13 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         goBack: function(evt){
-            if (this.pod.lastEditedContainer.isNew)
+            if (this.pod.wizardState.addContainerFlow){
+                this.pod.get('containers').remove(this.pod.wizardState.container);
                 this.trigger('step:getimage');
-            else
+            } else {
+                this.pod.wizardState.container = null;
                 this.trigger('step:complete');
+            }
         },
 
         onRender: function(){
@@ -746,26 +760,32 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         tagName: 'div',
 
         ui: {
-            ieditable  : '.ieditable',
-            reset      : '.reset-button',
-            input      : '.change-input',
-            addItem    : '.add-env',
-            removeItem : '.remove-env',
-            nameField  : 'input.name',
-            valueField : 'input.value',
-            next       : '.next-step',
-            prev       : '.go-to-ports',
-            navButtons : '.nav-buttons',
+            ieditable    : '.ieditable',
+            reset        : '.reset-button',
+            input        : '.change-input',
+            addItem      : '.add-env',
+            removeItem   : '.remove-env',
+            nameField    : 'input.name',
+            valueField   : 'input.value',
+            next         : '.next-step',
+            prev         : '.go-to-ports',
+            cancelEdit   : '.cancel-edit',
+            editEntirePod: '.edit-entire-pod',
+            saveChanges  : '.save-changes',
+            navButtons   : '.nav-buttons',
         },
 
         events: {
-            'click @ui.addItem'    : 'addItem',
-            'click @ui.removeItem' : 'removeItem',
-            'click @ui.reset'      : 'resetFielsdsValue',
-            'change @ui.input'     : 'onChangeInput',
-            'click @ui.next'       : 'finalStep',
-            'click @ui.prev'       : 'prevStep',
-            'focus @ui.input'      : 'removeError',
+            'click @ui.addItem'      : 'addItem',
+            'click @ui.removeItem'   : 'removeItem',
+            'click @ui.reset'        : 'resetFielsdsValue',
+            'change @ui.input'       : 'onChangeInput',
+            'click @ui.next'         : 'finalStep',
+            'click @ui.prev'         : 'prevStep',
+            'click @ui.cancelEdit'   : 'cancelEdit',
+            'click @ui.editEntirePod': 'editEntirePod',
+            'click @ui.saveChanges'  : 'saveChanges',
+            'focus @ui.input'        : 'removeError',
         },
 
         modelEvents: {
@@ -779,6 +799,12 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             });
         },
 
+        templateHelpers: function(){
+            return {
+                flow: this.model.getPod().wizardState.flow,
+            };
+        },
+
         onDomRefresh: function(){
             if (utils.hasScroll()) {
                 this.ui.navButtons.addClass('fixed');
@@ -789,7 +815,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         removeError: function(evt){ utils.removeError($(evt.target)); },
 
-        finalStep: function(){
+        validateAndNormalize: function(){
             var that = this,
                 valid = true,
                 env = this.model.get('env'),
@@ -846,13 +872,54 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             /* scroling to error */
             if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
 
-            /* save data & navigate to next step */
-            if (valid){
+            return valid && env;
+        },
+        finalStep: function(evt){
+            evt.stopPropagation();
+            var env = this.validateAndNormalize();
+            if (env){
                 this.model.set('env', env);
                 this.trigger('step:complete');
             }
         },
         prevStep: function(){ this.trigger('step:portconf'); },
+
+        cancelEdit: function(){
+            var podID = this.model.getPod().editOf().id,
+                id = this.model.id;
+            utils.modalDialog({
+                title: 'Cancel edit?',
+                body: 'This will discard all unsaved changes. Are you sure?',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        App.navigate('pods/' + podID + '/container/' + id + '/env', {trigger: true});
+                    },
+                    buttonCancel: true,
+                    buttonOkText: 'Yes, discard latest changes',
+                    buttonCancelText: 'No'
+                }
+            });
+        },
+        editEntirePod: function(evt){
+            evt.stopPropagation();
+            var env = this.validateAndNormalize();
+            if (env){
+                this.model.set('env', env);
+                this.model.getPod().wizardState.flow = 'EDIT_ENTIRE_POD';
+                App.navigate('pods/' + this.model.getPod().editOf().id + '/edit');
+                this.trigger('step:complete');
+            }
+        },
+        saveChanges: function(evt){
+            evt.stopPropagation();
+            var env = this.validateAndNormalize();
+            if (env){
+                this.model.set('env', env);
+                this.trigger('pod:save_changes');
+            }
+        },
 
         addItem: function(evt){
             evt.stopPropagation();
@@ -890,12 +957,55 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
     });
 
-    views.WizardCompleteSubView = Backbone.Marionette.ItemView.extend({
+    views.ContainerListItemView = Backbone.Marionette.ItemView.extend({
+        template: wizardContainerCollectionItemTpl,
+        tagName: 'tr',
+        className: 'added-containers',
+
+        ui: {
+            deleteBtn: '.delete-item',
+            editBtn: '.edit-item',
+            lessKubeBtn: '.kubes-less',
+            moreKubeBtn: '.kubes-more',
+            kubes: '.kubes',
+        },
+        events: {
+            'click @ui.lessKubeBtn': 'removeKube',
+            'click @ui.moreKubeBtn': 'addKube',
+        },
+        triggers: {
+            'click @ui.deleteBtn': 'container:delete',
+            'click @ui.editBtn': 'container:edit',
+            'change @ui.kubes': 'container:kubes:change',
+        },
+        initialize: function(options){ _.extend(this, options); },
+        templateHelpers: function(){
+            return {
+                period: App.userPackage.get('period'),
+                price: this.model.price,
+                kubesLimit: this.kubesLimit,
+            };
+        },
+        addKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() + 1).change(); },
+        removeKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() - 1).change(); },
+    });
+
+    views.WizardCompleteSubView = Backbone.Marionette.CompositeView.extend({
         template: wizardSetContainerCompleteTpl,
+        childView: views.ContainerListItemView,
+        childViewContainer: '.total-wrapper tbody.wizard-containers-list',
         tagName: 'div',
+        childViewOptions: function(){ return _.pick(this, 'pkg', 'kubesLimit'); },
+
+        childEvents: {
+            'container:edit': 'editContainer',
+            'container:delete': 'deleteContainer',
+            'container:kubes:change': 'changeContainerKubes',
+        },
 
         initialize: function(options){
             this.pkg = App.userPackage;
+            this.collection = this.model.get('containers');
             this.model.recalcInfo(this.pkg);
             if (this.model.editOf())
                 this.model.editOf().recalcInfo(this.pkg);
@@ -905,6 +1015,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             // TODO: package change, package-kube relationship change
             this.listenTo(App.kubeTypeCollection, 'change add remove reset', this.pricingChanged);
+            this.on('show', function(){ this.checkKubeTypes(/*ensureSelected*/false);});
         },
 
         templateHelpers: function() {
@@ -920,21 +1031,23 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             var edited = this.model.editOf();
 
+            this.model.recalcInfo(this.pkg);
+            if (edited)
+                edited.recalcInfo(this.pkg);
+
             return {
+                wizardState      : this.model.wizardState,
                 formatPrice      : _.bind(this.pkg.getFormattedPrice, this.pkg),
                 edited           : edited,
                 diffTotalPrice   : edited && this.model.rawTotalPrice - edited.rawTotalPrice,
-                last_edited      : this.model.lastEditedContainer.id,
                 isPublic         : this.model.isPublic,
                 isPerSorage      : this.model.isPerSorage,
                 limits           : this.model.limits,
-                containerPrices  : _.pluck(this.model.get('containers').models, 'price'),
                 totalPrice       : this.model.rawTotalPrice,
                 kubeTypes        : kubeTypes,
                 kubesLimit       : this.kubesLimit,
                 restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                 restart_policy   : this.model.get('restartPolicy'),
-                image_name_id    : this.model.get('lastAddedImageNameId'),
                 period           : this.pkg.get('period'),
                 price_ip         : this.pkg.getFormattedPrice(this.pkg.get('price_ip')),
                 price_pstorage   : this.pkg.getFormattedPrice(this.pkg.get('price_pstorage')),
@@ -944,51 +1057,95 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         ui: {
-            'ieditable'               : '.ieditable',
             'policy'                  : 'select.restart-policy',
             'kubeTypes'               : 'select.kube_type',
-            'kubeQuantity'            : 'select.kube-quantity',
             'editPolicy'              : '.edit-policy',
             'editPolycyDescription'   : '.edit-polycy-description',
             'editKubeType'            : '.edit-kube-type',
             'editKubeTypeDescription' : '.edit-kube-type-description',
-            'main'                    : '#add-image',
             'selectpicker'            : '.selectpicker',
             'tooltip'                 : '[data-toggle="tooltip"]'
         },
 
         events: {
             'click .prev-step'       : 'goBack',
-            'click .delete-item'     : 'deleteItem',
-            'click .edit-item'       : 'editItem',
             'click .add-more'        : 'addItem',
             'click .node'            : 'toggleNode',
             'change .replicas'       : 'changeReplicas',
             'change @ui.kubeTypes'   : 'changeKubeType',
-            'change .kube-quantity'  : 'changeKubeQuantity',
             'change @ui.policy'      : 'changePolicy',
             'click @ui.editPolicy'   : 'editPolicy',
             'click @ui.editKubeType' : 'editKubeType',
+            'click .save-container'       : 'save',
+            'click .pay-and-run-container': 'payAndRun',
+            'click .pay-and-apply-changes': 'payAndApply',
+            'click .save-changes'         : 'saveChanges',
+            'click .cancel-edit'          : 'cancelEdit',
         },
 
-        triggers: {
-            'click .save-container'        : 'pod:save',
-            'click .pay-and-run-container' : 'pod:pay_and_run',
-            'click .pay-and-apply-changes' : 'pod:pay_and_apply',
-            'click .save-changes'          : 'pod:save_changes',
+        save: function(){
+            if (!this.checkKubeTypes(/*ensureSelected*/true))
+                this.trigger('pod:save');
         },
-
-        deleteItem: function(evt){
-            evt.stopPropagation();
-            var name = $(evt.target).closest('tr').children('td:first').attr('id');
-            if (this.model.get('containers').length >= 2) {
-                this.model.get('containers').remove(name);
-                if (name === this.model.lastEditedContainer.id) {
-                    this.model.lastEditedContainer.isNew = false;
-                    this.model.lastEditedContainer.id = this.model
-                        .get('containers').last().id;
+        payAndRun: function(){
+            if (!this.checkKubeTypes(/*ensureSelected*/true))
+                this.trigger('pod:pay_and_run');
+        },
+        payAndApply: function(){
+            if (!this.checkKubeTypes(/*ensureSelected*/true))
+                this.trigger('pod:pay_and_apply');
+        },
+        saveChanges: function(){
+            if (!this.checkKubeTypes(/*ensureSelected*/true))
+                this.trigger('pod:save_changes');
+        },
+        cancelEdit: function(){
+            var that = this;
+            utils.modalDialog({
+                title: 'Cancel edit?',
+                body: 'This will discard all unsaved changes. Are you sure?',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        App.navigate('pods/' + that.model.editOf().id, {trigger: true});
+                    },
+                    buttonCancel: true,
+                    buttonOkText: 'Yes, discard latest changes',
+                    buttonCancelText: 'No'
                 }
-                this.model.recalcInfo(this.pkg);
+            });
+        },
+
+        checkKubeTypes: function(ensureSelected){
+            if (this.model.get('kube_type') === Model.KubeType.noAvailableKubeTypes.id){
+                if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
+                    Model.KubeType.noAvailableKubeTypes.notifyConflict();
+                else
+                    Model.KubeType.noAvailableKubeTypes.notify();
+                return true;
+            } else if (this.model.get('kube_type') === undefined){
+                utils.notifyWindow('Please, select kube type.');
+                return true;
+            }
+        },
+
+        changeContainerKubes: function(childView){
+            var kubes = Math.max(1, Math.min(this.kubesLimit, +childView.ui.kubes.val()));
+            childView.ui.kubes.val(kubes);
+            childView.model.set('kubes', kubes);
+            this.render();
+        },
+
+        deleteContainer: function(childView){
+            var container = childView.model;
+            if (this.model.get('containers').length >= 2) {
+                this.model.get('containers').remove(container);
+                var wizardState = this.model.wizardState;
+                if (wizardState.container === container) {
+                    wizardState.addContainerFlow = false;
+                    wizardState.container = null;
+                }
                 this.model.solveKubeTypeConflicts();
                 this.render();
             } else {
@@ -1008,17 +1165,16 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             }
         },
 
-        editItem: function(evt){
-            evt.stopPropagation();
-            var tgt = evt.target,
-                name = $(tgt).closest('tr').children('td:first').attr('id');
-            this.model.lastEditedContainer = {id: name};
+        editContainer: function(childView){
+            this.model.wizardState.container = childView.model;
+            this.model.wizardState.addContainerFlow = false;
             this.trigger('step:portconf');
         },
 
         addItem: function(evt){
             evt.stopPropagation();
-            this.model.lastEditedContainer = {id: null, isNew: true};
+            this.model.wizardState.container = null;
+            this.model.wizardState.addContainerFlow = true;
             this.trigger('step:getimage');
         },
 
@@ -1041,22 +1197,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.model.set('replicas', parseInt($(evt.target).val().trim()));
         },
 
-        changeKubeQuantity: function(evt){
-            evt.stopPropagation();
-            var num = parseInt(evt.target.value);
-            this.getCurrentContainer().set('kubes', num);
-
-            this.model.recalcInfo(this.pkg);
-            this.render();
-            $('.kube-quantity button span').text(num);
-        },
-
         changeKubeType: function(evt){
             evt.stopPropagation();
             var kube_id = parseInt(evt.target.value);
             this.model.set('kube_type', kube_id);
-
-            this.model.recalcInfo(this.pkg);
             this.render();
         },
 
@@ -1064,11 +1208,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             evt.stopPropagation();
             var restart_policy = $(evt.target).val();
             this.model.set('restartPolicy', restart_policy);
-        },
-
-        getCurrentContainer: function() {
-            var containers = this.model.get('containers');
-            return containers.get(this.model.lastEditedContainer.id);
         },
 
         /**
@@ -1087,7 +1226,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 noneSelectedText: this.model.get('kube_type') === Model.KubeType.noAvailableKubeTypes
                     ? 'No available kube types' : 'Select kube type',
             });
-            this.ui.kubeQuantity.selectpicker('val', this.getCurrentContainer().get('kubes'));
             if (this.model.get('kube_type') === undefined)
                 this.ui.kubeTypes.val('').selectpicker('render');  // unselect
             else

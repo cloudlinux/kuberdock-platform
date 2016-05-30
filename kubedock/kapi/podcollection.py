@@ -144,6 +144,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         original_db_pod = DBPod.query.get(original_pod.id)
         original_db_pod_config = original_db_pod.get_dbconfig()
 
+        if new_pod_data is None:
+            original_db_pod.set_dbconfig(
+                dict(original_db_pod_config, edited_config=None), save=False)
+            original_pod.edited_config = None
+            return original_pod.as_dict()
+
         data, secrets = self._preprocess_new_pod(
             new_pod_data, original_pod=original_pod, skip_check=skip_check)
 

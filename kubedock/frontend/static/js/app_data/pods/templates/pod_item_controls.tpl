@@ -6,7 +6,7 @@
             <span class="close"></span>
         </div>
     <% } %>
-    <% if (edited_config) { %>
+    <% if (changed) { %>
         <div class="message-edited">
             <h3>You have some changes that haven't been applied yet!</h3>
             <p>
@@ -17,7 +17,8 @@
                 <% } else { %>
                     You need to re-deploy pod with new containers and configuration.
                     <button class="blue apply">Restart & apply changes</button>
-            <% } %>
+                <% } %>
+                <button class="gray reset-changes">Reset changes</button>
             </p>
         </div>
     <% } %>
@@ -34,7 +35,6 @@
     <% } else { %>
         <a class="upgrade-btn" href="#pods/<%- id %>/upgrade"><span>Upgrade</span></a>
     <% } %>
-    <a class="edit-btn" href="#pods/<%- id %>/edit"><span>Edit</span></a>
     <div class="btn-group controls pull-right">
         <span type="button" class="dropdown-toggle" data-toggle="dropdown">
             <span class="ic_reorder">
@@ -43,6 +43,7 @@
             </span>
         </span>
         <ul class="dropdown-menu" role="menu">
+        <li><a class="edit-btn" href="#pods/<%- id %>/edit"><span>Edit</span></a></li>
         <% if (ableTo('redeploy')) { %><li><span class="restart-btn"><span>Restart</span></span></li><% } %>
         <% if (ableTo('pay-and-start')) { %><li><span class="pay-and-start-btn"><span>Pay & start</span></span></li><% } %>
         <% if (ableTo('start')) { %><li><span class="start-btn"><span>Start</span></span></li><% } %>

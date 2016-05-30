@@ -199,14 +199,16 @@ body{
                 margin: 0 -15px;
                 padding: 10px 0;
                 .navbar-header{
+                    margin: 0;
                     .navbar-brand{
-                        padding-left: 30px;
+                        margin-right: 0;
+                        padding-left: 15px;
                     }
                     .navbar-toggle{
                         .mdi('close',30px, #b5bbc1, #3197EE);
                         padding: 0;
                         z-index: 2;
-                        margin-right: 30px;
+                        margin-right: 15px;
                         position: relative;
                         &:after{
                             top: -19px;
@@ -245,7 +247,7 @@ body{
                             padding: 0;
                             margin: 0 -15px;
                             > li {
-                                a{
+                                a, span{
                                     margin-right: 0;
                                     line-height: 19px;
                                     position: relative;
@@ -289,7 +291,7 @@ body{
                                 .transition(none);
                                 padding: 0;
                                 > li {
-                                    a{
+                                    a, span{
                                         padding-left: 45px;
                                     }
                                 }

@@ -27,9 +27,6 @@
                                 <li><a class="routable" href="#settings">Settings</a></li>
                             <% } %>
                             <% if (!user.isImpersonated()){ %>
-                                <!--
-                                <li><a href="/logout">Logout </a></li>
-                                -->
                                 <li><span id="logout">Logout</span></li>
                             <% } %>
                         </ul>

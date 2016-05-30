@@ -45,6 +45,17 @@ from .kapi.usage import update_states
 from .kd_celery import celery, exclusive_task
 
 
+class AddNodeTask(celery.Task):
+    abstract = True
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        with self.flask_app.app_context():
+            node_id = kwargs.get('node_id', args[0])
+            db_node = Node.get_by_id(node_id)
+            db_node.state = 'troubles'
+            db.session.commit()
+
+
 def get_pods_nodelay(pod_id=None, namespace=None):
     url = get_api_url('pods', namespace=namespace)
     if pod_id is not None:
@@ -126,10 +137,9 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
     return res.text if not res.ok else False
 
 
-@celery.task()
+@celery.task(base=AddNodeTask)
 def add_new_node(node_id, with_testing=False, redeploy=False,
                  deploy_options=None):
-
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
     channels = [i.id for i in SessionData.query.filter_by(role_id=admin_rid)]

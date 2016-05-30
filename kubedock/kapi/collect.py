@@ -13,6 +13,7 @@ from flask import current_app
 
 from kubedock.core import db, ssh_connect, ConnectionPool
 from kubedock.kapi import licensing
+from kubedock.utils import get_version
 from kubedock.kapi.users import UserCollection
 from kubedock.nodes.models import Node
 from kubedock.pods.models import (
@@ -216,22 +217,6 @@ def get_node_pods_count(ssh):
         except:
             pass
     return res
-
-
-def get_version(package):
-    """
-    Get RPM package version
-    :param package: string -> RPM package name
-    :param patt: object -> compiled regexp
-    :return: string -> version of the given package or None if missing
-    """
-    try:
-        rv = subprocess.check_output(
-            ['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', package]
-        )
-        return rv
-    except (subprocess.CalledProcessError, AttributeError):
-        return 'unknown'
 
 
 def get_storage():

@@ -63,9 +63,21 @@ class KDIntegrationTestAPI(object):
                  "({1} call is skipped).".format(build_flag, op_name))
         return False
 
+    def _any_vm_is_running(self):
+        for vm in self.vagrant.status():
+            if vm.state != "not_created":
+                return True
+        return False
+
     def start(self, provider=PROVIDER):
         if not self._build_cluster_flag("start"):
             return
+
+        if self._any_vm_is_running():
+            raise VagrantIsAlreadyUpException("Vagrant is already up. Please, either perform \"vagrant destroy\" "
+                                              "if you want to run tests on new cluster, or make sure you do not "
+                                              "pass BUILD_CLUSTER env variable if you want run tests on the "
+                                              "existing one.")
 
         if provider == OPENNEBULA:
             self.vagrant.up(provider=provider, no_provision=True)
@@ -237,4 +249,8 @@ class _NginxPod(KDPod):
 
 
 class KDPredefinedApp(KDPod):
+    pass
+
+
+class VagrantIsAlreadyUpException(Exception):
     pass

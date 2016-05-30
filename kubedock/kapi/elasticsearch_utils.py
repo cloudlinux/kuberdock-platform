@@ -1,9 +1,25 @@
 import elasticsearch as elastic
 from requests import RequestException
 
-from ..exceptions import APIError
 from ..nodes.models import Node
 from ..settings import ELASTICSEARCH_REST_PORT
+
+
+class LogsError(Exception):
+    CONNECTION_ERROR = 503
+    INTERNAL_ERROR = 500
+    NO_LOGS = 404
+    POD_ERROR = 502
+    UNKNOWN_ERROR = -1
+
+    def __init__(self, message, error_code=UNKNOWN_ERROR):
+        self.message = message
+        self.error_code = error_code
+
+    def __repr__(self):
+        return 'LogsError("{0}", error_code={1})'.format(
+            self.message, self.error_code,
+        )
 
 
 def execute_es_query(index, query, size, sort, host=None):
@@ -36,14 +52,25 @@ def execute_es_query(index, query, size, sort, host=None):
             index=index,
             body=body
         )
-    except (RequestException, elastic.TransportError) as err:
-        raise APIError(
-            u'Failed to get logs from elasticsearch: {}'.format(err),
-            status_code=404)
+    except (RequestException,
+            elastic.ConnectionTimeout,
+            elastic.ConnectionError) as err:
+        raise LogsError(repr(err), error_code=LogsError.CONNECTION_ERROR)
+    except elastic.TransportError as err:
+        if err.status_code == 404:
+            raise LogsError('Logs not found', error_code=LogsError.NO_LOGS)
+        elif err.status_code == 503:
+            raise LogsError(repr(err), error_code=LogsError.INTERNAL_ERROR)
+        raise LogsError(repr(err))
     except (elastic.ImproperlyConfigured,
             elastic.ElasticsearchException) as err:
-        raise APIError(
-            u'Failed to execute elasticsearch query: {}'.format(err),
-            status_code=500)
+        raise LogsError(repr(err), error_code=LogsError.INTERNAL_ERROR)
+    except Exception as err:
+        raise LogsError(repr(err))
 
-    return res.get('hits', {})
+    hits = res.get('hits', {})
+
+    if hits.get('total', 0) == 0 or not hits.get('hits', []):
+        raise LogsError('Empty logs', error_code=LogsError.NO_LOGS)
+
+    return hits

@@ -13,6 +13,12 @@
 
 - include: ../../../facts.yml
 
+- name: Update global environment variables
+  lineinfile:
+      dest: "/etc/environment"
+      line: "SENTRY_ENABLE="
+      state: present
+
 - name: RPM proxy configure
   include: rpm_proxy.yml
   when: is_nebula

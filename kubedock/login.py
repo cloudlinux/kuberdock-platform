@@ -4,7 +4,9 @@ from functools import wraps
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer,
                           BadSignature, SignatureExpired)
 from hashlib import md5
+from uuid import uuid4
 from werkzeug.local import LocalProxy
+
 from .exceptions import APIError, PermissionDenied, NotAuthorized
 
 current_user = LocalProxy(lambda: _get_user())
@@ -112,7 +114,7 @@ def _get_remote_addr():
     return address
 
 
-def _create_identifier():
+def create_identifier():
     user_agent = request.headers.get('User-Agent')
     if user_agent is not None:
         user_agent = user_agent.encode('utf-8')
@@ -128,8 +130,10 @@ def login_user(user, DB=True):
     user_id = getattr(user, ID_ATTRIBUTE)()
     session['user_id'] = user_id
     session['_fresh'] = True
-    session['_id'] = _create_identifier()
+    session['_id'] = create_identifier()
     _request_ctx_stack.top.user = user
+    if session.sid is None:
+        session.sid = str(uuid4())
     if DB and current_app.login_manager.adder_callback:
         current_app.login_manager.adder_callback(session.sid, user_id, user.role_id)
     return True

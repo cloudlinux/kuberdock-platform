@@ -250,7 +250,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         events:{
             'click @ui.nodeCancelBtn'   : 'cancel',
             'click @ui.nodeAddBtn'      : 'complete',
-            'change @ui.nodeTypeSelect' : 'changeKubeType',
+            'focus @ui.node_name'       : 'removeError',
+            'change @ui.nodeTypeSelect' : 'changeKubeType'
         },
 
         changeKubeType: function(evt) {
@@ -267,6 +268,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             };
         },
 
+        removeError: function(evt){ $(evt.target).removeClass('error') },
+
         complete: function () {
             var that = this,
                 val = this.ui.node_name.val(),
@@ -278,12 +281,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             App.getNodeCollection().done(function(nodeCollection){
                 switch (true){
                     case !val:
+                        that.ui.node_name.addClass('error');
                         utils.notifyWindow('Enter valid hostname');
-                        this.ui.node_name.focus();
                         break;
                     case val && !pattern.test(val):
+                        that.ui.node_name.addClass('error');
                         utils.notifyWindow('Hostname can\'t contain some special symbols like "#", "%", "/" or start with "."');
-                        this.ui.node_name.focus();
                         break;
                     default:
                         utils.preloader.show();
@@ -303,7 +306,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                                 );
                             },
                             error: function(collection, response){
-                                utils.preloader.hide();
+                                that.ui.node_name.addClass('error');
                                 utils.notifyWindow(response);
                             },
                         });

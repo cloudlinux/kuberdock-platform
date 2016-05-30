@@ -76,7 +76,7 @@ class UserCollection(object):
 
     @atomic(APIError("Couldn't create user.", 500, 'UserCreateError'), nested=False)
     @enrich_tz_with_offset(['timezone'])
-    def create(self, data):
+    def create(self, data, return_object=False):
         """Create user"""
         if not license_valid():
             raise APIError("Action forbidden. Please check your license")
@@ -91,6 +91,8 @@ class UserCollection(object):
         user.package = package
         db.session.add(user)
         db.session.flush()
+        if return_object:
+            return user
         return user.to_dict()
 
     @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'), nested=False)

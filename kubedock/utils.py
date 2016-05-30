@@ -808,3 +808,19 @@ def from_siunit(value):
 
     new_value = float(value) / ratio
     return new_value
+
+
+def get_version(package):
+    """
+    Get RPM package version
+    :param package: string -> RPM package name
+    :param patt: object -> compiled regexp
+    :return: string -> version of the given package or None if missing
+    """
+    try:
+        rv = subprocess.check_output(
+            ['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', package]
+        )
+        return rv
+    except (subprocess.CalledProcessError, AttributeError):
+        return 'unknown'

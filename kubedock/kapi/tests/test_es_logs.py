@@ -205,12 +205,9 @@ class TestLogQuery(unittest.TestCase):
         """Test failed call."""
         start, end = datetime(2015, 2, 5, 6), datetime(2015, 2, 5, 18)
 
-        class ESError(es_logs.APIError):
-            pass
-
-        self.es_query_mock.side_effect = ESError()
+        self.es_query_mock.side_effect = es_logs.LogsError('!!!')
         check_logs_pod_mock.return_value = ''
-        with self.assertRaises(ESError):
+        with self.assertRaises(es_logs.LogsError):
             self._check(start, end)
         check_logs_pod_mock.assert_called_once_with(self.host)
 

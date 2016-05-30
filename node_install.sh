@@ -251,7 +251,7 @@ yum_wrapper()
 
 chk_ver()
 {
-    python -c "from distutils.version import LooseVersion; print(LooseVersion('$1') < LooseVersion('$2'))"
+    python -c "import rpmUtils.miscutils as misc; print misc.compareEVR(misc.stringToVersion('$1'), misc.stringToVersion('$2')) < 0"
 }
 
 
@@ -685,15 +685,15 @@ check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
 if [ "$check_kernel" == "True" ]
 then
     echo "Current kernel is $current_kernel, upgrading..."
-    yum_wrapper -y install kernel
+    yum_wrapper -y install --disablerepo=kube kernel
     check_status
-    yum_wrapper -y install kernel-tools
+    yum_wrapper -y install --disablerepo=kube kernel-tools
     check_status
-    yum_wrapper -y install kernel-tools-libs
+    yum_wrapper -y install --disablerepo=kube kernel-tools-libs
     check_status
-    yum_wrapper -y install kernel-headers
+    yum_wrapper -y install --disablerepo=kube kernel-headers
     check_status
-    yum_wrapper -y install kernel-devel
+    yum_wrapper -y install --disablerepo=kube kernel-devel
 fi
 
 # 14. Install and configure CEPH client if CEPH config is defined in envvar

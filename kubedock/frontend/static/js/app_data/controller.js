@@ -16,8 +16,21 @@ define([
             var admin = App.currentUser.get('rolename') === 'Admin';
             App.navigate(admin ? 'nodes' : 'pods', {trigger: true});
         },
-        showLogin: function(options){
-            var deferred = new $.Deferred();
+        doLogin: function(options){
+            var deferred = new $.Deferred(),
+                auth = /token2=(.*?)(?:$|&)/.exec(window.location.href),
+                tokenData, authData;
+            if (auth != null && auth.length !== 0) {
+                tokenData = _.chain(auth[1].split('.')).first(2)
+                    .map(atob).object(['header', 'payload']).invert()
+                    .mapObject(JSON.parse).value();
+                if (tokenData.header.exp >= +new Date() / 1000){
+                    authData = {id: tokenData.payload.sid, token: auth[1]};
+                    App.storage.authData = JSON.stringify(authData);
+                    deferred.resolveWith(App, [authData]);
+                    return deferred;
+                }
+            }
             require(['app_data/login/views'], function(Views){
                 var loginView = new Views.LoginView(options);
                 App.message.empty();  // hide any notification
@@ -1061,9 +1074,10 @@ define([
                 };
 
                 var errorModelSaving = function(context, response) {
-                    if (!(response.responseJSON &&
-                          response.responseJSON.data &&
-                          response.responseJSON.data.validationError)){
+                    if ( response && !(response.responseJSON &&
+                        response.responseJSON.data &&
+                        response.responseJSON.data.validationError)){
+                        utils.notifyWindow(response);
                         return;
                     }
                     var errorText = getValidationError(
@@ -1103,6 +1117,7 @@ define([
                     // have confirm, then the model will be saved without
                     // validation flag.
                     var url = model.url() + '?' + $.param({validate: true});
+
                     model.save(null, {wait: true, url: url})
                         .done(function(){ successModelSaving(context); })
                         .fail(function(xhr){ errorModelSaving(context, xhr); });

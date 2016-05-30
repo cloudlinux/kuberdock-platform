@@ -62,6 +62,7 @@ Requires: python-dateutil
 Requires: python-nginx
 Requires: python-boto
 Requires: python-alembic
+Requires: python-raven >= 5.12
 Requires: python-flask-migrate >= 1.4.0
 Requires: python-flask-script
 Requires: python-bitmath

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Page not found</title>
+    <meta charset="utf8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/x-icon" />
+<style type="text/css">
+    html, body, div, span, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    abbr, address, cite, code,
+    del, dfn, em, img, ins, kbd, q, samp,
+    small, strong, sub, sup, var,
+    b, i,
+    dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend,
+    table, caption, tbody, tfoot, thead, tr, th, td,
+    article, aside, canvas, details, figcaption, figure,
+    footer, header, hgroup, menu, nav, section, summary,
+    time, mark, audio, video {
+        margin:0;
+        padding:0;
+        border:0;
+        outline:0;
+        font-size:100%;
+        vertical-align:baseline;
+        background:transparent;
+    }
+    body {line-height:1;}
+    article,aside,details,figcaption,figure,
+    footer,header,hgroup,menu,nav,section {display:block;}
+    nav ul {list-style:none;}
+    blockquote, q {quotes:none;}
+    blockquote:before, blockquote:after,
+    q:before, q:after {
+        content:'';
+        content:none;
+    }
+    a {
+        margin:0;
+        padding:0;
+        font-size:100%;
+        vertical-align:baseline;
+        background:transparent;
+    }
+    ins {
+        background-color:#ff9;
+        color:#000;
+        text-decoration:none;
+    }
+    mark {
+        background-color:#ff9;
+        color:#000;
+        font-style:italic;
+        font-weight:bold;
+    }
+    del {text-decoration: line-through;}
+    abbr[title], dfn[title] {
+        border-bottom:1px dotted;
+        cursor:help;
+    }
+    table {
+        border-collapse:collapse;
+        border-spacing:0;
+    }
+    hr {
+        display:block;
+        height:1px;
+        border:0;
+        border-top:1px solid #cccccc;
+        margin:1em 0;
+        padding:0;
+    }
+    input, select {vertical-align:middle;}
+
+    /* custom styles */
+
+    @font-face {
+        font-family: 'open_sanslight';
+        src: url('../static/fonts/opensans-light-webfont.eot');
+        src: url('../static/fonts/opensans-light-webfont.eot?#iefix') format('embedded-opentype'),
+             url('../static/fonts/opensans-light-webfont.woff2') format('woff2'),
+             url('../static/fonts/opensans-light-webfont.woff') format('woff'),
+             url('../static/fonts/opensans-light-webfont.ttf') format('truetype'),
+             url('../static/fonts/opensans-light-webfont.svg#open_sanslight') format('svg');
+        font-weight: normal;
+        font-style: normal;
+    }
+    @font-face {
+        font-family: 'open_sansregular';
+        src: url('../static/fonts/opensans-regular-webfont.eot');
+        src: url('../static/fonts/opensans-regular-webfont.eot?#iefix') format('embedded-opentype'),
+             url('../static/fonts/opensans-regular-webfont.woff2') format('woff2'),
+             url('../static/fonts/opensans-regular-webfont.woff') format('woff'),
+             url('../static/fonts/opensans-regular-webfont.ttf') format('truetype'),
+             url('../static/fonts/opensans-regular-webfont.svg#open_sansregular') format('svg');
+        font-weight: normal;
+        font-style: normal;
+    }
+    body{
+        font-size: 14px;
+        background-color: #f8f8f8;
+        font-family: 'open_sansregular';
+    }
+    .container{
+        padding-right: 15px;
+        padding-left: 15px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+    @media (min-width: 768px) {
+        .container {
+            width: 750px;
+        }
+    }
+    @media (min-width: 992px) {
+        .container {
+            width: 970px;
+        }
+    }
+    @media (min-width: 1200px){
+        .container {
+            width: 1170px;
+        }
+    }
+    @media (max-width: 767px){
+        .hidden-xs {
+            display: none!important;
+        }
+    }
+    .row {
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    header{
+        padding: 10px 0 17px;
+    }
+    .breadcrumbs-wrapper{
+        width: 100%;
+        margin-bottom: 40px;
+        background-color: #0074BF;
+    }
+    .breadcrumbs-wrapper span{
+        color: #dee6ef;
+        padding: 18px 0;
+        font-size: 15px;
+        display: inline-block;
+        font-family: "open_sansregular";
+    }
+    .page-404 .page-404_image,
+    .page-404 .page-404_text{
+        vertical-align: middle;
+        display: inline-block;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .page-404 .page-404_image{
+        min-width: 195px;
+    }
+    .page-404 .page-404_image img{
+        max-width: 100%;
+    }
+    .page-404 .page-404_text{
+        color: #9f9f9f;
+    }
+    .page-404 .page-404_text h1{
+        font-size: 51px;
+        line-height: 51px;
+        font-weight: bold;
+        margin-left: -3px;
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
+    .page-404 .page-404_text p{
+        font-size: 16px;
+        font-weight: 400;
+        margin: 0 0 10px;
+    }
+    .page-404 .page-404_text .buttons{
+        zoom: 1;
+        font-size: 0;
+        margin: 20px 0;
+    }
+    .page-404 .page-404_text .buttons a{
+        -webkit-border-radius: 2px;
+        -moz-border-radius: 2px;
+        border-radius: 2px;
+        -moz-background-clip: padding;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        -webkit-transition: all 300ms;
+        -moz-transition: all 300ms;
+        -ms-transition: all 300ms;
+        -o-transition: all 300ms;
+        transition: all 300ms;
+        -webkit-box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        -moz-box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+        border: none;
+        height: 37px;
+        padding: 0 31px;
+        font-size: 13px;
+        min-width: 105px;
+        line-height: 37px;
+        text-align: center;
+        margin-right: 10px;
+        font-family: "open_sansregular";
+        text-transform: uppercase;
+        line-height: 37px;
+        display: inline-block;
+        text-decoration: none;
+        color: #fff;
+        background-color: #2490EA;
+    }
+    .page-404 .page-404_text .buttons a:hover{
+        -webkit-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        -moz-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18);
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/"><img alt="CloudLinux Kuberdock" class="logo" src="/static/img/logo.png"></a>
+        </div>
+    </header>
+    <div class="breadcrumbs-wrapper">
+        <div class="container">
+            <span>Oops...</span>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row page-404">
+            <div class="col-sm-2 hidden-xs page-404_image">
+                <img alt="No such page" src="/static/img/spirit.png">
+            </div>
+            <div class="col-sm-10 col-xs-12 page-404_text">
+                <h1>Ooops...</h1>
+                <p>We couldnt find the page you are looking for</p>
+                <div class="buttons">
+                    <a href="/" class="blue">BACK TO THE MAIN PAGE</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

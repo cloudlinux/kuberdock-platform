@@ -4,7 +4,6 @@ import mock
 from requests import RequestException
 
 from .. import elasticsearch_utils
-from ...exceptions import APIError
 
 
 class TestElasticsearchUtils(unittest.TestCase):
@@ -55,7 +54,7 @@ class TestElasticsearchUtils(unittest.TestCase):
             }
         )
         search_mock.side_effect = RequestException('!!!')
-        with self.assertRaises(APIError):
+        with self.assertRaises(elasticsearch_utils.LogsError):
             elasticsearch_utils.execute_es_query(index, query, size, sort)
         self.assertEqual(node_query_values_mock.call_count, 3)
 

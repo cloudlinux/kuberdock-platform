@@ -93,15 +93,6 @@ class TestStatItem(unittest.TestCase):
                          "Pods are expected to be {0} but got {1}".format(
                              str(pods), str(expected)))
 
-    @mock.patch('kubedock.kapi.collect.subprocess.check_output')
-    def test_get_version_of_non_existent(self, _run):
-        _run.side_effect = subprocess.CalledProcessError(1, 'command')
-        expected = 'unknown'
-        ver = collect.get_version('kuberdoc')
-        self.assertEqual(expected, ver,
-                         "version extected to be {0} but {1} got".format(
-                             expected, ver))
-
 
 if __name__ == '__main__':
     unittest.main()

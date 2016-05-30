@@ -456,7 +456,11 @@
                 var appPackageID = {{ appPackageID|int }},
                     billingUrl = {{ billing_url|tojson|safe }},
                     billingType = {{ billing_type|tojson|safe }},
-                    token2 = {{ token2|tojson|safe }},
+                    token2 = {{ token2|tojson|safe }} || (
+                        window.localStorage.authData
+                        ? JSON.parse(window.localStorage.authData).token
+                        : null
+                    ),
                     customFields = document.getElementsByClassName('custom-field'),
                     submitButton = document.getElementById('submit-button'),
                     backButton = document.getElementById('back-button'),
@@ -530,7 +534,7 @@
                                         + '&postDescription='
                                         + desc || '';
                                 window.location = url;
-                                
+
                             }
                         };
                         r.open('POST', '/api/yamlapi/', true);

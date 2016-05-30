@@ -89,7 +89,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         var msg;
         if (typeof data == "string") {
             msg = data;
-        } else if (data.statusText === 'abort') {
+        } else if (data.statusText === 'abort' || type === 'abort') {
             return;
         } else if (!data.responseJSON || !data.responseJSON.data) {
             msg = data.responseText;

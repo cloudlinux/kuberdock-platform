@@ -4,6 +4,7 @@ from os import path
 import time
 from uuid import uuid4
 from base64 import urlsafe_b64encode, urlsafe_b64decode
+from collections import defaultdict
 from flask import current_app
 
 from . import pd_utils
@@ -47,6 +48,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         """
         :param owner: User model instance
         """
+        # Original names of pods in k8s {'metadata': 'name'}
+        # Pod class store it in 'sid' field, but here it will be replaced with
+        # name of pod in replication controller.
+        self.pod_names = None
         self.owner = owner
         namespaces = self._get_namespaces()
         self._get_pods(namespaces)
@@ -472,9 +477,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             replicas = self._get(['replicationcontrollers'])
             replicas_data.extend(replicas.get('items', {}))
 
+        pod_names = defaultdict(set)
+
         for item in data:
             pod = Pod.populate(item)
             self.check_public_address(pod)
+            pod_name = pod.sid
 
             for r in replicas_data:
                 if self._is_related(item['metadata']['labels'],
@@ -488,9 +496,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             else:
                 pod.replicas = 1
 
+            pod_names[pod.id, pod.namespace].add(pod_name)
             if pod.sid not in pod_index:
                 self._collection[pod.id, pod.namespace] = pod
                 pod_index.add(pod.sid)
+
+        self.pod_names = pod_names
 
     @staticmethod
     def format_lbservice_name(pod_id):
@@ -737,6 +748,36 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         return pod.as_dict()
 
+    def patch_running_pod(self, pod_id, data,
+                          replace_lists=False, restart=False):
+        """Patches spec of pod in RC.
+        :param data: data part of pod's spec
+        :param replace_lists: if true then lists in spec will be fully
+            replaced with lists in 'data'. If False, then  lists will be
+            appended.
+        :param restart: If True, then after patching RC pods will be killed,
+            so the RC will restart pods with patched config. If False, then
+            pods will not be restarted.
+        :return: Pod.as_dict()
+        """
+        pod = PodCollection()._get_by_id(pod_id)
+        rcdata = json.dumps({'spec': {'template': data}})
+        rv = self._patch(['replicationcontrollers', pod.sid], rcdata,
+                         rest=True, ns=pod.namespace,
+                         replace_lists=replace_lists)
+        self._raise_if_failure(rv, "Could not change '{0}' pod RC".format(
+            pod.name.encode('ascii', 'replace')))
+        # Delete running pods, so the RC will create new pods with updated
+        # spec.
+        if restart:
+            names = self.pod_names.get((pod_id, pod.namespace), [])
+            for name in names:
+                rv = self._del(['pods', name], ns=pod.namespace)
+                self._raise_if_failure(rv, "Could not change '{0}' pod".format(
+                    pod.name.encode('ascii', 'replace')))
+        pod = PodCollection()._get_by_id(pod_id)
+        return pod.as_dict()
+
     def _redeploy(self, pod, data):
         db_pod = DBPod.query.get(pod.id)
         # apply changes in config
@@ -791,8 +832,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 drive_name=drive_name
             ).first()
             if persistent_disk is None:
-                name = pd_utils.parse_pd_name(drive_name).drive
-                raise APIError('Persistent Disk {0} not found'.format(name),
+                raise APIError('Persistent Disk {0} not found'.format(
+                                    drive_name),
                                404)
             drives[drive_name] = (storage, persistent_disk)
             if persistent_disk.state == PersistentDiskStatuses.TODELETE:

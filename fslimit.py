@@ -3,7 +3,8 @@ Usage: fslimit.py containers|storage [name=limit ...]
 
 Examples:
 fslimit.py containers a00750a46fbb3c5bd512c790031dca02ef87359ae3cb54f70bdb2a2f6e0f66a9=1g
-fslimit.py storage 63ce0925-1b11-4688-98cb-f5a934030d4b=5g ca3a36ed-fc85-4fdf-ae29-f777f0923089=10g
+fslimit.py storage /var/lib/kuberdock/storage/23/mydrive1=5g
+fslimit.py storage mydrive1_23=3g
 """
 
 import glob
@@ -16,8 +17,8 @@ import sys
 OVERLAY = '/var/lib/docker/overlay'
 PROJECTS = '/etc/projects'
 PROJID = '/etc/projid'
-PROJECT_PATTERN = re.compile('^(?P<id>\d+):(?P<path>.+)$')
-PROJID_PATTERN = re.compile('^(?P<name>.+):(?P<id>\d+)$')
+PROJECT_PATTERN = re.compile(r'^(?P<id>\d+):(?P<path>.+)$')
+PROJID_PATTERN = re.compile(r'^(?P<name>.+):(?P<id>\d+)$')
 STORAGE = '/var/lib/kuberdock/storage'
 
 
@@ -57,7 +58,12 @@ def _limits(parent):
     limits = {}
     for limit in sys.argv[2:]:
         name, _, value = limit.partition('=')
-        path = os.path.join(parent, name)
+        # Use given names as paths if it represent an absolute path. Otherwise
+        # use it as subdir for the parent dir.
+        if name.startswith('/'):
+            path = name
+        else:
+            path = os.path.join(parent, name)
         limits[name] = {'limit': value, 'path': path}
     return limits
 
@@ -72,20 +78,35 @@ def _storage():
     storage = {}
     target_path = os.path.join(STORAGE, '*')
     for storage_path in glob.glob(target_path):
-        storage_name = os.path.basename(storage_path)
-        storage[storage_name] = storage_path
+        # we expect here directories like <STORAGE>/<user id>/<user storage>
+        if not os.path.isdir(storage_path):
+            continue
+        subdir = os.path.basename(storage_path)
+        try:
+            int(subdir)
+        except (TypeError, ValueError):
+            continue
+        user_storage_parent = os.path.join(storage_path, '*')
+        for lstorage in glob.glob(user_storage_parent):
+            storage[lstorage] = lstorage
     return storage
 
 
+FSLIMIT_TARGETS = {
+    'containers': (OVERLAY, _containers),
+    'storage': (STORAGE, _storage,),
+}
+
 def _target():
+    """Returns tuple of Parent directory, method for getting subdirs and
+    flag which determine the way of working with paths - use absolute
+    """
     if len(sys.argv) < 2:
         _exit('No target specified', 3, usage=True)
     target = sys.argv[1]
-    if target == 'containers':
-        return OVERLAY, _containers
-    if target == 'storage':
-        return STORAGE, _storage
-    _exit('Unknown target', 4, usage=True)
+    if target not in FSLIMIT_TARGETS:
+        _exit('Unknown target', 4, usage=True)
+    return target
 
 
 def check_xfs(fs):
@@ -99,7 +120,7 @@ def check_prjquota(fs):
         _exit('Enable project quota for {0}'.format(fs['device']), 2)
 
 
-def fslimit(fs, parent, dirs):
+def fslimit(fs, parent, dirs, abspath=False):
     delete = set()
     max_id = 0
     projects = set()
@@ -114,7 +135,10 @@ def fslimit(fs, parent, dirs):
                     id_ = int(project_dict['id'])
                     path = project_dict['path']
                     if path.startswith(parent):
-                        name = os.path.basename(path)
+                        if abspath:
+                            name = path
+                        else:
+                            name = os.path.basename(path)
                         if name not in dirs:
                             delete.add(id_)
                             continue
@@ -132,7 +156,7 @@ def fslimit(fs, parent, dirs):
                     max_id = max([max_id, id_])
                 projid_lines.append(projid)
     new = _limits(parent)
-    for name, data in new.items():
+    for name, data in new.iteritems():
         if name not in projects:
             max_id += 1
             projects_lines.append('{0}:{1}'.format(max_id, data['path']))
@@ -149,8 +173,14 @@ def fslimit(fs, parent, dirs):
 
 
 if __name__ == '__main__':
-    _parent, _dirs = _target()
-    fs_ = _fs()[_mount(_parent)]
+
+    target_ = _target()
+    parent_, get_dirs = FSLIMIT_TARGETS[target_]
+
+    use_abspath = False
+    if target_ == 'storage':
+        use_abspath = True
+    fs_ = _fs()[_mount(parent_)]
     check_xfs(fs_)
     check_prjquota(fs_)
-    fslimit(fs_, _parent, _dirs())
+    fslimit(fs_, parent_, get_dirs(), abspath=use_abspath)

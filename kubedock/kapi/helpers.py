@@ -80,12 +80,23 @@ class KubeQuery(object):
         args = self._compose_args()
         return self._run('del', res, args, ns)
 
+    def _patch(self, res, data, rest=False, ns=None, replace_lists=True):
+        args = self._compose_args(rest)
+        if replace_lists:
+            ct = 'application/merge-patch+json'
+        else:
+            ct = 'application/strategic-merge-patch+json'
+        args['headers']['Content-Type'] = ct
+        args['data'] = data
+        return self._run('patch', res, args, ns)
+
     def _run(self, act, res, args, ns):
         dispatcher = {
             'get': requests.get,
             'post': requests.post,
             'put': requests.put,
-            'del': requests.delete
+            'del': requests.delete,
+            'patch': requests.patch,
         }
         try:
             req = dispatcher.get(act, requests.get)(self._make_url(res, ns),

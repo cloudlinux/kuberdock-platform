@@ -183,8 +183,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pd_cls = get_storage_class()
         if not pd_cls:
             return
-        pd_cls().enrich_volume_info(volume, persistent_disk.size,
-                                    persistent_disk.drive_name)
+        pd_cls().enrich_volume_info(volume, persistent_disk)
 
     def _handle_local_storage(self, volume):
         # TODO: cleanup localStorage volumes. It is now used only for pods of

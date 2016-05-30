@@ -1,17 +1,16 @@
-from flask import Blueprint, current_app, request
+from flask import Blueprint, current_app, request, session
 from ..core import ConnectionPool, EvtStream
 from ..login import auth_required
-from ..sessions import session_required
+
 
 stream = Blueprint('stream', __name__, url_prefix='/stream')
 
 
 @stream.route('')
 @auth_required
-@session_required
 def send_stream():
     conn = ConnectionPool.get_connection()
-    channel = request.args.get('id')
+    channel = getattr(session, 'sid', None)
     if channel is None:
         channel = 'common'
     last_id = request.headers.get('Last-Event-Id')

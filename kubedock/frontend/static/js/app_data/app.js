@@ -7,11 +7,9 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         },
 
         initialize: function(){
-            //this._cache = backendData;
             this._cache = {};
             this.lastEventId = null;
             this.storage = window.localStorage || window.sessionStorage || {};
-            //delete this.storage.authData;
         },
 
         /**
@@ -44,11 +42,8 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
          *
          * @param {Object} authData - modified data from App.getAuth
          */
-        updateAuth: function(authData){
-            var actualAuthData = JSON.parse(App.storage.authData || 'null');
-            // check that it is the same session
-            if (actualAuthData && authData.id === actualAuthData.id)
-                App.storage.authData = JSON.stringify(authData);
+        updateAuth: function(token){
+            App.storage.authData = token;
         },
 
         /**
@@ -122,10 +117,15 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
      * @returns {Promise} - promise of auth data
      */
     App.getCurrentAuth = function(){
-        var authData = this.storage.authData;
+        var authData = this.storage.authData,
+            tokenPos = window.location.href.indexOf('token2'),
+            token;
+        if (tokenPos !== -1 && window.history.pushState) {
+            var newurl = Utils.removeURLParameter(window.location.href, 'token2');
+            window.history.pushState({path:newurl}, '', newurl);
+        }
         if (authData){
-            authData = JSON.parse(authData);
-            var token = _.chain(authData.token.split('.')).first(2)
+            token = _.chain(authData.split('.')).first(2)
                 .map(atob).object(['header', 'payload']).invert()
                 .mapObject(JSON.parse).value();
             if (token.header.exp > +new Date() / 1000)
@@ -133,7 +133,6 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         }
     };
     App.getAuth = function(){
-        console.log('getAuth called...');
         var deferred = $.Deferred(),
             authData = this.getCurrentAuth();
         if (authData)
@@ -153,19 +152,18 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
      */
     App.eventHandler = function(options){
         options = options || {};
-        var auth = App.getCurrentAuth();
-        if (!auth)
+        var token = App.getCurrentAuth();
+        if (!token)
             return;
         var url = options.url || '/api/stream',
             lastID = options.lastID,
-            token = auth.token,
             nodes = App.currentUser.roleIs('Admin'),
             that = this;
 
         url += (url.indexOf('?') === -1 ? '?' : '&')
             + $.param(lastID != null
-                      ? {token2: token, lastid: lastID, id: auth.id}
-                      : {token2: token, id: auth.id});
+                      ? {token2: token, lastid: lastID}
+                      : {token2: token});
         var source = App.sseEventSource = new EventSource(url),
             events;
         var collectionEvent = function(collectionGetter, eventType){
@@ -323,22 +321,20 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         $.xhrPool.push(xhr);
 
         if (options.authWrap){
-            var auth = App.getCurrentAuth();
-            if (auth){
+            var token = App.getCurrentAuth();
+            if (token){
                 xhr.done(function(){
                     if (xhr && (xhr.status === 401 || xhr.status === 403)){
                         App.cleanUp().initApp();
                     } else {
-                        var auth = App.getCurrentAuth();
-                        if (auth){
+                        if (App.getCurrentAuth()){
                             var token = xhr.getResponseHeader('X-Auth-Token');
                             if (token) {
-                                auth.token = token;
-                                App.updateAuth(auth);
+                                App.updateAuth(token);
                             }
                         }
                     }
-                }).setRequestHeader('X-Auth-Token', auth.token);
+                }).setRequestHeader('X-Auth-Token', token);
             } else {
                 xhr.abort();
                 App.cleanUp().initApp();

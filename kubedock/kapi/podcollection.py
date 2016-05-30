@@ -774,12 +774,14 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
 
 
 def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
+    """Set new replicas size and wait until replication controller increase or
+    decrease real number of pods or max retries exceed
+    """
     pc = PodCollection()
     pod = pc._get_by_id(pod_id)
-    rc = get_replicationcontroller(pod.namespace, pod.sid)
-    rc['spec']['replicas'] = size
-    rc = pc.k8squery.put(['replicationcontrollers', pod.sid],
-                         json.dumps(rc), ns=pod.namespace, rest=True)
+    data = json.dumps({'spec': {'replicas': size}})
+    rc = pc.k8squery.patch(
+        ['replicationcontrollers', pod.sid], data, ns=pod.namespace)
     podutils.raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
     retry_count = 0
     while rc['status']['replicas'] != size and retry_count < max_retries:

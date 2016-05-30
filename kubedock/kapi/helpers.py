@@ -5,6 +5,7 @@ import string
 from ..core import db
 from ..exceptions import APIError
 from ..pods.models import Pod
+from ..users.models import User
 from ..utils import get_api_url
 
 
@@ -105,6 +106,78 @@ class KubeQuery(object):
             return self._return_request(req)
         except requests.exceptions.ConnectionError, e:
             return self._raise_error(str(e))
+
+
+KUBERDOCK_POD_UID = 'kuberdock-pod-uid'
+LABEL_SELECTOR_TYPE = 'kuberdock-type={}'
+LABEL_SELECTOR_PODS = KUBERDOCK_POD_UID + ' in ({})'
+
+
+class Services(object):
+    """Class provides methods to get services by some label selector
+    conditions, or by user or pods.
+
+    Args:
+        svc_type (str): type of service, or None to get all services
+
+    """
+
+    def __init__(self, svc_type=None):
+        self.kq = KubeQuery()
+        self.svc_type = svc_type
+
+    def _get_label_selector(self, conditions):
+        return ", ".join(conditions)
+
+    def _get(self, conditions=None):
+        if conditions is None:
+            conditions = []
+        label_selector = self._get_label_selector(conditions)
+        svc = self.kq.get(['services'], {'labelSelector': label_selector})
+        return svc['items']
+
+    def get_by_type(self, conditions=None):
+        """Return all services filtered by LabelSelector
+        Args:
+            conditions (str, tuple, list): conditions that goes to
+            LabelSelector(example: 'kuberdock-pod-uid=123')
+
+        """
+        if conditions is None:
+            conditions = []
+        if not isinstance(conditions, (tuple, list)):
+            conditions = [conditions]
+        else:
+            conditions = list(conditions)
+        if self.svc_type:
+            conditions.append(LABEL_SELECTOR_TYPE.format(self.svc_type))
+        return self._get(conditions)
+
+    def get_all(self):
+        """Return all service of selected type
+        """
+        return self.get_by_type()
+
+    def get_by_pods(self, pods):
+        """Return all services of selected type, owned by pods
+        Args:
+            pods (str, list, tuple): pods ids
+
+        """
+        if not isinstance(pods, (list, tuple)):
+            pods = (pods, )
+        ls_pods = LABEL_SELECTOR_PODS.format(', '.join(pods))
+        svc = self.get_by_type(ls_pods)
+        return {s['metadata']['labels'][KUBERDOCK_POD_UID]: s for s in svc}
+
+    def get_by_user(self, user_id):
+        """Return all service of selected type, owned by user
+        Args:
+            user_id (str): id of user
+        """
+        user = User.get(user_id)
+        pods = [pod['id'] for pod in user.pods_to_dict()]
+        return self.get_by_pods(pods)
 
 
 def get_pod_config(pod_id, param=None, default=None):

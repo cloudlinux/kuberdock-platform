@@ -24,7 +24,7 @@ NUM_NODES=${NUM_NODES:-2}
 # Dynamically set node sizes so that Heapster has enough space to run
 if [[ -z ${NODE_SIZE} ]]; then
   if (( ${NUM_NODES} < 50 )); then
-    NODE_SIZE="t2.micro"
+    NODE_SIZE="t2.small"
   elif (( ${NUM_NODES} < 150 )); then
     NODE_SIZE="t2.small"
   else

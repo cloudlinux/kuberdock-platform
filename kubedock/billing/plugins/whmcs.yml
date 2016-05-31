@@ -71,3 +71,14 @@ methods:
         endpoint: /includes/api.php
         return:
             - results
+    orderpodedit:
+        method: post
+        args:
+            - pod
+        params:
+            action: editkuberdockkubes
+            client_id: null          # filled in automatically
+            pod: pod
+        endpoint: /includes/api.php
+        return:
+            - results

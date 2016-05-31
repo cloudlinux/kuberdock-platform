@@ -6,6 +6,8 @@ from kubedock.login import auth_required
 from kubedock.utils import KubeUtils
 from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
+import json
+from kubedock.kapi.podcollection import PodCollection, POD_STATUSES
 
 
 billing = Blueprint('billing', __name__, url_prefix='/billing')
@@ -68,17 +70,21 @@ def order_product():
 @maintenance_protected
 @KubeUtils.jsonwrap
 def order_edit():
-    # TODO: actual billing method
-    # return {'status': 'Unpaid', 'redirect': 'http://i.am.the.billing.com'}
-    user = KubeUtils._get_current_user()
     data = KubeUtils._get_params()
-    from kubedock.kapi.podcollection import PodCollection, POD_STATUSES
-    pc = PodCollection(user)
-    status = pc._get_by_id(data['pod']['id']).status
-    cmd = 'start' if status == POD_STATUSES.stopped else 'redeploy'
-    pc.update(data['pod']['id'], {'command': cmd,
-                                  'commandOptions': {'applyEdit': True}})
-    return {'status': 'Paid'}
+    pod_id = data['pod']['id']
+    data['pod'] = json.dumps(data['pod'])
+    current_billing = SystemSettings.get_by_name('billing_type')
+    if current_billing == 'No billing':
+        raise APIError('Without billing', 404)
+    billing = current_app.billing_factory.get_billing(current_billing)
+    result = billing.orderpodedit(**data)
+    if result['status'] == 'Paid':
+        user = KubeUtils._get_current_user()
+        pc = PodCollection(user)
+        status = pc._get_by_id(pod_id).status
+        cmd = 'start' if status == POD_STATUSES.stopped else 'redeploy'
+        pc.update(pod_id, {'command': cmd, 'commandOptions': {'applyEdit': True}})
+    return result
 
 
 @billing.route('/orderKubes', methods=['POST'], strict_slashes=False)

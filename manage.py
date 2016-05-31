@@ -123,9 +123,9 @@ def wait_for_nodes(nodes_list, timeout):
             if status == 'troubles' and nhost not in nodes_in_trouble:
                 nodes_in_trouble[nhost] = time.time() + WAIT_TROUBLE_TIMEOUT
             elif status == 'troubles' and time.time() > nodes_in_trouble[nhost]:
-                raise WaitTroubleException("Node `%s` went into trouble and "
-                                           "still in troubles state after %d seconds." % (
-                                             nhost, WAIT_TROUBLE_TIMEOUT))
+                raise WaitTroubleException(
+                    "Node `%s` went into trouble and still in troubles state "
+                    "after %d seconds." % (nhost, WAIT_TROUBLE_TIMEOUT))
             elif status == 'running' and nhost in host_list:
                 host_list.remove(nhost)
 
@@ -157,14 +157,12 @@ class NodeManager(Command):
             check_node_data({'hostname': hostname, 'kube_type': kube_type})
             res = create_node(None, hostname, kube_type, do_deploy, testing,
                               options=options)
-        except APIError as e:
-            print e.message
-        except Exception as e:
-            print e
-        else:
-            print res.to_dict()
+            print(res.to_dict())
             if wait:
                 wait_for_nodes([hostname, ], timeout)
+        except Exception as e:
+            print("Node management error: {0}".format(e))
+            exit(1)
 
 
 class WaitForNodes(Command):

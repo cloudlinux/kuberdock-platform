@@ -344,7 +344,7 @@ def init_local_storage(pod_spec_file):
             raise PluginException(
                 'Failed to create local storage dir "{}"'.format(path)
             )
-        limits[os.path.basename(path)] = '{}g'.format(ls.get('size', 1))
+        limits[path] = '{}g'.format(ls.get('size', 1))
     if limits:
         subprocess.call(
             ['/usr/bin/env', 'python2', FSLIMIT_PATH, 'storage'] +

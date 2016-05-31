@@ -82,6 +82,36 @@
             &.show{
                 display: block;
             }
+            &.editPod{
+                background-color: #fffeeb;
+                .message{
+                    background-color: #fffeeb;
+                    padding: 18px 18px 8px 18px;
+                    background-color: hsla(0, 0%, 0%, 0);
+                    background-image: -webkit-linear-gradient(#fffeeb, #fffeeb), -webkit-linear-gradient(top left, transparent 50.5%, #fffeeb 50.5%), -webkit-linear-gradient(top right, transparent 50.5%, #fffeeb 50.5%), -webkit-linear-gradient(bottom left, transparent 50.5%, #fffeeb 50.5%), -webkit-linear-gradient(bottom right, transparent 50.5%, #fffeeb 50.5%);
+                    background-image: -moz-linear-gradient(#fffeeb, #fffeeb), -moz-linear-gradient(top left, transparent 50.5%, #fffeeb 50.5%), -moz-linear-gradient(top right, transparent 50.5%, #fffeeb 50.5%), -moz-linear-gradient(bottom left, transparent 50.5%, #fffeeb 50.5%), -moz-linear-gradient(bottom right, transparent 50.5%, #fffeeb 50.5%);
+                    background-image: linear-gradient(#fffeeb, #fffeeb), linear-gradient(to bottom right, transparent 50.5%, #fffeeb 50.5%), linear-gradient(to bottom left, transparent 50.5%, #fffeeb 50.5%), linear-gradient(to top right, transparent 50.5%, #fffeeb 50.5%), linear-gradient(to top left, transparent 50.5%, #fffeeb 50.5%);
+                    &:before{
+                        content: none;
+                    }
+                    h3, p{
+                        text-align: center;
+                    }
+                    h3{
+                        font-size: 17px;
+                        margin-bottom: 10px;
+                    }
+                    .buttons{
+                        margin: 20px 0 0 0;
+                        button{
+                            height: initial;
+                            padding: 0 15px;
+                            line-height: 28px;
+                            margin-bottom: 18px;
+                        }
+                    }
+                }
+            }
             .message{
                 top: 10px;
                 width: 100%;

@@ -45,8 +45,8 @@
     .container-update{
         .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
     }
-    .check-for-update{
-        .mdi('find_replace',21px, #B5BBC1, #3197EE);
+    .edit-btn{
+        .mdi('create',21px, #B5BBC1, #3197EE);
     }
     .list-btn{
         .mdi('equalizer',21px, #B5BBC1, #3197EE);
@@ -244,6 +244,7 @@ table{
         .mdi('stop',21px, #B5BBC1, #3197EE);
     }
     .check-for-update{
+        display: inline-block;
         .mdi('find_replace',21px, #B5BBC1, #3197EE);
         &.start-atimation{
             &:before{
@@ -256,6 +257,7 @@ table{
         .mdi('autorenew',21px, #B5BBC1, #3197EE);
     }
     .container-update{
+        display: inline-block;
         .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
     }
     .edit-item{
@@ -275,6 +277,38 @@ table{
         &:before{
             .rotate(-180deg);
         }
+    }
+    .diff-arrow{
+        display: inline-block;
+        vertical-align: middle;
+        .mdi('trending_flat',18px, #8e8e8e, #8e8e8e);
+        &:hover{
+          cursor: default;
+        }
+    }
+    .diff-added-icon{
+        display: inline-block;
+        vertical-align: middle;
+        .mdi('add',18px, #8e8e8e, #8e8e8e);
+        &:hover{
+          cursor: default;
+        }
+        ~ span {
+            vertical-align: middle;
+            display: inline-block;
+        }
+    }
+}
+/* edit pod message icons */
+.message-pod-canged-info-title-ico{
+    display: inline-block;
+    vertical-align: middle;
+    .mdi('info_outline',24px, inherit, inherit);
+    &:hover{
+        cursor: default;
+    }
+    &:before{
+        .rotate(-180deg);
     }
 }
 /* add image icons */

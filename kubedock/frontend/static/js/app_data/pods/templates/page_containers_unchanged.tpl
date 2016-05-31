@@ -1,7 +1,7 @@
-<% if (partial){ %>
-    Haven't changed:
-<% } %>
 <table class="table" id="imagelist-table">
+<% if (partial){ %>
+<caption>Haven't changed</caption>
+<% } %>
 <thead>
     <tr class="main-table-head">
         <th>Image name</th>

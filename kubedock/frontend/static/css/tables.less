@@ -17,6 +17,7 @@
 #users-online-table,
 #predefined-app-table,
 #user-profile-logs-table,
+#imagelist-changed-table,
 #persistent-volumes-table,
 #user-profile-general-table,
 #all-users-activities-table{
@@ -137,9 +138,15 @@
 #users-online-table,
 #predefined-app-table,
 #user-profile-logs-table,
+#imagelist-changed-table,
 #persistent-volumes-table,
 #user-profile-general-table,
 #all-users-activities-table{
+    caption{
+      text-align: left;
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
     tbody{
         tr{
             td{
@@ -237,6 +244,12 @@
                 }
                 .unmount{
                     background: url('../img/unmount.png') 0 0 no-repeat;
+                }
+                .diff-changed,
+                .diff-deleted{
+                    .diff{
+                        color: #8e8e8e;
+                    }
                 }
             }
         }

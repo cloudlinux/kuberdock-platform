@@ -121,7 +121,7 @@
                 <% } else { %>
                     <td><%= data.persistentVolume[1] %></td>
                 <% } %>
-                <td class="font-fix">
+                <td class="actions">
                     <span class="check-for-update" title="Update status"></span>
                 </td>
             </tr>

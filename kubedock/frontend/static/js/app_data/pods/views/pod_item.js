@@ -363,7 +363,7 @@ define(['app_data/app',
             // If there is only one point, jqplot will display ugly plot with
             // weird grid and no line.
             // Remove this point to force jqplot to show noDataIndicator.
-            if (this.model.get('points').length == 1)
+            if (this.model.get('points').length === 1)
                 this.model.get('points').splice(0);
 
             this.model.get('points').forEach(function(record){
@@ -502,7 +502,7 @@ define(['app_data/app',
                         url: '/api/billing/orderKubes',
                         data: JSON.stringify({pod: JSON.stringify(that.model)}),
                     }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(xhr){
-                        if(xhr.data.status.toLowerCase() == 'paid'){
+                        if(xhr.data.status.toLowerCase() === 'paid'){
                             utils.notifyWindow('Pod will be upgraded.', 'success');
                             App.navigate('pods/' + that.model.id, {trigger: true});
                         } else {

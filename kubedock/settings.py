@@ -258,3 +258,10 @@ except ImportError:
 
 if not CEPH:
     CELERYBEAT_SCHEDULE.pop('unmap-temp-mapped-drives', None)
+
+# Check if testing repo is enabled
+WITH_TESTING = False
+try:
+    from .deploy_settings import *  # noqa
+except ImportError:
+    pass

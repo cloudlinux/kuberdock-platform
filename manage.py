@@ -25,7 +25,7 @@ from kubedock.rbac.models import Role
 from kubedock.system_settings.fixtures import add_system_settings
 from kubedock.notifications.fixtures import add_notifications
 from kubedock.static_pages.fixtures import generate_menu
-from kubedock.settings import NODE_CEPH_AWARE_KUBERDOCK_LABEL
+from kubedock.settings import NODE_CEPH_AWARE_KUBERDOCK_LABEL, WITH_TESTING
 from kubedock.updates.models import Updates
 from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
 from kubedock.updates.kuberdock_upgrade import get_available_updates
@@ -155,7 +155,7 @@ class NodeManager(Command):
             kube_type_id = kube_type.id
 
         options = None
-
+        testing = testing or WITH_TESTING
         if docker_options is not None:
             options = {'DOCKER': docker_options}
 

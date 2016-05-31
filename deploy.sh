@@ -990,6 +990,12 @@ EOF
 
 fi
 
+if [ "$WITH_TESTING" = yes ]; then
+cat > $KUBERDOCK_DIR/kubedock/deploy_settings.py << EOF
+WITH_TESTING = True
+EOF
+fi
+
 # 17. Starting web-interface
 #
 # WARNING! uWSGI restart should be done after writing all custom settings (CEPH, Amazon, etc)

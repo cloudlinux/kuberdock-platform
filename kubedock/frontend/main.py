@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template
+from flask import (Blueprint, request, render_template, make_response,
+                   session)
+from ..sessions import create_token
 
 
 main = Blueprint('main', __name__)
@@ -6,7 +8,14 @@ main = Blueprint('main', __name__)
 
 @main.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')
+    token = request.args.get('token2')
+    if token is not None:
+        token = create_token(session)
+        resp = make_response(render_template('index.html', token=(token or '')))
+        if 'X-Auth-Token' not in resp.headers:
+            resp.headers['X-Auth-Token'] = token
+        return resp
+    return render_template('index.html', token='')
 
 
 #@main.route('/test', methods=['GET'])

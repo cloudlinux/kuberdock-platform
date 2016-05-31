@@ -267,8 +267,15 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
                 db.session.commit()
                 return err
             time.sleep(0.2)
-        s = o.channel.recv_exit_status()
-        ssh.exec_command('rm /node_install.sh')
+
+        try:
+            # this raises an exception in case of a lost ssh connection
+            # and node is in 'pending' state instead of 'troubles'
+            s = o.channel.recv_exit_status()
+            ssh.exec_command('rm /node_install.sh')
+        except Exception as e:
+            send_logs(node_id, 'Error: {}\n'.format(e), log_file)
+
         if s != 0:
             res = 'Installation script error. Exit status: {0}.'.format(s)
             send_logs(node_id, res, log_file, channels)

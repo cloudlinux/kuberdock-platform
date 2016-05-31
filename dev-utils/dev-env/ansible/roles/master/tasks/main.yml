@@ -45,10 +45,6 @@
 
 - include: billing.yml
 
-- seboolean: name=httpd_can_network_connect state=yes persistent=yes
-  notify:
-    - restart nginx
-
 - name: Fetching key
   fetch: src={{ pub_key }} dest=/tmp/kd_rsa.pub fail_on_missing=yes flat=yes
 

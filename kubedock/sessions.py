@@ -16,20 +16,9 @@ from .core import db
 from .login import create_identifier
 
 
-def session_required(func):
-    @wraps(func)
-    def wrapper(*args, **kw):
-        sessid = request.args.get('id')
-        if not sessid:
-            abort(500)
-        sess = SessionData.query.get(sessid)
-        if sess is None:
-            abort(500)
-        return func(*args, **kw)
-    return wrapper
-
-
 def create_token(session):
+    if getattr(session, 'sid', None) is None:
+        return
     secret = SystemSettings.get_by_name('sso_secret_key')
     if not secret:
         secret = current_app.config.get('SECRET_KEY')
@@ -53,6 +42,10 @@ def add_and_auth_user(data):
                     if package is None:
                         package = Package.get_default()
                     data['package'] = package.name
+            if 'rolename' not in data:
+                data['rolename'] = 'User'
+            if 'active' not in data:
+                data['active'] = True
             user = UserCollection().create(data, return_object=True)
     sid = str(uuid4())
     session_data = {
@@ -142,7 +135,8 @@ class ManagedSessionInterface(SessionInterface):
         user_id = session.get('user_id')
         if user_id is None:
             return
-        response.headers['X-Auth-Token'] = create_token(session)
+        if 'X-Auth-Token' not in response.headers:
+            response.headers['X-Auth-Token'] = create_token(session)
 
 
 class DataBaseSessionManager(SessionManager):

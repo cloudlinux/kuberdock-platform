@@ -77,5 +77,11 @@
 
         <script data-main="{{ url_for('static', filename='js/app_data/require_main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
         {% endblock %}
+
+        {% if token %}
+        <script>
+            window.localStorage.authData = {{ token|tojson|safe }};
+        </script>
+        {% endif %}
     </body>
 </html>

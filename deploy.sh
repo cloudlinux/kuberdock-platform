@@ -449,6 +449,9 @@ else
 fi
 
 
+# AC-3318 Remove chrony which prevents ntpd service to start 
+# after boot
+yum erase -y chrony
 
 # 3 Install ntp, we need correct time for node logs
 # for now, etcd-ca and bridge-utils needed during deploy only

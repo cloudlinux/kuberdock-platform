@@ -17,28 +17,16 @@ define([
             App.navigate(admin ? 'nodes' : 'pods', {trigger: true});
         },
         doLogin: function(options){
-            var deferred = new $.Deferred(),
-                auth = /token2=(.*?)(?:$|&)/.exec(window.location.href),
-                tokenData, authData;
-            if (auth != null && auth.length !== 0) {
-                tokenData = _.chain(auth[1].split('.')).first(2)
-                    .map(atob).object(['header', 'payload']).invert()
-                    .mapObject(JSON.parse).value();
-                if (tokenData.header.exp >= +new Date() / 1000){
-                    authData = {id: tokenData.payload.sid, token: auth[1]};
-                    App.storage.authData = JSON.stringify(authData);
-                    deferred.resolveWith(App, [authData]);
-                    return deferred;
-                }
-            }
+            var deferred = new $.Deferred();
             require(['app_data/login/views'], function(Views){
                 var loginView = new Views.LoginView(options);
                 App.message.empty();  // hide any notification
                 utils.preloader.hide();  // hide preloader if there is any
                 App.listenTo(loginView,'action:signin', function(authModel){
                     authModel.unset('password');
-                    App.storage.authData = JSON.stringify(authModel);
-                    deferred.resolveWith(App, [authModel.toJSON()]);
+                    var token = authModel.get('token');
+                    App.storage.authData = token;
+                    deferred.resolveWith(App, [token]);
                 });
                 App.contents.show(loginView);
             });

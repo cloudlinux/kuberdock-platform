@@ -41,10 +41,7 @@ def token2():
     login_user(user)
     token = create_token(session)
 
-    return jsonify({
-        'status': 'OK',
-        'id': session.sid,
-        'token': token})
+    return jsonify({'status': 'OK', 'token': token})
 
 
 @auth.route('/logout', methods=['GET'])

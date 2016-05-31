@@ -239,6 +239,19 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         }
         return moment(dt).format(formatString);
     };
+    
+    utils.removeURLParameter = function (url, parameter) {
+        var urlParts = url.split('?');
+        if (urlParts.length < 2) { return url; }
+        var prefix = encodeURIComponent(parameter) + '=',
+            pars= urlParts[1].split(/[&;]/g);
+        for (var i=pars.length; i-- > 0;) {
+            if (pars[i].lastIndexOf(prefix, 0) !== -1) {
+                pars.splice(i, 1);
+            }
+        }
+        return urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : "");
+    };
 
     utils.deepClone = function(obj) {
         return (!obj || (typeof obj !== 'object')) ? obj :

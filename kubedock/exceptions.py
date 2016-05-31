@@ -18,7 +18,7 @@ class APIError(Exception):
 
     def __str__(self):
         # Only message because this class may wrap other exception classes
-        return self.message
+        return str(self.message)
 
     def __repr__(self):
         return '<{0}: "{1}" ({2})>'.format(

@@ -35,7 +35,8 @@ from .rbac.models import Role
 from .system_settings.models import SystemSettings
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
-    NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH)
+    NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
+    NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
@@ -176,11 +177,12 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             send_logs(node_id, 'Remove node {0} from kubernetes...'.format(
                 host), log_file, channels)
             result = remove_node_by_host(host)
-            send_logs(node_id, json.dumps(result, indent=2), log_file, channels)
+            send_logs(node_id, json.dumps(result, indent=2), log_file,
+                      channels)
 
         send_logs(node_id, 'Node kubernetes package will be'
                            ' "{0}" (same version as master kubernetes)'
-                           .format(current_master_kubernetes), log_file, channels)
+                  .format(current_master_kubernetes), log_file, channels)
 
         send_logs(node_id, 'Connecting to {0} with ssh with user "root" ...'
                   .format(host), log_file, channels)
@@ -192,7 +194,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             db.session.commit()
             return error_message
 
-        i, o, e = ssh.exec_command('ip -o -4 address show')
+        i, o, e = ssh.exec_command('ip -o -4 address show',
+                                   timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
         node_interface = get_node_interface(o.read(), db_node.ip)
         sftp = ssh.open_sftp()
         sftp.put('fslimit.py', '/fslimit.py')
@@ -229,7 +232,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
                      'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} '\
                      'bash /node_install.sh'
         if CEPH:
-            deploy_cmd = 'CEPH_CONF={} '.format(TEMP_CEPH_CONF_PATH) + deploy_cmd
+            deploy_cmd = 'CEPH_CONF={} '.format(
+                TEMP_CEPH_CONF_PATH) + deploy_cmd
         # we pass ports and hosts to let the node know which hosts are allowed
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
@@ -244,7 +248,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
         i, o, e = ssh.exec_command(
             deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
                               node_interface, timezone, host,
-                              cpu_multiplier, memory_multiplier),
+                              cpu_multiplier, memory_multiplier,
+                              timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT),
             get_pty=True)
         s_time = time.time()
         while not o.channel.exit_status_ready():
@@ -272,7 +277,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             # this raises an exception in case of a lost ssh connection
             # and node is in 'pending' state instead of 'troubles'
             s = o.channel.recv_exit_status()
-            ssh.exec_command('rm /node_install.sh')
+            ssh.exec_command('rm /node_install.sh',
+                             timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
         except Exception as e:
             send_logs(node_id, 'Error: {}\n'.format(e), log_file)
 
@@ -286,7 +292,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
                 )
                 check_namespace_exists(node_ip=host)
             send_logs(node_id, 'Rebooting node...', log_file, channels)
-            ssh.exec_command('reboot')
+            ssh.exec_command('reboot',
+                             timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
             # Here we can wait some time before add node to k8s to prevent
             # "troubles" status if we know that reboot will take more then
             # 1 minute. For now delay will be just 2 seconds (fastest reboot)
@@ -324,7 +331,8 @@ def pull_hourly_stats():
     try:
         data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
     except Exception:
-        current_app.logger.exception('Skip pulling statistics because of error.')
+        current_app.logger.exception(
+            'Skip pulling statistics because of error.')
         return
     time_windows = set(map(operator.itemgetter('time_window'), data))
     rv = db.session.query(StatWrap5Min).filter(

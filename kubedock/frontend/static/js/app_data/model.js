@@ -16,6 +16,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             if(response.status === 'error' || response.status === 'warning')
                 utils.notifyWindow(response);
             return data;
+        },
+        getParentWithType = function(model, typeOfPatent, throughCollection){
+            return _.find(model.parents || [],
+                          function(parent){ return parent instanceof typeOfPatent; });
         };
 
     data.DiffCollection = Backbone.Collection.extend({
@@ -111,7 +115,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         generateName: function(){
             return _.map(_.range(10), function(){ return _.random(36).toString(36); }).join('');
         },
-        getContainer: function(){ return ((this.collection || {}).parents || [])[0]; },
+        getContainer: function(){ return getParentWithType(this.collection, data.Container); },
     });
 
     data.Port = Backbone.Model.extend({
@@ -122,7 +126,16 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             isPublic: false,
             protocol: "tcp",
         },
-        getContainer: function(){ return ((this.collection || {}).parents || [])[0]; },
+        getContainer: function(){ return getParentWithType(this.collection, data.Container); },
+    });
+
+    data.EnvVar = Backbone.Model.extend({
+        idAttribute: 'name',
+        defaults: {
+            name: 'not set',
+            value: '',
+        },
+        getContainer: function(){ return getParentWithType(this.collection, data.Container); },
     });
 
     data.Container = Backbone.AssociatedModel.extend({
@@ -135,6 +148,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             type: Backbone.Many,
             key: 'volumeMounts',
             relatedModel: data.VolumeMount,
+        }, {
+            type: Backbone.Many,
+            key: 'env',
+            relatedModel: data.EnvVar,
         }],
         defaults: function(){
             return {
@@ -154,10 +171,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             'args', 'command', 'env', 'image', 'kubes', 'ports', 'sourceUrl',
             'volumeMounts', 'workingDir'
         ],
-        getPod: function(){
-            return _.find((this.collection || {}).parents || [],
-                          function(parent){ return parent instanceof data.Pod; });
-        },
+        getPod: function(){ return getParentWithType(this.collection, data.Pod); },
         isChanged: function(compareTo){
             if (!compareTo)
                 return false;
@@ -315,7 +329,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
         // if it's "edited_config" of some other pod, get that pod:
         // pod.editOf() === undefined || pod.editOf().get('edited_config') === pod
-        editOf: function(){ return (this.parents || [])[0]; },
+        editOf: function(){ return getParentWithType(this, data.Pod); },
         getContainersDiffCollection: function(){
             var before = this,
                 diffCollection = new data.DiffCollection(

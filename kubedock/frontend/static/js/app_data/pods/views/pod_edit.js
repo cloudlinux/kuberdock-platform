@@ -12,6 +12,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         'tpl!app_data/pods/templates/editable_volume_mounts/empty.tpl',
 
         'tpl!app_data/pods/templates/wizard_set_container_env.tpl',
+        'tpl!app_data/pods/templates/editable_env_vars/item.tpl',
 
         'tpl!app_data/pods/templates/wizard_container_collection_item.tpl',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
@@ -31,6 +32,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 volumeMountListEmptyTpl,
 
                 wizardSetContainerEnvTpl,
+                editableEnvVarTpl,
 
                 wizardContainerCollectionItemTpl,
                 wizardSetContainerCompleteTpl){
@@ -755,18 +757,73 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     });
 
 
-    views.WizardEnvSubView = Backbone.Marionette.ItemView.extend({
+    views.EnvTableRow = Backbone.Marionette.CompositeView.extend({
+        template: editableEnvVarTpl,
+        tagName: 'tr',
+        className: 'col-sm-12 no-padding',
+        ui: {
+            removeItem   : '.remove-env',
+            input        : '.change-input',
+            nameField    : 'input.name',
+            valueField   : 'input.value',
+        },
+        events: {
+            'focus @ui.input' : 'removeError',
+            'change @ui.nameField': 'onChangeName',
+            'change @ui.valueField': 'onChangeValue',
+            'click @ui.removeItem': 'removeVariable',
+        },
+
+        removeError: function(evt){ utils.removeError($(evt.target)); },
+
+        onChangeName: function(evt){
+            var name = evt.target.value.trim();
+            this.model.set('name', evt.target.value = name);
+        },
+        onChangeValue: function(evt){
+            var value = evt.target.value.trim();
+            this.model.set('value', evt.target.value = value);
+        },
+        removeVariable: function(evt){ this.model.collection.remove(this.model); },
+        validateAndNormalize: function(){
+            var paternFirstSumbol = /^[a-zA-Z]/,
+                paternValidName = /^[a-zA-Z0-9-_\.]*$/;
+
+            var name = this.model.get('name');
+            if (!paternFirstSumbol.test(name)){
+                utils.notifyInline('First symbol must be letter in variables name',
+                                   this.ui.nameField);
+                return false;
+            }
+            if (!paternValidName.test(name)){
+                utils.notifyInline('Variable name should contain only Latin letters or ".", "_", "-" symbols',
+                                   this.ui.nameField);
+                return false;
+            }
+            if (name.length > 255){
+                utils.notifyInline('Max length is 255 symbols', this.ui.nameField);
+                return false;
+            }
+
+            var value = this.model.get('value');
+            if (!value){
+                utils.notifyInline('Variables value must be set', this.ui.valueField);
+                return false;
+            }
+            return true;
+        },
+    });
+    views.WizardEnvSubView = Backbone.Marionette.CompositeView.extend({
         template: wizardSetContainerEnvTpl,
         tagName: 'div',
+        childView: views.EnvTableRow,
+        childViewContainer: '.environment-set-up tbody',
 
         ui: {
             ieditable    : '.ieditable',
             reset        : '.reset-button',
-            input        : '.change-input',
+            envTable     : '.environment-set-up',
             addItem      : '.add-env',
-            removeItem   : '.remove-env',
-            nameField    : 'input.name',
-            valueField   : 'input.value',
             next         : '.next-step',
             prev         : '.go-to-ports',
             cancelEdit   : '.cancel-edit',
@@ -779,24 +836,23 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'click @ui.addItem'      : 'addItem',
             'click @ui.removeItem'   : 'removeItem',
             'click @ui.reset'        : 'resetFielsdsValue',
-            'change @ui.input'       : 'onChangeInput',
             'click @ui.next'         : 'finalStep',
             'click @ui.prev'         : 'prevStep',
             'click @ui.cancelEdit'   : 'cancelEdit',
             'click @ui.editEntirePod': 'editEntirePod',
             'click @ui.saveChanges'  : 'saveChanges',
-            'focus @ui.input'        : 'removeError',
         },
 
         modelEvents: {
             'change': 'render'
         },
 
+        collectionEvents: {
+            'add remove reset': 'toggleTableVisibility',
+        },
+
         initialize: function() {
-            var that = this;
-            App.getPodCollection().done(function(podCollection){
-                that.podCollection = podCollection;
-            });
+            this.collection = this.model.get('env');
         },
 
         templateHelpers: function(){
@@ -813,64 +869,42 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             }
         },
 
-        removeError: function(evt){ utils.removeError($(evt.target)); },
+        toggleTableVisibility: function(){
+            this.ui.envTable.toggleClass('hidden', this.isEmpty());
+        },
 
         validateAndNormalize: function(){
-            var that = this,
-                valid = true,
-                env = this.model.get('env'),
-                paternFirstSumbol = /^[a-zA-Z]/,
-                paternValidName = /^[a-zA-Z0-9-_\.]*$/;
+            var valid = true,
+                env = this.model.get('env');
 
-            /* get only not empty env from model */
-            this.model.set('env', env = _.filter(env, function(item){ return item.name; }));
+            /* check for duplicates */
+            var uniqEnvVars = env.groupBy(function(item){ return item.get('name'); }),
+                hasDuplicates = false;
 
-            /* validation & triming extra spacing */
-            _.each(env, function(envItem, indexEnv){
-                var name = that.ui.nameField[indexEnv];
-                envItem.name = name.value.trim();
-                $(name).val(envItem.name);
-                if (!paternFirstSumbol.test(envItem.name)){
-                    utils.notifyInline('First symbol must be letter in variables name',name);
-                    valid = false;
-                }
-                if (!paternValidName.test(envItem.name)){
-                    utils.notifyInline('Variable name should contain only Latin letters or ".", "_", "-" symbols',name);
-                    valid = false;
-                }
-                if (envItem.name.length > 255){
-                    utils.notifyInline('Max length is 255 symbols',name);
-                    valid = false;
-                }
-
-                var value = that.ui.valueField[indexEnv];
-                envItem.value = value.value.trim();
-                $(value).val(envItem.value);
-                if (!envItem.value){
-                    utils.notifyInline('Variables value must be set',value);
-                    valid = false;
+            this.children.each(function(view){
+                var group = uniqEnvVars[view.model.get('name')];
+                if (group.length > 1){
+                    hasDuplicates = true;
+                    utils.notifyInline('Duplicate variable names are not allowed',
+                                       view.ui.nameField);
                 }
             });
-
-            /* check to uniq values */
-            var uniqEnvs = _.uniq(env, function(item){ return item.name; }),
-                difference = _.difference(env, uniqEnvs);
-
-            if (difference.length !== 0){
-                _.each(difference, function(item){
-                    _.each(that.ui.nameField, function(field){
-                        if (field.value === item.name){
-                            $(field).addClass('error');
-                            utils.notifyInline('Duplicate variable names are not allowed',field);
-                        }
-                    });
-                });
-                difference.length = 0;
-                valid = false;
+            if (hasDuplicates){
+                utils.scrollTo($('input.error').first());
+                return false;
             }
 
+            /* get only not empty env from model */
+            env.reset(env.filter(function(item){ return item.get('name'); }));
+
+            /* validation */
+            this.children.each(function(view){
+                valid = valid && view.validateAndNormalize();
+            });
+
             /* scroling to error */
-            if (this.ui.nameField.hasClass('error')) utils.scrollTo($('input.error').first());
+            var invalidFields = $('input.error');
+            if (invalidFields.length) utils.scrollTo(invalidFields.first());
 
             return valid && env;
         },
@@ -923,37 +957,11 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         addItem: function(evt){
             evt.stopPropagation();
-            var env = this.model.get('env');
-            env.push({name: null, value: null});
-            this.render();
-        },
-
-
-        removeItem: function(evt){
-            var env = this.model.get('env'),
-                item = $(evt.target),
-                index = item.parents('tr').index();
-            item.parents('tr').remove();
-            env.splice(index, 1);
-
-            this.render();
+            this.collection.add({name: null, value: null});
         },
 
         resetFielsdsValue: function(){
             this.model.set('env', _.map(this.model.originalImage.get('env'), _.clone));
-        },
-
-        onChangeInput: function(evt){
-            var env = this.model.get('env'),
-                tgt = $(evt.target),
-                row = tgt.closest('tr'),
-                index = row.index();
-            if (tgt.hasClass('name')) {
-                env[index].name = tgt.val().trim();
-            }
-            else if (tgt.hasClass('value')) {
-                env[index].value = tgt.val().trim();
-            }
         },
     });
 

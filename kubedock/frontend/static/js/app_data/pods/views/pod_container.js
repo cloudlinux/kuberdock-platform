@@ -2,6 +2,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         'tpl!app_data/pods/templates/layout_wizard.tpl',
         'tpl!app_data/pods/templates/pod_container_tab_general.tpl',
         'tpl!app_data/pods/templates/pod_container_tab_env.tpl',
+        'tpl!app_data/pods/templates/env_table_row_empty.tpl',
+        'tpl!app_data/pods/templates/env_table_row.tpl',
         'tpl!app_data/pods/templates/pod_container_tab_logs.tpl',
         'tpl!app_data/pods/templates/pod_container_tab_stats.tpl',
         'tpl!app_data/pods/templates/pod_item_graph.tpl',
@@ -12,6 +14,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
                 podContainerGeneralTabTpl,
                 podContainerEnvTabTpl,
+                envTableRowEmptyTpl,
+                envTableRowTpl,
                 podContainerLogsTabTpl,
                 podContainerStatsTabTpl,
                 podItemGraphTpl){
@@ -110,9 +114,22 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
     });
 
-    views.WizardEnvSubView = Backbone.Marionette.ItemView.extend({
+    views.EnvTableRowEmpty = Backbone.Marionette.ItemView.extend({
+        template: envTableRowEmptyTpl,
+        tagName: 'tr',
+    });
+
+    views.EnvTableRow = Backbone.Marionette.ItemView.extend({
+        template: envTableRowTpl,
+        tagName: 'tr',
+    });
+
+    views.WizardEnvSubView = Backbone.Marionette.CompositeView.extend({
         template: podContainerEnvTabTpl,
         tagName: 'div',
+        childView: views.EnvTableRow,
+        emptyView: views.EnvTableRowEmpty,
+        childViewContainer: '.env-table tbody',
 
         ui: {
             stopContainer  : '#stopContainer',
@@ -143,6 +160,12 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.podBefore = before ? before.getPod() : this.model.get('after').getPod().editOf();
             this.podAfter = this.podBefore.get('edited_config') || this.podBefore;
             this.model.addNestedChangeListener(this, this.render);
+
+            this.collection = new Model.DiffCollection([], {
+                modelType: Model.EnvVar,
+                before: this.model.get('before').get('env'),
+                after: this.model.get('after').get('env'),
+            });
         },
 
         templateHelpers: function(){
@@ -151,8 +174,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.podBefore.recalcInfo();
             this.podAfter.recalcInfo();
             return {
-                env: (before || after).get('env'),
-
                 // TODO: move common parts out of those views
                 podID: this.podBefore.id,
                 state: before ? before.get('state') : 'new',

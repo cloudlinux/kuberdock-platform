@@ -55,20 +55,7 @@
                                 <th class="col-xs-8">Value</th>
                               </tr>
                             </thead>
-                            <tbody>
-                            <% if (env.length != 0) { %>
-                                <% _.each(env, function(e){ %>
-                                  <tr>
-                                    <td><span class="name"><%- e.name ? e.name : 'not set' %></span></td>
-                                    <td><span class="value"><%- e.value ? e.value : 'not set' %></span></td>
-                                  </tr>
-                                <% }) %>
-                            <% } else { %>
-                                <tr>
-                                    <td colspan="2" class="text-center disabled-color-text">Variables are not specified</td>
-                                </tr>
-                            <% } %>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>

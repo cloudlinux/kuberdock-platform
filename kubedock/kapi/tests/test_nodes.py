@@ -68,7 +68,7 @@ class TestNodes(DBTestCase):
         self.assertEqual(res.hostname, hostname)
 
         deploy_node_mock.assert_called_once_with(
-            res, True, False, None
+            res, True, False, ebs_volume=None, ls_devices=None, options=None
         )
         gethostbyname_mock.assert_called_once_with(hostname)
         node = Node.get_by_name(hostname)
@@ -87,15 +87,20 @@ class TestNodes(DBTestCase):
         with self.assertRaises(APIError):
             nodes.create_node(None, 'anotherhost', kube_id)
 
+    @mock.patch.object(nodes, 'remove_ls_volume')
     @mock.patch.object(nodes.tasks, 'remove_node_by_host')
-    def test_delete_node(self, remove_by_host_mock):
+    def test_delete_node(self, remove_by_host_mock, remove_ls_volume_mock):
         """Test for kapi.nodes.delete_node function."""
         node1, node2 = self.add_two_nodes()
         id1 = node1.id
 
+        remove_ls_volume_mock.return_value = ''
+
         nodes.delete_node(id1)
         nodes_ = Node.get_all()
         remove_by_host_mock.assert_called_once_with(node1.hostname)
+        remove_ls_volume_mock.assert_called_once_with(
+            node1.hostname, raise_on_error=False)
         self.assertEqual(nodes_, [node2])
 
         with self.assertRaises(APIError):
@@ -169,10 +174,16 @@ class TestNodes(DBTestCase):
         do_deploy = True
         nodes._deploy_node(node1, do_deploy, with_testing)
         add_node_mock.apply_async.assert_called_once_with(
-            (node1.id, with_testing), deploy_options=None,
+            [node1.id],
+            dict(
+                with_testing=with_testing,
+                ebs_volume=None, ls_devices=None,
+                deploy_options=None,
+            ),
             task_id=settings.NODE_INSTALL_TASK_ID.format(
                 node1.hostname, node1.id
-            ))
+            )
+        )
 
         self.assertFalse(is_ceph_mock.called)
         self.assertFalse(add_node_to_k8s_mock.called)

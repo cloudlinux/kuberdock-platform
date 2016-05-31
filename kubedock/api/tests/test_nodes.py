@@ -1,4 +1,5 @@
 from random import randint
+import unittest
 
 import mock
 from mock import Mock
@@ -145,3 +146,7 @@ class TestNodeCRUD(APITestCase):
     #        NodesUrl.redeploy(123), 'GET')
     #
     #    self.assert200(response)
+
+
+if __name__ == '__main__':
+    unittest.main()

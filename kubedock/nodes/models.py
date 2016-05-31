@@ -156,3 +156,32 @@ class NodeAction(db.Model):
         return ("<NodeAction(host='{0}', command='{1}', "
                 "timestamp={2}, type='{3}')>".format(
                     self.host, self.command, repr(self.timestamp), self.type))
+
+
+class LocalStorageDevices(db.Model):
+    """Class stores information about block devices attached (via LVM) to
+    node's local storage.
+    """
+    __tablename__ = 'localstorage_devices'
+
+    node_id = db.Column(db.ForeignKey(Node.id), nullable=True,
+                        primary_key=True)
+    # Block device name on a node (like '/dev/sdc' or similar)
+    device = db.Column(db.String(64), nullable=False, primary_key=True)
+    # volume size in bytes
+    size = db.Column(db.BigInteger, nullable=False)
+    # AWS volume name. For generic local storage backend this field is empty.
+    volume_name = db.Column(db.String(255), nullable=False, default='')
+
+    @classmethod
+    def add_device_if_not_exists(cls, node_id, device, size, volume_name=''):
+        """Creates a record for a node's device if it not exists in DB."""
+        exists = db.session.query(cls).filter(
+            cls.node_id == node_id, cls.device == device).first()
+        if exists:
+            return exists
+        new_record = cls(
+            node_id=node_id, device=device, size=size, volume_name=volume_name
+        )
+        db.session.add(new_record)
+        return new_record

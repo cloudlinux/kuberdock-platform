@@ -9,6 +9,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 CLOUDLINUX_SIG_KEY = '8c55a6628608cb71'
 
+
 def is_production_pkg():
     """
     Checks that current Kuberdock package is one of stable KD releases based
@@ -37,7 +38,8 @@ IS_PRODUCTION_VERSION = is_production_pkg()
 # variable 'SENTRY_ENABLE' and then check remote variable 'sentry.enable'.
 # Also check if current package is production and turn on sentry only if true
 SENTRY_ENABLE = True and IS_PRODUCTION_VERSION
-REMOTE_SETTINGS = os.environ.get('REMOTE_SETTINGS',  '')
+REMOTE_SETTINGS = os.environ.get(
+    'REMOTE_SETTINGS', '')
 if SENTRY_ENABLE and os.environ.get("SENTRY_ENABLE", True):
     try:
         import requests
@@ -186,6 +188,8 @@ UPDATES_RELOAD_LOCK_FILE = '/var/lib/kuberdock/updates-reload.lock'
 UPDATES_PATH = '/var/opt/kuberdock/kubedock/updates/scripts'
 KUBERDOCK_SERVICE = 'emperor.uwsgi'
 KUBERDOCK_SETTINGS_FILE = '/etc/sysconfig/kuberdock/kuberdock.conf'
+NODE_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
+NODE_LVM_MANAGE_SCRIPT = 'node_lvm_manage.py'
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'
@@ -240,6 +244,10 @@ SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
 
 AWS = False
+# Default size to extend persistent storage on AWS nodes (in GB)
+# TODO: replace with reasonable value. 1 GB size is for test purpose only.
+# TODO: https://cloudlinux.atlassian.net/browse/AC-3699
+AWS_EBS_EXTEND_STEP = 1
 try:
     from .amazon_settings import *  # noqa
 except ImportError:

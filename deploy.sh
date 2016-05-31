@@ -447,6 +447,12 @@ NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 # Do some preliminaries for aws/non-aws setups
 if [ -z "$PD_CUSTOM_NAMESPACE" ]; then
   PD_NAMESPACE="$MASTER_IP"
+  if [ "$ISAMAZON" = true ] && [ ! -z "$KUBE_AWS_INSTANCE_PREFIX" ]; then
+    # For AWS installation may be defined KUBE_AWS_INSTANCE_PREFIX variable,
+    # which will be used to prefix node names. We will use it also to prefix
+    # EBS volume names.
+    PD_NAMESPACE="$KUBE_AWS_INSTANCE_PREFIX"
+  fi
 else
   PD_NAMESPACE="$PD_CUSTOM_NAMESPACE"
 fi

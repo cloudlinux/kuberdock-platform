@@ -98,12 +98,20 @@ clean_node(){
     remove_unneeded ntp
 
     if [ "$AWS" = True ];then
+        remove_unneeded awscli
         remove_unneeded aws-cli
         remove_unneeded jq
+        remove_unneeded python2-boto
+        remove_unneeded python2-botocore
     fi
 
     if [ ! -z "$CEPH_CONF" ]; then
         remove_unneeded ceph-common
+    else
+        # clean any localtorage LVM group
+        umount -f /var/lib/kuberdock/storage || true
+        sed -i.kdsave '/^[^#].*\/var\/lib\/kuberdock\/storage/d' /etc/fstab
+        vgremove -ff kdstorage00
     fi
 
     # kubelet auth token and etcd certs
@@ -430,7 +438,7 @@ check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
 if [ "$AWS" = True ];then
-    yum_wrapper -y install aws-cli
+    yum_wrapper -y install awscli
     check_status
     # we need to install command-line json parser from epel
     rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
@@ -438,6 +446,10 @@ if [ "$AWS" = True ];then
     yum_wrapper -y install epel-release
     check_status
     yum_wrapper -y install jq
+    check_status
+    yum_wrapper -y install python2-botocore
+    check_status
+    yum_wrapper -y install python2-boto
     check_status
 fi
 
@@ -499,6 +511,10 @@ setup_cron
 
 # Useless if we do reboot:
 # systemctl restart sshd.service
+
+mv /node_lvm_manage.py /var/lib/kuberdock/scripts/node_lvm_manage.py
+chmod +x /var/lib/kuberdock/scripts/node_lvm_manage.py
+check_status
 
 
 # 4.2 kuberdock kubelet plugin stuff
@@ -757,6 +773,12 @@ if [ ! -z "$CEPH_CONF" ]; then
     cp $CEPH_CONF/* /etc/ceph/
     check_status
 
+else
+    # If it is not CEPH-enabled installation, then manage persistent storage
+    # via LVM.
+    # Python bindings to manage LVM
+    yum_wrapper -y install lvm2-python-libs
+    check_status
 fi
 
 

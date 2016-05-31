@@ -422,7 +422,8 @@ class PersistentStorage(object):
         except (DriveIsLockedError, NodeCommandError, NoNodesError) as e:
             current_app.logger.exception(admin_msg)
             notify_msg = "{}, reason: {}".format(admin_msg, e.message)
-            send_event_to_role('notify:error', {'message': notify_msg}, 'Admin')
+            send_event_to_role(
+                'notify:error', {'message': notify_msg}, 'Admin')
             raise APIError(user_msg)
 
     def _makefs(self, drive_name, fs):
@@ -529,9 +530,9 @@ class PersistentStorage(object):
 
     @classmethod
     def check_node_is_locked(cls, node_id):
-        """If some storage has KD node-aware dependency, then this method should
-        check if the given node is free of storage, or if it is using by the
-        storage.
+        """If some storage has KD node-aware dependency, then this method
+        should check if the given node is free of storage, or if it is using
+        by the storage.
         :return: tuple of lock_flag, reason - lock_flag True if the node is
         in-use, False, if the node is free. Reason will explain of lock reason
         if the node is not free.
@@ -707,7 +708,8 @@ def unmap_temporary_mapped_ceph_drives():
 
 def _get_ceph_pool_pgnum_by_osdnum(osdnum):
     """Calculates CEPH placement groups number depending on OSDs number.
-    http://docs.ceph.com/docs/hammer/rados/operations/placement-groups/#a-preselection-of-pg-num
+    http://docs.ceph.com/docs/hammer/rados/operations/
+        placement-groups/#a-preselection-of-pg-num
 
     """
     OSDNUM_TO_PGNUM = ((5, 128), (10, 512), (50, 4096))
@@ -1029,6 +1031,14 @@ class CephStorage(PersistentStorage):
 
 
 class AmazonStorage(PersistentStorage):
+    """Obsolete.
+    Class to use kubernetes native way to provide persistent storage via
+    Amazon EBS volumes. Now is obsolete: There is a limit of 40 EBS volumes
+    per EC2 instance in k8s and in Amazon services. So we use our own way for
+    storage on AWS: we are attaching EBS volumes to LVM logical volume and use
+    this exactly as localstorage.
+    TODO: completely remove this class.
+    """
     storage_name = 'AWS'
 
     VOLUME_EXTENSION_KEY = 'awsElasticBlockStore'
@@ -1036,8 +1046,9 @@ class AmazonStorage(PersistentStorage):
     def __init__(self):
         self._conn = None
         try:
-            from ..settings import AVAILABILITY_ZONE, REGION, \
-                                   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+            from ..settings import (
+                AVAILABILITY_ZONE, REGION, AWS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY)
             self._region = REGION
             self._availability_zone = AVAILABILITY_ZONE
             self._aws_access_key_id = AWS_ACCESS_KEY_ID
@@ -1499,12 +1510,12 @@ def get_storage_class():
     """
     if CEPH:
         return CephStorage
-    if AWS:
-        return AmazonStorage
+    #if AWS:
+        #return LocalStorage
     return LocalStorage
 
 
-ALL_STORAGE_CLASSES = [CephStorage, AmazonStorage, LocalStorage]
+ALL_STORAGE_CLASSES = [CephStorage, LocalStorage]
 
 VOLUME_EXTENSION_TO_STORAGE_CLASS = {
     cls.VOLUME_EXTENSION_KEY: cls

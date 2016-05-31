@@ -42,6 +42,10 @@ def add_and_auth_user(data):
                     if package is None:
                         package = Package.get_default()
                     data['package'] = package.name
+            if 'rolename' not in data:
+                data['rolename'] = 'User'
+            if 'active' not in data:
+                data['active'] = True
             user = UserCollection().create(data, return_object=True)
     sid = str(uuid4())
     session_data = {

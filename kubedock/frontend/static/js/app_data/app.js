@@ -19,7 +19,6 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
          * @returns {Promise} - promise to be logged in :)
          */
         cleanUp: function(keepToken){
-            console.log('Deleting expired data');
             App.initialized = false;
             $.xhrPool.abortAll();
             if (!keepToken)
@@ -333,6 +332,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                                 App.updateAuth(token);
                             }
                         }
+                    }
+                })
+                .fail(function(xhr){
+                    if (xhr.status === 401 || xhr.status === 403) {
+                        App.cleanUp().initApp();
                     }
                 }).setRequestHeader('X-Auth-Token', token);
             } else {

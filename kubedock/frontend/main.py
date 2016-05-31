@@ -11,10 +11,11 @@ def index():
     token = request.args.get('token2')
     if token is not None:
         token = create_token(session)
-    resp = make_response(render_template('index.html', token=(token or '')))
-    if 'X-Auth-Token' not in resp.headers:
-        resp.headers['X-Auth-Token'] = token
-    return resp
+        resp = make_response(render_template('index.html', token=(token or '')))
+        if 'X-Auth-Token' not in resp.headers:
+            resp.headers['X-Auth-Token'] = token
+        return resp
+    return render_template('index.html', token='')
 
 
 #@main.route('/test', methods=['GET'])

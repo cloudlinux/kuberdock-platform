@@ -16,19 +16,19 @@
         <span class="diff-deleted">
             <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
              title="This container will be deleted after you apply changes."></span>
-            <span class="diff">deleted</span>
+            <span class="diff">Deleted</span>
         </span>
     <% } else if (!before && after) { %>
         <span class="diff-added">
             <span class="diff-added-icon" data-toggle="tooltip" data-placement="top"
                 title="This container will be added after you apply changes."></span>
-            <span class="diff">new added</span>
+            <span class="diff">New added</span>
         </span>
     <% } else if (changed) { %>
         <span class="diff-changed">
             <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
              title="This container will be modified after you apply changes."></span>
-            <span class="diff">modified</span>
+            <span class="diff">Modified</span>
         </span>
         <% console.log(before, after); %>
     <% } %>

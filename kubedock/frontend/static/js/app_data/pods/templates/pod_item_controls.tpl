@@ -30,7 +30,7 @@
     <% } %>
 </div>
 <div class="status-line">
-    <span class="icon <%- status %>">Status: <%- status %></span>
+    <span class="status icon <%- status %>">Status: <%- status %></span>
     <% if (graphs) { %>
         <a class="list-btn" href="#pods/<%- id %>"><span>Data</span></a>
     <% } else { %>

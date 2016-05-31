@@ -20,11 +20,14 @@
       line: "def is_valid(): return True" 
       state: present
   when: license_path == 'patch'
-  notify:
-      - restart emperor
+  register: patch_license
   tags:
       - license
       - patch
+
+- name: Restart emperor
+  service: name=emperor.uwsgi state=restarted
+  when: not is_dev_install and patch_license.changed
 
 - name: Patching a licensing on host
   become: false

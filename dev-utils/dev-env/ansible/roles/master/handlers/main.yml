@@ -1,5 +1,2 @@
 - name: restart nginx
   service: name=nginx state=restarted
-
-- name: restart emperor
-  service: name=emperor.uwsgi state=restarted

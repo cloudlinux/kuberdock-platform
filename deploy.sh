@@ -16,7 +16,7 @@ fi
 
 RELEASE="CentOS Linux release 7.2"
 ARCH="x86_64"
-MIN_RAM_KB=1880344
+MIN_RAM_KB=1572864
 MIN_DISK_SIZE=10
 
 check_release()

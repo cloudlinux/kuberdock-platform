@@ -297,20 +297,19 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 var that = this,
                     success = true;
                 if (window.clipboardData) {
-                    window.clipboardData.setData("Text", textToClipboard)
+                    window.clipboardData.setData("Text", textToClipboard);
                 } else {
                     var forExecElement = that.createElementForExecCommand(textToClipboard);
                     that.selectContent(forExecElement);
-                    var supported = true;
                     try {
-                        if (window.netscape && netscape.security) {
-                            netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect")
+                        if (window.netscape && window.netscape.security) {
+                            window.netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
                         }
-                        success = document.execCommand("copy", false, null)
+                        success = document.execCommand("copy", false, null);
                     } catch (e) {
-                        success = false
+                        success = false;
                     }
-                    document.body.removeChild(forExecElement)
+                    document.body.removeChild(forExecElement);
                 }
                 if (success) {
                     utils.notifyWindow('Link copied to buffer', 'success');
@@ -332,7 +331,7 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 rangeToSelect.selectNodeContents(element);
                 var selection = window.getSelection();
                 selection.removeAllRanges();
-                selection.addRange(rangeToSelect)
+                selection.addRange(rangeToSelect);
             }
         });
 

@@ -938,15 +938,25 @@ define([
                 var getValidationError = function(data) {
                     var res = '';
                     if (data.common) {
-                        res += JSON.stringify(data.common) + '<br />';
+                        res += _.escape(JSON.stringify(data.common)) + '<br />';
                     }
                     if (data.customVars) {
                         res += 'Invalid custom variables:<br />' +
-                            JSON.stringify(data.customVars) + '<br />';
+                            _.escape(JSON.stringify(data.customVars)) + '<br />';
                     }
                     if (data.values) {
                         res += 'Invalid values:<br />' +
-                            JSON.stringify(data.values) + '<br />';
+                            _.escape(JSON.stringify(data.values)) + '<br />';
+                    }
+                    if (data.kuberdock) {
+                        var kuberdock = typeof data.kuberdock == 'string'
+                                ? [data.kuberdock] : data.kuberdock;
+                        kuberdock = _.map(kuberdock, function(err){
+                            return typeof err == 'string' ? err : JSON.stringify(err);
+                        });
+
+                        res += 'Invalid "kuberdock" section:<br />- ' +
+                            _.map(kuberdock, _.escape).join('<br />- ') + '<br />';
                     }
                     if (!res) {
                         res = JSON.stringify(data);

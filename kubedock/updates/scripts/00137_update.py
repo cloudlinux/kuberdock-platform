@@ -16,16 +16,20 @@ def upgrade(upd, with_testing, *args, **kwargs):
     standard = Kube.get_by_name('Standard')
     if small:
         small.cpu = 0.12
+        small.name = 'Tiny'
+        small.memory = 64
         if small.is_default and standard:
             small.is_default = False
             standard.is_default = True
         small.save()
     if standard:
         standard.cpu = 0.25
+        standard.memory = 128
         standard.save()
     high = Kube.get_by_name('High memory')
     if high:
-        high.cpu = 0.32
+        high.cpu = 0.25
+        high.memory = 256
         high.disk_space = 3
         high.save()
 

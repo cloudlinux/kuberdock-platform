@@ -510,11 +510,11 @@
                         var yml = app.templateToApp(appPackageID, getValues(), templateID),
                             desc = yml.kuberdock.postDescription,
                             r = new XMLHttpRequest();
-                        console.log(jsyaml.safeDump(yml));
-                        console.log(yml);
+                        //console.log(jsyaml.safeDump(yml));
+                        //console.log(yml);
                         r.onreadystatechange = function(){
                             if (r.readyState == 4) {
-                                console.log(r);
+                                //console.log(r);
                                 if(r.status != 200) {
                                     alert(r.responseText);
                                     return;

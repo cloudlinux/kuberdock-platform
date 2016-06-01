@@ -25,11 +25,13 @@ def index(app_hash):
             plan_id = int(plan_id)
 
         app = PredefinedApps().get_by_qualifier(app_hash)
-        billing_type, billing_url = map(SystemSettings.get_by_name,
-                                        ['billing_type', 'billing_url'])
+        billing_type, billing_url, max_pd_size = map(
+            SystemSettings.get_by_name,
+            ['billing_type', 'billing_url', 'persitent_disk_max_size'])
         if billing_type.lower() != 'no billing' and billing_url:
-            billing_url += current_app.billing_factory.get_app_url()
-        max_pd_size = SystemSettings.get_by_name('persitent_disk_max_size') or 10
+            billing_url += current_app.billing_factory.get_app_url(billing_type)
+        if not max_pd_size:
+            max_pd_size = 10
         name = app.get('name', 'app')
         template = app.get('template', '')
 

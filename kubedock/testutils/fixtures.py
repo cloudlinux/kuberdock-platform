@@ -84,5 +84,10 @@ def pod(**kwargs):
     return Pod(**kwargs).save()
 
 
+def kube_type(**kwargs):
+    return Kube(**dict(
+        kwargs, name=randstr(), cpu=.25, memory=64, disk_space=1)).save()
+
+
 def randstr(length=8, symbols=ascii_letters + digits):
     return ''.join(choice(symbols) for i in range(length))

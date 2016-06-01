@@ -603,7 +603,6 @@ predefined_app_schema = {
         'type': 'dict',
         'required': True,
         'schema': predefined_apps_kuberdock_schema,
-        'package_id_contains_kube_types': True,
     }
 }
 
@@ -859,20 +858,6 @@ class V(cerberus.Validator):
         if exists:
             if Package.query.get(int(value)) is None:
                 self._error(field, 'Package with id "{0}" doesn\'t exist'.format(value))
-
-    def _validate_package_id_contains_kube_types(self, exists, field, value):
-        if exists:
-            package_id = value['packageID'] or 0
-            package_kubes = PackageKube.query.filter(
-                PackageKube.package_id == package_id).all()
-            kubes = set(pk.kube_id for pk in package_kubes)
-            for app_package in value.get('appPackages'):
-                for pod in app_package.get('pods') or []:
-                    kube_id = pod.get('kubeType')
-                    if kube_id and kube_id not in kubes:
-                        self._error(field, (
-                            'Package with id "{0}" doesn\'t contain Kube Type '
-                            'with id "{1}"'.format(package_id, kube_id)))
 
 
 def check_int_id(id):

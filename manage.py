@@ -165,6 +165,18 @@ class NodeManager(Command):
             exit(1)
 
 
+class DeleteNodeCmd(Command):
+    option_list = (
+        Option('--hostname', dest='hostname', required=True),
+    )
+
+    def run(self, hostname):
+        node = db.session.query(Node).filter(Node.hostname == hostname).first()
+        if node is None:
+            raise InvalidCommand(u'Node "{0}" not found'.format(hostname))
+        db.session.delete(node)
+
+
 class WaitForNodes(Command):
     """Wait for nodes to become ready.
     """
@@ -387,6 +399,7 @@ manager.add_command('db', MigrateCommand)
 manager.add_command('createdb', Creator())
 manager.add_command('updatedb', Updater())
 manager.add_command('add_node', NodeManager())
+manager.add_command('delete-node', DeleteNodeCmd())
 manager.add_command('wait-for-nodes', WaitForNodes())
 manager.add_command('reset-password', ResetPass())
 manager.add_command('node-flag', NodeFlagCmd())

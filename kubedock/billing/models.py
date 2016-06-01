@@ -5,7 +5,7 @@ from ..utils import send_event_to_user, send_event_to_role
 from ..models_mixin import BaseModelMixin
 
 # Package and Kube with id=0 are default
-DEFAULT_KUBE_TYPE = 0
+DEFAULT_KUBE_TYPE = 1
 
 #: Special kube type for internal services
 INTERNAL_SERVICE_KUBE_TYPE = -1

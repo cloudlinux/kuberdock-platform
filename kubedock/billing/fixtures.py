@@ -10,15 +10,13 @@ def add_kubes_and_packages():
                         name='Internal service', cpu=.02, cpu_units='Cores',
                         memory=64, memory_units='MB', disk_space=1,
                         disk_space_units='GB', included_traffic=0)
-    k2 = Kube(id=Kube.get_default_kube_type(),
-                name='Standard', cpu=.25, cpu_units='Cores',
+    k1 = Kube(id=0, name='Tiny', cpu=.12, cpu_units='Cores',
                 memory=64, memory_units='MB', disk_space=1,
-                disk_space_units='GB', included_traffic=0, is_default=True)
-    k1 = Kube(
-                name='Small', cpu=.12, cpu_units='Cores',
-                memory=16, memory_units='MB', disk_space=1,
                 disk_space_units='GB', included_traffic=0)
-    k3 = Kube(name='High memory', cpu=.32, cpu_units='Cores',
+    k2 = Kube(name='Standard', cpu=.25, cpu_units='Cores',
+                memory=128, memory_units='MB', disk_space=1,
+                disk_space_units='GB', included_traffic=0, is_default=True)
+    k3 = Kube(name='High memory', cpu=.25, cpu_units='Cores',
                 memory=256, memory_units='MB', disk_space=3,
                 disk_space_units='GB', included_traffic=0)
 

@@ -1,3 +1,3 @@
-<div id="nav">main div text</div>
-<div id="main">main div text</div>
-<div id="pager">pager div text</div>
+<div id="nav"></div>
+<div id="main"></div>
+<div id="pager"></div>

@@ -6,7 +6,6 @@
     border-bottom: 1px solid #e5e5e5;
     > *{
         color: #4e5665;
-        min-height: 17px;
         margin-right: 20px;
         margin-bottom: 20px;
         display: inline-block;
@@ -45,7 +44,8 @@
     .container-update{
         .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
     }
-    .edit-btn{
+    .edit-btn,
+    .edit-container-env{
         .mdi('create',21px, #B5BBC1, #3197EE);
     }
     .list-btn{
@@ -83,6 +83,7 @@
         .mdi('reorder',21px, #646f82, #3197EE);
     }
     .icon{
+        min-height: 21px;
         padding-left: 25px;
         position: relative;
         &:before{
@@ -101,6 +102,10 @@
                 color: #3197ee;
                 text-decoration: none;
             }
+        }
+        > span{
+            display: inline-block;
+            vertical-align: middle;
         }
         &.status{
           text-transform: capitalize;

@@ -1,10 +1,10 @@
 <td><span class="name">
     <% if (before && !after){ %>
-        (deleted)
+        <span class="deleted" data-toggle="tooltip" data-placement="right" title="Deleted"></span>
     <% } else if (!before && after) { %>
-        (added)
+        <span class="added" data-toggle="tooltip" data-placement="right" title="Added"></span>
     <% } else if (before.value !== after.value) { %>
-        (changed)
+        <span class="changed" data-toggle="tooltip" data-placement="right" title="Changed"></span>
     <% } %>
     <%- id %>
 </span></td>
@@ -14,8 +14,10 @@
     <% } else if (!before && after) { %>
         <%- after.value %>
     <% } else if (before.value !== after.value) { %>
-        <%- before.value %>
-        (tooltip: <%- after.value %>)
+        <span class="diff"><%- before.value %></span>
+        <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
+         title="This container will be modified after you apply changes."></span>
+        <span><%- after.value %></span>
     <% } else { %>
         <%- before.value %>
     <% } %>

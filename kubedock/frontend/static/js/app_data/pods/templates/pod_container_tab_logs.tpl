@@ -19,7 +19,7 @@
             <div id="details_content" class="col-md-10 col-sm-12 logs-tab no-padding">
                 <div id="tab-content" class="col-md-12">
                     <div class="status-line">
-                        <span class="icon <%- state %>">Status: <%- state %></span>
+                        <span class="icon status <%- state %>"><span>Status: <%- state %></span></span>
                         <% if (state == "running"){ %>
                             <span id="stopContainer"><span>Stop</span></span>
                             <% if (!updateIsAvailable) { %>

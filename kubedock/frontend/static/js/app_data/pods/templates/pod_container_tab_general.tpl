@@ -13,7 +13,7 @@
         <div id="details_content" class="col-md-10 col-sm-12 configuration-general-tab">
             <div id="tab-content">
                 <div class="status-line">
-                    <span class="icon <%- state %>"><span>Status: <%- state %></span></span>
+                    <span class="icon status <%- state %>"><span>Status: <%- state %></span></span>
                     <% if (state == "running"){ %>
                         <span id="stopContainer"><span>Stop</span></span>
                         <% if (!updateIsAvailable) { %>
@@ -44,8 +44,8 @@
                     </div>
                 </div>
                 <div class="col-xs-12 no-padding">
-                    <label>Ports:</label>
                     <table id="ports-table" class="table">
+                        <caption>Ports:<caption>
                         <thead>
                             <tr>
                                 <th>Container port</th>
@@ -73,10 +73,10 @@
                         </tbody>
                     </table>
                     <div class="volumes">
-                        <label>Volumes:</label>
                         <div class="row">
                             <div class="col-xs-12">
                                 <table class="table" id="volumes-table">
+                                    <caption>Volumes:</caption>
                                     <thead>
                                         <tr>
                                             <th>Container path</th>

@@ -122,6 +122,12 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     views.EnvTableRow = Backbone.Marionette.ItemView.extend({
         template: envTableRowTpl,
         tagName: 'tr',
+
+        ui: {
+            'tooltip' : '[data-toggle="tooltip"]',
+        },
+
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); }
     });
 
     views.WizardEnvSubView = Backbone.Marionette.CompositeView.extend({
@@ -129,7 +135,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         tagName: 'div',
         childView: views.EnvTableRow,
         emptyView: views.EnvTableRowEmpty,
-        childViewContainer: '.env-table tbody',
+        childViewContainer: '#data-table tbody',
 
         ui: {
             stopContainer  : '#stopContainer',

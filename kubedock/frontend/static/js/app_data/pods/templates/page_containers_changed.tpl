@@ -1,5 +1,5 @@
 <table id="imagelist-changed-table" class="table">
-<caption>Changes needed re-deploy</caption>
+<caption>Changes needed re-deploy:</caption>
 <thead>
     <tr class="main-table-head">
         <th>Image name</th>

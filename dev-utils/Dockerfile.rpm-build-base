@@ -1,0 +1,13 @@
+FROM centos:7
+
+RUN yum -y install epel-release && \
+    yum -y update && \
+    yum -y install rsync rpm-build nodejs nodejs-less nodejs-clean-css
+
+# Rebuild & push with:
+# docker build -t lobur/rpm-build-base:vX -f dev-utils/Dockerfile.rpm-build-base --rm=true --no-cache=true --pull .
+# docker push lobur/rpm-build-base:vX
+
+# Always bump X, including Dockerfile.kd-rpm-build, this is
+# needed to make sure the new image gets pulled on Jenkins
+# If you are not lobur use your own hub.docker.com account

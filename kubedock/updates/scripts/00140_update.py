@@ -3,7 +3,7 @@ import os
 import shutil
 from collections import defaultdict
 
-from fabric.api import hide, put, run, settings
+from fabric.api import hide, put, run, settings, local
 from fabric.exceptions import CommandTimeout, NetworkError
 from kubedock.billing.models import Kube
 from kubedock.core import db
@@ -13,7 +13,7 @@ from kubedock.kapi.podcollection import PodCollection
 from kubedock.nodes.models import Node
 from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from kubedock.rbac.fixtures import Permission, Resource, add_permissions
-from kubedock.settings import AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX
+from kubedock.settings import AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX, MASTER_IP
 from kubedock.static_pages.fixtures import (Menu, MenuItem, MenuItemRole,
                                             generate_menu)
 from kubedock.system_settings.models import SystemSettings
@@ -33,6 +33,16 @@ u133_PLUGIN_DIR = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
 u138_PLUGIN_DIR = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock'
 u138_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
 u138_FSLIMIT_PATH = os.path.join(u138_SCRIPT_DIR, 'fslimit.py')
+
+u150_NTP_CONF = '/etc/ntp.conf'
+u150_ERASE_CHRONY_CMD = 'yum erase -y chrony'
+u150_RESTART_NTPD = 'systemctl restart ntpd'
+# To prevent ntpd from exit on large time offsets
+u150_SET_TINKER_PANIC = 'sed -i "/^tinker /d" {0};'\
+                        'echo "tinker panic 0" >> {0}'.format(u150_NTP_CONF)
+u150_CHANGE_NODES_POLL_INTERVAL = 'sed -i "/^server /d" {0};'\
+    'echo "server {1} iburst minpoll 3 maxpoll 4" >> {0}'.format(
+        u150_NTP_CONF, MASTER_IP)
 
 
 def upgrade_localstorage_paths(upd):
@@ -217,6 +227,11 @@ def upgrade(upd, with_testing, *args, **kwargs):
                               'application.')
     db.session.commit()
 
+    # === backported 00150_update.py ===
+    local(u150_ERASE_CHRONY_CMD)
+    local(u150_SET_TINKER_PANIC)
+    local(u150_RESTART_NTPD)
+
 
     upd.print_log('Close all sessions...')
     close_all_sessions()
@@ -282,6 +297,12 @@ def upgrade_node(upd, with_testing, *args, **kwargs):
         os.path.join(u138_PLUGIN_DIR, 'kuberdock.py'))
     put('/var/opt/kuberdock/fslimit.py',
         os.path.join(u138_SCRIPT_DIR, 'fslimit.py'))
+
+    # === backported 00150_update.py ===
+    run(u150_ERASE_CHRONY_CMD)
+    run(u150_SET_TINKER_PANIC)
+    run(u150_CHANGE_NODES_POLL_INTERVAL)
+    run(u150_RESTART_NTPD)
 
 
     # moved from 00132_update.py

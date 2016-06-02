@@ -461,6 +461,11 @@ yum_wrapper install -y etcd-ca
 yum_wrapper install -y bridge-utils
 log_it ntpd -gq
 log_it echo "Enabling restart for ntpd.service"
+
+# To prevent ntpd from exit on large time offsets
+sed -i "/^tinker /d" /etc/ntp.conf
+echo "tinker panic 0" >> /etc/ntp.conf
+
 do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
 do_and_log echo -e "[Service]
 Restart=always

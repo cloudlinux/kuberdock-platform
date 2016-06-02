@@ -376,14 +376,18 @@ yum --enablerepo=kube,kube-testing clean metadata
 yum erase -y chrony
 # We use setup like this
 # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
+# Decrease poll interval to be more closer to master time
 yum_wrapper install -y ntp
 check_status
 sed -i "/^server /d" /etc/ntp.conf
-echo "server ${MASTER_IP} iburst" >> /etc/ntp.conf
+sed -i "/^tinker /d" /etc/ntp.conf
+echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> /etc/ntp.conf
+echo "tinker panic 0" >> /etc/ntp.conf
 systemctl daemon-reload
-systemctl restart ntpd
-check_status
+systemctl stop ntpd
 ntpd -gq
+check_status
+systemctl start ntpd
 systemctl reenable ntpd
 check_status
 ntpq -p

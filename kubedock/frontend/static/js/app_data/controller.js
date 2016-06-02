@@ -1172,7 +1172,7 @@ define([
                     navbar = new Menu.NavList({collection: App.menuCollection});
 
                 that.listenTo(layoutView, 'show', function(){
-                    var pvCollection = new Model.PersistentStorageCollection();
+                    var pvCollection = new Model.PaginatedPersistentStorageCollection();
                     layoutView.nav.show(navbar);
                     pvCollection.fetch({
                         wait: true,

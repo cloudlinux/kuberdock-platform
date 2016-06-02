@@ -133,7 +133,7 @@ def wait_for_nodes(nodes_list, timeout):
 class NodeManager(Command):
     option_list = (
         Option('--hostname', dest='hostname', required=True),
-        Option('--kube-type', dest='kube_type', type=int, required=True),
+        Option('--kube-type', dest='kube_type', required=False),
         Option('--do-deploy', dest='do_deploy', action='store_true'),
         Option('--wait', dest='wait', action='store_true'),
         Option('--timeout', dest='timeout', required=False, type=int),
@@ -143,6 +143,15 @@ class NodeManager(Command):
 
     def run(self, hostname, kube_type, do_deploy, wait, timeout, testing,
             docker_options):
+
+        if kube_type is None:
+            kube_type_id = Kube.get_default_kube_type()
+        else:
+            kube_type = Kube.get_by_name(kube_type)
+            if kube_type is None:
+                raise InvalidCommand('Kube type with name `{0}` not '
+                                     'found.'.format(kube_type))
+            kube_type_id = kube_type.id
 
         options = None
 
@@ -154,8 +163,8 @@ class NodeManager(Command):
                 'Kuberdock is in maintenance mode. Operation canceled'
             )
         try:
-            check_node_data({'hostname': hostname, 'kube_type': kube_type})
-            res = create_node(None, hostname, kube_type, do_deploy, testing,
+            check_node_data({'hostname': hostname, 'kube_type': kube_type_id})
+            res = create_node(None, hostname, kube_type_id, do_deploy, testing,
                               options=options)
             print(res.to_dict())
             if wait:

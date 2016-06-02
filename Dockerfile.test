@@ -1,4 +1,4 @@
-FROM lobur/centos7-test-base:v1
+FROM lobur/centos7-test-base:v2
 
 COPY . /appcloud
 WORKDIR /appcloud

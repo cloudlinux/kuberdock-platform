@@ -2,7 +2,7 @@ FROM centos:7
 
 RUN yum -y install epel-release && \
     yum -y update && \
-    yum -y install python-pip python-devel postgresql-contrib postgresql-devel gcc nc
+    yum -y install python-pip python-devel postgresql-contrib postgresql-devel gcc nmap
 RUN pip install --upgrade pip && pip install virtualenv
 
 # Pre-build test env. Before test run requirements are checked again.

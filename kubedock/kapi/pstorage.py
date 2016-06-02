@@ -826,7 +826,7 @@ class CephStorage(PersistentStorage):
             'user': CEPH_CLIENT_USER,
             'pool': pool_name
         }
-        if size is not None:
+        if pd.size is not None:
             volume[self.VOLUME_EXTENSION_KEY]['size'] = pd.size
         volume[self.VOLUME_EXTENSION_KEY]['monitors'] = self.get_monitors()
         return volume
@@ -1060,7 +1060,7 @@ class AmazonStorage(PersistentStorage):
             'fsType': DEFAULT_FILESYSTEM,
             'drive': pd.drive_name,
         }
-        if size is not None:
+        if pd.size is not None:
             volume[self.VOLUME_EXTENSION_KEY]['size'] = pd.size
         return volume
 

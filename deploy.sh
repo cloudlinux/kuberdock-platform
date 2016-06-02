@@ -1096,7 +1096,8 @@ DATA_TEMPLATE='{'\
 '\"event_id\": \"$eventid\", '\
 '\"level\": \"error\", '\
 '\"extra\":{\"fullLog\":\"$logs\"}, '\
-'\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"}}'
+'\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"},'\
+' \"release\":\"$release\", \"server_name\":\"$hostname\($ip_address\)\"}'
 
 
 sentryWrapper() {
@@ -1114,6 +1115,9 @@ sentryWrapper() {
      if [ ! -z ${KD_OWNER_EMAIL} ] ;then
          logs=$(while read line; do echo -n "${line}\\n"; done < $ERRORLOGFILE)
          uname=$(uname -a)
+         hostname=$(cat /etc/hostname)
+         ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
+         release=$(rpm -qa |grep -e "kuberdock-[1-9]")
          data=$(eval echo $DATA_TEMPLATE)
          echo
          curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\

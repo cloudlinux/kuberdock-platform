@@ -33,8 +33,8 @@ class KDIntegrationTestAPI(object):
             "KD_ONE_USERNAME": os.environ.get("KD_ONE_USERNAME"),
             "KD_ONE_PASSWORD": os.environ.get("KD_ONE_PASSWORD"),
             "KD_ONE_PUB_IPS": os.environ.get("KD_ONE_PUB_IPS"),
+            "KD_DEV_INSTALL": os.environ.get("KD_DEV_INSTALL"),
             "KD_LICENSE": "patch",
-            "KD_DEV_INSTALL": "1",  # TODO: make configurable. 0 in Jenkins (get rpm from build.cl.com), 1 for local.
         }
         kd_env = {k: v for k, v in kd_env.iteritems() if v}
         self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,

@@ -144,7 +144,8 @@ INVALID_TEMPLATE_2_RECOMMENDED = re.sub(r'name: M(\W+)', r'name: M\1recommended:
 class TestValidateTemplate(DBTestCase):
     """Tests for for kapi.predefined_apps.validate_template"""
     def setUp(self):
-        for method in ('preprocess', 'load', 'fill', 'find_root', 'check_plans'):
+        for method in ('preprocess', 'load', 'fill', 'find_root',
+                       'check_kuberdock_section'):
             patcher = mock.patch.object(kapi_papps, method)
             self.addCleanup(patcher.stop)
             patcher.start()
@@ -165,8 +166,10 @@ class TestValidateTemplate(DBTestCase):
                                                 mock.sentinel.FIELDS)
         kapi_papps.fill.assert_called_once_with(mock.sentinel.LOADED_TEMPLATE,
                                                 mock.sentinel.FIELDS)
-        kapi_papps.find_root.assert_called_once_with(mock.sentinel.FILLED_TEMPLATE)
-        kapi_papps.check_plans.assert_called_once_with(mock.sentinel.FILLED_TEMPLATE)
+        kapi_papps.find_root.assert_called_once_with(
+            mock.sentinel.FILLED_TEMPLATE)
+        kapi_papps.check_kuberdock_section.assert_called_once_with(
+            mock.sentinel.FILLED_TEMPLATE)
 
     def test_preprocess(self):
         """Convert parse errors from preprocess step to validation errors."""
@@ -188,7 +191,8 @@ class TestValidateTemplate(DBTestCase):
         """Raise validation errors if smth wrong with app packages."""
         template = VALID_TEMPLATE1
 
-        kapi_papps.check_plans.side_effect = kapi_papps.ValidationError
+        kapi_papps.check_kuberdock_section.side_effect = \
+            kapi_papps.ValidationError
         with self.assertRaises(kapi_papps.ValidationError):
             kapi_papps.validate_template(template)
 
@@ -232,41 +236,48 @@ class TestCompare(DBTestCase):
 
 
 class TestCheckPlans(DBTestCase):
-    """Tests for for kapi.predefined_apps.check_plans"""
+    """Tests for for kapi.predefined_apps.check_kuberdock_section"""
     def setUp(self):
         self.prepared_template, self.fields = kapi_papps.preprocess(VALID_TEMPLATE1, raise_=True)
         self.parsed_template = kapi_papps.load(self.prepared_template, self.fields)
         self.filled_template, self.fields = kapi_papps.fill(self.parsed_template, self.fields)
 
-    def test_check_plans_valid(self):
-        kapi_papps.check_plans(self.filled_template)
+    def test_check_kuberdock_section_valid(self):
+        kapi_papps.check_kuberdock_section(self.filled_template)
 
     def test_check_plans_2_recommended(self):
         self.filled_template['kuberdock']['appPackages'][1]['recommended'] = True
         with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_plans(self.filled_template)
+            kapi_papps.check_kuberdock_section(self.filled_template)
 
     def test_check_plans_unknown_pod(self):
         self.filled_template['kuberdock']['appPackages'][0]['pods'][0]['name'] = 'invalid'
         with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_plans(self.filled_template)
+            kapi_papps.check_kuberdock_section(self.filled_template)
 
     def test_check_plans_unknown_container(self):
         self.filled_template['kuberdock']['appPackages'][0]['pods'][0]\
             ['containers'][0]['name'] = 'invalid'
         with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_plans(self.filled_template)
+            kapi_papps.check_kuberdock_section(self.filled_template)
 
     def test_check_plans_unknown_pd(self):
         self.filled_template['kuberdock']['appPackages'][0]['pods'][0]\
             ['persistentDisks'][0]['name'] = 'invalid'
         with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_plans(self.filled_template)
+            kapi_papps.check_kuberdock_section(self.filled_template)
 
     def test_check_plans_invalid_kube_type(self):
         self.filled_template['kuberdock']['appPackages'][0]['pods'][0]['kubeType'] = -1
         with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_plans(self.filled_template)
+            kapi_papps.check_kuberdock_section(self.filled_template)
+
+    def test_check_kuberdock_section_invalid_package_id(self):
+        other_kube = self.fixtures.kube_type()
+        pod = self.filled_template['kuberdock']['appPackages'][0]['pods'][0]
+        pod['kubeType'] = other_kube.id
+        with self.assertRaises(kapi_papps.ValidationError):
+            kapi_papps.check_kuberdock_section(self.filled_template)
 
 
 class TestPreprocess(unittest.TestCase):

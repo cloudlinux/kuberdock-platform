@@ -302,6 +302,8 @@ type=rpm-md
 gpgkey=https://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc
 EOF
 
+yum_wrapper -y install epel-release
+
   CNT=1
   /bin/false
   while [ $? -ne 0 ]; do

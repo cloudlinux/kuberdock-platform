@@ -29,6 +29,7 @@ class KDIntegrationTestAPI(object):
             "HOME": os.environ.get("HOME"),
             "PATH": os.environ.get("PATH"),
             "SSH_AUTH_SOCK": os.environ.get("SSH_AUTH_SOCK"),
+            "KD_ONE_PRIVATE_KEY": os.environ.get("KD_ONE_PRIVATE_KEY"),
             "KD_ONE_USERNAME": os.environ.get("KD_ONE_USERNAME"),
             "KD_ONE_PASSWORD": os.environ.get("KD_ONE_PASSWORD"),
             "KD_ONE_PUB_IPS": os.environ.get("KD_ONE_PUB_IPS"),

@@ -40,12 +40,21 @@
 }
 #item-info{
     .upgrade-summary{
-        margin-top: 20px;
         padding-top: 37px;
+    }
+}
+#tab-content.complete{
+    .payment-summary{
+        padding-top: 20px;
+    }
+}
+#item-info,
+#tab-content.complete{
+    .payment-summary,
+    .upgrade-summary{
+        margin-top: 20px;
         border-top: 1px solid #e0e0e0;
-        + .buttons{
-            margin-top: 0;
-        }
+        .diff-total,
         .upgrade-total-price{
             p {
                 color: #121010;
@@ -61,6 +70,8 @@
                 font-family: @regular;
             }
         }
+        .total,
+        .new-total,
         .upgrade-diff-price{
             color: #30a718;
             font-size: 23px;
@@ -221,28 +232,13 @@
                     position: relative;
                 }
                 &.complete{
-                    padding-right: 10px;
-                    .left{
-                        margin-bottom: 29px;
-                    }
+                    border-bottom: none;
                     .total-wrapper{
                         position: relative;
                         padding: 14px 20px;
-                        margin-bottom: 52px;
+                        margin-bottom: 20px;
                         background-color: #fff;
                         border: 1px solid #e5e5e5;
-                        &:before{
-                            .rotate(180deg);
-                            right: 0;
-                            top: -41px;
-                            color: #b5bbc1;
-                            max-width: 55px;
-                            content: 'attach_file';
-                            display: inline-block;
-                            vertical-align: middle;
-                            position: absolute;
-                            font: normal normal normal 55px/55px @materials;
-                        }
                         table{
                             width: 100%;
                             thead{
@@ -256,13 +252,6 @@
                             tbody{
                                 tr{
                                     height: 40px;
-                                    .total, #total_price{
-                                        color: #3f920e;
-                                        font-size: 17px;
-                                        margin-top: 30px;
-                                        margin-bottom: 0;
-                                        text-align: right;
-                                    }
                                 }
                             }
                         }
@@ -298,6 +287,7 @@
                         }
                     }
                     label{
+                        margin-bottom: 5px;
                         display: inline-block;
                         vertical-align: middle;
                     }
@@ -370,7 +360,7 @@
                     }
                 }
                 .policy{
-                    margin-bottom: 29px;
+                    margin-bottom: 50px;
                 }
                 .kube-type-wrapper{
                     margin-bottom: 50px;
@@ -776,7 +766,7 @@
             #data-table{
                 margin-top: 0;
                 td{
-                    .word-wrap()
+                    .word-wrap();
                 }
             }
         }

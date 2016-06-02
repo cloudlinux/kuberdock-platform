@@ -976,6 +976,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             lessKubeBtn: '.kubes-less',
             moreKubeBtn: '.kubes-more',
             kubes: '.kubes',
+            tooltip : '[data-toggle="tooltip"]'
         },
         events: {
             'click @ui.lessKubeBtn': 'removeKube',
@@ -994,6 +995,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 kubesLimit: this.kubesLimit,
             };
         },
+        onRender: function(){ this.ui.tooltip.tooltip(); },
         addKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() + 1).change(); },
         removeKube: function(){ this.ui.kubes.val(+this.ui.kubes.val() - 1).change(); },
     });

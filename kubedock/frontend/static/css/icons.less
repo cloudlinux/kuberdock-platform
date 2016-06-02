@@ -216,11 +216,6 @@ table{
     .terminate-btn,
     #deleteNetwork{
         .mdi('delete',21px, #B5BBC1, #3197EE);
-        &:hover{
-            &:before{
-                content: 'delete_forever'
-            }
-        }
         &.disabled {
             &:before{
                 .opacity(0.7);
@@ -304,6 +299,14 @@ table{
             vertical-align: middle;
             display: inline-block;
         }
+    }
+    .kubes-more,
+    .upgrade-kubes-more{
+        .mdi('add_circle_outline',18px, #3197EE, #3197EE);
+    }
+    .kubes-less,
+    .upgrade-kubes-less{
+        .mdi('remove_circle_outline',18px, #3197EE, #3197EE);
     }
 }
 /* edit pod message icons */

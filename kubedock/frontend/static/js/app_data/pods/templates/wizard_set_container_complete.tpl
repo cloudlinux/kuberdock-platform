@@ -14,7 +14,7 @@
                     <div class="col-xs-12">
                         <label>Restart policy</label><!-- <span class="help" data-toggle="tooltip" data-placement="right" title="Defines if a container in the pod should be restarted, after it has been executed"></span> -->
                     </div>
-                    <div class="col-md-<%= containers.length > 1 ? '11' : '12 no-padding-right' %>">
+                    <div class="col-xs-<%= containers.length > 1 ? '11' : '12 no-padding-right' %>">
                         <select class="restart-policy selectpicker"<%= containers.length > 1 ? ' disabled' : '' %>>
                             <% _.each(restart_policies, function(value, key) {%>
                             <option value="<%- key %>"<%= key === restart_policy ? ' selected' : '' %>><%- value %></option>
@@ -23,16 +23,17 @@
                     </div>
                     <div class="col-xs-12 edit-polycy-description">Type will apply for each container</div>
                     <% if (containers.length > 1){ %>
-                    <div class="col-md-1 no-padding edit-policy"></div>
+                    <div class="col-xs-1 no-padding edit-policy" data-toggle="tooltip"
+                        data-placement="left" title="Edit restart policy"></div>
                     <% } %>
                 </div>
                 <div class="row kube-type-wrapper">
                     <% if (containers.length > 1){ %>
-                    <label class="col-xs-8">Kube Type</label>
-                    <div class="col-xs-7">
+                    <label class="col-xs-11">Kube Type</label>
+                    <div class="col-xs-11">
                         <select class="kube_type selectpicker" id="extra-options" disabled>
                     <% } else { %>
-                    <div class="col-xs-8">
+                    <div class="col-xs-12 no-padding-right">
                         <label>Kube Type</label><!-- <span class="help" data-toggle="tooltip" data-placement="right" title="A particular set of resources predefined for each containe"></span> -->
                         <select class="kube_type selectpicker" id="extra-options">
                     <% } %>
@@ -44,7 +45,8 @@
                         </select>
                     </div>
                     <% if (containers.length > 1){ %>
-                    <div class="col-xs-1 no-padding edit-kube-type"></div>
+                    <div class="col-xs-1 no-padding edit-kube-type" data-toggle="tooltip"
+                    data-placement="left" title="Edit pod kube type"></div>
                     <% } %>
                     <div class="col-xs-12 edit-kube-type-description">Type will apply for each container</div>
                 </div>
@@ -55,12 +57,12 @@
                 <div>HDD: <span id="hdd_data"><%- limits.hdd %></span></div>
             </div>
             <div class="col-md-12 total-wrapper">
-                <table>
+                <table id="pod-payment-table">
                     <thead>
                        <tr>
                            <th class="col-xs-5 no-padding">Name</th>
-                           <th class="col-xs-4 no-padding">Number of Kubes</th>
-                           <th class="col-xs-2 no-padding">Price</th>
+                           <th class="col-xs-3 no-padding">Number of Kubes</th>
+                           <th class="col-xs-3 no-padding">Price</th>
                            <th class="col-xs-1 no-padding"></th>
                        </tr>
                     </thead>
@@ -83,59 +85,45 @@
                                 </td>
                             </tr>
                         <% } %>
-                        <tr>
-                            <% if (edited && diffTotalPrice > 0){ %>
-                                <td class="new-total" colspan="1">
-                                    New total price:
-                                    <span id="total_price">
-                                        <%- formatPrice(totalPrice) %> / <%- period %>
-                                    </span>
-                                </td>
-                                <td class="diff-total" colspan="2">
-                                    Additional costs:
-                                    <span id="total_price">
-                                        <%- formatPrice(diffTotalPrice) %> / <%- period %>
-                                    </span>
-                                </td>
-                            <% } else { %>
-                                <td class="total" colspan="3">
-                                    Total price:
-                                    <span id="total_price">
-                                        <%- formatPrice(totalPrice) %> / <%- period %>
-                                    </span>
-                                </td>
-                            <% } %>
-                        </tr>
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-xs-12">
-            <div class="col-md-3 hidden-sm"></div>
-            <div class="buttons col-md-9 col-sm-12 no-padding">
+            <div class="col-md-12 no-padding payment-summary">
+                <% if (edited && diffTotalPrice > 0){ %>
+                    <div class="diff-total pull-left">
+                        <p>Additional costs: <span id="total_price"><%- formatPrice(diffTotalPrice) %> / <%- period %></span></p>
+                    </div>
+                    <div class="new-total pull-right">
+                        New total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- period %></span>
+                    </div>
+                <% } else { %>
+                    <div class="total pull-right">
+                        Total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- period %></span>
+                    </div>
+                <% } %>
+            </div>
+            <div class="buttons col-md-12 no-padding text-right">
                 <% if (edited){ %>
-                    <button class="cancel-edit gray pull-left">Cancel</button>
+                    <button class="cancel-edit gray">Cancel</button>
                 <% } %>
                 <% if (wizardState.container){ %>
-                    <button class="prev-step gray pull-left">Back</button>
+                    <button class="prev-step gray">Back</button>
                 <% } %>
-                <button class="add-more blue pull-left">Add more containers</button>
+                <button class="add-more blue">Add more containers</button>
                 <% if (!edited){ %>
-                    <button class="save-container blue pull-left">Save</button>
+                    <button class="save-container blue">Save</button>
                     <% if (hasBilling && !payg){ %>
-                        <button class="pay-and-run-container blue pull-right">Pay and Run</button>
+                        <button class="pay-and-run-container blue">Pay and Run</button>
                     <% } %>
                 <% } else { %>
                     <% if (hasBilling && !payg && diffTotalPrice > 0){ %>
-                        <button class="pay-and-apply-changes blue pull-right">Pay and Apply changes *</button>
-                        <button class="save-changes blue pull-right">Save for later</button>
-                        <span class="edit-pod-note pull-right" style="clear: both; font-size: 12px">
+                        <button class="pay-and-apply-changes blue">Pay and Apply changes *</button>
+                        <button class="save-changes">Save for later</button>
+                        <span class="edit-pod-note" style="clear: both; font-size: 12px">
                             * Pod will be restarted
                         </span>
                     <% } else { %>
-                        <button class="save-changes blue pull-left">Save</button>
+                        <button class="save-changes blue">Save</button>
                     <% } %>
                 <% } %>
             </div>

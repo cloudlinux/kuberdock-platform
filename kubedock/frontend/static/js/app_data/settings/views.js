@@ -175,13 +175,13 @@ define(['app_data/app', 'marionette',
                 },
                 error: function(){
                     that.ui.updateStats.removeClass('start-atimation');
-                    console.log('Could not fetch statistics');  //eslint-disable-line no-console
+                    console.log('Could not fetch statistics','error');
                 }
             });
         },
 
         comparison: function(a, b){
-            if (a == 'unlimited' || a == 0) a = Infinity;
+            if (a === 'unlimited' || a === 0) a = Infinity;
             return a > b ? true : false;
         },
 
@@ -361,7 +361,7 @@ define(['app_data/app', 'marionette',
                     'timezone': this.ui.timezone.val(),
                 };
 
-            if (data.email == '') {
+            if (data.email === '') {
                 utils.scrollTo(this.ui.email);
                 utils.notifyInline('Empty E-mail',this.ui.email);
                 return;
@@ -431,7 +431,7 @@ define(['app_data/app', 'marionette',
             utils.preloader.hide();
 
             _.each(tabs, function(item){
-                if (item.className == href) {
+                if (item.className === href) {
                     $(item).addClass('active');
                 } else if (!href) {
                     that.ui.general.addClass('active');

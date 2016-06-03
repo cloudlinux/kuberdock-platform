@@ -154,7 +154,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         templateHelpers: function(){
             return {
                 sortingType : this.sortingType
-            }
+            };
         },
 
         filterCollection: function(){
@@ -180,10 +180,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 this.collection.fullCollection.sort();
                 this.counter = this.counter * (-1);
 
-                if (that.sortingType[targetClass] == 1){
+                if (that.sortingType[targetClass] === 1){
                     _.each(that.sortingType, function(item, index){
                         that.sortingType[index] = 1;
-                    })
+                    });
                     that.sortingType[targetClass] = -1;
                 } else {
                     that.sortingType[targetClass] = 1;
@@ -232,7 +232,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         breadcrumbClick: function(){
-           App.navigate('nodes', {trigger: true})
+           App.navigate('nodes', {trigger: true});
         }
     });
 
@@ -268,7 +268,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             };
         },
 
-        removeError: function(evt){ $(evt.target).removeClass('error') },
+        removeError: function(evt){ $(evt.target).removeClass('error'); },
 
         complete: function () {
             var that = this,
@@ -279,6 +279,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.ui.node_name.val(val);
 
             App.getNodeCollection().done(function(nodeCollection){
+                console.log(nodeCollection);
                 switch (true){
                     case !val:
                         that.ui.node_name.addClass('error');
@@ -421,14 +422,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         breadcrumbClick: function(){
-           App.navigate('nodes', {trigger: true})
+           App.navigate('nodes', {trigger: true});
         },
 
         templateHelpers: function(){
             return {
                 tab: this.tab,
                 hostname: this.model ? this.model.get('hostname') : 'hostname'
-            }
+            };
         }
     });
 
@@ -608,7 +609,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 // If there is only one point, jqplot will display ugly plot with
                 // weird grid and no line.
                 // Remove this point to force jqplot to show noDataIndicator.
-                if (that.model.get('points').length == 1)
+                if (that.model.get('points').length === 1)
                     that.model.get('points').splice(0);
 
                 that.model.get('points').forEach(function(record){
@@ -638,10 +639,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         childView: views.NodeMonitoringTabViewItem,
         childViewContainer: '.graphs',
         childViewOptions: function() { return {node: this.model}; },
-
+        onBeforeRender: function(){ utils.preloader.show; },
+        onShow: function(){ utils.preloader.hide; },
         modelEvents: {
             'change': 'render'
-        },
+        }
     });
 
     views.NodeTimelinesTabView = Backbone.Marionette.ItemView.extend({

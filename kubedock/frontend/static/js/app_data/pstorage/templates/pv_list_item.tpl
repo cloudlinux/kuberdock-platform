@@ -1,9 +1,8 @@
 <td class="col-md-4"><%- name %></td>
 <td class="col-md-3"><%- size %>&nbsp;GB</td>
 <td class="col-md-3">
-    <span class="<%- in_use ? 'busy' : 'free' %>" data-toggle="tooltip" data-placement="top"
-    title="<%- in_use ? 'Used by pod "'+pod_name+'"' : 'Not used by any pod' %>">
-        <%- in_use ? '"'+pod_name+'"' : 'free' %>
+    <span class="<%- in_use ? 'busy' : 'free' %>">
+        <%- in_use ? 'Used by pod "'+pod_name+'"' : 'Free to use' %>
     </span>
 </td>
 <td class="col-md-2">

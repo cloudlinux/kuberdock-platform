@@ -287,17 +287,8 @@ def send_feedback_context(namespace, k8s_pod):
     except Exception as e:
         status = "{}: {}".format(type(e).__name__, e.message)
         send_feedback(namespace, k8s_pod, status)
-
-
-#  def send_feedback_on_fail(f):
-    #  @wraps(f)
-    #  def wrapper(*args, **kwargs):
-        #  with sendfeedback_context():
-            #  status = f(*args, **kwargs)
-            #  if status:
-                #  raise PluginException("'{}' exit with code: {}".format(f.func_name, status))
-            #  return status
-    #  return wrapper
+        # Will output exception to the caller and return 1 exit code
+        raise
 
 
 def remove_feedback(namespace, k8s_pod):

@@ -329,6 +329,10 @@ case "$ACTION" in
     if [ "$POD_PUBLIC_IP" != "" ];then
       echo "POD_PUBLIC_IP=$POD_PUBLIC_IP" >> "$DATA_INFO"
       MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" setup $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $KUBERNETES_POD_ID $DATA_INFO-spec)
+      if [ ! $? -eq 0 ]; then
+       log "$MSG"
+       exit 1
+      fi
       log "$MSG"
     fi
     

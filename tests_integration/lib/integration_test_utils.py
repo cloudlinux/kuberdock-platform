@@ -6,7 +6,7 @@ LOG = logging.getLogger(__name__)
 
 
 def ssh_exec(ssh, cmd, timeout=None, check_retcode=True):
-    LOG.debug("Calling SSH: '{0}''".format(cmd))
+    LOG.debug("Calling SSH: '{0}'".format(cmd))
     stdin, out, err = ssh.exec_command(cmd, timeout=timeout)
     retcode = out.channel.recv_exit_status()
     out, err = out.read(), err.read()

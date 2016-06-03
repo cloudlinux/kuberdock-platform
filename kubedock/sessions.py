@@ -15,13 +15,15 @@ from .core import db
 from .login import create_identifier
 
 
+def get_secret_key():
+    return (SystemSettings.get_by_name('sso_secret_key') or
+            current_app.config.get('SECRET_KEY'))
+
+
 def create_token(session):
     if getattr(session, 'sid', None) is None:
         return
-    billing_type, secret = map(
-        SystemSettings.get_by_name, ['billing_type', 'sso_secret_key'])
-    if billing_type.lower() == 'no billing' or not secret:
-        secret = current_app.config.get('SECRET_KEY')
+    secret = get_secret_key()
     lifetime = current_app.config.get('SESSION_LIFETIME')
     s = Serializer(secret, lifetime)
     token = s.dumps(dict(dict(session), sid=session.sid))
@@ -108,10 +110,7 @@ class ManagedSessionInterface(SessionInterface):
         token = request.headers.get('X-Auth-Token', request.args.get('token2'))
         if not token:   # new unauthorized request
             return self.manager.new_session()
-        billing_type, secret = map(
-            SystemSettings.get_by_name, ['billing_type', 'sso_secret_key'])
-        if billing_type.lower() == 'no billing' or not secret:
-            secret = current_app.config.get('SECRET_KEY')
+        secret = get_secret_key()
         lifetime = current_app.config.get('SESSION_LIFETIME')
         try:
             s = Serializer(secret, lifetime)

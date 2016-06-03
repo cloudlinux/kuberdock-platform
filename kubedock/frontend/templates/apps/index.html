@@ -516,6 +516,15 @@
                             if (r.readyState == 4) {
                                 //console.log(r);
                                 if(r.status != 200) {
+                                    try {
+                                        var error = JSON.parse(r.responseText);
+                                        if (error.type === 'PermissionDenied'){
+                                            alert('Permission denied. Note, that '
+                                                + 'you need to be logged in as '
+                                                + 'a User (not Admin).');
+                                            return;
+                                        }
+                                    } catch (e) {}
                                     alert(r.responseText);
                                     return;
                                 }

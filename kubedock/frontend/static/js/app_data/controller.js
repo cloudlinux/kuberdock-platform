@@ -486,11 +486,12 @@ define([
 
                 var billingType = settingsCollection.byName('billing_type').get('value'),
                     kubesLimit = settingsCollection.byName('max_kubes_per_container').get('value'),
+                    payg = App.userPackage.get('count_type') === 'payg',
                     view = new Views.WizardCompleteSubView({
                         model: model,
                         kubesLimit: kubesLimit,
-                        hasBilling: billingType !== 'No billing',
-                        payg: App.userPackage.get('count_type') === 'payg',
+                        hasBilling: billingType.toLowerCase() !== 'no billing',
+                        payg: payg,
                     });
                 that.listenTo(view, 'pod:save', function(){
                     if (checkKubeTypes(/*ensureSelected*/true)) return;
@@ -505,9 +506,7 @@ define([
                 });
                 that.listenTo(view, 'pod:pay_and_run', function(){
                     if (checkKubeTypes(/*ensureSelected*/true)) return;
-                    var billingType = settingsCollection.byName('billing_type').get('value'),
-                        fix_price = App.userPackage.get('count_type') === 'fixed';
-                    if (billingType.toLowerCase() !== 'no billing' && fix_price) {
+                    if (billingType.toLowerCase() !== 'no billing' && !payg) {
                         utils.preloader.show();
                         podCollection.fullCollection.create(model, {
                             wait: true,

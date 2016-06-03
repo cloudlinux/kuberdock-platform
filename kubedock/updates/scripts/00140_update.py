@@ -20,6 +20,7 @@ from kubedock.system_settings.models import SystemSettings
 from kubedock.updates.helpers import (close_all_sessions, downgrade_db,
                                       install_package, reboot_node,
                                       start_service, stop_service, upgrade_db)
+from kubedock.utils import randstr
 
 u124_old = '/index.txt'
 u124_new = '/var/lib/kuberdock/k8s2etcd_resourceVersion'
@@ -203,6 +204,18 @@ def upgrade(upd, with_testing, *args, **kwargs):
 
     if not (CEPH or AWS):
         upgrade_localstorage_paths(upd)
+
+
+    # === added later ===
+
+    secret_key = SystemSettings.query.filter(
+        SystemSettings.name == 'sso_secret_key').first()
+    if not secret_key.value:
+        secret_key.value = randstr(16)
+    secret_key.description = ('Used for Single sign-on. Must be shared between '
+                              'Kuberdock and billing system or other 3rd party '
+                              'application.')
+    db.session.commit()
 
 
     upd.print_log('Close all sessions...')

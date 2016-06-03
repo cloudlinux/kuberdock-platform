@@ -4,6 +4,7 @@ from uuid import uuid4
 import json
 
 from kubedock.core import db
+from kubedock.utils import randstr
 from kubedock.models import User, Pod
 from kubedock.billing.models import Kube
 from kubedock.billing.fixtures import add_kubes_and_packages
@@ -87,7 +88,3 @@ def pod(**kwargs):
 def kube_type(**kwargs):
     return Kube(**dict(
         kwargs, name=randstr(), cpu=.25, memory=64, disk_space=1)).save()
-
-
-def randstr(length=8, symbols=ascii_letters + digits):
-    return ''.join(choice(symbols) for i in range(length))

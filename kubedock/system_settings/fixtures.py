@@ -1,4 +1,5 @@
-from .models import db, SystemSettings
+from ..utils import randstr
+from .models import SystemSettings, db
 
 
 def add_system_settings():
@@ -19,9 +20,10 @@ def add_system_settings():
             placeholder='password'),
         SystemSettings(
             name='sso_secret_key', label='Secret key for Single sign-on',
-            placeholder='Enter a secret key',
+            placeholder='Enter a secret key', value=randstr(16),
             description=('Used for Single sign-on. Must be shared between '
-                         'Kuberdock and billing system.')),
+                         'Kuberdock and billing system or other 3rd party '
+                         'application.')),
         SystemSettings(
             name='persitent_disk_max_size', value='10',
             label='Persistent disk maximum size',

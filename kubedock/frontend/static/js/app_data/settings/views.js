@@ -20,7 +20,7 @@ define(['app_data/app', 'marionette',
                 name = this.model.get('name');
 
             if (billing === 'No billing' && _.contains(
-                    ['billing_url', 'billing_username', 'billing_password', 'sso_secret_key'], name))
+                    ['billing_url', 'billing_username', 'billing_password'], name))
                 className += ' hidden';
             return className;
         },
@@ -78,7 +78,7 @@ define(['app_data/app', 'marionette',
 
             // toggle billing settings, depending on selected billing type
             if (this.model.get('name') === 'billing_type'){
-                $('#billing_url, #billing_username, #billing_password, #sso_secret_key').parent()
+                $('#billing_url, #billing_username, #billing_password').parent()
                     .toggleClass('hidden', this.model.get('value') === 'No billing');
             }
         },

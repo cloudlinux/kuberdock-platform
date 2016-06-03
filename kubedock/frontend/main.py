@@ -1,9 +1,15 @@
 from flask import (Blueprint, request, render_template, make_response,
-                   session)
+                   session, redirect, url_for)
 from ..sessions import create_token
 
 
 main = Blueprint('main', __name__)
+
+
+# TODO: remove in the next release
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    return redirect(url_for('main.index'))
 
 
 @main.route('/', methods=['GET'])

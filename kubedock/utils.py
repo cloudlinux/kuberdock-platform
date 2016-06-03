@@ -9,6 +9,7 @@ import socket
 import sys
 import datetime
 import nginx
+import string
 
 import subprocess
 from collections import namedtuple
@@ -824,3 +825,7 @@ def get_version(package):
         return rv
     except (subprocess.CalledProcessError, AttributeError):
         return 'unknown'
+
+
+def randstr(length=8, symbols=string.ascii_letters + string.digits):
+    return ''.join(random.choice(symbols) for i in range(length))

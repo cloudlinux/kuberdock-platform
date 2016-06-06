@@ -5,6 +5,7 @@ from copy import deepcopy
 from collections import namedtuple
 
 from flask import current_app
+import uuid
 
 from . import helpers
 from ..exceptions import APIError
@@ -21,6 +22,8 @@ from . import podutils
 
 ORIGIN_ROOT = 'originroot'
 OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
+MOUNT_KDTOOLS_PATH = '/.kdtools'
+HOST_KDTOOLS_PATH = '/usr/lib/kdtools'
 
 
 PodOwnerTuple = namedtuple('PodOwnerTuple', ['id', 'username'])
@@ -154,7 +157,8 @@ class Pod(object):
             for volume_mount in container.get('volumeMounts', ()):
                 mount_path = volume_mount.get('mountPath', '')
                 # Skip origin root mountPath
-                if ORIGIN_ROOT in mount_path:
+                hidden_volumes = [ORIGIN_ROOT, MOUNT_KDTOOLS_PATH]
+                if any(item in mount_path for item in hidden_volumes):
                     continue
                 # strip Z option from mountPath
                 if mount_path[-2:] in (':Z', ':z'):
@@ -264,6 +268,7 @@ class Pod(object):
             containers.append(
                 self._prepare_container(container, kube_type, volumes)
             )
+        add_kdtools(containers, volumes)
 
         config = {
             "kind": "ReplicationController",
@@ -447,3 +452,21 @@ def _del_docker_prefix(value):
     if not value:
         return value
     return value.split('docker://')[-1]
+
+
+def add_kdtools(containers, volumes):
+    """Adds volume to mount kd tools for every container.
+    That tools contains statically linked binaries to provide ssh access
+    into containers.
+
+    """
+    volume_name = 'kdtools-' + uuid.uuid4().hex
+    volumes.append({
+        u'hostPath': {u'Path': HOST_KDTOOLS_PATH},
+        u'name': volume_name})
+    for container in containers:
+        container['volumeMounts'].append({
+            u'readOnly': True,
+            u'mountPath': MOUNT_KDTOOLS_PATH,
+            u'name': volume_name
+        })

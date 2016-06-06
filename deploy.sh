@@ -471,7 +471,7 @@ do_and_log ntpq -p
 
 
 #4. Install kuberdock
-PACKAGE=$(ls -1 |awk '/kuberdock.*\.rpm/ {print $1; exit}')
+PACKAGE=$(ls -1 |awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
 if [ ! -z $PACKAGE ];then
     log_it echo 'WARNING: Installation from local package. Using repository is strongly recommended.'
     log_it echo 'To do this just move kuberdock package file to any other dir from deploy script.'
@@ -543,7 +543,7 @@ Description=Etcd Server
 After=network.target
 
 [Service]
-Type=simple
+Type=notify
 WorkingDirectory=/var/lib/etcd/
 EnvironmentFile=-/etc/etcd/etcd.conf
 User=etcd

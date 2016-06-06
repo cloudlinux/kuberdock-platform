@@ -6,7 +6,7 @@ from flask import Flask
 from flask.json import JSONEncoder
 from fabric.api import env
 
-from .core import db, login_manager, influx_db
+from .core import db, login_manager
 from kubedock.settings import SSH_KEY_FILENAME, SENTRY_ENABLE
 from kubedock.billing.resolver import BillingFactory
 
@@ -34,7 +34,6 @@ def create_app(package_name, package_path, settings_override=None):
     app.config.from_pyfile('settings.cfg', silent=True)
     app.config.from_object(settings_override)
     db.init_app(app)
-    influx_db.init_app(app)
     login_manager.init_app(app)
     BillingFactory().init_app(app)
     app.json_encoder = APIJSONEncoder

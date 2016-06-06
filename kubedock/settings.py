@@ -122,7 +122,7 @@ INFLUXDB_PORT = 8086
 INFLUXDB_TABLE = 'stats'
 INFLUXDB_USER = 'root'
 INFLUXDB_PASSWORD = 'root'
-INFLUXDB_DATABASE = 'cadvisor'
+INFLUXDB_DATABASE = 'k8s'
 
 # Port to access elasticsearch via rest api
 ELASTICSEARCH_REST_PORT = 9200

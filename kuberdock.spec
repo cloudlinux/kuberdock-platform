@@ -13,7 +13,8 @@ BuildRequires: nodejs-less
 BuildRequires: nodejs-clean-css
 
 Requires: nginx
-Requires: influxdb == 0.8.8-1
+Requires: influxdb == 0:0.13.0
+Requires: heapster = 1.0.2
 Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
@@ -26,7 +27,6 @@ Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
 Requires: python-cerberus >= 0.9.1
 Requires: python-flask >= 0.10.1
-Requires: python-flask-influxdb >= 0.1
 Requires: python-flask-login >= 0.2.11
 Requires: python-flask-mail >= 0.9.1
 Requires: python-flask-sqlalchemy >= 2.0
@@ -45,7 +45,6 @@ Requires: python-celery == 1:3.1.19
 Requires: python-ecdsa >= 0.11
 Requires: python-gevent >= 1:1.1.1
 Requires: python-greenlet >= 0.4.2
-Requires: python-influxdb >= 0.1.13
 Requires: python-itsdangerous >= 0.24
 Requires: python-ipaddress >= 1.0.7
 Requires: python-kombu >= 3.0.35

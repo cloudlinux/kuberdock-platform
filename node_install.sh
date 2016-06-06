@@ -15,7 +15,6 @@ KD_WATCHER_SERVICE='/etc/systemd/system/kuberdock-watcher.service'
 KD_KERNEL_VARS='/etc/sysctl.d/75-kuberdock.conf'
 KD_RSYSLOG_CONF='/etc/rsyslog.d/kuberdock.conf'
 KD_ELASTIC_LOGS='/var/lib/elasticsearch'
-CADVISOR_CONF='/etc/sysconfig/kuberdock-cadvisor'
 FSTAB_BACKUP="/var/lib/kuberdock/backups/fstab.pre-swapoff"
 CEPH_VERSION=hammer
 CEPH_BASE='/etc/yum.repos.d/ceph-base'
@@ -62,8 +61,7 @@ clean_node(){
     echo "ALL PACKAGES, CONFIGS AND DATA RELATED TO KUBERDOCK AND PODS WILL BE DELETED"
 
     echo "Stop and disable services..."
-    for i in kubelet docker kube-proxy flanneld kuberdock-watcher \
-             kuberdock-cadvisor ntpd;do
+    for i in kubelet docker kube-proxy flanneld kuberdock-watcher ntpd; do
         systemctl disable $i &> /dev/null
         systemctl stop $i &> /dev/null
     done
@@ -77,7 +75,6 @@ clean_node(){
         yum -y remove kubernetes*
         yum -y remove docker
         yum -y remove flannel*
-        yum -y remove kuberdock-cadvisor
     } &> /dev/null
     remove_unneeded python-requests
     remove_unneeded python-ipaddress
@@ -113,7 +110,6 @@ clean_node(){
     del_existed /var/lib/docker
     del_existed /var/lib/kubelet
     del_existed /var/lib/kuberdock
-    del_existed $CADVISOR_CONF*
     del_existed $KD_ELASTIC_LOGS
 
     del_existed $KUBE_REPO
@@ -400,8 +396,6 @@ yum_wrapper -y install docker
 check_status
 yum_wrapper -y install flannel-0.5.3
 check_status
-yum_wrapper -y install kuberdock-cadvisor-0.19.5
-check_status
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests
 yum_wrapper -y install python-ipaddress
@@ -486,6 +480,7 @@ check_status
 echo "Configuring kubernetes..."
 sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
 sed -i "/^KUBELET_HOSTNAME/ {s/--hostname_override=127.0.0.1//}" $KUBERNETES_CONF_DIR/kubelet
+sed -i "/^KUBELET_ADDRESS/ {s|127.0.0.1|0.0.0.0|}" $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 if [ "$AWS" = True ];then
     sed -i '/^KUBELET_ARGS/ {s|""|"--cloud-provider=aws --kubeconfig=/etc/kubernetes/configfile --cadvisor_port=0 --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet
@@ -652,12 +647,6 @@ systemctl daemon-reload
 systemctl reenable kubelet
 check_status
 systemctl reenable kube-proxy
-check_status
-
-CADVISOR_CONF=/etc/sysconfig/kuberdock-cadvisor
-sed -i "/^CADVISOR_STORAGE_DRIVER/ {s/\"\"/\"influxdb\"/}" $CADVISOR_CONF
-sed -i "/^CADVISOR_STORAGE_DRIVER_HOST/ {s/localhost/${MASTER_IP}/}" $CADVISOR_CONF
-systemctl reenable kuberdock-cadvisor
 check_status
 
 # 11. disable swap for best performance

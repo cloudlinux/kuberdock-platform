@@ -6,7 +6,6 @@ import paramiko
 import redis
 from paramiko.ssh_exception import AuthenticationException, SSHException
 from flask_sqlalchemy_fix import SQLAlchemy
-from flask.ext.influxdb import InfluxDB
 from flask import current_app
 from werkzeug.contrib.cache import RedisCache
 
@@ -20,7 +19,6 @@ from .settings import (REDIS_HOST, REDIS_PORT,
 login_manager = LoginManager()
 
 db = SQLAlchemy()
-influx_db = InfluxDB()
 cache = RedisCache(host=REDIS_HOST, port=REDIS_PORT)
 
 
@@ -135,7 +133,7 @@ class ServerSentEvents(object):
     def _parse_message_text(text, encoding):
         """
         Generator to parse and decode data to be sent to SSE endpoint
-        @param test: iterable -> list, tuple, set or string to be decoded
+        @param text: iterable -> list, tuple, set or string to be decoded
         @param encoding: string -> endocing to decode
         @return: generator
         """

@@ -81,6 +81,20 @@ def remote_install(pkg, testing=False, action='install'):
                         _make_yum_opts(pkg, testing, action, True)))
 
 
+def update_local_config_file(conf_file, new_vars):
+    with open(conf_file, "r+") as conf:
+        text = conf.read()
+        for var, updates in new_vars.iteritems():
+            for param, new_value in updates.iteritems():
+                if new_value is None:
+                    text = _unset_param(text, var, param)
+                else:
+                    text = _set_param(text, var, param, new_value)
+        conf.seek(0)
+        conf.write(text)
+        conf.truncate()
+
+
 def _set_param(text, var, param, value):
     res = param + value
 
@@ -93,6 +107,18 @@ def _set_param(text, var, param, value):
                                       re.sub(r'(.*){0}(\w+)(.*)'.format(param),
                                              r'\g<1>{0}\g<3>'.format(res), m))
         return '{0}="{1} {2}"'.format(var, m, res)
+    return re.sub(r'{0}="(.*?)"'.format(var), x, text, re.DOTALL)
+
+
+def _unset_param(text, var, param):
+    def x(matchobj):
+        m = matchobj.group(1).strip()
+        if m == '':
+            return '{0}=""'.format(var)
+        if param in m:
+            return '{0}="{1}"'.format(var, re.sub('{0}(\w*)'.format(param), '', m))
+        return '{0}="{1}"'.format(var, m)
+
     return re.sub(r'{0}="(.*?)"'.format(var), x, text, re.DOTALL)
 
 

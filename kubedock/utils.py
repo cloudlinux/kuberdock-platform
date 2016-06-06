@@ -10,6 +10,7 @@ import sys
 import datetime
 import nginx
 import string
+import time
 
 import subprocess
 from collections import namedtuple
@@ -829,3 +830,24 @@ def get_version(package):
 
 def randstr(length=8, symbols=string.ascii_letters + string.digits):
     return ''.join(random.choice(symbols) for i in range(length))
+
+
+def retry(f, retry_pause, max_retries, exc=None, *f_args, **f_kwargs):
+    """
+    Retries the given function call until it returns non-empty value
+    or max_retries exceeds.
+
+    :param f: a function to retry
+    :param retry_pause: pause between retries (seconds)
+    :param max_retries: max retries num.
+    :param exc: exception obj to throw after max retries.
+    :return:
+    """
+    for _ in range(max_retries):
+        ret_val = f(*f_args, **f_kwargs)
+        if ret_val:
+            return ret_val
+        time.sleep(retry_pause)
+    if exc:
+        raise exc
+

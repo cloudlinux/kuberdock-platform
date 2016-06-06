@@ -22,7 +22,7 @@ from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
 from ..system_settings.models import SystemSettings
-from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user
+from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user, retry
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
@@ -718,10 +718,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # this call will do nothing.
         PersistentDisk.free(pod.id)
         if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
-            pod.status = POD_STATUSES.stopped
             if hasattr(pod, 'sid'):
                 if block:
                     scale_replicationcontroller(pod.id)
+                    wait_pod_status(pod.id, POD_STATUSES.stopped)
                 else:
                     scale_replicationcontroller_task.apply_async((pod.id,))
                 for container in pod.containers:
@@ -919,6 +919,20 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             if pod_kubes > kubes_left:
                 self._raise('Trial User limit is exceeded. '
                             'Kubes available for you: {0}'.format(kubes_left))
+
+
+def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
+    """Keeps polling k8s api until pod status becomes as given"""
+    def check_status():
+        pod = PodCollection()._get_by_id(pod_id)
+        if pod.status == wait_status:
+            return pod
+
+    return retry(
+        check_status, interval, max_retries,
+        APIError("Pod {0} did not become {1} after a given timeout. "
+                 "It may become later.".format(pod_id, wait_status))
+    )
 
 
 def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):

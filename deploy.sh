@@ -668,13 +668,21 @@ chmod 600 $KUBERNETES_CONF_DIR/configfile_for_nodes
 
 #9. Configure kubernetes
 log_it echo "Configure kubernetes"
+# ServiceAccount signing key
+SA_KEY=/etc/pki/kube-apiserver/serviceaccount.key
+do_and_log mkdir -m o-rwx -p `dirname $SA_KEY`
+do_and_log openssl genrsa -out $SA_KEY 2048
+do_and_log chmod -R 0440 $SA_KEY
+do_and_log chown -R kube:kube `dirname $SA_KEY`
+
 if [ "$ISAMAZON" = true ];then
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--cloud-provider=aws --token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP  --watch-cache=false\"|}" $KUBERNETES_CONF_DIR/apiserver
-sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--cloud-provider=aws\"|}" $KUBERNETES_CONF_DIR/controller-manager
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--cloud-provider=aws --token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --service-account-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--cloud-provider=aws --service-account-private-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/controller-manager
 else
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP  --watch-cache=false\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --service-account-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--service-account-private-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/controller-manager
 fi
-sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission_control=NamespaceLifecycle,NamespaceExists,SecurityContextDeny|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission-control=NamespaceLifecycle,NamespaceExists|}" $KUBERNETES_CONF_DIR/apiserver
 
 
 #10. Create and populate DB
@@ -1046,7 +1054,7 @@ do_cleanup()
                  /etc/yum.repos.d/kube-cloudlinux-testing.repo
 
     log_it echo "Remove dirs..."
-    for i in /var/run/kubernetes /etc/kubernetes /var/run/flannel /root/.etcd-ca \
+    for i in /var/run/kubernetes /etc/kubernetes /etc/pki/kube-apiserver/ /var/run/flannel /root/.etcd-ca \
              /var/opt/kuberdock /var/lib/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
              /etc/etcd/etcd.conf /var/lib/etcd; do
         rm -rf $i

@@ -38,6 +38,11 @@ class KDIntegrationTestAPI(object):
             "KD_DEV_INSTALL": os.environ.get("KD_DEV_INSTALL"),
             "KD_LICENSE": "patch",
         }
+        if kd_env['KD_DEV_INSTALL']:
+            self.kuberdock_root = '/vagrant'
+        else:
+            self.kuberdock_root = '/var/opt/kuberdock'
+
         kd_env = {k: v for k, v in kd_env.iteritems() if v}
         self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,
                                        env=kd_env)
@@ -99,8 +104,7 @@ class KDIntegrationTestAPI(object):
         local_arg = ''
         if upgrade_to != 'latest':
             local_arg = "--local {0}".format(upgrade_to)
-        ssh = self.get_ssh("master")
-        ssh_exec(ssh, "kuberdock-upgrade {0}".format(local_arg))
+        self.ssh_exec("master", "kuberdock-upgrade {0}".format(local_arg))
 
     def cleanup(self):
         rc, out, err = self.kubectl("get pods", out_as_dict=True)
@@ -140,25 +144,34 @@ class KDIntegrationTestAPI(object):
 
     def healthcheck(self):
         # Not passing for now: AC-3199
-        ssh = self.get_ssh("master")
-        retcode, out, err = ssh_exec(ssh,
-                                     "kuberdock-upgrade health-check-only")
-        assert_eq(retcode, 0)
+        rc, _, _ = self.ssh_exec("master",
+                                  "kuberdock-upgrade health-check-only")
+        assert_eq(rc, 0)
 
     def kcli(self, cmd):
-        ssh = self.get_ssh("master")
-        return ssh_exec(ssh, "kcli kuberdock {0}".format(cmd))
+        return self.ssh_exec("master", "kcli kuberdock {0}".format(cmd))
 
     def kubectl(self, cmd, out_as_dict=False):
-        ssh = self.get_ssh("master")
         if out_as_dict:
-            rc, out, err = ssh_exec(ssh, "kcli -j kubectl {}".format(cmd))
+            rc, out, err = self.ssh_exec("master",
+                                          "kcli -j kubectl {}".format(cmd))
             return rc, json.loads(out), err
-        return ssh_exec(ssh, "kcli kubectl {}".format(cmd))
+        return self.ssh_exec("master", "kcli kubectl {}".format(cmd))
 
     def docker(self, cmd, node="node1"):
+        return self.ssh_exec(node, "docker {0}".format(cmd))
+
+    def manage(self, args, out_as_dict=False):
+        manage_cmd_path = os.path.join(self.kuberdock_root, 'manage.py')
+        cmd = "/usr/bin/env python {} {}".format(manage_cmd_path, args)
+        rc, out, err = self.ssh_exec("master", cmd)
+        if out_as_dict:
+            return rc, json.loads(out), err
+        return rc, out, err
+
+    def ssh_exec(self, node, cmd):
         ssh = self.get_ssh(node)
-        return ssh_exec(ssh, "docker {0}".format(cmd))
+        return ssh_exec(ssh, cmd)
 
     def _escape_command_arg(self, arg):
         return pipes.quote(arg)

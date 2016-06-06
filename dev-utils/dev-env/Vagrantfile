@@ -69,6 +69,14 @@ Vagrant.configure(2) do |config|
       end
       master.vm.provision "ansible" do |ansible|
         ansible.playbook = "ansible/main.yml"
+        if ENV['KD_DEPLOY_DEBUG']
+            ansible.verbose='vvv'
+            commitHash = `git rev-parse HEAD`
+            ENV['ANSIBLE_LOG_PATH']="./ansible_deploy_"+commitHash[0..8]+".log"
+        end
+        if ENV['KD_DEPLOY_SKIP']
+            ansible.skip_tags=ENV['KD_DEPLOY_SKIP']
+        end
         if ENV['KD_RETRY_FROM_LAST_FAIL']
           ansible.limit = '@ansible/main.retry'
         else

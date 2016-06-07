@@ -24,7 +24,7 @@ def parser(subs):
         '--mount-path',
         help="Point to existent mount path entry or create a new one")
     c_create.add_argument(
-        '--kubes', type=int, choices=range(1, 11),
+        '--kubes', type=int,
         help="Set image kubes. Integer between 1 and 10",
         default=1)
     c_create.add_argument('--kube-type', help="Set pod kube type")

@@ -565,6 +565,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.node = db_pod_config.get('node')
                 pod.podIP = db_pod_config.get('podIP')
                 pod.service = db_pod_config.get('service')
+                pod.postDescription = db_pod_config.get('postDescription')
 
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']

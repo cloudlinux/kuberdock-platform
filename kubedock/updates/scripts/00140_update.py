@@ -3,24 +3,25 @@ import os
 import shutil
 from collections import defaultdict
 
-from fabric.api import hide, put, run, settings, local
+from fabric.api import hide, local, put, run, settings
 from fabric.exceptions import CommandTimeout, NetworkError
 from kubedock.billing.models import Kube
 from kubedock.core import db
 from kubedock.kapi import pd_utils, pstorage
 from kubedock.kapi.helpers import KubeQuery
+from kubedock.kapi.notifications import detach_admin, read_role_events
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.nodes.models import Node
 from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses, Pod
-from kubedock.rbac.fixtures import Permission, Resource, add_permissions
-from kubedock.settings import AWS, CEPH, NODE_LOCAL_STORAGE_PREFIX, MASTER_IP
+from kubedock.rbac.fixtures import Permission, Resource, Role, add_permissions
+from kubedock.settings import AWS, CEPH, MASTER_IP, NODE_LOCAL_STORAGE_PREFIX
 from kubedock.static_pages.fixtures import (Menu, MenuItem, MenuItemRole,
                                             generate_menu)
 from kubedock.system_settings.models import SystemSettings
 from kubedock.updates.helpers import (close_all_sessions, downgrade_db,
                                       install_package, reboot_node,
-                                      start_service, stop_service, upgrade_db,
-                                      restart_service)
+                                      restart_service, start_service,
+                                      stop_service, upgrade_db)
 from kubedock.utils import randstr
 
 u124_old = '/index.txt'
@@ -233,7 +234,14 @@ def upgrade(upd, with_testing, *args, **kwargs):
     local(u150_SET_TINKER_PANIC)
     local(u150_RESTART_NTPD)
 
-    restart_service('nginx')
+    restart_service('nginx')  # apply new nginx config
+
+    for notification in read_role_events(
+            Role.query.filter(Role.rolename == 'Admin').one()):
+        if 'Please update your KuberDock' in notification.get('target', ''):
+            # remove "new version is available" msg
+            detach_admin('CLN_NOTIFICATION')
+            break
 
     upd.print_log('Close all sessions...')
     close_all_sessions()

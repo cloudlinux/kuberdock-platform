@@ -37,10 +37,10 @@ MESSAGES = {
 master_services = ['etcd', 'influxdb', 'kube-apiserver',
                    'kube-controller-manager', 'kube-scheduler', 'nginx',
                    'kuberdock-k8s2etcd', 'ntpd', 'postgresql', 'redis',
-                   'emperor.uwsgi']
+                   'emperor.uwsgi', 'heapster']
 
 node_services = ['flanneld', 'ntpd', 'docker', 'kube-proxy',
-                 'kubelet', 'kuberdock-cadvisor', 'kuberdock-watcher']
+                 'kubelet', 'kuberdock-watcher']
 
 
 def get_service_state(service):

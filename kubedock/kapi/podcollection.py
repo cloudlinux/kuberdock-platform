@@ -97,8 +97,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         pod = Pod(params)
         pod.check_name()
-        # create PD models in db and change volumes schema in config
-        pod.compose_persistent()
         self._make_namespace(pod.namespace)
         # create secrets in k8s and add IDs in config
         pod.secrets = [self._make_secret(pod.namespace, *secret)
@@ -111,6 +109,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 pod.public_ip = db_pod.public_ip
             if getattr(db_pod, 'public_aws', None):
                 pod.public_aws = db_pod.public_aws
+
+        # create PD models in db and change volumes schema in config
+        # we should do this only after all pod requirements are satisfied (e.g. public ip)
+        pod.compose_persistent()
         pod._forge_dockers()
         return pod.as_dict()
 

@@ -887,7 +887,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 raise
         finally:
             if free_on_exit and now_taken:
-                PersistentDisk.free_drives(now_taken)
+                PersistentDisk.free_drives([d.drive_name for d in now_taken])
 
     # def _container_start(self, pod, data):
     #     self._do_container_action('start', data)

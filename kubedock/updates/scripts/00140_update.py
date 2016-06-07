@@ -19,7 +19,8 @@ from kubedock.static_pages.fixtures import (Menu, MenuItem, MenuItemRole,
 from kubedock.system_settings.models import SystemSettings
 from kubedock.updates.helpers import (close_all_sessions, downgrade_db,
                                       install_package, reboot_node,
-                                      start_service, stop_service, upgrade_db)
+                                      start_service, stop_service, upgrade_db,
+                                      restart_service)
 from kubedock.utils import randstr
 
 u124_old = '/index.txt'
@@ -232,6 +233,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     local(u150_SET_TINKER_PANIC)
     local(u150_RESTART_NTPD)
 
+    restart_service('nginx')
 
     upd.print_log('Close all sessions...')
     close_all_sessions()

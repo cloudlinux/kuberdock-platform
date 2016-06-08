@@ -71,12 +71,13 @@ def get_channel_key(conn, key, size=100):
         return 1
     keys = sorted(conn.hkeys(key), key=int)
     if length >= size:
-        for k in keys[:-(size-1)]:
+        for k in keys[:-(size - 1)]:
             conn.hdel(key, k)
-    return int(keys[-1])+1
+    return int(keys[-1]) + 1
 
 
-def send_event_to_user(event_name, data, user_id, to_file=None, prefix='SSEEVT'):
+def send_event_to_user(event_name, data, user_id, to_file=None,
+                       prefix='SSEEVT'):
     """
     Selects all given user sessions and sends list to send_event
     """
@@ -221,6 +222,7 @@ class atomic(object):
         In case of a decorator, this behavior can be overridden by passing
         `commit=True/False` into decorated function.
     """
+
     class UnexpectedCommit(SQLAlchemyError):
         """Raised before commit inside atomic block happens."""
 
@@ -239,6 +241,7 @@ class atomic(object):
                 self.nested_override = not kwargs.pop('commit')
             with self:
                 return func(*args, **kwargs)
+
         return decorated
 
     def __enter__(self):
@@ -301,6 +304,8 @@ class atomic(object):
                             cls._unexpectedly_closed)
         except InvalidRequestError:  # ok, it is not registered
             pass
+
+
 atomic.register()
 
 
@@ -443,7 +448,8 @@ def register_elb_name(service, name):
     :param name: string -> DNS name to be saved
     """
     item = db.session.query(Pod).filter(
-        (Pod.status != 'deleted') & (Pod.config.like('%'+service+'%'))).first()
+        (Pod.status != 'deleted') & (
+            Pod.config.like('%' + service + '%'))).first()
     if item is None:
         return
     data = json.loads(item.config)
@@ -459,7 +465,8 @@ def get_pod_owner_id(service):
     :return: integer
     """
     item = db.session.query(Pod).filter(
-        (Pod.status != 'deleted') & (Pod.config.like('%'+service+'%'))).first()
+        (Pod.status != 'deleted') & (
+            Pod.config.like('%' + service + '%'))).first()
     if item is None:
         return
     return item.owner_id
@@ -606,7 +613,6 @@ def all_request_params():
 
 
 class KubeUtils(object):
-
     @staticmethod
     def _get_current_user():
         try:
@@ -623,6 +629,7 @@ class KubeUtils(object):
             if isinstance(rv, Response):
                 return rv
             return jsonify({'status': 'OK', 'data': rv})
+
         return wrapper
 
     @classmethod
@@ -637,6 +644,7 @@ class KubeUtils(object):
                     'Permission denied. Your account is suspended. '
                     'Your package has expired. Please upgrade it.')
             return func(*args, **kwargs)
+
         return wrapper
 
     @staticmethod
@@ -850,4 +858,3 @@ def retry(f, retry_pause, max_retries, exc=None, *f_args, **f_kwargs):
         time.sleep(retry_pause)
     if exc:
         raise exc
-

@@ -13,11 +13,11 @@ from kubedock.updates import helpers
 from kubedock.settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, CEPH, PD_NS_SEPARATOR)
 
-#00084_update.py
+# 00084_update.py
 old_version = "3.10.0-229.11.1.el7.centos"
 
 
-#00085_update.py
+# 00085_update.py
 def with_size(volumes, owner_id):
     volumes = deepcopy(volumes)
     for volume in volumes:
@@ -29,7 +29,7 @@ def with_size(volumes, owner_id):
     return volumes
 
 
-#00086_update.py
+# 00086_update.py
 SERVICE_FILE = \
 """
 [Unit]
@@ -87,10 +87,10 @@ KUBELET_TEMP_PATH = '/tmp/kubelet'
 
 ETCD_SERVICE = 'etcd.service'
 
-#00087_update.py
+# 00087_update.py
 OLD_DEFAULT_CEPH_POOL = 'rbd'
 
-#00088_update.py
+# 00088_update.py
 PLUGIN_DIR = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
 
 
@@ -151,7 +151,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     with open(KUBE_API_SERVER_PATH, 'w+') as f:
         for line in lines:
             if (KUBE_API_SERVER_ARG in line and
-                not KUBE_API_WATCHCACHE_DISABLE in line):
+                    not KUBE_API_WATCHCACHE_DISABLE in line):
                 s = line.split('"')
                 s[1] += KUBE_API_WATCHCACHE_DISABLE
                 line = '"'.join(s)
@@ -196,7 +196,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
 
 
 def downgrade(upd, with_testing,  exception, *args, **kwargs):
-    #00085_update.py
+    # 00085_update.py
     upd.print_log('Set volumes_original back...')
     for pod in Pod.query.all():
         upd.print_log('Processing pod {0}'.format(pod.name))
@@ -206,7 +206,7 @@ def downgrade(upd, with_testing,  exception, *args, **kwargs):
         pod.set_dbconfig(config, save=False)
     db.session.commit()
 
-    #00087_update.py
+    # 00087_update.py
     if CEPH:
         for pd in PersistentDisk.query:
             parts = PersistentDisk.drive_name.split(PD_NS_SEPARATOR, 1)

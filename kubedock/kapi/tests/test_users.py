@@ -68,12 +68,16 @@ class TestUserUpdate(DBTestCase):
         self.assertFalse(unsuspend_mock.called)
 
     @mock.patch('kubedock.utils.current_app')
-    def test_unsuspend_error(self, app_mock, unsuspend_mock, suspend_mock, logout_mock):
-        """If error was rised during unsuspend, all changes must be rolled back."""
+    def test_unsuspend_error(self, app_mock, unsuspend_mock, suspend_mock,
+                             logout_mock):
+        """
+        If error was raised during unsuspend, all changes must be rolled back.
+        """
         UserCollection().update(self.user.id, {'suspended': True})
 
         class ReturnIPError(APIError):
             message = "Couldn't return ip: pool is empty"
+
         unsuspend_mock.side_effect = ReturnIPError()
 
         with self.assertRaises(ReturnIPError):

@@ -13,6 +13,8 @@ oneUsername = ENV['KD_ONE_USERNAME'] || ''
 onePassword = ENV['KD_ONE_PASSWORD'] || ''
 privateKey = ENV['KD_ONE_PRIVATE_KEY'] || '~/.ssh/id_rsa'
 
+nebulaTemplateId = Integer(ENV['KD_NEBULA_TEMPLATE_ID'] || '84')
+
 Vagrant.configure(2) do |config|
   config.vm.box = "bento/centos-7.2"
 
@@ -29,7 +31,7 @@ Vagrant.configure(2) do |config|
     one.endpoint = 'https://some.nebula.host.com:2633/RPC2'
     one.username = oneUsername
     one.password = onePassword
-    one.template_id = 84
+    one.template_id = nebulaTemplateId
     override.ssh.private_key_path = privateKey
     override.ssh.pty = true
     config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".venv/", ".tox/", "ceph_settings.py", ".cache", ".idea"]

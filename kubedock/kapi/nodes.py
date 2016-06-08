@@ -21,7 +21,7 @@ from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID)
 from ..users.models import User
-from ..utils import send_event_to_role, run_ssh_command
+from ..utils import send_event_to_role, run_ssh_command, retry
 from ..validation import check_internal_pod_data
 from ..kd_celery import celery
 
@@ -83,66 +83,76 @@ def create_node(ip, hostname, kube_id,
 
 
 def create_logs_pod(hostname, owner):
-    pod_name = get_kuberdock_logs_pod_name(hostname)
-    if db.session.query(Pod).filter_by(name=pod_name, owner=owner).first():
-        return
+    def _create_pod():
+        pod_name = get_kuberdock_logs_pod_name(hostname)
+        if db.session.query(Pod).filter_by(name=pod_name, owner=owner).first():
+            return True
 
-    try:
-        logs_kubes = 1
-        logcollector_kubes = logs_kubes
-        logstorage_kubes = logs_kubes
-        node_resources = kubes_to_limits(
-            logs_kubes, Kube.get_internal_service_kube_type()
-        )['resources']
-        logs_memory_limit = node_resources['limits']['memory']
-        if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
-            logs_kubes = int(math.ceil(
-                float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
-            ))
+        try:
+            logs_kubes = 1
+            logcollector_kubes = logs_kubes
+            logstorage_kubes = logs_kubes
+            node_resources = kubes_to_limits(
+                logs_kubes, Kube.get_internal_service_kube_type()
+            )['resources']
+            logs_memory_limit = node_resources['limits']['memory']
+            if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
+                logs_kubes = int(math.ceil(
+                    float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
+                ))
 
-        if logs_kubes > 1:
-            # allocate total log cubes to log collector and to log
-            # storage/search containers as 1 : 3
-            total_kubes = logs_kubes * 2
-            logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
-            logstorage_kubes = total_kubes - logcollector_kubes
-        internal_ku_token = owner.get_token()
+            if logs_kubes > 1:
+                # allocate total log cubes to log collector and to log
+                # storage/search containers as 1 : 3
+                total_kubes = logs_kubes * 2
+                logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
+                logstorage_kubes = total_kubes - logcollector_kubes
+            internal_ku_token = owner.get_token()
 
-        logs_config = get_kuberdock_logs_config(
-            hostname, pod_name,
-            Kube.get_internal_service_kube_type(),
-            logcollector_kubes,
-            logstorage_kubes,
-            MASTER_IP,
-            internal_ku_token
-        )
-        check_internal_pod_data(logs_config, owner)
-        logs_pod = PodCollection(owner).add(logs_config, skip_check=True)
-        PodCollection(owner).update(logs_pod['id'], {'command': 'start'})
-    except IntegrityError:
-        # This is a normal situation, only logging that this happened
-        current_app.logger.exception('During "{}" node creation tried to '
-                                     'create a Logs service pod which was '
-                                     'already concurrently created '
-                                     'by another process'.format(hostname))
+            logs_config = get_kuberdock_logs_config(
+                hostname, pod_name,
+                Kube.get_internal_service_kube_type(),
+                logcollector_kubes,
+                logstorage_kubes,
+                MASTER_IP,
+                internal_ku_token
+            )
+            check_internal_pod_data(logs_config, owner)
+            logs_pod = PodCollection(owner).add(logs_config, skip_check=True)
+            PodCollection(owner).update(logs_pod['id'], {'command': 'start'})
+            return True
+        except (IntegrityError, APIError):
+            # Either pod already exists or an error occurred during it's
+            # creation - log and retry
+            current_app.logger.exception(
+                'During "{}" node creation tried to create a Logs service '
+                'pod but got an error.'.format(hostname))
+
+    return retry(_create_pod, 1, 5, exc=APIError('Could not create Log '
+                                                 'service POD'))
 
 
 def create_dns_pod(hostname, owner):
-    if db.session.query(Pod) \
-            .filter_by(name=KUBERDOCK_DNS_POD_NAME, owner=owner).first():
-        return
+    def _create_pod():
+        if db.session.query(Pod) \
+                .filter_by(name=KUBERDOCK_DNS_POD_NAME, owner=owner).first():
+            return True
 
-    try:
-        dns_config = get_dns_pod_config()
-        check_internal_pod_data(dns_config, owner)
-        dns_pod = PodCollection(owner).add(dns_config, skip_check=True)
-        PodCollection(owner).update(dns_pod['id'], {'command': 'start'})
-    except IntegrityError:
-        # This is a normal situation, only logging that this happened
-        current_app.logger.exception('During "{}" node creation tried to '
-                                     'create a DNS service pod which was '
-                                     'already concurrently created '
-                                     'by another process'.format(hostname))
+        try:
+            dns_config = get_dns_pod_config()
+            check_internal_pod_data(dns_config, owner)
+            dns_pod = PodCollection(owner).add(dns_config, skip_check=True)
+            PodCollection(owner).update(dns_pod['id'], {'command': 'start'})
+            return True
+        except (IntegrityError, APIError):
+            # Either pod already exists or an error occurred during it's
+            # creation - log and retry
+            current_app.logger.exception(
+                'During "{}" node creation tried to create a DNS service '
+                'pod but got an error.'.format(hostname))
+
+    return retry(_create_pod, 1, 5, exc=APIError('Could not create DNS '
+                                                 'service POD'))
 
 
 def mark_node_as_being_deleted(node_id):

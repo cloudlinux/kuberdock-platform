@@ -396,6 +396,7 @@ fi
 echo "Installing kubernetes..."
 yum_wrapper -y install ${CUR_MASTER_KUBERNETES}
 check_status
+yum_wrapper -y install docker-selinux-1.8.2-10.el7
 yum_wrapper -y install docker-1.8.2-10.el7
 check_status
 yum_wrapper -y install flannel-0.5.3

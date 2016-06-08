@@ -287,51 +287,17 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 this.trigger('app:edit:item', this.model.get('id'));
             },
 
-            copyLink: function(){
-                var link = this.urlPath + this.model.get('qualifier');
+            copyLink: function(e){
+                e.preventDefault();
+                var link = this.urlPath + this.model.get('qualifier'),
+                    $txa = $("<textarea />",{val:link,css:{position:"fixed"}}).appendTo("body").select();
 
-                this.copyToClipboard(link);
-            },
-
-            copyToClipboard :function (textToClipboard) {
-                var that = this,
-                    success = true;
-                if (window.clipboardData) {
-                    window.clipboardData.setData("Text", textToClipboard);
-                } else {
-                    var forExecElement = that.createElementForExecCommand(textToClipboard);
-                    that.selectContent(forExecElement);
-                    try {
-                        if (window.netscape && window.netscape.security) {
-                            window.netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
-                        }
-                        success = document.execCommand("copy", false, null);
-                    } catch (e) {
-                        success = false;
-                    }
-                    document.body.removeChild(forExecElement);
-                }
-                if (success) {
+                if (document.execCommand('copy')){ // CH, FF, Edge, IE
                     utils.notifyWindow('Link copied to buffer', 'success');
                 } else {
-                    utils.notifyWindow('Your browser does not support this action. Click on application name and copy link from address bar.');
+                    prompt("Copy to clipboard:\nSelect, Cmd+C, Enter", link);
                 }
-            },
-
-            createElementForExecCommand: function (textToClipboard) {
-                var forExecElement = $('<div>'+ textToClipboard + '</div>')
-                    .css({ position : 'absolute', left : '-10000px', top : '-10000px'})
-                    .attr('contentEditable', true);
-                $('body').append(forExecElement);
-                return forExecElement[0];
-            },
-
-            selectContent: function(element) {
-                var rangeToSelect = document.createRange();
-                rangeToSelect.selectNodeContents(element);
-                var selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(rangeToSelect);
+                $txa.remove();
             }
         });
 

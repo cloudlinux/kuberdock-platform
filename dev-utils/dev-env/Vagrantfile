@@ -29,7 +29,7 @@ Vagrant.configure(2) do |config|
     one.endpoint = 'https://some.nebula.host.com:2633/RPC2'
     one.username = oneUsername
     one.password = onePassword
-    one.template_id = 53
+    one.template_id = 84
     override.ssh.private_key_path = privateKey
     override.ssh.pty = true
     config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".venv/", ".tox/", "ceph_settings.py", ".cache", ".idea"]

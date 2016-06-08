@@ -1,0 +1,8 @@
+# Packages used in kubedock/tests_integration
+nose
+paramiko
+pyyaml
+python-vagrant==0.5.11
+colorama==0.3.7
+pytest==2.9.2
+pytest-instafail==0.3.0

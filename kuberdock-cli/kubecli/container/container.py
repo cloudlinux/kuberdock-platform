@@ -128,12 +128,13 @@ class PodResource(object):
                  a dict, here we're extracting only "image" field - name
                  of image in the container,
               "template_id": template_id of the pod
+              "host": "name of the node
             }
         Name and status will be returned as is, labels will be joined to
         one string. Image names of container also will be joined to one string.
 
         """
-        ready = ['name', 'status', 'template_id']
+        ready = ['name', 'status', 'template_id', 'host']
         out = dict((k, data.get(k, '???')) for k in ready)
         out['labels'] = u','.join(
             [u'{0}={1}'.format(k, v)
@@ -149,7 +150,7 @@ class PodResource(object):
             wants_header=True,
             fields=(('name', 32), ('images', 32),
                     ('labels', 64), ('status', 10),
-                    ('template_id', 11)),
+                    ('template_id', 14), ('host', 10)),
             as_json=self.resource.as_json)
         data = data or []
         if not isinstance(data, (list, tuple)):
@@ -508,9 +509,10 @@ class KuberDock(KubeCtl):
                 if not f.endswith(self.EXT):
                     continue
                 names.append(f[:f.index(self.EXT)])
-            printout.show_list([{'name': base64.b64decode(i)} for i in names])
         except OSError:
             pass
+
+        printout.show_list([{'name': base64.b64decode(i)} for i in names])
 
     def kube_types(self):
         """

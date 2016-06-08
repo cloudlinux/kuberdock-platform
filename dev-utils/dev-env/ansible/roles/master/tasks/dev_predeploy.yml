@@ -5,11 +5,17 @@
       - nodejs
       - nodejs-less
       - nodejs-clean-css
+      - gcc
 
-- name: Building RPM from source
+- name: Building Kuberdock RPM from source
   command: bash /vagrant/dev-utils/build-rpm.sh
   environment:
     KD_GIT_REF: "{{ git_ref | default('') }}"
+
+- name: Building KCLI RPM from source
+  command: bash /vagrant/dev-utils/build-kdcli-rpm.sh
+  environment:
+    KDCLI_GIT_REF: "{{ git_ref | default('') }}"
 
 - name: Notice not to unpack deploy.sh
   set_fact:

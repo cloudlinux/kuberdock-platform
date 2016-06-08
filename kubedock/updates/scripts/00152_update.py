@@ -20,7 +20,8 @@ def _update_influxdb(with_testing):
     # wait starting
     t = 1
     success = False
-    ping_url = 'http://%s:%s/ping' % (settings.INFLUXDB_HOST, settings.INFLUXDB_PORT)
+    ping_url = 'http://%s:%s/ping' % (
+    settings.INFLUXDB_HOST, settings.INFLUXDB_PORT)
     for _ in xrange(5):
         try:
             requests.get(ping_url)
@@ -34,8 +35,9 @@ def _update_influxdb(with_testing):
         raise helpers.UpgradeError('Influxdb does not answer to ping')
 
     # initialization
-    helpers.local('influx -execute "create user {user} with password \'{password}\' with all privileges"'
-                  .format(user=INFLUXDB_USER, password=INFLUXDB_PASSWORD))
+    helpers.local(
+        'influx -execute "create user {user} with password \'{password}\' with all privileges"'
+        .format(user=INFLUXDB_USER, password=INFLUXDB_PASSWORD))
     helpers.local('influx -execute "create database {db}"'
                   .format(db=INFLUXDB_DATABASE))
 

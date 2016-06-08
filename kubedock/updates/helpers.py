@@ -37,9 +37,10 @@ class UpgradeError(Exception):
     Pass some 'code' that helps downgrade_func to determine where was an error.
     If this code is 0 then exception is some kind of "unexpected"
     """
+
     def __init__(self, msg, code=0):
-        # By this code we could determine on which point was error, but we still
-        # need full downgrade for consistency
+        # By this code we could determine on which point was error, but we
+        # still need full downgrade for consistency
         super(UpgradeError, self).__init__(msg)
         self.code = code
 
@@ -107,6 +108,7 @@ def _set_param(text, var, param, value):
                                       re.sub(r'(.*){0}(\w+)(.*)'.format(param),
                                              r'\g<1>{0}\g<3>'.format(res), m))
         return '{0}="{1} {2}"'.format(var, m, res)
+
     return re.sub(r'{0}="(.*?)"'.format(var), x, text, re.DOTALL)
 
 
@@ -116,7 +118,8 @@ def _unset_param(text, var, param):
         if m == '':
             return '{0}=""'.format(var)
         if param in m:
-            return '{0}="{1}"'.format(var, re.sub('{0}(\w*)'.format(param), '', m))
+            return '{0}="{1}"'.format(var,
+                                      re.sub('{0}(\w*)'.format(param), '', m))
         return '{0}="{1}"'.format(var, m)
 
     return re.sub(r'{0}="(.*?)"'.format(var), x, text, re.DOTALL)

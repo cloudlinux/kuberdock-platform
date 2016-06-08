@@ -41,7 +41,7 @@ def upgrade_localstorage_paths(upd):
     node_to_pds = defaultdict(list)
     pod_to_pds = defaultdict(list)
     for pd in db.session.query(PersistentDisk).filter(
-            PersistentDisk.state != PersistentDiskStatuses.TODELETE):
+                    PersistentDisk.state != PersistentDiskStatuses.TODELETE):
         node_to_pds[pd.node_id].append(pd)
         if pd.pod_id:
             pod_to_pds[pd.pod_id].append(pd)
@@ -113,7 +113,6 @@ def upgrade_localstorage_paths(upd):
     db.session.commit()
 
 
-
 def upgrade(upd, with_testing, *args, **kwargs):
     upgrade_db()
 
@@ -125,7 +124,6 @@ def upgrade(upd, with_testing, *args, **kwargs):
             shutil.move(u124_old, u124_new)
     finally:
         start_service(u124_service_name)
-
 
     # === 00126_update.py ===
 
@@ -139,12 +137,12 @@ def upgrade(upd, with_testing, *args, **kwargs):
             if service_name is None:
                 continue
             namespace = db_config.get('namespace') or pod.id
-            service = KubeQuery()._get(['services', service_name], ns=namespace)
+            service = KubeQuery()._get(['services', service_name],
+                                       ns=namespace)
             cluster_ip = service.get('spec', {}).get('clusterIP')
             if cluster_ip is not None:
                 db_config['podIP'] = cluster_ip
         pod_collection.replace_config(pod, db_config)
-
 
     # === 00127_update.py ===
 
@@ -154,7 +152,6 @@ def upgrade(upd, with_testing, *args, **kwargs):
     Menu.query.delete()
     generate_menu()
 
-
     # === 00130_update.py ===
 
     upd.print_log('Update permissions...')
@@ -162,7 +159,6 @@ def upgrade(upd, with_testing, *args, **kwargs):
     Resource.query.delete()
     add_permissions()
     db.session.commit()
-
 
     # === 00135_update.py ===
     # upd.print_log('Changing session_data schema...')
@@ -199,12 +195,10 @@ def upgrade(upd, with_testing, *args, **kwargs):
         high.disk_space = 3
         high.save()
 
-
     # === 00138_update.py ===
 
     if not (CEPH or AWS):
         upgrade_localstorage_paths(upd)
-
 
     # === added later ===
 
@@ -212,11 +206,11 @@ def upgrade(upd, with_testing, *args, **kwargs):
         SystemSettings.name == 'sso_secret_key').first()
     if not secret_key.value:
         secret_key.value = randstr(16)
-    secret_key.description = ('Used for Single sign-on. Must be shared between '
-                              'Kuberdock and billing system or other 3rd party '
-                              'application.')
+    secret_key.description = (
+    'Used for Single sign-on. Must be shared between '
+    'Kuberdock and billing system or other 3rd party '
+    'application.')
     db.session.commit()
-
 
     upd.print_log('Close all sessions...')
     close_all_sessions()
@@ -234,7 +228,6 @@ def downgrade(upd, *args, **kwars):
     upd.print_log('Downgrading db...')
     downgrade_db(revision='45e4b1e232ad')
 
-
     # === 00124_update.py ===
 
     try:
@@ -247,7 +240,6 @@ def downgrade(upd, *args, **kwars):
 
 def upgrade_node(upd, with_testing, *args, **kwargs):
     run('yum --enablerepo=kube,kube-testing clean metadata')
-
 
     # === 00132_update.py ===
 
@@ -275,7 +267,6 @@ def upgrade_node(upd, with_testing, *args, **kwargs):
         u133_PLUGIN_DIR + 'kuberdock.py')
     run('systemctl restart kuberdock-watcher')
 
-
     # === 00138_update.py ===
 
     put('/var/opt/kuberdock/node_network_plugin.py',
@@ -283,10 +274,8 @@ def upgrade_node(upd, with_testing, *args, **kwargs):
     put('/var/opt/kuberdock/fslimit.py',
         os.path.join(u138_SCRIPT_DIR, 'fslimit.py'))
 
-
     # moved from 00132_update.py
     reboot_node(upd)
-
 
 
 def downgrade_node(upd, with_testing, exception, *args, **kwargs):

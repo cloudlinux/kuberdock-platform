@@ -4,6 +4,9 @@ import math
 import os
 import socket
 
+from flask import current_app
+from sqlalchemy.exc import IntegrityError
+
 from . import pstorage
 from .node_utils import add_node_to_db, delete_node_from_db
 from .podcollection import PodCollection
@@ -22,6 +25,7 @@ from ..utils import send_event_to_role, run_ssh_command
 from ..validation import check_internal_pod_data
 from ..kd_celery import celery
 
+KUBERDOCK_DNS_POD_NAME = 'kuberdock-dns'
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
 
 
@@ -70,10 +74,20 @@ def create_node(ip, hostname, kube_id,
     _deploy_node(node, do_deploy, with_testing, options)
 
     ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
-    logs_podname = get_kuberdock_logs_pod_name(hostname)
-    logs_pod = db.session.query(Pod).filter_by(name=logs_podname,
-                                               owner=ku).first()
-    if not logs_pod:
+
+    create_logs_pod(hostname, ku)
+    create_dns_pod(hostname, ku)
+
+    node.kube.send_event('change')
+    return node
+
+
+def create_logs_pod(hostname, owner):
+    pod_name = get_kuberdock_logs_pod_name(hostname)
+    if db.session.query(Pod).filter_by(name=pod_name, owner=owner).first():
+        return
+
+    try:
         logs_kubes = 1
         logcollector_kubes = logs_kubes
         logstorage_kubes = logs_kubes
@@ -92,30 +106,43 @@ def create_node(ip, hostname, kube_id,
             total_kubes = logs_kubes * 2
             logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
             logstorage_kubes = total_kubes - logcollector_kubes
-        internal_ku_token = ku.get_token()
+        internal_ku_token = owner.get_token()
 
         logs_config = get_kuberdock_logs_config(
-            hostname, logs_podname,
+            hostname, pod_name,
             Kube.get_internal_service_kube_type(),
             logcollector_kubes,
             logstorage_kubes,
             MASTER_IP,
             internal_ku_token
         )
-        check_internal_pod_data(logs_config, ku)
-        logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
-        PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
+        check_internal_pod_data(logs_config, owner)
+        logs_pod = PodCollection(owner).add(logs_config, skip_check=True)
+        PodCollection(owner).update(logs_pod['id'], {'command': 'start'})
+    except IntegrityError:
+        # This is a normal situation, only logging that this happened
+        current_app.logger.exception('During "{}" node creation tried to '
+                                     'create a Logs service pod which was '
+                                     'already concurrently created '
+                                     'by another process'.format(hostname))
 
-    dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
-                                              owner=ku).first()
-    if not dns_pod:
+
+def create_dns_pod(hostname, owner):
+    if db.session.query(Pod) \
+            .filter_by(name=KUBERDOCK_DNS_POD_NAME, owner=owner).first():
+        return
+
+    try:
         dns_config = get_dns_pod_config()
-        check_internal_pod_data(dns_config, ku)
-        dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
-        PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
-
-    node.kube.send_event('change')
-    return node
+        check_internal_pod_data(dns_config, owner)
+        dns_pod = PodCollection(owner).add(dns_config, skip_check=True)
+        PodCollection(owner).update(dns_pod['id'], {'command': 'start'})
+    except IntegrityError:
+        # This is a normal situation, only logging that this happened
+        current_app.logger.exception('During "{}" node creation tried to '
+                                     'create a DNS service pod which was '
+                                     'already concurrently created '
+                                     'by another process'.format(hostname))
 
 
 def mark_node_as_being_deleted(node_id):
@@ -149,9 +176,9 @@ def delete_node(node_id=None, node=None):
 
     try:
         celery.control.revoke(task_id=NODE_INSTALL_TASK_ID.format(
-                                  node.hostname, node.id
-                              ),
-                              terminate=True)
+            node.hostname, node.id
+        ),
+            terminate=True)
     except Exception as e:
         raise APIError('Couldn\'t cancel node deployment. Error: {}'.format(e))
 
@@ -256,7 +283,7 @@ def _deploy_node(dbnode, do_deploy, with_testing, options=None):
         tasks.add_new_node.apply_async((dbnode.id, with_testing),
                                        deploy_options=options,
                                        task_id=NODE_INSTALL_TASK_ID.format(
-                                            dbnode.hostname, dbnode.id
+                                           dbnode.hostname, dbnode.id
                                        ))
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
@@ -388,7 +415,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     # TODO AC-3377: migrate on yaml-based templates
     # TODO AC-3378: integrate exechealthz container
     return {
-        "name": "kuberdock-dns",
+        "name": KUBERDOCK_DNS_POD_NAME,
         "podIP": ip,
         "replicas": 1,
         "kube_type": Kube.get_internal_service_kube_type(),
@@ -503,7 +530,7 @@ def get_dns_pod_config_pre_k8s_1_2(domain='kuberdock', ip='10.254.0.10'):
     # backward migrations only.
     # TODO AC-3377: migrate on yaml-based templates
     return {
-        "name": "kuberdock-dns",
+        "name": KUBERDOCK_DNS_POD_NAME,
         "podIP": ip,
         "replicas": 1,
         "kube_type": Kube.get_internal_service_kube_type(),

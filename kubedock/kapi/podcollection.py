@@ -666,7 +666,7 @@ class PodCollection(object):
         pod = PodCollection()._get_by_id(pod_id)
         rcdata = json.dumps({'spec': {'template': data}})
         rv = self.k8squery.patch(['replicationcontrollers', pod.sid], rcdata,
-                                 rest=True, ns=pod.namespace,
+                                 ns=pod.namespace,
                                  replace_lists=replace_lists)
         podutils.raise_if_failure(rv, "Could not change '{0}' pod RC".format(
             pod.name.encode('ascii', 'replace')))

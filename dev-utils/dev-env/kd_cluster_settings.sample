@@ -43,6 +43,10 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: "200,201,202"
 #export KD_ONE_PUB_IPS="200,201,202"
 
+# Custom OpenNebula template ID
+# default: 84
+# KD_NEBULA_TEMPLATE_ID=100
+
 # ====== Env group ======
 
 # Build specific ref instead of current state of the repo

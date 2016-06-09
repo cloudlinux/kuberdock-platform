@@ -27,7 +27,7 @@ MAX_DISK_PERCENTAGE = 90
 MESSAGES = {
     'disk': "\tLow disk space: {}",
     'services': "\tSome services in wrong state: {}",
-    'ntp': "\tTime not synced",
+    'ntp': "\tTime not synced. Please either synchronize it manually or wait several minutes (up to 20) and repeat",
     'running': "\tNode not running in kubernetes",
     'ssh': "\tCan't access node from master through ssh",
     'pods': "Some internal pods in wrong state: {}",

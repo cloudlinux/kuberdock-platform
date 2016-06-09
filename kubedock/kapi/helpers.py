@@ -39,14 +39,14 @@ class KubeQuery(object):
             raise SystemExit(error_string)
 
     @staticmethod
-    def _make_url(res, ns=None):
+    def _make_url(res, ns=None, **kwargs):
         """
         Composes a full URL
         :param res: list -> list of URL path items
         """
         if res is not None:
-            return get_api_url(*res, namespace=ns)
-        return get_api_url(namespace=ns)
+            return get_api_url(*res, namespace=ns, **kwargs)
+        return get_api_url(namespace=ns, **kwargs)
 
     def _return_request(self, req):
         try:

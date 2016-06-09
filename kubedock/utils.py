@@ -1,3 +1,5 @@
+from urlparse import urlsplit, urlunsplit, urljoin
+
 import bitmath
 import boto.ec2
 import boto.ec2.elb
@@ -174,20 +176,30 @@ def get_api_url(*args, **kwargs):
         namespace - namespace
         api_version - overrides default api version
         watch - True if you need append ?watch=true
+        base_url - override the base url specified in KUBE_MASTER_URL. It
+        should begin with a leading slash in order to work properly. For
+        example given KUBE_MASTER_URL = http://localhost:1/api/ and
+        base_url = /apis/kuberdock.com the final URL will be
+        http://localhost:1/apis/kuberdock.com/...
     :return: string
     """
-    api_version = kwargs.get('api_version', KUBE_API_VERSION)
-    url = '/'.join([KUBE_MASTER_URL.rstrip('/'), api_version])
-    if args:
-        url = '{0}/{1}'.format(url.rstrip('/'), '/'.join(map(str, args)))
+    schema, host, url, query, fragment = list(urlsplit(KUBE_MASTER_URL))
+
+    if kwargs.get('watch'):
+        schema, query = 'ws', 'watch=true'
+
+    if 'base_url' in kwargs:
+        url = kwargs['base_url'] + '/'
+
+    url_parts = [kwargs.get('api_version', KUBE_API_VERSION)]
+
     namespace = kwargs.get('namespace', 'default')
     if namespace:
-        url = url.replace('/' + api_version,
-                          '/{0}/namespaces/{1}'.format(api_version, namespace),
-                          1)
-    if kwargs.get('watch'):
-        url = url.replace('http://', 'ws://') + '?watch=true'
-    return url
+        url_parts += ['namespaces', namespace]
+
+    url = urljoin(url, '/'.join(url_parts + [str(a) for a in args]))
+
+    return urlunsplit([schema, host, url, query, fragment])
 
 
 def k8s_json_object_hook(obj):

@@ -4,6 +4,7 @@ import pytz
 import mock
 from ipaddress import ip_address
 from kubedock.testutils.testcases import APITestCase, attr
+from flask import current_app
 
 from uuid import uuid4
 from kubedock.core import db
@@ -11,7 +12,6 @@ from kubedock.users.models import User, UserActivity
 from kubedock.pods.models import Pod
 from kubedock.billing.models import Package, PackageKube, Kube
 from kubedock.kapi import podcollection as kapi_podcollection
-
 
 class UserCRUDTestCase(APITestCase):
     """Tests for /api/users/all endpoint"""
@@ -174,6 +174,10 @@ class UserCRUDTestCase(APITestCase):
         """AC-1608 In case of unsuspend, return all public IPs"""
         from kubedock.kapi.podcollection import PodCollection
         from kubedock.pods.models import PodIP, IPPool
+
+        # Disable as otherwise test breaks. Was created before introducing
+        # this feature
+        current_app.config['NONFLOATING_PUBLIC_IPS'] = False
 
         user = self.user
         url = self.item_url(self.user.id)

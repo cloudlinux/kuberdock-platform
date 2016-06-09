@@ -18,8 +18,8 @@ class Node(db.Model):
     upgrade_status = db.Column(db.Text, default=UPDATE_STATUSES.applied)
 
     def __repr__(self):
-        return "<Node(hostname='{0}', ip='{1}', kube_type='{2} ({3})')>".format(
-            self.hostname, self.ip, self.kube.id, self.kube.name)
+        tpl = "<Node(hostname='{0}', ip='{1}', kube_type='{2} ({3})')>"
+        return tpl.format(self.hostname, self.ip, self.kube.id, self.kube.name)
 
     @classmethod
     def get_by_name(cls, hostname):
@@ -56,7 +56,7 @@ class Node(db.Model):
         return db.session.query(cls).join(NodeFlag).filter(
             NodeFlag.flag_name == flagname,
             NodeFlag.flag_value == flagvalue,
-            NodeFlag.deleted == None)
+            NodeFlag.deleted is None)
 
 
 class NodeFlag(db.Model):
@@ -106,7 +106,7 @@ class NodeFlag(db.Model):
     def get_by_name(cls, node_id, name):
         """Search a flag by it's name for a node."""
         flag = cls.query.filter(
-            cls.node_id == node_id, cls.flag_name == name, cls.deleted == None
+            cls.node_id == node_id, cls.flag_name == name, cls.deleted is None
         ).first()
         return flag
 
@@ -114,7 +114,7 @@ class NodeFlag(db.Model):
     def delete_by_name(cls, node_id, flag_name):
         cls.query(
             cls.node_id == node_id, cls.flag_name == flag_name,
-            cls.deleted == None
+            cls.deleted is None
         ).update({
             cls.deleted: datetime.datetime.utcnow()
         })
@@ -133,7 +133,8 @@ class NodeFlagNames(object):
 
 class RegisteredHost(db.Model):
     __tablename__ = 'registered_hosts'
-    id = db.Column(db.Integer, primary_key=True, nullable=False, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True, nullable=False,
+                   autoincrement=True)
     host = db.Column(db.String, nullable=False, unique=True)
     description = db.Column(db.Text, nullable=True)
     time_stamp = db.Column(db.DateTime, nullable=False)

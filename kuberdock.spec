@@ -19,7 +19,7 @@ Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
 Requires: etcd == 1:2.2.5
-Requires: kubernetes-master == 1:1.2.4-1.el7.cloudlinux
+Requires: kubernetes-master == 1:1.2.4-2.el7.cloudlinux
 Requires: flannel == 1:0.5.3
 Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:

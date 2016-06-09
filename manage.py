@@ -309,7 +309,7 @@ class CreateIPPool(Command):
         ippool.IpAddrPool().create({
             'network': subnet.decode(),
             'autoblock': exclude,
-            # 'node': node,  # uncomment after AC-3128
+            'node': node
         })
 
 

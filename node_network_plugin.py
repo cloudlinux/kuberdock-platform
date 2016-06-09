@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-import re
 import os
 import sys
 import time
@@ -10,8 +9,8 @@ import json
 import subprocess
 from ConfigParser import ConfigParser
 from StringIO import StringIO
+from collections import OrderedDict
 from contextlib import contextmanager
-from functools import wraps
 
 import ipaddress
 import requests
@@ -19,7 +18,8 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 FSLIMIT_PATH = '/var/lib/kuberdock/scripts/fslimit.py'
-
+PLUGIN_PATH = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
+INI_PATH = PLUGIN_PATH + 'kuberdock.ini'
 
 PUBLIC_IP_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t nat -d {1} ' \
                  '-p {2} --dport {3} -j DNAT --to-destination {4}:{5}'
@@ -157,6 +157,17 @@ def get_config(filename):
     return config_dict
 
 
+def set_config(filename, data):
+    with open(filename) as f:
+        lines = f.read().splitlines()
+
+    d = OrderedDict([l.split('=', 1) for l in lines])
+    d.update(data)
+
+    with open(filename, 'w') as f:
+        f.writelines(['{0}={1}\n'.format(k, v) for k, v in d.items()])
+
+
 def _update_ipset(set_name, ip_list, set_type='hash:ip'):
     set_temp = '{0}_temp'.format(set_name)
     subprocess.call(['ipset', '-exist', 'create', set_name, set_type])
@@ -202,9 +213,37 @@ def get_pod_spec(pod_spec_file):
         return json.load(f)
 
 
+def get_public_ip(pod):
+    config = get_config(INI_PATH)
+    master = config['master']
+    node = config['node']
+    token = config['token']
+    try:
+        r = requests.get(
+            'https://{0}/api/ippool/get-public-ip/{1}/{2}?token={3}'.format(
+                master, node, pod, token
+            ),
+            verify=False).json()
+        if r['status'] == 'OK':
+            ip = r['data']
+            glog('Requested Public IP {0} for Pod {1}'.format(ip, pod))
+            return ip
+    except:
+        pass
+
+
 def handle_public_ip(
-        action, public_ip, pod_ip, iface, namespace, k8s_pod_id, pod_spec_file):
+        action, public_ip, pod_ip, iface, namespace, k8s_pod_id, pod_data,
+        pod_spec_file):
     with send_feedback_context(namespace, k8s_pod_id):
+        nonfloating = (public_ip == 'true')
+        if nonfloating:
+            public_ip = get_public_ip(namespace)
+            if public_ip is None:
+                raise PluginException('Cannot get Public IP for {0}'.format(
+                    namespace)
+                )
+            set_config(pod_data, {'POD_PUBLIC_IP': public_ip})
         if action not in ('add', 'del',):
             raise PluginException('Unknown action for public ip. Skip call.')
         spec = get_pod_spec(pod_spec_file)
@@ -216,28 +255,66 @@ def handle_public_ip(
                 'Error loading ports from spec "{0}" Skip call.'.format(e))
         if not ports:
             return 4
+
         for container in ports:
             for port_spec in container:
                 is_public = port_spec.get('isPublic', False)
                 if not is_public:
                     continue
+
                 container_port = port_spec.get('containerPort')
                 if not container_port:
                     raise PluginException(
-                        'Something went wrong and bad spec of pod has come. Skip')
+                        'Something went wrong. Bad pod spec received. Skip')
+
                 proto = port_spec.get('protocol', 'tcp')
                 host_port = port_spec.get('hostPort', None) or container_port
+
                 if action == 'add':
-                    if subprocess.call(PUBLIC_IP_RULE.format('C', public_ip, proto, host_port, pod_ip, container_port).split(' ')):
-                        subprocess.call(PUBLIC_IP_RULE.format('I', public_ip, proto, host_port, pod_ip, container_port).split(' '))
-                    if subprocess.call(PUBLIC_IP_MANGLE_RULE.format('C', public_ip, proto, host_port).split(' ')):
-                        subprocess.call(PUBLIC_IP_MANGLE_RULE.format('I', public_ip, proto, host_port).split(' '))
+                    add_ip(container_port, host_port, pod_ip, proto, public_ip)
                 elif action == 'del':
-                    subprocess.call(PUBLIC_IP_RULE.format('D', public_ip, proto, host_port, pod_ip, container_port).split(' '))
-                    subprocess.call(PUBLIC_IP_MANGLE_RULE.format('D', public_ip, proto, host_port).split(' '))
+                    delete_ip(container_port, host_port, pod_ip, proto,
+                              public_ip)
+        # Temporarily disable check. Maybe will be removed completely
+        # if not (nonfloating or is_nonfloating_ip_mode_enabled()):
+        #    modify_ip(action, public_ip, iface)
         modify_ip(action, public_ip, iface)
         return 0
     return 1
+
+
+def is_nonfloating_ip_mode_enabled():
+    enabled_options = ('1','on', 't', 'true', 'y', 'yes')
+    config = get_config(INI_PATH)
+    return config['nonfloating_public_ips'].lower() in enabled_options
+
+
+def delete_ip(container_port, host_port, pod_ip, proto, public_ip):
+    subprocess.call(
+        PUBLIC_IP_RULE.format('D', public_ip, proto, host_port,
+                              pod_ip, container_port).split(
+            ' '))
+    subprocess.call(
+        PUBLIC_IP_MANGLE_RULE.format('D', public_ip, proto,
+                                     host_port).split(' '))
+
+
+def add_ip(container_port, host_port, pod_ip, proto, public_ip):
+    if subprocess.call(
+            PUBLIC_IP_RULE.format('C', public_ip, proto,
+                                  host_port, pod_ip,
+                                  container_port).split(' ')):
+        subprocess.call(
+            PUBLIC_IP_RULE.format('I', public_ip, proto,
+                                  host_port, pod_ip,
+                                  container_port).split(' '))
+    if subprocess.call(
+            PUBLIC_IP_MANGLE_RULE.format('C', public_ip, proto,
+                                         host_port).split(
+                ' ')):
+        subprocess.call(
+            PUBLIC_IP_MANGLE_RULE.format('I', public_ip, proto,
+                                         host_port).split(' '))
 
 
 def init():

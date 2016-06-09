@@ -1,34 +1,37 @@
-import ipaddress
 import json
-from os import path
 import time
-from uuid import uuid4
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from collections import defaultdict
+from os import path
+from uuid import uuid4
+
+import ipaddress
 from flask import current_app
 
-from .pod import Pod
+from kubedock.exceptions import NoFreeIPs
+from . import helpers
+from . import podutils
+from .helpers import KubeQuery
 from .images import Image
+from .licensing import is_valid as license_valid
+from .node import Node as K8SNode
+from .pod import Pod
 from .pstorage import (get_storage_class_by_volume_info, get_storage_class,
                        delete_drive_by_id)
-from .helpers import KubeQuery
-from . import helpers
-from .licensing import is_valid as license_valid
-from ..core import db
 from ..billing import repr_limits
+from ..core import db
 from ..exceptions import APIError
 from ..kd_celery import celery
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
-from ..usage.models import IpState
-from ..system_settings.models import SystemSettings
-from ..utils import (
-    POD_STATUSES, atomic, update_dict, send_pod_status_update,
-    send_event_to_user, retry)
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
-from . import podutils
-
+from ..system_settings.models import SystemSettings
+from ..usage.models import IpState
+from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user
+from ..utils import (
+    send_pod_status_update,
+    retry)
 
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
@@ -36,11 +39,6 @@ UNKNOWN_ADDRESS = 'Unknown'
 
 def get_user_namespaces(user):
     return {pod.namespace for pod in user.pods if not pod.is_deleted}
-
-
-class NoFreeIPs(APIError):
-    message = 'There are no free public IP-addresses, '\
-              'contact KuberDock administrator'
 
 
 class PodNotFound(APIError):
@@ -168,6 +166,10 @@ class PodCollection(object):
         conf = pod.get_dbconfig()
         if AWS:
             conf.setdefault('public_aws', UNKNOWN_ADDRESS)
+        elif current_app.config['NONFLOATING_PUBLIC_IPS']:
+            if not IPPool.get_free_host():
+                raise NoFreeIPs()
+            conf['public_ip'] = pod.public_ip = 'true'
         else:
             ip_address = IPPool.get_free_host(as_int=True)
             if ip_address is None:
@@ -240,6 +242,12 @@ class PodCollection(object):
             for port in container['ports']:
                 port['isPublic_before_freed'] = port.pop('isPublic', None)
         pod.set_dbconfig(pod_config, save=False)
+
+        network = IPPool.query.filter_by(network=ip.network).first()
+        node = network.node
+        if current_app.config['NONFLOATING_PUBLIC_IPS'] and node:
+            K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
+
         IpState.end(pod_id, ip.ip_address)
         db.session.delete(ip)
 

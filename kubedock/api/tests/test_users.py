@@ -112,7 +112,7 @@ class UserCRUDTestCase(APITestCase):
         for field, value in data.iteritems():
             self.assertEqual(value, getattr(user, field))
 
-    @mock.patch.object(kapi_podcollection.PodCollection, '_run')
+    @mock.patch.object(kapi_podcollection.KubeQuery, '_run')
     def test_delete(self, PodCollection):
         user, _ = self.fixtures.user_fixtures()
         # delete
@@ -169,7 +169,7 @@ class UserCRUDTestCase(APITestCase):
         self.assert400(self.admin_open(url=url, method='PUT', json=data))
 
     @mock.patch.object(kapi_podcollection, 'license_valid', lambda: True)
-    @mock.patch.object(kapi_podcollection.PodCollection, '_run')
+    @mock.patch.object(kapi_podcollection.KubeQuery, '_run')
     def test_suspend(self, _run):
         """AC-1608 In case of unsuspend, return all public IPs"""
         from kubedock.kapi.podcollection import PodCollection

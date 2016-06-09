@@ -24,7 +24,7 @@ from ...rbac.models import Role
 global_patchers = [
     mock.patch.object(podcollection, 'current_app'),
     mock.patch.object(podcollection, 'license_valid'),
-    mock.patch.object(helpers, 'current_app'),
+    #mock.patch.object(helpers, 'current_app'),
 ]
 
 
@@ -74,7 +74,9 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
 
         self.mock_methods(podcollection.PodCollection,
                           '_get_namespaces', '_get_pods',
-                          '_merge', '_stop_pod', '_get', '_del', '_raise')
+                          '_merge', '_stop_pod')
+        self.mock_methods(podcollection.KubeQuery,
+                          'get', 'delete')
 
         self.app = podcollection.PodCollection(self.user)
 
@@ -85,223 +87,93 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         """
         pod = fake_pod(sid='s', owner=self.internal_user)
 
-        pod.get_config = (lambda x: None)
         self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
 
-        self.app._raise.side_effect = Exception()
-
-        try:
-            # Making actual call
+        with self.assertRaises(APIError):
             self.app.delete(str(uuid4()))
-        except Exception:
-            pass
 
-        self.assertTrue(self.app._raise.called)
-        self.assertFalse(self.app._del.called)
+        self.assertFalse(self.app.k8squery.delete.called)
 
+    @mock.patch.object(podcollection.helpers, 'mark_pod_as_deleted')
+    @mock.patch.object(podcollection.podutils, 'raise_if_failure')
+    @mock.patch.object(podcollection.PodCollection, '_drop_namespace')
+    @mock.patch.object(podcollection.helpers, 'get_pod_config')
     @mock.patch.object(podcollection.PersistentDisk, 'free')
     def test_pods_belonging_to_KUBERDOCK_INTERNAL_USER_deleted_if_forced(
-            self, mock_free_pd):
+            self, mock_free_pd, get_pod_config, drop_namespace,
+            raise_if_failure, mark_pod_as_deleted):
         """
         Check if pod deletion actually takes place even if user is
         podcollection.KUBERDOCK_INTERNAL_USER when forced
         """
         db_pod = self.fixtures.pod(owner=self.internal_user)
         pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: None)
+        get_pod_config.return_value = None
 
         # Monkey-patched podcollection.PodCollection methods
         self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
 
         # Makiing actual call
         self.app.delete(pod.id, force=True)
 
-        # Checking our _del has been called only once with expected args
-        self.assertFalse(self.app._raise.called)
         mock_free_pd.assert_called_once_with(pod.id)
+        drop_namespace.assert_called_once_with(pod.namespace)
+        mark_pod_as_deleted.assert_called_once_with(pod.id)
 
+    @mock.patch.object(podcollection.PodCollection, '_drop_namespace')
+    @mock.patch.object(podcollection.podutils, 'raise_if_failure')
+    @mock.patch.object(podcollection.helpers, 'mark_pod_as_deleted')
+    @mock.patch.object(podcollection.PodCollection, '_get_by_id')
+    @mock.patch.object(podcollection.helpers, 'get_pod_config')
     @mock.patch.object(podcollection.PersistentDisk, 'free')
-    def test_delete_not_called_unless_sid_is_present(self, mock_free_pd):
+    def test_delete_not_called_unless_sid_is_present(self, mock_free_pd,
+                                                     get_pod_config,
+                                                     get_by_id,
+                                                     mark_pod_as_deleted,
+                                                     raise_if_failure,
+                                                     drop_namespace):
         """
         Makes sure _del not called on sid-less pods (i.e pure kubernetes pods)
         """
         db_pod = self.fixtures.pod(owner=self.user)
         pod = fake_pod(owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: None)
+        get_pod_config.return_value = None
 
         # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
+        get_by_id.return_value = pod
 
         # Making actual call
         self.app.delete(pod.id)
 
-        # Checking our _del has not been called
-        self.assertFalse(self.app._del.called)
+        # Checking our k8s delete query has not been called
+        self.assertFalse(self.app.k8squery.delete.called)
         mock_free_pd.assert_called_once_with(pod.id)
 
-    @unittest.skip('Now all pods have Replication Controller')
-    @mock.patch.object(podcollection.PodCollection, '_del')
-    def test_delete_request_is_sent_for_serviceless_non_replica(self, del_):
-        """
-        If pod has no services and no replicas, only one delete request
-        should be made (for deletion the pod itself)
-        """
-        db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: None)
-
-        # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
-
-        # Makiing actual call
-        self.app.delete(pod.id)
-
-        # Checking our _del has been called only once with expected args
-        del_.assert_called_once_with(['k', 's'], ns='n')
-
-    @mock.patch.object(podcollection.PersistentDisk, 'free')
-    def test_delete_request_is_sent_for_serviceless_replica(self,
-                                                            mock_free_pd):
-        """
-        If serviceless pod has replicas (one replica for now) an attempt
-        to stop cluster after pod deletion is expected to be made
-        """
-        db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: None)
-
-        # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
-
-        # Making actual call
-        self.app.delete(pod.id)
-
-        # Checking our _del has been called only once with expected args
-        mock_free_pd.assert_called_once_with(pod.id)
-
-    @mock.patch.object(podcollection.PersistentDisk, 'free')
-    def test_delete_request_is_sent_twice_if_pod_has_service(self, free_pd):
-        """
-        If a pod has a service then _del is expected to be called twice:
-        for deletion a pod itself and for deletion its service.
-        Moreover a _get request to learn about the service details is expected
-        to be sent. Attempt to unbind IP address is not expected to be made
-        """
-        db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(sid='s', public_ip=True,
-                       owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: 'fs')
-
-        # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
-
-        # we don't want to call modify_node_ips
-        self.app._get.return_value = {}
-
-        # Making actual call
-        self.app.delete(pod.id)
-
-        # Checking our _get has been called only once with expected args
-        # self.app._get.assert_called_once_with(['services', 'fs'], ns='n')
-
-        # Making sure del_ has been called twice with proper params each time
-        self.app._del.assert_called_once_with(['services', 'fs'], ns='n')
-        free_pd.assert_called_once_with(pod.id)
-
-    @mock.patch.object(podcollection.PersistentDisk, 'free')
+    @mock.patch.object(podcollection.podutils, 'raise_if_failure')
     @mock.patch.object(podcollection.PodCollection, '_remove_public_ip')
-    @mock.patch('kubedock.kapi.podcollection.current_app')
-    def test_pod_assigned_IPs_are_marked_as_free(self, ca_, free_, free_pd):
-        """
-        Check if an attempt to free a pod public IP has been made after
-        the deletion of the pod
-        """
-        # Real Pod instance
-        db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(use_parents=(podcollection.ModelQuery,), sid='s',
-                       public_ip=True, owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: 'fs')
-
-        # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
-
-        self.app._get.return_value = {
-            'metadata': {},
-            'spec': {
-                'ports': []}}
-
-        # Making actual call
-        self.app.delete(pod.id)
-
-        self.assertTrue(free_.called,
-                        "pod._remove_public_ip is expected to be called")
-        free_pd.assert_called_once_with(pod.id)
-
-    @mock.patch.object(podcollection.PersistentDisk, 'free')
-    @mock.patch('kubedock.kapi.podcollection.current_app')
+    @mock.patch.object(podcollection.PodCollection, '_get_by_id')
     @mock.patch.object(podcollection.PodCollection, '_drop_namespace')
-    def test_namespace_is_dropped(self, dn_, ca_, mock_free_pd):
-        """
-        Check if an attempt to call _drop_namespace has been made.
-        """
-        db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: 'fs')
-
-        # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._mark_pod_as_deleted = (lambda x: None)
-        self.app._raise_if_failure = (lambda x, y: None)
-
-        self.app._get.return_value = {
-            'metadata': {},
-            'spec': {
-                'ports': []}}
-
-        # Making actual call
-        self.app.delete(pod.id)
-
-        dn_.assert_called_once_with('n')
-        mock_free_pd.assert_called_once_with(pod.id)
-
+    @mock.patch.object(podcollection.helpers, 'get_pod_config')
     @mock.patch.object(podcollection.PersistentDisk, 'free')
-    @mock.patch.object(podcollection.ModelQuery, '_mark_pod_as_deleted')
+    @mock.patch.object(podcollection.helpers, 'mark_pod_as_deleted')
     @mock.patch('kubedock.kapi.podcollection.current_app')
-    def test_pod_marked_as_deleted(self, ca_, mark_, mock_free_pd):
+    def test_pod_delete(self, ca_, mark_, mock_free_pd,
+                        get_pod_config_mock, pc_drop_namespace_mock,
+                        pc_get_by_id_mock, remove_ip_mock,
+                        *args, **kwargs):
         """
-        Check if an attempt to call _mark_pod_as_deleted has been made.
+        Check if an attempt to call mark_pod_as_deleted has been made.
         """
         db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
-        pod.get_config = (lambda x: 'fs')
+        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
+                       public_ip=True)
+        #pod = fake_pod(sid='s', public_ip=True)
+        get_pod_config_mock.return_value = 'fs'
 
         # Monkey-patched podcollection.PodCollection methods
-        self.app._get_by_id = (lambda x: pod)
-        self.app._raise_if_failure = (lambda x, y: None)
-        self.app._drop_namespace = (lambda x: None)
+        pc_get_by_id_mock.return_value = pod
 
-        self.app._get.return_value = {
+        self.app.k8squery.get.return_value = {
             'metadata': {},
             'spec': {
                 'ports': []}}
@@ -310,7 +182,18 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         self.app.delete(pod.id)
 
         mock_free_pd.assert_called_once_with(pod.id)
+        pc_drop_namespace_mock.assert_called_once_with(pod.namespace)
+        remove_ip_mock.assert_called_once_with(pod_id=pod.id)
         mark_.assert_called_once_with(pod.id)
+        self.app.k8squery.delete.assert_called_once_with(
+            ['services', 'fs'], ns=pod.namespace)
+
+        remove_ip_mock.reset_mock()
+        db_pod = self.fixtures.pod(owner=self.user)
+        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
+        pc_get_by_id_mock.return_value = pod
+        self.app.delete(pod.id)
+        self.assertFalse(remove_ip_mock.called)
 
 
 class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
@@ -321,7 +204,7 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
                           '_get_pods', '_merge')
         self.pod_collection = podcollection.PodCollection(U())
 
-    @mock.patch.object(podcollection.PodCollection, '_post')
+    @mock.patch.object(podcollection.KubeQuery, 'post')
     def test_pod_run_service(self, post_):
         """
         Test that _run_service generates expected service config
@@ -340,7 +223,7 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
         }]
 
         # Making actual call
-        self.pod_collection._run_service(pod)
+        podcollection.run_service(pod)
 
         expected_service_conf = (
             '{"kind": "Service", "spec": {"sessionAffinity": "None", "type": '
@@ -372,7 +255,7 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
         self.pod_collection = podcollection.PodCollection(U())
         self.test_ns = "user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094"
 
-    @mock.patch.object(podcollection.PodCollection, '_post')
+    @mock.patch.object(podcollection.KubeQuery, 'post')
     def test_pod_make_namespace_is_presented(self, post_):
         """
         Test that _make_namespace do nothing when ns already exists
@@ -387,7 +270,7 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
             self.test_ns)
         self.assertEquals(post_.called, False)
 
-    @mock.patch.object(podcollection.PodCollection, '_post')
+    @mock.patch.object(podcollection.KubeQuery, 'post')
     def test_pod_make_namespace_new_created(self, post_):
         """
         Test that _make_namespace create new ns
@@ -444,7 +327,8 @@ class TestPodCollectionGetNamespaces(TestCase, TestCaseMixin):
 
         self.pod_collection = podcollection.PodCollection(U())
 
-    def test_pod_get_namespaces(self):
+    @mock.patch.object(podcollection.KubeQuery, 'get')
+    def test_pod_get_namespaces(self, get_mock):
         """
         Test that _get_namespaces returns list of correct namespaces for this
         user
@@ -457,19 +341,18 @@ class TestPodCollectionGetNamespaces(TestCase, TestCaseMixin):
             'ccc6736151b6011c2442c72ddb077be6',
         ]
         ns_items = {'items': [{'metadata': {'name': i}} for i in test_nses]}
-        self.pod_collection._get = mock.Mock(return_value=ns_items)
+        get_mock.return_value = ns_items
 
         # Actual call
-        self.pod_collection._get.reset_mock()
+        get_mock.reset_mock()
         self.get_ns_patcher.stop()
         res = self.pod_collection._get_namespaces()
         self.get_ns_patcher.start()
 
-        self.pod_collection._get.assert_called_once_with(['namespaces'],
-                                                         ns=False)
+        get_mock.assert_called_once_with(['namespaces'], ns=False)
         self.assertEquals(res, test_nses[2:])
 
-    @mock.patch.object(podcollection.PodCollection, '_del')
+    @mock.patch.object(podcollection.KubeQuery, 'delete')
     def test_pod_drop_namespace(self, del_):
         """
         Test that _drop_namespace call _del with expected args.
@@ -531,7 +414,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         U = type('User', (), {'username': 'user'})
 
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
-                          '_get_pods', '_merge', 'replace_config')
+                          '_get_pods', '_merge')
+        self.mock_methods(podcollection.helpers, 'replace_pod_config')
 
         self.pod_collection = podcollection.PodCollection(U())
 
@@ -562,74 +446,82 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         self.assertEqual(self.test_pod.containers[0]['state'], status)
         self.assertEqual(response, self.test_pod.as_dict.return_value)
 
-    @mock.patch.object(podcollection.PodCollection,
-                       '_get_replicationcontroller')
-    @mock.patch.object(podcollection.PodCollection, '_raise_if_failure')
-    @mock.patch.object(podcollection.PodCollection, '_post')
-    @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_normal_first_start(self, mk_ns, post_, rif, mk_get_rc):
+    @mock.patch.object(podcollection, 'send_pod_status_update')
+    @mock.patch.object(podcollection.helpers, 'replace_pod_config')
+    @mock.patch.object(podcollection, 'DBPod')
+    @mock.patch.object(podcollection, 'run_service')
+    @mock.patch.object(podcollection, 'get_replicationcontroller')
+    @mock.patch.object(podcollection.podutils, 'raise_if_failure')
+    @mock.patch.object(podcollection.KubeQuery, 'post')
+    def test_pod_prepare_and_run_task(
+            self, post_mock,
+            raise_if_failure_mock, get_rc_mock, run_service_mock,
+            dbpod_mock, replace_pod_config_mock,
+            send_pod_status_update_mock):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
         :type mk_ns: mock.Mock
         :type rif: mock.Mock
         """
-
-        mk_get_rc.side_effect = APIError('no rc')
-        self.test_pod.get_config = mock.Mock(return_value={'volumes': []})
+        get_rc_mock.side_effect = APIError('no rc')
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
-
-        self.pod_collection._run_service.reset_mock()
+        dbpod = mock.Mock()
+        dbpod_mock.query.get.return_value = dbpod
+        dbpod.get_dbconfig.return_value = {'volumes': []}
 
         # Actual call
-        res = self.pod_collection._start_pod(self.test_pod)
+        res = podcollection.prepare_and_run_pod_task(self.test_pod)
 
-        mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with()
-        self.pod_collection._run_service.assert_called_once_with(self.test_pod)
+        run_service_mock.assert_called_once_with(self.test_pod)
         self.test_pod.prepare.assert_called_once_with()
-        post_.assert_called_once_with(
+        post_mock.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
-        self.assertEqual(rif.called, True)
+        self.assertTrue(raise_if_failure_mock.called)
+        replace_pod_config_mock.assert_called_once_with(
+            self.test_pod, dbpod.get_dbconfig.return_value)
         self._check_status(res, POD_STATUSES.pending)
+        send_pod_status_update_mock.assert_called_once_with(
+            POD_STATUSES.pending, dbpod, 'MODIFIED')
 
-    @mock.patch.object(podcollection.PodCollection,
-                       '_get_replicationcontroller')
-    @mock.patch.object(podcollection.PodCollection, '_post')
+    @mock.patch.object(podcollection.helpers, 'set_pod_status')
+    @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_first_start_without_ports(self, mk_ns, post_, mk_get_rc):
+    def test_pod_start(self, mk_ns, run_pod_mock, set_pod_status):
         """
         Test first _start_pod for pod without ports
         :type post_: mock.Mock
         """
-        mk_get_rc.side_effect = APIError('no rc')
-        saved_ports = self.test_pod.containers[0]['ports']
-        self.test_pod.containers[0]['ports'] = []
-
-        self.test_pod.get_config = mock.Mock(return_value={'volumes': []})
-        self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
-
-        self.pod_collection._run_service.reset_mock()
+        pod = fake_pod(
+            use_parents=(Pod,),
+            name='unnamed-1',
+            is_deleted=False,
+            status=POD_STATUSES.stopped,
+            kind='replicationcontrollers',
+            namespace="user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094",
+            containers=[{
+                'ports': [],
+                'name': '2dbgdc',
+                'state': POD_STATUSES.stopped,
+            }]
+        )
 
         # Actual call
-        res = self.pod_collection._start_pod(self.test_pod)
+        res = self.pod_collection._start_pod(pod)
 
-        mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with()
-        self.assertEquals(self.pod_collection._run_service.called, False)
-        self.test_pod.prepare.assert_called_once_with()
-        post_.assert_called_once_with(
-            [self.test_pod.kind], json.dumps(self.valid_config),
-            ns=self.test_pod.namespace, rest=True)
-        self._check_status(res, POD_STATUSES.pending)
+        mk_ns.assert_called_once_with(pod.namespace)
+        run_pod_mock.delay.assert_called_once_with(pod)
+        self.assertEqual(pod.status, POD_STATUSES.preparing)
 
-        self.test_pod.containers[0]['ports'] = saved_ports
-
-    @mock.patch.object(podcollection.PodCollection, '_get_replicationcontroller')
-    @mock.patch.object(podcollection.PodCollection, '_post')
-    @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_normal_second_start(self, mk_ns, post_, mk_get_rc):
+    @mock.patch.object(podcollection, 'send_pod_status_update')
+    @mock.patch.object(podcollection, 'run_service')
+    @mock.patch.object(podcollection, 'DBPod')
+    @mock.patch.object(podcollection, 'get_replicationcontroller')
+    @mock.patch.object(podcollection.KubeQuery, 'post')
+    def test_pod_prepare_and_run_task_second_start(
+            self, post_, mk_get_rc, dbpod_mock, run_service_mock,
+            send_pod_status_update_mock):
         """
         Test second _start_pod in usual case
         :type post_: mock.Mock
@@ -640,19 +532,24 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             return_value={'volumes': [], 'service': self.test_service_name})
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
-        self.pod_collection._run_service.reset_mock()
+        dbpod = mock.Mock()
+        dbpod_mock.query.get.return_value = dbpod
+        dbpod.get_dbconfig.return_value = {
+            'volumes': [], 'service': self.test_service_name
+        }
 
         # Actual call
-        res = self.pod_collection._start_pod(self.test_pod)
+        res = podcollection.prepare_and_run_pod_task(self.test_pod)
 
-        mk_ns.assert_called_once_with(self.test_pod.namespace)
-        self.test_pod.get_config.assert_called_once_with()
-        self.assertEquals(self.pod_collection._run_service.called, False)
+        dbpod.get_dbconfig.assert_called_once_with()
+        self.assertFalse(run_service_mock.called)
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
         self._check_status(res, POD_STATUSES.pending)
+        send_pod_status_update_mock.assert_called_once_with(
+            POD_STATUSES.pending, dbpod, 'MODIFIED')
 
     def test_needs_public_ip(self):
         test_conf = {
@@ -703,12 +600,11 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         # Actual call
         res = self.pod_collection._stop_pod(pod)
 
-        self.assertEquals(pod.status, POD_STATUSES.stopped)
+        pod.set_status.assert_called_once_with(POD_STATUSES.stopped)
         mk_scale_rc.assert_called_once_with((pod.id,))
 
         free_pd_mock.assert_called_once_with(pod.id)
 
-        self.assertEqual(pod.status, POD_STATUSES.stopped)
         self.assertEqual(pod.containers[0]['state'], POD_STATUSES.stopped)
         self.assertEqual(res, pod.as_dict.return_value)
 
@@ -750,7 +646,8 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
         containers = [
             {'image': 'wncm/test_image:4', 'name': 'a', 'args': ['nginx'],
              'secret': {'username': secrets[0][0], 'password': secrets[0][1]}},
-            {'image': 'quay.io/wncm/test_image', 'name': 'b', 'args': ['nginx'],
+            {'image': 'quay.io/wncm/test_image',
+             'name': 'b', 'args': ['nginx'],
              'secret': {'username': secrets[1][0], 'password': secrets[1][1]}},
         ]
         params = dict(self.params, containers=containers)
@@ -976,9 +873,12 @@ class TestPodCollectionDoContainerAction(unittest.TestCase, TestCaseMixin):
 class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
     def setUp(self):
         # mock all these methods to prevent any accidental calls
+        def _init_podcollection(self, owner=None):
+            self.owner = owner
+            self.k8squery = podcollection.KubeQuery()
         self.mock_methods(
             podcollection.PodCollection, '_get_namespaces', '_merge',
-            __init__=lambda self, owner=None: setattr(self, 'owner', owner)
+            __init__=_init_podcollection
         )
 
         U = type('User', (), {'username': '4u5hfee'})
@@ -993,7 +893,7 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
         pod.namespace = str(uuid4())
         return pod
 
-    @mock.patch.object(podcollection.PodCollection, '_get')
+    @mock.patch.object(podcollection.KubeQuery, 'get')
     def test_many_namespace_provided(self, get_mock):
         """
         Test that _get_pods generates right api calls
@@ -1012,7 +912,7 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
         ])
 
     @mock.patch('kubedock.kapi.podcollection.Pod')
-    @mock.patch.object(podcollection.PodCollection, '_get')
+    @mock.patch.object(podcollection.KubeQuery, 'get')
     def test_replication(self, get_mock, PodMock):
         """
         If replication controller manages more then one pod,
@@ -1047,7 +947,7 @@ class TestPodCollectionGetPods(unittest.TestCase, TestCaseMixin):
                               [('pod1', namespace), ('pod2', namespace)])
 
     @mock.patch('kubedock.kapi.podcollection.Pod')
-    @mock.patch.object(podcollection.PodCollection, '_get')
+    @mock.patch.object(podcollection.KubeQuery, 'get')
     def test_pods_metadata(self, get_mock, PodMock):
         """
         Pods in the resulting collection must be populated with metadata,
@@ -1138,7 +1038,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
             pod_model_instances.append(pod_model_instance)
         return pod_model_instances
 
-    @mock.patch.object(podcollection.PodCollection, '_fetch_pods')
+    @mock.patch.object(podcollection.helpers, 'fetch_pods')
     def test_pods_fetched(self, fetch_pods_mock):
         """ _merge will fetch pods from db """
         fetch_pods_mock.return_value = []
@@ -1148,7 +1048,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
         fetch_pods_mock.assert_called_once_with(users=True)
 
     @mock.patch('kubedock.kapi.podcollection.Pod')
-    @mock.patch.object(podcollection.PodCollection, '_fetch_pods')
+    @mock.patch.object(podcollection.helpers, 'fetch_pods')
     def test_pods_in_db_only(self, fetch_pods_mock, pod_mock):
         """ If pod exists in db only, then _forge_dockers and add in
         _collection """
@@ -1183,8 +1083,8 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
             ((pod.id, pod.namespace) for pod in pod_model_instances)
         )
 
-    @mock.patch.object(podcollection.PodCollection, 'merge_lists')
-    @mock.patch.object(podcollection.PodCollection, '_fetch_pods')
+    @mock.patch.object(podcollection.podutils, 'merge_lists')
+    @mock.patch.object(podcollection.helpers, 'fetch_pods')
     def test_pods_in_db_and_kubernetes(self, fetch_pods_mock,
                                        merge_lists_mock):
         """ If pod exists in db and kubernetes, then merge """
@@ -1231,7 +1131,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         U = type('User', (), {'username': '4u5hfee'})
         self.user = U()
 
-    @mock.patch.object(podcollection.PodCollection, '_raise')
+    @mock.patch.object(podcollection.podutils, 'raise_')
     def test_enough_kubes(self, raise_mock):
         """ user is trial and have enough kubes for a new pod """
         self.user.is_trial = lambda: True
@@ -1240,7 +1140,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         podcollection.PodCollection(self.user)._check_trial(pod)
         self.assertFalse(raise_mock.called)
 
-    @mock.patch.object(podcollection.PodCollection, '_raise')
+    @mock.patch.object(podcollection.podutils, 'raise_')
     def test_not_enough_kubes(self, raise_mock):
         """ user is trial and don't have enough kubes for a new pod """
         self.user.is_trial = lambda: True
@@ -1249,7 +1149,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         podcollection.PodCollection(self.user)._check_trial(pod)
         raise_mock.assert_called_once_with(mock.ANY)
 
-    @mock.patch.object(podcollection.PodCollection, '_raise')
+    @mock.patch.object(podcollection.podutils, 'raise_')
     def test_user_is_not_trial(self, raise_mock):
         self.user.is_trial = lambda: False
         self.user.kubes = 5
@@ -1267,7 +1167,7 @@ class TestPodCollectionGetSecrets(unittest.TestCase, TestCaseMixin):
         U = type('User', (), {'username': 'oergjh'})
         self.pod_collection = podcollection.PodCollection(U())
 
-    @mock.patch.object(podcollection.PodCollection, '_get')
+    @mock.patch.object(podcollection.KubeQuery, 'get')
     def test_get_secrets(self, get_mock):
         """Get secrets from kubernetes"""
         pod = fake_pod(id=str(uuid4()), secrets=('secret-1', 'secret-2'),
@@ -1288,7 +1188,7 @@ class TestPodCollectionGetSecrets(unittest.TestCase, TestCaseMixin):
         self.assertEqual(secrets, {'secret-1': (username, password, registry),
                                    'secret-2': (username, password, registry)})
 
-    @mock.patch.object(podcollection.PodCollection, '_get')
+    @mock.patch.object(podcollection.KubeQuery, 'get')
     def test_secret_not_found(self, get_mock):
         """
         If secret was not found in kubernetes,
@@ -1340,7 +1240,8 @@ class TestPodCollectionCheckUpdates(unittest.TestCase, TestCaseMixin):
                           get_by_id_mock):
         """Request secrets from kubernetes, format and pass to get_id"""
         Image = podcollection.Image
-        image, image_id, container_id = 'nginx', 'ceab60537ad2d', 'oduhrg94her4'
+        image, image_id, container_id = (
+            'nginx', 'ceab60537ad2d', 'oduhrg94her4')
 
         secrets_full = {'secret-1': ('user1', 'password', 'regist.ry'),
                         'secret-2': ('user2', 'p-0', 'quay.io')}
@@ -1492,7 +1393,8 @@ class TestPodComposePersistent(DBTestCase):
             {'name': 'vol-2', 'persistentDisk': {'pdName': 'wncm',
                                                  'pdSize': 5}},
             {'name': 'vol-3', 'persistentDisk': {'pdName': 'default-1'}},
-            {'name': 'vol-4', 'persistentDisk': {'pdName': 'present-2', 'pdSize': 2}},
+            {'name': 'vol-4', 'persistentDisk': {'pdName': 'present-2',
+                                                 'pdSize': 2}},
         ]
         volumes_public = [
             {'name': 'vol-1', 'localStorage': True},
@@ -1531,13 +1433,15 @@ class TestPodCollectionChangePodConfig(TestCase, TestCaseMixin):
             sid='some-id',
         )
 
-    @mock.patch.object(podcollection.PodCollection, '_raise_if_failure')
-    @mock.patch.object(podcollection.PodCollection, 'replace_config')
-    @mock.patch.object(podcollection.PodCollection, '_put')
+    @mock.patch.object(podcollection.helpers, 'get_pod_config')
+    @mock.patch.object(podcollection.podutils, 'raise_if_failure')
+    @mock.patch.object(podcollection.helpers, 'replace_pod_config')
+    @mock.patch.object(podcollection.KubeQuery, 'put')
     @mock.patch.object(podcollection.PodCollection, '_get_by_id')
-    def test_pin_pod_to_node(self, get_by_id, put, rep_config, raise_fail):
+    def test_pin_pod_to_node(self, get_by_id, put, rep_config, raise_fail,
+                             get_pod_config_mock):
         get_by_id.return_value = self.test_pod
-        self.test_pod.get_config = mock.Mock(return_value={'node': None})
+        get_pod_config_mock.return_value = {'node': None}
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
 
         # Actual call
@@ -1546,7 +1450,7 @@ class TestPodCollectionChangePodConfig(TestCase, TestCaseMixin):
             {'node': self.node},
         )
 
-        self.assertTrue(self.test_pod.get_config.called)
+        get_pod_config_mock.assert_called_once_with(self.test_pod.id)
         rep_config.assert_called_once_with(self.test_pod, {'node': self.node})
         get_by_id.assert_called_once_with(self.test_pod.id)
         self.assertTrue(self.test_pod.prepare.called)

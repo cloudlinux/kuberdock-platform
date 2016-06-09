@@ -7,12 +7,12 @@ from base64 import urlsafe_b64encode, urlsafe_b64decode
 from collections import defaultdict
 from flask import current_app
 
-from . import pd_utils
 from .pod import Pod
 from .images import Image
 from .pstorage import (get_storage_class_by_volume_info, get_storage_class,
                        delete_drive_by_id)
-from .helpers import KubeQuery, ModelQuery, Utilities
+from .helpers import KubeQuery
+from . import helpers
 from .licensing import is_valid as license_valid
 from ..core import db
 from ..billing import repr_limits
@@ -22,9 +22,14 @@ from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..usage.models import IpState
 from ..system_settings.models import SystemSettings
-from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user, retry
+from ..utils import (
+    POD_STATUSES, atomic, update_dict, send_pod_status_update,
+    send_event_to_user, retry)
 from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
+from . import podutils
+
+
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
 
@@ -34,7 +39,8 @@ def get_user_namespaces(user):
 
 
 class NoFreeIPs(APIError):
-    message = 'There are no free public IP-addresses, contact KuberDock administrator'
+    message = 'There are no free public IP-addresses, '\
+              'contact KuberDock administrator'
 
 
 class PodNotFound(APIError):
@@ -42,7 +48,7 @@ class PodNotFound(APIError):
     status_code = 404
 
 
-class PodCollection(KubeQuery, ModelQuery, Utilities):
+class PodCollection(object):
 
     def __init__(self, owner=None):
         """
@@ -53,6 +59,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         # name of pod in replication controller.
         self.pod_names = None
         self.owner = owner
+        self.k8squery = KubeQuery()
         namespaces = self._get_namespaces()
         self._get_pods(namespaces)
         self._merge()
@@ -115,12 +122,15 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return pod.as_dict()
 
     def get(self, pod_id=None, as_json=True):
+        owner_id = None
+        if self.owner is not None:
+            owner_id = self.owner.id
         if pod_id is None:
             if self.owner is None:
                 pods = [p.as_dict() for p in self._collection.values()]
             else:
                 pods = [p.as_dict() for p in self._collection.values()
-                        if getattr(p, 'owner', '') == self.owner]
+                        if p.owner.id == owner_id]
         else:
             pods = self._get_by_id(pod_id).as_dict()
         if as_json:
@@ -135,7 +145,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             else:
                 pod = (p for p in self._collection.values()
                        if p.id == pod_id and
-                       getattr(p, 'owner', '') == self.owner).next()
+                       p.owner.id == self.owner.id).next()
         except StopIteration:
             raise PodNotFound()
         return pod
@@ -292,28 +302,30 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         }
         if command in dispatcher:
             return dispatcher[command](pod, data)
-        self._raise("Unknown command")
+        podutils.raise_("Unknown command")
 
     def delete(self, pod_id, force=False):
         pod = self._get_by_id(pod_id)
         if pod.owner.username == KUBERDOCK_INTERNAL_USER and not force:
-            self._raise('Service pod cannot be removed', 400)
+            podutils.raise_('Service pod cannot be removed', 400)
 
         DBPod.query.get(pod_id).mark_as_deleting()
 
         PersistentDisk.free(pod.id)
         # we remove service also manually
-        service_name = pod.get_config('service')
+        service_name = helpers.get_pod_config(pod.id, 'service')
         if service_name:
-            rv = self._del(['services', service_name], ns=pod.namespace)
-            self._raise_if_failure(rv, "Could not remove a service")
+            rv = self.k8squery.delete(
+                ['services', service_name], ns=pod.namespace
+            )
+            podutils.raise_if_failure(rv, "Could not remove a service")
 
         if hasattr(pod, 'public_ip'):
             self._remove_public_ip(pod_id=pod_id)
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
         self._drop_namespace(pod.namespace)
-        self._mark_pod_as_deleted(pod_id)
+        helpers.mark_pod_as_deleted(pod_id)
 
     def check_updates(self, pod_id, container_name):
         """
@@ -356,8 +368,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 "kind": "Namespace",
                 "apiVersion": KUBE_API_VERSION,
                 "metadata": {"name": namespace}}
-            rv = self._post(['namespaces'], json.dumps(config), rest=True,
-                            ns=False)
+            rv = self.k8squery.post(
+                ['namespaces'], json.dumps(config), rest=True, ns=False)
             # TODO where raise ?
             # current_app.logger.debug(rv)
 
@@ -379,8 +391,8 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                   'data': {'.dockercfg': secret},
                   'type': 'kubernetes.io/dockercfg'}
 
-        rv = self._post(['secrets'], json.dumps(config), rest=True,
-                        ns=namespace)
+        rv = self.k8squery.post(['secrets'], json.dumps(config), rest=True,
+                                ns=namespace)
         if rv['kind'] == 'Status' and rv['status'] == 'Failure':
             raise APIError(rv['message'])
         return name
@@ -394,7 +406,7 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         """
         secrets = {}
         for secret in pod.secrets:
-            rv = self._get(['secrets', secret], ns=pod.namespace)
+            rv = self.k8squery.get(['secrets', secret], ns=pod.namespace)
             if rv['kind'] == 'Status':
                 raise APIError(rv['message'])
             dockercfg = json.loads(urlsafe_b64decode(
@@ -410,19 +422,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 secrets[secret] = (username, password, registry)
         return secrets
 
-    def _get_replicationcontroller(self, namespace, name):
-        rc = self._get(['replicationcontrollers', name], ns=namespace)
-        self._raise_if_failure(rc, "Couldn't find Replication Controller")
-        return rc
-
     def _get_namespace(self, namespace):
-        data = self._get(ns=namespace)
+        data = self.k8squery.get(ns=namespace)
         if data.get('code') == 404:
             return None
         return data
 
     def _get_namespaces(self):
-        data = self._get(['namespaces'], ns=False)
+        data = self.k8squery.get(['namespaces'], ns=False)
         namespaces = [i['metadata']['name'] for i in data.get('items', {})]
         if self.owner is None:
             return namespaces
@@ -430,15 +437,15 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         return [ns for ns in namespaces if ns in user_namespaces]
 
     def _drop_namespace(self, namespace):
-        rv = self._del(['namespaces', namespace], ns=False)
-        self._raise_if_failure(rv, "Cannot delete namespace '{}'".format(
+        rv = self.k8squery.delete(['namespaces', namespace], ns=False)
+        podutils.raise_if_failure(rv, "Cannot delete namespace '{}'".format(
             namespace))
         return rv
 
     def _get_replicas(self, name=None):
         # TODO: apply namespaces here
         replicas = []
-        data = self._get(['replicationControllers'])
+        data = self.k8squery.get(['replicationControllers'])
 
         for item in data['items']:
             try:
@@ -468,13 +475,14 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         if namespaces:
             for namespace in namespaces:
-                data.extend(self._get(['pods'], ns=namespace)['items'])
-                replicas = self._get(['replicationcontrollers'], ns=namespace)
+                data.extend(self.k8squery.get(['pods'], ns=namespace)['items'])
+                replicas = self.k8squery.get(
+                    ['replicationcontrollers'], ns=namespace)
                 replicas_data.extend(replicas['items'])
         else:
-            pods = self._get(['pods'])
+            pods = self.k8squery.get(['pods'])
             data.extend(pods.get('items', {}))
-            replicas = self._get(['replicationcontrollers'])
+            replicas = self.k8squery.get(['replicationcontrollers'])
             replicas_data.extend(replicas.get('items', {}))
 
         pod_names = defaultdict(set)
@@ -503,11 +511,6 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
 
         self.pod_names = pod_names
 
-    @staticmethod
-    def format_lbservice_name(pod_id):
-        """Format name of service for LoadBalancer from pod id"""
-        return "{}-lbservice".format(pod_id[:54])
-
     def check_public_address(self, pod):
         """Check if public address not set and try to get it from
         services. Update public address if found one.
@@ -515,38 +518,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         if AWS:
             if getattr(pod, 'public_aws', UNKNOWN_ADDRESS) == UNKNOWN_ADDRESS:
                 label_selector = 'name={}'.format(
-                    self.format_lbservice_name(pod.id))
-                services_list = self._get(['services'],
-                                          {'labelSelector': label_selector},
-                                          ns=pod.namespace)
+                    format_lbservice_name(pod.id))
+                services_list = self.k8squery.get(
+                    ['services'], {'labelSelector': label_selector},
+                    ns=pod.namespace
+                )
                 services = services_list['items']
                 for service in services:
                     # For now, we just pick first service in list
                     # (it must be only one for AWS)
-                    hostname = self.update_public_address(service, pod.id)
+                    hostname = update_public_address(service, pod.id)
                     if hostname:
                         break
 
-    @staticmethod
-    def update_public_address(service, pod_id, send=False):
-        """Try to get public address from service and if found update in DB
-        and send event
-        """
-        if service['spec']['type'] == 'LoadBalancer':
-            ingress = service['status']['loadBalancer'].get('ingress', [])
-            if ingress and 'hostname' in ingress[0]:
-                hostname = ingress[0]['hostname']
-                pod = DBPod.query.get(pod_id)
-                conf = pod.get_dbconfig()
-                conf['public_aws'] = hostname
-                pod.set_dbconfig(conf)
-                if send:
-                    send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
-                return hostname
-
     def _merge(self):
-        """ Merge pods retrieved from kubernates api with data from DB """
-        db_pods = self._fetch_pods(users=True)
+        """ Merge pods retrieved from kubernetes api with data from DB """
+        db_pods = helpers.fetch_pods(users=True)
         for db_pod in db_pods:
             db_pod_config = json.loads(db_pod.config)
             namespace = db_pod.namespace
@@ -575,11 +562,11 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 a = pod.containers
                 b = db_pod_config.get('containers')
                 restore_fake_volume_mounts(a, b)
-                pod.containers = self.merge_lists(a, b, 'name')
+                pod.containers = podutils.merge_lists(a, b, 'name')
                 restore_containers_host_ports_config(pod.containers, b)
 
             pod.name = db_pod.name
-            pod.owner = db_pod.owner
+            pod.set_owner(db_pod.owner)
             pod.template_id = template_id
             pod.kube_type = db_pod.kube_id
 
@@ -598,118 +585,32 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 container['limits'] = repr_limits(container['kubes'],
                                                   pod.kube_type)
 
-    def ingress_public_ports(self, pod_id, namespace, ports):
-        """Ingress public ports with cloudprovider specific methods
-        """
-        if AWS and ports:
-            conf = {
-                'kind': 'Service',
-                'apiVersion': KUBE_API_VERSION,
-                'metadata': {
-                    'generateName': 'lbservice-',
-                    'labels': {'name': self.format_lbservice_name(pod_id)},
-                },
-                'spec': {
-                    'selector': {'kuberdock-pod-uid': pod_id},
-                    'ports': ports,
-                    'type': 'LoadBalancer',
-                    'sessionAffinity': 'None'
-                }
-            }
-            data = json.dumps(conf)
-            rv = self._post(['services'], data, rest=True, ns=namespace)
-            self._raise_if_failure(rv, "Could not ingress public ports")
-
-    def _run_service(self, pod):
-        ports = []
-        public_ports = []
-        for ci, c in enumerate(getattr(pod, 'containers', [])):
-            for pi, p in enumerate(c.get('ports', [])):
-                host_port = p.get('hostPort', None) or p.get('containerPort')
-                port_name = 'c{0}-p{1}'.format(ci, pi)
-                ports.append({
-                    "name": port_name,
-                    "port": host_port,
-                    "protocol": p.get('protocol', 'TCP').upper(),
-                    "targetPort": p.get('containerPort')})
-                if p.get('isPublic', False):
-                    public_ports.append({
-                        "name": port_name,
-                        "port": host_port,
-                        "protocol": p.get('protocol', 'TCP').upper(),
-                        "targetPort": p.get('containerPort')})
-        conf = {
-            'kind': 'Service',
-            'apiVersion': KUBE_API_VERSION,
-            'metadata': {
-                'generateName': 'service-',
-                'labels': {'name': pod.id[:54] + '-service'},
-            },
-            'spec': {
-                'selector': {'kuberdock-pod-uid': pod.id},
-                'ports': ports,
-                'type': 'ClusterIP',
-                'sessionAffinity': 'None'   # may be ClientIP is better
-            }
-        }
-        if hasattr(pod, 'podIP') and pod.podIP:
-            conf['spec']['clusterIP'] = pod.podIP
-        self.ingress_public_ports(pod.id, pod.namespace, public_ports)
-        data = json.dumps(conf)
-        return self._post(['services'], data, rest=True, ns=pod.namespace)
-
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now
         number = int(data.get('replicas', getattr(pod, 'replicas', 0)))
         replicas = self._get_replicas(pod.id)
         # TODO check replica numbers and compare to ones set in config
         for replica in replicas:
-            rv = self._put(
+            rv = self.k8squery.put(
                 ['replicationControllers', replica.get('id', '')],
                 json.loads({'desiredState': {'replicas': number}}))
-            self._raise_if_failure(rv, "Could not resize a replica")
+            podutils.raise_if_failure(rv, "Could not resize a replica")
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
         if pod.status == POD_STATUSES.unpaid:
             raise APIError("Pod is unpaid, we can't run it")
-        if pod.status in (POD_STATUSES.running, POD_STATUSES.pending):
+        if pod.status in (POD_STATUSES.running, POD_STATUSES.pending,
+                          POD_STATUSES.preparing):
             raise APIError("Pod is not stopped, we can't run it")
         if pod.status == POD_STATUSES.succeeded or \
            pod.status == POD_STATUSES.failed:
             self._stop_pod(pod, block=True)
         self._make_namespace(pod.namespace)
-        db_config = pod.get_config()
 
-        self._process_persistent_volumes(pod, db_config.get('volumes', []))
+        pod.set_status(POD_STATUSES.preparing)
 
-        if not db_config.get('service'):
-            for c in pod.containers:
-                if len(c.get('ports', [])) > 0:
-                    service_rv = self._run_service(pod)
-                    self._raise_if_failure(service_rv,
-                                           "Could not start a service")
-                    db_config['service'] = service_rv['metadata']['name']
-                    db_config['podIP'] = service_rv['spec']['clusterIP']
-                    break
-
-        self.replace_config(pod, db_config)
-
-        config = pod.prepare()
-        try:
-            self._get_replicationcontroller(pod.namespace, pod.sid)
-            rc = self._put(['replicationcontrollers', pod.sid],
-                           json.dumps(config), ns=pod.namespace, rest=True)
-        except APIError:
-            rc = self._post(['replicationcontrollers'],
-                            json.dumps(config), ns=pod.namespace, rest=True)
-            self._raise_if_failure(rc, "Could not start '{0}' pod".format(
-                pod.name.encode('ascii', 'replace')))
-
-        for container in pod.containers:
-            # TODO: create CONTAINER_STATUSES
-            container['state'] = POD_STATUSES.pending
-        pod.status = POD_STATUSES.pending
+        prepare_and_run_pod_task.delay(pod)
         return pod.as_dict()
 
     def _stop_pod(self, pod, data=None, raise_=True, block=False):
@@ -727,23 +628,25 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
                 for container in pod.containers:
                     # TODO: create CONTAINER_STATUSES
                     container['state'] = POD_STATUSES.stopped
-                pod.status = POD_STATUSES.stopped
+                pod.set_status(POD_STATUSES.stopped)
                 return pod.as_dict()
         elif raise_:
             raise APIError('Pod is already stopped')
 
     def _change_pod_config(self, pod, data):
-        db_config = pod.get_config()
+        db_config = helpers.get_pod_config(pod.id)
         update_dict(db_config, data)
-        self.replace_config(pod, db_config)
+        helpers.replace_pod_config(pod, db_config)
 
         # get pod again after change
         pod = PodCollection()._get_by_id(pod.id)
 
         config = pod.prepare()
-        rv = self._put(['replicationcontrollers', pod.sid], json.dumps(config),
-                       rest=True, ns=pod.namespace)
-        self._raise_if_failure(rv, "Could not change '{0}' pod".format(
+        rv = self.k8squery.put(
+            ['replicationcontrollers', pod.sid], json.dumps(config),
+            rest=True, ns=pod.namespace
+        )
+        podutils.raise_if_failure(rv, "Could not change '{0}' pod".format(
             pod.name.encode('ascii', 'replace')))
 
         return pod.as_dict()
@@ -762,19 +665,22 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
         """
         pod = PodCollection()._get_by_id(pod_id)
         rcdata = json.dumps({'spec': {'template': data}})
-        rv = self._patch(['replicationcontrollers', pod.sid], rcdata,
-                         rest=True, ns=pod.namespace,
-                         replace_lists=replace_lists)
-        self._raise_if_failure(rv, "Could not change '{0}' pod RC".format(
+        rv = self.k8squery.patch(['replicationcontrollers', pod.sid], rcdata,
+                                 rest=True, ns=pod.namespace,
+                                 replace_lists=replace_lists)
+        podutils.raise_if_failure(rv, "Could not change '{0}' pod RC".format(
             pod.name.encode('ascii', 'replace')))
         # Delete running pods, so the RC will create new pods with updated
         # spec.
         if restart:
             names = self.pod_names.get((pod_id, pod.namespace), [])
             for name in names:
-                rv = self._del(['pods', name], ns=pod.namespace)
-                self._raise_if_failure(rv, "Could not change '{0}' pod".format(
-                    pod.name.encode('ascii', 'replace')))
+                rv = self.k8squery.delete(['pods', name], ns=pod.namespace)
+                podutils.raise_if_failure(
+                    rv,
+                    "Could not change '{0}' pod".format(
+                        pod.name.encode('ascii', 'replace'))
+                )
         pod = PodCollection()._get_by_id(pod_id)
         return pod.as_dict()
 
@@ -802,90 +708,12 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
     #         command = 'docker {0} {1}'.format(action, container)
     #         status, message = run_ssh_command(host, command)
     #         if status != 0:
-    #             self._raise('Docker error: {0} ({1}).'.format(
+    #             podutils.raise_('Docker error: {0} ({1}).'.format(
     #               message, status))
     #         if action in ('start', 'stop'):
     #             send_event('pull_pod_state', message)
     #         rv[container] = message or 'OK'
     #     return rv
-
-    @staticmethod
-    def _process_persistent_volumes(pod, volumes):
-        """
-        Processes preliminary persistent volume routines (create, attach, mkfs)
-        :param pod: object -> a Pod instance
-        :param volumes: list -> list of volumes
-        """
-        # extract PDs from volumes
-        drives = {}
-        for v in volumes:
-            storage_cls = get_storage_class_by_volume_info(v)
-            if storage_cls is None:
-                continue
-            storage = storage_cls()
-            info = storage.extract_volume_info(v)
-            drive_name = info.get('drive_name')
-            if drive_name is None:
-                raise APIError("Got no drive name")
-
-            persistent_disk = PersistentDisk.filter_by(
-                drive_name=drive_name
-            ).first()
-            if persistent_disk is None:
-                raise APIError('Persistent Disk {0} not found'.format(
-                                    drive_name),
-                               404)
-            drives[drive_name] = (storage, persistent_disk)
-            if persistent_disk.state == PersistentDiskStatuses.TODELETE:
-                # This status means that the drive is in deleting process now.
-                # We can't be sure that drive exists or has been deleted at the
-                # moment of starting pod.
-                raise APIError(
-                    'Persistent drive "{}" is deleting now. '
-                    'Wait some time and try again later'.format(
-                        persistent_disk.name
-                    )
-                )
-            if persistent_disk.state != PersistentDiskStatuses.CREATED:
-                persistent_disk.state = PersistentDiskStatuses.PENDING
-        if not drives:
-            return
-
-        # check that pod can use all of them
-        now_taken, taken_by_another_pod = PersistentDisk.take(
-            pod.id, drives.keys()
-        )
-        # Flag points that persistent drives, binded on previous step, must be
-        # unbind before exit.
-        free_on_exit = False
-        try:
-            if taken_by_another_pod:
-                free_on_exit = True
-                raise APIError(
-                    u'For now two pods cannot share one Persistent Disk. '
-                    u'{0}. Stop these pods before starting this one.'
-                    .format('; '.join('PD: {0}, Pod: {1}'.format(
-                        item.name, item.pod.name)
-                            for item in taken_by_another_pod
-                        )
-                    )
-                )
-
-            # prepare drives
-            try:
-                for drive_name, (storage,
-                                 persistent_disk) in drives.iteritems():
-                    storage.create(persistent_disk)
-                    vid = storage.makefs(persistent_disk)
-                    persistent_disk.state = PersistentDiskStatuses.CREATED
-                    pod._update_volume_path(v['name'], vid)
-            except:
-                # free already taken drives in case of exception
-                free_on_exit = True
-                raise
-        finally:
-            if free_on_exit and now_taken:
-                PersistentDisk.free_drives([d.drive_name for d in now_taken])
 
     # def _container_start(self, pod, data):
     #     self._do_container_action('start', data)
@@ -917,8 +745,10 @@ class PodCollection(KubeQuery, ModelQuery, Utilities):
             kubes_left = TRIAL_KUBES - user_kubes
             pod_kubes = sum(c['kubes'] for c in params['containers'])
             if pod_kubes > kubes_left:
-                self._raise('Trial User limit is exceeded. '
-                            'Kubes available for you: {0}'.format(kubes_left))
+                podutils.raise_(
+                    'Trial User limit is exceeded. '
+                    'Kubes available for you: {0}'.format(kubes_left)
+                )
 
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
@@ -938,17 +768,17 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
 def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
     pc = PodCollection()
     pod = pc._get_by_id(pod_id)
-    rc = pc._get_replicationcontroller(pod.namespace, pod.sid)
+    rc = get_replicationcontroller(pod.namespace, pod.sid)
     rc['spec']['replicas'] = size
-    rc = pc._put(['replicationcontrollers',
-                  pod.sid], json.dumps(rc), ns=pod.namespace, rest=True)
-    pc._raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
-    retry = 0
-    while rc['status']['replicas'] != size and retry < max_retries:
-        retry += 1
-        rc = pc._get_replicationcontroller(pod.namespace, pod.sid)
+    rc = pc.k8squery.put(['replicationcontrollers', pod.sid],
+                         json.dumps(rc), ns=pod.namespace, rest=True)
+    podutils.raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
+    retry_count = 0
+    while rc['status']['replicas'] != size and retry_count < max_retries:
+        retry_count += 1
+        rc = get_replicationcontroller(pod.namespace, pod.sid)
         time.sleep(interval)
-    if retry >= max_retries:
+    if retry_count >= max_retries:
         current_app.logger.error("Can't scale rc: max retries exceeded")
 
 
@@ -1071,3 +901,220 @@ def fix_relative_mount_paths(containers):
         for mount in container.get('volumeMounts') or []:
             mount['mountPath'] = path.abspath(
                 path.join('/', mount['mountPath']))
+
+
+@celery.task(ignore_results=True)
+def prepare_and_run_pod_task(pod):
+    db_pod = DBPod.query.get(pod.id)
+    db_config = db_pod.get_dbconfig()
+    try:
+        _process_persistent_volumes(pod, db_config.get('volumes', []))
+
+        if not db_config.get('service'):
+            for c in pod.containers:
+                if len(c.get('ports', [])) > 0:
+                    service_rv = run_service(pod)
+                    podutils.raise_if_failure(service_rv,
+                                              "Could not start a service")
+                    db_config['service'] = service_rv['metadata']['name']
+                    db_config['podIP'] = service_rv['spec']['clusterIP']
+                    break
+
+        helpers.replace_pod_config(pod, db_config)
+
+        config = pod.prepare()
+        k8squery = KubeQuery()
+        try:
+            get_replicationcontroller(pod.namespace, pod.sid)
+            rc = k8squery.put(['replicationcontrollers', pod.sid],
+                              json.dumps(config), ns=pod.namespace, rest=True)
+        except APIError:
+            rc = k8squery.post(['replicationcontrollers'],
+                               json.dumps(config), ns=pod.namespace, rest=True)
+            podutils.raise_if_failure(
+                rc,
+                "Could not start '{0}' pod".format(
+                    pod.name.encode('ascii', 'replace')
+                )
+            )
+
+        for container in pod.containers:
+            # TODO: create CONTAINER_STATUSES
+            container['state'] = POD_STATUSES.pending
+    except Exception as err:
+        if isinstance(err, APIError):
+            send_event_to_user('notify:error', {'message': err.message},
+                               db_pod.owner_id)
+        pod.set_status(POD_STATUSES.stopped)
+        send_pod_status_update(pod.status, db_pod, 'DELETED')
+        raise
+    pod.status = POD_STATUSES.pending
+    send_pod_status_update(pod.status, db_pod, 'MODIFIED')
+    return pod.as_dict()
+
+
+def run_service(pod):
+    ports = []
+    public_ports = []
+    for ci, c in enumerate(getattr(pod, 'containers', [])):
+        for pi, p in enumerate(c.get('ports', [])):
+            host_port = p.get('hostPort', None) or p.get('containerPort')
+            port_name = 'c{0}-p{1}'.format(ci, pi)
+            ports.append({
+                "name": port_name,
+                "port": host_port,
+                "protocol": p.get('protocol', 'TCP').upper(),
+                "targetPort": p.get('containerPort')})
+            if p.get('ispublic', False):
+                public_ports.append({
+                    "name": port_name,
+                    "port": host_port,
+                    "protocol": p.get('protocol', 'tcp').upper(),
+                    "targetport": p.get('containerport')})
+    conf = {
+        'kind': 'Service',
+        'apiVersion': KUBE_API_VERSION,
+        'metadata': {
+            'generateName': 'service-',
+            'labels': {'name': pod.id[:54] + '-service'},
+        },
+        'spec': {
+            'selector': {'kuberdock-pod-uid': pod.id},
+            'ports': ports,
+            'type': 'ClusterIP',
+            'sessionAffinity': 'None'   # may be ClientIP is better
+        }
+    }
+    if hasattr(pod, 'podIP') and pod.podIP:
+        conf['spec']['clusterIP'] = pod.podIP
+    ingress_public_ports(pod.id, pod.namespace, public_ports)
+    data = json.dumps(conf)
+    return KubeQuery().post(['services'], data, rest=True, ns=pod.namespace)
+
+
+def ingress_public_ports(pod_id, namespace, ports):
+    """Ingress public ports with cloudprovider specific methods
+    """
+    if AWS and ports:
+        conf = {
+            'kind': 'Service',
+            'apiVersion': KUBE_API_VERSION,
+            'metadata': {
+                'generateName': 'lbservice-',
+                'labels': {'name': format_lbservice_name(pod_id)},
+            },
+            'spec': {
+                'selector': {'kuberdock-pod-uid': pod_id},
+                'ports': ports,
+                'type': 'LoadBalancer',
+                'sessionAffinity': 'None'
+            }
+        }
+        data = json.dumps(conf)
+        rv = KubeQuery().post(['services'], data, rest=True, ns=namespace)
+        podutils.raise_if_failure(rv, "Could not set ingress public ports")
+
+
+def format_lbservice_name(pod_id):
+    """Format name of service for LoadBalancer from pod id"""
+    return "{}-lbservice".format(pod_id[:54])
+
+
+def update_public_address(service, pod_id, send=False):
+    """Try to get public address from service and if found update in DB
+    and send event
+    """
+    if service['spec']['type'] == 'LoadBalancer':
+        ingress = service['status']['loadBalancer'].get('ingress', [])
+        if ingress and 'hostname' in ingress[0]:
+            hostname = ingress[0]['hostname']
+            pod = DBPod.query.get(pod_id)
+            conf = pod.get_dbconfig()
+            conf['public_aws'] = hostname
+            pod.set_dbconfig(conf)
+            if send:
+                send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
+            return hostname
+
+
+def _process_persistent_volumes(pod, volumes):
+    """
+    Processes preliminary persistent volume routines (create, attach, mkfs)
+    :param pod: object -> a Pod instance
+    :param volumes: list -> list of volumes
+    """
+    # extract PDs from volumes
+    drives = {}
+    for v in volumes:
+        storage_cls = get_storage_class_by_volume_info(v)
+        if storage_cls is None:
+            continue
+        storage = storage_cls()
+        info = storage.extract_volume_info(v)
+        drive_name = info.get('drive_name')
+        if drive_name is None:
+            raise APIError("Got no drive name")
+
+        persistent_disk = PersistentDisk.filter_by(
+            drive_name=drive_name
+        ).first()
+        if persistent_disk is None:
+            raise APIError('Persistent Disk {0} not found'.format(drive_name),
+                           404)
+        drives[drive_name] = (storage, persistent_disk, v['name'])
+        if persistent_disk.state == PersistentDiskStatuses.TODELETE:
+            # This status means that the drive is in deleting process now.
+            # We can't be sure that drive exists or has been deleted at the
+            # moment of starting pod.
+            raise APIError(
+                'Persistent drive "{}" is deleting now. '
+                'Wait some time and try again later'.format(
+                    persistent_disk.name
+                )
+            )
+        if persistent_disk.state != PersistentDiskStatuses.CREATED:
+            persistent_disk.state = PersistentDiskStatuses.PENDING
+    if not drives:
+        return
+
+    # check that pod can use all of them
+    now_taken, taken_by_another_pod = PersistentDisk.take(
+        pod.id, drives.keys()
+    )
+    # Flag points that persistent drives, binded on previous step, must be
+    # unbind before exit.
+    free_on_exit = False
+    try:
+        if taken_by_another_pod:
+            free_on_exit = True
+            raise APIError(
+                u'For now two pods cannot share one Persistent Disk. '
+                u'{0}. Stop these pods before starting this one.'
+                .format('; '.join('PD: {0}, Pod: {1}'.format(
+                                  item.name, item.pod.name)
+                        for item in taken_by_another_pod))
+            )
+
+        # prepare drives
+        try:
+            for drive_name, (storage,
+                             persistent_disk,
+                             pv_name) in drives.iteritems():
+                storage.create(persistent_disk)
+                vid = storage.makefs(persistent_disk)
+                persistent_disk.state = PersistentDiskStatuses.CREATED
+                pod._update_volume_path(pv_name, vid)
+        except:
+            # free already taken drives in case of exception
+            free_on_exit = True
+            pod.set_status(POD_STATUSES.stopped)
+            raise
+    finally:
+        if free_on_exit and now_taken:
+            PersistentDisk.free_drives(now_taken)
+
+
+def get_replicationcontroller(namespace, name):
+    rc = KubeQuery().get(['replicationcontrollers', name], ns=namespace)
+    podutils.raise_if_failure(rc, "Couldn't find Replication Controller")
+    return rc

@@ -1,0 +1,29 @@
+FROM centos:7
+
+RUN yum -y install epel-release && \
+    yum -y update && \
+    yum -y install ansible rsync wget git gcc make && \
+    wget https://releases.hashicorp.com/vagrant/1.8.1/vagrant_1.8.1_x86_64.rpm && \
+    yum -y localinstall vagrant_1.8.1_x86_64.rpm && \
+    vagrant plugin install vagrant-gatling-rsync && \
+    vagrant plugin install vagrant-rsync-back && \
+    wget https://github.com/histrio/opennebula-provider/releases/download/fog-1.0.1/opennebula-provider-1.0.1.gem && \
+    vagrant plugin install opennebula-provider-1.0.1.gem && \
+    yum clean all
+
+# Remove annoying "duplicated key at line 132 ignored: :nic" warning
+RUN sed -i '132d' /root/.vagrant.d/gems/gems/fog-1.38.0/lib/fog/opennebula/requests/compute/template_pool.rb
+
+# Workaround for https://github.com/mitchellh/vagrant/issues/6721 # TODO remove "gcc" and "make" rpms when fixed
+RUN cd /opt/vagrant/embedded/ && \
+    bin/gem install ffi && \
+    yes | cp lib/ruby/gems/2.2.0/extensions/x86_64-linux/2.2.0/ffi-1.9.10/ffi_c.so /opt/vagrant/embedded/gems/extensions/x86_64-linux/2.2.0/ffi-1.9.10/ffi_c.so
+
+
+# Rebuild & push with:
+# docker build -t lobur/dev-env:vX -f dev-utils/Dockerfile.dev-env --rm=true --no-cache=true --pull .
+# docker push lobur/dev-env:vX
+
+# Always bump X, including vagrant.sh file, this is needed to make sure
+# the new image gets pulled on Jenkins.
+# If you are not lobur use your own hub.docker.com account

@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -e
+
+# What works well here:
+# OpenNebula provider when run from Linux host (native docker)
+# OpenNebula provider when run from OSX host with password-less nebula ssh-key.
+
+# What does not work:
+# 1. It is always asking for a pass-phrase on OSX, due to
+# https://forums.docker.com/t/can-we-re-use-the-osx-ssh-agent-socket-in-a-container/8152/8
+# Workaround: use password-less ssh key for nebula.
+# 2. No VBox support. The only cross-platform way to make it is reverse-ssh:
+# http://stackoverflow.com/a/19364263/923620 which is shitty
+
+IMG=lobur/dev-env:v3
+
+if [ ! -d "dev-utils" ]
+then
+    echo "Must be run from AppCloud dir, like:"
+    echo "./dev-utils/vagrant <CMD>"
+    echo "or make an alias:"
+    echo "alias vag='dev-utils/vagrant'"
+    echo "or add dev-utils to PATH:"
+    echo "export PATH=dev-utils:$PATH"
+    exit 1
+fi
+
+bypass_env=$(cat dev-utils/dev-env/kd_cluster_settings.sample | fgrep export | sed 's/^.*export //' | awk -F'=' '{print $1}')
+bypass_env+="
+BUILD_CLUSTER
+KD_DEPLOY_SKIP
+KD_RETRY_FROM_LAST_FAIL
+KD_DEPLOY_DEBUG
+ANSIBLE_LOG_PATH
+"
+
+py_get_env_args="import sys, os;
+print ' '.join(['-e %s=%s' % (k,os.environ.get(k)) for k in sys.argv[1:] if os.environ.get(k)])"
+env_cluster_settings=$(python -c "$py_get_env_args" $bypass_env)
+
+SSH_KEY=${KD_ONE_PRIVATE_KEY:-"$HOME/.ssh/id_rsa"}
+DOT_FILES=${KD_DOT_FILES:-"$HOME"}
+HOOK=${KD_MASTER_HOOK:-""}
+
+if [ "$EUID" -eq 0 ]
+  then arg_priv="--privileged"
+  else arg_priv=""
+fi
+
+if [ -t 1 ] ;
+    then arg_tty="-it"
+    else arg_tty=""
+fi
+
+if [ -n "$SSH_AUTH_SOCK" ]
+  then
+    vol_auth_sock="-v $SSH_AUTH_SOCK:/root/auth_sock"
+    env_auth_sock="-e SSH_AUTH_SOCK=/root/auth_sock"
+  else
+    vol_auth_sock=""
+    env_auth_sock=""
+fi
+
+if [ -n "$HOOK" ]
+  then
+    vol_hook="-v $HOOK:/root/hook.sh"
+    env_hook="-e KD_MASTER_HOOK=/root/hook.sh"
+  else
+    vol_hook=""
+    env_hook=""
+fi
+
+docker run --rm $arg_tty $arg_priv \
+    -v $PWD:/AppCloud -w="/AppCloud" \
+    -v $SSH_KEY:/root/id_rsa \
+    $vol_auth_sock \
+    -v $DOT_FILES:/root/dotfiles \
+    $vol_hook \
+    $env_cluster_settings \
+    -e "KD_ONE_PRIVATE_KEY=/root/id_rsa" \
+    $env_auth_sock \
+    -e "KD_DOT_FILES=/root/dotfiles" \
+    $env_hook \
+    $IMG vagrant $@

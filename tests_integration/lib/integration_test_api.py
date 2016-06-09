@@ -24,7 +24,8 @@ LOG = logging.getLogger(__name__)
 
 
 class KDIntegrationTestAPI(object):
-    def __init__(self, override_envs=None, version='latest',
+    def __init__(self, override_envs=None,
+                 version='latest',
                  upgrade_to='latest'):
         """
         API client for interaction with kuberdock cluster
@@ -38,9 +39,14 @@ class KDIntegrationTestAPI(object):
         defaults = {"VAGRANT_CWD": "dev-utils/dev-env/", "KD_LICENSE": "patch"}
 
         env_vars = [
+            "DOCKER_TLS_VERIFY",
+            "DOCKER_HOST",
+            "DOCKER_CERT_PATH",
+            "DOCKER_MACHINE_NAME",
             "HOME",
             "PATH",
             "SSH_AUTH_SOCK",
+            "VAGRANT_DOTFILE_PATH",
             "KD_ONE_PRIVATE_KEY",
             "KD_ONE_USERNAME",
             "KD_ONE_PASSWORD",
@@ -52,7 +58,6 @@ class KDIntegrationTestAPI(object):
             "KD_CEPH_USER_KEYRING",
             "KD_PD_NAMESPACE",
             "KD_NONFLOATING_PUBLIC_IPS",
-            "VAGRANT_DOTFILE_PATH"
         ]
 
         if override_envs is None:
@@ -85,16 +90,25 @@ class KDIntegrationTestAPI(object):
             "node2": "kd_node2",
         }
         host = hosts[host]
-
         if host in self._ssh_connections:
             return self._ssh_connections[host]
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        if PROVIDER == OPENNEBULA:
+            def_key = "".join([os.environ.get("HOME"), "/.ssh/id_rsa"])
+            key_file = os.environ.get("KD_ONE_PRIVATE_KEY", def_key)
+        else:
+            # NOTE: this won't give proper results inside docker, another
+            # reason why docker+vbox is not supported
+            key_file = self.vagrant.conf()["IdentityFile"]
+
         ssh.connect(self.vagrant.hostname(host),
                     port=int(self.vagrant.port(host)),
                     username="root",
-                    key_filename=self.vagrant.conf()["IdentityFile"])
+                    key_filename=key_file)
+
         self._ssh_connections[host] = ssh
         return ssh
 

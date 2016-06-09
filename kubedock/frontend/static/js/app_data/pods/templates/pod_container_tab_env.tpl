@@ -3,10 +3,10 @@
         <div class="row">
             <div class="col-sm-12 col-md-2 sidebar">
                 <ul class="nav nav-sidebar">
-                    <li role="presentation" class="stats go-to-logs">Logs</li>
-                    <li role="presentation" class="go-to-stats monitoring">Monitoring</li>
-                    <li role="presentation" class="configuration go-to-ports">General</li>
-                    <li role="presentation" class="variables active">Variables</li>
+                    <li role="presentation" class="stats go-to-logs"><span>Logs</span></li>
+                    <li role="presentation" class="go-to-stats monitoring"><span>Monitoring</span></li>
+                    <li role="presentation" class="configuration go-to-ports"><span>General</span></li>
+                    <li role="presentation" class="variables active"><span>Variables</span></li>
                 </ul>
             </div>
             <div id="details_content" class="col-md-10 col-sm-12 variables-tab">

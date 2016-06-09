@@ -16,9 +16,9 @@
     <div class="row">
         <div class="col-sm-12 col-md-2 sidebar">
             <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                <li class="general active">Users</li>
+                <li class="users active"><span>Users</span></li>
                 <!-- <li class="onlinePage">Online users</li> -->
-                <li class="activityPage">Users activity</li>
+                <li class="activityPage"><span>Users activity</span></li>
             </ul>
         </div>
         <div id="details_content" class="col-md-10 col-sm-12">

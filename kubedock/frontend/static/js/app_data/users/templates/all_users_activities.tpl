@@ -12,8 +12,8 @@
     <div class="row" id="all-user-activity-tab">
         <div class="col-md-2 col-sm-12 sidebar">
             <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                <li class="usersPage general">Users</li>
-                <li class="activityPage active">Users activity</li>
+                <li class="usersPage users"><span>Users</span></li>
+                <li class="activityPage active"><span>Users activity</span></li>
             </ul>
         </div>
         <div class="tab-content col-md-10 col-sm-12">

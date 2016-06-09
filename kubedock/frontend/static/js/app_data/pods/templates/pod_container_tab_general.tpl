@@ -2,10 +2,10 @@
     <div class="row">
         <div class="col-sm-12 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
-                <li role="presentation" class="stats go-to-logs">Logs</li>
-                <li role="presentation" class="monitoring go-to-stats">Monitoring</li>
-                <li role="presentation" class="configuration active">General</li>
-                <li role="presentation" class="variables go-to-envs">Variables</li>
+                <li role="presentation" class="stats go-to-logs"><span>Logs</span></li>
+                <li role="presentation" class="monitoring go-to-stats"><span>Monitoring</span></li>
+                <li role="presentation" class="configuration active"><span>General</span></li>
+                <li role="presentation" class="variables go-to-envs"><span>Variables</span></li>
             </ul>
         </div>
         <div id="details_content" class="col-md-10 col-sm-12 configuration-general-tab">

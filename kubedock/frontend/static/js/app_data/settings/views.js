@@ -418,6 +418,7 @@ define(['app_data/app', 'marionette',
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
+            if(tgt.not("li")) tgt = tgt.parent('li');
             if (tgt.hasClass('general')) App.navigate('settings/general', {trigger: true});
             if (tgt.hasClass('license')) App.navigate('settings/license', {trigger: true});
             else if (tgt.hasClass('profile')) App.navigate('settings/profile', {trigger: true});

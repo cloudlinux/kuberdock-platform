@@ -369,6 +369,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
+            if(tgt.not("li")) tgt = tgt.parent('li');
             if (tgt.hasClass('nodeGeneralTab')) App.navigate('nodes/' + this.nodeId + '/general', {trigger: true});
             else if (tgt.hasClass('nodeStatsTab')) App.navigate('nodes/' + this.nodeId + '/stats', {trigger: true});
             else if (tgt.hasClass('nodeLogsTab')) App.navigate('nodes/' + this.nodeId + '/logs', {trigger: true});

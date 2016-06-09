@@ -177,6 +177,29 @@
         /* end statuses */
     }
 }
+/* sidebar icons*/
+@sidebarIconDefaultColor: #B5BBC1;
+@sidebarIconHoverColor: #3197EE;
+@sidebarActiveLinkColor: @sidebarIconHoverColor;
+.sidebar{
+    .nav-sidebar{
+        li{
+            &.users{ .mdi('group',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.profile{ .mdi('person',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.variables{ .mdi('tune',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.stats{ .mdi('equalizer',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.logHistory{ .mdi('history',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.license{ .mdi('star_border',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.monitoring{ .mdi('timeline',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.configuration, &.general{ .mdi('settings',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.activityPage{ .mdi('transfer_within_a_station',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            &.active{
+                &:before, a, span{ color: @sidebarActiveLinkColor }
+            }
+        }
+    }
+}
+/* end sidebar icons*/
 .complete{
     .help{
         .mdi('help_outline',20px, #b8c0c5, #3197EE);

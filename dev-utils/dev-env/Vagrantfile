@@ -100,6 +100,7 @@ Vagrant.configure(2) do |config|
             "public_ips" => ENV['KD_ONE_PUB_IPS'],
             "non_floating_ips" => ENV['KD_NONFLOATING_PUBLIC_IPS'],
             "pd_namespace" => ENV['KD_PD_NAMESPACE'],
+            "kcli_rpm_url" => ENV['KD_KCLI_RPM_URL'],
         }
 
         # Clean undefined vars

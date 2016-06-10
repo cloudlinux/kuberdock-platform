@@ -1,25 +1,23 @@
 - name: Install kcli
-  yum: name=http://repo.cloudlinux.com/kuberdock-client/7/x86_64/kuberdock-cli-1.0-0.el7.rc.2.cloudlinux.x86_64.rpm state=present
+  yum: name="{{ kcli_rpm_url }}" state=present
   tags:
     - kcli
 
-- name: Get Token for test_user
-  shell: curl -k --user test_user:test_user https://localhost/api/auth/token
+- name: Get Tocken for test_user
+  uri: 
+    url: "{{ token_gathering_url}}"
+    user: test_user
+    password: test_user
+    validate_certs: no
+    force_basic_auth: yes
   register: raw_token
-  tags:
-    - kcli
-
-- set_fact:
-    token: "{{ (raw_token.stdout|from_json).token }}"
   tags:
     - kcli
 
 - name: Write kcli auth (test_user only for now!)
   lineinfile:
       dest: "/etc/kubecli.conf"
-      line: "{{ item }}"
+      line: "token = {{ raw_token.json.token }}"
       state: present
-  with_items:
-      - "token = {{ token }}"
   tags:
     - kcli

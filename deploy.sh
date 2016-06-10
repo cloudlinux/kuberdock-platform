@@ -9,10 +9,79 @@ WEBAPP_USER=nginx
 DEPLOY_LOG_FILE=/var/log/kuberdock_master_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 
+#####################
+# Fail log delivery #
+#####################
+
+SENTRY_SETTINGS_URL="http://repo.cloudlinux.com/kuberdock/settings.json"
+SENTRY_SETTINGS=$(curl -s $SENTRY_SETTINGS_URL)
+SENTRY_DSN=$(echo $SENTRY_SETTINGS | sed -E 's/^.*"https:\/\/(.*):(.*)@(.*)\/(.*)".*/\1,\2,\3,\4/')
+SENTRYVERSION=7
+
+SENTRYKEY=$(echo $SENTRY_DSN | cut -f1 -d,)
+SENTRYSECRET=$(echo $SENTRY_DSN | cut -f2 -d,)
+SENTRYURL=$(echo $SENTRY_DSN | cut -f3 -d,)
+SENTRYPROJECTID=$(echo $SENTRY_DSN | cut -f4 -d,)
+
+ERRORLOGFILE=error.log
+
+DATA_TEMPLATE='{'\
+'\"project\": \"$SENTRYPROJECTID\", '\
+'\"logger\": \"bash\", '\
+'\"platform\": \"other\", '\
+'\"message\": \"Deploy error\", '\
+'\"event_id\": \"$eventid\", '\
+'\"level\": \"error\", '\
+'\"extra\":{\"fullLog\":\"$logs\"}, '\
+'\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"},'\
+' \"release\":\"$release\", \"server_name\":\"$hostname\($ip_address\)\"}'
+
+sentryWrapper() { 
+     eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
+     printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $DEPLOY_LOG_FILE. \n"
+
+     if [ -z ${KD_OWNER_EMAIL} ]; then
+         read -p "Do you agree to send it to our support team? If so, just specify an email and we contact you back: " -r KD_OWNER_EMAIL
+     fi
+     echo
+     if [ ! -z ${KD_OWNER_EMAIL} ] ;then
+         logs=$(while read line; do echo -n "${line}\\n"; done < $DEPLOY_LOG_FILE)
+         uname=$(uname -a)
+         hostname=$(cat /etc/hostname)
+         ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
+         release=$(rpm -qa |grep -e "kuberdock-[1-9]")
+         data=$(eval echo $DATA_TEMPLATE)
+         echo
+         curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
+"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null && echo "Information about your problem has been sent to our support team."
+     fi
+     echo "Done."
+}
+
+
+catchFailure() {
+   cmnd="$@"
+   $cmnd 2>&1 | tee $ERRORLOGFILE ; ( exit ${PIPESTATUS} )
+   catchExit
+}
+
+catchExit(){
+   ERROR_CODE=$?
+   if [ ${ERROR_CODE} != 0 ] ;then
+       sentryWrapper
+   fi
+}
+
+
+
+#####################
+
 if [ $USER != "root" ]; then
     echo "Superuser privileges required" | tee -a $DEPLOY_LOG_FILE
     exit 1
 fi
+
+trap catchExit EXIT
 
 RELEASE="CentOS Linux release 7.2"
 ARCH="x86_64"
@@ -1076,62 +1145,6 @@ do_cleanup()
 
 }
 
-#####################
-# Fail log delivery #
-#####################
-
-SENTRY_SETTINGS_URL="http://repo.cloudlinux.com/kuberdock/settings.json"
-SENTRY_SETTINGS=$(curl -s $SENTRY_SETTINGS_URL)
-SENTRY_DSN=$(echo $SENTRY_SETTINGS | sed -E 's/^.*"https:\/\/(.*):(.*)@(.*)\/(.*)".*/\1,\2,\3,\4/')
-SENTRYVERSION=7
-
-SENTRYKEY=$(echo $SENTRY_DSN | cut -f1 -d,)
-SENTRYSECRET=$(echo $SENTRY_DSN | cut -f2 -d,)
-SENTRYURL=$(echo $SENTRY_DSN | cut -f3 -d,)
-SENTRYPROJECTID=$(echo $SENTRY_DSN | cut -f4 -d,)
-
-ERRORLOGFILE=error.log
-
-DATA_TEMPLATE='{'\
-'\"project\": \"$SENTRYPROJECTID\", '\
-'\"logger\": \"bash\", '\
-'\"platform\": \"other\", '\
-'\"message\": \"Deploy error\", '\
-'\"event_id\": \"$eventid\", '\
-'\"level\": \"error\", '\
-'\"extra\":{\"fullLog\":\"$logs\"}, '\
-'\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"},'\
-' \"release\":\"$release\", \"server_name\":\"$hostname\($ip_address\)\"}'
-
-
-sentryWrapper() {
-   cmnd="$@"
-   $cmnd 2>&1 | tee $ERRORLOGFILE ; ( exit ${PIPESTATUS} )
-   ERROR_CODE=$?
-   if [ ${ERROR_CODE} != 0 ] ;then
-     eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
-     printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $ERRORLOGFILE. \n"
-
-     if [ -z ${KD_OWNER_EMAIL} ]; then
-         read -p "Do you agree to send it to our support team? If so, just specify an email and we contact you back: " -r KD_OWNER_EMAIL
-     fi
-     echo
-     if [ ! -z ${KD_OWNER_EMAIL} ] ;then
-         logs=$(while read line; do echo -n "${line}\\n"; done < $ERRORLOGFILE)
-         uname=$(uname -a)
-         hostname=$(cat /etc/hostname)
-         ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
-         release=$(rpm -qa |grep -e "kuberdock-[1-9]")
-         data=$(eval echo $DATA_TEMPLATE)
-         echo
-         curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
-"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null && echo "Information about your problem has been sent to our support team."
-     fi
-     echo "Done."
-     exit ${ERROR_CODE}
-   fi
-}
-
 
 
 #########
@@ -1139,7 +1152,7 @@ sentryWrapper() {
 #########
 
 if [ "$CLEANUP" = yes ];then
-    sentryWrapper do_cleanup
+    catchFailure do_cleanup
 else
-    sentryWrapper do_deploy
+    catchFailure do_deploy
 fi

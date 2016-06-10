@@ -740,6 +740,13 @@ class KuberDock(KubeCtl):
 
                 if not hasattr(self, 'mount_path'):
                     raise SystemExit('"--mount-path" option is expected')
+                elif not re.match('^[\w/.-]*$', self.mount_path):
+                    raise SystemExit('"--mount-path" should contain letters '
+                                     'of Latin alphabet or "/", "_", "-" '
+                                     'symbols')
+                elif len(self.mount_path) > 30:
+                    raise SystemExit('"--mount-path" maximum length '
+                                     'is 30 symbols.')
 
                 curr = filter((lambda i: i['name'] == self.persistent_drive),
                               self._get_drives())
@@ -758,7 +765,7 @@ class KuberDock(KubeCtl):
 
                 if not mount_path.get('name'):
                     mount_path['name'] = self._generate_image_name(
-                        self.mount_path.lstrip('/').replace('/', '-'))
+                        self.mount_path.lstrip('/').replace('/', '-').lower())
 
                 vols = [v for v in self.volumes
                         if v.get('name') == mount_path['name']]

@@ -1,45 +1,13 @@
 """Some utilities for persistent drives.
 """
+import os
 from collections import namedtuple
 
 from ..settings import (
     PD_SEPARATOR_USERNAME, PD_SEPARATOR_USERID, PD_NAMESPACE, PD_NS_SEPARATOR,
     CEPH, AWS)
-from ..users.models import User
 
 ParsedPDName = namedtuple('ParsedPDName', ('drive', 'uid', 'uname'))
-
-
-def parse_pd_name(pdname):
-    """Extracts user and drive name from composite persistent drive name.
-    :return: ParsedPDName tuple or None in case of unknown pdname format.
-    """
-    drive = uid = uname = None
-    try:
-        drive, uid = pdname.rsplit(PD_SEPARATOR_USERID)
-        uid = int(uid)
-    except (ValueError, TypeError):
-        try:
-            drive, uname = pdname.rsplit(PD_SEPARATOR_USERNAME)
-        except ValueError:
-            return None
-    return ParsedPDName(drive, uid, uname)
-
-
-def get_drive_and_user(pdname):
-    """Extracts drive name and user from persistent drive name.
-    :return: tuple of drive name and User object
-    """
-    parsed = parse_pd_name(pdname)
-    if not parsed:
-        return (None, None)
-    if parsed.uid is not None:
-        user = User.query.filter(User.id == parsed.uid).first()
-    elif parsed.uname is not None:
-        user = User.query.filter(User.username == parsed.uname).first()
-    else:
-        return (parsed.drive, None)
-    return (parsed.drive, user)
 
 
 def compose_pdname(drive, user):
@@ -50,7 +18,11 @@ def compose_pdname(drive, user):
     :param user: User object or user id
     """
     user_id = getattr(user, 'id', user)
-    drivename = PD_SEPARATOR_USERID.join((drive, str(user_id)))
+    is_localstorage_backend = not (CEPH or AWS)
+    if is_localstorage_backend:
+        drivename = os.path.join(str(user_id), drive)
+    else:
+        drivename = PD_SEPARATOR_USERID.join((drive, str(user_id)))
     if PD_NAMESPACE and (CEPH or AWS):
         # do not use namespace for localstorage backend
         return PD_NS_SEPARATOR.join([

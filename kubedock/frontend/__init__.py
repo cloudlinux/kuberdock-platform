@@ -1,4 +1,3 @@
-import datetime
 from flask import render_template
 from flask import jsonify
 
@@ -19,10 +18,9 @@ def create_app(settings_override=None, fake_sessions=False):
 
     # registering blueprings
     from .main import main
-    from .auth import auth
     from .apps import apps
 
-    for bp in main, auth, apps:
+    for bp in main, apps:
         app.register_blueprint(bp)
 
     app.errorhandler(PermissionDenied)(on_permission_denied)

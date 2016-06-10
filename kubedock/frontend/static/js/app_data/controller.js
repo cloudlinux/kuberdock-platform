@@ -641,11 +641,12 @@ define([
 
                 var billingType = settingsCollection.byName('billing_type').get('value'),
                     kubesLimit = settingsCollection.byName('max_kubes_per_container').get('value'),
+                    payg = App.userPackage.get('count_type') === 'payg',
                     view = new Views.WizardCompleteSubView({
                         model: model,
                         kubesLimit: kubesLimit,
-                        hasBilling: billingType !== 'No billing',
-                        payg: App.userPackage.get('count_type') === 'payg',
+                        hasBilling: billingType.toLowerCase() !== 'no billing',
+                        payg: payg,
                     });
                 that.listenTo(view, 'pod:save', function(){
                     utils.preloader.show();
@@ -658,9 +659,7 @@ define([
                         });
                 });
                 that.listenTo(view, 'pod:pay_and_run', function(){
-                    var billingType = settingsCollection.byName('billing_type').get('value'),
-                        fix_price = App.userPackage.get('count_type') === 'fixed';
-                    if (billingType.toLowerCase() !== 'no billing' && fix_price) {
+                    if (billingType.toLowerCase() !== 'no billing' && !payg) {
                         utils.preloader.show();
                         podCollection.fullCollection.create(model, {
                             wait: true,
@@ -1091,15 +1090,25 @@ define([
                 var getValidationError = function(data) {
                     var res = '';
                     if (data.common) {
-                        res += JSON.stringify(data.common) + '<br />';
+                        res += _.escape(JSON.stringify(data.common)) + '<br />';
                     }
                     if (data.customVars) {
                         res += 'Invalid custom variables:<br />' +
-                            JSON.stringify(data.customVars) + '<br />';
+                            _.escape(JSON.stringify(data.customVars)) + '<br />';
                     }
                     if (data.values) {
                         res += 'Invalid values:<br />' +
-                            JSON.stringify(data.values) + '<br />';
+                            _.escape(JSON.stringify(data.values)) + '<br />';
+                    }
+                    if (data.kuberdock) {
+                        var kuberdock = typeof data.kuberdock == 'string'
+                                ? [data.kuberdock] : data.kuberdock;
+                        kuberdock = _.map(kuberdock, function(err){
+                            return typeof err == 'string' ? err : JSON.stringify(err);
+                        });
+
+                        res += 'Invalid "kuberdock" section:<br />- ' +
+                            _.map(kuberdock, _.escape).join('<br />- ') + '<br />';
                     }
                     if (!res) {
                         res = JSON.stringify(data);
@@ -1315,7 +1324,7 @@ define([
                     navbar = new Menu.NavList({collection: App.menuCollection});
 
                 that.listenTo(layoutView, 'show', function(){
-                    var pvCollection = new Model.PersistentStorageCollection();
+                    var pvCollection = new Model.PaginatedPersistentStorageCollection();
                     layoutView.nav.show(navbar);
                     pvCollection.fetch({
                         wait: true,

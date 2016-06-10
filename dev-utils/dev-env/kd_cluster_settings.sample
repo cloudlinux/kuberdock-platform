@@ -43,6 +43,10 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: "200,201,202"
 #export KD_ONE_PUB_IPS="200,201,202"
 
+# Custom OpenNebula template ID
+# default: 84
+# KD_NEBULA_TEMPLATE_ID=100
+
 # ====== Env group ======
 
 # Build specific ref instead of current state of the repo
@@ -81,3 +85,10 @@ export VAGRANT_CWD=dev-utils/dev-env/
 #export KD_CEPH_USER=your_ceph_user 
 #export KD_CEPH_CONFIG=/path/to/ceph.conf 
 #export KD_CEPH_USER_KEYRING=/path/to/client.your_ceph_user.keyring
+#export KD_PD_NAMESPACE=your_namespace
+
+# Uncomment to enable NONFLOATING_PUBLIC_IPS mode
+# default: nothing
+#export KD_NONFLOATING_PUBLIC_IPS=true
+#
+

@@ -26,8 +26,6 @@ from .utils import (
     update_dict, get_api_url, send_event, send_logs, k8s_json_object_hook,
     get_timezone,
 )
-from .stats import StatWrap5Min
-from .kubedata.kubestat import KubeUnitResolver, KubeStat
 from .models import Pod, ContainerState, PodState, PersistentDisk, User
 from .nodes.models import Node, NodeAction, NodeFlag, NodeFlagNames
 from .users.models import SessionData
@@ -35,12 +33,14 @@ from .rbac.models import Role
 from .system_settings.models import SystemSettings
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
-    NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH)
+    NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
+    KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
     check_namespace_exists)
 from .kapi.usage import update_states
+from .kapi.node import Node as K8SNode
 
 from .kd_celery import celery, exclusive_task
 
@@ -77,7 +77,7 @@ def get_services_nodelay(namespace=None):
 def create_service_nodelay(data, namespace=None):
     r = requests.post(get_api_url('services', namespace=namespace),
                       data=json.dumps(data))
-    return r.text   # TODO must return json()
+    return r.text  # TODO must return json()
 
 
 def delete_pod_nodelay(item, namespace=None):
@@ -124,6 +124,9 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
                 'kuberdock-node-hostname': host,
                 'kuberdock-kube-type':
                     'type_' + str(kube_type)
+            },
+            'annotations': {
+                K8SNode.FREE_PUBLIC_IP_COUNTER_FIELD: '0'
             }
         },
         'spec': {
@@ -148,6 +151,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
     kube_type = db_node.kube_id
     cpu_multiplier = SystemSettings.get_by_name('cpu_multiplier')
     memory_multiplier = SystemSettings.get_by_name('memory_multiplier')
+    ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
+    token = ku.get_token() if ku else ''
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
         try:
             current_master_kubernetes = subprocess.check_output(
@@ -159,7 +164,7 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             db_node.state = 'completed'
             db.session.commit()
             return mes
-        except OSError:     # no rpm
+        except OSError:  # no rpm
             current_master_kubernetes = 'kubernetes-master'
         current_master_kubernetes = current_master_kubernetes.replace(
             'master', 'node')
@@ -176,11 +181,12 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             send_logs(node_id, 'Remove node {0} from kubernetes...'.format(
                 host), log_file, channels)
             result = remove_node_by_host(host)
-            send_logs(node_id, json.dumps(result, indent=2), log_file, channels)
+            send_logs(node_id, json.dumps(result, indent=2), log_file,
+                      channels)
 
         send_logs(node_id, 'Node kubernetes package will be'
                            ' "{0}" (same version as master kubernetes)'
-                           .format(current_master_kubernetes), log_file, channels)
+                  .format(current_master_kubernetes), log_file, channels)
 
         send_logs(node_id, 'Connecting to {0} with ssh with user "root" ...'
                   .format(host), log_file, channels)
@@ -192,7 +198,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             db.session.commit()
             return error_message
 
-        i, o, e = ssh.exec_command('ip -o -4 address show')
+        i, o, e = ssh.exec_command('ip -o -4 address show',
+                                   timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
         node_interface = get_node_interface(o.read(), db_node.ip)
         sftp = ssh.open_sftp()
         sftp.put('fslimit.py', '/fslimit.py')
@@ -226,10 +233,12 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
         sftp.close()
         deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
-                     'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} '\
+                     'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} ' \
+                     'NONFLOATING_PUBLIC_IPS={8} TOKEN="{9}" '\
                      'bash /node_install.sh'
         if CEPH:
-            deploy_cmd = 'CEPH_CONF={} '.format(TEMP_CEPH_CONF_PATH) + deploy_cmd
+            deploy_cmd = 'CEPH_CONF={} '.format(
+                TEMP_CEPH_CONF_PATH) + deploy_cmd
         # we pass ports and hosts to let the node know which hosts are allowed
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
@@ -244,7 +253,10 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
         i, o, e = ssh.exec_command(
             deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
                               node_interface, timezone, host,
-                              cpu_multiplier, memory_multiplier),
+                              cpu_multiplier, memory_multiplier,
+                              current_app.config['NONFLOATING_PUBLIC_IPS'],
+                              token),
+            timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
             get_pty=True)
         s_time = time.time()
         while not o.channel.exit_status_ready():
@@ -272,7 +284,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
             # this raises an exception in case of a lost ssh connection
             # and node is in 'pending' state instead of 'troubles'
             s = o.channel.recv_exit_status()
-            ssh.exec_command('rm /node_install.sh')
+            ssh.exec_command('rm /node_install.sh',
+                             timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
         except Exception as e:
             send_logs(node_id, 'Error: {}\n'.format(e), log_file)
 
@@ -286,7 +299,8 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
                 )
                 check_namespace_exists(node_ip=host)
             send_logs(node_id, 'Rebooting node...', log_file, channels)
-            ssh.exec_command('reboot')
+            ssh.exec_command('reboot',
+                             timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
             # Here we can wait some time before add node to k8s to prevent
             # "troubles" status if we know that reboot will take more then
             # 1 minute. For now delay will be just 2 seconds (fastest reboot)
@@ -316,25 +330,6 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
 
             # send update in common channel for all admins
             send_event('node:change', {'id': db_node.id})
-
-
-@celery.task()
-@exclusive_task(60 * 30)
-def pull_hourly_stats():
-    try:
-        data = KubeStat(resolution=300).stats(KubeUnitResolver().all())
-    except Exception:
-        current_app.logger.exception('Skip pulling statistics because of error.')
-        return
-    time_windows = set(map(operator.itemgetter('time_window'), data))
-    rv = db.session.query(StatWrap5Min).filter(
-        StatWrap5Min.time_window.in_(time_windows))
-    existing_windows = set(map((lambda x: x.time_window), rv))
-    for entry in data:
-        if entry['time_window'] in existing_windows:
-            continue
-        db.session.add(StatWrap5Min(**entry))
-    db.session.commit()
 
 
 @celery.task()
@@ -415,21 +410,18 @@ def fix_pods_timeline():
         raise
     t.append(time.time())
     current_app.logger.debug('Fixed pods timeline: {0}'.format(
-        ['{0:.3f}'.format(t2-t1) for t1, t2 in zip(t[:-1], t[1:])]))
+        ['{0:.3f}'.format(t2 - t1) for t1, t2 in zip(t[:-1], t[1:])]))
     current_app.logger.debug('Closed %s pod_states', closed_states)
 
 
 def add_k8s_node_labels(nodename, labels):
     """Add given labels to the node in kubernetes
     :param nodename: node hostname
-    :param labels: dict of labels to add
+    :param labels: dict of labels to be patched.
+    Look https://tools.ietf.org/html/rfc7386 for dict format
     """
-    headers = {'Content-Type': 'application/strategic-merge-patch+json'}
-    res = requests.patch(
-        get_api_url('nodes', nodename, namespace=False),
-        json={'metadata': {'labels': labels}},
-        headers=headers
-    )
+    node = K8SNode(hostname=nodename)
+    node.patch_labels(labels)
 
 
 def _check_ceph_via_ssh(ssh):
@@ -488,7 +480,7 @@ def check_if_node_down(hostname):
 def process_node_actions(action_type=None, node_host=None):
     actions = db.session.query(NodeAction).filter(
         NodeAction.timestamp > (datetime.utcnow() - timedelta(minutes=35))
-        ).order_by(NodeAction.timestamp)
+    ).order_by(NodeAction.timestamp)
     if action_type is not None:
         actions = actions.filter(NodeAction.type == action_type)
     if node_host is not None:

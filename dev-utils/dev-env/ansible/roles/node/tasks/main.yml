@@ -24,7 +24,7 @@
 
 
 - name: Add node to master
-  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} --kube-type 1 --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
+  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   tags:

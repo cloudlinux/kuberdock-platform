@@ -120,7 +120,7 @@ def update_pods_volumes(pd):
                 continue
 
             current_app.logger.debug('Updating volume: %s', item)
-            storage_cls().enrich_volume_info(item, pd.size, pd.drive_name)
+            storage_cls().enrich_volume_info(item, pd)
             changed = True
             break
         if changed:
@@ -493,7 +493,7 @@ class PersistentStorage(object):
         """
         PersistentDiskState.end(user_id, name)
 
-    def enrich_volume_info(self, volume, size, drive_name):
+    def enrich_volume_info(self, volume, pd):
         """Adds storage specific attributes to volume dict.
         Implement in nested classes if needed.
         """
@@ -812,12 +812,12 @@ class CephStorage(PersistentStorage):
             return False
         return drive_name in res
 
-    def enrich_volume_info(self, volume, size, drive_name):
+    def enrich_volume_info(self, volume, pd):
         """Adds storage specific attributes to volume dict.
         Converts drive name in form namespace/drivename to pool name and
         image name for kubernetes.
         """
-        pool_name, image = self.get_drive_name_and_pool(drive_name)
+        pool_name, image = self.get_drive_name_and_pool(pd.drive_name)
 
         volume[self.VOLUME_EXTENSION_KEY] = {
             'image': image,
@@ -826,8 +826,8 @@ class CephStorage(PersistentStorage):
             'user': CEPH_CLIENT_USER,
             'pool': pool_name
         }
-        if size is not None:
-            volume[self.VOLUME_EXTENSION_KEY]['size'] = size
+        if pd.size is not None:
+            volume[self.VOLUME_EXTENSION_KEY]['size'] = pd.size
         volume[self.VOLUME_EXTENSION_KEY]['monitors'] = self.get_monitors()
         return volume
 
@@ -1049,7 +1049,7 @@ class AmazonStorage(PersistentStorage):
             self._aws_secret_access_key = None
         super(AmazonStorage, self).__init__()
 
-    def enrich_volume_info(self, volume, size, drive_name):
+    def enrich_volume_info(self, volume, pd):
         """Adds storage specific attributes to volume dict.
         """
         if self._availability_zone is None:
@@ -1058,10 +1058,10 @@ class AmazonStorage(PersistentStorage):
         volume[self.VOLUME_EXTENSION_KEY] = {
             'volumeID': 'aws://{0}/'.format(self._availability_zone),
             'fsType': DEFAULT_FILESYSTEM,
-            'drive': drive_name,
+            'drive': pd.drive_name,
         }
-        if size is not None:
-            volume[self.VOLUME_EXTENSION_KEY]['size'] = size
+        if pd.size is not None:
+            volume[self.VOLUME_EXTENSION_KEY]['size'] = pd.size
         return volume
 
     def _is_drive_exist(self, pd):
@@ -1319,7 +1319,7 @@ class LocalStorage(PersistentStorage):
         Returns True if it exists, False otherwise.
         """
         command = 'test -d "{}"'.format(
-            self._get_full_drive_path(pd.drive_name)
+            self.get_full_drive_path(pd.drive_name)
         )
         failed_test_code = 1
         try:
@@ -1340,14 +1340,16 @@ class LocalStorage(PersistentStorage):
         return False
 
     @staticmethod
-    def _get_full_drive_path(drive_name):
-        path = os.path.join(NODE_LOCAL_STORAGE_PREFIX, drive_name)
+    def get_full_drive_path(drive_name):
+        path = os.path.join(
+            NODE_LOCAL_STORAGE_PREFIX, drive_name
+        )
         return path
 
-    def enrich_volume_info(self, volume, size, drive_name):
-        """Adds storae specific attributes to volume dict.
+    def enrich_volume_info(self, volume, pd):
+        """Adds storage specific attributes to volume dict.
         """
-        full_path = self._get_full_drive_path(drive_name)
+        full_path = self.get_full_drive_path(pd.drive_name)
         volume[self.VOLUME_EXTENSION_KEY] = {
             'path': full_path,
         }
@@ -1358,7 +1360,7 @@ class LocalStorage(PersistentStorage):
         # that volume is a persistent disk with local storage backend.
         volume['annotation'] = {
             'localStorage': {
-                'size': size,
+                'size': pd.size,
                 'path': full_path
             }
         }
@@ -1368,7 +1370,8 @@ class LocalStorage(PersistentStorage):
         res = {}
         drive_path = volume[self.VOLUME_EXTENSION_KEY].get('path', '')
         drive_name = os.path.basename(drive_path)
-        res['drive_name'] = drive_name
+        user_dir = os.path.basename(os.path.dirname(drive_path))
+        res['drive_name'] = os.path.join(user_dir, drive_name)
         return res
 
     def _get_drives_from_db(self, user_id=None):
@@ -1401,7 +1404,7 @@ class LocalStorage(PersistentStorage):
         """
         failed_rm_code = 1
         try:
-            drive_path = self._get_full_drive_path(pd.drive_name)
+            drive_path = self.get_full_drive_path(pd.drive_name)
             current_app.logger.debug('Deleting local storage: %s', drive_path)
             res = self.run_on_pd_node(
                 pd,

@@ -16,7 +16,7 @@ fi
 
 RELEASE="CentOS Linux release 7.2"
 ARCH="x86_64"
-MIN_RAM_KB=1880344
+MIN_RAM_KB=1572864
 MIN_DISK_SIZE=10
 
 check_release()
@@ -98,6 +98,9 @@ while [[ $# > 0 ]];do
         ;;
         -g|--hostgw-backend)
         CONF_FLANNEL_BACKEND='host-gw'
+        ;;
+        --nonfloating-ip)
+        NONFLOATING_PUBLIC_IPS=true
         ;;
         --vni)
         VNI="$2";   # vxlan network id. Defaults to 1
@@ -429,8 +432,6 @@ else
     log_it echo 'Adding cluster-only visible ports...'
     # kube-apiserver insecure ro
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="7080" protocol="tcp" accept"
-    # influxdb
-    do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="8086" protocol="tcp" accept"
     # cluster dns
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="tcp" accept"
     do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="udp" accept"
@@ -461,6 +462,11 @@ yum_wrapper install -y etcd-ca
 yum_wrapper install -y bridge-utils
 log_it ntpd -gq
 log_it echo "Enabling restart for ntpd.service"
+
+# To prevent ntpd from exit on large time offsets
+sed -i "/^tinker /d" /etc/ntp.conf
+echo "tinker panic 0" >> /etc/ntp.conf
+
 do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
 do_and_log echo -e "[Service]
 Restart=always
@@ -473,7 +479,7 @@ do_and_log ntpq -p
 
 
 #4. Install kuberdock
-PACKAGE=$(ls -1 |awk '/kuberdock.*\.rpm/ {print $1; exit}')
+PACKAGE=$(ls -1 |awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
 if [ ! -z $PACKAGE ];then
     log_it echo 'WARNING: Installation from local package. Using repository is strongly recommended.'
     log_it echo 'To do this just move kuberdock package file to any other dir from deploy script.'
@@ -545,7 +551,7 @@ Description=Etcd Server
 After=network.target
 
 [Service]
-Type=simple
+Type=notify
 WorkingDirectory=/var/lib/etcd/
 EnvironmentFile=-/etc/etcd/etcd.conf
 User=etcd
@@ -624,22 +630,9 @@ EOF
 do_and_log systemctl reenable kuberdock-k8s2etcd
 do_and_log systemctl restart kuberdock-k8s2etcd
 
+# change influxdb listening interface
+sed -i 's/\":8086\"/\"127\.0\.0\.1:8086\"/' /etc/influxdb/influxdb.conf
 
-# Systemd to sysvinit backwards compatibility has been broken
-# after updating to centos 7.2.
-# so we need to create an influxdb unit-file at the moment
-cat > /etc/systemd/system/influxdb.service << EOF
-[Unit]
-Description=InfluxDB Server
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/influxdb -pidfile /opt/influxdb/shared/influxdb.pid -config /opt/influxdb/shared/config.toml
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload
 # Start early or curl connection refused
 do_and_log systemctl reenable influxdb
 do_and_log systemctl restart influxdb
@@ -683,13 +676,21 @@ chmod 600 $KUBERNETES_CONF_DIR/configfile_for_nodes
 
 #9. Configure kubernetes
 log_it echo "Configure kubernetes"
+# ServiceAccount signing key
+SA_KEY=/etc/pki/kube-apiserver/serviceaccount.key
+do_and_log mkdir -m o-rwx -p `dirname $SA_KEY`
+do_and_log openssl genrsa -out $SA_KEY 2048
+do_and_log chmod -R 0440 $SA_KEY
+do_and_log chown -R kube:kube `dirname $SA_KEY`
+
 if [ "$ISAMAZON" = true ];then
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--cloud-provider=aws --token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP  --watch-cache=false\"|}" $KUBERNETES_CONF_DIR/apiserver
-sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--cloud-provider=aws\"|}" $KUBERNETES_CONF_DIR/controller-manager
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--cloud-provider=aws --token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --service-account-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--cloud-provider=aws --service-account-private-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/controller-manager
 else
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token_auth_file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP  --watch-cache=false\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --service-account-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--service-account-private-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/controller-manager
 fi
-sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission_control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission_control=NamespaceLifecycle,NamespaceExists,SecurityContextDeny|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission-control=NamespaceLifecycle,NamespaceExists|}" $KUBERNETES_CONF_DIR/apiserver
 
 
 #10. Create and populate DB
@@ -815,11 +816,12 @@ do_and_log systemctl restart dnsmasq
 
 
 
-#14 Create cadvisor database
+#14 Create k8s database
 # Only after influxdb is fully loaded
-curl -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "cadvisor"}'
+influx -execute "create user root with password 'root' with all privileges"
+influx -execute "create database k8s"
 if [ $? -ne 0 ];then
-    log_it echo "Error create cadvisor database"
+    log_it echo "Error create k8s database"
     echo $EXIT_MESSAGE
     exit 1
 fi
@@ -879,10 +881,16 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
+if [ "$NONFLOATING_PUBLIC_IPS" = true ]; then
+    sed -i 's/^KUBE_SCHEDULER_ARGS.*/KUBE_SCHEDULER_ARGS="--enable-non-floating-ip=true"/' $KUBERNETES_CONF_DIR/scheduler
+    sed -i 's/NONFLOATING_PUBLIC_IPS = False/NONFLOATING_PUBLIC_IPS = True/' \
+     $KUBERDOCK_DIR/kubedock/settings.py
+fi
+
 log_it echo "Starting kubernetes..."
-for i in kube-apiserver kube-controller-manager kube-scheduler;
+for i in kube-apiserver kube-controller-manager kube-scheduler heapster;
     do do_and_log systemctl reenable $i;done
-for i in kube-apiserver kube-controller-manager kube-scheduler;
+for i in kube-apiserver kube-controller-manager kube-scheduler heapster;
     do do_and_log systemctl restart $i;done
 
 
@@ -978,10 +986,11 @@ do_cleanup()
 
     log_it echo "Stop and disable services..."
     for i in nginx emperor.uwsgi flanneld redis postgresql influxdb kuberdock-k8s2etcd etcd \
-             kube-apiserver kube-controller-manager kube-scheduler;do
+             kube-apiserver kube-controller-manager kube-scheduler heapster;do
         log_it systemctl disable $i
     done
-    for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kuberdock-k8s2etcd kube-scheduler;do
+    for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kuberdock-k8s2etcd kube-scheduler \
+             heapster;do
         log_it systemctl stop $i
     done
 
@@ -995,15 +1004,10 @@ do_cleanup()
     log_it echo "Cleaning up redis..."
     log_it redis-cli flushall
     log_it echo "Cleaning up influxdb..."
-    curl -X DELETE 'http://localhost:8086/db/cadvisor?u=root&p=root'
+    influx -execute "drop database k8s"
     for i in flanneld redis influxdb etcd;do
         log_it systemctl stop $i
     done
-
-    # '\n' because curl is a previous command
-    log_it echo -e "\nDeleting custom influxdb.service..."
-    log_it rm /etc/systemd/system/influxdb.service
-    log_it systemctl daemon-reload
 
     log_it echo "Trying to remove postgres role and database..."
     su -c 'dropdb kuberdock && dropuser kuberdock' - postgres
@@ -1064,7 +1068,7 @@ do_cleanup()
                  /etc/yum.repos.d/kube-cloudlinux-testing.repo
 
     log_it echo "Remove dirs..."
-    for i in /var/run/kubernetes /etc/kubernetes /var/run/flannel /root/.etcd-ca \
+    for i in /var/run/kubernetes /etc/kubernetes /etc/pki/kube-apiserver/ /var/run/flannel /root/.etcd-ca \
              /var/opt/kuberdock /var/lib/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
              /etc/etcd/etcd.conf /var/lib/etcd; do
         rm -rf $i
@@ -1072,14 +1076,70 @@ do_cleanup()
 
 }
 
+#####################
+# Fail log delivery #
+#####################
+
+SENTRY_SETTINGS_URL="http://repo.cloudlinux.com/kuberdock/settings.json"
+SENTRY_SETTINGS=$(curl -s $SENTRY_SETTINGS_URL)
+SENTRY_DSN=$(echo $SENTRY_SETTINGS | sed -E 's/^.*"https:\/\/(.*):(.*)@(.*)\/(.*)".*/\1,\2,\3,\4/')
+SENTRYVERSION=7
+
+SENTRYKEY=$(echo $SENTRY_DSN | cut -f1 -d,)
+SENTRYSECRET=$(echo $SENTRY_DSN | cut -f2 -d,)
+SENTRYURL=$(echo $SENTRY_DSN | cut -f3 -d,)
+SENTRYPROJECTID=$(echo $SENTRY_DSN | cut -f4 -d,)
+
+ERRORLOGFILE=error.log
+
+DATA_TEMPLATE='{'\
+'\"project\": \"$SENTRYPROJECTID\", '\
+'\"logger\": \"bash\", '\
+'\"platform\": \"other\", '\
+'\"message\": \"Deploy error\", '\
+'\"event_id\": \"$eventid\", '\
+'\"level\": \"error\", '\
+'\"extra\":{\"fullLog\":\"$logs\"}, '\
+'\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"},'\
+' \"release\":\"$release\", \"server_name\":\"$hostname\($ip_address\)\"}'
+
+
+sentryWrapper() {
+   cmnd="$@"
+   $cmnd 2>&1 | tee $ERRORLOGFILE ; ( exit ${PIPESTATUS} )
+   ERROR_CODE=$?
+   if [ ${ERROR_CODE} != 0 ] ;then
+     eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
+     printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $ERRORLOGFILE. \n"
+
+     if [ -z ${KD_OWNER_EMAIL} ]; then
+         read -p "Do you agree to send it to our support team? If so, just specify an email and we contact you back: " -r KD_OWNER_EMAIL
+     fi
+     echo
+     if [ ! -z ${KD_OWNER_EMAIL} ] ;then
+         logs=$(while read line; do echo -n "${line}\\n"; done < $ERRORLOGFILE)
+         uname=$(uname -a)
+         hostname=$(cat /etc/hostname)
+         ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
+         release=$(rpm -qa |grep -e "kuberdock-[1-9]")
+         data=$(eval echo $DATA_TEMPLATE)
+         echo
+         curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
+"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null && echo "Information about your problem has been sent to our support team."
+     fi
+     echo "Done."
+     exit ${ERROR_CODE}
+   fi
+}
+
+
 
 #########
 # Start #
 #########
 
-
 if [ "$CLEANUP" = yes ];then
-    do_cleanup
+    sentryWrapper do_cleanup
 else
-    do_deploy
+    sentryWrapper do_deploy
 fi

@@ -58,6 +58,7 @@ def order_product():
         raise APIError('Without billing', 404)
     billing = current_app.billing_factory.get_billing(current_billing)
     if data.get('pod'):
+        data['referer'] = data['referer'] if 'referer' in data else ''
         return billing.orderpod(**data)
     return billing.orderproduct(**data)
 
@@ -90,4 +91,5 @@ def order_kubes():
     if current_billing == 'No billing':
         raise APIError('Without billing', 404)
     billing = current_app.billing_factory.get_billing(current_billing)
+    data['referer'] = data['referer'] if 'referer' in data else ''
     return billing.orderkubes(**data)

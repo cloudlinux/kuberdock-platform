@@ -107,11 +107,16 @@ def roles_loader():
     yield get_user_role()
 
 
+def check_permission_for_user(user, operation, resource):
+    rolename = user.role.rolename
+    return acl.is_allowed(rolename, operation, resource)
+
+
 class RoleWrapper(object):
     """
     It's just a wrapper to minimize typo errors
     """
-    def __init__(self, rolename, parents=[]):
+    def __init__(self, rolename, parents=()):
         self.rolename = rolename
         acl.add_role(rolename, [x.rolename for x in parents])
 

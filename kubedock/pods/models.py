@@ -1,29 +1,30 @@
 import json
-import ipaddress
 import random
 import string
 import types
+import uuid
 from datetime import datetime
 from hashlib import md5
-import uuid
 
-from sqlalchemy.dialects import postgresql
+import ipaddress
 from flask import current_app
+from sqlalchemy.dialects import postgresql
+
 from ..core import db
-from ..settings import DOCKER_IMG_CACHE_TIMEOUT
-from ..models_mixin import BaseModelMixin
-from ..users.models import User
 from ..kapi import pd_utils
+from ..models_mixin import BaseModelMixin
+from ..settings import DOCKER_IMG_CACHE_TIMEOUT
+from ..users.models import User
 
 
 class Pod(BaseModelMixin, db.Model):
     """
     Notes:
         Status of pod is taken from kubernetes if it possible or from database.
-        If pod is running, it exists in kubernetes, if it stopped, it exists in database only.
-        So pod in database can has only statuses ['stopped', 'deleted', 'unpaid', 'pending'].
-        If pod is running, it's status is taken from kubernetes.
-        It's historically.
+        If pod is running, it exists in kubernetes, if it stopped, it exists in
+        database only. So pod in database can has only statuses ['stopped',
+        'deleted', 'unpaid', 'pending']. If pod is running, it's status is
+        taken from kubernetes. It's historically.
     """
     __tablename__ = 'pods'
     __table_args__ = (db.UniqueConstraint('name', 'owner_id'),)
@@ -197,6 +198,8 @@ class IPPool(BaseModelMixin, db.Model):
     network = db.Column(db.String, primary_key=True, nullable=False)
     ipv6 = db.Column(db.Boolean, default=False)
     blocked_list = db.Column(db.Text, nullable=True)
+    node_id = db.Column(db.ForeignKey('nodes.id'), nullable=True)
+    node = db.relationship('Node', backref='ippool')
 
     def __repr__(self):
         return self.network
@@ -227,14 +230,26 @@ class IPPool(BaseModelMixin, db.Model):
         return set(format(ipaddress.ip_address(ip_)) for ip_ in ip)
 
     def block_ip(self, ip):
-        self.blocked_list = json.dumps(list(
-            self.get_blocked_set(as_int=True) | self._to_ip_set(ip)
-        ))
+        """
+        Blocks given IP or a an IP set
+        :param ip: either a single ip or an iterable of ips
+        :return: number of blocked ip addresses
+        """
+        current_set = self.get_blocked_set(as_int=True)
+        new_set = current_set | self._to_ip_set(ip)
+        self.blocked_list = json.dumps(list(new_set))
+        return len(new_set) - len(current_set)
 
     def unblock_ip(self, ip):
-        self.blocked_list = json.dumps(list(
-            self.get_blocked_set(as_int=True) - self._to_ip_set(ip)
-        ))
+        """
+        Unblocks given IP or an IP set
+        :param ip: either a single ip or an iterable of ips
+        :return: number of unblocked ip addresses
+        """
+        current_set = self.get_blocked_set(as_int=True)
+        new_set = current_set - self._to_ip_set(ip)
+        self.blocked_list = json.dumps(list(new_set))
+        return len(current_set) - len(new_set)
 
     def hosts(self, as_int=None, exclude=None, allowed=None, page=None):
         """
@@ -270,17 +285,22 @@ class IPPool(BaseModelMixin, db.Model):
     def free_hosts_and_busy(self, as_int=None, page=None):
         pods = PodIP.filter_by(network=self.network)
         allocated_ips = {int(pod): pod.get_pod() for pod in pods}
-        data = []
-        blocked_set = self.get_blocked_set(as_int=True)
+        blocked_ips = self.get_blocked_set(as_int=True)
         hosts = self.hosts(as_int=True, page=page)
-        for ip in hosts:
+
+        def get_ip_state(ip, pod):
+            if pod:
+                return 'busy'
+            if ip in blocked_ips:
+                return 'blocked'
+            return 'free'
+
+        def get_ip_info(ip):
             pod = allocated_ips.get(ip)
-            status = 'blocked' \
-                if ip in blocked_set else 'busy' if pod else 'free'
-            if not as_int:
-                ip = str(ipaddress.ip_address(ip))
-            data.append((ip, pod, status))
-        return data
+            state = get_ip_state(ip, pod)
+            return ip if as_int else str(ipaddress.ip_address(ip)), pod, state
+
+        return [get_ip_info(ip) for ip in hosts]
 
     @property
     def is_free(self):
@@ -318,6 +338,7 @@ class IPPool(BaseModelMixin, db.Model):
             ipv6=self.ipv6,
             free_hosts=self.free_hosts(page=page),
             blocked_list=list(self.get_blocked_set()),
+            node=None if self.node is None else self.node.hostname,
             allocation=free_hosts_and_busy,
             page=page,
             pages=pages,
@@ -332,12 +353,15 @@ class IPPool(BaseModelMixin, db.Model):
         return False
 
     @classmethod
-    def get_free_host(cls, as_int=None):
-        for n in cls.all():
+    def get_free_host(cls, as_int=None, node=None):
+        if node is None:
+            networks = cls.all()
+        else:
+            networks = cls.filter(cls.node.has(hostname=node))
+        for n in networks:
             free_host = n.get_first_free_host(as_int=as_int)
             if free_host is not None:
                 return free_host
-        return None
 
 
 class PodIP(BaseModelMixin, db.Model):
@@ -394,8 +418,10 @@ class PersistentDisk(BaseModelMixin, db.Model):
     owner_id = db.Column(db.ForeignKey('users.id'), nullable=False)
     owner = db.relationship(User, backref='persistent_disks')
     size = db.Column(db.Integer, nullable=False)
-    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=True)
-    state = db.Column(db.Integer, default=PersistentDiskStatuses.PENDING, nullable=False)
+    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
+                       nullable=True)
+    state = db.Column(db.Integer, default=PersistentDiskStatuses.PENDING,
+                      nullable=False)
     pod = db.relationship(Pod, backref='persistent_disks')
     # Optional binding of PD to a particular node. Now is only used for 'local
     # storage' backend
@@ -406,12 +432,6 @@ class PersistentDisk(BaseModelMixin, db.Model):
         if self.drive_name is None:
             owner = self.owner if self.owner is not None else self.owner_id
             self.drive_name = pd_utils.compose_pdname(self.name, owner)
-        if self.name is None or self.owner_id is None:
-            name, user_id, username = pd_utils.parse_pd_name(self.drive_name)
-            if self.name is None:
-                self.name = name
-            if self.owner is None:
-                self.owner = User.get(username or user_id)
         if self.id is None:
             self.id = md5(self.drive_name).hexdigest()
 
@@ -429,10 +449,12 @@ class PersistentDisk(BaseModelMixin, db.Model):
 
         """
         db.session.expire_all()
-        current_app.logger.debug("Locking drives %s for pod id %s" % (drives, pod_id))
+        current_app.logger.debug(
+            "Locking drives %s for pod id %s" % (drives, pod_id))
         all_drives = cls.filter(
             cls.drive_name.in_(drives)).with_for_update().all()
-        current_app.logger.debug("LOCKED drives %s for pod id %s" % (drives, pod_id))
+        current_app.logger.debug(
+            "LOCKED drives %s for pod id %s" % (drives, pod_id))
 
         free = [item for item in all_drives if
                 item.pod_id is None]
@@ -444,9 +466,11 @@ class PersistentDisk(BaseModelMixin, db.Model):
                 drive.pod_id = pod_id
             now_taken = free
 
-        current_app.logger.debug("Releasing drives %s for pod id %s" % (drives, pod_id))
+        current_app.logger.debug(
+            "Releasing drives %s for pod id %s" % (drives, pod_id))
         db.session.commit()
-        current_app.logger.debug("RELEASED drives %s for pod id %s" % (drives, pod_id))
+        current_app.logger.debug(
+            "RELEASED drives %s for pod id %s" % (drives, pod_id))
         return now_taken, taken_by_another
 
     @classmethod
@@ -504,11 +528,10 @@ class PersistentDisk(BaseModelMixin, db.Model):
     @classmethod
     def mark_todelete(cls, drive_id):
         """Marks PD for deletion. Also creates a new one PD with the same
-        'name' and owner, but with different physical 'drive_name'. It is needed
-        for possibility to fast relaunch the pod right after PD deletion. If we
-        will use the same physical drive name, then we have to wait until old
-        drive will be actually deleted.
-
+        'name' and owner, but with different physical 'drive_name'. It is
+        needed for possibility to fast relaunch the pod right after PD
+        deletion. If we will use the same physical drive name, then we have
+        to wait until old drive will be actually deleted.
         """
         pd = cls.query.filter(cls.id == drive_id, cls.pod_id == None).first()
         if not pd or pd.state == PersistentDiskStatuses.TODELETE:
@@ -527,7 +550,6 @@ class PersistentDisk(BaseModelMixin, db.Model):
         db.session.add(new_pd)
         db.session.commit()
         return new_pd
-
 
     @classmethod
     def get_todelete_query(cls):

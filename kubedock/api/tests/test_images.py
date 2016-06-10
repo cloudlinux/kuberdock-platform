@@ -38,7 +38,8 @@ class TestImages(APITestCase):
 
     @mock.patch.object(images, 'PodCollection')
     @mock.patch.object(images.kapi_images.Image, 'get_container_config')
-    def test_get_dockerfile_data_by_pod(self, get_container_config, PodCollection):
+    def test_get_dockerfile_data_by_pod(
+            self, get_container_config, PodCollection):
         secrets = {
             'secret-id-1': ('username-1', 'password-1', 'https://1-regist.ry'),
             'secret-id-2': ('username-2', 'password-2', 'https://2-regist.ry'),

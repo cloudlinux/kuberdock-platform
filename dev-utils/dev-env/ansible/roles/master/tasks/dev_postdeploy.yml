@@ -12,6 +12,10 @@
   notify:
     - restart nginx
 
+- name: Copy CEPH settings
+  file: src=/var/opt/kuberdock/kubedock/ceph_settings.py dest=/vagrant/kubedock/ceph_settings.py state=link
+  when: use_ceph
+
 - name: Create tmux session
   shell: tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}' 
   tags:

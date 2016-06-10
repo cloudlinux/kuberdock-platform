@@ -35,10 +35,12 @@ methods:
         method: post
         args:
             - pod
+            - referer
         params:
             action: orderkuberdockpod
             client_id: null          # filled in automatically
             pod: pod
+            referer: referer
         endpoint: /includes/api.php
         return:
             - results
@@ -60,10 +62,12 @@ methods:
         method: post
         args:
             - pod
+            - referer
         params:
             action: addkuberdockkubes
             client_id: null          # filled in automatically
             pod: pod
+            referer: referer
         endpoint: /includes/api.php
         return:
             - results

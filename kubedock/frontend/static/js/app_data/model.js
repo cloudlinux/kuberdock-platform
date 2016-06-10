@@ -836,7 +836,12 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     // TODO: Fixed code duplication by moving models from settings_app to a common file
-    data.PersistentStorageCollection = data.SortableCollection.extend({
+    data.PersistentStorageCollection = Backbone.Collection.extend({
+        url: '/api/pstorage',
+        model: data.PersistentStorageModel,
+        parse: unwrapper,
+    });
+    data.PaginatedPersistentStorageCollection = data.SortableCollection.extend({
         url: '/api/pstorage',
         model: data.PersistentStorageModel,
         parse: unwrapper,

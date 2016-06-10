@@ -1,7 +1,6 @@
 <div id="item-controls" class="licenseTab">
     <div class="status-line">
         <span class="icon <%= status %>"><span>License status: <%= status ? status : 'unknown'%></span></span>
-        <span class="clock"><span>Expiration date: <%= formatDate(expiration) %></span></span>
         <span class="award"><span>License type:
             <% if (type){ %>
                 <%= type %>

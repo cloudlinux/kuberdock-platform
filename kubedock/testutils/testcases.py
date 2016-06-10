@@ -1,5 +1,4 @@
 import unittest
-import base64
 import os
 import logging
 import sqlalchemy

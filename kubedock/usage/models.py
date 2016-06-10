@@ -4,7 +4,6 @@ from sqlalchemy.dialects import postgresql
 from flask import current_app
 from ..core import db
 from ..models_mixin import BaseModelMixin
-from ..kapi import pd_utils
 
 
 def to_timestamp(dt):
@@ -210,15 +209,10 @@ class PersistentDiskState(BaseModelMixin, db.Model):
             start_time=datetime.utcnow(), size=size).save()
 
     @classmethod
-    def end(cls, user_id=None, pd_name=None, sys_drive_name=None):
-        query = cls.query.filter_by(end_time=None)
-        if user_id is None or pd_name is None:
-            pd_name, user = pd_utils.get_drive_and_user(sys_drive_name)
-            if not user:
-                return
-            query = query.filter_by(pd_name=pd_name, user_id=user.id)
-        else:
-            query = query.filter_by(pd_name=pd_name, user_id=user_id)
+    def end(cls, user_id=None, pd_name=None):
+        query = cls.query.filter(cls.pd_name == pd_name,
+                                 cls.user_id == user_id,
+                                 cls.end_time == None)
         query.update({'end_time': datetime.utcnow()})
         db.session.commit()
 

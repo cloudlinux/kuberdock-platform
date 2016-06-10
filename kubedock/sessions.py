@@ -2,10 +2,9 @@ from itsdangerous import (JSONWebSignatureSerializer as FallbackSerializer,
                           TimedJSONWebSignatureSerializer as Serializer,
                           SignatureExpired)
 
-from functools import wraps
 from werkzeug.datastructures import CallbackDict
 from flask.sessions import SessionInterface, SessionMixin
-from flask import current_app, abort, request, _request_ctx_stack
+from flask import current_app, _request_ctx_stack
 from uuid import uuid4
 
 from .users.models import SessionData
@@ -16,12 +15,15 @@ from .core import db
 from .login import create_identifier
 
 
+def get_secret_key():
+    return (SystemSettings.get_by_name('sso_secret_key') or
+            current_app.config.get('SECRET_KEY'))
+
+
 def create_token(session):
     if getattr(session, 'sid', None) is None:
         return
-    secret = SystemSettings.get_by_name('sso_secret_key')
-    if not secret:
-        secret = current_app.config.get('SECRET_KEY')
+    secret = get_secret_key()
     lifetime = current_app.config.get('SESSION_LIFETIME')
     s = Serializer(secret, lifetime)
     token = s.dumps(dict(dict(session), sid=session.sid))
@@ -108,9 +110,7 @@ class ManagedSessionInterface(SessionInterface):
         token = request.headers.get('X-Auth-Token', request.args.get('token2'))
         if not token:   # new unauthorized request
             return self.manager.new_session()
-        secret = SystemSettings.get_by_name('sso_secret_key')
-        if not secret:
-            secret = current_app.config.get('SECRET_KEY')
+        secret = get_secret_key()
         lifetime = current_app.config.get('SESSION_LIFETIME')
         try:
             s = Serializer(secret, lifetime)

@@ -1,4 +1,4 @@
-Version: 1.2
+Version: 1.2.0
 Name: kuberdock
 Summary: KuberDock
 Release: 1%{?dist}.cloudlinux
@@ -13,20 +13,21 @@ BuildRequires: nodejs-less
 BuildRequires: nodejs-clean-css
 
 Requires: nginx
-Requires: influxdb == 0.8.8-1
+Requires: influxdb == 0:0.13.0
+Requires: heapster = 1.0.2
 Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
-Requires: etcd == 1:2.0.9
-Requires: kubernetes-master == 1:1.1.3-3.el7.cloudlinux
+Requires: etcd == 1:2.2.5
+Requires: kubernetes-master == 1:1.2.4-2.el7.cloudlinux
 Requires: flannel == 1:0.5.3
 Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
 Requires: python-cerberus >= 0.9.1
+Requires: python-click >= 6.3
 Requires: python-flask >= 0.10.1
-Requires: python-flask-influxdb >= 0.1
 Requires: python-flask-login >= 0.2.11
 Requires: python-flask-mail >= 0.9.1
 Requires: python-flask-sqlalchemy >= 2.0
@@ -45,7 +46,6 @@ Requires: python-celery == 1:3.1.19
 Requires: python-ecdsa >= 0.11
 Requires: python-gevent >= 1:1.1.1
 Requires: python-greenlet >= 0.4.2
-Requires: python-influxdb >= 0.1.13
 Requires: python-itsdangerous >= 0.24
 Requires: python-ipaddress >= 1.0.7
 Requires: python-kombu >= 3.0.35
@@ -102,6 +102,7 @@ mkdir -p %{buildroot}/var/lib/kuberdock
 mkdir -p %{buildroot}%{_bindir}
 cp -r * %{buildroot}/var/opt/kuberdock
 ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_bindir}/kuberdock-upgrade
+ln -sf  /var/opt/kuberdock/backup_master.py %{buildroot}%{_bindir}/kd-backup-master
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %{__install} -D -m 0644 conf/shared-kubernetes.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
 %{__install} -D -m 0644 conf/shared-etcd.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-etcd.conf
@@ -185,6 +186,7 @@ fi
 %config %{_sysconfdir}/sudoers.d/nginx
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
+%attr (-,nginx,nginx) %{_bindir}/kd-backup-master
 %exclude /var/opt/kuberdock/dev-utils
 %{_bindir}/kdcustomize
 

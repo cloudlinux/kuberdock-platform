@@ -464,8 +464,9 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         """
         Get container config from cache or registry
 
-        :param auth: authentication data. Accepts None, [<username>, <password>]
-            or {'username': <username>, <password>: <password>}
+        :param auth: authentication data. Accepts None,
+            [<username>, <password>], or
+            {'username': <username>, <password>: <password>}
         :param refresh_cache: if True, then refresh cache no matter what
             timestamp does it have
         :param secrets: additional list of secrets to use with (or instead of)
@@ -477,7 +478,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         additional_auth_set = set()
         if secrets is not None:
             additional_auth_set.update(
-                (username, password) for username, password, registry in secrets
+                (username, password)
+                for username, password, registry in secrets
                 if registry == self.full_registry)
 
         cache_enabled = auth is None and secrets is None
@@ -486,8 +488,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             if not (refresh_cache or cached_config is None or cached_config.outdated):
                 return cached_config.data
 
-        # try to get image data using provided auth data (or without auth) first
-        # then using provided secrets
+        # try to get image data using provided auth data
+        # (or without auth) first, then using provided secrets
         for auth in chain([auth], additional_auth_set):
             image_info = self._request_image_info(auth)
             if image_info is not None and 'config' in image_info:

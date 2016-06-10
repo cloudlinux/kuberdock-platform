@@ -9,7 +9,7 @@ import pytz
 
 from .exceptions import APIError
 from .predefined_apps.models import PredefinedApp
-from .billing.models import Kube, Package
+from .billing.models import Kube, Package, PackageKube
 from .users.models import User
 from .rbac.models import Role
 from .system_settings.models import SystemSettings
@@ -426,6 +426,10 @@ new_pod_schema.update({
         'nullable': True,
         'template_exists': True,
     },
+    'dnsPolicy': {
+        'type': 'string', 'required': False,
+        'allowed': ['ClusterFirst', 'Default']
+    },
     'status': {
         'type': 'string', 'required': False,
         'allowed': ['stopped', 'unpaid']
@@ -598,7 +602,7 @@ predefined_apps_kuberdock_schema = {
     'packageID': {
         'type': 'integer',
         'coerce': int,
-        # 'package_id_exists': True,
+        'package_id_exists': True,
     },
     'appPackages': {
         'type': 'list',
@@ -634,6 +638,13 @@ ippool_schema = {
             'message': 'Exclude IP\'s are expected to be in the form of 5,6,7 '
                        'or 6-134 or both comma-separated',
         },
+    },
+    'node': {
+        'type': 'string',
+        'nullable': True,
+        # Optional because schema should be the same both when
+        # NONFLOATING_PUBLIC_IPS is either True and False.
+        'required': False,
     },
 }
 
@@ -863,7 +874,7 @@ class V(cerberus.Validator):
     def _validate_package_id_exists(self, exists, field, value):
         if exists:
             if Package.query.get(int(value)) is None:
-                self._error(field, "Package doesn't exist")
+                self._error(field, 'Package with id "{0}" doesn\'t exist'.format(value))
 
 
 def check_int_id(id):

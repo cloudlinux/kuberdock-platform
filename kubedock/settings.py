@@ -1,8 +1,6 @@
 import os
 import ConfigParser
 from datetime import timedelta
-import subprocess
-
 from celery.schedules import crontab
 
 DEFAULT_TIMEZONE = 'UTC'
@@ -122,7 +120,7 @@ INFLUXDB_PORT = 8086
 INFLUXDB_TABLE = 'stats'
 INFLUXDB_USER = 'root'
 INFLUXDB_PASSWORD = 'root'
-INFLUXDB_DATABASE = 'cadvisor'
+INFLUXDB_DATABASE = 'k8s'
 
 # Port to access elasticsearch via rest api
 ELASTICSEARCH_REST_PORT = 9200
@@ -198,12 +196,14 @@ MASTER_TOBIND_FLANNEL = 'enp0s5'
 NODE_TOBIND_EXTERNAL_IPS = 'enp0s5'
 NODE_TOBIND_FLANNEL = 'enp0s5'
 NODE_INSTALL_TIMEOUT_SEC = 30 * 60    # 30 min
+NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT = 30
 PD_NAMESPACE = ''
 
 NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
 ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/' \
                         'v2/keys/kuberdock/network/plugin/registered_hosts'
+NONFLOATING_PUBLIC_IPS = False
 
 # Import hoster settings in update case
 

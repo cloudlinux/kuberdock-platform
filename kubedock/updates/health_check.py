@@ -27,7 +27,7 @@ MAX_DISK_PERCENTAGE = 90
 MESSAGES = {
     'disk': "\tLow disk space: {}",
     'services': "\tSome services in wrong state: {}",
-    'ntp': "\tTime not synced",
+    'ntp': "\tTime not synced. Please either synchronize it manually or wait several minutes (up to 20) and repeat",
     'running': "\tNode not running in kubernetes",
     'ssh': "\tCan't access node from master through ssh",
     'pods': "Some internal pods in wrong state: {}",
@@ -37,10 +37,10 @@ MESSAGES = {
 master_services = ['etcd', 'influxdb', 'kube-apiserver',
                    'kube-controller-manager', 'kube-scheduler', 'nginx',
                    'kuberdock-k8s2etcd', 'ntpd', 'postgresql', 'redis',
-                   'emperor.uwsgi']
+                   'emperor.uwsgi', 'heapster']
 
 node_services = ['flanneld', 'ntpd', 'docker', 'kube-proxy',
-                 'kubelet', 'kuberdock-cadvisor', 'kuberdock-watcher']
+                 'kubelet', 'kuberdock-watcher']
 
 
 def get_service_state(service):

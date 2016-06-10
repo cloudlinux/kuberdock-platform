@@ -1,3 +1,4 @@
+click>=6.3
 websocket-client
 boto==2.38
 elasticsearch>=1.0

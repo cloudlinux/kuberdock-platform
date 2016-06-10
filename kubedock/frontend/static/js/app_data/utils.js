@@ -239,7 +239,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         }
         return moment(dt).format(formatString);
     };
-    
+
     utils.removeURLParameter = function (url, parameter) {
         var urlParts = url.split('?');
         if (urlParts.length < 2) { return url; }

@@ -178,7 +178,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                     var item = collection.fullCollection.get(data.id);
                     if (item) {
                         item.fetch({statusCode: null}).fail(function(xhr){
-                            if (xhr.status == 404)  // "delete" event was missed
+                            if (xhr.status === 404)  // "delete" event was missed
                                 collection.remove(item);
                         });
                     } else {  // it's a new item, or we've missed some event
@@ -255,12 +255,17 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         source.onerror = function () {
             console.log('SSE Error. Reconnecting...');  // eslint-disable-line no-console
             console.log(source);
+            var timeOut = 5000;
+            if (source.readyState === 0){
+                Utils.notifyWindow('The page you are looking for is temporarily unavailable. Please try again later');
+                timeOut = 30000;
+            }
             if (source.readyState !== 2)
                 return;
             source.close();
             var lastEventId = that.lastEventId || options.lastID,
                 newOptions = _.extend(_.clone(options), {lastID: lastEventId});
-            setTimeout(_.bind(that.eventHandler, that, newOptions), 5000);
+            setTimeout(_.bind(that.eventHandler, that, newOptions), timeOut);
         };
     };
 

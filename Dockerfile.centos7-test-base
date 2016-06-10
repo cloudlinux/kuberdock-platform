@@ -2,15 +2,22 @@ FROM centos:7
 
 RUN yum -y install epel-release && \
     yum -y update && \
-    yum -y install python-devel python-pip postgresql-contrib postgresql-devel gcc
-RUN pip install --upgrade pip && \
-    pip install -U --no-cache-dir tox psycopg2 setuptools funcsigs python-dateutil
+    yum -y install python-pip python-devel postgresql-contrib postgresql-devel gcc nmap
+RUN pip install --upgrade pip && pip install virtualenv
 
-RUN mkdir /tmp/pip-cache-warm-up
-COPY requirements.txt requirements-dev.txt /tmp/pip-cache-warm-up/
-RUN cd /tmp/pip-cache-warm-up && pip download -r requirements.txt -r requirements-dev.txt
-RUN rm -rf /tmp/pip-cache-warm-up/
+# Pre-build test env. Before test run requirements are checked again.
+# It is much faster to check/install-missing than full install.
+COPY requirements.txt requirements-dev.txt /
+RUN cd / && \
+    virtualenv venv && \
+    source venv/bin/activate && \
+    pip install -r requirements.txt -r requirements-dev.txt && \
+    rm -f requirements.txt requirements-dev.txt
 
-# Rebuild & push with:
-# docker build -t lobur/centos7-test-base -f Dockerfile.centos7-test-base --rm=true --no-cache=true .
-# docker push lobur/centos7-test-base
+# Rebuild & push with (always bump X):
+# docker build -t lobur/centos7-test-base:vX -f Dockerfile.centos7-test-base --rm=true --no-cache=true --pull .
+# docker push lobur/centos7-test-base:vX
+
+# Always bump X, including Dockerfile.test, this is
+# needed to make sure the new image gets pulled on Jenkins
+# If you are not lobur use your own hub.docker.com account

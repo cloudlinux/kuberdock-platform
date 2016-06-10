@@ -4,36 +4,52 @@ import unittest
 
 import mock
 import ipaddress
+import responses
 
 from kubedock.core import db
 from kubedock.exceptions import APIError
 from kubedock.kapi import ippool
 from kubedock.pods.models import IPPool
+from kubedock.testutils.fixtures import K8SAPIStubs
 from kubedock.testutils.testcases import DBTestCase
+from kubedock.kapi.node import Node as K8SNode, \
+    NodeExceptionNegativeFreeIPCount
 from kubedock.testutils.testcases import attr
+from flask import current_app
 
 
 @attr('db')
 class TestIpPool(DBTestCase):
     """Tests for ippool.IpAddrPool class"""
 
-    def test_get(self):
-        """Test IpAddrPool.get method."""
+    def setUp(self):
+        super(TestIpPool, self).setUp()
+        self.node = self.fixtures.node()
+        self.db.session.add(self.node)
+        self.db.session.commit()
+
+        self.stubs = K8SAPIStubs()
+        self.stubs.node_info_in_k8s_api(self.node.hostname)
+        self.stubs.node_info_update_in_k8s_api(self.node.hostname)
+
+        current_app.config['NONFLOATING_PUBLIC_IPS'] = True
+
+    def test_get_returns_emtpy_list_by_default(self):
         res = ippool.IpAddrPool().get()
         self.assertEqual(res, [])
 
+    def test_get_returns_none_if_network_does_not_exist(self):
         res = ippool.IpAddrPool().get(net='somegarbage')
         self.assertIsNone(res)
 
-        # add a pool
+    def test_add_raises_if_pool_network_is_incorrect(self):
         pool = IPPool(network='somegarbage')
         db.session.add(pool)
         db.session.commit()
         with self.assertRaises(ValueError):
             ippool.IpAddrPool().get()
-        db.session.query(IPPool).delete()
-        db.session.commit()
 
+    def test_add_successfully_adds_network(self):
         pool = IPPool(network='192.168.1.1/32')
         db.session.add(pool)
         db.session.commit()
@@ -45,8 +61,9 @@ class TestIpPool(DBTestCase):
             'id': u'192.168.1.1/32',
             'ipv6': False,
             'network': u'192.168.1.1/32',
+            'node': None,
             'page': 1,
-            'pages': 1
+            'pages': 1,
         }
         self.assertEqual(res, [first_net])
         pool = IPPool(network='192.168.1.2/32')
@@ -64,34 +81,39 @@ class TestIpPool(DBTestCase):
         res = ippool.IpAddrPool().get(net='192.168.1.1/32', page=1000)
         self.assertEqual(res, first_net)
 
-    def test_get_free_host(self):
-        """Test IpAddrPool.get_free method."""
+    def test_get_free_host_returns_none_when_there_are_no_ips(self):
         res = ippool.IpAddrPool().get_free()
         self.assertIsNone(res)
 
+    def test_get_free_host_returns_first_ip_of_a_net_if_all_are_free(self):
         pool = IPPool(network='192.168.1.0/24')
         db.session.add(pool)
         db.session.commit()
         res = ippool.IpAddrPool().get_free()
         self.assertEqual(res, '192.168.1.1')
 
-    def test_create(self):
-        """Test IpAddrPool.create method."""
-        data = None
-        with self.assertRaises(APIError):
-            ippool.IpAddrPool().create(data)
+    def test_create_raises_if_given_data_is_invalid(self):
+        for invalid in (None, {}):
+            with self.assertRaises(APIError):
+                ippool.IpAddrPool().create(invalid)
 
-        data = {}
-        with self.assertRaises(APIError):
-            ippool.IpAddrPool().create(data)
-
+    @responses.activate
+    def test_create_successfully_creates_network_instance(self):
         data = {
-            'network': u'192.168.1.1/32'
+            'network': u'192.168.1.1/32',
+            'node': self.node.hostname,
         }
         res = ippool.IpAddrPool().create(data)
         self.assertEqual(res, {'network': data['network'], 'autoblock': [],
                                'id': data['network'],
-                               'allocation': [(u'192.168.1.1', None, 'free')]})
+                               'allocation': [('192.168.1.1', None, 'free')],
+                               'node': data['node']})
+
+    @responses.activate
+    def test_create_correctly_excludes_blocks(self):
+        pool = IPPool(network='192.168.1.1/32')
+        db.session.add(pool)
+        db.session.commit()
 
         expected_block_ips = [
             u'192.168.2.1', u'192.168.2.3', u'192.168.2.4',
@@ -102,7 +124,8 @@ class TestIpPool(DBTestCase):
 
         data = {
             'network': u'192.168.2.0/24',
-            'autoblock': block
+            'autoblock': block,
+            'node': self.node.hostname,
         }
         res = ippool.IpAddrPool().create(data)
         self.assertEqual(
@@ -120,11 +143,11 @@ class TestIpPool(DBTestCase):
 
         invalid_block = 'qwerty'
         data = {
-            'network': u'192.168.4.0/24',
+            'network': '192.168.4.0/24',
             'autoblock': invalid_block
         }
         with self.assertRaises(APIError):
-            res = ippool.IpAddrPool().create(data)
+            ippool.IpAddrPool().create(data)
 
         networks = db.session.query(IPPool).order_by(IPPool.network)
         self.assertEqual(
@@ -132,6 +155,7 @@ class TestIpPool(DBTestCase):
             [u'192.168.1.1/32', u'192.168.2.0/24'],
         )
 
+    @responses.activate
     @mock.patch.object(ippool.PodCollection, '_remove_public_ip')
     def test_update(self, remove_public_mock):
         """Test IpAddrPool.update method."""
@@ -140,16 +164,18 @@ class TestIpPool(DBTestCase):
             ippool.IpAddrPool().update(network, None)
 
         pool = IPPool(network='192.168.1.0/24')
+        node = self.node
+
         db.session.add(pool)
         db.session.commit()
 
         block = '1,3-5,7'
         data = {
             'network': network,
-            'autoblock': block
+            'autoblock': block,
+            'node': node.hostname,
         }
         ippool.IpAddrPool().create(data)
-
 
         res1 = ippool.IpAddrPool().update(network, None)
         self.assertIsNotNone(res1)
@@ -158,8 +184,8 @@ class TestIpPool(DBTestCase):
         # add already blocked ip
         block_ip = u'192.168.2.1'
         params = {'block_ip': block_ip}
-        res2 = ippool.IpAddrPool().update(network, params)
-        self.assertEqual(res1, res2)
+        with self.assertRaises(APIError):
+            ippool.IpAddrPool().update(network, params)
 
         # block new ip
         block_ip1 = u'192.168.2.111'
@@ -198,6 +224,9 @@ class TestIpPool(DBTestCase):
         )
         remove_public_mock.assert_called_once_with(ip=unbind_ip)
 
+        res = ippool.IpAddrPool().update(network, {'node': node.hostname})
+        self.assertEqual(res['node'], node.hostname)
+
     @mock.patch.object(ippool, 'PodIP')
     def test_delete(self, pod_ip_mock):
         """Test IpAddrPool.delete method."""
@@ -217,8 +246,93 @@ class TestIpPool(DBTestCase):
 
         pod_ip_mock.filter_by.return_value.first.return_value = None
         ippool.IpAddrPool().delete(network)
-        all = IPPool.query.all()
-        self.assertEqual(all, [])
+        all_ = IPPool.query.all()
+        self.assertEqual(all_, [])
+
+    @responses.activate
+    def test_create_sets_correctly_public_ip_counter(self):
+        # Network contains 14 IPs
+        # 192.168.2.1 - 192.168.2.14
+        self._create_network(u'192.168.2.0/28')
+
+        node = K8SNode(hostname=self.node.hostname)
+        self.assertEqual(node.free_public_ip_count, 14)
+
+    @responses.activate
+    def test_create_sets_correctly_public_ip_counter_given_autoblock(self):
+        # Network contains 14 IPs
+        # 192.168.2.1 - 192.168.2.14
+        # Autoblock leaves only 192.168.2.13, 192.168.2.14
+        self._create_network(u'192.168.2.0/28', autoblock='1-12')
+
+        node = K8SNode(hostname=self.node.hostname)
+        self.assertEqual(node.free_public_ip_count, 2)
+
+    @responses.activate
+    def test_update_decreases_public_ip_counter_on_block_ip_request(self):
+        # Network contains 14 IPs
+        # 192.168.2.1 - 192.168.2.14
+        network = u'192.168.2.0/28'
+        self._create_network(network)
+
+        params = {'block_ip': u'192.168.2.1', 'node': self.node.hostname}
+        ippool.IpAddrPool().update(network, params)
+        node = K8SNode(hostname=self.node.hostname)
+        self.assertEqual(node.free_public_ip_count, 14 - 1)
+
+    @responses.activate
+    def test_update_increases_public_ip_counter_on_unblock_ip_request(self):
+        # Network contains 14 IPs
+        # 192.168.2.1 - 192.168.2.14
+        network = u'192.168.2.0/28'
+        self._create_network(network)
+
+        update_params = [
+            {'block_ip': u'192.168.2.1', 'node': self.node.hostname},
+            {'unblock_ip': u'192.168.2.1', 'node': self.node.hostname}
+        ]
+
+        for p in update_params:
+            ippool.IpAddrPool().update(network, p)
+
+        node = K8SNode(hostname=self.node.hostname)
+        self.assertEqual(node.free_public_ip_count, 14 - 1 + 1)
+
+    @responses.activate
+    def test_delete_correctly_decreases_public_ip_counter(self):
+        # Networks contains 28 IPs
+        networks = [u'192.168.2.0/28', u'192.168.3.0/28']
+        for net in networks:
+            self._create_network(net)
+        ippool.IpAddrPool().delete(networks[0])
+        node = K8SNode(hostname=self.node.hostname)
+        self.assertEqual(node.free_public_ip_count, 14)
+
+    @responses.activate
+    def test_update_fails_on_ip_block_if_free_ip_counter_is_zero(self):
+        # We have one ip in out network
+        network = u'192.168.2.0/32'
+        self._create_network(network)
+
+        node = K8SNode(hostname=self.node.hostname)
+        # Emulate situation when scheduler decreased counter in parallel
+        node.update_free_public_ip_count(0)
+
+        # Should fail as we try to block the only existing IP which was
+        # reserved by pod not yet started but already scheduled by scheduler
+        with self.assertRaises(APIError):
+            ippool.IpAddrPool().update(network, {
+                'block_ip': u'192.168.2.1',
+                'node': self.node.hostname
+            })
+
+    def _create_network(self, network, autoblock=None):
+        data = {
+            'network': network,
+            'autoblock': '' if autoblock is None else autoblock,
+            'node': self.node.hostname,
+        }
+        ippool.IpAddrPool().create(data)
 
 
 if __name__ == '__main__':

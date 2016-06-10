@@ -2,23 +2,31 @@ import json
 import os
 import shlex
 from copy import deepcopy
+from collections import namedtuple
+
 from flask import current_app
 
-from .helpers import KubeQuery, ModelQuery, Utilities, APIError
+from . import helpers
+from ..exceptions import APIError
 from .images import Image
 from .pstorage import get_storage_class
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
-from ..pods.models import db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod
+from ..pods.models import (
+    db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod)
 from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
     NODE_LOCAL_STORAGE_PREFIX
 from ..utils import POD_STATUSES
+from . import podutils
 
 ORIGIN_ROOT = 'originroot'
 OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
 
 
-class Pod(KubeQuery, ModelQuery, Utilities):
+PodOwnerTuple = namedtuple('PodOwnerTuple', ['id', 'username'])
+
+
+class Pod(object):
     """
     Represents related k8s resources: RC, Service and all replicas (Pods).
 
@@ -27,7 +35,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
     id - uuid4, id in db
     namespace - uuid4, for now it's the same as `id`
     name - kubedock.pods.models.Pod.name (name in UI)
-    owner - kubedock.users.models.User
+    owner - PodOwnerTuple()
     podIP - k8s.Service.spec.clusterIP (appears after first start)
     service - k8s.Service.metadata.name (appears after first start)
     sid - uuid4, k8s.ReplicationController.metadata.name
@@ -41,14 +49,30 @@ class Pod(KubeQuery, ModelQuery, Utilities):
 
     """
     def __init__(self, data=None):
+        owner = None
         if data is not None:
             for c in data['containers']:
                 if len(c.get('args', [])) == 1:
                     # it seems the args has been changed
                     # or may be its length is only 1 item
                     c['args'] = self._parse_cmd_string(c['args'][0])
+            if 'owner' in data:
+                owner = data.pop('owner')
             for k, v in data.items():
                 setattr(self, k, v)
+        self.set_owner(owner)
+
+    def set_owner(self, owner):
+        """Set owner field as a named tuple with minimal necessary fields.
+        It is needed to pass Pod object to async celery task, to prevent
+        DetachedInstanceError, because of another session in celery task.
+        :param owner: object of 'User' model
+
+        """
+        if owner is not None:
+            self.owner = PodOwnerTuple(id=owner.id, username=owner.username)
+        else:
+            self.owner = PodOwnerTuple(None, None)
 
     @staticmethod
     def populate(data):
@@ -73,6 +97,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pod.volumes = spec.get('volumes', [])
         pod.containers = spec.get('containers', [])
         pod.restartPolicy = spec.get('restartPolicy')
+        pod.dnsPolicy = spec.get('dnsPolicy')
 
         if pod.status in (POD_STATUSES.running, POD_STATUSES.succeeded,
                           POD_STATUSES.failed):
@@ -116,6 +141,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         # unneeded fields in API output
         hide_fields = ['node', 'labels', 'namespace', 'secrets', 'owner']
         data = vars(self).copy()
+
+        # Temporary hack to hide unsupported statuses in frontend.
+        # TODO: remove it when frontend will support additional status
+        # 'preparing'
+        if data.get('status') == POD_STATUSES.preparing:
+            data['status'] = POD_STATUSES.pending
+
         data['volumes'] = data.pop('volumes_public', [])
         for container in data.get('containers', ()):
             new_volumes = []
@@ -186,8 +218,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         pd_cls = get_storage_class()
         if not pd_cls:
             return
-        pd_cls().enrich_volume_info(volume, persistent_disk.size,
-                                    persistent_disk.drive_name)
+        pd_cls().enrich_volume_info(volume, persistent_disk)
 
     def _handle_local_storage(self, volume):
         # TODO: cleanup localStorage volumes. It is now used only for pods of
@@ -268,10 +299,13 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                         }
                     },
                     "spec": {
+                        "securityContext": {'seLinuxOptions': {}},
                         "volumes": volumes,
                         "containers": containers,
                         "restartPolicy": getattr(self, 'restartPolicy',
                                                  'Always'),
+                        "dnsPolicy": getattr(self, 'dnsPolicy',
+                                             'ClusterFirst'),
                         "imagePullSecrets": [{"name": secret}
                                              for secret in secrets]
                     }
@@ -317,7 +351,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             kube_type = Kube.get_default_kube_type()
 
         if not data.get('name'):
-            data['name'] = self._make_name_from_image(data.get('image', ''))
+            data['name'] = podutils.make_name_from_image(data.get('image', ''))
 
         if volumes is None:
             volumes = []
@@ -348,7 +382,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 p.pop('hostPort', None)
 
         self.add_origin_root(data, volumes)
-        self.add_securety_labels(data, volumes)
 
         data['imagePullPolicy'] = 'Always'
         return data
@@ -368,21 +401,6 @@ class Pod(KubeQuery, ModelQuery, Utilities):
                 {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
                  u'name': volume_name})
 
-    def add_securety_labels(self, container, volumes):
-        """Add SELinuxOptions to volumes. For now, just add docker `:Z` option
-        to mountPath.
-        """
-        # TODO: after k8s 1.2 version, use
-        # `pod.Spec.SecurityContext.SELinuxOptions`
-        for volume_mount in container.get('volumeMounts', ()):
-            for volume in volumes:
-                if ('rbd' in volume and
-                        volume.get('name') == volume_mount.get('name')):
-
-                    mountPath = volume_mount.get('mountPath', '')
-                    if mountPath and mountPath[-2:] not in (':Z', ':z'):
-                        volume_mount['mountPath'] += ':Z'
-
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)
         lex.whitespace_split = True
@@ -391,7 +409,7 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         try:
             return list(lex)
         except ValueError:
-            self._raise('Incorrect cmd string')
+            podutils.raise_('Incorrect cmd string')
 
     def _forge_dockers(self, status='stopped'):
         for container in self.containers:
@@ -413,6 +431,11 @@ class Pod(KubeQuery, ModelQuery, Utilities):
             raise APIError('Pod with name "{0}" already exists. '
                            'Try another name.'.format(self.name),
                            status_code=409, type='PodNameConflict')
+
+    def set_status(self, status):
+        """Updates pod status in database"""
+        helpers.set_pod_status(self.id, status)
+        self.status = status
 
     def __repr__(self):
         name = getattr(self, 'name', '').encode('ascii', 'replace')

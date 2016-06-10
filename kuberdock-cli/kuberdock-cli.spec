@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 1.0
-Release: 2%{?dist}.cloudlinux
+Release: 3%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -54,6 +54,14 @@ rm -rf %{buildroot}
 %{python_sitelib}/kubecli/*
 
 %changelog
+
+* Fri Jun 03 2016 Maksym Lobur <mlobur@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 1.0-3
+- Install kuberdock-plugin when deploy cli
+- AC-3248 Fix kcli - two conflicting patches
+- KCLI. Get home dir from config path
+- AC-3239 Fix unit test kcli. Change Pod init order. Newly-given data has higher priority than one found on disk.
+- AC-3069 Fix failing kubecli helper test
+
 * Wed Apr 20 2016 Igor Savenko <bliss@cloudlinux.com> 1.0-2
 - AC-2963: removed passwords from /etc/kubecli.conf;
   restricted file permissions for ~/.kubecli.conf;

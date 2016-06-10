@@ -104,7 +104,8 @@ def get_dockerfile_data():
         pod = pod_collection._get_by_id(pod_id)
         containers = pod.containers
         containers += (pod.edited_config or {}).get('containers') or []
-        if any(c for c in containers if kapi_images.Image(c['image']) == image):
+        if any(c for c in containers
+               if kapi_images.Image(c['image']) == image):
             secrets = pod_collection._get_secrets(pod).values()
 
     return image.get_container_config(

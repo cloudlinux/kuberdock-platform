@@ -4,6 +4,9 @@ import math
 import os
 import socket
 
+from flask import current_app
+from sqlalchemy.exc import IntegrityError
+
 from . import pstorage
 from .node_utils import add_node_to_db, delete_node_from_db
 from .podcollection import PodCollection
@@ -18,10 +21,11 @@ from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID)
 from ..users.models import User
-from ..utils import send_event_to_role, run_ssh_command
+from ..utils import send_event_to_role, run_ssh_command, retry
 from ..validation import check_internal_pod_data
 from ..kd_celery import celery
 
+KUBERDOCK_DNS_POD_NAME = 'kuberdock-dns'
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
 
 
@@ -70,52 +74,85 @@ def create_node(ip, hostname, kube_id,
     _deploy_node(node, do_deploy, with_testing, options)
 
     ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
-    logs_podname = get_kuberdock_logs_pod_name(hostname)
-    logs_pod = db.session.query(Pod).filter_by(name=logs_podname,
-                                               owner=ku).first()
-    if not logs_pod:
-        logs_kubes = 1
-        logcollector_kubes = logs_kubes
-        logstorage_kubes = logs_kubes
-        node_resources = kubes_to_limits(
-            logs_kubes, Kube.get_internal_service_kube_type()
-        )['resources']
-        logs_memory_limit = node_resources['limits']['memory']
-        if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
-            logs_kubes = int(math.ceil(
-                float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
-            ))
 
-        if logs_kubes > 1:
-            # allocate total log cubes to log collector and to log
-            # storage/search containers as 1 : 3
-            total_kubes = logs_kubes * 2
-            logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
-            logstorage_kubes = total_kubes - logcollector_kubes
-        internal_ku_token = ku.get_token()
-
-        logs_config = get_kuberdock_logs_config(
-            hostname, logs_podname,
-            Kube.get_internal_service_kube_type(),
-            logcollector_kubes,
-            logstorage_kubes,
-            MASTER_IP,
-            internal_ku_token
-        )
-        check_internal_pod_data(logs_config, ku)
-        logs_pod = PodCollection(ku).add(logs_config, skip_check=True)
-        PodCollection(ku).update(logs_pod['id'], {'command': 'start'})
-
-    dns_pod = db.session.query(Pod).filter_by(name='kuberdock-dns',
-                                              owner=ku).first()
-    if not dns_pod:
-        dns_config = get_dns_pod_config()
-        check_internal_pod_data(dns_config, ku)
-        dns_pod = PodCollection(ku).add(dns_config, skip_check=True)
-        PodCollection(ku).update(dns_pod['id'], {'command': 'start'})
+    create_logs_pod(hostname, ku)
+    create_dns_pod(hostname, ku)
 
     node.kube.send_event('change')
     return node
+
+
+def create_logs_pod(hostname, owner):
+    def _create_pod():
+        pod_name = get_kuberdock_logs_pod_name(hostname)
+        if db.session.query(Pod).filter_by(name=pod_name, owner=owner).first():
+            return True
+
+        try:
+            logs_kubes = 1
+            logcollector_kubes = logs_kubes
+            logstorage_kubes = logs_kubes
+            node_resources = kubes_to_limits(
+                logs_kubes, Kube.get_internal_service_kube_type()
+            )['resources']
+            logs_memory_limit = node_resources['limits']['memory']
+            if logs_memory_limit < KUBERDOCK_LOGS_MEMORY_LIMIT:
+                logs_kubes = int(math.ceil(
+                    float(KUBERDOCK_LOGS_MEMORY_LIMIT) / logs_memory_limit
+                ))
+
+            if logs_kubes > 1:
+                # allocate total log cubes to log collector and to log
+                # storage/search containers as 1 : 3
+                total_kubes = logs_kubes * 2
+                logcollector_kubes = int(math.ceil(float(total_kubes) / 4))
+                logstorage_kubes = total_kubes - logcollector_kubes
+            internal_ku_token = owner.get_token()
+
+            logs_config = get_kuberdock_logs_config(
+                hostname, pod_name,
+                Kube.get_internal_service_kube_type(),
+                logcollector_kubes,
+                logstorage_kubes,
+                MASTER_IP,
+                internal_ku_token
+            )
+            check_internal_pod_data(logs_config, owner)
+            logs_pod = PodCollection(owner).add(logs_config, skip_check=True)
+            PodCollection(owner).update(logs_pod['id'], {'command': 'start'})
+            return True
+        except (IntegrityError, APIError):
+            # Either pod already exists or an error occurred during it's
+            # creation - log and retry
+            current_app.logger.exception(
+                'During "{}" node creation tried to create a Logs service '
+                'pod but got an error.'.format(hostname))
+
+    return retry(_create_pod, 1, 5, exc=APIError('Could not create Log '
+                                                 'service POD'))
+
+
+def create_dns_pod(hostname, owner):
+    def _create_pod():
+        if db.session.query(Pod) \
+                .filter_by(name=KUBERDOCK_DNS_POD_NAME, owner=owner).first():
+            return True
+
+        try:
+            dns_config = get_dns_pod_config()
+            check_internal_pod_data(dns_config, owner)
+            dns_pod = PodCollection(owner).add(dns_config, skip_check=True)
+            PodCollection(owner).update(dns_pod['id'], {'command': 'start'})
+            return True
+        except (IntegrityError, APIError):
+            # Either pod already exists or an error occurred during it's
+            # creation - log and retry
+            current_app.logger.exception(
+                'During "{}" node creation tried to create a DNS service '
+                'pod but got an error.'.format(hostname))
+
+    return retry(_create_pod, 1, 5, exc=APIError('Could not create DNS '
+                                                 'service POD'))
 
 
 def mark_node_as_being_deleted(node_id):
@@ -149,9 +186,9 @@ def delete_node(node_id=None, node=None):
 
     try:
         celery.control.revoke(task_id=NODE_INSTALL_TASK_ID.format(
-                                  node.hostname, node.id
-                              ),
-                              terminate=True)
+            node.hostname, node.id
+        ),
+            terminate=True)
     except Exception as e:
         raise APIError('Couldn\'t cancel node deployment. Error: {}'.format(e))
 
@@ -256,7 +293,7 @@ def _deploy_node(dbnode, do_deploy, with_testing, options=None):
         tasks.add_new_node.apply_async((dbnode.id, with_testing),
                                        deploy_options=options,
                                        task_id=NODE_INSTALL_TASK_ID.format(
-                                            dbnode.hostname, dbnode.id
+                                           dbnode.hostname, dbnode.id
                                        ))
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
@@ -383,8 +420,127 @@ def get_kuberdock_logs_config(node, name, kube_type,
 
 
 def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
+    """Returns config of k8s DNS service pod."""
+    # Based on https://github.com/kubernetes/kubernetes/blob/release-1.2/cluster/addons/dns/skydns-rc.yaml.in  # noqa
+    # TODO AC-3377: migrate on yaml-based templates
+    # TODO AC-3378: integrate exechealthz container
     return {
-        "name": "kuberdock-dns",
+        "name": KUBERDOCK_DNS_POD_NAME,
+        "podIP": ip,
+        "replicas": 1,
+        "kube_type": Kube.get_internal_service_kube_type(),
+        "node": None,
+        "restartPolicy": "Always",
+        "dnsPolicy": "Default",
+        "volumes": [
+            {
+                "name": "kubernetes-config",
+                # path is allowed only for kuberdock-internal
+                "localStorage": {"path": "/etc/kubernetes"}
+            },
+            {
+                "name": "etcd-pki",
+                # path is allowed only for kuberdock-internal
+                "localStorage": {"path": "/etc/pki/etcd"}
+            }
+        ],
+        "containers": [
+            {
+                "name": "etcd",
+                "command": [
+                    "/usr/local/bin/etcd",
+                    "-data-dir",
+                    "/var/etcd/data",
+                    "-listen-client-urls",
+                    "https://0.0.0.0:2379,http://127.0.0.1:4001",
+                    "-advertise-client-urls",
+                    "https://0.0.0.0:2379,http://127.0.0.1:4001",
+                    "-initial-cluster-token",
+                    "skydns-etcd",
+                    "--ca-file",
+                    "/etc/pki/etcd/ca.crt",
+                    "--cert-file",
+                    "/etc/pki/etcd/etcd-dns.crt",
+                    "--key-file",
+                    "/etc/pki/etcd/etcd-dns.key"
+                ],
+                "kubes": 1,
+                "image": "gcr.io/google_containers/etcd-amd64:2.2.1",
+                "env": [],
+                "ports": [
+                    {
+                        "isPublic": False,
+                        "protocol": "TCP",
+                        "containerPort": 2379
+                    }
+                ],
+                "volumeMounts": [
+                    {
+                        "name": "etcd-pki",
+                        "mountPath": "/etc/pki/etcd"
+                    }
+                ],
+                "workingDir": "",
+                "terminationMessagePath": None
+            },
+            {
+                "name": "kube2sky",
+                "args": [
+                    "--domain={0}".format(domain),
+                    "--kubecfg-file=/etc/kubernetes/configfile",
+                    "--kube-master-url=https://10.254.0.1",
+                ],
+                "kubes": 1,
+                "image": "gcr.io/google_containers/kube2sky:1.14",
+                "env": [],
+                "ports": [],
+                "volumeMounts": [
+                    {
+                        "name": "kubernetes-config",
+                        "mountPath": "/etc/kubernetes"
+                    }
+                ],
+                "workingDir": "",
+                "terminationMessagePath": None
+            },
+            {
+                "name": "skydns",
+                "args": [
+                    "-machines=http://127.0.0.1:4001",
+                    "-addr=0.0.0.0:53",
+                    "-ns-rotate=false",
+                    "-domain={0}.".format(domain)
+                ],
+                "kubes": 1,
+                "image": "gcr.io/google_containers/skydns:2015-10-13-8c72f8c",
+                "env": [],
+                "ports": [
+                    {
+                        "isPublic": False,
+                        "protocol": "UDP",
+                        "containerPort": 53
+                    },
+                    {
+                        "isPublic": False,
+                        "protocol": "TCP",
+                        "containerPort": 53
+                    }
+                ],
+                "volumeMounts": [],
+                "workingDir": "",
+                "terminationMessagePath": None
+            },
+        ]
+    }
+
+
+def get_dns_pod_config_pre_k8s_1_2(domain='kuberdock', ip='10.254.0.10'):
+    """Returns config of k8s DNS service pod."""
+    # Old DNS pod config used before k8s 1.2 series. Left for
+    # backward migrations only.
+    # TODO AC-3377: migrate on yaml-based templates
+    return {
+        "name": KUBERDOCK_DNS_POD_NAME,
         "podIP": ip,
         "replicas": 1,
         "kube_type": Kube.get_internal_service_kube_type(),

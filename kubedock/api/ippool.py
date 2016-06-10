@@ -61,3 +61,11 @@ def update_ippool(network):
 @KubeUtils.jsonwrap
 def delete_ippool(network):
     return IpAddrPool().delete(network)
+
+
+@ippool.route('/get-public-ip/<path:node>/<path:pod>', methods=['GET'],
+              strict_slashes=False)
+@auth_required
+@KubeUtils.jsonwrap
+def get_public_ip(node, pod):
+    return IpAddrPool().assign_ip_to_pod(pod, node)

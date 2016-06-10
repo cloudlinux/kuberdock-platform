@@ -18,12 +18,13 @@ from .settings import (
     PODS_VERBOSE_LOG,
     KUBERDOCK_INTERNAL_USER
 )
-from .utils import (get_api_url,
-                    unregistered_pod_warning, send_event_to_role,
-                    send_event_to_user, pod_without_id_warning, k8s_json_object_hook)
+from .utils import (get_api_url, unregistered_pod_warning,
+                    send_event_to_role, send_event_to_user,
+                    pod_without_id_warning, k8s_json_object_hook,
+                    send_pod_status_update)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
-from .kapi.podcollection import PodCollection
+from .kapi.podcollection import PodCollection, update_public_address
 from .kapi.pstorage import get_storage_class_by_volume_info, LocalStorage
 from . import tasks
 
@@ -71,26 +72,6 @@ def get_pod_state(pod):
     return json.dumps(res)
 
 
-def send_pod_status_update(pod, db_pod, event_type, app):
-    key_ = 'pod_state_' + db_pod.id
-
-    redis = ConnectionPool.get_connection()
-    prev_state = redis.get(key_)
-    if not prev_state:
-        redis.set(key_, get_pod_state(pod))
-    else:
-        current = get_pod_state(pod)
-        deleted = event_type == 'DELETED'
-        if prev_state != current or deleted:
-            redis.set(key_, 'DELETED' if deleted else current)
-            owner = db_pod.owner.id
-            event = ('pod:delete'
-                     if db_pod.status in ('deleting', 'deleted') else
-                     'pod:change')
-            send_event_to_role(event, {'id': db_pod.id}, 'Admin')
-            send_event_to_user(event, {'id': db_pod.id}, owner)
-
-
 def process_pods_event(data, app, event_time=None, live=True):
     if PODS_VERBOSE_LOG >= 2:
         print 'POD EVENT', data
@@ -102,7 +83,7 @@ def process_pods_event(data, app, event_time=None, live=True):
 
     if pod_id is None:
         pod_without_id_warning(pod['metadata']['name'],
-                                pod['metadata']['namespace'])
+                               pod['metadata']['namespace'])
         return
 
     # save states in database
@@ -113,7 +94,7 @@ def process_pods_event(data, app, event_time=None, live=True):
 
     # if live, we need to send events to frontend
     if live:
-        send_pod_status_update(pod, db_pod, event_type, app)
+        send_pod_status_update(get_pod_state(pod), db_pod, event_type)
 
     host = pod['spec'].get('nodeName')
 
@@ -294,7 +275,7 @@ def process_events_event(data, app):
 
             message = event['message']
             not_enough_resources_keywords = [
-                'PodFitsResources', 'PodExceedsFreeCPU', 'PodExceedsFreeMemory'
+                'PodCount', 'CPU', 'Memory', 'PublicIP'
             ]
 
             node = pod.get_dbconfig('node')
@@ -358,7 +339,7 @@ def process_service_event_k8s(data, app):
     if not pod_id:
         return
     with app.app_context():
-        PodCollection.update_public_address(service, pod_id, send=True)
+        update_public_address(service, pod_id, send=True)
 
 
 def process_pods_event_k8s(data, app):
@@ -527,8 +508,8 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
                         print "{}: start watch on event {}".format(
                             fn_name, index)
                     r = requests.get(url, params={'wait': True,
-                                                'recursive': True,
-                                                'waitIndex': index})
+                                                  'recursive': True,
+                                                  'waitIndex': index})
                     if not r.ok:
                         current_app.logger.error(
                             "{}: Can't connect to etcd".format(fn_name))
@@ -541,12 +522,13 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
                     # The event in requested index is outdated and cleared
                     if data.get('errorCode') == 401:
                         print "The event in requested index is outdated and "\
-                                "cleared. Skip all events and wait for new one"
+                              "cleared. Skip all events and wait for new one"
                         index = 0
                         continue
                     if retry < MAX_ATTEMPTS:
                         if verbose >= 3:
-                            print "{}: try to process {}".format(fn_name, index)
+                            print "{}: try to process {}".format(
+                                fn_name, index)
                         func(data, app)
                     else:
                         message = "Problems in the listeners module have been\
@@ -567,7 +549,8 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
                     retry += 1
                     if verbose >= 3:
                         print "{}: retry={}".format(fn_name, retry)
-                    print repr(e), '...restarting listen {0}...'.format(fn_name)
+                    print repr(e), \
+                        '...restarting listen {0}...'.format(fn_name)
                     gevent.sleep(0.2)
     return result
 
@@ -594,7 +577,8 @@ def prelist_extended_statuses(app):
 
 
 def process_extended_statuses(data, app):
-    """Get extended statuses from etcd key and prepare it for kuberdock process.
+    """Get extended statuses from etcd key and prepare it for kuberdock
+    process.
     Delete delete namespace dir from etcd after processing.
     """
     if data['action'] != 'set':

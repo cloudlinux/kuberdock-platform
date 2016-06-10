@@ -1,3 +1,5 @@
+from urlparse import urlsplit, urlunsplit, urljoin
+
 import bitmath
 import boto.ec2
 import boto.ec2.elb
@@ -9,6 +11,8 @@ import socket
 import sys
 import datetime
 import nginx
+import string
+import time
 
 import subprocess
 from collections import namedtuple
@@ -53,6 +57,7 @@ class POD_STATUSES:
     succeeded = 'succeeded'
     failed = 'failed'
     unpaid = 'unpaid'
+    preparing = 'preparing'
 
 
 def get_channel_key(conn, key, size=100):
@@ -69,12 +74,13 @@ def get_channel_key(conn, key, size=100):
         return 1
     keys = sorted(conn.hkeys(key), key=int)
     if length >= size:
-        for k in keys[:-(size-1)]:
+        for k in keys[:-(size - 1)]:
             conn.hdel(key, k)
-    return int(keys[-1])+1
+    return int(keys[-1]) + 1
 
 
-def send_event_to_user(event_name, data, user_id, to_file=None, prefix='SSEEVT'):
+def send_event_to_user(event_name, data, user_id, to_file=None,
+                       prefix='SSEEVT'):
     """
     Selects all given user sessions and sends list to send_event
     """
@@ -170,20 +176,30 @@ def get_api_url(*args, **kwargs):
         namespace - namespace
         api_version - overrides default api version
         watch - True if you need append ?watch=true
+        base_url - override the base url specified in KUBE_MASTER_URL. It
+        should begin with a leading slash in order to work properly. For
+        example given KUBE_MASTER_URL = http://localhost:1/api/ and
+        base_url = /apis/kuberdock.com the final URL will be
+        http://localhost:1/apis/kuberdock.com/...
     :return: string
     """
-    api_version = kwargs.get('api_version', KUBE_API_VERSION)
-    url = '/'.join([KUBE_MASTER_URL.rstrip('/'), api_version])
-    if args:
-        url = '{0}/{1}'.format(url.rstrip('/'), '/'.join(map(str, args)))
+    schema, host, url, query, fragment = list(urlsplit(KUBE_MASTER_URL))
+
+    if kwargs.get('watch'):
+        schema, query = 'ws', 'watch=true'
+
+    if 'base_url' in kwargs:
+        url = kwargs['base_url'] + '/'
+
+    url_parts = [kwargs.get('api_version', KUBE_API_VERSION)]
+
     namespace = kwargs.get('namespace', 'default')
     if namespace:
-        url = url.replace('/' + api_version,
-                          '/{0}/namespaces/{1}'.format(api_version, namespace),
-                          1)
-    if kwargs.get('watch'):
-        url = url.replace('http://', 'ws://') + '?watch=true'
-    return url
+        url_parts += ['namespaces', namespace]
+
+    url = urljoin(url, '/'.join(url_parts + [str(a) for a in args]))
+
+    return urlunsplit([schema, host, url, query, fragment])
 
 
 def k8s_json_object_hook(obj):
@@ -219,6 +235,7 @@ class atomic(object):
         In case of a decorator, this behavior can be overridden by passing
         `commit=True/False` into decorated function.
     """
+
     class UnexpectedCommit(SQLAlchemyError):
         """Raised before commit inside atomic block happens."""
 
@@ -237,6 +254,7 @@ class atomic(object):
                 self.nested_override = not kwargs.pop('commit')
             with self:
                 return func(*args, **kwargs)
+
         return decorated
 
     def __enter__(self):
@@ -299,6 +317,8 @@ class atomic(object):
                             cls._unexpectedly_closed)
         except InvalidRequestError:  # ok, it is not registered
             pass
+
+
 atomic.register()
 
 
@@ -441,7 +461,8 @@ def register_elb_name(service, name):
     :param name: string -> DNS name to be saved
     """
     item = db.session.query(Pod).filter(
-        (Pod.status != 'deleted') & (Pod.config.like('%'+service+'%'))).first()
+        (Pod.status != 'deleted') & (
+            Pod.config.like('%' + service + '%'))).first()
     if item is None:
         return
     data = json.loads(item.config)
@@ -457,7 +478,8 @@ def get_pod_owner_id(service):
     :return: integer
     """
     item = db.session.query(Pod).filter(
-        (Pod.status != 'deleted') & (Pod.config.like('%'+service+'%'))).first()
+        (Pod.status != 'deleted') & (
+            Pod.config.like('%' + service + '%'))).first()
     if item is None:
         return
     return item.owner_id
@@ -604,7 +626,6 @@ def all_request_params():
 
 
 class KubeUtils(object):
-
     @staticmethod
     def _get_current_user():
         try:
@@ -621,6 +642,7 @@ class KubeUtils(object):
             if isinstance(rv, Response):
                 return rv
             return jsonify({'status': 'OK', 'data': rv})
+
         return wrapper
 
     @classmethod
@@ -635,6 +657,7 @@ class KubeUtils(object):
                     'Permission denied. Your account is suspended. '
                     'Your package has expired. Please upgrade it.')
             return func(*args, **kwargs)
+
         return wrapper
 
     @staticmethod
@@ -824,3 +847,50 @@ def get_version(package):
         return rv
     except (subprocess.CalledProcessError, AttributeError):
         return 'unknown'
+
+
+def randstr(length=8, symbols=string.ascii_letters + string.digits):
+    return ''.join(random.choice(symbols) for i in range(length))
+
+
+def retry(f, retry_pause, max_retries, exc=None, *f_args, **f_kwargs):
+    """
+    Retries the given function call until it returns non-empty value
+    or max_retries exceeds.
+
+    :param f: a function to retry
+    :param retry_pause: pause between retries (seconds)
+    :param max_retries: max retries num.
+    :param exc: exception obj to throw after max retries.
+    :return:
+    """
+    for _ in range(max_retries):
+        ret_val = f(*f_args, **f_kwargs)
+        if ret_val:
+            return ret_val
+        time.sleep(retry_pause)
+    if exc:
+        raise exc
+
+
+def send_pod_status_update(pod_status, db_pod, event_type):
+    """Sends pod status change to frontend.
+    Must be executed in application context.
+    """
+    key_ = 'pod_state_' + db_pod.id
+
+    redis = ConnectionPool.get_connection()
+    prev_state = redis.get(key_)
+    user_id = db_pod.owner_id
+    if not prev_state:
+        redis.set(key_, pod_status)
+    else:
+        current = pod_status
+        deleted = event_type == 'DELETED'
+        if prev_state != current or deleted:
+            redis.set(key_, 'DELETED' if deleted else current)
+            event = ('pod:delete'
+                     if db_pod.status in ('deleting', 'deleted') else
+                     'pod:change')
+            send_event_to_role(event, {'id': db_pod.id}, 'Admin')
+            send_event_to_user(event, {'id': db_pod.id}, user_id)

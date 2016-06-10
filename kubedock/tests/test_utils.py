@@ -251,6 +251,23 @@ class TestUtilsGetApiUrl(unittest.TestCase):
                 'pods', 'unnamed-1aj3q02ep9bv1rtu6z7wf-c4h6t',
                 namespace='user-unnamed-1-v1cf712fd0bea4ac37ab9e12a2ee3094'))
 
+    def test_base_url_completely_overrides_base_in_a_default_api_url(self):
+        expected = 'http://localhost:8080/apis/kuberdock.com/v1/namespaces' \
+                   '/default'
+        self.assertEqual(get_api_url(base_url='/apis/kuberdock.com'), expected)
+
+    def test_base_url_override_works_with_api_version_param(self):
+        expected = 'http://localhost:8080/apis/kuberdock.com/v2/namespaces' \
+                   '/default'
+        self.assertEqual(get_api_url(base_url='/apis/kuberdock.com',
+                                     api_version='v2'), expected)
+
+    def test_base_url_override_works_with_multiple_version_and_args(self):
+        expected = 'http://localhost:8080/apis/kuberdock.com/v2/namespaces' \
+                   '/default/freepublicipcounters/node1'
+        self.assertEqual(get_api_url('freepublicipcounters', 'node1',
+                                     base_url='/apis/kuberdock.com',
+                                     api_version='v2'), expected)
 
 # TODO: remove after handle_aws_node
 class TestUtilsComposes(unittest.TestCase):

@@ -7,7 +7,7 @@ from copy import deepcopy
 
 import yaml
 
-from ..billing.models import Kube
+from ..billing.models import Kube, Package
 from ..exceptions import APIError
 from ..predefined_apps.models import PredefinedApp as PredefinedAppModel
 from ..validation import ValidationError, V, predefined_app_schema
@@ -112,19 +112,19 @@ def validate_template(template):
             u'common', u'Invalid application structure: {}'.format(str(err))
         )
 
-    check_plans(filled_template)
+    check_kuberdock_section(filled_template)
 
     return fields, filled_template, parsed_template, template
 
 
-def check_plans(yml):
-    """Checks validity of plans in application structure.
-    :param app_struct: dict or list for application structure.
+def check_kuberdock_section(filled_template):
+    """Checks validity of kuberdock section in application structure.
+    :param filled_template: dict or list for application structure.
     :raise: APIError in case of invalid kube type.
 
     """
     validator = V(allow_unknown=True)
-    validator.validate(yml, predefined_app_schema)
+    yml = validator.validated(filled_template, predefined_app_schema)
     if validator.errors:
         # TODO: remove legacy error schema.
         # See TODO for raise_validation_error
@@ -136,6 +136,14 @@ def check_plans(yml):
     plans = yml['kuberdock']['appPackages']
     if len([plan for plan in plans if plan.get('recommended')]) != 1:
         error('Exactly one appPackage must be recommended.')
+
+
+    package_id = yml['kuberdock'].get('packageID')
+    if package_id is None:
+        package = Package.get_default()
+    else:
+        package = Package.query.get(package_id) or Package.get_default()
+    available_kubes = set(kube.kube_id for kube in package.kubes)
 
     pod = find_root(yml)
     for plan in plans:
@@ -163,6 +171,12 @@ def check_plans(yml):
                 if pdPlan['name'] in used:
                     error('Dublicate volume name in appPackage: "{0}"'.format(pdPlan['name']))
                 used.add(pdPlan['name'])
+
+            kube_id = podPlan.get('kubeType')
+            if kube_id is not None and kube_id not in available_kubes:
+                raise_validation_error('kuberdock', (
+                    'Package with id "{0}" doesn\'t contain Kube Type '
+                    'with id "{1}"'.format(package.id, kube_id)))
 
 
 def find_root(app_struct):

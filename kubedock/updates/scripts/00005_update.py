@@ -2,17 +2,18 @@ import json
 from kubedock.updates import helpers
 from kubedock.kapi.helpers import KubeQuery
 
-
 paths = ['metadata.labels',
          'spec.selector',
          'spec.template.metadata.labels',
          'spec.template.spec.selector']
 
 
-def _add_label(replace_map, items, using_label='name', add_label='kuberdock-pod-uid'):
+def _add_label(replace_map, items, using_label='name',
+               add_label='kuberdock-pod-uid'):
     for item in items:
         for path in paths:
-            obj = reduce(lambda obj, key: obj.get(key, {}), path.split('.'), item)
+            obj = reduce(lambda obj, key: obj.get(key, {}), path.split('.'),
+                         item)
             try:
                 namespace = item['metadata']['namespace']
                 obj[add_label] = replace_map[obj[using_label], namespace]
@@ -20,10 +21,12 @@ def _add_label(replace_map, items, using_label='name', add_label='kuberdock-pod-
                 pass
 
 
-def _del_label(replace_map, items, del_label='name', if_label='kuberdock-pod-uid'):
+def _del_label(replace_map, items, del_label='name',
+               if_label='kuberdock-pod-uid'):
     for item in items:
         for path in paths:
-            obj = reduce(lambda obj, key: obj.get(key, {}), path.split('.'), item)
+            obj = reduce(lambda obj, key: obj.get(key, {}), path.split('.'),
+                         item)
             try:
                 namespace = item['metadata']['namespace']
                 if replace_map[obj[del_label], namespace] == obj[if_label]:
@@ -38,7 +41,8 @@ def _put(kind, *items):
     for item in items:
         try:
             response = api._put([kind, item['metadata']['name']],
-                                json.dumps(item), ns=item['metadata']['namespace'])
+                                json.dumps(item),
+                                ns=item['metadata']['namespace'])
             if response['kind'].lower() == 'status':
                 print('Warning: {kind} {response}'.format(kind, response))
         except KeyError:
@@ -50,7 +54,8 @@ def _replace_labels(replace_map, old_label, new_label):
 
     for kind in ('pods', 'replicationcontrollers', 'services'):
         items = api._get([kind])['items']
-        _add_label(replace_map, items, using_label=old_label, add_label=new_label)
+        _add_label(replace_map, items, using_label=old_label,
+                   add_label=new_label)
         _put(kind, *items)
 
     for kind in ('services', 'replicationcontrollers', 'pods'):
@@ -71,7 +76,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     helpers.close_all_sessions()
 
 
-def downgrade(upd, with_testing,  exception, *args, **kwargs):
+def downgrade(upd, with_testing, exception, *args, **kwargs):
     from kubedock.pods.models import Pod
     upd.print_log('Change back pods name label')
 

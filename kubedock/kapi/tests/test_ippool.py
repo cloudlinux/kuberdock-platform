@@ -97,6 +97,20 @@ class TestIpPool(DBTestCase):
             with self.assertRaises(APIError):
                 ippool.IpAddrPool().create(invalid)
 
+    def test_cant_add_overlapping_network(self):
+        current_app.config['NONFLOATING_PUBLIC_IPS'] = False
+        # 192.168.0.9 - 192.168.0.10
+        ippool.IpAddrPool().create({'network': u'192.168.1.8/30'})
+
+        with self.assertRaisesRegexp(APIError, 'overlaps'):
+            ippool.IpAddrPool().create({'network': u'192.168.1.9/32'})
+
+        with self.assertRaisesRegexp(APIError, 'overlaps'):
+            ippool.IpAddrPool().create({'network': u'192.168.1.0/24'})
+
+        with self.assertRaisesRegexp(APIError, 'overlaps'):
+            ippool.IpAddrPool().create({'network': u'192.168.0.0/16'})
+
     @responses.activate
     def test_create_successfully_creates_network_instance(self):
         data = {

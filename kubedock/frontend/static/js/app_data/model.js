@@ -24,6 +24,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     data.DiffCollection = Backbone.Collection.extend({
         initialize: function(models, options){
+            this.compositeID = options.compositeID;
             this.before = options.before || new Backbone.Collection();
             this.after = options.after || new Backbone.Collection();
             this.modelType = options.modelType || Backbone.Model;
@@ -45,12 +46,16 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         recalc: function(){
             this.reset(this.after.map(function(modelA){
-                var modelB = this.before.get(modelA.id);
-                return {id: modelA.id, before: modelB, after: modelA};
+                var compositeID = this.compositeID && modelA.pick.apply(modelA, this.compositeID),
+                    modelB = compositeID ? this.before.findWhere(compositeID) : this.before.get(modelA.id),
+                    id = compositeID ? JSON.stringify(compositeID) : modelA.id;
+                return {id: id, before: modelB, after: modelA};
             }, this));
             this.add(this.before.map(function(modelB){
-                var modelA = this.after.get(modelB.id);
-                return {id: modelB.id, before: modelB, after: modelA};
+                var compositeID = this.compositeID && modelB.pick.apply(modelB, this.compositeID),
+                    modelA = compositeID ? this.after.findWhere(compositeID) : this.after.get(modelB.id),
+                    id = compositeID ? JSON.stringify(compositeID) : modelB.id;
+                return {id: id, before: modelB, after: modelA};
             }, this));
             this.listenToOnce(this.before, 'add remove reset', this.recalc);
             this.listenToOnce(this.after, 'add remove reset', this.recalc);
@@ -108,7 +113,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     data.VolumeMount = Backbone.Model.extend({
-        idAttribute: 'name',
+        idAttribute: 'mountPath',
         defaults: function(){
             return {name: this.generateName(this.get('mountPath')), mountPath: null};
         },
@@ -116,10 +121,13 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return _.map(_.range(10), function(){ return _.random(36).toString(36); }).join('');
         },
         getContainer: function(){ return getParentWithType(this.collection, data.Container); },
+        getVolume: function(){
+            return _.findWhere(this.getContainer().getPod().get('volumes'),
+                               {name: this.get('name')});
+        },
     });
 
     data.Port = Backbone.Model.extend({
-        idAttribute: 'containerPort',
         defaults: {
             containerPort: null,
             hostPort: null,
@@ -314,8 +322,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             var attrs = _.without(this.editableAttributes, 'containers'),
                 before = _.partial(_.pick, this.toJSON()).apply(_, attrs),
                 after = _.partial(_.pick, compareTo.toJSON()).apply(_, attrs);
-            return !_.isEqual(before, after) || this.get('containers').any(function(orig){
-                    return orig.isChanged(compareTo.get('containers').get(orig.id));
+            return !_.isEqual(before, after) ||  this.getContainersDiffCollection().any(function(container){
+                    var before = container.get('before'),
+                        after = container.get('after');
+                    return !before || !after || before.isChanged(after);
                 });
         },
 

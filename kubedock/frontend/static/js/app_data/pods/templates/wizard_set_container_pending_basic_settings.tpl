@@ -38,7 +38,13 @@
         <sup>**</sup> Data wiped out on each container restart, use persistent storage if you want data to persist</p>
     </div>
     <span class="buttons pull-right">
-        <button class="prev-step gray">Back</button>
-        <button class="next-step">Next</button>
+        <% if (flow === 'EDIT_CONTAINER_GENERAL'){ %>
+            <button class="cancel-edit gray">Cancel</button>
+            <button class="edit-entire-pod gray">Edit entire pod</button>
+            <button class="save-changes blue">Save</button>
+        <% } else { %>
+            <button class="prev-step gray">Back</button>
+            <button class="next-step">Next</button>
+        <% } %>
     </span>
 </div>

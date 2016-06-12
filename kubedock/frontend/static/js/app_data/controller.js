@@ -348,7 +348,6 @@ define([
                     this.podWizardStepFinal(options);
                 });
         },
-
         /**
          * Go to the third step of edit pod wizard.
          *
@@ -367,6 +366,26 @@ define([
                         container: container,
                     };
                     this.podWizardStepEnv(options);
+                });
+        },
+        /**
+         * Go to the second step of edit pod wizard.
+         *
+         * @param {string} id - The ID of the pod.
+         * @param {string} containerID - The name of the container.
+         */
+        editContainerGeneral: function(id, containerID){
+            this.editPodBase(id)
+                .fail(function(){ this.pageNotFound(); })
+                .done(function(options){
+                    var container = options.podModel.get('containers').get(containerID);
+                    if (!container)
+                        return this.pageNotFound();
+                    options.podModel.wizardState = {
+                        flow: 'EDIT_CONTAINER_GENERAL',
+                        container: container,
+                    };
+                    this.podWizardStepGeneral(options);
                 });
         },
 
@@ -388,8 +407,8 @@ define([
          * @param {Model.container} [options.podModel.wizardState.container] -
          *      The container user works with.
          * @param {string} [options.podModel.wizardState.flow='CREATE_POD'] -
-         *      General goal of this wizard. Must be one of: "CREATE_POD",
-         *      "EDIT_ENTIRE_POD", "EDIT_CONTAINER_ENV".
+         *      General goal of this wizard. Must be one of: CREATE_POD,
+         *      EDIT_ENTIRE_POD, EDIT_CONTAINER_ENV, EDIT_CONTAINER_GENERAL.
          *
          * @returns {Promise} - Promise of filled `options`.
          */
@@ -454,9 +473,12 @@ define([
                                       function(){ originalModel.set('edited_config', oldEdited); })
                                 .done(function(){
                                     pod.editOf().cleanup();  // backbone-associations, prevent leak
-                                    var url = 'pods/' + originalModel.id;
-                                    if (pod.wizardState.flow === 'EDIT_CONTAINER_ENV')
-                                        url += '/container/' + pod.wizardState.container.id + '/env';
+                                    var url = 'pods/' + originalModel.id,
+                                        containerID = pod.wizardState.container.id;
+                                    if (pod.wizardState.flow === 'EDIT_CONTAINER_GENERAL')
+                                        url += '/container/' + containerID + '/general';
+                                    else if (pod.wizardState.flow === 'EDIT_CONTAINER_ENV')
+                                        url += '/container/' + containerID + '/env';
                                     App.navigate(url, {trigger: true});
                                 });
                         });

@@ -237,6 +237,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         }
     });
 
+
     views.WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
         tagName: 'div',
         regions: {
@@ -252,6 +253,9 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             nextStep       : '.next-step',
             prevStep       : '.prev-step',
             input_command  : 'input.command',
+            cancelEdit   : '.cancel-edit',
+            editEntirePod: '.edit-entire-pod',
+            saveChanges  : '.save-changes',
         },
 
         events: {
@@ -259,6 +263,9 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'click @ui.prevStep'       : 'goBack',
             'click @ui.nextStep'       : 'goNext',
             'change @ui.input_command' : 'changeCommand',
+            'click @ui.cancelEdit'   : 'cancelEdit',
+            'click @ui.editEntirePod': 'editEntirePod',
+            'click @ui.saveChanges'  : 'saveChanges',
         },
 
         initialize: function(options) {
@@ -267,12 +274,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         templateHelpers: function(){
             return {
-                parentID: this.pod.id,
-                volumes: this.pod.get('volumes'),
-                updateIsAvailable: this.model.updateIsAvailable,
-                kube_type: this.pod.getKubeType(),
-                restart_policy: this.pod.get('restartPolicy'),
-                podName: this.pod.get('name')
+                flow: this.model.getPod().wizardState.flow,
             };
         },
 
@@ -285,6 +287,39 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 model: this.model,
                 collection: this.model.get('volumeMounts')
             }), {replaceElement: true});
+        },
+
+        cancelEdit: function(){
+            var podID = this.model.getPod().editOf().id,
+                id = this.model.id;
+            utils.modalDialog({
+                title: 'Cancel edit?',
+                body: 'This will discard all unsaved changes. Are you sure?',
+                small: true,
+                show: true,
+                footer: {
+                    buttonOk: function(){
+                        App.navigate('pods/' + podID + '/container/' + id + '/general', {trigger: true});
+                    },
+                    buttonCancel: true,
+                    buttonOkText: 'Yes, discard latest changes',
+                    buttonCancelText: 'No'
+                }
+            });
+        },
+        editEntirePod: function(evt){
+            evt.stopPropagation();
+            if (this.validateAndNormalize()){
+                this.model.getPod().wizardState.flow = 'EDIT_ENTIRE_POD';
+                this.model.getPod().wizardState.container = null;
+                App.navigate('pods/' + this.model.getPod().editOf().id + '/edit');
+                this.trigger('step:complete');
+            }
+        },
+        saveChanges: function(evt){
+            evt.stopPropagation();
+            if (this.validateAndNormalize())
+                this.trigger('pod:save_changes');
         },
 
         removeError: function(evt){
@@ -309,7 +344,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             );
         },
 
-        goNext: function(evt){
+        validateAndNormalize: function(evt){
             var that = this;
 
             // remove empty ports and volumeMounts
@@ -381,7 +416,12 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 showDublicatePortError(e);
                 return;
             }
-            this.trigger('step:envconf');
+            return true;
+        },
+
+        goNext: function(evt){
+            if (this.validateAndNormalize())
+                this.trigger('step:envconf');
         },
 
         goBack: function(evt){
@@ -443,6 +483,20 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 return {newValue: newValue};
             };
 
+            var checkUniqueness = function(newAttrs) {
+                if (!newAttrs.containerPort)
+                    return;
+                var dublicate = _(that.model.collection.where(
+                        _.pick(newAttrs, 'containerPort', 'protocol')
+                    )).without(that.model)[0];
+                if (dublicate) {
+                    utils.notifyWindow('Port ' + newAttrs.containerPort
+                                       + ' with protocol ' + newAttrs.protocol
+                                       + ' already exists.');
+                    return true;
+                }
+            };
+
             this.ui.podPort.editable({
                 type: 'text',
                 mode: 'inline',
@@ -460,6 +514,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 mode: 'inline',
                 validate: validatePort,
                 success: function(response, newValue) {
+                    if (checkUniqueness(_.extend({}, that.model.toJSON(), {containerPort: newValue})))
+                        return ' ';
                     that.model.set('containerPort', newValue);
                 },
             });
@@ -471,6 +527,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 mode: 'inline',
                 showbuttons: false,
                 success: function(response, newValue) {
+                    if (checkUniqueness(_.extend({}, that.model.toJSON(), {protocol: newValue})))
+                        return ' ';
                     that.model.set('protocol', newValue);
                 },
             });
@@ -710,17 +768,25 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.ui.mountPath.editable({
                 type: 'text',
                 mode: 'inline',
-                success: function(response, newValue) {
+                validate: function(newValue){
                     var value = newValue.trim(),
-                        error = Model.Container.validateMountPath(value);
+                        dublicate = _(that.model.collection.where({mountPath: value}))
+                            .without(that.model)[0],
+                        error = dublicate
+                            ? 'Path must be unique.'
+                            : Model.Container.validateMountPath(value);
+
                     // TODO: style for editable validation errors
                     // if (error) return error;
                     if (error) {
                         utils.notifyWindow(error);
-                        return '';
+                        return ' ';
                     }
 
-                    that.model.set('mountPath', value);
+                    return {newValue: value};
+                },
+                success: function(response, newValue) {
+                    that.model.set('mountPath', newValue);
                 }
             });
             this.ui.pdSelect.selectpicker({
@@ -942,6 +1008,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             if (env){
                 this.model.set('env', env);
                 this.model.getPod().wizardState.flow = 'EDIT_ENTIRE_POD';
+                this.model.getPod().wizardState.container = null;
                 App.navigate('pods/' + this.model.getPod().editOf().id + '/edit');
                 this.trigger('step:complete');
             }

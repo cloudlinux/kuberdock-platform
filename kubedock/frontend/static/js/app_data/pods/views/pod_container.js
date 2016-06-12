@@ -1,9 +1,18 @@
 define(['app_data/app', 'app_data/model', 'app_data/utils',
         'tpl!app_data/pods/templates/layout_wizard.tpl',
+
+        'tpl!app_data/pods/templates/volume_mounts_table/empty.tpl',
+        'tpl!app_data/pods/templates/volume_mounts_table/item.tpl',
+        'tpl!app_data/pods/templates/volume_mounts_table/list.tpl',
+        'tpl!app_data/pods/templates/ports_table/empty.tpl',
+        'tpl!app_data/pods/templates/ports_table/item.tpl',
+        'tpl!app_data/pods/templates/ports_table/list.tpl',
         'tpl!app_data/pods/templates/pod_container_tab_general.tpl',
+
         'tpl!app_data/pods/templates/pod_container_tab_env.tpl',
         'tpl!app_data/pods/templates/env_table_row_empty.tpl',
         'tpl!app_data/pods/templates/env_table_row.tpl',
+
         'tpl!app_data/pods/templates/pod_container_tab_logs.tpl',
         'tpl!app_data/pods/templates/pod_container_tab_stats.tpl',
         'tpl!app_data/pods/templates/pod_item_graph.tpl',
@@ -12,10 +21,18 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
        function(App, Model, utils,
                 layoutWizardTpl,
 
+                volumeMountsTableEmplyTpl,
+                volumeMountsTableItemTpl,
+                volumeMountsTableTpl,
+                portsTableEmplyTpl,
+                portsTableItemTpl,
+                portsTableTpl,
                 podContainerGeneralTabTpl,
+
                 podContainerEnvTabTpl,
                 envTableRowEmptyTpl,
                 envTableRowTpl,
+
                 podContainerLogsTabTpl,
                 podContainerStatsTabTpl,
                 podItemGraphTpl){
@@ -49,10 +66,66 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         onShow: utils.preloader.hide,
     });
 
-    views.WizardGeneralSubView = Backbone.Marionette.ItemView.extend({
+    views.VolumeMountsTableEmptyView = Backbone.Marionette.ItemView.extend({
+        template: volumeMountsTableEmplyTpl,
+        tagName: 'tr',
+    });
+    views.VolumeMountsTableItemView = Backbone.Marionette.ItemView.extend({
+        template: volumeMountsTableItemTpl,
+        tagName: 'tr',
+        initialize: function(options){ _.extend(this, options); },
+        templateHelpers: function(){
+            return {
+                pdBefore: this.pdBefore,
+                pdAfter: this.pdAfter,
+            };
+        },
+    });
+    views.VolumeMountsTableView = Backbone.Marionette.CompositeView.extend({
+        template: volumeMountsTableTpl,
+        tagName: 'table',
+        id: 'volumes-table',
+        className: 'table',
+        childView: views.VolumeMountsTableItemView,
+        emptyView: views.VolumeMountsTableEmptyView,
+        childViewContainer: 'tbody',
+        childViewOptions: function(volumeMount){
+            var volumeBefore = volumeMount.get('before') && volumeMount.get('before').getVolume(),
+                volumeAfter = volumeMount.get('after') && volumeMount.get('after').getVolume();
+            return {
+                pdBefore: volumeBefore && volumeBefore.persistentDisk,
+                pdAfter: volumeAfter && volumeAfter.persistentDisk,
+            };
+        },
+    });
+
+    views.PortsTableEmptyView = Backbone.Marionette.ItemView.extend({
+        template: portsTableEmplyTpl,
+        tagName: 'tr',
+    });
+    views.PortsTableItemView = Backbone.Marionette.ItemView.extend({
+        template: portsTableItemTpl,
+        tagName: 'tr',
+    });
+    views.PortsTableView = Backbone.Marionette.CompositeView.extend({
+        template: portsTableTpl,
+        tagName: 'table',
+        id: 'ports-table',
+        className: 'table',
+        childView: views.PortsTableItemView,
+        emptyView: views.PortsTableEmptyView,
+        childViewContainer: 'tbody',
+    });
+
+    views.WizardGeneralSubView = Backbone.Marionette.LayoutView.extend({
         tagName: 'div',
         template: podContainerGeneralTabTpl,
         id: 'container-page',
+
+        regions: {
+            'ports': '.ports-table-wrapper',
+            'volumes': '.volumes > div > div',
+        },
 
         ui: {
             stopContainer  : '#stopContainer',
@@ -77,6 +150,24 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.podBefore = before ? before.getPod() : this.model.get('after').getPod().editOf();
             this.podAfter = this.podBefore.get('edited_config') || this.podBefore;
             this.model.addNestedChangeListener(this, this.render);
+        },
+
+        onShow: function() {
+            var portsDiff = new Model.DiffCollection([], {
+                compositeID: ['containerPort', 'protocol'],
+                modelType: Model.Port,
+                before: this.model.get('before').get('ports'),
+                after: this.model.get('after').get('ports'),
+            });
+            this.ports.show(new views.PortsTableView({collection: portsDiff}));
+
+            var volumeMountsDiff = new Model.DiffCollection([], {
+                modelType: Model.VolumeMount,
+                before: this.model.get('before').get('volumeMounts'),
+                after: this.model.get('after').get('volumeMounts'),
+            });
+            this.volumes.show(new views.VolumeMountsTableView(
+                {collection: volumeMountsDiff}));
         },
 
         triggers: {

@@ -13,6 +13,7 @@ define(['marionette'], function(Marionette){
             'pods/:id/container/:name(/:tab)' : 'showPodContainer',
             'pods/:id/edit'                   : 'editEntirePod',
             'pods/:id/container/:name/edit/env': 'editContainerEnv',
+            'pods/:id/container/:name/edit/general': 'editContainerGeneral',
 
             'nodes'                           : 'showNodes',
             'nodes/add'                       : 'showAddNode',

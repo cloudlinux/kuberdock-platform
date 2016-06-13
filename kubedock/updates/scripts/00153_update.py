@@ -119,7 +119,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _upgrade_etcd()
     _upgrade_k8s_master(upd, with_testing)
     service, res = helpers.restart_master_kubernetes()
-    if service != 0:
+    if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))
 
@@ -128,7 +128,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
     _downgrade_etcd()
     _downgrade_k8s_master(upd, with_testing)
     service, res = helpers.restart_master_kubernetes()
-    if service != 0:
+    if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))
 
@@ -136,7 +136,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _upgrade_k8s_node(upd, with_testing)
     service, res = helpers.restart_node_kubernetes()
-    if service != 0:
+    if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))
 
@@ -145,6 +145,6 @@ def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
     _upgrade_k8s_node(upd, with_testing)
     helpers.restart_node_kubernetes()
     service, res = helpers.restart_node_kubernetes()
-    if service != 0:
+    if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))

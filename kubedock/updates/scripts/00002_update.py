@@ -47,7 +47,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
 
     upd.print_log('Trying to restart master kubernetes...')
     service, code = helpers.restart_master_kubernetes(with_enable=True)
-    if service != 0:
+    if code != 0:
         raise helpers.UpgradeError('Kubernetes not restarted. '
                                    'Service {0} code {1}'.format(service, code))
     else:
@@ -75,7 +75,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     run("""sed -i '/^KUBE_MASTER/ {s|7080|6443|}' /etc/kubernetes/config""")
     run("""sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile"|}' /etc/kubernetes/proxy""")
     service, res = helpers.restart_node_kubernetes(with_enable=True)
-    if service != 0:
+    if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))
     else:

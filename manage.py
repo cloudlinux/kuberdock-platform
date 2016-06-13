@@ -11,11 +11,12 @@ import subprocess
 
 from kubedock.api import create_app
 from kubedock.exceptions import APIError
-from kubedock.kapi.nodes import create_node
+from kubedock.kapi.nodes import create_node, delete_node
 from kubedock.validation import check_node_data
 from kubedock.utils import UPDATE_STATUSES
 from kubedock.core import db
 from kubedock.models import User, Pod
+from kubedock.pods.models import PersistentDisk
 from kubedock.billing.models import Package, Kube
 from kubedock.billing.fixtures import add_kubes_and_packages
 from kubedock.rbac.fixtures import add_permissions
@@ -183,7 +184,10 @@ class DeleteNodeCmd(Command):
         node = db.session.query(Node).filter(Node.hostname == hostname).first()
         if node is None:
             raise InvalidCommand(u'Node "{0}" not found'.format(hostname))
-        db.session.delete(node)
+
+        PersistentDisk.get_by_node_id(node.id).delete(
+            synchronize_session=False)
+        delete_node(node=node, force=True)
 
 
 class WaitForNodes(Command):

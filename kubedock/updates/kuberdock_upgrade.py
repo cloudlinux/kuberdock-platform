@@ -346,6 +346,7 @@ def ask_upgrade():
         ans = raw_input('Do you want to upgrade it ? [y/n]:')
     return ans in ('y', 'yes')
 
+
 def health_check():
     if not args.skip_health_check:
         print "Performing cluster health check..."
@@ -359,6 +360,7 @@ def health_check():
     else:
         print "Skipping health check."
     return True
+
 
 def pre_upgrade():
     """
@@ -644,7 +646,8 @@ if __name__ == '__main__':
             else:
                 print 'Kuberdock is up to date.'
         if args.command == CLI_COMMANDS.health_check_only:
-            health_check()
+            if not health_check():
+                sys.exit(1)
             sys.exit(0)
 
         if args.command == CLI_COMMANDS.concat_updates:

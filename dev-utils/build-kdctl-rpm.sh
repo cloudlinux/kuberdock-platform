@@ -30,6 +30,6 @@ mv /tmp/$NAME-$VERSION.tar.bz2 /root/rpmbuild/SOURCES/
 echo "########## Starting the RPM build ##########"
 rpmbuild --define="dist .el7" --quiet -bb /root/rpmbuild/SPECS/kuberdock-manage.spec
 EXTRA_NAME=".noarch.rpm"
-cp -f /root/rpmbuild/RPMS/noarch/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME /vagrant/kuberdock-manage.rpm
-echo "########## Done RPM build. Find kuberdock-manage.rpm ##########"
+cp -f /root/rpmbuild/RPMS/noarch/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME /vagrant/kdctl.rpm
+echo "########## Done RPM build. Find kdctl.rpm ##########"
 cd $NOW

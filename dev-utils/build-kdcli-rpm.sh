@@ -28,8 +28,8 @@ cp $SOURCES_DIR/kuberdock-cli.spec /root/rpmbuild/SPECS/
 mv /tmp/$NAME-$VERSION.tar.bz2 /root/rpmbuild/SOURCES/
 
 echo "########## Starting the RPM build ##########"
-rpmbuild --define="dist .el7" -ba /root/rpmbuild/SPECS/kuberdock-cli.spec
+rpmbuild --define="dist .el7" --quiet -bb /root/rpmbuild/SPECS/kuberdock-cli.spec
 EXTRA_NAME=".x86_64.rpm"
-cp -f /root/rpmbuild/RPMS/x86_64/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME /vagrant/kuberdock-cli.rpm
-echo "########## Done RPM build. Find kuberdock-cli.rpm ##########"
+cp -f /root/rpmbuild/RPMS/x86_64/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME /vagrant/kcli.rpm
+echo "########## Done RPM build. Find kcli.rpm ##########"
 cd $NOW

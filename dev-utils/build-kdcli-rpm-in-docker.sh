@@ -12,6 +12,6 @@ CONT=rpm-build_$(echo $RANDOM | tr '[0-9]' '[a-zA-Z]')
 
 docker build -t $IMG -f dev-utils/Dockerfile.kd-rpm-build --rm=true --no-cache=true .
 docker run --name $CONT $IMG bash dev-utils/build-kdcli-rpm.sh
-docker cp $CONT:/vagrant/kuberdock-cli.rpm .
+docker cp $CONT:/vagrant/kcli.rpm .
 docker rm -f $CONT
 docker rmi $IMG

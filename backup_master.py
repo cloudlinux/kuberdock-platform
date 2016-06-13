@@ -231,11 +231,42 @@ class LicenseResource(BackupResource):
                 shutil.copyfileobj(zf.open('.license'), tmp)
 
 
+class SharedNginxConfigResource(BackupResource):
+
+    config_src = '/etc/nginx/conf.d/'
+
+    @classmethod
+    def backup(cls, dst):
+        config_tmp = tempfile.mkdtemp(prefix="nginx-config-", dir=dst,
+                                      suffix="-inprogress")
+        for fn in os.listdir(cls.config_src):
+            shutil.copy(os.path.join(cls.config_src, fn), config_tmp)
+
+        result = os.path.join(dst, "nginx_config")
+        os.rename(config_tmp, result)
+        return result
+
+    @classmethod
+    def restore(cls, zf):
+        src = tempfile.mkdtemp()
+        try:
+            zf.extractall(src, filter(lambda x: x.startswith('nginx'),
+                          zf.namelist()))
+            pki_src = os.path.join(src, 'nginx_config')
+            for fn in os.listdir(pki_src):
+                shutil.copy(os.path.join(pki_src, fn), cls.config_src)
+        finally:
+            shutil.rmtree(src)
+        return src
+
+
 backup_chain = (PostgresResource, EtcdResource, SSHKeysResource,
-                EtcdCertResource, KubeTokenResource, LicenseResource)
+                EtcdCertResource, KubeTokenResource, LicenseResource,
+                SharedNginxConfigResource)
 
 restore_chain = (PostgresResource, EtcdResource, SSHKeysResource,
-                 EtcdCertResource, KubeTokenResource, LicenseResource)
+                 EtcdCertResource, KubeTokenResource, LicenseResource,
+                 SharedNginxConfigResource)
 
 
 def do_backup(backup_dir, callback, skip_errors, **kwargs):
@@ -294,6 +325,7 @@ def do_restore(backup_file, skip_errors, **kwargs):
     subprocess.check_call(["systemctl", "start", "etcd"])
     time.sleep(5)
     subprocess.check_call(["systemctl", "start", "kube-apiserver"])
+    subprocess.check_call(["systemctl", "restart", "nginx"])
     logger.info('Restore finished')
 
 

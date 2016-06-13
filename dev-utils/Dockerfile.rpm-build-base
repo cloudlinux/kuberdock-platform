@@ -2,7 +2,7 @@ FROM centos:7
 
 RUN yum -y install epel-release && \
     yum -y update && \
-    yum -y install rsync rpm-build nodejs nodejs-less nodejs-clean-css
+    yum -y install rsync rpm-build gcc nodejs nodejs-less nodejs-clean-css
 
 # Rebuild & push with:
 # docker build -t lobur/rpm-build-base:vX -f dev-utils/Dockerfile.rpm-build-base --rm=true --no-cache=true --pull .

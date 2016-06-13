@@ -3,7 +3,7 @@ set -e
 
 SOURCES_DIR=/vagrant
 VERSION=$(grep "Version:" $SOURCES_DIR/kuberdock.spec | grep -oP "\d+\.\d+.*")
-BUILD_VER=$(grep "Release:" $SOURCES_DIR/kuberdock.spec | sed -rn 's/.*: (.*)%\{\?dist\}(.*)/\1.el7\2/p')
+BUILD_VER=$(grep "Release:" $SOURCES_DIR/kuberdock.spec | sed -rn 's/.*: (.*)%\{\?dist\}(.*)/\1.el7\2/p' | tr -d '[:blank:]')
 NAME=kuberdock
 TMP_PATH=/tmp/$NAME-$VERSION
 

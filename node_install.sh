@@ -20,6 +20,11 @@ CEPH_VERSION=hammer
 CEPH_BASE='/etc/yum.repos.d/ceph-base'
 CEPH_REPO='/etc/yum.repos.d/ceph.repo'
 
+KD_SSH_GC_PATH="/var/lib/kuberdock/scripts/kd-ssh-gc"
+KD_SSH_GC_LOCK="/var/run/kuberdock-ssh-gc.lock"
+KD_SSH_GC_CMD="flock -n $KD_SSH_GC_LOCK -c '$KD_SSH_GC_PATH;rm $KD_SSH_GC_LOCK'"
+KD_SSH_GC_CRON="@hourly  $KD_SSH_GC_CMD >/dev/null 2>&1"
+
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 echo "Using MASTER_IP=${MASTER_IP}"
@@ -56,6 +61,15 @@ del_existed(){
     done
 }
 
+setup_cron(){
+    if [[ "$1" = 'cleanup' ]];then
+        (crontab -l 2>/dev/null) | grep -v "$KD_SSH_GC_CRON" | crontab -
+    else
+        (crontab -l 2>/dev/null; echo "$KD_SSH_GC_CRON")| crontab -
+    fi
+}
+
+
 clean_node(){
     echo "=== Node clean up started ==="
     echo "ALL PACKAGES, CONFIGS AND DATA RELATED TO KUBERDOCK AND PODS WILL BE DELETED"
@@ -69,6 +83,8 @@ clean_node(){
 
     # Maybe only in some cases?
     unmap_ceph
+
+    setup_cron 'cleanup'
 
     echo "Remove some packages (k8s, docker, etc.)..."
     {
@@ -233,7 +249,6 @@ check_status()
     fi
 }
 
-echo "Node OS: $(cat /etc/redhat-release)"
 
 yum_wrapper()
 {
@@ -440,11 +455,12 @@ mv /etcd-dns.key /etc/pki/etcd/
 check_status
 
 # 4.1 create and populate scripts directory
+# TODO refactor this staff to kdnode package or copy folder ones
 mkdir -p /var/lib/kuberdock/scripts
 check_status
 mkdir -p /var/lib/kuberdock/backups
 check_status
-mv /pd.sh /var/lib/kuberdock/scripts/pd.sh
+mv /pd.sh /var/lib/kuberdock/scripts/pd.sh      # TODO remove, obsoleted
 chmod +x /var/lib/kuberdock/scripts/pd.sh
 mv /fslimit.py /var/lib/kuberdock/scripts/fslimit.py
 chmod +x /var/lib/kuberdock/scripts/fslimit.py
@@ -452,6 +468,37 @@ mv /kubelet_args.py /var/lib/kuberdock/scripts/kubelet_args.py
 chmod +x /var/lib/kuberdock/scripts/kubelet_args.py
 check_status
 
+mv /kd-ssh-user.sh /var/lib/kuberdock/scripts/kd-ssh-user.sh
+chmod +x /var/lib/kuberdock/scripts/kd-ssh-user.sh
+check_status
+mv /kd-docker-exec.sh /var/lib/kuberdock/scripts/kd-docker-exec.sh
+chmod +x /var/lib/kuberdock/scripts/kd-docker-exec.sh
+check_status
+mv /kd-ssh-user-update.sh /var/lib/kuberdock/scripts/kd-ssh-user-update.sh
+chmod +x /var/lib/kuberdock/scripts/kd-ssh-user-update.sh
+check_status
+
+mv /kd-ssh-gc "$KD_SSH_GC_PATH"
+chmod +x "$KD_SSH_GC_PATH"
+check_status
+
+
+# For direct ssh feature
+groupadd kddockersshuser
+echo '%kddockersshuser ALL=(ALL) NOPASSWD: /var/lib/kuberdock/scripts/kd-docker-exec.sh' >> /etc/sudoers
+echo 'Defaults:%kddockersshuser !requiretty' >> /etc/sudoers
+
+printf 'Match group kddockersshuser
+  PasswordAuthentication yes
+  X11Forwarding no
+  AllowTcpForwarding no
+  ForceCommand /var/lib/kuberdock/scripts/kd-ssh-user.sh\n' >> /etc/ssh/sshd_config
+
+# Append SSH GC to cron
+setup_cron
+
+# Useless if we do reboot:
+# systemctl restart sshd.service
 
 
 # 4.2 kuberdock kubelet plugin stuff

@@ -207,7 +207,15 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
         sftp.put('node_install.sh', '/node_install.sh')
         sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
         sftp.put('node_network_plugin.py', '/node_network_plugin.py')
+        # TODO refactor to copy all folder ones, or make kdnode package
+        sftp.put('node_scripts/kd-ssh-user.sh', '/kd-ssh-user.sh')
+        sftp.put('node_scripts/kd-docker-exec.sh', '/kd-docker-exec.sh')
+        sftp.put('node_scripts/kd-ssh-user-update.sh', '/kd-ssh-user-update.sh')
+        sftp.put('node_scripts/kd-ssh-gc', '/kd-ssh-gc')
+
+        # TODO this is obsoleted, remove later:
         sftp.put('pd.sh', '/pd.sh')
+
         sftp.put('kubelet_args.py', '/kubelet_args.py')
         sftp.put('/etc/kubernetes/configfile_for_nodes', '/configfile')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')

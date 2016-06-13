@@ -848,8 +848,17 @@ def get_version(package):
         return 'unknown'
 
 
-def randstr(length=8, symbols=string.ascii_letters + string.digits):
-    return ''.join(random.choice(symbols) for i in range(length))
+def randstr(length=8, symbols=string.ascii_letters + string.digits,
+            secure=False):
+    """
+    Generate random string with secure randomness generator if secure is True
+    :param length: length of string
+    :param symbols: symbols for choice()
+    :param secure: whether to use secure SystemRandom generator
+    :return: generated string
+    """
+    rnd = random.SystemRandom() if secure else random.Random()
+    return ''.join(rnd.choice(symbols) for _ in range(length))
 
 
 def retry(f, retry_pause, max_retries, exc=None, *f_args, **f_kwargs):

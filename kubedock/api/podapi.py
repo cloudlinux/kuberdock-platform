@@ -97,3 +97,13 @@ def check_updates(pod_id, container_name):
 def update_container(pod_id, container_name):
     user = KubeUtils._get_current_user()
     return PodCollection(user).update_container(pod_id, container_name)
+
+
+@podapi.route('/<pod_id>/direct_access', methods=['GET'],
+              strict_slashes=False)
+@auth_required
+@KubeUtils.jsonwrap
+@check_permission('get', 'pods')
+def access_container(pod_id):
+    user = KubeUtils._get_current_user()
+    return PodCollection(user).direct_access(pod_id)

@@ -16,8 +16,11 @@ from ..settings import (
     NODE_SCRIPT_DIR, NODE_LVM_MANAGE_SCRIPT)
 
 
-def get_nodes_collection():
+def get_nodes_collection(kube_type=None):
     """Returns information for all known nodes.
+
+    :param kube_type: If provided, nodes are filtered by this kube type.
+    :type kube_type: int
 
     Side effect: If some node exists in kubernetes, but is missed in DB, then
     it will be created in DB (see documentation for _fix_missed_nodes function)
@@ -30,7 +33,11 @@ def get_nodes_collection():
         'resources' info about node resources, will be retrieved from k8s
     :return: list of dicts
     """
-    nodes = Node.get_all()
+    if kube_type is None:
+        nodes = Node.get_all()
+    else:
+        nodes = Node.query.filter_by(kube_id=kube_type)
+
     kub_hosts = {x['metadata']['name']: x for x in get_all_nodes()}
     nodes = _fix_missed_nodes(nodes, kub_hosts)
     nodes_list = []
@@ -176,6 +183,11 @@ def get_status(node, k8s_node=None):
             )
 
     return res_node_status, node_status_message
+
+
+def node_status_running(k8snode):
+    k8snode_info = get_one_node(k8snode.id)
+    return k8snode_info['status'] == 'running'
 
 
 def add_node_to_db(node):

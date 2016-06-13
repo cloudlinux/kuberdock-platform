@@ -15,7 +15,7 @@ from kubedock.testutils import create_app
 from ...exceptions import APIError
 from ..pod import Pod
 from ..images import Image
-from .. import podcollection, helpers
+from .. import podcollection
 from ...utils import POD_STATUSES
 from ...users.models import User
 from ...rbac.models import Role
@@ -24,7 +24,7 @@ from ...rbac.models import Role
 global_patchers = [
     mock.patch.object(podcollection, 'current_app'),
     mock.patch.object(podcollection, 'license_valid'),
-    #mock.patch.object(helpers, 'current_app'),
+    # mock.patch.object(helpers, 'current_app'),
 ]
 
 
@@ -167,7 +167,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         db_pod = self.fixtures.pod(owner=self.user)
         pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
                        public_ip=True)
-        #pod = fake_pod(sid='s', public_ip=True)
+        # pod = fake_pod(sid='s', public_ip=True)
         get_pod_config_mock.return_value = 'fs'
 
         # Monkey-patched podcollection.PodCollection methods
@@ -481,11 +481,12 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         send_pod_status_update_mock.assert_called_once_with(
             POD_STATUSES.pending, dbpod, 'MODIFIED')
 
-    @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.helpers, 'set_pod_status')
     @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_start(self, mk_ns, run_pod_mock, set_pod_status, dbpod_mock):
+    @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
+    def test_pod_start(
+            self, node_available_mock, mk_ns, run_pod_mock, set_pod_status):
         """
         Test first _start_pod for pod without ports
         :type post_: mock.Mock
@@ -503,14 +504,107 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
                 'state': POD_STATUSES.stopped,
             }]
         )
-        dbpod = mock.Mock()
-        dbpod_mock.query.get.return_value = dbpod
-        # Actual call
-        res = self.pod_collection._start_pod(pod)
 
+        # Actual call
+        self.pod_collection._start_pod(pod)
+
+        node_available_mock.assert_called_once_with(pod)
         mk_ns.assert_called_once_with(pod.namespace)
         run_pod_mock.delay.assert_called_once_with(pod)
         self.assertEqual(pod.status, POD_STATUSES.preparing)
+
+    @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
+    def test_start_pod_failure(self, node_available_mock):
+        """
+        Test _start_pod with no available nodes
+        :type post_: mock.Mock
+        """
+        pod = mock.Mock()
+        node_available_mock.return_value = False
+
+        with self.assertRaisesRegexp(
+                APIError,
+                "There are no suitable nodes for the pod.*"):
+            # Actual call
+            self.pod_collection._start_pod(pod)
+
+        node_available_mock.assert_called_once_with(pod)
+
+    @mock.patch.object(podcollection, 'DBPod')
+    def test_node_available_for_pod_first(self, dbpod_mock):
+        """
+        Test _node_available_for_pod: service pod
+        """
+        pod = mock.Mock()
+        pod.kube_type = 1
+        db_pod = mock.Mock()
+        db_pod.is_service_pod = True
+        dbpod_mock.query.get.return_value = db_pod
+
+        # Actual call
+        res = self.pod_collection._node_available_for_pod(pod)
+        self.assertTrue(res)
+
+    @mock.patch.object(podcollection, 'DBPod')
+    @mock.patch.object(podcollection, 'node_status_running')
+    @mock.patch.object(podcollection, 'Node')
+    def test_node_available_for_pod_second(
+            self, dbnode_mock, node_status_mock, dbpod_mock):
+        """
+        Test _node_available_for_pod: pinned node
+        """
+        pod = mock.Mock()
+        db_pod = mock.Mock()
+        db_pod.is_service_pod = False
+        dbpod_mock.query.get.return_value = db_pod
+        node_hostname = 'mock-node'
+        db_pod.pinned_node = node_hostname
+        db_node = mock.Mock()
+        dbnode_mock.get_by_name.return_value = db_node
+        node_status_mock.return_value = True
+
+        # Actual call #1
+        res = self.pod_collection._node_available_for_pod(pod)
+        node_status_mock.assert_called_with(db_node)
+        self.assertTrue(res)
+
+        node_status_mock.return_value = False
+        # Actual call #2
+        res = self.pod_collection._node_available_for_pod(pod)
+        node_status_mock.assert_called_with(db_node)
+        self.assertFalse(res)
+
+    @mock.patch.object(podcollection, 'DBPod')
+    @mock.patch.object(podcollection, 'get_nodes_collection')
+    def test_node_available_for_pod_third(self, get_nodes_mock, dbpod_mock):
+        """
+        Test _node_available_for_pod: no pinned node
+        """
+        pod = mock.Mock()
+        db_pod = mock.Mock()
+        db_pod.pinned_node = None
+        db_pod.is_service_pod = False
+        dbpod_mock.query.get.return_value = db_pod
+
+        nodes_collection = [{'id': str(uuid4()), 'status': 'deletion'},
+                            {'id': str(uuid4()), 'status': 'troubles'},
+                            {'id': str(uuid4()), 'status': 'running'}]
+        get_nodes_mock.return_value = nodes_collection
+
+        # Actual call #1
+        res = self.pod_collection._node_available_for_pod(pod)
+        get_nodes_mock.assert_called_with(kube_type=pod.kube_type)
+        self.assertTrue(res)
+
+        nodes_collection = [{'id': str(uuid4()), 'status': 'deletion'},
+                            {'id': str(uuid4()), 'status': 'troubles'},
+                            {'id': str(uuid4()), 'status': 'troubles'}]
+        get_nodes_mock.return_value = nodes_collection
+
+        # Actual call #2
+        res = self.pod_collection._node_available_for_pod(pod)
+        get_nodes_mock.assert_called_with(kube_type=pod.kube_type)
+        self.assertFalse(res)
 
     @mock.patch.object(podcollection, 'send_pod_status_update')
     @mock.patch.object(podcollection, 'run_service')
@@ -1380,7 +1474,6 @@ class TestRemoveAndReturnIP(DBTestCase):
         self.ippool.unblock_ip(self.ippool.hosts(as_int=True))
         self.db.session.flush()
         self._check_removed_and_retrun_back()
-
 
 
 class TestPodComposePersistent(DBTestCase):

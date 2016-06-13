@@ -20,6 +20,7 @@ from .node import Node as K8SNode
 from .pod import Pod
 from .pstorage import (get_storage_class_by_volume_info, get_storage_class,
                        delete_drive_by_id)
+from .node_utils import node_status_running, get_nodes_collection
 from ..billing import repr_limits
 from ..core import db
 from ..exceptions import APIError
@@ -35,13 +36,13 @@ from ..utils import (
     send_pod_status_update,
     retry)
 from .node_utils import get_external_node_ip
+from ..nodes.models import Node
 
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
 
-# We use only 30 because useradd limits name to 32, and ssh client
-# limits name only to 30 (may be this is configurable) so we use lowest
-# possible
+# We use only 30 because useradd limits name to 32, and ssh client limits
+# name only to 30 (may be this is configurable) so we use lowest possible
 # This value is hardcoded in a few ssh-feature related scripts because they
 # will be copied to each node at deploy stage
 DIRECT_SSH_USERNAME_LEN = 30
@@ -651,6 +652,9 @@ class PodCollection(object):
         if pod.status in (POD_STATUSES.running, POD_STATUSES.pending,
                           POD_STATUSES.preparing):
             raise APIError("Pod is not stopped, we can't run it")
+        if not self._node_available_for_pod(pod):
+            raise APIError("There are no suitable nodes for the pod. "
+                           "Please contact KD admin or try again later.")
         if pod.status == POD_STATUSES.succeeded \
                 or pod.status == POD_STATUSES.failed:
             self._stop_pod(pod, block=True)
@@ -874,6 +878,35 @@ class PodCollection(object):
                     'Trial User limit is exceeded. '
                     'Kubes available for you: {0}'.format(kubes_left)
                 )
+
+    def _node_available_for_pod(self, pod):
+        """
+        Check if there is an available node for the pod.
+
+        In case of a pinned node make sure the node is running, otherwise
+        check if any node with a required kube type is running.
+
+        The check is skipped for service pods.
+
+        :param pod: A pod to check.
+        :type pod: kubedock.kapi.pod.Pod
+        :returns: True or False
+        :rtype: bool
+        """
+        dbPod = DBPod.query.get(pod.id)
+        if dbPod.is_service_pod:
+            return True
+
+        # Check the case of a pinned node
+        node_hostname = dbPod.pinned_node
+        if node_hostname is not None:
+            k8snode = Node.get_by_name(node_hostname)
+            return node_status_running(k8snode)
+
+        nodes_list = get_nodes_collection(kube_type=pod.kube_type)
+        running_nodes = [node for node in nodes_list
+                         if node['status'] == 'running']
+        return len(running_nodes) > 0
 
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):

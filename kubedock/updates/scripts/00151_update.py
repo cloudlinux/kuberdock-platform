@@ -1,5 +1,6 @@
 """Add statically linked binaries to provide ssh access into containers."""
-from kubedock.kapi.podcollection import PodCollection
+from kubedock.kapi.podcollection import (
+    PodCollection, get_replicationcontroller)
 from kubedock.kapi.pod import add_kdtools
 from kubedock.pods.models import Pod
 from kubedock.updates.helpers import remote_install, run
@@ -14,7 +15,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
         pod_id = dbpod.id
         pod = pc._get_by_id(pod_id)
         try:
-            rc = pc._get_replicationcontroller(pod.namespace, pod.sid)
+            get_replicationcontroller(pod.namespace, pod.sid)
         except APIError:
             # there is no RC created for the pod yet, skip it.
             continue

@@ -17,7 +17,7 @@ from .signals import (
     user_set_setting)
 from .utils import (
     get_user_last_activity, get_online_users, enrich_tz_with_offset)
-from ..settings import DEFAULT_TIMEZONE
+from ..settings import DEFAULT_TIMEZONE, KUBERDOCK_INTERNAL_USER
 
 
 @login_manager.user_loader
@@ -99,7 +99,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
 
     @classmethod
     def get_internal(cls):
-        return cls.get(0)
+        return cls.get(KUBERDOCK_INTERNAL_USER)
 
     @classmethod
     def username_iequal(cls, username):
@@ -115,7 +115,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
             return cls.query.get(uid.id)
         uid = str(uid)
         if uid.isdigit():
-            return cls.query.get(uid)
+            return cls.query.get(int(uid))
         return cls.query.filter(cls.username_iequal(uid)).first()
 
     @classmethod

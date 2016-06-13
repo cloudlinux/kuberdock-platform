@@ -23,25 +23,25 @@ TOKEN={3}'''
 
 def _upgrade_kubernetes(with_testing):
     helpers.remote_install(' '.join(KUBERNETES_PACKAGES), with_testing)
-    res, service = helpers.restart_node_kubernetes()
+    service, res = helpers.restart_node_kubernetes()
     _raise_on_failure(res, service)
 
 
 def _downgrade_kubernetes(with_testing):
     helpers.remote_install(' '.join(OLD_KUBERNETES_PACKAGES), with_testing,
                            action='downgrade')
-    res, service = helpers.restart_node_kubernetes()
+    service, res = helpers.restart_node_kubernetes()
     _raise_on_failure(res, service)
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    res, service = helpers.restart_master_kubernetes()
+    service, res = helpers.restart_master_kubernetes()
     _raise_on_failure(res, service)
     helpers.upgrade_db(revision='3dc83a81f385')
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
-    res, service = helpers.restart_master_kubernetes()
+    service, res = helpers.restart_master_kubernetes()
     _raise_on_failure(res, service)
     helpers.downgrade_db(revision='3c832810a33c')
 

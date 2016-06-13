@@ -462,7 +462,7 @@ def add_kdtools(containers, volumes):
     """
     volume_name = 'kdtools-' + uuid.uuid4().hex
     volumes.append({
-        u'hostPath': {u'Path': HOST_KDTOOLS_PATH},
+        u'hostPath': {u'path': HOST_KDTOOLS_PATH},
         u'name': volume_name})
     for container in containers:
         container['volumeMounts'].append({

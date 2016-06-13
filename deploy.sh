@@ -1087,7 +1087,7 @@ do_cleanup()
             read -p "Remove the whole postgres data dir (it will erase all data stored in postgres) (yes/no)? [yes]: " REMOVE_DIR
             if [ "$REMOVE_DIR" = yes ] || [ -z "$REMOVE_DIR" ];then
                 log_it systemctl stop postgresql
-                log_it rm -rf /var/lib/pgsql
+                log_it rm -rf /var/lib/pgsql/*
                 break
             elif [ "$REMOVE_DIR" = no ];then
                 break

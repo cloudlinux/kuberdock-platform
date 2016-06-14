@@ -441,11 +441,6 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             }]
         )
 
-    def _check_status(self, response, status):
-        self.assertEqual(self.test_pod.status, status)
-        self.assertEqual(self.test_pod.containers[0]['state'], status)
-        self.assertEqual(response, self.test_pod.as_dict.return_value)
-
     @mock.patch.object(podcollection, 'send_pod_status_update')
     @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, 'DBPod')
@@ -481,7 +476,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         self.assertTrue(raise_if_failure_mock.called)
         replace_pod_config_mock.assert_called_once_with(
             self.test_pod, dbpod.get_dbconfig.return_value)
-        self._check_status(res, POD_STATUSES.pending)
+        self.test_pod.set_status.assert_called_with(POD_STATUSES.pending)
+        self.assertEqual(res, self.test_pod.as_dict.return_value)
         send_pod_status_update_mock.assert_called_once_with(
             POD_STATUSES.pending, dbpod, 'MODIFIED')
 
@@ -547,7 +543,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         post_.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
-        self._check_status(res, POD_STATUSES.pending)
+        self.test_pod.set_status.assert_called_with(POD_STATUSES.pending)
+        self.assertEqual(res, self.test_pod.as_dict.return_value)
         send_pod_status_update_mock.assert_called_once_with(
             POD_STATUSES.pending, dbpod, 'MODIFIED')
 

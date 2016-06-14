@@ -409,6 +409,9 @@ yum_wrapper -y install ipset
 # It is installed by default, but ensure it is here
 yum_wrapper -y install tuned
 check_status
+# kdtools - statically linked binaries to provide ssh access into containers
+yum_wrapper -y install kdtools
+check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
 if [ "$AWS" = True ];then

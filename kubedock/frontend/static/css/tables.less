@@ -170,8 +170,10 @@
                     &.stopped,
                     &.pending,
                     &.waiting,
+                    &.deletion,
                     &.troubles,
                     &.suspended,
+                    &.preparing,
                     &.terminated,
                     &.termination{
                         position: relative;
@@ -215,7 +217,9 @@
                         }
                     }
                     &.pending,
-                    &.waiting{
+                    &.waiting,
+                    &.deletion,
+                    &.preparing{
                         padding-left: 33px;
                         &:before{
                             .border-radius(0);
@@ -525,6 +529,7 @@
                     &.waiting,
                     &.termination,
                     &.terminated,
+                    &.preparing,
                     &.failed,
                     &.succeeded{
                         position: relative;
@@ -555,7 +560,7 @@
                             background-color: #bac1c7;
                         }
                     }
-                    &.pending, &.waiting{
+                    &.pending, &.waiting, &.preparing{
                         padding-left: 29px;
                         &:before{
                             .border-radius(0);

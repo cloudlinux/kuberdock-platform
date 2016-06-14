@@ -115,7 +115,7 @@ class User(BaseModelMixin, UserMixin, db.Model):
             return cls.query.get(uid.id)
         uid = str(uid)
         if uid.isdigit():
-            return cls.query.get(uid)
+            return cls.query.get(int(uid))
         return cls.query.filter(cls.username_iequal(uid)).first()
 
     @classmethod

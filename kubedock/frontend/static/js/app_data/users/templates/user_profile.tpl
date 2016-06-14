@@ -26,8 +26,8 @@
     <div class="row">
         <div class="col-sm-12 col-md-2 sidebar">
             <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                <li class="general active">General</li>
-                <li class="logHistory">Login history</li>
+                <li class="general active"><span>General</span></li>
+                <li class="logHistory"><span>Login history</span></li>
             </ul>
         </div>
         <div id="details_content" class="col-sm-12 col-md-10">

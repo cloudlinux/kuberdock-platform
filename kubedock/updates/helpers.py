@@ -174,7 +174,7 @@ def restart_node_kubernetes(with_docker=False, with_enable=False):
             res = run('systemctl reenable ' + i)
             if res.failed:
                 return i, res
-    return 0, 'All node services restarted'
+    return 0, 0
 
 
 def set_maintenance(state):

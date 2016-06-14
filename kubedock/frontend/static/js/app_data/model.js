@@ -366,9 +366,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             if (command === 'start')
                 return _.contains(['stopped'], status);
             if (command === 'redeploy')
-                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded'], status);
+                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded', 'preparing'], status);
             if (command === 'stop' || command === 'restart')
-                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded'], status);
+                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded', 'preparing'], status);
             if (command === 'pay-and-start')
                 return _.contains(['unpaid'], status);
             if (command === 'delete')

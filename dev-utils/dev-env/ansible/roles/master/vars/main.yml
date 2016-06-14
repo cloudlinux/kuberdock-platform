@@ -12,3 +12,5 @@ ceph_user_keyring: "{{ lookup('env','KD_CEPH_USER_KEYRING') }}"
 
 ceph_config_dest: "/tmp/ceph.conf"
 ceph_user_keyring_dest: "/tmp/ceph.keyring"
+
+token_gathering_url: https://localhost/api/auth/token

@@ -1053,7 +1053,7 @@ function deploy-master(){
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y install wget rpm2cpio | cat" < <(cat) 2>"$LOG"
     echo "Kubernetes cluster created."
 
-    if [[ ! -z ${REMOTE_PACKAGE} ]]; then
+    if [[ ! -z "${REMOTE_PACKAGE+x}" ]]; then
       echo "WARNING: KeberDock will download from ${REMOTE_PACKAGE}"
       wget ${REMOTE_PACKAGE} < <(cat) 2>"$LOG"
     fi

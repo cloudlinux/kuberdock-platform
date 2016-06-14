@@ -165,7 +165,7 @@ def mark_node_as_being_deleted(node_id):
     return node
 
 
-def delete_node(node_id=None, node=None):
+def delete_node(node_id=None, node=None, force=False):
     """Deletes node."""
 
     # As long as the func is allowed to be called after mark_node_as_being_
@@ -182,7 +182,8 @@ def delete_node(node_id=None, node=None):
     if node_id is None:
         node_id = node.id
 
-    _check_node_can_be_deleted(node)
+    if not force:
+        _check_node_can_be_deleted(node)
 
     try:
         celery.control.revoke(task_id=NODE_INSTALL_TASK_ID.format(

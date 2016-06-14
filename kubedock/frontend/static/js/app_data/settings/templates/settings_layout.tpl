@@ -14,10 +14,10 @@
             <div class="col-sm-12 col-md-2 sidebar">
                 <ul class="nav nav-sidebar list-unstyled" >
                     <% if(user.get('rolename')  === 'Admin') { %>
-                        <li class="general">General</li>
-                        <li class="license">License</li>
+                        <li class="general"><span>General</span></li>
+                        <li class="license"><span>License</span></li>
                     <% } %>
-                    <li class="profile">Profile</li>
+                    <li class="profile"><span>Profile</span></li>
                 </ul>
             </div>
             <div id="details_content" class="col-sm-12 col-md-10">

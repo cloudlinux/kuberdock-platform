@@ -56,21 +56,16 @@ class IpAddrPool(object):
         except (ValueError, AttributeError) as e:
             raise ValidationError(str(e))
 
-        if IPPool.filter_by(network=str(network)).first():
-            raise APIError(
-                'Network {0} already exists'.format(str(network)))
+        self._check_if_network_exists(network)
+
         autoblock = self._parse_autoblock(data.get('autoblock'))
         node_name = data.get('node')
         node = Node.query.filter_by(hostname=node_name).first()
         if node_name is not None and node is None:
             raise APIError('Node is not exists ({0})'.format(node_name))
         pool = IPPool(network=str(network), node=node)
-        block_list = [
-            int(ipaddress.ip_address(i))
-            for i in imap(unicode, network.hosts())
-            if int(i.split('.')[-1]) in autoblock
-        ]
 
+        block_list = self._create_autoblock(autoblock, network)
         pool.block_ip(block_list)
         pool.save()
 
@@ -140,6 +135,24 @@ class IpAddrPool(object):
         if node is None:
             raise APIError('Node is not exists ({0})'.format(node_name))
         return node
+
+    def _create_autoblock(self, autoblock, network):
+        block_list = [
+            int(ipaddress.ip_address(i))
+            for i in imap(unicode, network.hosts())
+            if int(i.split('.')[-1]) in autoblock
+            ]
+        return block_list
+
+    def _check_if_network_exists(self, network):
+        net = ipaddress.IPv4Network(network)
+        for pool in IPPool.all():
+            if pool.network == net:
+                raise APIError('Network {} already exists'.format(network))
+            if net.overlaps(ipaddress.IPv4Network(pool.network)):
+                raise APIError(
+                    'New {} network overlaps {} which already exists'.format(
+                        network, pool.network))
 
     def get_user_addresses(self, user):
         pods = {pod.id: pod.name

@@ -6,13 +6,13 @@ from kubedock.users import User
 from node_network_plugin import PLUGIN_PATH
 
 KUBERNETES_PACKAGES = [
-    'kubernetes-client-1.2.4-2.el7',
-    'kubernetes-node-1.2.4-2.el7'
+    'kubernetes-client-1.2.4-2.el7.cloudlinux',
+    'kubernetes-node-1.2.4-2.el7.cloudlinux'
 ]
 
 OLD_KUBERNETES_PACKAGES = [
-    'kubernetes-client-1.2.4-1.el7',
-    'kubernetes-node-1.2.4-1.el7'
+    'kubernetes-client-1.2.4-1.el7.cloudlinux',
+    'kubernetes-node-1.2.4-1.el7.cloudlinux'
 ]
 
 KUBERDOCK_INI = '''NONFLOATING_PUBLIC_IPS={0}
@@ -23,26 +23,26 @@ TOKEN={3}'''
 
 def _upgrade_kubernetes(with_testing):
     helpers.remote_install(' '.join(KUBERNETES_PACKAGES), with_testing)
-    res, service = helpers.restart_node_kubernetes()
-    _raise_on_failure(res, service)
+    service, res = helpers.restart_node_kubernetes()
+    _raise_on_failure(service, res)
 
 
 def _downgrade_kubernetes(with_testing):
     helpers.remote_install(' '.join(OLD_KUBERNETES_PACKAGES), with_testing,
                            action='downgrade')
-    res, service = helpers.restart_node_kubernetes()
-    _raise_on_failure(res, service)
+    service, res = helpers.restart_node_kubernetes()
+    _raise_on_failure(service, res)
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    res, service = helpers.restart_master_kubernetes()
-    _raise_on_failure(res, service)
+    service, res = helpers.restart_master_kubernetes()
+    _raise_on_failure(service, res)
     helpers.upgrade_db(revision='3dc83a81f385')
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
-    res, service = helpers.restart_master_kubernetes()
-    _raise_on_failure(res, service)
+    service, res = helpers.restart_master_kubernetes()
+    _raise_on_failure(service, res)
     helpers.downgrade_db(revision='3c832810a33c')
 
 
@@ -64,7 +64,7 @@ def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
     _downgrade_kubernetes(with_testing)
 
 
-def _raise_on_failure(res, service):
-    if service != 0:
+def _raise_on_failure(service, res):
+    if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))

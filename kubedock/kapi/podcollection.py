@@ -642,7 +642,18 @@ class PodCollection(object):
             if (db_pod.id, namespace) not in self._collection:
                 pod = Pod(db_pod_config)
                 pod.id = db_pod.id
-                pod.status = getattr(db_pod, 'status', POD_STATUSES.stopped)
+                status = getattr(db_pod, 'status', POD_STATUSES.stopped)
+                # If the pod not exists in k8s, then status 'pending' in
+                # DB means that pod actually is stopped.
+                # 'pending' status in database is assigned before the pod will
+                # be run in k8s. After sending pod to k8s it's state in DB
+                # will not be updated. So when we have 'pending' pod in DB and
+                # the pod is absent in k8s it means the pod is stopped.
+                # It is a workaround for all complicated workflow of merging
+                # pods from DB and k8s and must be completely refactored.
+                if status == POD_STATUSES.pending:
+                    status = POD_STATUSES.stopped
+                pod.status = status
                 pod._forge_dockers()
                 self._collection[pod.id, namespace] = pod
             else:
@@ -651,6 +662,7 @@ class PodCollection(object):
                 pod.node = db_pod_config.get('node')
                 pod.podIP = db_pod_config.get('podIP')
                 pod.service = db_pod_config.get('service')
+                pod.postDescription = db_pod_config.get('postDescription')
                 pod.edited_config = db_pod_config.get('edited_config')
 
                 if db_pod_config.get('public_ip'):
@@ -1081,14 +1093,15 @@ def prepare_and_run_pod_task(pod):
             # TODO: create CONTAINER_STATUSES
             container['state'] = POD_STATUSES.pending
     except Exception as err:
+        current_app.logger.exception('Failed to run pod: %s', config)
         if isinstance(err, APIError):
             send_event_to_user('notify:error', {'message': err.message},
                                db_pod.owner_id)
         pod.set_status(POD_STATUSES.stopped)
         send_pod_status_update(pod.status, db_pod, 'DELETED')
         raise
-    pod.status = POD_STATUSES.pending
-    send_pod_status_update(pod.status, db_pod, 'MODIFIED')
+    pod.set_status(POD_STATUSES.pending)
+    send_pod_status_update(POD_STATUSES.pending, db_pod, 'MODIFIED')
     return pod.as_dict()
 
 
@@ -1104,7 +1117,7 @@ def run_service(pod):
                 "port": host_port,
                 "protocol": p.get('protocol', 'TCP').upper(),
                 "targetPort": p.get('containerPort')})
-            if p.get('ispublic', False):
+            if p.get('isPublic', False):
                 public_ports.append({
                     "name": port_name,
                     "port": host_port,
@@ -1140,7 +1153,8 @@ def ingress_public_ports(pod_id, namespace, ports):
             'apiVersion': KUBE_API_VERSION,
             'metadata': {
                 'generateName': 'lbservice-',
-                'labels': {'name': format_lbservice_name(pod_id)},
+                'labels': {'kuberdock-type': 'public',
+                           'kuberdock-pod-uid': pod_id},
             },
             'spec': {
                 'selector': {'kuberdock-pod-uid': pod_id},
@@ -1151,7 +1165,7 @@ def ingress_public_ports(pod_id, namespace, ports):
         }
         data = json.dumps(conf)
         rv = KubeQuery().post(['services'], data, rest=True, ns=namespace)
-        podutils.raise_if_failure(rv, "Could not set ingress public ports")
+        podutils.raise_if_failure(rv, "Could not ingress public ports")
 
 
 def format_lbservice_name(pod_id):

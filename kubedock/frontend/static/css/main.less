@@ -631,19 +631,15 @@ body{
     }
     /* end bredkrumb */
 
-    /* details-node, sidebar-user */
+    /* sidebar */
     .sidebar{
         .user-select(none);
         margin-bottom: 25px;
         .nav-sidebar{
             li{
-                height: 16px;
-                color: #3197ee;
                 font-size: 13px;
                 line-height: 22px;
-                padding-left: 23px;
-                position: relative;
-                margin-bottom: 14px;
+                margin-bottom: 5px;
                 font-family: @regular;
                 a{
                     padding: 0;
@@ -654,87 +650,6 @@ body{
                 }
                 &:last-child{
                     margin-bottom: 0;
-                }
-                &:before{
-                    top: 0;
-                    left: 0;
-                    content: '';
-                    position: absolute;
-                }
-                &:hover{
-                    cursor: pointer;
-                    color: #4e5665;
-                }
-                &.active{
-                    color: #4e5665;
-                    a{
-                        color: #4e5665;
-                    }
-                }
-                &.general{
-                    &:before{
-                        top: 2px;
-                        width: 13px;
-                        height: 16px;
-                        background: url('../img/general-ico.png') 0 0 no-repeat;
-                    }
-                }
-                &.activityPage{
-                    &:before{
-                        top: 4px;
-                        width: 21px;
-                        height: 18px;
-                        background: url('../img/users-activity.png') 0 0 no-repeat;
-                        .background-size(83%);
-                    }
-                }
-                &.stats{
-                    &:before{
-                        width: 16px;
-                        height: 16px;
-                        background: url('../img/stats-ico.png') 0 0 no-repeat;
-                    }
-                }
-                &.configuration{
-                    &:before{
-                        top: 3px;
-                        width: 16px;
-                        height: 16px;
-                        background: url('../img/configuration-ico.png') 0 0 no-repeat;
-                    }
-                }
-                &.monitoring{
-                    &:before{
-                        top: 4px;
-                        width: 18px;
-                        height: 15px;
-                        background: url('../img/monitoring-ico.png') 0 0 no-repeat;
-                    }
-                }
-                &.variables{
-                    &:before{
-                        top: 4px;
-                        width: 18px;
-                        height: 15px;
-                        background: url('../img/variables-ico.png') 0 0 no-repeat;
-                    }
-                }
-                &.profile{
-                    &:before{
-                        top: 4px;
-                        width: 12px;
-                        height: 15px;
-                        background: url('../img/profile-icon.png') 0 0 no-repeat;
-                    }
-                }
-                &.license{
-                    &:before{
-                        top: 4px;
-                        left: -1px;
-                        width: 14px;
-                        height: 15px;
-                        background: url('../img/license-icon.png') 0 0 no-repeat;
-                    }
                 }
             }
         }

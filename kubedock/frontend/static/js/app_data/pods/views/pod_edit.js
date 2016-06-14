@@ -680,8 +680,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         changeSize: function(evt){
             evt.stopPropagation();
             // TODO: wants rethinking.
-            var size = evt.target.value;
-            if (_.some( [_.isUndefined(size), _.isNaN(size), _.isEmpty(size)] )){
+            var size = parseInt(evt.target.value, 10);
+            if (_.isNaN(size)){
                 this.ui.pdSize.addClass('error');
             } else if (size < 1 || this.pdSizeLimit !== undefined && size > this.pdSizeLimit) {
                 this.ui.pdSize.addClass('error');

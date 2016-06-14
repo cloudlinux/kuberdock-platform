@@ -5,9 +5,7 @@
             <li>
                 <div id="nodes-page">Nodes</div>
             </li>
-            <li class="active">
-                <%= hostname %>
-            </li>
+            <li class="active"><%= hostname %></li>
         </ul>
         <div class="control-group">
             <button id="delete_node">Delete</button>
@@ -27,10 +25,10 @@
                 case 'timelines': s.timelines = 'active'; break;
                 case 'configuration': s.configuration = 'active'; break;
             } %>
-                <li role="presentation" class="general <%- s.general %> nodeGeneralTab">General</li>
+                <li role="presentation" class="general <%- s.general %> nodeGeneralTab"><span>General</span></li>
                 <!-- <li role="presentation" class="stats <%- s.stats %> nodeStatsTab">Stats</li> -->
-                <li role="presentation" class="stats <%- s.logs %> nodeLogsTab">Logs</li>
-                <li role="presentation" class="monitoring <%- s.monitoring %> nodeMonitoringTab">Monitoring</li>
+                <li role="presentation" class="stats <%- s.logs %> nodeLogsTab"><span>Logs</span></li>
+                <li role="presentation" class="monitoring <%- s.monitoring %> nodeMonitoringTab"><span>Monitoring</span></li>
                 <!-- <li role="presentation" class="<%- s.timelines %> nodeTimelinesTab">Timelines</li>
                 <li role="presentation" class="configuration <%- s.configuration %> nodeConfigurationTab">Configuration</li> -->
             </ul>

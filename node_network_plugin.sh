@@ -274,9 +274,11 @@ case "$ACTION" in
     iptables -w -N KUBERDOCK -t filter
     iptables -w -N KUBERDOCK -t nat
     iptables -w -N KUBERDOCK-PUBLIC-IP -t nat
+    iptables -w -N KUBERDOCK-PUBLIC-IP-SNAT -t nat
     iptables_ -I FORWARD -t filter -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK-PUBLIC-IP
+    iptables_ -I POSTROUTING -t nat -j KUBERDOCK-PUBLIC-IP-SNAT
     MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" init)
     log "$MSG"
     iptables_ -I KUBERDOCK -t filter -i docker0 ! -o docker0 -m set ! --match-set kuberdock_cluster dst -j ACCEPT

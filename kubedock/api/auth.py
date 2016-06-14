@@ -1,8 +1,8 @@
 from flask import Blueprint, current_app, request, jsonify, session
 
 from ..exceptions import APIError, PermissionDenied, NotAuthorized
-from ..users import User
-#from ..users.signals import user_logged_in
+from ..users.models import User, load_user_by_token
+# from ..users.signals import user_logged_in
 from ..login import auth_required, login_user, current_user
 from ..sessions import create_token
 auth = Blueprint('auth', __name__, url_prefix='/auth')
@@ -27,21 +27,25 @@ def token():
 
 @auth.route('/token2', methods=['POST'])
 def token2():
-    username = request.json.get('username')
-    password = request.json.get('password')
-    if username is None or password is None:
-        raise NotAuthorized
-    user = User.query.filter(User.username_iequal(username)).first()
+    username = request.json and request.json.get('username')
+    password = request.json and request.json.get('password')
+    token = (request.json and request.json.get('token') or
+             request.args.get('token'))
+    user = None
+    if token:
+        user = load_user_by_token(token)
+    elif username is not None and password is not None:
+        user = User.query.filter(User.username_iequal(username)).first()
     if user is None or user.deleted:
         raise NotAuthorized
     if not user.active:
         raise PermissionDenied
-    if not user.verify_password(password):
+    if not token and not user.verify_password(password):
         raise NotAuthorized
     login_user(user)
-    token = create_token(session)
+    token2 = create_token(session)
 
-    return jsonify({'status': 'OK', 'token': token})
+    return jsonify({'status': 'OK', 'token': token2})
 
 
 @auth.route('/logout', methods=['GET'])

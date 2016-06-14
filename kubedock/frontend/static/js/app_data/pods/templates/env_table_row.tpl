@@ -16,7 +16,7 @@
     <% } else if (before.value !== after.value) { %>
         <span class="diff"><%- before.value %></span>
         <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
-         title="This container will be modified after you apply changes."></span>
+         title="This variable will be modified after you apply changes."></span>
         <span><%- after.value %></span>
     <% } else { %>
         <%- before.value %>

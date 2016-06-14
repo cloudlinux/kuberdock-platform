@@ -73,7 +73,9 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     views.VolumeMountsTableItemView = Backbone.Marionette.ItemView.extend({
         template: volumeMountsTableItemTpl,
         tagName: 'tr',
+        ui: { 'tooltip' : '[data-toggle="tooltip"]' },
         initialize: function(options){ _.extend(this, options); },
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
         templateHelpers: function(){
             return {
                 pdBefore: this.pdBefore,
@@ -106,6 +108,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     views.PortsTableItemView = Backbone.Marionette.ItemView.extend({
         template: portsTableItemTpl,
         tagName: 'tr',
+        ui: { 'tooltip' : '[data-toggle="tooltip"]' },
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); }
     });
     views.PortsTableView = Backbone.Marionette.CompositeView.extend({
         template: portsTableTpl,
@@ -213,11 +217,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     views.EnvTableRow = Backbone.Marionette.ItemView.extend({
         template: envTableRowTpl,
         tagName: 'tr',
-
-        ui: {
-            'tooltip' : '[data-toggle="tooltip"]',
-        },
-
+        ui: { 'tooltip' : '[data-toggle="tooltip"]' },
         onDomRefresh: function(){ this.ui.tooltip.tooltip(); }
     });
 

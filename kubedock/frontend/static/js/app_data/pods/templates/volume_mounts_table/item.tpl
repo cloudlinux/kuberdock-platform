@@ -12,7 +12,7 @@
     <% if (before && after && !pdBefore !== !pdAfter){ %>
         <%- pdBefore ? 'yes' : 'no' %>
         <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
-        title="This container will be modified after you apply changes."></span>
+        title="This volume will be modified after you apply changes."></span>
         <%- pdAfter ? 'yes' : 'no' %>
     <% } else { %>
         <%- (pdBefore || pdAfter) ? 'yes' : 'no' %>
@@ -22,7 +22,7 @@
     <% if (pdBefore && pdAfter && pdBefore.pdName !== pdAfter.pdName){ %>
         <%- pdBefore.pdName %>
         <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
-        title="This container will be modified after you apply changes."></span>
+        title="This volume will be modified after you apply changes."></span>
         <%- pdAfter.pdName %>
     <% } else { %>
         <%- (pdBefore || pdAfter) ? (pdBefore || pdAfter).pdName : '' %>
@@ -32,7 +32,7 @@
     <% if (pdBefore && pdAfter && pdBefore.pdSize !== pdAfter.pdSize){ %>
         <%- pdBefore.pdSize %>
         <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
-        title="This container will be modified after you apply changes."></span>
+        title="This volume will be modified after you apply changes."></span>
         <%- pdAfter.pdSize %>
     <% } else { %>
         <%- (pdBefore || pdAfter) ? (pdBefore || pdAfter).pdSize : '' %>

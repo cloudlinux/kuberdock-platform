@@ -12,7 +12,7 @@
     <% if (before && after && before.protocol !== after.protocol){ %>
         <%- before.protocol %>
         <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
-        title="This container will be modified after you apply changes."></span>
+        title="This port will be modified after you apply changes."></span>
         <%- after.protocol %>
     <% } else { %>
         <%- (before || after).protocol %>
@@ -23,7 +23,7 @@
            && (before.hostPort || before.containerPort) !== (after.hostPort || after.containerPort)){ %>
         <%- before.hostPort || before.containerPort %>
         <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
-        title="This container will be modified after you apply changes."></span>
+        title="This port will be modified after you apply changes."></span>
         <%- after.hostPort || after.containerPort %>
     <% } else { %>
         <%- (before || after).hostPort || (before || after).containerPort %>
@@ -33,7 +33,7 @@
     <% if (before && after && !before.isPublic !== !after.isPublic){ %>
         <%- before.isPublic ? 'yes' : 'no' %>
         <span class="diff-arrow" data-toggle="tooltip" data-placement="top"
-        title="This container will be modified after you apply changes."></span>
+        title="This port will be modified after you apply changes."></span>
         <%- after.isPublic ? 'yes' : 'no' %>
     <% } else { %>
         <%- (before || after).isPublic ? 'yes' : 'no' %>

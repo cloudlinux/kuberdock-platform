@@ -16,6 +16,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             if(response.status === 'error' || response.status === 'warning')
                 utils.notifyWindow(response);
             return data;
+        },
+        getParentWithType = function(model, typeOfPatent, throughCollection){
+            return _.find(model.parents || [],
+                          function(parent){ return parent instanceof typeOfPatent; });
         };
 
     /**
@@ -69,25 +73,28 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     data.VolumeMount = Backbone.Model.extend({
-        idAttribute: 'name',
+        idAttribute: 'mountPath',
         defaults: function(){
             return {name: this.generateName(this.get('mountPath')), mountPath: null};
         },
         generateName: function(){
             return _.map(_.range(10), function(){ return _.random(36).toString(36); }).join('');
         },
-        getContainer: function(){ return ((this.collection || {}).parents || [])[0]; },
+        getContainer: function(){ return getParentWithType(this.collection, data.Container); },
+        getVolume: function(){
+            return _.findWhere(this.getContainer().getPod().get('volumes'),
+                               {name: this.get('name')});
+        },
     });
 
     data.Port = Backbone.Model.extend({
-        idAttribute: 'containerPort',
         defaults: {
             containerPort: null,
             hostPort: null,
             isPublic: false,
             protocol: "tcp",
         },
-        getContainer: function(){ return ((this.collection || {}).parents || [])[0]; },
+        getContainer: function(){ return getParentWithType(this.collection, data.Container); },
     });
 
     data.Container = Backbone.AssociatedModel.extend({
@@ -115,10 +122,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 sourceUrl: null,
             };
         },
-        getPod: function(){
-            return _.find((this.collection || {}).parents || [],
-                          function(parent){ return parent instanceof data.Pod; });
-        },
+        getPod: function(){ return getParentWithType(this.collection, data.Pod); },
         checkForUpdate: function(){
             var container = this;
             utils.preloader.show();

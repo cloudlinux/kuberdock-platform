@@ -1,4 +1,4 @@
-define(['app_data/app', 'app_data/model',
+define(['app_data/app', 'app_data/model', 'app_data/utils',
         'tpl!app_data/pods/templates/layout_wizard.tpl',
         'tpl!app_data/pods/templates/wizard_image_collection_item.tpl',
         'tpl!app_data/pods/templates/wizard_get_image.tpl',
@@ -13,9 +13,8 @@ define(['app_data/app', 'app_data/model',
 
         'tpl!app_data/pods/templates/wizard_set_container_env.tpl',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
-        'app_data/utils',
         'bootstrap-editable', 'selectpicker', 'tooltip'],
-       function(App, Model,
+       function(App, Model, utils,
                 layoutWizardTpl,
                 wizardImageCollectionItemTpl,
                 wizardGetImageTpl,
@@ -29,8 +28,7 @@ define(['app_data/app', 'app_data/model',
                 volumeMountListEmptyTpl,
 
                 wizardSetContainerEnvTpl,
-                wizardSetContainerCompleteTpl,
-                utils){
+                wizardSetContainerCompleteTpl){
 
     var views = {};
 
@@ -225,6 +223,7 @@ define(['app_data/app', 'app_data/model',
         }
     });
 
+
     views.WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
         tagName: 'div',
         regions: {
@@ -251,17 +250,6 @@ define(['app_data/app', 'app_data/model',
 
         initialize: function(options) {
             this.pod = this.model.getPod();
-        },
-
-        templateHelpers: function(){
-            return {
-                parentID: this.pod.id,
-                volumes: this.pod.get('volumes'),
-                updateIsAvailable: this.model.updateIsAvailable,
-                kube_type: this.pod.getKubeType(),
-                restart_policy: this.pod.get('restartPolicy'),
-                podName: this.pod.get('name')
-            };
         },
 
         onBeforeShow: function(){
@@ -297,7 +285,7 @@ define(['app_data/app', 'app_data/model',
             );
         },
 
-        goNext: function(evt){
+        validateAndNormalize: function(){
             var that = this;
 
             // remove empty ports and volumeMounts
@@ -334,7 +322,8 @@ define(['app_data/app', 'app_data/model',
 
             /* check CMD and ENTRYPOINT */
             if (!this.model.get('command').length && !this.model.get('args').length
-                    && !this.model.originalCommand.length && !this.model.originalArgs.length){
+                    && !this.model.originalCommand.length
+                    && !this.model.originalArgs.length){
                 utils.notifyWindow('Please, specify value of the Command field.');
                 utils.scrollTo(this.ui.input_command);
                 return;
@@ -347,7 +336,8 @@ define(['app_data/app', 'app_data/model',
                     where = container === that.model ? 'this container!'
                         : ' other container (' + container.get('image') + ')!';
                 utils.notifyWindow('You have a duplicate ' + type + ' port ' +
-                                   dublicatePort.port + ' in ' + where);
+                                   dublicatePort.port + '/' +
+                                   dublicatePort.protocol + ' in ' + where);
             };
 
             try {
@@ -355,12 +345,19 @@ define(['app_data/app', 'app_data/model',
                     that.pod.get('containers').each(function(container2){
                         container2.get('ports').each(function(port2, j){
                             if (container2 === that.model && i === j) return;
-                            if (port.get('containerPort') === port2.get('containerPort'))
-                                throw {container: container2, port: port.get('containerPort')};
-                            var hostPort = port.get('hostPort') || port.get('containerPort'),
-                                hostPort2 = port2.get('hostPort') || port2.get('containerPort');
+                            if (port.get('protocol') !== port2.get('protocol')) return;
+
+                            var protocol = port.get('protocol'),
+                                containerPort = port.get('containerPort'),
+                                containerPort2 = port2.get('containerPort'),
+                                hostPort = port.get('hostPort') || containerPort,
+                                hostPort2 = port2.get('hostPort') || containerPort2;
+                            if (containerPort === containerPort2)
+                                throw {container: container2, protocol: protocol,
+                                       port: containerPort};
                             if (hostPort === hostPort2)
-                                throw {container: container2, port: hostPort, isPod: true};
+                                throw {container: container2, protocol: protocol,
+                                       port: hostPort, isPod: true};
                         });
                     });
                 });
@@ -368,7 +365,12 @@ define(['app_data/app', 'app_data/model',
                 showDublicatePortError(e);
                 return;
             }
-            this.trigger('step:envconf');
+            return true;
+        },
+
+        goNext: function(evt){
+            if (this.validateAndNormalize())
+                this.trigger('step:envconf');
         },
 
         goBack: function(evt){
@@ -425,6 +427,20 @@ define(['app_data/app', 'app_data/model',
                 return {newValue: newValue};
             };
 
+            var checkUniqueness = function(newAttrs) {
+                if (!newAttrs.containerPort)
+                    return;
+                var dublicate = _(that.model.collection.where(
+                        _.pick(newAttrs, 'containerPort', 'protocol')
+                    )).without(that.model)[0];
+                if (dublicate) {
+                    utils.notifyWindow('Port ' + newAttrs.containerPort
+                                       + '/' + newAttrs.protocol
+                                       + ' already exists in this container.');
+                    return true;
+                }
+            };
+
             this.ui.podPort.editable({
                 type: 'text',
                 mode: 'inline',
@@ -442,17 +458,21 @@ define(['app_data/app', 'app_data/model',
                 mode: 'inline',
                 validate: validatePort,
                 success: function(response, newValue) {
+                    if (checkUniqueness(_.extend({}, that.model.toJSON(), {containerPort: newValue})))
+                        return ' ';
                     that.model.set('containerPort', newValue);
                 },
             });
 
             this.ui.iseditable.editable({
                 type: 'select',
-                value: 'tcp',
+                value: that.model.get('protocol'),
                 source: [{value: 'tcp', text: 'tcp'}, {value: 'udp', text: 'udp'}],
                 mode: 'inline',
                 showbuttons: false,
                 success: function(response, newValue) {
+                    if (checkUniqueness(_.extend({}, that.model.toJSON(), {protocol: newValue})))
+                        return ' ';
                     that.model.set('protocol', newValue);
                 },
             });
@@ -692,17 +712,25 @@ define(['app_data/app', 'app_data/model',
             this.ui.mountPath.editable({
                 type: 'text',
                 mode: 'inline',
-                success: function(response, newValue) {
+                validate: function(newValue){
                     var value = newValue.trim(),
-                        error = Model.Container.validateMountPath(value);
+                        dublicate = _(that.model.collection.where({mountPath: value}))
+                            .without(that.model)[0],
+                        error = dublicate
+                            ? 'Path must be unique.'
+                            : Model.Container.validateMountPath(value);
+
                     // TODO: style for editable validation errors
                     // if (error) return error;
                     if (error) {
                         utils.notifyWindow(error);
-                        return '';
+                        return ' ';
                     }
 
-                    that.model.set('mountPath', value);
+                    return {newValue: value};
+                },
+                success: function(response, newValue) {
+                    that.model.set('mountPath', newValue);
                 }
             });
             this.ui.pdSelect.selectpicker({

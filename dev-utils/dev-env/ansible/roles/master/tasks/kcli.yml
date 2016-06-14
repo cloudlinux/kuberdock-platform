@@ -1,3 +1,10 @@
+# Requirement for ansible's uri module
+# The dependency on httplib2 was removed in Ansible 2.1
+- name: Install additional packages
+  yum: name=python-httplib2 state=latest
+  tags:
+    - kcli
+
 - stat: path=/vagrant/kcli.rpm
   register: kcli_rpm
 

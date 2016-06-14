@@ -3,14 +3,17 @@
   tags:
     - kcli
 
-- name: Get Tocken for test_user
-  uri: 
+- name: Get token for test_user
+  uri:
     url: "{{ token_gathering_url}}"
     user: test_user
     password: test_user
     validate_certs: no
     force_basic_auth: yes
   register: raw_token
+  until: raw_token.status == 200
+  retries: 5
+  delay: 30
   tags:
     - kcli
 

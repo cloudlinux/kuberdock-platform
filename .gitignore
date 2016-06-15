@@ -17,5 +17,7 @@ celerybeat-schedule
 *.retry
 *.rpm
 celerybeat.pid
+.cache
+Dockerfile.local
 
 .tox/

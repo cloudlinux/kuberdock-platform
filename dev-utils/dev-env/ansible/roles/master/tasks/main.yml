@@ -24,6 +24,8 @@
 
 - name: Cleanup
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
+  tags:
+      - cleanup
 
 - include: ceph.yml
   when: use_ceph

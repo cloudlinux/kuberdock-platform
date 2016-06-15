@@ -1,7 +1,15 @@
-- name: Install kcli
-  yum: name="{{ kcli_rpm_url }}" state=present
+- stat: path=/vagrant/kcli.rpm
+  register: kcli_rpm
+
+- fail: msg="kcli.rpm was not found"
+  when: not kcli_rpm.stat.exists
   tags:
-    - kcli
+   - kcli
+
+- name: Install KCLI
+  yum: name=/vagrant/kcli.rpm state=present
+  tags:
+   - kcli
 
 - name: Get token for test_user
   uri:

@@ -52,9 +52,9 @@ class TestKubeCtl(unittest.TestCase):
         get_mock.assert_called_with(container.PODAPI_PATH)
         showlist_mock.assert_called_once_with([
             {'name': 'a', 'status': 'running', u'labels': 'name=a',
-             'images': u'img1,imageless', 'template_id': '???'},
+             'images': u'img1,imageless', 'template_id': '???', 'host': '???'},
             {'name': 'b', 'status': '???', 'labels': u'', 'images': u'',
-             'template_id': '???'}
+             'template_id': '???', 'host': '???'}
         ])
 
     @mock.patch.object(container.KubeQuery, 'get')

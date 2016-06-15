@@ -317,6 +317,27 @@ class CreateIPPool(Command):
         })
 
 
+class DeleteIPPool(Command):
+    """ Deletes IP pool
+    """
+    option_list = (
+        Option('-s', '--subnet', dest='subnet', required=True,
+               help='Network with mask'),
+    )
+
+    def run(self, subnet):
+        ippool.IpAddrPool().delete(subnet.decode())
+
+
+class ListIPPool(Command):
+    """ Deletes IP pool
+    """
+    option_list = tuple()
+
+    def run(self):
+        print(json.dumps(ippool.IpAddrPool().get()))
+
+
 class CreateUser(Command):
     """ Creates a new user
     """
@@ -419,6 +440,8 @@ manager.add_command('node-flag', NodeFlagCmd())
 manager.add_command('node-info', NodeInfoCmd())
 manager.add_command('auth-key', AuthKey())
 manager.add_command('create-ip-pool', CreateIPPool())
+manager.add_command('delete-ip-pool', DeleteIPPool())
+manager.add_command('list-ip-pools', ListIPPool())
 manager.add_command('create-user', CreateUser())
 manager.add_command('add-predefined-app', AddPredefinedApp())
 

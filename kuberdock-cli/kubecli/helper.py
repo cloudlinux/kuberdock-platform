@@ -11,8 +11,8 @@ from functools import wraps
 import requests
 from requests.auth import HTTPBasicAuth
 
-
 GLOBAL_CONFIG = '/etc/kubecli.conf'
+
 
 class NullHandler(logging.Handler):
     def emit(self, record):
@@ -270,8 +270,7 @@ def create_user_config(args):
             config.write('[defaults]\n'
                          'user = <YOUR USERNAME HERE>\n'
                          'password = <YOUR PASSWORD HERE>\n')
-        os.chmod(default_path, stat.S_IRUSR|stat.S_IWUSR)
-
+        os.chmod(default_path, stat.S_IRUSR | stat.S_IWUSR)
 
 
 def echo(func):

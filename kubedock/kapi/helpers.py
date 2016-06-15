@@ -1,7 +1,10 @@
 import json
 import random
-import requests
 import string
+
+import requests
+from flask import current_app
+
 from ..core import db
 from ..exceptions import APIError
 from ..pods.models import Pod

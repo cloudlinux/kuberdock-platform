@@ -1,37 +1,36 @@
-from urlparse import urlsplit, urlunsplit, urljoin
-
-import bitmath
-import boto.ec2
-import boto.ec2.elb
+import datetime
 import json
 import os
 import random
 import re
 import socket
-import sys
-import datetime
-import nginx
 import string
-import time
-
 import subprocess
+import sys
+import time
 from collections import namedtuple
-from flask import (current_app, request, jsonify, g, has_app_context, Response,
-                   session, has_request_context)
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
-from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
 from traceback import format_exception
+from urlparse import urlsplit, urlunsplit, urljoin
 
-from .login import current_user
-from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
-from .pods import Pod
+import bitmath
+import boto.ec2
+import boto.ec2.elb
+import nginx
+from flask import (current_app, request, jsonify, g, has_app_context, Response,
+                   session, has_request_context)
+from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
+
 from .core import ssh_connect, db, ConnectionPool
+from .exceptions import APIError, PermissionDenied
+from .login import current_user
+from .pods import Pod
+from .rbac.models import Role
+from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
 from .settings import NODE_TOBIND_EXTERNAL_IPS
 from .users.models import SessionData
-from .rbac.models import Role
-from .exceptions import APIError, PermissionDenied
 
 
 class UPDATE_STATUSES:

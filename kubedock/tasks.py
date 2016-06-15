@@ -1,7 +1,6 @@
 import os
 import ipaddress
 import json
-import operator
 import re
 import requests
 import subprocess

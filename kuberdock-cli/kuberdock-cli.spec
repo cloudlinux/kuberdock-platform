@@ -55,9 +55,8 @@ rm -rf %{buildroot}
 
 %changelog
 
-* Wed Jun 15 2016 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Sergey Gruntovsky <sgruntovsky@cloudlinux.com> 1.0-4
+* Wed Jun 15 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Maksym Lobur <mlobur@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 1.0-3
 - AC-3458 fix: user can't create pod with more that 10 kubes
-* Fri Jun 03 2016 Maksym Lobur <mlobur@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 1.0-3
 - Install kuberdock-plugin when deploy cli
 - AC-3248 Fix kcli - two conflicting patches
 - KCLI. Get home dir from config path

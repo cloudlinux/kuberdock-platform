@@ -588,30 +588,55 @@
                             background: url('../img/unpaid-icon.png') 0 0 no-repeat;
                         }
                     }
-                    &.added,
-                    &.changed{
-                        .border-radius(50%);
-                        width: 7px;
-                        height: 7px;
-                        margin-right: 5px;
-                        display: inline-block;
-                    }
-                    &.added{
-                        background-color: #6295e5;
-                    }
-                    &.changed{
-                        background-color: #e45ce6;
+                    &.path,
+                    &.name,
+                    &.containerPort{
+                        position: relative;;
+                        .added,
+                        .deleted,
+                        .changed{
+                            top: 0;
+                            bottom: 0;
+                            left: -24px;
+                            width: 24px;
+                            margin: auto;
+                            min-height: 50px;
+                            position: absolute;
+                            &::before{
+                                .border-radius(50%);
+                                top: 0;
+                                right: 0;
+                                left: 3px;
+                                bottom: 0;
+                                width: 7px;
+                                height: 7px;
+                                content: '';
+                                margin: auto;
+                                position: absolute;
+                            }
+                        }
+                        .added{
+                            &::before{
+                                background-color: #6295e5;
+                            }
+                        }
+                        .changed{
+                            &::before{
+                                background-color: #e45ce6;
+                            }
+                        }
+                        .deleted{
+                            &::before{
+                                content: 'x';
+                                color: #a8a9aa;
+                                font-size: 13px;
+                                line-height: 5px;
+                                text-align: center;
+                            }
+                        }
                     }
                     &.diff{
                         color: #8e8e8e;
-                    }
-                    &.deleted{
-                        margin-right: 5px;
-                        &::before{
-                            content: 'x';
-                            color: #a8a9aa;
-                            font-size: 13px;
-                        }
                     }
                 }
                 .tooltip.bottom{

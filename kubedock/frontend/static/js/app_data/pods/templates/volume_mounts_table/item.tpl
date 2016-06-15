@@ -1,12 +1,14 @@
 <td>
-    <% if (before && !after){ %>
-        <span class="deleted" data-toggle="tooltip" data-placement="right" title="Deleted"></span>
-    <% } else if (!before && after) { %>
-        <span class="added" data-toggle="tooltip" data-placement="right" title="Added"></span>
-    <% } else if (!_.isEqual(before, after) || !_.isEqual(pdBefore, pdAfter)) { %>
-        <span class="changed" data-toggle="tooltip" data-placement="right" title="Changed"></span>
-    <% } %>
-    <%- (before || after).mountPath %>
+    <span class="path">
+        <% if (before && !after){ %>
+            <span class="deleted" data-toggle="tooltip" data-placement="right" title="Deleted"></span>
+        <% } else if (!before && after) { %>
+            <span class="added" data-toggle="tooltip" data-placement="right" title="Added"></span>
+        <% } else if (!_.isEqual(before, after) || !_.isEqual(pdBefore, pdAfter)) { %>
+            <span class="changed" data-toggle="tooltip" data-placement="right" title="Changed"></span>
+        <% } %>
+        <%- (before || after).mountPath %>
+    </span>
 </td>
 <td>
     <% if (before && after && !pdBefore !== !pdAfter){ %>

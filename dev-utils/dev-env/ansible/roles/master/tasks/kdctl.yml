@@ -1,0 +1,12 @@
+- stat: path=/vagrant/kdctl.rpm
+  register: kdctl_rpm
+
+- fail: msg="kdctl.rpm was not found"
+  when: not kdctl_rpm.stat.exists
+  tags:
+   - kdctl
+
+- name: Install kdctl
+  yum: name=/vagrant/kdctl.rpm state=present
+  tags:
+   - kdctl

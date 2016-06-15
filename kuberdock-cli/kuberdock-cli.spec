@@ -56,6 +56,7 @@ rm -rf %{buildroot}
 %changelog
 
 * Fri Jun 03 2016 Maksym Lobur <mlobur@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 1.0-3
+- AC-3458 fix: user can't create pod with more that 10 kubes
 - Install kuberdock-plugin when deploy cli
 - AC-3248 Fix kcli - two conflicting patches
 - KCLI. Get home dir from config path
@@ -101,7 +102,7 @@ rm -rf %{buildroot}
 * Fri Oct 30 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 0.1-25
 - AC-1345: check --kubes type and value
 - AC-1372: add validation to environment variable name. Fixed API errors output in kcli
-- 
+-
 
 * Wed Oct 21 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-24
 - KCLI. Remove info messages (breaks cPanel plugin)

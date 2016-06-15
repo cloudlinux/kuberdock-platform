@@ -1,6 +1,7 @@
 from time import sleep
 
 import requests
+
 from kubedock import settings
 from kubedock.settings import INFLUXDB_DATABASE, INFLUXDB_USER, \
     INFLUXDB_PASSWORD
@@ -21,7 +22,7 @@ def _update_influxdb(with_testing):
     t = 1
     success = False
     ping_url = 'http://%s:%s/ping' % (
-    settings.INFLUXDB_HOST, settings.INFLUXDB_PORT)
+        settings.INFLUXDB_HOST, settings.INFLUXDB_PORT)
     for _ in xrange(5):
         try:
             requests.get(ping_url)
@@ -37,9 +38,19 @@ def _update_influxdb(with_testing):
     # initialization
     helpers.local(
         'influx -execute "create user {user} with password \'{password}\' with all privileges"'
-        .format(user=INFLUXDB_USER, password=INFLUXDB_PASSWORD))
+            .format(user=INFLUXDB_USER, password=INFLUXDB_PASSWORD))
     helpers.local('influx -execute "create database {db}"'
                   .format(db=INFLUXDB_DATABASE))
+
+
+def _start_heapster():
+    helpers.local('systemctl reenable heapster')
+    helpers.local('systemctl restart heapster')
+
+
+def _stop_heapster():
+    helpers.local('systemctl stop heapster')
+    helpers.local('systemctl disable heapster')
 
 
 def _remove_cadvisor():
@@ -55,11 +66,15 @@ def _restore_cadvisor():
 def upgrade(upd, with_testing, *args, **kwargs):
     upd.print_log('Update influxdb...')
     _update_influxdb(with_testing)
+    upd.print_log('Start heapster service...')
+    _start_heapster()
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
     upd.print_log('Downgrade influxdb...')
     helpers.install_package('influxdb', 'downgrade')
+    upd.print_log('Stop and disable heapster service...')
+    _stop_heapster()
 
 
 def upgrade_node(upd, with_testing, *args, **kwargs):

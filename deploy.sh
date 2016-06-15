@@ -23,8 +23,6 @@ SENTRYSECRET=$(echo $SENTRY_DSN | cut -f2 -d,)
 SENTRYURL=$(echo $SENTRY_DSN | cut -f3 -d,)
 SENTRYPROJECTID=$(echo $SENTRY_DSN | cut -f4 -d,)
 
-ERRORLOGFILE=error.log
-
 DATA_TEMPLATE='{'\
 '\"project\": \"$SENTRYPROJECTID\", '\
 '\"logger\": \"bash\", '\
@@ -36,7 +34,39 @@ DATA_TEMPLATE='{'\
 '\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"},'\
 ' \"release\":\"$release\", \"server_name\":\"$hostname\($ip_address\)\"}'
 
-sentryWrapper() { 
+
+isRpmFileNotSigned(){
+    package="$@"
+    sig=$(rpm -Kv $package | grep Signature)
+    if [ -z "$sig" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+isInstalledRpmNotSigned(){
+    installed=$(rpm -qi kuberdock | grep Signature | awk -F ": " '{print $2}')
+    if [ "$installed" == "(none)" ];then
+        return 0
+    else
+        return 1
+    fi
+}
+
+sentryWrapper() {
+     # AC-3591 Do not send anything if package not signed
+     package=$(ls -1 | awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
+     if [ ! -z $package ];then
+         if isRpmFileNotSigned $package; then
+             return 0
+         fi
+     else
+         if isInstalledRpmNotSigned; then
+             return 0
+         fi
+     fi
+
      eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
      printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $DEPLOY_LOG_FILE. \n"
 
@@ -50,7 +80,7 @@ sentryWrapper() {
          uname=$(uname -a)
          hostname=$(cat /etc/hostname)
          ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
-         release=$(rpm -qa |grep -e "kuberdock-[1-9]")
+         release=$(rpm -q --queryformat "%{VERSION}-%{RELEASE}" kuberdock)
          data=$(eval echo $DATA_TEMPLATE)
          echo
          curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
@@ -62,7 +92,7 @@ sentryWrapper() {
 
 catchFailure() {
    cmnd="$@"
-   $cmnd 2>&1 | tee $ERRORLOGFILE ; ( exit ${PIPESTATUS} )
+   $cmnd
    catchExit
 }
 
@@ -520,7 +550,7 @@ else
 fi
 
 
-# AC-3318 Remove chrony which prevents ntpd service to start 
+# AC-3318 Remove chrony which prevents ntpd service to start
 # after boot
 yum erase -y chrony
 

@@ -440,6 +440,8 @@ new_pod_schema = {
                     }
                 },
                 'workingDir': path_schema,
+                "readinessProbe": {'type': 'dict'},
+                "livenessProbe": {'type': 'dict'},
                 "terminationMessagePath": {
                     'type': 'string',
                     'maxlength': PATH_LENGTH,

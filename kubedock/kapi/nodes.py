@@ -502,7 +502,27 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
                     }
                 ],
                 "workingDir": "",
-                "terminationMessagePath": None
+                "terminationMessagePath": None,
+                "readinessProbe": {
+                    "httpGet": {
+                        "path": "/readiness",
+                        "port": 8081,
+                        "scheme": "HTTP",
+                    },
+                    "initialDelaySeconds": 30,
+                    "timeoutSeconds": 5
+                },
+                "livenessProbe": {
+                    "httpGet": {
+                        "path": "/healthz",
+                        "port": 8080,
+                        "scheme": "HTTP"
+                    },
+                    "initialDelaySeconds": 60,
+                    "timeoutSeconds": 5,
+                    "successThreshold": 1,
+                    "failureThreshold": 5,
+                }
             },
             {
                 "name": "skydns",
@@ -531,6 +551,18 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
                 "workingDir": "",
                 "terminationMessagePath": None
             },
+            {
+                "name": "healthz",
+                "image": "gcr.io/google_containers/exechealthz:1.0",
+                "args": [
+                    "-cmd=nslookup {0} 127.0.0.1 >/dev/null".format(domain),
+                    "-port=8080"
+                ],
+                "ports": [{
+                    "protocol": "TCP",
+                    "containerPort": 8080
+                }]
+            }
         ]
     }
 

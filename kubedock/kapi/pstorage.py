@@ -1372,7 +1372,8 @@ class LocalStorage(PersistentStorage):
         volume['annotation'] = {
             'localStorage': {
                 'size': pd.size,
-                'path': full_path
+                'path': full_path,
+                'name': pd.name,
             }
         }
         return volume

@@ -255,6 +255,7 @@ class Pod(object):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
+        volumes_dir_url = getattr(self, 'volumes_dir_url', "")
         kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
         volume_annotations = self.extract_volume_annotations(volumes)
 
@@ -300,7 +301,8 @@ class Pod(object):
                             "kuberdock-container-kubes": self._dump_kubes(),
                             "kuberdock-volume-annotations": json.dumps(
                                 volume_annotations
-                            )
+                            ),
+                            "kuberdock-volumes-backup-url": volumes_dir_url
                         }
                     },
                     "spec": {
@@ -391,21 +393,34 @@ class Pod(object):
         data['imagePullPolicy'] = 'Always'
         return data
 
-    @staticmethod
-    def add_origin_root(container, volumes):
+    def add_origin_root(self, container, volumes):
         """If there are lifecycle in container, then mount origin root from
         docker overlay path. Need this for container hooks.
         """
-        if 'lifecycle' in container:
-            image = Image(container['image'])
-            image_id = image.get_id()
-            volume_name = '-'.join([container['name'], ORIGIN_ROOT])
-            volumes.append(
-                {u'hostPath': {u'path': OVERLAY_PATH.format(image_id)},
-                 u'name': volume_name})
-            container['volumeMounts'].append(
-                {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
-                 u'name': volume_name})
+        if 'lifecycle' not in container:
+            # No container hooks defined for container
+            return
+
+        volume_name = '-'.join([container['name'], ORIGIN_ROOT])
+
+        # Make sure we remove previous info, to handle case when image changes
+        origin_root_vol = filter(lambda v: v['name'] == volume_name,
+                                 volumes)
+        if origin_root_vol:
+            volumes.remove(origin_root_vol[0])
+        origin_root_mnt = filter(lambda m: m['name'] == volume_name,
+                                 container['volumeMounts'])
+        if origin_root_mnt:
+            container['volumeMounts'].remove(origin_root_mnt[0])
+
+        image = Image(container['image'])
+        image_id = image.get_id()
+        volumes.append(
+            {u'hostPath': {u'path': OVERLAY_PATH.format(image_id)},
+             u'name': volume_name})
+        container['volumeMounts'].append(
+            {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
+             u'name': volume_name})
 
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)

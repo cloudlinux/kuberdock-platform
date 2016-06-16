@@ -338,7 +338,11 @@ case "$ACTION" in
       log "$MSG"
     fi
     
-    MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" initlocalstorage $DATA_INFO-spec)
+    MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" initlocalstorage $DATA_INFO-spec 2>&1)
+    if [ ! $? -eq 0 ]; then
+     log "$MSG"
+     exit 1
+    fi
     log "$MSG"
 
     etcd_ PUT "$USER_ID" "$POD_IP" "{\"node\":\"$NODE_IP\",\"service\":\"$SERVICE_IP\"}"

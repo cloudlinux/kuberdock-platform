@@ -5,3 +5,4 @@ Flask-Testing==0.4.2
 vcrpy==1.7.4
 vcrpy-unittest==0.1.5
 pytest==2.9.2
+pytest-mock==1.1

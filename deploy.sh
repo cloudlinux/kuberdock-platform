@@ -1125,7 +1125,7 @@ sentryWrapper() {
          uname=$(uname -a)
          hostname=$(cat /etc/hostname)
          ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
-         release=$(rpm -qa |grep -e "kuberdock-[1-9]")
+         release=$(rpm -q --queryformat "%{VERSION}-%{RELEASE}" kuberdock)
          data=$(eval echo $DATA_TEMPLATE)
          echo
          curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\

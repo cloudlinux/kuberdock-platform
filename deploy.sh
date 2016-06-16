@@ -1106,9 +1106,12 @@ DATA_TEMPLATE='{'\
 
 
 sentryWrapper() {
+   echo > $ERRORLOGFILE
    cmnd="$@"
    $cmnd 2>&1 | tee $ERRORLOGFILE ; ( exit ${PIPESTATUS} )
    ERROR_CODE=$?
+   sed -i '/login:/d' $ERRORLOGFILE
+   sed -i '/password:/d' $ERRORLOGFILE
    if [ ${ERROR_CODE} != 0 ] ;then
      eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
      printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $ERRORLOGFILE. \n"
@@ -1128,9 +1131,10 @@ sentryWrapper() {
          curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
 "?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null && echo "Information about your problem has been sent to our support team."
      fi
-     echo "Done."
-     exit ${ERROR_CODE}
    fi
+   rm -rf $ERRORLOGFILE
+   echo "Done."
+   exit ${ERROR_CODE}
 }
 
 

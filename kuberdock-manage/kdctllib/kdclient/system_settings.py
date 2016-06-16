@@ -17,5 +17,5 @@ class SystemSettingsClient(ClientBase):
     def update(self, sid, value):
         return self.transport.put(
             self._url(sid),
-            data={'value': value}
+            json={'value': value}
         )

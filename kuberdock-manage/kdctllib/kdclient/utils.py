@@ -3,6 +3,13 @@ import requests
 from .exceptions import APIError
 
 
+def _get_response_message(response):
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
+
+
 class ClientBase(object):
     endpoint = '/'
 
@@ -31,31 +38,29 @@ class Transport(object):
         self.conn = conn
         self.url = url
 
-    def request(self, method, url, params=None, data=None, **kwargs):
+    def request(self, method, url, **kwargs):
         url = self.url + url
-        response = self.conn.request(method, url, params, data, **kwargs)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as e:
-            raise APIError(e.message)
+        response = self.conn.request(method, url, **kwargs)
+
+        if response.ok:
+            return _get_response_message(response)
         else:
-            try:
-                return response.json()
-            except ValueError:
-                return response.text
+            raise APIError(_get_response_message(response))
 
     def get(self, url, params=None):
-        return self.request('GET', url, params)
+        return self.request('GET', url, params=params)
 
-    def post(self, url, params=None, data=None):
+    def post(self, url, params=None, json=None, **kwargs):
         return self.request(
-            'POST', url, params, data,
+            'POST', url, params=params, json=json, **kwargs
         )
 
-    def put(self, url, params=None, data=None):
+    def put(self, url, params=None, json=None, **kwargs):
         return self.request(
-            'PUT', url, params, data,
+            'PUT', url, params=params, json=json, **kwargs
         )
 
-    def delete(self, url, params=None):
-        return self.request('DELETE', url, params)
+    def delete(self, url, params=None, json=None, **kwargs):
+        return self.request(
+            'DELETE', url, params=params, json=json, **kwargs
+        )

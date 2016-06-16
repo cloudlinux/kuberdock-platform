@@ -25,13 +25,13 @@ class UsersClient(ClientBase):
     def create(self, user_data):
         return self.transport.post(
             self._url(),
-            data=user_data
+            json=user_data
         )
 
     def update(self, uid, user_data):
         return self.transport.put(
             self._url(uid),
-            data=user_data
+            json=user_data
         )
 
     def delete(self, uid, force=False):

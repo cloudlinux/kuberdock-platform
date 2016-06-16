@@ -23,13 +23,13 @@ class PredefinedAppsClient(ClientBase):
     def create(self, app_data):
         return self.transport.post(
             self._url(),
-            data=app_data
+            json=app_data
         )
 
     def update(self, app_id, app_data):
         return self.transport.put(
             self._url(app_id),
-            data=app_data
+            json=app_data
         )
 
     def delete(self, app_id):
@@ -40,5 +40,5 @@ class PredefinedAppsClient(ClientBase):
     def validate_template(self, template):
         return self.transport.post(
             self._url('validate-template'),
-            data={'template': template}
+            json={'template': template}
         )

@@ -14,7 +14,9 @@ if __name__ == '__main__':
     from kdctllib.parser import system_settings
     from kdctllib.parser import users
 
+    from kdctllib.parser import utils
+
     try:
         print main()
     except Exception as e:
-        raise SystemExit(e)
+        raise SystemExit(utils.formatted(e.message))

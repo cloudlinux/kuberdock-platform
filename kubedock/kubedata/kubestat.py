@@ -14,6 +14,9 @@ from influxdb.client import InfluxDBClientError
 
 from ..utils import get_api_url
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class KubeUnitResolver(object):
     def __init__(self):
@@ -120,7 +123,8 @@ class KubeStat(object):
             settings.INFLUXDB_DATABASE)
         try:
             self._data = conn.query(self.query_str)[0]
-        except IndexError:
+        except (IndexError, InfluxDBClientError) as e:
+            logger.warning(repr(e))
             self._data = {'points': [], 'columns': []}
 
     @staticmethod

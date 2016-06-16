@@ -1238,7 +1238,11 @@ define([
             if (!App.message.hasView()) { return; }
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
-                    notificationCollection.remove(data.id);
+                    notificationCollection.remove(
+                        notificationCollection.filter(function(m){
+                            return m.get('target').indexOf(data.target) !== -1;
+                        })
+                    );
                     if (notificationCollection.length) {
                         var notificationView = new Views.MessageList({collection: notificationCollection});
                         App.message.show(notificationView);

@@ -25,7 +25,7 @@ def attach_admin(message, target=None):
         'id': evt_entry.id,
         'description': message_entry.description,
         'target': target,
-        'type': message_entry.type}, 1)
+        'type': message_entry.type}, admin_role.id)
 
 
 def detach_admin(message):
@@ -38,15 +38,14 @@ def detach_admin(message):
         return
     admin_role = Role.query.filter(Role.rolename == 'Admin').one()
     messages = [r for r in message_entry.roles if r.role == admin_role]
-    ids = []
-    for message in messages:
-        ids.append(message.id)
-        db.session.delete(message)
-    db.session.commit()
+    targets = [{'id': msg.id, 'target': msg.target} for msg in messages]
     try:
-        send_event_to_role('advise:hide', {'id': ids[0]}, 1)
+        send_event_to_role('advise:hide', targets[0], admin_role.id)
     except IndexError:
         pass
+    for message in messages:
+        db.session.delete(message)
+    db.session.commit()
 
 
 def read_role_events(role=None):

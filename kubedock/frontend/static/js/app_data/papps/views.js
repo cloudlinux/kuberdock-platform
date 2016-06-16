@@ -287,17 +287,9 @@ define(['app_data/app', 'app_data/utils', 'marionette',
                 this.trigger('app:edit:item', this.model.get('id'));
             },
 
-            copyLink: function(e){
-                e.preventDefault();
-                var link = this.urlPath + this.model.get('qualifier'),
-                    $txa = $("<textarea />",{val:link,css:{position:"fixed"}}).appendTo("body").select();
-
-                if (document.execCommand('copy')){ // CH, FF, Edge, IE
-                    utils.notifyWindow('Link copied to buffer', 'success');
-                } else {
-                    prompt("Copy to clipboard:\nSelect, Cmd+C, Enter", link);
-                }
-                $txa.remove();
+            copyLink: function(){
+                var link = this.urlPath + this.model.get('qualifier');
+                utils.copyLink( link, 'Link copied to buffer');
             }
         });
 

@@ -54,6 +54,9 @@
             .rotate(-90deg);
         }
     }
+    .updateSsh{
+        .mdi('update',21px, #B5BBC1, #3197EE);
+    }
     .upgrade-btn{
         .mdi('vertical_align_top',21px, #B5BBC1, #3197EE);
         &.back{
@@ -260,6 +263,7 @@ table{
         .mdi('stop',21px, #B5BBC1, #3197EE);
     }
     .check-for-update{
+        display: inline-block;
         .mdi('find_replace',21px, #B5BBC1, #3197EE);
         &.start-atimation{
             &:before{
@@ -272,16 +276,20 @@ table{
         .mdi('autorenew',21px, #B5BBC1, #3197EE);
     }
     .container-update{
+        display: inline-block;
         .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
     }
     .edit-item{
         .mdi('create',21px, #B5BBC1, #3197EE);
     }
-    .copy-link{
+    .copy-link,
+    .copy-ssh-link{
+        display: inline-block;
         .mdi('insert_link',21px, #B5BBC1, #3197EE);
-        &:before{
-            .rotate(-45deg);
-        }
+    }
+    .copy-ssh-password{
+        display: inline-block;
+        .mdi('vpn_key',21px, #B5BBC1, #3197EE);
     }
     .warning-info-title-ico{
         .mdi('info_outline',19px, #F25555, #F25555);
@@ -365,7 +373,13 @@ table{
         .mdi('autorenew',21px, #B5BBC1, #3197EE);
     }
 }
-
+.notifyjs-corner{
+    .notifyjs-container{
+        .notify-close{
+            .mdi('close',19px, #fff, #fff);
+        }
+    }
+}
 /* TODO REFACTORING */
 .control-icons{
     margin-top: 37px;

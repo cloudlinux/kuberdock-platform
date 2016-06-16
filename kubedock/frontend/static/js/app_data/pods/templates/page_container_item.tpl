@@ -8,14 +8,18 @@
     <% } %>
 </td>
 <td><span class="<%- state %>"><%- state %></span></td>
+<td>
+    <span class="copy-ssh-link" data-toggle="tooltip" data-placement="top" title="Copy SSH link to clipboard"></span>
+    <span class="copy-ssh-password" data-toggle="tooltip" data-placement="top" title="Copy SSH password to clipboard"></span>
+</td>
 <td><span><%- kubes ? kubes : 'unknown' %></span></td>
 <td><span><%- startedAt ? startedAt : '' %></span></td>
 <td class="actions">
     <% if (state == 'running' )  { %>
         <% if (!updateIsAvailable) { %>
-            <span class="check-for-update" title="Check <%- image %> for updates">Check for updates</span>
+            <span class="check-for-update" data-toggle="tooltip" data-placement="top" title="Check <%- image %> for updates">Check for updates</span>
         <% } else { %>
-            <span class="container-update" title="Update <%- image %> container">Update</span>
+            <span class="container-update" data-toggle="tooltip" data-placement="top" title="Update <%- image %> container">Update</span>
         <% } %>
     <% }%>
 </td>

@@ -119,7 +119,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 args: [],
                 kubes: 1,
                 terminationMessagePath: null,
-                sourceUrl: null,
+                sourceUrl: null
             };
         },
         getPod: function(){ return getParentWithType(this.collection, data.Pod); },
@@ -228,6 +228,22 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             key: 'containers',
             relatedModel: data.Container,
         }],
+
+        updateSshAccess: function(){
+            var that = this;
+
+            utils.preloader.show();
+            $.ajax({
+                url: '/api/podapi/' + that.id + '/direct_access',
+                authWrap: true,
+            })
+            .done(function(response) {
+                utils.notifyWindow('SSH credentials are ready to use.' +
+                ' See table below in column SSH.', 'success');
+                that.sshAccess = response;
+            })
+            .always(utils.preloader.hide).fail(utils.notifyWindow);
+        },
 
         defaults: function(){
             var kubeTypes = new data.KubeTypeCollection(

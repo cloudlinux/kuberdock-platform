@@ -1,16 +1,13 @@
 <table class="table" id="imagelist-table">
 <thead>
     <tr class="main-table-head">
-        <!-- <th class="checkboxes"><label class="custom"><input type="checkbox"><span></span></label></th> -->
         <th>Image name</th>
         <th>Status</th>
+        <th>SSH (link/pass)</th>
         <th>Number of Kubes</th>
         <th>Deployed</th>
         <th>Actions</th>
     </tr>
-    <!-- <tr class="containersControl">
-        <th colspan="6"><span class="count"></span><span class="stopContainers">Stop</span></th>
-    </tr> -->
 </thead>
 <tbody></tbody>
 </table>

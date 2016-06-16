@@ -253,5 +253,17 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         return urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : "");
     };
 
+    utils.copyLink = function(text, successMessage, messageState){
+        var link = text,
+            $txa = $("<textarea />",{val:link,css:{position:"fixed"}}).appendTo("body").select();
+
+        if (document.execCommand('copy')){ // CH, FF, Edge, IE
+            utils.notifyWindow(successMessage, messageState ? messageState : 'success');
+        } else {
+            prompt("Copy to clipboard:\nSelect, Cmd+C, Enter", link);
+        }
+        $txa.remove();
+    };
+
     return utils;
 });

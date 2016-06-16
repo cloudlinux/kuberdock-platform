@@ -353,16 +353,30 @@ class Pod(KubeQuery, ModelQuery, Utilities):
         """If there are lifecycle in container, then mount origin root from
         docker overlay path. Need this for container hooks.
         """
-        if 'lifecycle' in container:
-            image = Image(container['image'])
-            image_id = image.get_id()
-            volume_name = '-'.join([container['name'], ORIGIN_ROOT])
-            volumes.append(
-                {u'hostPath': {u'path': OVERLAY_PATH.format(image_id)},
-                 u'name': volume_name})
-            container['volumeMounts'].append(
-                {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
-                 u'name': volume_name})
+        if 'lifecycle' not in container:
+            # No container hooks defined for container
+            return
+
+        volume_name = '-'.join([container['name'], ORIGIN_ROOT])
+
+        # Make sure we remove previous info, to handle case when image changes
+        origin_root_vol = filter(lambda v: v['name'] == volume_name,
+                                 volumes)
+        if origin_root_vol:
+            volumes.remove(origin_root_vol[0])
+        origin_root_mnt = filter(lambda m: m['name'] == volume_name,
+                                 container['volumeMounts'])
+        if origin_root_mnt:
+            container['volumeMounts'].remove(origin_root_mnt[0])
+
+        image = Image(container['image'])
+        image_id = image.get_id()
+        volumes.append(
+            {u'hostPath': {u'path': OVERLAY_PATH.format(image_id)},
+             u'name': volume_name})
+        container['volumeMounts'].append(
+            {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
+             u'name': volume_name})
 
     def add_securety_labels(self, container, volumes):
         """Add SELinuxOptions to volumes. For now, just add docker `:Z` option

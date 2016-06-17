@@ -52,13 +52,17 @@ def make_celery(app=None):
         from raven.contrib.celery import register_logger_signal
         from kubedock.settings import SENTRY_DSN, MASTER_IP
         from kubedock.utils import get_version
+        from kubedock.kapi.licensing import get_license_info
+        authkey = get_license_info().get('auth_key', 'no installation id')
 
         class Celery(celery.Celery):
 
             def on_configure(self):
                 hostname = "{}({})".format(socket.gethostname(), MASTER_IP)
+                tags = {'installation_id': authkey}
                 client = raven.Client(SENTRY_DSN, name=hostname,
-                                      release=get_version('kuberdock'))
+                                      release=get_version('kuberdock'),
+                                      tags=tags)
 
                 # register a custom filter to filter out duplicate logs
                 register_logger_signal(client)

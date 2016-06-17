@@ -533,7 +533,7 @@ class PersistentDisk(BaseModelMixin, db.Model):
         deletion. If we will use the same physical drive name, then we have
         to wait until old drive will be actually deleted.
         """
-        pd = cls.query.filter(cls.id == drive_id, cls.pod_id == None).first()
+        pd = cls.query.filter(cls.id == drive_id, cls.pod_id.is_(None)).first()
         if not pd or pd.state == PersistentDiskStatuses.TODELETE:
             return
         new_drive_name = cls._increment_drive_name(pd)
@@ -573,7 +573,7 @@ class PersistentDisk(BaseModelMixin, db.Model):
         any node and belong to a given pod.
         """
         db.session.query(cls).filter(
-            cls.pod_id == pod_id, cls.node_id == None
+            cls.pod_id == pod_id, cls.node_id.is_(None)
         ).update(
             {cls.node_id: node_id},
             synchronize_session=False

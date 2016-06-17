@@ -17,13 +17,13 @@ class NodesClient(ClientBase):
     def create(self, node_data):
         return self.transport.post(
             self._url(),
-            data=node_data
+            json=node_data
         )
 
     def update(self, node_id, node_data):
         return self.transport.put(
             self._url(node_id),
-            data=node_data
+            json=node_data
         )
 
     def delete(self, node_id):

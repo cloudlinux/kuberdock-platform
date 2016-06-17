@@ -23,13 +23,13 @@ class IPPoolClient(ClientBase):
     def create(self, ippool_data):
         return self.transport.post(
             self._url(),
-            data=ippool_data
+            json=ippool_data
         )
 
     def update(self, network, ippoll_data):
         return self.transport.put(
             self._url(network),
-            data=ippoll_data
+            json=ippoll_data
         )
 
     def delete(self, network):

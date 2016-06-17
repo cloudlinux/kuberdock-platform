@@ -35,6 +35,10 @@ def data_argument(*args, **kwargs):
         def c1(ctx, param, value):
             if value is not None:
                 ctx.params[target_param_name] = value
+            if target_param_name not in ctx.params:
+                raise click.BadArgumentUsage(
+                    'One of --file or %s must be specified' % target_param_name
+                )
             return value
 
         kwargs.update(
@@ -60,3 +64,13 @@ def data_argument(*args, **kwargs):
         return d2(d1(fn))
 
     return wrapper
+
+
+def formatted(data):
+    if isinstance(data, dict):
+        result = json.dumps(data, indent=4, sort_keys=True)
+    elif data is None:
+        result = None
+    else:
+        result = str(data)
+    return result

@@ -1,7 +1,6 @@
-import json
-
 import click
 
+from utils import formatted
 from . import KDCtl
 
 
@@ -20,13 +19,9 @@ def main(ctx, config_dir):
 
 @main.resultcallback()
 def print_result(result, **params):
-    if isinstance(result, dict):
-        formatted = json.dumps(result, indent=4, sort_keys=True)
-    elif result is None:
-        return
-    else:
-        formatted = str(result)
-    click.echo(formatted)
+    s = formatted(result)
+    if s is not None:
+        click.echo(s)
 
 
 @main.command(help='Login.')

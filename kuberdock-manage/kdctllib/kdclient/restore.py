@@ -7,7 +7,7 @@ class RestoreClient(ClientBase):
     def pod(self, pod_data, owner, volumes_dir_url):
         return self.transport.post(
             self._url('pod'),
-            data={
+            json={
                 'pod_data': pod_data,
                 'owner': owner,
                 'volumes_dir_url': volumes_dir_url,

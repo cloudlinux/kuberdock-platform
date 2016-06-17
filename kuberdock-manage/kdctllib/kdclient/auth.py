@@ -12,7 +12,7 @@ class AuthClient(ClientBase):
     def token2(self, username, password):
         return self.transport.post(
             self._url('token2'),
-            data={
+            json={
                 'username': username,
                 'password': password
             }

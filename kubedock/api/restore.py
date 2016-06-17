@@ -32,7 +32,8 @@ pods_args_schema = {
     },
     'volumes_dir_url': {
         'type': 'string',
-        'required': False
+        'required': False,
+        'nullable': True
     }
 }
 

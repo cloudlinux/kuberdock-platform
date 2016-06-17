@@ -112,21 +112,31 @@ class PodCollection(object):
 
         pod = Pod(params)
         pod.check_name()
-        # create PD models in db and change volumes schema in config
-        pod.compose_persistent()
+
+        # AC-3256 Fix.
+        # Wrap {PD models}/{public IP}/{Pod creation} in a db inside
+        # a single db transaction, i.e. if anything goes wrong - rollback.
+        with atomic():
+            # create PD models in db and change volumes schema in config
+            pod.compose_persistent()
+            set_public_ip = self.needs_public_ip(params)
+            db_pod = self._save_pod(pod, set_public_ip)
+            if set_public_ip:
+                if getattr(db_pod, 'public_ip', None):
+                    pod.public_ip = db_pod.public_ip
+                if getattr(db_pod, 'public_aws', None):
+                    pod.public_aws = db_pod.public_aws
+            pod._forge_dockers()
+
+        db_pod = DBPod.query.get(pod.id)
         self._make_namespace(pod.namespace)
         # create secrets in k8s and add IDs in config
         pod.secrets = [self._make_secret(pod.namespace, *secret)
                        for secret in secrets]
-
-        set_public_ip = self.needs_public_ip(params)
-        db_pod = self._save_pod(pod, set_public_ip)
-        if set_public_ip:
-            if getattr(db_pod, 'public_ip', None):
-                pod.public_ip = db_pod.public_ip
-            if getattr(db_pod, 'public_aws', None):
-                pod.public_aws = db_pod.public_aws
-        pod._forge_dockers()
+        pod_config = db_pod.get_dbconfig()
+        pod_config['secrets'] = pod.secrets
+        # Update config
+        db_pod.set_dbconfig(pod_config, save=True)
         return pod.as_dict()
 
     def get(self, pod_id=None, as_json=True):
@@ -170,7 +180,9 @@ class PodCollection(object):
         return False
 
     @staticmethod
-    @atomic()
+    # Removed @atomic() wrapper due to AC-3256. If you want to make this
+    # transaction separate, for safety measures make sure to call it
+    # inside an atomic() context: with atomic(): ...
     def _set_public_ip(pod):
         """Assign some free IP address to the pod."""
         conf = pod.get_dbconfig()
@@ -281,7 +293,9 @@ class PodCollection(object):
         pod.set_dbconfig(pod_config, save=False)
         cls._set_public_ip(pod)
 
-    @atomic()
+    # Removed @atomic() wrapper due to AC-3256. If you want to make this
+    # transaction separate, for safety measures make sure to call it
+    # inside an atomic() context: with atomic(): ...
     def _save_pod(self, obj, set_public_ip=False):
         """
         Save pod data to db.

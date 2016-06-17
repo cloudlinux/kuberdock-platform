@@ -481,10 +481,11 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         send_pod_status_update_mock.assert_called_once_with(
             POD_STATUSES.pending, dbpod, 'MODIFIED')
 
+    @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.helpers, 'set_pod_status')
     @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
-    def test_pod_start(self, mk_ns, run_pod_mock, set_pod_status):
+    def test_pod_start(self, mk_ns, run_pod_mock, set_pod_status, dbpod_mock):
         """
         Test first _start_pod for pod without ports
         :type post_: mock.Mock
@@ -502,7 +503,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
                 'state': POD_STATUSES.stopped,
             }]
         )
-
+        dbpod = mock.Mock()
+        dbpod_mock.query.get.return_value = dbpod
         # Actual call
         res = self.pod_collection._start_pod(pod)
 
@@ -614,8 +616,11 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
                           '_get_pods', '_merge', '_save_pod', '_check_trial',
                           '_make_namespace', '_make_secret')
         self.mock_methods(podcollection, 'Pod', 'extract_secrets',
-                          'fix_relative_mount_paths')
+                          'fix_relative_mount_paths', 'DBPod')
         podcollection.extract_secrets.return_value = set()
+        dbpod = mock.Mock()
+        dbpod.get_dbconfig.return_value = {}
+        podcollection.DBPod.query.get.return_value = dbpod
 
         self.user, _ = self.fixtures.user_fixtures(
             role_id=Role.by_rolename('TrialUser').id)

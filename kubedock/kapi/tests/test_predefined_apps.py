@@ -175,7 +175,8 @@ class TestValidateTemplate(DBTestCase):
         """Convert parse errors from preprocess step to validation errors."""
         template = VALID_TEMPLATE1
 
-        kapi_papps.preprocess.side_effect = kapi_papps.AppParseError
+        kapi_papps.preprocess.side_effect = kapi_papps.AppParseError(
+            {'Variable is not defined': 'blahblah'})
         with self.assertRaises(kapi_papps.ValidationError):
             kapi_papps.validate_template(template)
 
@@ -183,7 +184,8 @@ class TestValidateTemplate(DBTestCase):
         """Raise validation errors if pod's root cannot be found."""
         template = VALID_TEMPLATE1
 
-        kapi_papps.find_root.side_effect = kapi_papps.AppParseError
+        kapi_papps.find_root.side_effect = kapi_papps.AppParseError(
+            {'Invalid application structure': 'blahblah'})
         with self.assertRaises(kapi_papps.ValidationError):
             kapi_papps.validate_template(template)
 

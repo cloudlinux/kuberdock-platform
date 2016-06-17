@@ -80,7 +80,7 @@ FIELD_PARSER = re.compile(ur'''
             (?P<default>(?:[^\\\|\$]|\\[\s\S])+|)
             \|
             (?P<label>(?:[^\\\|\$]|\\[\s\S])+|)
-        )?                 # default and label are optioanl
+        )?                 # default and label are optional
     )?\$
 ''', re.X)  # NOQA
 
@@ -88,19 +88,21 @@ FIELD_PARSER = re.compile(ur'''
 def validate_template(template):
     """Validates saving template text.
     Now checks:
-        - validity of custom variables in template;
-        - plans section, including kube type check.
-            If it is specified, then it must be one of existing types.
-
+        - customFields: validity of custom variables in template
+        - schema: schema validation of "kuberdock" section
+            TODO: validate schema of the whole template
+        - appPackages: appPackages section check, including kube type,
+            package, existence of containers and  etc.
+        - common: invalid yaml syntax and other errors
     """
     try:  # find all variables and prepare YAML for loading
         template, fields = preprocess(template, raise_=True)
     except AppParseError as err:
-        raise_validation_error('customFields', str(err))
+        raise ValidationError({'customFields': err.args[0]})
     try:  # load
         parsed_template = load(template, fields)
     except (yaml.scanner.ScannerError, yaml.parser.ParserError):
-        raise_validation_error(u'common', u'Invalid yaml format')
+        raise ValidationError({'common': 'Invalid yaml format'})
 
     # fill template with defaults and leave only fields that are necessary for
     # filling template (filter out fields in YAML-comments, for example)
@@ -108,9 +110,7 @@ def validate_template(template):
     try:
         find_root(filled_template)
     except AppParseError as err:
-        raise_validation_error(
-            u'common', u'Invalid application structure: {}'.format(str(err))
-        )
+        raise ValidationError({'common': err.args[0]})
 
     check_kuberdock_section(filled_template)
 
@@ -126,12 +126,10 @@ def check_kuberdock_section(filled_template):
     validator = V(allow_unknown=True)
     yml = validator.validated(filled_template, predefined_app_schema)
     if validator.errors:
-        # TODO: remove legacy error schema.
-        # See TODO for raise_validation_error
-        key, val = validator.errors.items()[0]
-        raise_validation_error(key, val)
+        raise ValidationError({'schema': validator.errors})
 
-    error = lambda msg: raise_validation_error('appPackages', msg)
+    def error(msg):
+        raise ValidationError({'appPackages': msg})
 
     plans = yml['kuberdock']['appPackages']
     if len([plan for plan in plans if plan.get('recommended')]) != 1:
@@ -149,40 +147,42 @@ def check_kuberdock_section(filled_template):
     for plan in plans:
         for podPlan in plan.get('pods', []):
             if podPlan['name'] != yml['metadata']['name']:
-                error('Pod {0} not found in spec'.format(podPlan['name']))
+                error({'Pod was not found in spec': podPlan['name']})
 
             names = set(c['name'] for c in pod['containers'])
             used = set()
             for containersPlan in podPlan.get('containers', []):
-                if containersPlan['name'] not in names:
-                    error('Container "{0}"" not found in pod "{1}"'
-                          .format(containersPlan['name'], podPlan['name']))
-                if containersPlan['name'] in used:
-                    error('Dublicate container name in appPackage: "{0}"'
-                          .format(containersPlan['name']))
-                used.add(containersPlan['name'])
+                name = containersPlan['name']
+                if name not in names:
+                    error('Container "{0}" was not found in pod "{1}"'
+                          .format(name, podPlan['name']))
+                if name in used:
+                    error({'Duplicate container name in appPackage': name})
+                used.add(name)
 
             names = set(c['name'] for c in pod.get('volumes', []))
             used = set()
             for pdPlan in podPlan.get('persistentDisks', []):
-                if pdPlan['name'] not in names:
+                volume_name = pdPlan['name']
+                if volume_name not in names:
                     error('Volume "{0}" not found in pod "{1}"'
-                          .format(pdPlan['name'], podPlan['name']))
-                if pdPlan['name'] in used:
-                    error('Dublicate volume name in appPackage: "{0}"'.format(pdPlan['name']))
-                used.add(pdPlan['name'])
+                          .format(volume_name, podPlan['name']))
+                if volume_name in used:
+                    error({'Duplicate volume name in appPackage': volume_name})
+                used.add(volume_name)
 
             kube_id = podPlan.get('kubeType')
             if kube_id is not None and kube_id not in available_kubes:
-                raise_validation_error('kuberdock', (
-                    'Package with id "{0}" doesn\'t contain Kube Type '
-                    'with id "{1}"'.format(package.id, kube_id)))
+                error('Package with id "{0}" does not contain Kube Type '
+                      'with id "{1}"'.format(package.id, kube_id))
 
 
 def find_root(app_struct):
     if not isinstance(app_struct, (dict, list)):
-        raise AppParseError('Invalid yaml template: top level element must be '
-                            'list or dict')
+        raise AppParseError({
+            'Invalid application structure': 'top level element must be list '
+                                             'or dict'
+        })
     try:
         if app_struct['kind'] == 'ReplicationController':
             return app_struct['spec']['template']['spec']
@@ -190,19 +190,13 @@ def find_root(app_struct):
             return app_struct['spec']
     except (TypeError, KeyError):
         pass
-    raise AppParseError("Not found 'spec' section")
+    raise AppParseError(
+        {'Invalid application structure': 'not found "spec" section'})
 
 
 def generate(length=8, symbols=string.lowercase + string.digits):
     rv = ''.join(random.choice(symbols) for i in range(length - 1))
     return random.choice(string.lowercase) + rv
-
-
-# TODO: this is a weird schema. If you need to specify,
-# that this is a validation error, use APIError.type
-# If you need to validate smth, use stuff in kubedock.validation
-def raise_validation_error(key, error):
-    raise ValidationError({'validationError': {key: error}})
 
 
 def preprocess(template, raise_=True):
@@ -226,7 +220,10 @@ def preprocess(template, raise_=True):
                 if not field.defined:
                     field.setup(default, label)
         else:  # first appearing of this variable
-            field = TemplateField(name, default, label)
+            start = match.start()
+            line = match.string[:start].count('\n') + 1
+            column = len(match.string[:start].split('\n')[-1])
+            field = TemplateField(name, default, label, line, column)
             fields[name] = field
 
         # replace with unique aplphanum string
@@ -241,9 +238,14 @@ def preprocess(template, raise_=True):
         # check for $VAR$ without full definition ($VAR|default:...$)
         for field in fields.itervalues():
             if not field.defined:
-                raise AppParseError(
-                    'Variable is not defined (found a short form ${0}$, but '
-                    'never full ${0}|default:...$)'.format(field.name))
+                raise AppParseError({
+                    'Variable is not defined': {
+                        'line': field.line,
+                        'column': field.column,
+                        'message': 'found a short form ${0}$, but never full, '
+                                   'like ${0}|default:...$'.format(field.name),
+                    }
+                })
 
     return template, fields
 
@@ -392,7 +394,8 @@ def compare(template, filled_yaml):
 
 class TemplateField(object):
     """Used to represent each unique variable in template"""
-    def __init__(self, name, default=None, label=None):
+    def __init__(self, name, default=None, label=None, line=None, column=None):
+        self.line, self.column = line, column  # for debug and validation
         self.name = name
         self.uid = generate(32)
         self.defined = False

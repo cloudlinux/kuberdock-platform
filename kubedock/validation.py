@@ -870,7 +870,8 @@ class V(cerberus.Validator):
     def _validate_package_id_exists(self, exists, field, value):
         if exists:
             if Package.query.get(int(value)) is None:
-                self._error(field, 'Package with id "{0}" doesn\'t exist'.format(value))
+                self._error(field, ('Package with id "{0}" does not exist'
+                                    .format(value)))
 
 
 def check_int_id(id):

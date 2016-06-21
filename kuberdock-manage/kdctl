@@ -8,9 +8,10 @@ if __name__ == '__main__':
     )
 
     from kdctllib.parser.main import main
-    from kdctllib.parser import restore
+    from kdctllib.parser import ippool
     from kdctllib.parser import nodes
     from kdctllib.parser import predefined_apps
+    from kdctllib.parser import restore
     from kdctllib.parser import system_settings
     from kdctllib.parser import users
 

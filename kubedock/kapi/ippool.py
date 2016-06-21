@@ -183,7 +183,7 @@ class IpAddrPool(object):
         pod_ip = PodIP.filter_by(network=network).first()
         if pod_ip is not None:
             raise APIError("You cannot delete this network '{0}' while "
-                           "some of IP-addresses of this network were "
+                           "some of IP-addresses of this network are "
                            "assigned to Pods".format(network))
 
     def _get_network_by_cidr(self, network):

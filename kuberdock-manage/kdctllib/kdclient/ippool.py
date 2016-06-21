@@ -26,18 +26,13 @@ class IPPoolClient(ClientBase):
             json=ippool_data
         )
 
-    def update(self, network, ippoll_data):
+    def update(self, network, ippool_data):
         return self.transport.put(
             self._url(network),
-            json=ippoll_data
+            json=ippool_data
         )
 
     def delete(self, network):
         return self.transport.delete(
             self._url(network)
-        )
-
-    def get_user_addresses(self):
-        return self.transport.get(
-            self._url('userstat')
         )

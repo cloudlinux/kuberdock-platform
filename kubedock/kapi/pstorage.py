@@ -562,8 +562,8 @@ def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
     if result.return_code != 0:
         if not catch_exitcodes or result.return_code not in catch_exitcodes:
             raise NodeCommandError(
-                'Remote command execution failed (exit code = {})'.format(
-                    result.return_code
+                'Remote command `{0}` execution failed (exit code = {1})'.format(
+                    command, result.return_code
                 )
             )
         raise NodeCommandWrongExitCode(code=result.return_code)
@@ -980,7 +980,7 @@ class CephStorage(PersistentStorage):
         mb_size = 1024 * int(size)
         try:
             self.run_on_first_node(
-                'rbd {0} create {1} --size={2}'.format(
+                'rbd {0} create {1} --size={2} --image-format=2'.format(
                     get_ceph_credentials(), name, mb_size
                 )
             )
@@ -1255,7 +1255,7 @@ class AmazonStorage(PersistentStorage):
         last_num = ord(last)
         if last_num >= 122:
             raise APIError("No free letters for devices")
-        return '/dev/xvd{0}'.format(chr(last_num+1))
+        return '/dev/xvd{0}'.format(chr(last_num + 1))
 
     def _create_fs_if_missing(self, device, fs=DEFAULT_FILESYSTEM):
         self.run_on_first_node(

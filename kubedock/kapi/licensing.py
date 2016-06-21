@@ -1,6 +1,7 @@
 import json
 import uuid
 import datetime
+import subprocess
 import dateutil.parser
 
 from kubedock.kapi.notifications import attach_admin, detach_admin
@@ -41,6 +42,7 @@ def generate_auth_key():
     authkey = uuid.uuid4().hex
     data = {'auth_key': authkey}
     _save_license(data)
+    subprocess.call(['chown', 'nginx', LICENSE_PATH])
     return authkey
 
 

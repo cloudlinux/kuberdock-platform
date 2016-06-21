@@ -288,8 +288,10 @@ class AuthKey(Command):
         try:
             key = licensing.get_auth_key()
         except APIError:
+            # Actually this case is never happens because generate_auth_key()
+            # called even earlie, during modules import. But I leave it here too
+            # for extra safety
             key = licensing.generate_auth_key()
-            subprocess.call(['chown', 'nginx', licensing.LICENSE_PATH])
         print key
 
 

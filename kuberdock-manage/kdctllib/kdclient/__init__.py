@@ -7,6 +7,7 @@ from .restore import RestoreClient
 from .system_settings import SystemSettingsClient
 from .users import UsersClient
 from .utils import Transport
+from .license import LicenseClient
 
 
 class KDClient(object):
@@ -32,3 +33,4 @@ class KDClient(object):
         self.restore = RestoreClient(self)
         self.system_settings = SystemSettingsClient(self)
         self.users = UsersClient(self)
+        self.license = LicenseClient(self)

@@ -1,11 +1,6 @@
 import unittest
 
 from lib.integration_test_api import KDIntegrationTestAPI
-
-# How to run integration tests
-# activate kd_venv:                 $ workon kd
-# create cluster and run tests:     $ BUILD_CLUSTER=1 nosetests -svv tests_integration
-# run tests on existing cluster:    $ nosetests -svv tests_integration
 from tests_integration.lib.integration_test_utils import pod_factory, \
     NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG
 
@@ -52,7 +47,7 @@ class IntegrationTests(unittest.TestCase):
                                       wait_for_status='running',
                                       healthcheck=True)
         pod.delete()
-        
+
         # TODO: move to 'networking' pipeline when pipelines introduced
         # It's not possible to create a POD with public IP with no IP
         # pools
@@ -68,6 +63,17 @@ class IntegrationTests(unittest.TestCase):
                                 start=True, open_all_ports=False,
                                 healthcheck=False, wait_ports=False,
                                 wait_for_status='running')
+
+    def test_cadvisor_errors(self):
+        """Check cadvisor error/warning appears in uwsgi (AC-3499)"""
+
+        self.cluster.kdctl('license show')
+
+        # TODO: Remove once AC-3618 implemented
+        cmd = "[ $(journalctl --since '15 min ago' -m -t uwsgi | " \
+              "grep -v 'ssl_stapling' | " \
+              "egrep 'warn|err' -c) -eq 0 ]"
+        self.cluster.ssh_exec('master', cmd)
 
     def test_a_pv_created_together_with_pod(self):
         pv1_name = "disk107"

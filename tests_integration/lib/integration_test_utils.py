@@ -122,9 +122,9 @@ def pod_factory(cluster, image, **create_kwargs):
     """
     name_generator = ('{}_{}'.format(image, i) for i in count())
 
-    def _factory(n=1, **override_kwargs):
+    def _factory(num=1, **override_kwargs):
         params = merge_dicts(create_kwargs, override_kwargs)
-        names = islice(name_generator, n)
+        names = islice(name_generator, num)
         return [cluster.create_pod(image, n, **params) for n in names]
 
     return _factory

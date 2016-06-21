@@ -19,6 +19,7 @@ if __name__ == '__main__':
     from kdctllib.parser import restore
     from kdctllib.parser import system_settings
     from kdctllib.parser import users
+    from kdctllib.parser import license
 
     from kdctllib.parser import utils
 

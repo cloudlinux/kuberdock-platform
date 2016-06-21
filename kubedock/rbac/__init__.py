@@ -52,7 +52,6 @@ class Registry(RegistryOrigin):
 
 
 acl = Registry()
-rbac_context = IdentityContext(acl)
 
 
 class check_permission(object):
@@ -66,13 +65,19 @@ class check_permission(object):
     manager, a boolean-like value or directly by calling method check().
     """
 
-    def __init__(self, operation, resource, **exception_kwargs):
+    def __init__(self, operation, resource, user=None, **exception_kwargs):
         self.operation = operation
         self.resource = resource
+        self.user = user
         self.exception_kwargs = exception_kwargs
         self.exception_kwargs.setdefault('exception', PermissionDenied)
+        rbac_context = IdentityContext(acl)
+        rbac_context.set_roles_loader(self._roles_loader)
         self.checker = rbac_context.check_permission(self.operation, self.resource,
                                                      **self.exception_kwargs)
+
+    def _roles_loader(self):
+        yield get_user_role(self.user)
 
     def __call__(self, func):
         def wrapper(*args, **kwargs):
@@ -98,18 +103,9 @@ class check_permission(object):
 
     def check(self):
         if self.undefined_resource_warning():
-            raise PermissionDenied()
+            exception = self.exception_kwargs.pop('exception')
+            raise exception(**self.exception_kwargs)
         return self.checker.check()
-
-
-@rbac_context.set_roles_loader
-def roles_loader():
-    yield get_user_role()
-
-
-def check_permission_for_user(user, operation, resource):
-    rolename = user.role.rolename
-    return acl.is_allowed(rolename, operation, resource)
 
 
 class RoleWrapper(object):

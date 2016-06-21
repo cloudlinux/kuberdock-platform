@@ -2,7 +2,6 @@ from flask import Blueprint, current_app, request, jsonify, session
 
 from ..exceptions import APIError, PermissionDenied, NotAuthorized
 from ..users import User
-#from ..users.signals import user_logged_in
 from ..login import auth_required, login_user, current_user
 from ..sessions import create_token
 auth = Blueprint('auth', __name__, url_prefix='/auth')

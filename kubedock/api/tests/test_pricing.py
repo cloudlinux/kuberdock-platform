@@ -446,7 +446,8 @@ class TestLicense(APITestCase):
 
         url = '{0}/installation_id'.format(self.url)
         installation_id = str(uuid4())
-        response = self.admin_open(url, 'POST', json={'value': installation_id})
+        response = self.admin_open(
+            url, 'POST', json={'value': installation_id})
         self.assert200(response)
 
         licensing.update_installation_id.assert_called_once_with(
@@ -454,7 +455,8 @@ class TestLicense(APITestCase):
         collect.collect.assert_called_once_with()
         collect.send.assert_called_once_with(collect.collect.return_value)
         # TODO: cover `process_collection` with unittests
-        process_collection.assert_called_once_with(collect.collect.return_value)
+        process_collection.assert_called_once_with(
+            collect.collect.return_value)
 
 
 class TestUtils(unittest.TestCase):

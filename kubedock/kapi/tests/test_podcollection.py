@@ -795,7 +795,7 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
     def test_pod_compose_persistent_called(self):
         podcollection.Pod.return_value = pod_ = self.pod()
         self.pod_collection.add(self.params)
-        pod_.compose_persistent.assert_called_once_with()
+        pod_.compose_persistent.assert_called_once_with(reuse_pv=True)
 
     def test_save_pod_called(self):
         self.pod_collection.add(self.params)

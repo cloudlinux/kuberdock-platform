@@ -7,7 +7,6 @@ import time
 from random import choice
 from datetime import datetime
 import json
-import subprocess
 import argparse
 
 from kubedock.api import create_app

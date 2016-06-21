@@ -7,7 +7,7 @@ class LoadBalanceService(Services):
     """Return Services that response for ingress public addresses"""
 
     def __init__(self):
-        return super(LoadBalanceService, self).__init__(PUBLIC_SVC_TYPE)
+        super(LoadBalanceService, self).__init__(PUBLIC_SVC_TYPE)
 
     def get_public_dns(self, service):
         if service['spec']['type'] == 'LoadBalancer':

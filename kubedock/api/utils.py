@@ -1,17 +1,16 @@
 from functools import wraps
 
-from cerberus import Validator
-
 from kubedock.utils import all_request_params
-from kubedock.validation import ValidationError
+from kubedock.validation import V, ValidationError
 
 
-def use_args(schema, as_kwargs=False):
+def use_args(schema, as_kwargs=False, validator_cls=V,
+             **validator_kwargs):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             params = all_request_params()
-            v = Validator(schema)
+            v = validator_cls(schema, **validator_kwargs)
             if v.validate(params):
                 parsed_args = v.document
 
@@ -30,5 +29,5 @@ def use_args(schema, as_kwargs=False):
     return decorator
 
 
-def use_kwargs(schema):
-    return use_args(schema, as_kwargs=True)
+def use_kwargs(schema, **kwargs):
+    return use_args(schema, as_kwargs=True, **kwargs)

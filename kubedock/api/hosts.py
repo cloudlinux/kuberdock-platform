@@ -18,7 +18,7 @@ hosts = Blueprint('hosts', __name__, url_prefix='/hosts')
 @maintenance_protected
 @KubeUtils.jsonwrap
 def create_host():
-    user = KubeUtils._get_current_user()
+    user = KubeUtils.get_current_user()
     if not user.is_administrator():
         raise APIError('Insufficient permissions level', 403,
                        type='PermissionDenied')

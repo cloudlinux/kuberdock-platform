@@ -56,7 +56,7 @@ class Node(db.Model):
         return db.session.query(cls).join(NodeFlag).filter(
             NodeFlag.flag_name == flagname,
             NodeFlag.flag_value == flagvalue,
-            NodeFlag.deleted is None)
+            NodeFlag.deleted.is_(None))
 
 
 class NodeFlag(db.Model):
@@ -106,15 +106,15 @@ class NodeFlag(db.Model):
     def get_by_name(cls, node_id, name):
         """Search a flag by it's name for a node."""
         flag = cls.query.filter(
-            cls.node_id == node_id, cls.flag_name == name, cls.deleted is None
-        ).first()
+            cls.node_id == node_id, cls.flag_name == name,
+            cls.deleted.is_(None)).first()
         return flag
 
     @classmethod
     def delete_by_name(cls, node_id, flag_name):
         cls.query(
             cls.node_id == node_id, cls.flag_name == flag_name,
-            cls.deleted is None
+            cls.deleted.is_(None)
         ).update({
             cls.deleted: datetime.datetime.utcnow()
         })

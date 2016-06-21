@@ -516,6 +516,36 @@
     .plan.recommended .buttons .submit-button{
         background-color: #e65583;
     }
+    #popup {
+       position: absolute;
+       bottom: 52px;
+       left: 40px;
+       min-width: 292px;
+       min-height: 36px;
+       background-color: rgba(180, 3, 3, 0.75);
+       color: #FFF;
+       box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.35);
+       border-radius: 2px;
+       font-size: 14px;
+    }
+    #popup span#boxclose {
+       float: right;
+       cursor: pointer;
+       color: #fff;
+       font-size: 21px;
+       display: inline-block;
+       line-height: 34px;
+       margin: 8px 18px 8px 0;
+    }
+    #popup div.body {
+       float: left;
+       margin: 18px;
+       color: #fff;
+       font-size: 13px;
+    }
+    #popup #boxclose:before {
+        content: "×";
+    }
     </style>
     </head>
     <body>
@@ -577,6 +607,46 @@
                 el.appendChild(document.createTextNode(text));
             }
 
+            function popURLParameter(url, parameter) {
+                var urlParts = url.split('?'),
+                    value;
+                if (urlParts.length < 2) { return url; }
+                var prefix = encodeURIComponent(parameter) + '=',
+                    pars= urlParts[1].split(/[&;]/g);
+                for (var i=pars.length; i-- > 0;) {
+                    if (pars[i].lastIndexOf(prefix, 0) !== -1) {
+                        value = decodeURIComponent(
+                            // splice returns deleted param as ['key=value']
+                            // let's split and return the last part
+                            pars.splice(i, 1)[0].split('=')[1]
+                        );
+                    }
+                }
+                return [
+                    urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : ""),
+                    value
+                ];
+            }
+
+            function showError(msg) {
+                var popup = document.createElement('div'),
+                    body = document.createElement('div'),
+                    closeIcon = document.createElement('span');
+                popup.id = 'popup';
+                closeIcon.id = 'boxclose';
+                body.setAttribute('class', 'body');
+                body.appendChild(document.createTextNode(msg));
+                popup.appendChild(closeIcon);
+                popup.appendChild(body);
+                document.body.appendChild(popup);
+                closeIcon.onclick = function(){
+                    while(popup.firstChild) {
+                        popup.removeChild(popup.firstChild);
+                    }
+                    popup.parentNode.removeChild(popup);
+                }
+            }
+
             function recalculate(app){
                 var domPlans = document.getElementsByClassName('plan'),
                     filled = app.filledDefault;
@@ -607,6 +677,8 @@
                     template: {{ template|tojson|safe }},
                 });
 
+                var hasError = (window.location.href.indexOf('error') !== -1);
+
                 var yml = app.filledDefault,
                     el = document.getElementById('pre-description');
                 if (yml.kuberdock.preDescription) {
@@ -614,6 +686,16 @@
                     el.innerHTML = parser.parseString(yml.kuberdock.preDescription);
                 } else {
                     el.parentNode.removeChild(el);
+                }
+
+                if (hasError) {
+                    var rv = popURLParameter(window.location.href, 'error');
+                    if (window.history.pushState) {
+                        window.history.pushState({path:rv[0]/* new url */}, '', rv[0]);
+                    }
+                    if (rv[1]/* error message picked out from query string */) {
+                        showError(rv[1]);
+                    }
                 }
 
                 recalculate(app);

@@ -1,27 +1,34 @@
 import ConfigParser
-from fabric.api import run
-from kubedock.kapi.nodes import get_dns_pod_config, get_dns_pod_config_pre_k8s_1_2
-from kubedock.settings import KUBERDOCK_INTERNAL_USER
-from kubedock.kapi.podcollection import PodCollection
-from kubedock.users.models import User
-from kubedock.pods.models import Pod
-from kubedock.validation import check_internal_pod_data
 
+from fabric.api import run
 from kubedock.updates import helpers
+from kubedock import settings
+
+K8S_VERSION = '1.2.4-1'
+K8S = 'kubernetes-{name}-{version}.el7.cloudlinux'
+K8S_NODE = K8S.format(name='node', version=K8S_VERSION)
+SA_KEY = "/etc/pki/kube-apiserver/serviceaccount.key"
 
 ETCD_VERSION = '2.2.5'
 ETCD = 'etcd-{version}'.format(version=ETCD_VERSION)
 ETCD_SERVICE_FILE = '/etc/systemd/system/etcd.service'
 
-K8S_VERSION = '1.2.4-1'
-K8S = 'kubernetes-{name}-{version}.el7.cloudlinux'
-K8S_NODE = K8S.format(name='node', version=K8S_VERSION)
-SA_KEY="/etc/pki/kube-apiserver/serviceaccount.key"
+
+# NOTE(lobur): this script should came one of the first in the 1.3.0 upgrade
+# When upgrade is started it installs the new k8s & etcd on master (via rpm
+# dependency) This script then updates configs and node k8s version to match
+# the new master. Until that cluster is not alive, that's why it should be
+# at the beginning.
 
 
-def _upgrade_etcd():
-    # update config
-    cp = ConfigParser.ConfigParser()
+class NonTransformConfigParser(ConfigParser.ConfigParser):
+    def optionxform(self, optionstr):
+        return optionstr
+
+
+def _upgrade_etcd(upd):
+    upd.print_log('Upgrading etcd...')
+    cp = NonTransformConfigParser()
     with open(ETCD_SERVICE_FILE) as f:
         cp.readfp(f)
 
@@ -29,10 +36,13 @@ def _upgrade_etcd():
     with open(ETCD_SERVICE_FILE, "w") as f:
         cp.write(f)
 
+    helpers.local('systemctl daemon-reload', capture=False)
+    helpers.local('systemctl restart etcd', capture=False)
 
-def _downgrade_etcd():
-    # downgrade config
-    cp = ConfigParser.ConfigParser()
+
+def _downgrade_etcd(upd):
+    upd.print_log('Downgrading etcd...')
+    cp = NonTransformConfigParser()
     with open(ETCD_SERVICE_FILE) as f:
         cp.readfp(f)
 
@@ -40,28 +50,8 @@ def _downgrade_etcd():
     with open(ETCD_SERVICE_FILE, "w") as f:
         cp.write(f)
 
-
-def _recreate_dns_pod(dns_pod_config):
-    user = User.filter_by(username=KUBERDOCK_INTERNAL_USER).one()
-    dns_pod = Pod.filter_by(name='kuberdock-dns', owner=user).first()
-    if dns_pod:
-        PodCollection(user).delete(dns_pod.id, force=True)
-
-    check_internal_pod_data(dns_pod_config, user)
-    dns_pod = PodCollection(user).add(dns_pod_config, skip_check=True)
-    PodCollection(user).update(dns_pod['id'], {'command': 'start'})
-
-
-def _upgrade_dns_pod(upd):
-    upd.print_log('Upgrading DNS pod...')
-    dns_pod_config = get_dns_pod_config()
-    _recreate_dns_pod(dns_pod_config)
-
-
-def _downgrade_dns_pod(upd):
-    upd.print_log('Downgrading DNS pod...')
-    dns_pod_config = get_dns_pod_config_pre_k8s_1_2()
-    _recreate_dns_pod(dns_pod_config)
+    helpers.local('systemctl daemon-reload', capture=False)
+    helpers.local('systemctl restart etcd', capture=False)
 
 
 def _upgrade_k8s_master(upd, with_testing):
@@ -75,13 +65,28 @@ chown -R kube:kube `dirname {key}`
 """.format(key=SA_KEY))
 
     upd.print_log("Updating apiserver config")
-    helpers.update_local_config_file("/etc/kubernetes/apiserver",
-                                     {"KUBE_API_ARGS": {"--service_account_key_file=": SA_KEY}})
+    helpers.update_local_config_file(
+        "/etc/kubernetes/apiserver",
+        {
+            "KUBE_API_ARGS":
+                {"--service_account_key_file=": SA_KEY}
+        }
+    )
+    helpers.update_local_config_file(
+        "/etc/kubernetes/apiserver",
+        {
+            "KUBE_ADMISSION_CONTROL":
+                {"--admission_control=": "NamespaceLifecycle,NamespaceExists"}}
+    )
 
     upd.print_log("Updating controller-manager config")
-    helpers.update_local_config_file("/etc/kubernetes/controller-manager",
-                                     {"KUBE_CONTROLLER_MANAGER_ARGS": {"--service_account_private_key_file=": SA_KEY}})
-    _upgrade_dns_pod(upd)
+    helpers.update_local_config_file(
+        "/etc/kubernetes/controller-manager",
+        {
+            "KUBE_CONTROLLER_MANAGER_ARGS":
+                {"--service_account_private_key_file=": SA_KEY}
+        }
+    )
 
 
 def _downgrade_k8s_master(upd, with_testing):
@@ -89,13 +94,35 @@ def _downgrade_k8s_master(upd, with_testing):
     helpers.local('rm -rf `dirname %s`' % SA_KEY)
 
     upd.print_log("Updating apiserver config")
-    helpers.update_local_config_file('/etc/kubernetes/apiserver',
-                                     {"KUBE_API_ARGS": {"--service_account_key_file=": None}})
+    helpers.update_local_config_file(
+        '/etc/kubernetes/apiserver',
+        {
+            "KUBE_API_ARGS":
+                {"--service_account_key_file=": None}
+        }
+    )
+
+    helpers.update_local_config_file(
+        "/etc/kubernetes/apiserver",
+        {
+            "KUBE_ADMISSION_CONTROL":
+                {
+                    "--admission_control=":
+                        "NamespaceLifecycle,"
+                        "NamespaceExists,"
+                        "SecurityContextDeny"
+                }
+        }
+    )
 
     upd.print_log("Updating controller-manager config")
-    helpers.update_local_config_file('/etc/kubernetes/controller-manager',
-                                     {"KUBE_CONTROLLER_MANAGER_ARGS": {"--service_account_private_key_file=": None}})
-    _downgrade_dns_pod(upd)
+    helpers.update_local_config_file(
+        '/etc/kubernetes/controller-manager',
+        {
+            "KUBE_CONTROLLER_MANAGER_ARGS":
+                {"--service_account_private_key_file=": None}
+        }
+    )
 
 
 def _upgrade_k8s_node(upd, with_testing):
@@ -116,21 +143,33 @@ def _downgrade_k8s_node(upd, with_testing):
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    _upgrade_etcd()
     _upgrade_k8s_master(upd, with_testing)
     service, res = helpers.restart_master_kubernetes()
     if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))
 
+    _upgrade_etcd(upd)
+
+    # Restart KD to make sure new libs are running
+    res = helpers.restart_service(settings.KUBERDOCK_SERVICE)
+    if res != 0:
+        raise helpers.UpgradeError('Failed to restart KuberDock')
+
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
-    _downgrade_etcd()
     _downgrade_k8s_master(upd, with_testing)
     service, res = helpers.restart_master_kubernetes()
     if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))
+
+    _downgrade_etcd(upd)
+
+    # Restart KD to make sure new libs are running
+    res = helpers.restart_service(settings.KUBERDOCK_SERVICE)
+    if res != 0:
+        raise helpers.UpgradeError('Failed to restart KuberDock')
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
@@ -142,8 +181,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
 
 
 def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
-    _upgrade_k8s_node(upd, with_testing)
-    helpers.restart_node_kubernetes()
+    _downgrade_k8s_node(upd, with_testing)
     service, res = helpers.restart_node_kubernetes()
     if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'

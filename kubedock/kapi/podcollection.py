@@ -627,6 +627,10 @@ class PodCollection(object):
         return len(replicas)
 
     def _start_pod(self, pod, data=None):
+        if data is None:
+            data = {}
+        async_pod_create = data.get('async-pod-create', True)
+
         if pod.status == POD_STATUSES.unpaid:
             raise APIError("Pod is unpaid, we can't run it")
         if pod.status in (POD_STATUSES.running, POD_STATUSES.pending,
@@ -639,7 +643,10 @@ class PodCollection(object):
 
         pod.set_status(POD_STATUSES.preparing)
 
-        prepare_and_run_pod_task.delay(pod)
+        if async_pod_create:
+            prepare_and_run_pod_task.delay(pod)
+        else:
+            prepare_and_run_pod(pod)
         return pod.as_dict()
 
     def _stop_pod(self, pod, data=None, raise_=True, block=False):
@@ -1005,8 +1012,7 @@ def fix_relative_mount_paths(containers):
                 path.join('/', mount['mountPath']))
 
 
-@celery.task(ignore_results=True)
-def prepare_and_run_pod_task(pod):
+def prepare_and_run_pod(pod):
     db_pod = DBPod.query.get(pod.id)
     db_config = db_pod.get_dbconfig()
     try:
@@ -1054,6 +1060,11 @@ def prepare_and_run_pod_task(pod):
     pod.set_status(POD_STATUSES.pending)
     send_pod_status_update(POD_STATUSES.pending, db_pod, 'MODIFIED')
     return pod.as_dict()
+
+
+@celery.task(ignore_results=True)
+def prepare_and_run_pod_task(pod):
+    return prepare_and_run_pod(pod)
 
 
 def run_service(pod):

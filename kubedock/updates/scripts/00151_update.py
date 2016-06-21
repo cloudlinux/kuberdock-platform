@@ -97,10 +97,6 @@ def upgrade(upd, with_testing, *args, **kwargs):
     service, res = helpers.restart_master_kubernetes()
     _raise_on_failure(service, res)
     helpers.upgrade_db(revision='3dc83a81f385')
-    # TODO: Remove this hack on release, config patch must be in another
-    # update script at that time.
-    local("sed -i 's/,SecurityContextDeny//' /etc/kubernetes/apiserver; "
-          "systemctl restart kube-apiserver")
 
 
 def downgrade(upd, *args, **kwars):

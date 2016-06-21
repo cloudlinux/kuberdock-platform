@@ -66,17 +66,19 @@ def extend_nodes(nodes):
     }
 
     for node in nodes:
+        _ip = node.pop('_ip')
         try:
-            _ip = node.pop('_ip')
             r = requests.get(fmt.format(_ip))
+        except (requests.exceptions.ConnectionError, AttributeError) as e:
+            current_app.logger.warning(repr(e))
+        else:
             if r.status_code != 200:
                 continue
+
             data = r.json()
             for cadvkey, nodekey in cadvisor_key_map.iteritems():
                 node[nodekey] = data.get(cadvkey)
             node['nics'] = len(data.get('network_devices', []))
-        except (requests.exceptions.ConnectionError, AttributeError):
-            pass
 
         ssh, error_message = ssh_connect(_ip)
         if error_message:

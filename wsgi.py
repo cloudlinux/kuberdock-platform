@@ -51,9 +51,12 @@ if SENTRY_ENABLE:
     from kubedock.settings import SENTRY_DSN, MASTER_IP
     from raven.contrib.flask import Sentry
     from kubedock.utils import get_version
+    from kubedock.kapi.licensing import get_license_info
+    authkey = get_license_info().get('auth_key', 'no installation id')
     hostname = "{}({})".format(socket.gethostname(), MASTER_IP)
     back_app.config['SENTRY_RELEASE'] = get_version('kuberdock')
     back_app.config['SENTRY_NAME'] = hostname
+    back_app.config['SENTRY_TAGS'] = {'installation_id': authkey}
     sentry = Sentry(back_app, logging=True, level=logging.ERROR, dsn=SENTRY_DSN)
 # Remove all locks remained after previous server run.
 try:

@@ -1,7 +1,22 @@
-- name: Install kcli
-  yum: name="{{ kcli_rpm_url }}" state=present
+# Requirement for ansible's uri module
+# The dependency on httplib2 was removed in Ansible 2.1
+- name: Install additional packages
+  yum: name=python-httplib2 state=latest
   tags:
     - kcli
+
+- stat: path=/vagrant/kcli.rpm
+  register: kcli_rpm
+
+- fail: msg="kcli.rpm was not found"
+  when: not kcli_rpm.stat.exists
+  tags:
+   - kcli
+
+- name: Install KCLI
+  yum: name=/vagrant/kcli.rpm state=present
+  tags:
+   - kcli
 
 - name: Get token for test_user
   uri:

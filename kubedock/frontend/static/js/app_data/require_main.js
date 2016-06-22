@@ -27,6 +27,7 @@ requirejs.config({
         dde                    : 'lib/dropdowns-enhancement',
         nicescroll             : 'lib/nicescroll.min',
         bbcode                 : "lib/bbCodeParser.min",
+        'js-yaml'              : "lib/js-yaml.min",
         tooltip                : 'lib/tooltip'
     },
     shim: {

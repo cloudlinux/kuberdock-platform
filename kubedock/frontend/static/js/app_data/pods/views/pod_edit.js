@@ -16,7 +16,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         'tpl!app_data/pods/templates/wizard_container_collection_item.tpl',
         'tpl!app_data/pods/templates/wizard_set_container_complete.tpl',
-        'app_data/utils',
         'bootstrap-editable', 'selectpicker', 'tooltip'],
        function(App, Model, utils,
                 layoutWizardTpl,
@@ -344,7 +343,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             );
         },
 
-        validateAndNormalize: function(evt){
+        validateAndNormalize: function(){
             var that = this;
 
             // remove empty ports and volumeMounts
@@ -395,7 +394,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                     where = container === that.model ? 'this container!'
                         : ' other container (' + container.get('image') + ')!';
                 utils.notifyWindow('You have a duplicate ' + type + ' port ' +
-                                   dublicatePort.port + ' in ' + where);
+                                   dublicatePort.port + '/' +
+                                   dublicatePort.protocol + ' in ' + where);
             };
 
             try {
@@ -403,12 +403,19 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                     that.pod.get('containers').each(function(container2){
                         container2.get('ports').each(function(port2, j){
                             if (container2 === that.model && i === j) return;
-                            if (port.get('containerPort') === port2.get('containerPort'))
-                                throw {container: container2, port: port.get('containerPort')};
-                            var hostPort = port.get('hostPort') || port.get('containerPort'),
-                                hostPort2 = port2.get('hostPort') || port2.get('containerPort');
+                            if (port.get('protocol') !== port2.get('protocol')) return;
+
+                            var protocol = port.get('protocol'),
+                                containerPort = port.get('containerPort'),
+                                containerPort2 = port2.get('containerPort'),
+                                hostPort = port.get('hostPort') || containerPort,
+                                hostPort2 = port2.get('hostPort') || containerPort2;
+                            if (containerPort === containerPort2)
+                                throw {container: container2, protocol: protocol,
+                                       port: containerPort};
                             if (hostPort === hostPort2)
-                                throw {container: container2, port: hostPort, isPod: true};
+                                throw {container: container2, protocol: protocol,
+                                       port: hostPort, isPod: true};
                         });
                     });
                 });
@@ -491,8 +498,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                     )).without(that.model)[0];
                 if (dublicate) {
                     utils.notifyWindow('Port ' + newAttrs.containerPort
-                                       + ' with protocol ' + newAttrs.protocol
-                                       + ' already exists.');
+                                       + '/' + newAttrs.protocol
+                                       + ' already exists in this container.');
                     return true;
                 }
             };
@@ -522,7 +529,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             this.ui.iseditable.editable({
                 type: 'select',
-                value: 'tcp',
+                value: that.model.get('protocol'),
                 source: [{value: 'tcp', text: 'tcp'}, {value: 'udp', text: 'udp'}],
                 mode: 'inline',
                 showbuttons: false,

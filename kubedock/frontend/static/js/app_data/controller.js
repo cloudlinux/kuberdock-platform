@@ -1109,62 +1109,32 @@ define([
                     mainLayout.pager.show(new Pager.PaginatorView({view: view}));
                 };
 
-                var getValidationError = function(data) {
-                    var res = '';
-                    if (data.common) {
-                        res += _.escape(JSON.stringify(data.common)) + '<br />';
-                    }
-                    if (data.customVars) {
-                        res += 'Invalid custom variables:<br />' +
-                            _.escape(JSON.stringify(data.customVars)) + '<br />';
-                    }
-                    if (data.values) {
-                        res += 'Invalid values:<br />' +
-                            _.escape(JSON.stringify(data.values)) + '<br />';
-                    }
-                    if (data.kuberdock) {
-                        var kuberdock = typeof data.kuberdock == 'string'
-                                ? [data.kuberdock] : data.kuberdock;
-                        kuberdock = _.map(kuberdock, function(err){
-                            return typeof err == 'string' ? err : JSON.stringify(err);
-                        });
-
-                        res += 'Invalid "kuberdock" section:<br />- ' +
-                            _.map(kuberdock, _.escape).join('<br />- ') + '<br />';
-                    }
-                    if (!res) {
-                        res = JSON.stringify(data);
-                    }
-                    return res;
-                };
-
                 var errorModelSaving = function(context, response) {
-                    if ( response && !(response.responseJSON &&
-                        response.responseJSON.data &&
-                        response.responseJSON.data.validationError)){
-                        utils.notifyWindow(response);
-                        return;
+                    if (response && !(response.responseJSON &&
+                            response.responseJSON.data &&
+                            response.responseJSON.type === 'ValidationError')){
+                                utils.notifyWindow(response);
+                                return;
                     }
-                    var errorText = getValidationError(
-                        response.responseJSON.data.validationError);
-                    errorText = 'Your template contains some errors. ' +
-                        'Are you shure you want to save it with that errors?' +
-                        '<br/><hr/>' +
-                        errorText;
-                    utils.modalDialog({
-                        title: 'Invalid template',
-                        body: errorText,
-                        show: true,
-                        small: true,
-                        type: 'saveAnyway',
-                        footer: {
-                            buttonOk: function(){
-                                context.model.save(null, {wait: true})
-                                    .done(function(){ successModelSaving(context); })
-                                    .fail(utils.notifyWindow);
-                            },
-                            buttonCancel: true
-                        }
+                    // TODO: move it in views in AC-3434
+                    require(['tpl!app_data/papps/templates/validation_error.tpl', 'js-yaml'],
+                             function(validationErrorTpl, jsyaml){
+                        utils.modalDialog({
+                            title: 'Invalid template',
+                            body: validationErrorTpl(
+                                {data: response.responseJSON.data, jsyaml: jsyaml}),
+                            show: true,
+                            small: true,
+                            type: 'saveAnyway',
+                            footer: {
+                                buttonOk: function(){
+                                    context.model.save(null, {wait: true})
+                                        .done(function(){ successModelSaving(context); })
+                                        .fail(utils.notifyWindow);
+                                },
+                                buttonCancel: true
+                            }
+                        });
                     });
                 };
 
@@ -1413,7 +1383,11 @@ define([
             if (!App.message.hasView()) { return; }
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
-                    notificationCollection.remove(data.id);
+                    notificationCollection.remove(
+                        notificationCollection.filter(function(m){
+                            return m.get('target').indexOf(data.target) !== -1;
+                        })
+                    );
                     if (notificationCollection.length) {
                         var notificationView = new Views.MessageList({collection: notificationCollection});
                         App.message.show(notificationView);

@@ -24,7 +24,7 @@ from ..utils import (
     get_timezone,
     update_allowed,
     from_siunit,
-    get_version
+    get_version,
 )
 
 

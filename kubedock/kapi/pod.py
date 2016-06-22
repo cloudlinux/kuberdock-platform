@@ -93,9 +93,12 @@ class Pod(object):
         pod.id = pod.labels.get('kuberdock-pod-uid')
 
         pod.status = status.get('phase', POD_STATUSES.pending).lower()
+        pod.hostIP = status.get('hostIP')
 
+        # TODO why we call this "pod.host" instead of "pod.nodeName" ? rename it
         pod.host = spec.get('nodeName')
         pod.kube_type = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
+        # TODO we should use nodeName or hostIP instead, and rename this attr
         pod.node = spec.get('nodeSelector', {}).get('kuberdock-node-hostname')
         pod.volumes = spec.get('volumes', [])
         pod.containers = spec.get('containers', [])
@@ -391,7 +394,8 @@ class Pod(object):
         data['imagePullPolicy'] = 'Always'
         return data
 
-    def add_origin_root(self, container, volumes):
+    @staticmethod
+    def add_origin_root(container, volumes):
         """If there are lifecycle in container, then mount origin root from
         docker overlay path. Need this for container hooks.
         """

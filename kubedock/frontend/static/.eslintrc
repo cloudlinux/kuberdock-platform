@@ -1,0 +1,29 @@
+{
+    "rules": {
+        "indent": [0, 4],
+        "quotes": [0, "single"],
+        "semi": [1, "always"],
+        "no-console": [1],
+        "linebreak-style": [2, "unix"],
+        "comma-dangle": [0],
+        "no-unused-vars": [1, {"args": "none"}],
+        "eqeqeq": ["error", "smart"]
+    },
+    "plugins": [
+    ],
+    "env": {
+        "es6": false,
+        "node": false,
+        "amd": true,
+        "browser": true,
+        "jquery": true
+    },
+    "globals": {
+        "_" : false,
+        "Backbone": false,
+        "Marionette": false,
+        "BBCodeParser": false,
+        "jsyaml": false
+    },
+    "extends": "eslint:recommended"
+}

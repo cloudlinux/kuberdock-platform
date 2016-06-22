@@ -1,0 +1,27 @@
+#!/usr/bin/env python2
+
+"""
+This script will be called from cron so error handling is pretty trivial,
+because we can't do anything with errors here
+"""
+
+import subprocess
+
+UNAME_LEN = 30
+USERS_HOME = '/var/lib/kuberdock/kd-ssh-users-home'
+
+# If any error, we let it fail because we can't do anything here
+running = subprocess.check_output(['docker', 'ps', '--format', '{{.ID}}',
+                                   '--no-trunc=true']).split()
+running = map(lambda x: x[:UNAME_LEN], running)
+
+with open('/etc/passwd') as f:
+    for line in f:
+        user = line.split(':')[0]
+        if (USERS_HOME not in line) or (len(user) != UNAME_LEN):
+            continue
+        if user not in running:
+            try:
+                subprocess.check_call(['userdel', '-rf', user])
+            except subprocess.CalledProcessError:
+                pass

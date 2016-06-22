@@ -24,11 +24,13 @@
 
 - name: Cleanup
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
+  tags:
+      - cleanup
 
 - include: ceph.yml
   when: use_ceph
 
-- name: Deploy 
+- name: Deploy
   shell: echo "{{ ansible_default_ipv4.address }}" | KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ non_floating_ips_mode }} {{ ceph_params|default("") }} chdir=/vagrant
   when: rpm_exist.matched > 0
   tags:
@@ -57,5 +59,6 @@
       - alt_test_user
 
 - include: predefined_apps.yml
+- include: kdctl.yml
 - include: kcli.yml
 

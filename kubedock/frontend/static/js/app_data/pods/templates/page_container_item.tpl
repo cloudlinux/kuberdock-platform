@@ -33,6 +33,12 @@
         <% console.log(before, after); %>
     <% } %>
 </td>
+<td>
+    <% if (before) { %>
+        <span class="copy-ssh-link" data-toggle="tooltip" data-placement="top" title="Copy SSH link to clipboard"></span>
+        <span class="copy-ssh-password" data-toggle="tooltip" data-placement="top" title="Copy SSH password to clipboard"></span>
+    <% } %>
+</td>
 <td><span>
     <% if (before && after && before.kubes !== after.kubes) { %>
       <span class="diff-changed">

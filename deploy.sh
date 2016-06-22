@@ -46,6 +46,7 @@ sentryWrapper() {
      echo
      if [ ! -z ${KD_OWNER_EMAIL} ] ;then
          logs=$(while read line; do echo -n "${line}\\n"; done < $DEPLOY_LOG_FILE)
+         logs=$(echo $logs | tr -d '"')
          uname=$(uname -a)
          hostname=$(cat /etc/hostname)
          ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')

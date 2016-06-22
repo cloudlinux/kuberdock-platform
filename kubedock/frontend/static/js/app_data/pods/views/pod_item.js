@@ -1,4 +1,4 @@
-define(['app_data/app',
+define(['app_data/app', 'app_data/model',
         'tpl!app_data/pods/templates/layout_pod_item.tpl',
         'tpl!app_data/pods/templates/page_info_panel.tpl',
         'tpl!app_data/pods/templates/page_containers_changed.tpl',
@@ -11,7 +11,7 @@ define(['app_data/app',
         'moment-timezone', 'app_data/utils',
         'bootstrap', 'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer',
         'numeral', 'bbcode', 'tooltip'],
-       function(App,
+       function(App, Model,
                 layoutPodItemTpl,
                 pageInfoPanelTpl,
                 pageContainersChangedTpl,
@@ -46,7 +46,6 @@ define(['app_data/app',
 
         onBeforeShow: utils.preloader.show,
         onShow: utils.preloader.hide,
-
         showPodsList: function(){
             App.navigate('pods', {trigger: true});
         }
@@ -57,9 +56,6 @@ define(['app_data/app',
         template    : pageContainerItemTpl,
         tagName     : 'tr',
         className   : 'container-item',
-        /*className   : function(){
-            return this.model.is_checked ? 'container-item checked' : 'container-item';
-        },*/
 
         initialize: function(){
             this.model.addNestedChangeListener(this, this.render);
@@ -89,24 +85,46 @@ define(['app_data/app',
         },
 
         ui: {
+            'copySshLink'      : '.copy-ssh-link',
             'updateContainer'  : '.container-update',
             'checkForUpdate'   : '.check-for-update',
-            'tooltip'          : '[data-toggle="tooltip"]',
+            'copySshPassword'  : '.copy-ssh-password',
+            'tooltip'          : '[data-toggle="tooltip"]'
         },
 
         events: {
-            'click @ui.updateContainer'    : 'updateItem',
-            'click @ui.checkForUpdate'     : 'checkForUpdate',
+            'click @ui.copySshLink'     : 'copySshLink',
+            'click @ui.updateContainer' : 'updateItem',
+            'click @ui.checkForUpdate'  : 'checkForUpdate',
+            'click @ui.copySshPassword' : 'copySshPassword'
         },
 
-        modelEvents: {
-            'change': 'render'
-        },
-
+        modelEvents: { 'change': 'render' },
         onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
         updateItem: function(){ this.model.get('before').update(); },
         checkForUpdate: function(){
             this.model.get('before').checkForUpdate().done(this.render);
+        },
+        copySshLink: function(){
+            var sshAccess = this.model.get('before').getPod().sshAccess;
+            if (sshAccess) {
+                var modelName = this.model.get('before').get('name'),
+                    sshLink = sshAccess.data.links[modelName];
+                utils.copyLink(sshLink,'SSH link copied to clipboard');
+            } else {
+                utils.notifyWindow('SSH access credentials are outdated. Please, '+
+                'click Get SSH access to generate new link and password', 'error');
+            }
+        },
+        copySshPassword: function(){
+            var sshAccess = this.model.get('before').getPod().sshAccess;
+            if (sshAccess) {
+                var sshPassword = sshAccess.data.auth;
+                utils.copyLink(sshPassword,'SSH password copied to clipboard');
+            } else {
+                utils.notifyWindow('SSH access credentials are outdated. Please, '+
+                'click Get SSH access to generate new link and password', 'error');
+            }
         },
     });
 
@@ -171,6 +189,7 @@ define(['app_data/app',
 
         ui: {
             close : 'span.close',
+            updateSsh: '.updateSsh',
             message: '.message-wrapper'
         },
         onShow: function(){
@@ -187,7 +206,8 @@ define(['app_data/app',
             'click .restart-btn'      : 'restartItem',
             'click .stop-btn'         : 'stopItem',
             'click .terminate-btn'    : 'terminateItem',
-            'click @ui.close'         : 'closeMessage'
+            'click @ui.close'         : 'closeMessage',
+            'click @ui.updateSsh'     : 'updateSshAccess'
         },
 
         modelEvents: {
@@ -244,6 +264,7 @@ define(['app_data/app',
             };
         },
 
+        updateSshAccess : function() { this.model.updateSshAccess(); },
         onDomRefresh: function(){
             if (this.model.get('postDescription') || this.model.get('edited_config'))
                 this.ui.message.show();

@@ -1,14 +1,17 @@
 import os
 import ipaddress
 import json
-import operator
 import re
-import requests
+import socket
 import subprocess
 import time
 from collections import OrderedDict
 from datetime import datetime, timedelta
+
+import ipaddress
+import requests
 from sqlalchemy import event
+from celery.exceptions import SoftTimeLimitExceeded
 
 # requests .json() errors handling workaround.
 # requests module uses simplejson as json by default
@@ -54,6 +57,18 @@ class AddNodeTask(celery.Task):
             db_node = Node.get_by_id(node_id)
             db_node.state = 'troubles'
             db.session.commit()
+
+    def _handle_timeout_failure(self, ssh, channels, log_file, node_id):
+        err = 'Timeout during install. Installation has failed.'
+        send_logs(node_id, err, log_file, channels)
+        try:
+            _, o, _ = ssh.exec_command(
+                'rm /node_install.sh',
+                timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+            o.channel.recv_exit_status()
+        except socket.timeout:
+            # Ignore timeout because we are reporting a failure anyway
+            pass
 
 
 def get_pods_nodelay(pod_id=None, namespace=None):
@@ -140,8 +155,8 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
     return res.text if not res.ok else False
 
 
-@celery.task(base=AddNodeTask)
-def add_new_node(node_id, with_testing=False, redeploy=False,
+@celery.task(bind=True, base=AddNodeTask)
+def add_new_node(self, node_id, with_testing=False, redeploy=False,
                  deploy_options=None):
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
@@ -200,14 +215,24 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
 
         i, o, e = ssh.exec_command('ip -o -4 address show',
                                    timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+
         node_interface = get_node_interface(o.read(), db_node.ip)
         sftp = ssh.open_sftp()
+        sftp.get_channel().settimeout(NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
         sftp.put('fslimit.py', '/fslimit.py')
         sftp.put('make_elastic_config.py', '/make_elastic_config.py')
         sftp.put('node_install.sh', '/node_install.sh')
         sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
         sftp.put('node_network_plugin.py', '/node_network_plugin.py')
+        # TODO refactor to copy all folder ones, or make kdnode package
+        sftp.put('node_scripts/kd-ssh-user.sh', '/kd-ssh-user.sh')
+        sftp.put('node_scripts/kd-docker-exec.sh', '/kd-docker-exec.sh')
+        sftp.put('node_scripts/kd-ssh-user-update.sh', '/kd-ssh-user-update.sh')
+        sftp.put('node_scripts/kd-ssh-gc', '/kd-ssh-gc')
+
+        # TODO this is obsoleted, remove later:
         sftp.put('pd.sh', '/pd.sh')
+
         sftp.put('kubelet_args.py', '/kubelet_args.py')
         sftp.put('/etc/kubernetes/configfile_for_nodes', '/configfile')
         sftp.put('/etc/pki/etcd/ca.crt', '/ca.crt')
@@ -250,35 +275,35 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
                 new_param = "{0}_PARAMS='{1}' ".format(key, value)
                 deploy_cmd = new_param + deploy_cmd
 
-        i, o, e = ssh.exec_command(
-            deploy_cmd.format(AWS, current_master_kubernetes, MASTER_IP,
-                              node_interface, timezone, host,
-                              cpu_multiplier, memory_multiplier,
-                              current_app.config['NONFLOATING_PUBLIC_IPS'],
-                              token),
-            timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
-            get_pty=True)
         s_time = time.time()
-        while not o.channel.exit_status_ready():
-            data = o.channel.recv(1024)
-            while data:
-                # Here we want to send update event to all browsers but only
-                # after any update from a node has come.
-                if not initial_evt_sent:
-                    send_event('node:change', {'id': db_node.id})
-                    initial_evt_sent = True
-                for line in data.split('\n'):
-                    send_logs(node_id, line, log_file, channels)
+        cmd = deploy_cmd.format(AWS,
+                                current_master_kubernetes,
+                                MASTER_IP, node_interface, timezone,
+                                host, cpu_multiplier, memory_multiplier,
+                                current_app.config[
+                                    'NONFLOATING_PUBLIC_IPS'], token)
+        i, o, e = ssh.exec_command(cmd,
+                                   timeout=NODE_INSTALL_TIMEOUT_SEC,
+                                   get_pty=True)
+
+        try:
+            while not o.channel.exit_status_ready():
                 data = o.channel.recv(1024)
-            if (time.time() - s_time) > NODE_INSTALL_TIMEOUT_SEC:
-                err = 'Timeout during install. Installation has failed.'
-                send_logs(node_id, err, log_file, channels)
-                ssh.exec_command('rm /node_install.sh')
-                ssh.close()
-                db_node.state = 'completed'
-                db.session.commit()
-                return err
-            time.sleep(0.2)
+                while data:
+                    # Here we want to send update event to all browsers but
+                    # only after any update from a node has come.
+                    if not initial_evt_sent:
+                        send_event('node:change', {'id': db_node.id})
+                        initial_evt_sent = True
+                    for line in data.split('\n'):
+                        send_logs(node_id, line, log_file, channels)
+                    data = o.channel.recv(1024)
+                    if (time.time() - s_time) > NODE_INSTALL_TIMEOUT_SEC:
+                        raise socket.timeout()
+                time.sleep(0.2)
+        except socket.timeout:
+            self._handle_timeout_failure(ssh, channels, log_file, node_id)
+            raise
 
         try:
             # this raises an exception in case of a lost ssh connection
@@ -299,8 +324,9 @@ def add_new_node(node_id, with_testing=False, redeploy=False,
                 )
                 check_namespace_exists(node_ip=host)
             send_logs(node_id, 'Rebooting node...', log_file, channels)
-            ssh.exec_command('reboot',
-                             timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+            ssh.exec_command(
+                'reboot', timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+
             # Here we can wait some time before add node to k8s to prevent
             # "troubles" status if we know that reboot will take more then
             # 1 minute. For now delay will be just 2 seconds (fastest reboot)

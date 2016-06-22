@@ -172,14 +172,13 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 args: [],
                 kubes: 1,
                 terminationMessagePath: null,
-                sourceUrl: null,
+                sourceUrl: null
             };
         },
         editableAttributes: [  // difference in other attributes won't be interpreted as "change"
             'args', 'command', 'env', 'image', 'kubes', 'ports', 'sourceUrl',
             'volumeMounts', 'workingDir'
         ],
-        getPod: function(){ return getParentWithType(this.collection, data.Pod); },
         isChanged: function(compareTo){
             if (!compareTo)
                 return false;
@@ -187,6 +186,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 after = _.partial(_.pick, compareTo.toJSON()).apply(_, this.editableAttributes);
             return !_.isEqual(before, after);
         },
+        getPod: function(){ return getParentWithType(this.collection, data.Pod); },
         checkForUpdate: function(){
             var container = this;
             utils.preloader.show();
@@ -296,6 +296,22 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             key: 'edited_config',
             relatedModel: Backbone.Self,
         }],
+
+        updateSshAccess: function(){
+            var that = this;
+
+            utils.preloader.show();
+            $.ajax({
+                url: '/api/podapi/' + that.id + '/direct_access',
+                authWrap: true,
+            })
+            .done(function(response) {
+                utils.notifyWindow('SSH credentials are ready to use.' +
+                ' See table below in column SSH.', 'success');
+                that.sshAccess = response;
+            })
+            .always(utils.preloader.hide).fail(utils.notifyWindow);
+        },
 
         defaults: function(){
             var kubeTypes = new data.KubeTypeCollection(

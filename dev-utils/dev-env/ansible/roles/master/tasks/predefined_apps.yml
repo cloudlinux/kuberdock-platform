@@ -3,11 +3,17 @@
 - name: Get predefined apps
   git: repo="{{ predefined_apps_repo }}"
        dest="{{ predefined_apps_dest }}"
+  tags:
+  - predefined_apps
 
 - name: Find all apps 
   find: paths="{{ predefined_apps_dest }}" patterns=*.yaml
   register: predefined_apps
+  tags:
+  - predefined_apps
 
 - name: Add predefined apps
   shell: python "{{ src_prefix }}/manage.py" add-predefined-app --name "{{ item.path | basename | splitext | first }}" -t "{{ item.path }}"
   with_items: "{{ predefined_apps.files }}"
+  tags:
+  - predefined_apps

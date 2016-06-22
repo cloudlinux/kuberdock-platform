@@ -146,10 +146,6 @@ ID_PATH = '/var/lib/kuberdock/installation-id'
 STAT_URL = 'https://cln.cloudlinux.com/api/kd/validate.json'
 
 CELERYBEAT_SCHEDULE = {
-    'pull-hourly-stats': {
-        'task': 'kubedock.tasks.pull_hourly_stats',
-        'schedule': timedelta(minutes=5)
-    },
     'process-node-actions': {
         'task': 'kubedock.tasks.process_node_actions',
         'schedule': timedelta(minutes=10)

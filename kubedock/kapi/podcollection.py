@@ -1,5 +1,6 @@
 import json
 import time
+from crypt import crypt
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from collections import defaultdict
 from os import path
@@ -9,6 +10,7 @@ import ipaddress
 from flask import current_app
 
 from kubedock.exceptions import NoFreeIPs
+from kubedock.utils import ssh_connect, randstr
 from . import helpers
 from . import podutils
 from .helpers import KubeQuery
@@ -35,6 +37,13 @@ from ..utils import (
 
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
+
+# We use only 30 because useradd limits name to 32, and ssh client
+# limits name only to 30 (may be this is configurable) so we use lowest possible
+# This value is hardcoded in a few ssh-feature related scripts because they
+# will be copied to each node at deploy stage
+DIRECT_SSH_USERNAME_LEN = 30
+DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
 
 
 def get_user_namespaces(user):
@@ -846,6 +855,77 @@ class PodCollection(object):
         finish_redeploy.delay(pod.id, data)
         # return updated pod
         return PodCollection(owner=self.owner).get(pod.id, as_json=False)
+
+    def direct_access(self, pod_id):
+        """
+        Setup direct ssh access to all pod containers via creating special unix
+        users with randomly generated secure password(one for all containers
+        and updated on each call). "Not needed" users will be garbage collected
+        by cron script on the node (hourly)
+        :param pod_id: Id of desired running pod
+        :return: dict with key "auth" which contain generated password and key
+                 key "links" with dict of "container_name" : "user_name@node_ip"
+        """
+        k8s_pod = self._get_by_id(pod_id)
+        if k8s_pod.status != POD_STATUSES.running:
+            raise APIError('Pod is not running. SSH access is impossible')
+        node = k8s_pod.hostIP
+        if not node:
+            raise APIError('Pod is not assigned to node yet, please try later. '
+                           'SSH access is impossible')
+
+        ssh, err = ssh_connect(node)
+        if err:
+            # Level is not error because it's maybe temporary problem on the
+            # cluster (node reboot) and we don't want to receive all such events
+            # in Sentry
+            current_app.logger.warning("Can't connect to node")
+            raise APIError(DIRECT_SSH_ERROR)
+
+        orig_pass = randstr(30, secure=True)
+        crypt_pass = crypt(orig_pass, randstr(2, secure=True))
+
+        clinks = {}
+        for c in k8s_pod.containers:
+            cname = c.get('name')
+            cid = c.get('containerID')
+            if not cid:
+                clinks[cname] = 'Container is not running'
+                continue
+            cid = cid[:DIRECT_SSH_USERNAME_LEN]
+            self._try_update_ssh_user(ssh, cid, crypt_pass)
+            clinks[cname] = '{}@{}'.format(cid, node)
+        return {'links': clinks, 'auth': orig_pass}
+
+    @staticmethod
+    def _try_update_ssh_user(ssh_to_node, user, passwd):
+        """
+        Tries to update ssh-related unix user on then node. Creates this user if
+        not exists
+        :param ssh_to_node: already connected to node ssh object
+        :param user: unix user name which is for now truncated container_id
+        :param passwd: crypted password
+        :return: None
+        """
+        # TODO this path also used in node_install.sh
+        update_user_cmd = '/var/lib/kuberdock/scripts/kd-ssh-user-update.sh ' \
+                          '{user} {password}'
+        try:
+            i, o, e = ssh_to_node.exec_command(
+                update_user_cmd.format(user=user, password=passwd),
+                timeout=20)
+            exit_status = o.channel.recv_exit_status()
+        except Exception as e:
+            # May happens in case of connection lost during operation
+            current_app.logger.error(
+                'Looks like connection error to the node: %s', e,
+                exc_info=True)
+            raise APIError(DIRECT_SSH_ERROR)
+        if exit_status != 0:
+            current_app.logger.error(
+                "Can't update kd-ssh-user on the node. Exited with: %s",
+                exit_status)
+            raise APIError(DIRECT_SSH_ERROR)
 
     # def _do_container_action(self, action, data):
     #     host = data.get('nodeName')

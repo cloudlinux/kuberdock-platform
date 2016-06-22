@@ -6,6 +6,7 @@
     <tr class="main-table-head">
         <th>Image name</th>
         <th>Status</th>
+        <th>SSH (link/pass)</th>
         <th>Number of Kubes</th>
         <th>Deployed</th>
         <th>Actions</th>

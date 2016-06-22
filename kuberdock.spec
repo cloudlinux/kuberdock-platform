@@ -28,7 +28,6 @@ Requires: python-uwsgi
 Requires: python-cerberus >= 0.9.1
 Requires: python-click >= 6.3
 Requires: python-flask >= 0.10.1
-Requires: python-flask-login >= 0.2.11
 Requires: python-flask-mail >= 0.9.1
 Requires: python-flask-sqlalchemy >= 2.0
 Requires: python-jinja2 >= 2.7.2

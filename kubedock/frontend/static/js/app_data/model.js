@@ -936,15 +936,47 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     data.NetworkModel = Backbone.Model.extend({
         urlRoot: '/api/ippool/',
-        parse: unwrapper
+        parse: unwrapper,
+        getIPs: function(){
+            var subnet = this,
+                getRawIPs = function(){
+                    return _.map(subnet.get('allocation'),
+                                 _.partial(_.object, ['ip', 'podName', 'status']));
+                },
+                IPsCollection = new data.IPsCollection(getRawIPs());
+            IPsCollection.listenTo(this, 'change:allocation', function(){
+                var page = IPsCollection.state.currentPage;
+                IPsCollection.fullCollection.reset(getRawIPs());
+                IPsCollection.getPage(page);
+            });
+            return IPsCollection;
+        },
     });
 
-    data.NetworkCollection = Backbone.Collection.extend({
+    data.NetworkCollection = Backbone.PageableCollection.extend({
         url: '/api/ippool/',
         model: data.NetworkModel,
-        parse: unwrapper
+        parse: unwrapper,
+        mode: 'client',
+        state: {
+            pageSize: 8
+        }
     });
+
+    App.getIppoolMode = App.resourcePromiser('ippoolMode', '/api/ippool/mode');
     App.getIPPoolCollection = App.resourcePromiser('ippoolCollection', data.NetworkCollection);
+
+    data.IPModel = Backbone.Model.extend({
+        idAttribute: 'ip',
+    });
+    data.IPsCollection = Backbone.PageableCollection.extend({
+        model: data.IPModel,
+        parse: unwrapper,
+        mode: 'client',
+        state: {
+            pageSize: 8
+        }
+    });
 
     data.UserAddressModel = Backbone.Model.extend({
         defaults: {

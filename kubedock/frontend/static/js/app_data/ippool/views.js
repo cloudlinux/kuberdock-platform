@@ -1,38 +1,36 @@
 define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
-        'tpl!app_data/ippool/templates/network_empty.tpl',
-        'tpl!app_data/ippool/templates/network_item.tpl',
-        'tpl!app_data/ippool/templates/network_item_more.tpl',
-        'tpl!app_data/ippool/templates/breadcrumbs.tpl',
-        'tpl!app_data/ippool/templates/ippool_left.tpl',
-        'tpl!app_data/ippool/templates/ippool_right.tpl',
-        'tpl!app_data/ippool/templates/ippool_aside.tpl',
-        'tpl!app_data/ippool/templates/network_create.tpl',
-        'tpl!app_data/ippool/templates/networks_layout.tpl',
+
+        'tpl!app_data/ippool/templates/subnets/empty.tpl',
+        'tpl!app_data/ippool/templates/subnets/list_item.tpl',
+        'tpl!app_data/ippool/templates/subnets/list.tpl',
+
+        'tpl!app_data/ippool/templates/subnet_ips/list_item.tpl',
+        'tpl!app_data/ippool/templates/subnet_ips/list.tpl',
+
+        'tpl!app_data/ippool/templates/ippool_create_subnetwork.tpl',
+        'tpl!app_data/ippool/templates/ippool_layout.tpl',
         'bootstrap', 'jquery-ui', 'selectpicker', 'bootstrap3-typeahead', 'mask'],
        function(App, Controller, Marionette, utils,
-                networkEmptyTpl,
-                networkItemTpl,
-                networkItemMoreTpl,
-                breadcrumbsTpl,
-                ippoolLeftTpl,
-                ippoolRightTpl,
-                ippoolAsideTpl,
-                networkCreateTpl,
-                networksLayoutTpl){
 
+                subnetsListItemTplEmptyTpl,
+                subnetsListItemTpl,
+                subnetsListTpl,
+
+                subnetIpsListItemTpl,
+                subnetIpsListTpl,
+
+                ippoolCreateSubnetworkTpl,
+                ippoolLayoutTpl){
     var views = {};
 
-    views.NetworkEmpty = Backbone.Marionette.ItemView.extend({
-        template: networkEmptyTpl,
+    views.SubnetsListItemEmptyView = Backbone.Marionette.ItemView.extend({
+        template: subnetsListItemTplEmptyTpl,
         tagName: 'tr',
     });
 
-    views.NetworkItem = Backbone.Marionette.ItemView.extend({
-        template: networkItemTpl,
+    views.SubnetsListItemView = Backbone.Marionette.ItemView.extend({
+        template: subnetsListItemTpl,
         tagName: 'tr',
-        className: function(){
-            return this.model.checked ? 'checked' : ''
-        },
 
         ui: {
             deleteNetwork : '#deleteNetwork',
@@ -40,11 +38,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
 
         events: {
-            'click @ui.deleteNetwork' : 'deleteNetwork_btn',
+            'click @ui.deleteNetwork' : 'deleteNetwork',
         },
 
         initialize: function(){
-            $(this.el).attr('data-id', this.model.get('network'));
+            this.isFloating = this.model.collection.ipPoolMode === 'floating';
         },
 
         templateHelpers: function(){
@@ -56,34 +54,36 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 forbidDeletionMsg = null;
             } else {
                 forbidDeletionMsg = 'Сannot be deleted, because '
-                    + (allocation.length == 1
+                    + (allocation.length === 1
                             ? 'pod "' + _.pluck(allocation, '1') + '" use this subnet'
                             : 'pods: "' + _.pluck(allocation, '1').join('", "') + '" use this subnet');
             }
 
             return {
-                forbidDeletionMsg: forbidDeletionMsg
+                forbidDeletionMsg : forbidDeletionMsg,
+                isFloating : this.isFloating
             };
         },
 
         onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
-
-        deleteNetwork_btn: function(evt){
-            evt.stopPropagation();
+        deleteNetwork: function(evt){
             var that = this,
                 target = $(evt.target);
 
             if (!target.hasClass('disabled')){
+                var network = this.model.get('network');
                 utils.modalDialogDelete({
                     title: 'Delete subnet',
                     body: "Are you sure you want to delete subnet '" +
-                        this.model.get('network') + "'?",
+                        network + "'?",
                     small: true,
                     show: true,
                     footer: {
                         buttonOk: function(){
                             utils.preloader.show();
                             that.model.destroy({wait: true})
+                                .success(utils.notifyWindow('Subnet "' + network
+                                                      + '" deleted', 'success'))
                                 .always(utils.preloader.hide)
                                 .fail(utils.notifyWindow);
                         },
@@ -94,125 +94,69 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
     });
 
-    views.NetworkItemMore = Backbone.Marionette.ItemView.extend({
-        template: networkItemMoreTpl,
+    views.SubnetIpsListItemView = Backbone.Marionette.ItemView.extend({
+        template: subnetIpsListItemTpl,
+        tagName  : 'tr',
 
         ui: {
-            block_ip      : '.block_ip',
-            unblock_ip    : '.unblock_ip',
-            /*unbind_ip     : '.unbind_ip'*/
+            block_ip    : '.block_ip',
+            unblock_ip  : '.unblock_ip',
+            tooltip     : '[data-toggle="tooltip"]'
         },
 
         events: {
             'click @ui.block_ip'      : 'blockIP',
-            'click @ui.unblock_ip'    : 'unblockIP',
-            /*'click @ui.unbind_ip'     : 'unbindIP'*/
+            'click @ui.unblock_ip'    : 'unblockIP'
         },
 
-        templateHelpers: function(){
-            var allocation = this.model.get('allocation');
-
-            if (allocation){
-                allocation.sort(function(a, b){
-                    var aa = a[0].split("."),
-                        bb = b[0].split(".");
-
-                    for (var i=0, n=Math.max(aa.length, bb.length); i<n; i++) {
-                        if (aa[i] !== bb[i]) return aa[i] - bb[i];
-                    }
-                    return 0;
-                });
-            }
-
-            return{
-                allocation : allocation
-            }
-        },
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
 
         commandIP: function(cmd, ip){
-            var data = {};
+            var data = {},
+                subnet = this._parent.model;
             data[cmd + '_ip'] = ip;
-            return this.model.save(data, {wait: true, context: this})
-                .always(function(){ this.model.set(cmd + '_ip', null); })
-                .done(this.render)
+            return subnet.save(data, {wait: true, context: this})
+                .always(function(){ subnet.set(cmd + '_ip', null); })
                 .fail(utils.notifyWindow);
         },
 
-        blockIP: function(btn){
-            var ip = $(btn.currentTarget).data('ip');
-            this.commandIP('block', ip);
-        },
-
-        unblockIP: function(btn){
-            var ip = $(btn.currentTarget).data('ip');
-            this.commandIP('unblock', ip);
-        },
-
-/*        unbindIP: function(btn){
-            var ip = $(btn.currentTarget).data('ip'),
-                that = this;
-
-            utils.modalDialog({
-                title: 'Unbind IP-address',
-                body: "Are you sure you want to unbind IP '" + ip + "' address?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: _.bind(this.commandIP, this, 'unbind', ip),
-                    buttonCancel: true
-                }
-            });
-        }*/
+        blockIP: function(){ this.commandIP('block', this.model.get('ip')); },
+        unblockIP: function(){ this.commandIP('unblock', this.model.get('ip')); }
     });
 
-    views.BreadcrumbView = Backbone.Marionette.ItemView.extend({
-        template: breadcrumbsTpl,
-
-        events: {
-            'click button#create_network' : 'createNetwork'
-        },
-
-        createNetwork: function(){
-            App.navigate('ippool/create', {trigger: true});
-        }
-    });
-
-    views.LeftView = Backbone.Marionette.CompositeView.extend({
-        template           : ippoolLeftTpl,
-        childView          : views.NetworkItem,
-        emptyView          : views.NetworkEmpty,
-        childViewContainer : "tbody.networks-list"
-    });
-
-    views.RightView = Backbone.Marionette.CompositeView.extend({
-        template: ippoolRightTpl,
-        childView: views.NetworkItemMore,
-        childViewContainer: "div.right"
-    });
-
-    views.AsideView = Backbone.Marionette.ItemView.extend({
-        template: ippoolAsideTpl,
-    });
-
-    views.NetworkCreateView = Backbone.Marionette.ItemView.extend({
-        template: networkCreateTpl,
+    views.IppoolCreateSubnetworkView = Backbone.Marionette.ItemView.extend({
+        template: ippoolCreateSubnetworkTpl,
         tagName: 'div',
 
         ui: {
             'network'    : 'input#network',
             'autoblock'  : '[name="autoblock"]',
             'add_button' : '#network-add-btn',
-            'back'       : '.back',
-            'input'      : 'input'
+            'input'      : 'input',
+            'hostname'   : '.hostname'
         },
 
         events: {
             'click @ui.add_button' : 'onSave',
-            'click @ui.back'       : 'back',
             'focus @ui.input'      : 'removeError'
         },
 
+        initialize: function(options){
+            this.ipPoolMode = options.ipPoolMode === 'floating';
+            this.nodelist = options.nodelist;
+        },
+
+        templateHelpers: function(){
+            return {
+                isFloating : this.ipPoolMode,
+                nodelist : this.nodelist
+            };
+        },
+
         onRender: function(){
+            this.ui.hostname.selectpicker({
+                noneSelectedText: 'Hostname list is empty'
+            });
             var options = {
                 onChange: function(cep, event, currentField, options){
                     if(cep){
@@ -222,7 +166,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                                 if(parseInt(ipArray[i].split('/')[1]) > 32){
                                     ipArray[i] = ipArray[i].split('/')[0] + '/' + 32;
                                 }
-                            } else if(ipArray[i] != "" && parseInt(ipArray[i]) > 255){
+                            } else if(ipArray[i] !== "" && parseInt(ipArray[i]) > 255){
                                 ipArray[i] =  '255';
                             }
                         }
@@ -239,15 +183,17 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.ui.network.mask("0ZZ.0ZZ.0ZZ.0ZZ/0Z", options);
         },
 
-        onSave: function(){
-            var that = this,
+        onSave: function(evt){
+            var data,
                 ok = true,
+                that = this,
                 pattern = /^\d+(?:-\d+)?(?:\s*,\s*(?:\d+(?:-\d+)?))*$/;
 
+            if (this.ipPoolMode && this.nodelist.length === 0) return;
             App.getIPPoolCollection().done(function(ipCollection){
                 // temp validation
                 var network = that.ui.network.val();
-                if(network.length == 0 || network.split('.').length < 4){
+                if(network.length === 0 || network.split('.').length < 4){
                     utils.notifyWindow('Wrong IP-address');
                     that.ui.network.addClass('error');
                     ok = false;
@@ -264,16 +210,27 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     that.ui.autoblock.addClass('error');
                     ok = false;
                 }
-                if (ok) {
-                    utils.preloader.show();
-                    ipCollection.create({
+                if (this.ipPoolMode){
+                    data = {
                         'network': network,
                         'autoblock': that.ui.autoblock.val()
-                    }, {
+                    };
+                } else {
+                    data = {
+                        'network': network,
+                        'autoblock': that.ui.autoblock.val(),
+                        'node' : that.ui.hostname.val()
+                    };
+                }
+                if (ok) {
+                    utils.preloader.show();
+                    ipCollection.create(data, {
                         wait: true,
                         complete: utils.preloader.hide,
                         success: function(){
                             App.navigate('ippool', {trigger: true});
+                            utils.notifyWindow('Subnet "' + network
+                                                + '" added', 'success');
                         },
                         error: function(collection, response){
                             utils.notifyWindow(response);
@@ -286,49 +243,43 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         removeError: function(e){
             var target = $(e.target);
-            if (target.hasClass('error')){
-                target.removeClass('error');
-            }
-        },
-
-        back: function(){
-            App.navigate('ippool', {trigger: true});
+            if (target.hasClass('error')) target.removeClass('error');
         }
     });
 
-    views.NetworksLayout = Marionette.LayoutView.extend({
-        template: networksLayoutTpl,
+    views.SubnetsListView = Backbone.Marionette.CompositeView.extend({
+        template           : subnetsListTpl,
+        childView          : views.SubnetsListItemView,
+        emptyView          : views.SubnetsListItemEmptyView,
+        childViewContainer : "tbody",
 
-        regions: {
-            nav   : 'div#nav',
-            main  : 'div#main',
-            aside : 'div#aside',
-            left  : 'div#left',
-            right : 'div#right'
+        initialize: function(){
+            this.isFloating = this.collection.ipPoolMode === 'floating';
         },
 
-        ui: {
-            'tr' : '.ip_pool_table tbody tr',
-        },
-
-        events: {
-            'click @ui.tr' : 'onCheckItem'
-        },
-
-        onBeforeShow: function(){
-            utils.preloader.show();
-        },
-
-        onShow: function(){
-            utils.preloader.hide();
-        },
-
-        onCheckItem: function (e) {
-            e.stopPropagation();
-            var target = $(e.currentTarget),
-                id = target.attr('data-id');
-            this.trigger('ippool:network:picked', id);
+        templateHelpers: function(){
+            return {
+                isFloating : this.isFloating
+            };
         }
+    });
+
+    views.SubnetIpsListView = Backbone.Marionette.CompositeView.extend({
+        template: subnetIpsListTpl,
+        childView: views.SubnetIpsListItemView,
+        childViewContainer: "tbody",
+    });
+
+    views.IppoolLayoutView = Marionette.LayoutView.extend({
+        template: ippoolLayoutTpl,
+        regions: {
+            nav        : '#nav',
+            breadcrumb : '#breadcrumb',
+            main       : '#main',
+            pager      : '#pager'
+        },
+        onBeforeShow: function(){ utils.preloader.show(); },
+        onShow: function(){ utils.preloader.hide(); }
     });
 
     return views;

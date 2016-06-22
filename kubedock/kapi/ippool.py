@@ -243,3 +243,8 @@ class IpAddrPool(object):
         )
         IpState.start(pod.id, ip)
         return repr_ip
+
+    @staticmethod
+    def get_mode():
+        return ('non-floating' if current_app.config['NONFLOATING_PUBLIC_IPS']
+                else 'floating')

@@ -373,6 +373,39 @@ function get_route_table_id {
   python -c "import json,sys; lst = [str(route_table['RouteTableId']) for route_table in json.load(sys.stdin)['RouteTables'] if route_table['VpcId'] == '$1' and route_table['Associations'][0].get('SubnetId') == '$2']; print ''.join(lst)"
 }
 
+function create-k8s-certs {
+  local -r primary_cn="${1}"
+  local -r certs_dir="${2}"
+
+  K8S_TEMP="/tmp/k8s/"
+  rm -rf ${K8S_TEMP}
+  mkdir ${K8S_TEMP}
+
+  sans="IP:${primary_cn},DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)"
+
+  local -r cert_create_debug_output=$(mktemp "${K8S_TEMP}/cert_create_debug_output.XXX")
+  (set -x
+    cd "${K8S_TEMP}"
+    curl -L -O --connect-timeout 20 --retry 6 --retry-delay 2 https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
+    tar xzf easy-rsa.tar.gz
+    cd easy-rsa-master/easyrsa3
+    ./easyrsa init-pki
+    ./easyrsa --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
+    ./easyrsa --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
+    ) &>${cert_create_debug_output} || {
+    cat "${cert_create_debug_output}" >&2
+    echo "=== Failed to generate certificates: Aborting ===" >&2
+    exit 2
+  }
+  TMP_CERT_DIR="${K8S_TEMP}/easy-rsa-master/easyrsa3"
+  mkdir -p ${certs_dir}
+  mv ${TMP_CERT_DIR}/pki/ca.crt ${certs_dir}/
+  mv ${TMP_CERT_DIR}/pki/issued/* ${certs_dir}/
+  mv ${TMP_CERT_DIR}/pki/private/* ${certs_dir}/
+  chown -R kube:kube ${certs_dir}
+  chmod -R 0440 ${certs_dir}/*
+}
+
 #yesno()
 ## $1 = Message prompt
 ## Returns ans=0 for no, ans=1 for yes
@@ -803,21 +836,22 @@ chmod 600 $KUBERNETES_CONF_DIR/configfile_for_nodes
 
 
 #9. Configure kubernetes
-log_it echo "Configure kubernetes"
+log_it echo "Configuring kubernetes"
 # ServiceAccount signing key
-SA_KEY=/etc/pki/kube-apiserver/serviceaccount.key
-do_and_log mkdir -m o-rwx -p `dirname $SA_KEY`
-do_and_log openssl genrsa -out $SA_KEY 2048
-do_and_log chmod -R 0440 $SA_KEY
-do_and_log chown -R kube:kube `dirname $SA_KEY`
+KUBERNETES_CERTS_DIR=/etc/kubernetes/certs/
+create-k8s-certs $MASTER_IP $KUBERNETES_CERTS_DIR
+K8S_TLS_CERT=$KUBERNETES_CERTS_DIR/$HOSTNAME.crt
+K8S_TLS_PRIVATE_KEY=$KUBERNETES_CERTS_DIR/$HOSTNAME.key
+K8S_CA_CERT=$KUBERNETES_CERTS_DIR/ca.crt
 
 if [ "$ISAMAZON" = true ];then
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--cloud-provider=aws --token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --service-account-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/apiserver
-sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--cloud-provider=aws --service-account-private-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/controller-manager
+    CLOUD_PROVIDER_OPT="--cloud-provider=aws"
 else
-sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --service-account-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/apiserver
-sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--service-account-private-key-file=$SA_KEY\"|}" $KUBERNETES_CONF_DIR/controller-manager
+    CLOUD_PROVIDER_OPT=""
 fi
+
+sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --tls-cert-file=$K8S_TLS_CERT --tls-private-key-file=$K8S_TLS_PRIVATE_KEY --client-ca-file=$K8S_CA_CERT --service-account-key-file=$K8S_TLS_CERT $CLOUD_PROVIDER_OPT \"|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--service_account_private_key_file=$K8S_TLS_CERT --root-ca-file=$K8S_CA_CERT $CLOUD_PROVIDER_OPT \"|}" $KUBERNETES_CONF_DIR/controller-manager
 sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission-control=NamespaceLifecycle,NamespaceExists|}" $KUBERNETES_CONF_DIR/apiserver
 
 

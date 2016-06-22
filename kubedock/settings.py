@@ -1,13 +1,19 @@
 import os
 import ConfigParser
 from datetime import timedelta
+import requests
+import json
+from urllib2 import urlparse
+import logging
+
 from celery.schedules import crontab
 
 DEFAULT_TIMEZONE = 'UTC'
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-CLOUDLINUX_SIG_KEY = '8c55a6628608cb71'
+LOG = logging.getLogger(__name__)
+
 
 
 def is_production_pkg():
@@ -16,9 +22,8 @@ def is_production_pkg():
     on package signature (Any public release signed with key above)
     :return: Bool
     """
+    cloudlinux_sig_key = '8c55a6628608cb71'
     try:
-        if os.path.exists('/var/opt/kuberdock/dev-utils'):
-            return False
         import rpm
         from rpmUtils.miscutils import getSigInfo
         ts = rpm.ts()
@@ -26,40 +31,72 @@ def is_production_pkg():
         err, res = getSigInfo(hdr)
         if err:
             return False
-        if CLOUDLINUX_SIG_KEY not in res[2]:
+        if cloudlinux_sig_key not in res[2]:
             return False
     except Exception:
         return False
     return True
 
-IS_PRODUCTION_VERSION = is_production_pkg()
+IS_PRODUCTION_PKG = is_production_pkg()
 
-# Check environment variable 'SENTRY_ENABLE'(assume True if not exist), local
-# variable 'SENTRY_ENABLE' and then check remote variable 'sentry.enable'.
-# Also check if current package is production and turn on sentry only if true
-SENTRY_ENABLE = True and IS_PRODUCTION_VERSION
-REMOTE_SETTINGS = os.environ.get(
-    'REMOTE_SETTINGS', '')
-if SENTRY_ENABLE and os.environ.get("SENTRY_ENABLE", True):
-    try:
-        import requests
-        import json
-        from urllib2 import urlparse
-        url = urlparse.urlparse(REMOTE_SETTINGS)
+
+def get_sentry_settings():
+    """Gets SENTRY_ENABLE and SENTRY_DSN variables according to settings"""
+
+    def _get_remote_sentry_settings():
+        remote_settings_url = os.environ.get(
+            'REMOTE_SETTINGS',
+            '')
         data = ''
-        if url.scheme == 'http':
-            res = requests.get(REMOTE_SETTINGS)
-            data = res.content
-        else:
-            with open(url.path) as f:
-                data = f.read()
-        remote_settings = json.loads(data)
-        sentry = remote_settings.get('sentry', {})
-        SENTRY_DSN = sentry.get('dsn', False)
-        SENTRY_ENABLE = SENTRY_DSN and sentry.get('enable', True)
-    except Exception as e:
-        print "Error while configure Sentry:{}".format(e)
-        SENTRY_ENABLE = False
+        enable = False
+        dsn = ""
+        try:
+            url = urlparse.urlparse(remote_settings_url)
+            # Support both Web & local paths
+            if url.scheme == 'http':
+                res = requests.get(remote_settings_url)
+                data = res.content
+            else:
+                with open(url.path) as f:
+                    data = f.read()
+
+            remote_settings = json.loads(data).get('sentry', {})
+            enable = remote_settings.get('enable', True)
+            dsn = remote_settings.get('dsn', "")
+        except Exception as e:
+            LOG.warning("Error while configure Sentry: {}".format(repr(e)))
+
+        return enable, dsn
+
+    enable = IS_PRODUCTION_PKG
+    _local_enable = os.environ.get("SENTRY_ENABLE")
+    local_force_enable = (_local_enable in ("y", "Y"))
+    local_force_disable = (_local_enable in ("n", "N"))
+
+    remote_enable, sentry_dsn = False, ""
+    if enable or local_force_enable:
+        remote_enable, sentry_dsn = _get_remote_sentry_settings()
+
+        if not sentry_dsn:
+            LOG.info("Sentry DSN was not retrieved, disabling Sentry")
+            return False, ""
+
+    if local_force_enable:
+        LOG.info("Sentry enabled through host SENTRY_ENABLE env")
+        return True, sentry_dsn
+
+    if local_force_disable:
+        LOG.info("Sentry disabled through host SENTRY_ENABLE env")
+        return False, ""
+
+    if not remote_enable:
+        LOG.info("Sentry disabled through remote setting")
+        return False, ""
+
+    return enable, sentry_dsn
+
+
+SENTRY_ENABLE, SENTRY_DSN = get_sentry_settings()
 
 DEBUG = True
 # With the following option turned on (by default) and in case of debug mode

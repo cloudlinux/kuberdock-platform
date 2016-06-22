@@ -16,7 +16,7 @@
 - name: Update global environment variables
   lineinfile:
       dest: "/etc/environment"
-      line: "SENTRY_ENABLE="
+      line: "SENTRY_ENABLE=n"
       state: present
 
 - name: RPM proxy configure

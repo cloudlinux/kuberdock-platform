@@ -3,11 +3,10 @@
 import pytz
 
 from flask import Blueprint, request, jsonify, Response
-from flask.ext.login import current_user
 
 from ..exceptions import APIError
 from ..rbac import check_permission
-from ..login import auth_required
+from ..login import auth_required, current_user
 from ..utils import parse_datetime_str, KubeUtils
 from ..kapi import es_logs, usage
 from ..users.models import User
